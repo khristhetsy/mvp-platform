@@ -10,6 +10,7 @@ import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
 import { formatError } from "@/lib/errors/format-error";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { resolveCompanyDependencies } from "@/lib/automation/dependencies";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { computeCompanyReadinessRiskSignals } from "@/lib/predictive-intelligence/readiness-risk";
@@ -59,6 +60,24 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
     notFound();
   }
 
+  // Reverse-link the founder to their CRM contact (contacts map to founders by
+  // email — see /admin/sales/contacts/[id]). Powers the "User Profile" tab.
+  let founderContactId: string | null = null;
+  if (workspace?.founder?.email && serviceRoleConfigured) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const admin = createServiceRoleClient() as any;
+      const { data: c } = await admin
+        .from("crm_contacts")
+        .select("id")
+        .eq("email", workspace.founder.email)
+        .limit(1);
+      founderContactId = c?.[0]?.id ?? null;
+    } catch {
+      founderContactId = null;
+    }
+  }
+
   return (
     <AppShell
       role="ADMIN"
@@ -90,6 +109,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 workflowDependencies={workflowDependencies}
                 adminRole={adminRole}
                 riskSignals={companyRiskSignals}
+                founderContactId={founderContactId}
               />
               {workspace.founder?.id ? (
                 <>

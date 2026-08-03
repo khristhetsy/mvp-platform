@@ -50,12 +50,14 @@ export function AdminCompanyWorkspace({
   workflowDependencies = [],
   adminRole = "admin",
   riskSignals = [],
+  founderContactId = null,
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
   nextBestActions?: NextBestAction[];
   workflowDependencies?: WorkflowDependency[];
   adminRole?: NextBestActionRole;
   riskSignals?: RiskSignal[];
+  founderContactId?: string | null;
 }>) {
   const t = useTranslations("adminCmp");
   const [tab, setTab] = useState<TabKey>("initialize");
@@ -126,6 +128,27 @@ export function AdminCompanyWorkspace({
               </button>
             );
           })}
+
+          {/* User Profile — jumps out to the founder's full CRM contact record
+              (new tab, keeps your place in the workspace). Disabled when the
+              founder has no linked contact. */}
+          {founderContactId ? (
+            <Link
+              href={`/admin/sales/contacts/${founderContactId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 whitespace-nowrap px-3.5 py-3 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
+            >
+              User Profile <span aria-hidden="true" className="text-xs">↗</span>
+            </Link>
+          ) : (
+            <span
+              title="No linked CRM contact for this founder"
+              className="cursor-not-allowed whitespace-nowrap px-3.5 py-3 text-sm font-semibold text-slate-300"
+            >
+              User Profile
+            </span>
+          )}
         </nav>
       </div>
 
