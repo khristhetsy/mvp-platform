@@ -53,7 +53,28 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
           country: comp.country ?? null,
           state: comp.state ?? null,
           useOfFunds: comp.use_of_funds ?? null,
+          fundingStage: null, operatingStage: null, businessEntity: null,
+          annualEbitda: null, managementTeam: null, seekingInvestorTypes: null,
+          seekingCapitalTypes: null, activeInvestorPreference: null,
         };
+        // Seeking + Company & stage columns (migration 20260803002). Best-effort:
+        // a separate select so the section still renders if the migration hasn't
+        // run yet (unknown columns return an error, not throw).
+        const { data: extra } = await admin
+          .from("companies")
+          .select("funding_stage, operating_stage, business_entity, annual_ebitda, management_team, seeking_investor_types, seeking_capital_types, active_investor_preference")
+          .eq("founder_id", prof.id)
+          .maybeSingle();
+        if (extra) {
+          linkedCompany.fundingStage = extra.funding_stage ?? null;
+          linkedCompany.operatingStage = extra.operating_stage ?? null;
+          linkedCompany.businessEntity = extra.business_entity ?? null;
+          linkedCompany.annualEbitda = extra.annual_ebitda ?? null;
+          linkedCompany.managementTeam = extra.management_team ?? null;
+          linkedCompany.seekingInvestorTypes = extra.seeking_investor_types ?? null;
+          linkedCompany.seekingCapitalTypes = extra.seeking_capital_types ?? null;
+          linkedCompany.activeInvestorPreference = extra.active_investor_preference ?? null;
+        }
       }
     }
   }

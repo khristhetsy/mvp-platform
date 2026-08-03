@@ -181,6 +181,15 @@ export type LinkedCompany = {
   country: string | null;
   state: string | null;
   useOfFunds: string | null;
+  // Seeking + Company & stage (from onboarding; migration 20260803002)
+  fundingStage: string | null;
+  operatingStage: string | null;
+  businessEntity: string | null;
+  annualEbitda: string | null;
+  managementTeam: string | null;
+  seekingInvestorTypes: string | null;
+  seekingCapitalTypes: string | null;
+  activeInvestorPreference: string | null;
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -622,6 +631,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         <RoRow label="Website">{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{company.website}</a> : null}</RoRow>
                         <RoRow label="Location">{[company.state, company.country].filter(Boolean).join(", ") || null}</RoRow>
                         <RoRow label="One-pager">{onePager?.slug ? <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>/f/{onePager.slug}{onePager.published ? <span style={{ fontSize: 10, background: "#E1F5EE", color: "#0F6E56", borderRadius: 8, padding: "1px 6px" }}>Published</span> : <span style={{ fontSize: 10, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 8, padding: "1px 6px" }}>Draft</span>}</a> : null}</RoRow>
+                        <RoRow label="Funding stage">{company.fundingStage || null}</RoRow>
+                        <RoRow label="Operating stage">{company.operatingStage || null}</RoRow>
+                        <RoRow label="Business entity">{company.businessEntity || null}</RoRow>
+                        <RoRow label="Annual EBITDA">{company.annualEbitda || null}</RoRow>
+                        <RoRow label="Type of investor(s)">{company.seekingInvestorTypes || null}</RoRow>
+                        <RoRow label="Type(s) of capital">{company.seekingCapitalTypes || null}</RoRow>
+                        <RoRow label="Active investor preference">{company.activeInvestorPreference || null}</RoRow>
+                        <RoRow label="Management team">{company.managementTeam || null}</RoRow>
                         <div style={{ gridColumn: "1 / -1" }}><RoRow label="Use of funds">{company.useOfFunds || null}</RoRow></div>
                         <div style={{ gridColumn: "1 / -1" }}><RoRow label="Description">{company.description || null}</RoRow></div>
                       </div>
