@@ -45,6 +45,24 @@ function companyPatchFromStep(parsed: ReturnType<typeof founderOnboardingStepSch
   if (parsed.revenue_stage?.trim()) patch.revenue_stage = parsed.revenue_stage.trim();
   if (parsed.use_of_funds?.trim()) patch.use_of_funds = parsed.use_of_funds.trim();
 
+  // Seeking + Company & stage columns (added in migration 20260803002; not yet in
+  // the generated Company type, so assigned via a Record cast until db:types runs).
+  const ext = patch as Record<string, unknown>;
+  const seekingStage: [keyof typeof parsed, string][] = [
+    ["seeking_investor_types", "seeking_investor_types"],
+    ["seeking_capital_types", "seeking_capital_types"],
+    ["active_investor_preference", "active_investor_preference"],
+    ["funding_stage", "funding_stage"],
+    ["operating_stage", "operating_stage"],
+    ["business_entity", "business_entity"],
+    ["annual_ebitda", "annual_ebitda"],
+    ["management_team", "management_team"],
+  ];
+  for (const [key, col] of seekingStage) {
+    const v = parsed[key];
+    if (typeof v === "string" && v.trim()) ext[col] = v.trim();
+  }
+
   if (parsed.step === "investor_readiness_review") {
     patch.review_status = "pending";
     patch.status = "pending";

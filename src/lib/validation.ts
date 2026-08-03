@@ -74,6 +74,16 @@ export const founderOnboardingStepSchema = z.object({
   funding_amount: z.coerce.number().positive().optional(),
   revenue_stage: z.string().optional(),
   use_of_funds: z.string().optional(),
+  // Seeking + Company & stage (onboarding "Raise & stage" step). Multi-selects
+  // arrive as comma-separated strings, matching use_of_funds.
+  seeking_investor_types: z.string().optional(),
+  seeking_capital_types: z.string().optional(),
+  active_investor_preference: z.string().optional(),
+  funding_stage: z.string().optional(),
+  operating_stage: z.string().optional(),
+  business_entity: z.string().optional(),
+  annual_ebitda: z.string().optional(),
+  management_team: z.string().optional(),
 });
 
 export const documentUploadSchema = z.object({
