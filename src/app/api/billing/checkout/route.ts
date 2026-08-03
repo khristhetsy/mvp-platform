@@ -4,6 +4,7 @@ import { createCheckoutUrl } from "@/lib/lemonsqueezy";
 import { LS_VARIANT_IDS } from "@/lib/billing/pricing";
 import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
 import { BUY_LINKS } from "@/lib/billing/buy-links";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { PlanType } from "@/lib/subscriptions/plans";
 
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
@@ -21,7 +22,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     const profile = await requireUserProfile();
-    const { planType } = (await req.json()) as { planType: PlanType };
+    const { planType, refundPolicyAcceptedAt, refundPolicyVersion } = (await req.json()) as {
+      planType: PlanType;
+      refundPolicyAcceptedAt?: string;
+      refundPolicyVersion?: string;
+    };
+
+    // Enforce the non-refundable acknowledgment server-side too (defense in depth
+    // — not just the UI checkbox), so no checkout proceeds without recorded consent.
+    if (!refundPolicyAcceptedAt) {
+      return NextResponse.json({ error: "Please accept the billing terms to continue." }, { status: 400 });
+    }
+
+    // Record the acknowledgment (audit trail for chargeback/dispute defense).
+    // Best-effort: never block checkout if the write fails.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const admin = createServiceRoleClient() as any;
+      await admin.from("billing_consents").insert({
+        profile_id: profile.id,
+        email: profile.email ?? null,
+        plan_type: planType,
+        policy_version: refundPolicyVersion ?? null,
+        accepted_at: refundPolicyAcceptedAt,
+        user_agent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
+      });
+    } catch (e) {
+      console.error("[billing/checkout] consent record failed (non-fatal)", e);
+    }
 
     // Preferred path: redirect straight to the Lemon Squeezy buy link, attaching
     // the founder's email + profile_id (the webhook reads custom_data.profile_id).
