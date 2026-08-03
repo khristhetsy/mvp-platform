@@ -23,8 +23,8 @@ const COMPANY_LINKS = [
   { href: "/about", label: "About us" },
   { href: "/events", label: "Events" }, // required cross-link: About → Events
   { href: "/disclosures", label: "Disclosures" },
-  { href: "/disclosures", label: "Terms of Service" },
-  { href: "/disclosures", label: "Privacy Policy" },
+  { href: "/terms", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
 ];
 const SOCIALS = [
   { href: "https://www.linkedin.com/company/icfocapital", label: "LinkedIn" },
