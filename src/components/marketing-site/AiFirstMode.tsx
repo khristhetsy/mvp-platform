@@ -48,7 +48,8 @@ const OPENERS: Record<Ctx, string[]> = {
     "When's the next expo?",
     "How do I register?",
     "Can my company present?",
-    "Where are events held?",
+    "How do I attend as an investor?",
+    "How do I become a panelist?",
   ],
 };
 
