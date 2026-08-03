@@ -5,16 +5,16 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * AI-first mode (spec §8) — a full-screen conversational shell. Opens by default
- * on the home page AND on /events (context-aware greeting, prompts, and a live
- * next-event card), and anywhere via the `icapos:open-ai-first` event. Uses the
- * guardrailed `assistant` task; renders the returned `card` enum as a routing
- * card. Never promises funding; output is server-validated + guardrailed.
+ * AI-first mode (spec §8) — a full-screen conversational shell, context-aware per
+ * page. Auto-opens on "/" and "/events"; opens on-click anywhere else, tailored
+ * to the page you're on. Bottom line is signup: a persistent "Get started" button
+ * (→ /start) stays visible in every context, and each context surfaces a
+ * signup-first card. Uses the guardrailed `assistant` task; never promises funding.
  */
 
 type Msg = { role: "user" | "assistant"; content: string };
 type Card = "none" | "readiness" | "pricing" | "demo" | "events" | "match" | "founders" | "investors";
-type Ctx = "home" | "events";
+type Ctx = "home" | "events" | "founders" | "investors" | "pricing" | "readiness" | "about";
 
 export type NextEvent = {
   title: string;
@@ -24,33 +24,67 @@ export type NextEvent = {
   registration_open: boolean | null;
 } | null;
 
-const INTRO: Record<Ctx, { title: string; sub: string; placeholder: string }> = {
+type SignupCard = { eyebrow: string; title: string; body: string; cta: string; href: string };
+type CtxConfig = { label: string; title: string; sub: string; placeholder: string; openers: string[]; card?: SignupCard };
+
+const START = "/start";
+
+const CONTEXTS: Record<Ctx, CtxConfig> = {
   home: {
+    label: "",
     title: "What are you trying to do?",
     sub: "Tell me whether you're raising or investing and I'll take you to the right place. Nothing here offers or sells securities.",
     placeholder: "Type what you're trying to do…",
+    openers: ["I'm a founder raising a seed round", "I'm an investor looking for climate deals", "How does it work?", "How do I get started?"],
+    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free Capital Readiness Rating and see where you stand — no card required.", cta: "Get started", href: START },
   },
   events: {
+    label: "events",
     title: "What would you like to know about our events?",
     sub: "Ask about the next expo, how to register, or presenting to investors. iCFO events are free to attend.",
     placeholder: "Ask about iCFO events…",
+    openers: ["When's the next expo?", "How do I register?", "Can my company present?", "How do I attend as an investor?", "How do I become a panelist?"],
   },
-};
-
-const OPENERS: Record<Ctx, string[]> = {
-  home: [
-    "I'm a founder raising a seed round",
-    "I'm an investor looking for climate deals",
-    "How does it work?",
-    "Can I book a demo?",
-  ],
-  events: [
-    "When's the next expo?",
-    "How do I register?",
-    "Can my company present?",
-    "How do I attend as an investor?",
-    "How do I become a panelist?",
-  ],
+  founders: {
+    label: "founders",
+    title: "What do you want to sort out for your raise?",
+    sub: "Ask how readiness, matching, and distribution work — then start free. No polished deck required, and nothing here offers or sells securities.",
+    placeholder: "Ask about getting investor-ready…",
+    openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my readiness scored?", "How do I get started?"],
+    card: { eyebrow: "Start free · no card", title: "Run your Capital Readiness Rating", body: "Create your account, score your company on the five dimensions investors screen on, and see what to fix.", cta: "Create your account", href: START },
+  },
+  investors: {
+    label: "investors",
+    title: "Looking for better-fit deal flow?",
+    sub: "Ask how mandates, matching, and the volume cap work. Free investor accounts — nothing here offers or sells securities.",
+    placeholder: "Ask about deal flow and mandates…",
+    openers: ["How does matching work?", "How do I set my mandate?", "What's the volume cap?", "How do I get started?"],
+    card: { eyebrow: "Free · your mandate", title: "Create your free investor account", body: "Set a mandate and a monthly cap, and see rated, diligence-ready companies that fit.", cta: "Create your account", href: START },
+  },
+  pricing: {
+    label: "pricing",
+    title: "Which plan fits your raise?",
+    sub: "Ask what's included or how self-serve works. The readiness rating is free — you only choose a plan when you're ready to distribute.",
+    placeholder: "Ask about plans and what's included…",
+    openers: ["What's the difference between the plans?", "Is it really self-serve?", "Can I book a demo?", "How do I get started?"],
+    card: { eyebrow: "Start free", title: "Create your account", body: "The Capital Readiness Rating is free with no card — choose a plan only when you're ready to distribute.", cta: "Get started", href: START },
+  },
+  readiness: {
+    label: "readiness",
+    title: "Want to know where you stand?",
+    sub: "Ask what the rating measures and how to run it. It's free, and it's what iCapOS produces — not what it requires.",
+    placeholder: "Ask about the readiness rating…",
+    openers: ["What does the rating measure?", "How is it scored?", "How long does it take?", "How do I get started?"],
+    card: { eyebrow: "Free · no card", title: "Run your Capital Readiness Rating", body: "Create your account and get a structured score with an ordered list of what to fix.", cta: "Create your account", href: START },
+  },
+  about: {
+    label: "about",
+    title: "Want to know who's behind iCapOS?",
+    sub: "Ask about the iCFO network, the conference series, and sixteen years of investor relations. Nothing here offers or sells securities.",
+    placeholder: "Ask about iCapOS and iCFO…",
+    openers: ["What is the iCFO network?", "How do the conferences work?", "How does iCapOS make money?", "How do I get started?"],
+    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free readiness rating and see where you stand — no card required.", cta: "Get started", href: START },
+  },
 };
 
 const CARD_META: Record<Exclude<Card, "none">, { title: string; body: string; href?: string; cta: string; demo?: boolean }> = {
@@ -64,10 +98,16 @@ const CARD_META: Record<Exclude<Card, "none">, { title: string; body: string; hr
 };
 
 function contextFor(pathname: string): Ctx {
-  return pathname === "/events" || pathname.startsWith("/events/") ? "events" : "home";
+  if (pathname === "/events" || pathname.startsWith("/events/")) return "events";
+  if (pathname.startsWith("/founders")) return "founders";
+  if (pathname.startsWith("/investors")) return "investors";
+  if (pathname.startsWith("/pricing")) return "pricing";
+  if (pathname.startsWith("/readiness")) return "readiness";
+  if (pathname.startsWith("/about")) return "about";
+  return "home";
 }
 function isAutoOpen(pathname: string): boolean {
-  return pathname === "/" || contextFor(pathname) === "events";
+  return pathname === "/" || pathname === "/events" || pathname.startsWith("/events/");
 }
 function fmtEventDate(iso: string | null): string {
   if (!iso) return "";
@@ -77,6 +117,7 @@ function fmtEventDate(iso: string | null): string {
 export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
   const pathname = usePathname() ?? "/";
   const ctx = contextFor(pathname);
+  const cfg = CONTEXTS[ctx];
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [chips, setChips] = useState<string[]>([]); // AI follow-up chips (openers come from ctx)
@@ -93,9 +134,7 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
     return () => window.removeEventListener("icapos:open-ai-first", openHandler);
   }, []);
 
-  // Open by default on "/" and "/events" unless ?pages=1 or the visitor already
-  // chose to browse this context this session. Full page is server-rendered
-  // beneath, so crawlers and no-JS visitors are unaffected (§10).
+  // Auto-open only on "/" and "/events" (per-context dismissal + ?pages=1).
   useEffect(() => {
     if (!isAutoOpen(pathname)) return;
     const params = new URLSearchParams(window.location.search);
@@ -184,11 +223,10 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
 
   const meta = card !== "none" ? CARD_META[card] : null;
   const empty = messages.length === 0;
-  const intro = INTRO[ctx];
 
   const openerRow = (
     <div className="flex flex-wrap justify-center gap-2">
-      {OPENERS[ctx].map((c) => (
+      {cfg.openers.map((c) => (
         <button key={c} type="button" onClick={() => send(c)} className="rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-white/85 transition-colors hover:border-site-blue-lt hover:text-white">{c}</button>
       ))}
     </div>
@@ -197,7 +235,7 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
   const inputForm = (
     <>
       <form onSubmit={(e) => { e.preventDefault(); const input = e.currentTarget.elements.namedItem("q") as HTMLInputElement; send(input.value); input.value = ""; }} className="flex gap-2">
-        <input name="q" autoFocus autoComplete="off" placeholder={intro.placeholder} className="flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-site-blue-lt" />
+        <input name="q" autoFocus autoComplete="off" placeholder={cfg.placeholder} className="flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-site-blue-lt" />
         <button type="submit" disabled={busy} className="rounded-xl bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi disabled:opacity-60">Send</button>
       </form>
       <p className={`mt-3 font-site-mono text-[10px] leading-4 text-white/40 ${empty ? "text-center" : ""}`}>iCapOS does not offer or sell securities, provide investment advice, or process transactions. Answers are informational and may be imperfect.</p>
@@ -206,16 +244,20 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-gradient-to-b from-site-navy via-site-navy-2 to-site-navy-3 text-white" role="dialog" aria-modal="true" aria-label="AI-first mode">
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-5">
-        <div className="font-site-display text-lg font-extrabold tracking-tight">iCap<span className="text-site-blue-lt">OS</span> <span className="ml-2 align-middle font-site-mono text-[11px] font-medium uppercase tracking-wider text-white/50">AI mode{ctx === "events" ? " · events" : ""}</span></div>
-        <button type="button" onClick={close} className="rounded-lg border border-white/20 px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/40 hover:text-white">Browse the site instead</button>
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-6 py-4">
+        <div className="font-site-display text-lg font-extrabold tracking-tight">iCap<span className="text-site-blue-lt">OS</span> <span className="ml-2 align-middle font-site-mono text-[11px] font-medium uppercase tracking-wider text-white/50">AI mode{cfg.label ? ` · ${cfg.label}` : ""}</span></div>
+        <div className="flex items-center gap-2">
+          {/* Persistent signup CTA — visible in every context, all session (goal: signup). */}
+          <Link href={START} className="rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">Get started</Link>
+          <button type="button" onClick={close} className="rounded-lg border border-white/20 px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:border-white/40 hover:text-white">Browse the site instead</button>
+        </div>
       </div>
 
       {empty ? (
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-7 px-6 pb-10">
           <div className="text-center">
-            <h2 className="font-site-display text-3xl font-extrabold tracking-tight sm:text-4xl">{intro.title}</h2>
-            <p className="mx-auto mt-3 max-w-md text-white/65">{intro.sub}</p>
+            <h2 className="font-site-display text-3xl font-extrabold tracking-tight sm:text-4xl">{cfg.title}</h2>
+            <p className="mx-auto mt-3 max-w-md text-white/65">{cfg.sub}</p>
           </div>
 
           {ctx === "events" && nextEvent ? (
@@ -229,6 +271,15 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
                 <div className="mt-0.5 text-[13px] text-white/60">{[fmtEventDate(nextEvent.starts_at), nextEvent.city].filter(Boolean).join(" · ")}</div>
               ) : null}
               <Link href="/events" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">Register <span aria-hidden="true">↗</span></Link>
+            </div>
+          ) : cfg.card ? (
+            <div className="flex w-full flex-wrap items-center gap-4 rounded-2xl border border-site-blue-lt/40 bg-site-blue/[0.18] px-5 py-4 text-left">
+              <div className="min-w-[220px] flex-1">
+                <div className="font-site-mono text-[10px] uppercase tracking-[0.12em] text-site-blue-lt">{cfg.card.eyebrow}</div>
+                <div className="mt-1.5 text-[17px] font-medium text-white">{cfg.card.title}</div>
+                <div className="mt-0.5 text-[13px] leading-6 text-white/60">{cfg.card.body}</div>
+              </div>
+              <Link href={cfg.card.href} className="whitespace-nowrap rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{cfg.card.cta} →</Link>
             </div>
           ) : null}
 
