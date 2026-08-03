@@ -51,6 +51,7 @@ export function SiteNav() {
 
           <Dropdown
             label="Founders"
+            href="/founders"
             isOpen={open === "founders"}
             onToggle={() => setOpen(open === "founders" ? null : "founders")}
             onClose={() => setOpen(null)}
@@ -63,6 +64,7 @@ export function SiteNav() {
 
           <Dropdown
             label="About"
+            href="/about"
             isOpen={open === "about"}
             onToggle={() => setOpen(open === "about" ? null : "about")}
             onClose={() => setOpen(null)}
@@ -72,13 +74,15 @@ export function SiteNav() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("icapos:open-ai-first"))}
+          {/* Real anchor (crawlable, valid href) — opens the overlay in place with
+              JS; without JS it navigates to "/", where AI Mode opens by default. */}
+          <Link
+            href="/"
+            onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("icapos:open-ai-first")); }}
             className="rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi"
           >
             AI Mode
-          </button>
+          </Link>
           <Link href="/auth/sign-in" className="rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi">
             Sign in
           </Link>
@@ -96,6 +100,7 @@ export function SiteNav() {
 
 function Dropdown({
   label,
+  href,
   items,
   isOpen,
   onToggle,
@@ -103,6 +108,7 @@ function Dropdown({
   active,
 }: {
   label: string;
+  href: string;
   items: Item[];
   isOpen: boolean;
   onToggle: () => void;
@@ -110,15 +116,18 @@ function Dropdown({
   active: boolean;
 }) {
   return (
-    <div className="relative">
+    <div className="relative flex items-center">
+      {/* Parent is a real crawlable link to the landing page (brief Step 7); the
+          caret is a separate toggle for the submenu. */}
+      <Link href={href} className={`px-3 py-2 text-sm font-medium transition-colors hover:text-site-blue-hi ${active ? "text-site-blue-hi" : "text-site-ink"}`}>{label}</Link>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        className={`flex items-center gap-1 px-3 py-2 text-sm font-medium transition-colors hover:text-site-blue-hi ${active ? "text-site-blue-hi" : "text-site-ink"}`}
+        aria-label={`${label} menu`}
+        className={`-ml-1 rounded p-1 transition-colors hover:text-site-blue-hi ${active ? "text-site-blue-hi" : "text-site-ink"}`}
       >
-        {label}
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       {isOpen ? (
