@@ -440,7 +440,6 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/investor-pipeline", label: "Manual outreach", minStage: "deploy" },
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
           { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },
-          { href: "/events", label: "Events", minStage: "qualify" },
         ],
       },
       {
@@ -482,6 +481,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/schedule", label: "Scheduling" },
         ],
       },
+      { href: "/events", label: "Events", minStage: "qualify" },
       { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
     ],
   },
