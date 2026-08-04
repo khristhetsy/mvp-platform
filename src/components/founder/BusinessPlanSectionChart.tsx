@@ -148,6 +148,7 @@ export function ProblemChart({ bars, setBars, onFill, filling }: { bars: PainBar
           </div>
         ))}
       </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>Auto-drafted from your problem section — edit any row. Appears here and in the PDF.</div>
     </div>
   );
 }
@@ -187,6 +188,7 @@ export function SolutionChart({ rows, setRows, onFill, filling }: { rows: Before
           </div>
         ))}
       </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>Auto-drafted from your solution section — edit before and after. Appears here and in the PDF.</div>
     </div>
   );
 }
@@ -226,6 +228,7 @@ export function CompetitionChart({ points, setPoints, onFill, filling }: { point
           </div>
         ))}
       </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>Auto-plotted from your competition section — adjust x, y, or who&apos;s you. Appears here and in the PDF.</div>
     </div>
   );
 }
@@ -268,6 +271,7 @@ export function TractionChart({ data, setData, onFill, filling }: { data: Tracti
         ))}
         <input value={data.unit} onChange={(e) => setData({ ...data, unit: e.target.value })} style={{ ...inp, width: 70 }} />
       </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>Auto-drafted from your traction section — edit periods and values. Appears here and in the PDF.</div>
     </div>
   );
 }
