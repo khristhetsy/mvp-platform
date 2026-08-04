@@ -36,10 +36,12 @@ export function ReadinessEstimator({
     const totalWeight = dimensions.reduce((a, d) => a + d.weight, 0) || 1;
     const weighted = dimensions.reduce((a, d, i) => a + values[i] * d.weight, 0);
     const est = Math.round(weighted / totalWeight);
-    // Weakest = lowest weighted contribution (biggest drag on the total).
+    // Biggest drags = largest weighted shortfall from 100. A maxed-out dimension
+    // has zero gap and is filtered out, so it can never surface here.
     const ranked = dimensions
-      .map((d, i) => ({ label: d.label, contribution: values[i] * d.weight }))
-      .sort((a, b) => a.contribution - b.contribution)
+      .map((d, i) => ({ label: d.label, gap: (100 - values[i]) * d.weight }))
+      .filter((x) => x.gap > 0)
+      .sort((a, b) => b.gap - a.gap)
       .slice(0, 2)
       .map((x) => x.label);
     return { estimate: est, weakest: ranked };
@@ -72,10 +74,14 @@ export function ReadinessEstimator({
         <div className="font-site-mono text-xs uppercase tracking-wider text-site-muted">Estimated rating</div>
         <div className="mt-2 font-site-display text-5xl font-extrabold text-site-blue">{estimate}<span className="text-lg text-site-muted">/100</span></div>
         <div className="text-sm text-site-muted">{bandFor(estimate)}</div>
-        <div className="mt-4 font-site-mono text-[11px] uppercase tracking-wider text-site-muted">{workOn}</div>
-        <ul className="mt-2 space-y-1 text-[13px] text-site-ink">
-          {weakest.map((w) => (<li key={w}>{w}</li>))}
-        </ul>
+        {weakest.length > 0 && (
+          <>
+            <div className="mt-4 font-site-mono text-[11px] uppercase tracking-wider text-site-muted">{workOn}</div>
+            <ul className="mt-2 space-y-1 text-[13px] text-site-ink">
+              {weakest.map((w) => (<li key={w}>{w}</li>))}
+            </ul>
+          </>
+        )}
         <Link href={cta.href} className="mt-4 block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{cta.label}</Link>
         <p className="mt-3 font-site-mono text-[10px] leading-4 text-site-muted/70">{disclaimer}</p>
       </div>

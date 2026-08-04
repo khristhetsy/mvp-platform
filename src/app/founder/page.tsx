@@ -29,6 +29,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
+import { founderFacingScore } from "@/lib/crr/select-score";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
@@ -112,15 +113,17 @@ export default async function FounderDashboardPage() {
   if (company) {
     const { data: scoreRow } = await serviceSupabase
       .from("company_readiness_scores")
-      .select("total_score, effective_score, factor_scores")
+      .select("*")
       .eq("company_id", company.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (scoreRow) {
-      const row = scoreRow as { total_score: number; effective_score: number | null; factor_scores: unknown };
-      investableScore = row.effective_score ?? row.total_score;
-      const fs = (row.factor_scores ?? {}) as Record<string, { pts?: number; max?: number; rating?: string }>;
+      // Founder sees the CRR under their own stage profile (falls back to the raw
+      // engine score until the profile columns are populated).
+      const fundingStage = (company as { funding_stage?: string | null }).funding_stage ?? null;
+      investableScore = founderFacingScore(scoreRow as Record<string, unknown>, fundingStage);
+      const fs = ((scoreRow as { factor_scores?: unknown }).factor_scores ?? {}) as Record<string, { pts?: number; max?: number; rating?: string }>;
       investableFactors = READINESS_FACTORS.map((f) => {
         const entry = fs[f.key];
         return {

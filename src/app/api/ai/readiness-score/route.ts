@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { scoreCompanyReadiness } from "@/lib/ai/readiness-scoring";
+import { rollupToDimensions, scoreForProfile, SCORE_VERSION } from "@/lib/crr/profiles";
 import { writeAuditLog } from "@/lib/data/audit";
 
 const schema = z.object({
@@ -81,6 +82,18 @@ export async function POST(request: Request) {
 
   const outreachUnlocked = result.totalScore >= 65;
 
+  // Re-weight the 13 factors into the audience profiles (single source of truth:
+  // src/lib/crr/profiles.ts). Store every profile so founder surfaces can read the
+  // stage-matched score and investor surfaces read the canonical (Series A) one.
+  const dims = rollupToDimensions(result.factorScores);
+  const profileScores = {
+    score_angel: scoreForProfile(dims, "angel"),
+    score_seed_institutional: scoreForProfile(dims, "seed_institutional"),
+    score_seriesa_institutional: scoreForProfile(dims, "seriesA_institutional"),
+    score_growth_institutional: scoreForProfile(dims, "growth_institutional"),
+    score_version: SCORE_VERSION,
+  };
+
   // Persist
   const { data: saved, error: saveError } = await auth.supabase
     .from("company_readiness_scores")
@@ -91,7 +104,8 @@ export async function POST(request: Request) {
       scored_by: result.generatedBy,
       document_count: documentSummaries.length,
       outreach_unlocked: outreachUnlocked,
-    })
+      ...profileScores,
+    } as never)
     .select("id, total_score, outreach_unlocked, created_at")
     .single();
 

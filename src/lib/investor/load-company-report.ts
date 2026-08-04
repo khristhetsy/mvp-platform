@@ -9,6 +9,7 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { DocumentRecord } from "@/lib/supabase/types";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
+import { investorFacingScore } from "@/lib/crr/select-score";
 
 export type InvestorCompanyReportSnapshot = {
   listing: MarketplaceListing;
@@ -161,7 +162,7 @@ export async function loadInvestorCompanyReport(
     getPitchDeckDocumentId(admin, companyId),
     admin
       .from("company_readiness_scores")
-      .select("id, total_score, effective_score, override_score, factor_scores, scored_by, created_at")
+      .select("*")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -177,14 +178,16 @@ export async function loadInvestorCompanyReport(
   // Platform avg + percentile (across all scored companies)
   const { data: allScores } = await admin
     .from("company_readiness_scores")
-    .select("company_id, total_score, created_at")
+    .select("*")
     .order("created_at", { ascending: false });
 
-  // Deduplicate — keep only the latest score per company
+  // Deduplicate — keep only the latest score per company, on the canonical
+  // (investor-facing) profile so the benchmark and headline share one basis.
   const latestByCompany = new Map<string, number>();
   for (const row of allScores ?? []) {
     if (!latestByCompany.has(row.company_id)) {
-      latestByCompany.set(row.company_id, row.total_score);
+      const s = investorFacingScore(row as Record<string, unknown>);
+      if (s !== null) latestByCompany.set(row.company_id, s);
     }
   }
   const allLatestScores = Array.from(latestByCompany.values());
@@ -192,7 +195,7 @@ export async function loadInvestorCompanyReport(
     allLatestScores.length > 0
       ? Math.round(allLatestScores.reduce((a, b) => a + b, 0) / allLatestScores.length)
       : null;
-  const thisScore = latestReadinessScore?.effective_score ?? latestReadinessScore?.total_score ?? null;
+  const thisScore = investorFacingScore(latestReadinessScore as Record<string, unknown> | null);
   const percentile =
     thisScore !== null && allLatestScores.length > 0
       ? Math.round(
@@ -285,12 +288,12 @@ export async function loadInvestorCompanyReport(
     investableReadiness: {
       scoreId: latestReadinessScore?.id ?? null,
       totalScore: latestReadinessScore?.total_score ?? null,
-      effectiveScore: latestReadinessScore?.effective_score ?? null,
+      effectiveScore: investorFacingScore(latestReadinessScore as Record<string, unknown> | null),
       isOverridden: latestReadinessScore?.override_score != null,
       factorScores: (latestReadinessScore?.factor_scores as Record<FactorKey, FactorScore> | null) ?? null,
       scoredAt: latestReadinessScore?.created_at ?? null,
       scoreHistory: readinessScores.map((r) => ({
-        score: r.effective_score ?? r.total_score,
+        score: investorFacingScore(r as Record<string, unknown>) ?? r.total_score,
         scoredAt: r.created_at,
       })),
       platformAvg,

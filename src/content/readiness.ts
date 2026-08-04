@@ -1,9 +1,12 @@
-import { RUBRIC_WEIGHTS } from "@/lib/prescore/rubric";
+import { PROFILES, CANONICAL_INSTITUTIONAL } from "@/lib/crr/profiles";
+
+/** The public estimator shows the canonical (institutional) weighting. */
+const W = PROFILES[CANONICAL_INSTITUTIONAL];
 
 /**
  * Readiness page copy — ported VERBATIM from icapos-site-mock.html (spec §6, §13).
- * Weightings are imported from lib/prescore/rubric.ts (§17 #4) — not hardcoded —
- * and mapped onto the five display dimensions.
+ * Weightings are imported from lib/crr/profiles.ts (the single source of truth) —
+ * not hardcoded — and mapped onto the five display dimensions.
  */
 export const readiness = {
   hero: {
@@ -40,11 +43,11 @@ export const readiness = {
     title: "Estimate your rating in thirty seconds.",
     sub: "Move each slider to where you honestly are today. This is an indicative estimate using the published weightings — not your actual rating, which is generated from your real materials.",
     dimensions: [
-      { label: "Narrative & positioning", weight: RUBRIC_WEIGHTS.narrative, desc: "Problem clarity, differentiation, market framing", value: 70 },
-      { label: "Financial model", weight: RUBRIC_WEIGHTS.financials, desc: "Model completeness, assumptions, use of proceeds", value: 45 },
-      { label: "Traction evidence", weight: RUBRIC_WEIGHTS.materials, desc: "Revenue, retention, pipeline, verifiability", value: 60 },
-      { label: "Cap table & structure", weight: RUBRIC_WEIGHTS.governance, desc: "Ownership, prior instruments, option pool", value: 50 },
-      { label: "Team & governance", weight: RUBRIC_WEIGHTS.dd, desc: "Founder coverage, key hires, board, reporting", value: 65 },
+      { label: "Narrative & positioning", weight: W.narrative, desc: "Problem clarity, differentiation, market framing", value: 70 },
+      { label: "Financial model", weight: W.financial, desc: "Model completeness, assumptions, use of proceeds", value: 45 },
+      { label: "Traction evidence", weight: W.traction, desc: "Revenue, retention, pipeline, verifiability", value: 60 },
+      { label: "Cap table & structure", weight: W.capTable, desc: "Ownership, prior instruments, option pool", value: 50 },
+      { label: "Team & governance", weight: W.team, desc: "Founder coverage, key hires, board, reporting", value: 65 },
     ],
     estimated: 58,
     band: "Developing",
@@ -57,11 +60,11 @@ export const readiness = {
     title: "Five dimensions, weighted toward what gets screened first.",
     cols: ["Dimension", "What it looks at", "Weight"],
     rows: [
-      { label: "Narrative & positioning", looks: "Problem clarity, differentiation, market framing, the raise story", weight: RUBRIC_WEIGHTS.narrative },
-      { label: "Financial model", looks: "Model completeness, assumption quality, use of proceeds, runway", weight: RUBRIC_WEIGHTS.financials },
-      { label: "Traction evidence", looks: "Revenue, retention, pipeline, and whether the numbers are verifiable", weight: RUBRIC_WEIGHTS.materials },
-      { label: "Cap table & structure", looks: "Ownership, prior instruments, option pool, entity and jurisdiction", weight: RUBRIC_WEIGHTS.governance },
-      { label: "Team & governance", looks: "Founder coverage, key hires, board, advisers, reporting discipline", weight: RUBRIC_WEIGHTS.dd },
+      { label: "Narrative & positioning", looks: "Problem clarity, differentiation, market framing, the raise story", weight: W.narrative },
+      { label: "Financial model", looks: "Model completeness, assumption quality, use of proceeds, runway", weight: W.financial },
+      { label: "Traction evidence", looks: "Revenue, retention, pipeline, and whether the numbers are verifiable", weight: W.traction },
+      { label: "Cap table & structure", looks: "Ownership, prior instruments, option pool, entity and jurisdiction", weight: W.capTable },
+      { label: "Team & governance", looks: "Founder coverage, key hires, board, advisers, reporting discipline", weight: W.team },
     ],
     note: "Weightings shown are illustrative of the current rubric and are periodically recalibrated.",
   },
