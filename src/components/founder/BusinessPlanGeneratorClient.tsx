@@ -8,8 +8,9 @@ import { computeProjections } from "@/lib/business-plan/projections";
 import { checkAssumptions } from "@/lib/business-plan/sanity";
 import type { ProjectionAssumptions, ProjectionResult } from "@/lib/business-plan/projections";
 import type { BusinessPlan } from "@/lib/business-plan/types";
-import type { AllocationSlice, MarketSize } from "@/lib/business-plan/charts";
-import { ProjectionsChart, MarketChart, FundsChart } from "./BusinessPlanSectionChart";
+import type { AllocationSlice, MarketSize, PainBar, BeforeAfter, MatrixPoint, TractionChart as TractionData } from "@/lib/business-plan/charts";
+import { DEFAULT_CHARTS } from "@/lib/business-plan/charts";
+import { ProjectionsChart, MarketChart, FundsChart, ProblemChart, SolutionChart, CompetitionChart, TractionChart } from "./BusinessPlanSectionChart";
 import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 type SectionMap = BusinessPlan["sections"];
@@ -41,6 +42,10 @@ export function BusinessPlanGeneratorClient() {
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [allocation, setAllocation] = useState<AllocationSlice[]>(DEFAULT_ALLOC);
   const [market, setMarket] = useState<MarketSize>({ tam: null, sam: null, som: null });
+  const [problem, setProblem] = useState<PainBar[]>(DEFAULT_CHARTS.problem);
+  const [solution, setSolution] = useState<BeforeAfter[]>(DEFAULT_CHARTS.solution);
+  const [competition, setCompetition] = useState<MatrixPoint[]>(DEFAULT_CHARTS.competition);
+  const [traction, setTraction] = useState<TractionData>(DEFAULT_CHARTS.traction);
   const [filling, setFilling] = useState(false);
   const [preview, setPreview] = useState(false);
 
@@ -55,9 +60,15 @@ export function BusinessPlanGeneratorClient() {
         setSections((j.plan?.sections as SectionMap) ?? {});
         const a = (j.plan?.assumptions && Object.keys(j.plan.assumptions).length ? j.plan.assumptions : j.defaultAssumptions) as ProjectionAssumptions;
         setAssumptions(a);
-        const ch = (j.plan?.charts ?? {}) as { allocation?: AllocationSlice[]; market?: MarketSize };
+        const ch = (j.plan?.charts ?? {}) as {
+          allocation?: AllocationSlice[]; market?: MarketSize; problem?: PainBar[]; solution?: BeforeAfter[]; competition?: MatrixPoint[]; traction?: TractionData;
+        };
         if (Array.isArray(ch.allocation) && ch.allocation.length) setAllocation(ch.allocation);
         if (ch.market) setMarket({ tam: ch.market.tam ?? null, sam: ch.market.sam ?? null, som: ch.market.som ?? null });
+        if (Array.isArray(ch.problem) && ch.problem.length) setProblem(ch.problem);
+        if (Array.isArray(ch.solution) && ch.solution.length) setSolution(ch.solution);
+        if (Array.isArray(ch.competition) && ch.competition.length) setCompetition(ch.competition);
+        if (ch.traction && Array.isArray(ch.traction.series) && ch.traction.series.length) setTraction(ch.traction);
       })
       .catch(() => on && setError("Could not load your business plan."))
       .finally(() => on && setLoading(false));
@@ -124,7 +135,7 @@ export function BusinessPlanGeneratorClient() {
       const res = await fetch("/api/founder/business-plan", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market }, ...(status ? { status } : {}) }),
+        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market, problem, solution, competition, traction }, ...(status ? { status } : {}) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "Could not save.");
@@ -149,6 +160,10 @@ export function BusinessPlanGeneratorClient() {
       if (j.charts) {
         if (Array.isArray(j.charts.allocation) && j.charts.allocation.length) setAllocation(j.charts.allocation);
         if (j.charts.market) setMarket({ tam: j.charts.market.tam ?? null, sam: j.charts.market.sam ?? null, som: j.charts.market.som ?? null });
+        if (Array.isArray(j.charts.problem) && j.charts.problem.length) setProblem(j.charts.problem);
+        if (Array.isArray(j.charts.solution) && j.charts.solution.length) setSolution(j.charts.solution);
+        if (Array.isArray(j.charts.competition) && j.charts.competition.length) setCompetition(j.charts.competition);
+        if (j.charts.traction && Array.isArray(j.charts.traction.series) && j.charts.traction.series.length) setTraction(j.charts.traction);
       }
     } finally { setFilling(false); }
   }
@@ -333,6 +348,10 @@ export function BusinessPlanGeneratorClient() {
               />
               {activeId === "market" && <MarketChart market={market} setMarket={setMarket} onFill={fillCharts} filling={filling} />}
               {activeId === "use_of_funds" && <FundsChart allocation={allocation} setAllocation={setAllocation} onFill={fillCharts} filling={filling} />}
+              {activeId === "problem" && <ProblemChart bars={problem} setBars={setProblem} onFill={fillCharts} filling={filling} />}
+              {activeId === "solution" && <SolutionChart rows={solution} setRows={setSolution} onFill={fillCharts} filling={filling} />}
+              {activeId === "competition" && <CompetitionChart points={competition} setPoints={setCompetition} onFill={fillCharts} filling={filling} />}
+              {activeId === "traction" && <TractionChart data={traction} setData={setTraction} onFill={fillCharts} filling={filling} />}
             </>
           )}
         </section>
