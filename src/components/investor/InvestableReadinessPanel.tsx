@@ -1251,7 +1251,7 @@ export function InvestableReadinessPanel({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">
-                Investable Readiness Score
+                Capital Readiness Rating
               </p>
               <p className="mt-0.5 text-sm text-slate-500">{companyName}</p>
             </div>

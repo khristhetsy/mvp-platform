@@ -286,7 +286,7 @@ export function CapitalReadinessSection({
         }
         return weakest.map(
           (f) =>
-            `${f.name} is scoring ${f.points}/${f.max}. This is one of your lowest factors — improving it has the highest marginal impact on your investable score.`,
+            `${f.name} is scoring ${f.points}/${f.max}. This is one of your lowest factors — improving it has the highest marginal impact on your CRR.`,
         );
       })(),
     },

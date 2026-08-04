@@ -322,7 +322,7 @@ export default async function FounderJourneyPage() {
                             <div className="flex items-center gap-3">
                               <ScoreGauge score={investableScore} stroke="#6366f1" />
                               <div className="min-w-0">
-                                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Investable Score</p>
+                                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">CRR</p>
                                 <p className="text-sm font-semibold text-indigo-600">
                                   {outreachReady ? "Outreach ready" : `Building · ${outreachGap} to go`}
                                 </p>
@@ -336,7 +336,7 @@ export default async function FounderJourneyPage() {
                             </div>
                             <div className={outreachReady ? "mt-2.5 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800" : "mt-2.5 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800"}>
                               {outreachReady ? (
-                                <><b>Investor outreach is unlocked.</b> Your Investable Score is at or above {OUTREACH_THRESHOLD} — matched investors can be reached.</>
+                                <><b>Investor outreach is unlocked.</b> Your CRR is at or above {OUTREACH_THRESHOLD} — matched investors can be reached.</>
                               ) : (
                                 <><b>Reach {OUTREACH_THRESHOLD} to unlock investor outreach.</b> You&apos;re {outreachGap} point{outreachGap === 1 ? "" : "s"} away — raise your lowest signal to qualify.</>
                               )}

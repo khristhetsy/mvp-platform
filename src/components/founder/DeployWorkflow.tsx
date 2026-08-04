@@ -45,7 +45,7 @@ const STEP_TIPS: Record<Step, string> = {
   profile:
     "Investors see this one-pager before anything else. A complete, published profile is what unlocks every downstream step — keep the description tight and the raise amount current.",
   outreach:
-    "Automated outreach runs itself once your Investable Score clears the threshold. Manual outreach is for the investors you want to touch personally — use the tools to build sequences and updates.",
+    "Automated outreach runs itself once your CRR clears the threshold. Manual outreach is for the investors you want to touch personally — use the tools to build sequences and updates.",
   analytics:
     "Compare automated vs. manual performance. Click any insight card to see what I'd change next — reply rate and follow-up debt are usually the fastest wins.",
   settings:
@@ -357,7 +357,7 @@ export function DeployWorkflow({
                 <span>
                   {scoreReady ? (
                     <>
-                      <b>Automated outreach is on.</b> Your Investable Score is {investableScore} (threshold{" "}
+                      <b>Automated outreach is on.</b> Your CRR is {investableScore} (threshold{" "}
                       {outreachThreshold}), so your Founder Preview one-pager is shared automatically with matched
                       investors in your industry (50+ match) — a limited batch per week, skipping anyone who has
                       unsubscribed, and never the same investor twice. Nothing to configure here. If your score drops
@@ -365,7 +365,7 @@ export function DeployWorkflow({
                     </>
                   ) : (
                     <>
-                      <b>Automated outreach is paused.</b> It turns on at an Investable Score of {outreachThreshold}; you
+                      <b>Automated outreach is paused.</b> It turns on at a CRR of {outreachThreshold}; you
                       are at {investableScore}. Raise your score in Qualify to switch it on — once you clear the
                       threshold, your Founder Preview is shared with matched investors automatically.
                     </>

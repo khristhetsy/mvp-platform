@@ -40,7 +40,7 @@ function buildDeployInsights(input: {
   if (input.investableScore < OUTREACH_THRESHOLD) {
     insights.push({
       id: "score-gate",
-      title: `Investable Score is ${input.investableScore} — automation is paused`,
+      title: `CRR is ${input.investableScore} — automation is paused`,
       summary: `Automated outreach unlocks at ${OUTREACH_THRESHOLD}. You are ${OUTREACH_THRESHOLD - input.investableScore} point${OUTREACH_THRESHOLD - input.investableScore === 1 ? "" : "s"} away.`,
       recommendations: [
         "Finish any missing profile fields — description, funding amount, and use of funds move the score most.",
@@ -53,7 +53,7 @@ function buildDeployInsights(input: {
     insights.push({
       id: "score-ok",
       title: "Automated outreach is live",
-      summary: `Your Investable Score of ${input.investableScore} clears the ${OUTREACH_THRESHOLD} threshold.`,
+      summary: `Your CRR of ${input.investableScore} clears the ${OUTREACH_THRESHOLD} threshold.`,
       recommendations: [
         "No action needed — approved investors are surfaced automatically.",
         "Keep your profile current so the score stays above the threshold.",

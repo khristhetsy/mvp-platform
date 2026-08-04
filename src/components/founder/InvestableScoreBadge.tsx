@@ -20,7 +20,7 @@ export function InvestableScoreBadge({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-      <svg viewBox="0 0 80 80" width={size} height={size} role="img" aria-label={`Investable score ${clamped} of 100`}>
+      <svg viewBox="0 0 80 80" width={size} height={size} role="img" aria-label={`Capital Readiness Rating ${clamped} of 100`}>
         <circle cx="40" cy="40" r={r} fill="none" stroke="#EEF2F8" strokeWidth={9} />
         <circle
           cx="40"
@@ -42,7 +42,7 @@ export function InvestableScoreBadge({
         </text>
       </svg>
       <span style={{ fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "#94a3b8", marginTop: 4 }}>
-        Investable Score
+        CRR
       </span>
       <span style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>Readiness signal</span>
     </div>

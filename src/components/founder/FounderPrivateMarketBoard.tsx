@@ -228,7 +228,7 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
         {visible.length === 0 ? (
           <div className="px-5 py-10 text-center">
             <p className="text-[13px] font-semibold text-[var(--navy)]">No outreach yet</p>
-            <p className="mx-auto mt-1 max-w-md text-[12px] text-slate-500">Strong matches queue automatically once your Investable Score clears the threshold and automation is on. Switch to “All matches” to see your full ranked list.</p>
+            <p className="mx-auto mt-1 max-w-md text-[12px] text-slate-500">Strong matches queue automatically once your CRR clears the threshold and automation is on. Switch to “All matches” to see your full ranked list.</p>
           </div>
         ) : visible.map((r, i) => (
           <button
