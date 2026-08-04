@@ -149,7 +149,7 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
       {drill(
         "deploy",
         <MetricCard
-          label="Investable Readiness"
+          label="Capital Readiness Rating"
           value={data.investable ? String(data.investable.effectiveScore ?? data.investable.totalScore) : "—"}
           detail={data.investable ? `${data.investable.isOverridden ? "Adjusted · " : ""}13-factor model` : "Not yet scored"}
           accent="blue"

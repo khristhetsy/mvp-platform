@@ -108,7 +108,7 @@ export function AdminCompanyWorkspace({
 
   const investablePanel = data.investable ? (
     <PageSection
-      title="Investable Readiness"
+      title="Capital Readiness Rating (CRR)"
       subtitle="13-factor investability model — factor breakdown, recommendations, and score history"
     >
       <InvestableReadinessPanel
