@@ -182,7 +182,7 @@ export function FounderReadinessDonutCards({
     switch (key) {
       case "score":
         return {
-          title: "Readiness score",
+          title: "Completion",
           sub: readinessDetail,
           stats: [
             { v: `${readinessScore}/100`, l: "Overall score" },
@@ -357,7 +357,7 @@ export function FounderReadinessDonutCards({
   }[] = [
     {
       key: "score",
-      label: "Readiness score",
+      label: "Completion",
       value: `${readinessScore}/100`,
       detail: readinessDetail,
       pct: readinessScore / 100,

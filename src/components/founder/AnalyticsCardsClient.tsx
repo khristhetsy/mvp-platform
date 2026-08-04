@@ -181,7 +181,7 @@ function DrawerContent({
         <div className="mt-2">
           <BRow name="Onboarding completion" badge={`${a.onboardingPercent}%`} variant={a.onboardingPercent >= 80 ? "success" : a.onboardingPercent >= 50 ? "medium" : "high"} />
           <BRow name="Fully completed" badge={a.onboardingCompletedAt ? new Date(a.onboardingCompletedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not yet"} variant={a.onboardingCompletedAt ? "success" : "neutral"} />
-          <BRow name="Readiness score" badge={a.readinessScore != null ? `${a.readinessScore}/100` : "Not yet assessed"} variant={a.readinessScore != null && a.readinessScore >= 80 ? "success" : a.readinessScore != null && a.readinessScore >= 50 ? "medium" : "neutral"} />
+          <BRow name="Completion" badge={a.readinessScore != null ? `${a.readinessScore}/100` : "Not yet assessed"} variant={a.readinessScore != null && a.readinessScore >= 80 ? "success" : a.readinessScore != null && a.readinessScore >= 50 ? "medium" : "neutral"} />
           <BRow name="Learning modules" badge={`${a.learningModulesCompleted}/${a.learningModulesPublished}`} variant={a.learningModulesCompleted === a.learningModulesPublished && a.learningModulesPublished > 0 ? "success" : "neutral"} />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">

@@ -53,7 +53,7 @@ export function DiligenceReportPreview({ report, readinessScore }: { report: Rep
           <span className="text-[8px]" style={{ color: band.ring }}>/100</span>
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">Readiness score · {band.label}</p>
+          <p className="text-sm font-semibold text-slate-900">Completion · {band.label}</p>
           {report.created_at ? (
             <p className="text-xs text-slate-400">Generated {new Date(report.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
           ) : null}

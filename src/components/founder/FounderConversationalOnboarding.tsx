@@ -388,7 +388,7 @@ export function FounderConversationalOnboarding({
             <div className="mt-6">
               <ScoreRing score={score} />
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
-                Capital Readiness Score
+                Completion
               </p>
               <p className="mt-1 text-xs text-slate-400 max-w-[220px]">
                 Your Stage 2 progress. Add your documents and complete the readiness checklist to raise it.
