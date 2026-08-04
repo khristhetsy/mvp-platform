@@ -50,12 +50,94 @@ export function renderBusinessPlanPdf(
         body(plan.execSummary);
       }
 
+      const charts = normalizeCharts(plan.charts);
+
+      // Each section's chart is drawn right beneath that section's text.
+      const drawSectionChart = (id: string) => {
+        if (id === "market") {
+          const marketRows = ([["TAM", charts.market.tam], ["SAM", charts.market.sam], ["SOM", charts.market.som]] as const).filter(([, v]) => v != null) as Array<[string, number]>;
+          if (!marketRows.length) return;
+          h2("Market size");
+          const maxV = Math.max(...marketRows.map(([, v]) => v), 1);
+          const x0 = 56 + 44;
+          for (const [label, v] of marketRows) {
+            const y = doc.y;
+            const w = Math.max((v / maxV) * 280, 3);
+            doc.font("Helvetica").fontSize(9).fillColor("#334155").text(label, 56, y + 2, { width: 40 });
+            doc.rect(x0, y, w, 12).fill(INDIGO);
+            doc.font("Helvetica").fontSize(8.5).fillColor(MUTED).text(moneyShort(v), x0 + w + 5, y + 2);
+            doc.y = y + 18;
+          }
+          return;
+        }
+        if (id === "use_of_funds") {
+          if (!charts.allocation.length) return;
+          h2("Use of funds");
+          for (let i = 0; i < charts.allocation.length; i++) {
+            const a = charts.allocation[i];
+            const y = doc.y;
+            doc.rect(56, y + 1, 9, 9).fill(ALLOC_HEX[i % ALLOC_HEX.length]);
+            doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${a.label}  —  ${a.pct}%`, 72, y);
+            doc.y = y + 15;
+          }
+          return;
+        }
+        if (id === "problem") {
+          if (!charts.problem.length) return;
+          h2("Cost of the status quo");
+          const maxP = Math.max(...charts.problem.map((p) => p.value), 1);
+          const x0 = 56 + 150;
+          for (const p of charts.problem) {
+            const y = doc.y;
+            const w = Math.max((p.value / maxP) * 240, 3);
+            doc.font("Helvetica").fontSize(9).fillColor("#334155").text(p.label, 56, y + 2, { width: 146, align: "right" });
+            doc.rect(x0, y, w, 12).fill(INDIGO);
+            doc.font("Helvetica").fontSize(8.5).fillColor(MUTED).text(`${p.value}${p.unit ? ` ${p.unit}` : ""}`, x0 + w + 5, y + 2);
+            doc.y = y + 18;
+          }
+          return;
+        }
+        if (id === "solution") {
+          if (!charts.solution.length) return;
+          h2("Before and after");
+          for (const s of charts.solution) {
+            const y = doc.y;
+            doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${s.label}:  ${s.before} -> ${s.after}`, 56, y);
+            doc.y = y + 15;
+          }
+          return;
+        }
+        if (id === "competition") {
+          if (!charts.competition.length) return;
+          h2("Positioning");
+          for (const p of charts.competition) {
+            const y = doc.y;
+            doc.rect(56, y + 1, 9, 9).fill(p.you ? INDIGO : "#94a3b8");
+            doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${p.label}${p.you ? " (you)" : ""}  —  automation ${p.x}/10, adoption ${p.y}/10`, 72, y);
+            doc.y = y + 15;
+          }
+          return;
+        }
+        if (id === "traction") {
+          if (!charts.traction.series.length) return;
+          h2("Traction over time");
+          const tr = charts.traction;
+          doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(tr.series.map((p) => `${p.period}: ${p.value}${tr.unit ? ` ${tr.unit}` : ""}`).join("    "), 56, doc.y);
+          doc.moveDown(0.2);
+          for (const mi of tr.milestones) {
+            doc.font("Helvetica-Oblique").fontSize(9).fillColor(MUTED).text(`• ${mi.period} — ${mi.label}`, 56);
+          }
+          return;
+        }
+      };
+
       for (const def of BUSINESS_PLAN_SECTIONS) {
         if (def.id === "projections" || def.id === "exec_summary") continue;
         const content = plan.sections[def.id]?.content?.trim();
         if (!content) continue;
         h2(def.title);
         body(content);
+        drawSectionChart(def.id);
       }
 
       if (plan.projections) {
@@ -71,76 +153,6 @@ export function renderBusinessPlanPdf(
         doc.moveDown(0.3).font("Helvetica-Oblique").fontSize(9).fillColor(MUTED).text(
           plan.projections.runwayMonths ? `Runway ~${plan.projections.runwayMonths} months` : "Cash-flow positive within 3 years",
         );
-      }
-
-      // Charts: market size + use of funds (drawn natively).
-      const charts = normalizeCharts(plan.charts);
-      const marketRows = ([["TAM", charts.market.tam], ["SAM", charts.market.sam], ["SOM", charts.market.som]] as const).filter(([, v]) => v != null) as Array<[string, number]>;
-      if (marketRows.length) {
-        h2("Market size");
-        const maxV = Math.max(...marketRows.map(([, v]) => v), 1);
-        const x0 = 56 + 44;
-        for (const [label, v] of marketRows) {
-          const y = doc.y;
-          const w = Math.max((v / maxV) * 280, 3);
-          doc.font("Helvetica").fontSize(9).fillColor("#334155").text(label, 56, y + 2, { width: 40 });
-          doc.rect(x0, y, w, 12).fill(INDIGO);
-          doc.font("Helvetica").fontSize(8.5).fillColor(MUTED).text(moneyShort(v), x0 + w + 5, y + 2);
-          doc.y = y + 18;
-        }
-      }
-      if (charts.allocation.length) {
-        h2("Use of funds");
-        for (let i = 0; i < charts.allocation.length; i++) {
-          const a = charts.allocation[i];
-          const y = doc.y;
-          doc.rect(56, y + 1, 9, 9).fill(ALLOC_HEX[i % ALLOC_HEX.length]);
-          doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${a.label}  —  ${a.pct}%`, 72, y);
-          doc.y = y + 15;
-        }
-      }
-
-      if (charts.problem.length) {
-        h2("Problem — cost of the status quo");
-        const maxP = Math.max(...charts.problem.map((p) => p.value), 1);
-        const x0 = 56 + 150;
-        for (const p of charts.problem) {
-          const y = doc.y;
-          const w = Math.max((p.value / maxP) * 240, 3);
-          doc.font("Helvetica").fontSize(9).fillColor("#334155").text(p.label, 56, y + 2, { width: 146, align: "right" });
-          doc.rect(x0, y, w, 12).fill(INDIGO);
-          doc.font("Helvetica").fontSize(8.5).fillColor(MUTED).text(`${p.value}${p.unit ? ` ${p.unit}` : ""}`, x0 + w + 5, y + 2);
-          doc.y = y + 18;
-        }
-      }
-
-      if (charts.solution.length) {
-        h2("Solution — before and after");
-        for (const s of charts.solution) {
-          const y = doc.y;
-          doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${s.label}:  ${s.before}  →  ${s.after}`, 56, y);
-          doc.y = y + 15;
-        }
-      }
-
-      if (charts.competition.length) {
-        h2("Competitive landscape");
-        for (const p of charts.competition) {
-          const y = doc.y;
-          doc.rect(56, y + 1, 9, 9).fill(p.you ? INDIGO : "#94a3b8");
-          doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${p.label}${p.you ? " (you)" : ""}  —  automation ${p.x}/10, adoption ${p.y}/10`, 72, y);
-          doc.y = y + 15;
-        }
-      }
-
-      if (charts.traction.series.length) {
-        h2("Traction & milestones");
-        const tr = charts.traction;
-        doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(tr.series.map((p) => `${p.period}: ${p.value}${tr.unit ? ` ${tr.unit}` : ""}`).join("    "), 56, doc.y);
-        doc.moveDown(0.2);
-        for (const mi of tr.milestones) {
-          doc.font("Helvetica-Oblique").fontSize(9).fillColor(MUTED).text(`• ${mi.period} — ${mi.label}`, 56);
-        }
       }
 
       doc.moveDown(1.2);
