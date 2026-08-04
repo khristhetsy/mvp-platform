@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { investorHasActiveDataRoomGrant } from "@/lib/data-room/access";
 
 /** App-layer check mirroring RLS: approved investor with explicit company relationship. */
 export async function investorHasCompanyDocumentAccess(
@@ -26,6 +27,11 @@ export async function investorHasCompanyDocumentAccess(
 
   if (company?.review_status !== "approved") {
     return false;
+  }
+
+  // An explicit, active data-room grant is sufficient on its own.
+  if (await investorHasActiveDataRoomGrant(supabase as unknown as SupabaseClient, userId, companyId)) {
+    return true;
   }
 
   const relationshipChecks = await Promise.all([

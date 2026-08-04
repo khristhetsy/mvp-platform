@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
+import { DataRoomAccessPanel } from "@/components/founder/DataRoomAccessPanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -32,6 +33,9 @@ export default async function FounderDataRoomPage() {
             description={t("everything_investors_and_our_diligence_team_ne")}
           />
           <DataRoomReadinessCard documents={documents} />
+          <div className="mt-6">
+            <DataRoomAccessPanel />
+          </div>
         </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>
