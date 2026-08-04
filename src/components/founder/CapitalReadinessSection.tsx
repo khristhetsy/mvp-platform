@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import type { FounderInvestorActivityResult } from "@/lib/data/investor-interests";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
-type DrawerKey = "readiness" | "investable" | "raise" | "interest" | "activity";
+type DrawerKey = "investable" | "raise" | "interest" | "activity";
 
 interface InvestableFactor {
   name: string;
@@ -215,8 +215,6 @@ const DOC_LABELS: Record<string, string> = {
 // Main component
 // ---------------------------------------------------------------------------
 export function CapitalReadinessSection({
-  readinessScore,
-  readinessDetail,
   investableScore = null,
   investableFactors = null,
   raiseProgress,
@@ -258,45 +256,13 @@ export function CapitalReadinessSection({
   // Drawer configs
   // -------------------------------------------------------------------------
   const drawerConfig = {
-    readiness: {
-      title: "Readiness score",
-      sub: "Your investor-readiness across all diligence factors",
-      stats: [
-        { label: "Overall score", value: `${readinessScore}/100` },
-        { label: "Docs uploaded", value: `${uploadedCount}/${REQUIRED_DOC_TYPES.length}` },
-        { label: "Critical gaps", value: String(missingTypes.length) },
-      ],
-      breakdown: (
-        <div>
-          {REQUIRED_DOC_TYPES.map((type) =>
-            uploadedTypes.has(type) ? (
-              <BRow key={type} name={DOC_LABELS[type] ?? type} status="Uploaded" variant="success" />
-            ) : (
-              <BRow key={type} name={DOC_LABELS[type] ?? type} status="Missing" variant="critical" />
-            ),
-          )}
-        </div>
-      ),
-      meaning: `A score of ${readinessScore} means ${readinessScore >= 80 ? "your company is in the top tier for institutional investor review" : readinessScore >= 60 ? "you have the core narrative in place but are missing financial verification documents investors rely on most" : "you need to close several document gaps before institutional investors will take a first meeting"}. ${readinessScore < 80 ? `Institutional investors typically require a score of 80+ before taking a first meeting.` : "Focus on keeping documents current and addressing the remaining gaps."}`,
-      advice: [
-        missingTypes.includes("AUDITED_FINANCIALS")
-          ? `Upload audited financials immediately — this single document can add 10–15 points to your score and unblocks investors who auto-filter for it.`
-          : `Your financial documents are uploaded. Schedule a refresh with your accountant if the last audit was more than 12 months ago.`,
-        missingTypes.length > 0
-          ? `You have ${missingTypes.length} missing document${missingTypes.length === 1 ? "" : "s"}: ${missingTypes.slice(0, 2).map((t) => DOC_LABELS[t]).join(", ")}${missingTypes.length > 2 ? ` and ${missingTypes.length - 2} more` : ""}. Each one closes a common investor objection before you even take a call.`
-          : `All core documents are uploaded. Make sure each file is current — investors check upload dates during diligence.`,
-        readinessScore < 90
-          ? `Getting to ${Math.min(100, readinessScore + 15)} requires completing your remaining ${missingTypes.length} document${missingTypes.length === 1 ? "" : "s"} and ensuring your pitch deck references audited numbers. Set a 2-week target.`
-          : `Your score of ${readinessScore} is excellent. The next leverage point is investor engagement — respond to all intro requests within 24 hours to convert signals into meetings.`,
-      ],
-    },
     investable: {
-      title: "Investable score",
-      sub: "iCapOS 13-factor investability model",
+      title: "Capital Readiness Rating (CRR)",
+      sub: "Your single fundability score — iCapOS 13-factor model",
       stats: [
-        { label: "Overall score", value: `${investableScore ?? 0}/100` },
+        { label: "CRR", value: `${investableScore ?? 0}/100` },
         { label: "Band", value: investableBand(investableScore ?? 0) },
-        { label: "Factors", value: String(investableFactors?.length ?? 0) },
+        { label: "Data room", value: `${uploadedCount}/${REQUIRED_DOC_TYPES.length}` },
       ],
       breakdown: (
         <div>
@@ -309,7 +275,7 @@ export function CapitalReadinessSection({
           )}
         </div>
       ),
-      meaning: `Your investable score of ${investableScore ?? 0} reflects how investable your company looks across 13 weighted factors — team, traction, market, unit economics, governance and more. This is a different lens from your readiness score (which measures document completeness): a company can have a complete data room but still be early on investability. ${(investableScore ?? 0) >= 70 ? "You're in a strong band for investor conversations." : (investableScore ?? 0) >= 45 ? "You're developing — closing the weakest factors below will move you toward the investable range." : "You're early — focus on the lowest-scoring factors first."}`,
+      meaning: `Your Capital Readiness Rating of ${investableScore ?? 0} is your single fundability score, weighing 13 factors — team, traction, market, unit economics, governance and more. Your data room (${uploadedCount}/${REQUIRED_DOC_TYPES.length} documents) is one input, not a separate score. ${(investableScore ?? 0) >= 70 ? "You're in a strong band for investor conversations." : (investableScore ?? 0) >= 45 ? "You're developing — closing the weakest factors below will move you toward the investable range." : "You're early — focus on the lowest-scoring factors first."}`,
       advice: (() => {
         const weakest = [...(investableFactors ?? [])]
           .filter((f) => f.max > 0)
@@ -454,34 +420,20 @@ export function CapitalReadinessSection({
           </div>
         </div>
 
-        <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${investableScore != null ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
-          {/* Readiness Score */}
-          <button type="button" className={cardClass} onClick={() => setOpen("readiness")} aria-label="View readiness score details">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("readiness_score")}</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Capital Readiness Rating (CRR) — the single fundability score. Data
+              room completeness is shown as a component, not a rival number. */}
+          <button type="button" className={cardClass} onClick={() => setOpen("investable")} aria-label="View Capital Readiness Rating details">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Capital Readiness Rating</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <div>
-                <p className="font-mono text-xl font-semibold text-slate-950">{readinessScore}/100</p>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{readinessDetail}</p>
+                <p className="font-mono text-xl font-semibold text-slate-950">{investableScore != null ? `${investableScore}/100` : "Not scored"}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">Data room {uploadedCount}/{REQUIRED_DOC_TYPES.length} · one fundability score</p>
               </div>
-              <DonutChart pct={readinessScore / 100} color="#2E78F5" />
+              <DonutChart pct={(investableScore ?? 0) / 100} color="#7F77DD" />
             </div>
             <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
-
-          {/* Investable Score */}
-          {investableScore != null ? (
-            <button type="button" className={cardClass} onClick={() => setOpen("investable")} aria-label="View investable score details">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Investable score</p>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-mono text-xl font-semibold text-slate-950">{investableScore}/100</p>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">13-factor investability model</p>
-                </div>
-                <DonutChart pct={investableScore / 100} color="#7F77DD" />
-              </div>
-              <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
-            </button>
-          ) : null}
 
           {/* Raise Progress */}
           <button type="button" className={cardClass} onClick={() => setOpen("raise")} aria-label="View raise progress details">
