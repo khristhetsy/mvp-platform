@@ -202,7 +202,7 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
               Pledge amount
             </th>
             <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Readiness score
+              CRR
             </th>
             <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-400" />
           </tr>
@@ -329,7 +329,7 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
 const SORT_LABELS: Record<SortBy, string> = {
   match: "Match score",
   newest: "Newest listed",
-  readiness: "Readiness score",
+  readiness: "CRR",
 };
 
 function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: InvestorOpportunityRow[] }>) {

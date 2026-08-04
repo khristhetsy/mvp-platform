@@ -112,7 +112,7 @@ export async function evaluateFounderOutreachReadiness(
     },
     {
       key: "ai_readiness_score",
-      label: `Investable readiness score ≥ ${READINESS_SCORE_THRESHOLD}`,
+      label: `CRR ≥ ${READINESS_SCORE_THRESHOLD}`,
       met: aiScoreMet,
       href: "/founder/readiness",
     },
@@ -141,11 +141,11 @@ export async function evaluateFounderOutreachReadiness(
   if (!aiScoreMet) {
     if (aiScore === null) {
       learningRecommendations.push(
-        "An investable readiness score is required before investor outreach. Upload your key documents to trigger scoring.",
+        "A Capital Readiness Rating is required before investor outreach. Upload your key documents to trigger scoring.",
       );
     } else {
       learningRecommendations.push(
-        `Your investable readiness score (${aiScore}) is below the ${READINESS_SCORE_THRESHOLD}-point threshold. Strengthen your documents to improve your score.`,
+        `Your CRR (${aiScore}) is below the ${READINESS_SCORE_THRESHOLD}-point threshold. Strengthen your documents to improve your score.`,
       );
     }
   }

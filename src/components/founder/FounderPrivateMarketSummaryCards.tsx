@@ -29,7 +29,7 @@ export function FounderPrivateMarketSummaryCards({
       ],
       advice: [
         "The network is large, but only a handful currently score above “Moderate” for you — sharpen your profile to climb their lists.",
-        "Completing your data room and raising your readiness score is the fastest way to move up the ranking.",
+        "Completing your data room and raising your completion is the fastest way to move up the ranking.",
       ],
     },
     reached: {

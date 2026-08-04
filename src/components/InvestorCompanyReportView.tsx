@@ -105,7 +105,7 @@ export function InvestorCompanyReportView({
         <WorkspacePanel title={t("readiness_summary")} subtitle={t("scores_and_onboarding_progress")}>
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <dt className="text-slate-500">Latest readiness score</dt>
+              <dt className="text-slate-500">Latest CRR</dt>
               <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.readiness.readinessScore ?? "—"}
               </dd>

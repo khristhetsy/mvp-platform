@@ -145,7 +145,7 @@ function computePriorities(opts: {
   // Positive fallback
   if (p.length === 0) {
     p.push("Keep your deal rooms active and maintain your response time below 24h.");
-    p.push("Upload any outstanding diligence documents to strengthen your readiness score.");
+    p.push("Upload any outstanding diligence documents to strengthen your completion.");
     p.push("Review your investor matches and start outreach to the strongest fits.");
   }
 

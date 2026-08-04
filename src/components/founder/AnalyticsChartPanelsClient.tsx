@@ -466,14 +466,14 @@ function DrawerContent({
             ? trend > 0
               ? `Your ${trend}-point improvement is meaningful. At this rate, share your progress with prospective investors — showing that you're actively improving your readiness signals coachability and execution discipline.`
               : trend < 0
-              ? `Investigate the ${Math.abs(trend)}-point drop before your next investor conversation. Declining readiness scores signal operational gaps — address them before they come up in due diligence.`
+              ? `Investigate the ${Math.abs(trend)}-point drop before your next investor conversation. Declining completion signals operational gaps — address them before they come up in due diligence.`
               : "Your score is stable — no regression, but also no improvement. Pick one specific item from your report this week and fully resolve it to restart upward momentum."
             : "Run a new readiness report every 4–6 weeks. Frequent re-assessment keeps your data room current and gives you concrete evidence of progress to share with investors.",
           latestScore !== null && latestScore >= 70
-            ? "With a strong readiness score, you're ready to approach institutional investors. Consider requesting a warm introduction through your existing network or advisor board — a good readiness score dramatically increases your close rate on warm intros."
+            ? "With strong completion, you're ready to approach institutional investors. Consider requesting a warm introduction through your existing network or advisor board — good completion dramatically increases your close rate on warm intros."
             : snapshots.length > 0
-            ? "Your readiness score directly affects how investors perceive your risk profile. Every point above 75 reduces friction in the due diligence process — investors who see organised, complete documentation move faster to term sheet."
-            : "Investors use readiness scores as a first filter. A score below 60 often results in a 'come back when you're more ready' response. Getting to 70+ before approaching most institutional investors is the recommended baseline.",
+            ? "Your completion directly affects how investors perceive your risk profile. Every point above 75% reduces friction in the due diligence process — investors who see organised, complete documentation move faster to term sheet."
+            : "Investors use completion as a first filter. Below 60% often results in a 'come back when you're more ready' response. Getting to 70%+ before approaching most institutional investors is the recommended baseline.",
         ]}
       />
     </div>

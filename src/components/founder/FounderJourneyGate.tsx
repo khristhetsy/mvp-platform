@@ -28,7 +28,7 @@ function getLockDescription(stage: JourneyStage, minRequired: JourneyStage): str
     return "Finish setting up your founder profile to advance to the Qualify stage and unlock this feature.";
   }
   if (stage === "qualify") {
-    return "Upload required documents and achieve a qualifying readiness score to request admin review and advance to Deploy.";
+    return "Upload required documents and achieve qualifying completion to request admin review and advance to Deploy.";
   }
   return `This feature is available at the ${minRequired} stage. Complete the requirements on your journey page to advance.`;
 }

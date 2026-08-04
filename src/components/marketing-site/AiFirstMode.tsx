@@ -50,7 +50,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     title: "What do you want to sort out for your raise?",
     sub: "Ask how readiness, matching, and distribution work — then start free. No polished deck required, and nothing here offers or sells securities.",
     placeholder: "Ask about getting investor-ready…",
-    openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my readiness scored?", "How do I get started?"],
+    openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my CRR scored?", "How do I get started?"],
     card: { eyebrow: "Start free · no card", title: "Run your Capital Readiness Rating", body: "Create your account, score your company on the five dimensions investors screen on, and see what to fix.", cta: "Run the free rating", href: START },
   },
   investors: {

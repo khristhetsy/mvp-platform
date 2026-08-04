@@ -259,10 +259,10 @@ function DrawerContent({
         <AdviceBox
           lines={[
             criticalCount > 0
-              ? `${criticalCount} critical action${criticalCount === 1 ? "" : "s"} should be your first focus today — these directly impact your investor readiness score and listing visibility.`
+              ? `${criticalCount} critical action${criticalCount === 1 ? "" : "s"} should be your first focus today — these directly impact your completion and listing visibility.`
               : analytics.open > 0
               ? `You have ${analytics.open} active actions but none are critical. Focus on the high-priority ones first, then work through medium and low in order.`
-              : "No active actions — a great sign. Use this window to review your readiness score and data room completeness.",
+              : "No active actions — a great sign. Use this window to review your completion and data room completeness.",
             highCount > 0
               ? `${highCount} high-priority action${highCount === 1 ? "" : "s"} are next in line. These typically involve investor engagement or document gaps that slow fundraising velocity.`
               : mediumCount > 0
@@ -324,7 +324,7 @@ function DrawerContent({
           <p className="text-xs leading-relaxed text-slate-600">
             {analytics.overdue === 0
               ? "You have no overdue actions — all open items are within their timeframes."
-              : `${analytics.overdue} action${analytics.overdue === 1 ? " is" : "s are"} past due. ${critOverdue > 0 ? `${critOverdue} of these are critical — they may already be affecting your investor readiness score.` : "None are critical, but left unresolved they can compound into compliance or investor trust issues."}`}
+              : `${analytics.overdue} action${analytics.overdue === 1 ? " is" : "s are"} past due. ${critOverdue > 0 ? `${critOverdue} of these are critical — they may already be affecting your completion.` : "None are critical, but left unresolved they can compound into compliance or investor trust issues."}`}
           </p>
         </div>
 
@@ -470,15 +470,15 @@ function DrawerContent({
         <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {analytics.completedThisWeek === 0
-            ? "No actions completed this week yet. Completing actions updates your readiness score and signals operational momentum to the platform."
-            : `You've resolved ${analytics.completedThisWeek} action${analytics.completedThisWeek === 1 ? "" : "s"} this week${completedToday > 0 ? `, including ${completedToday} today` : ""}. Each completed action improves your investor-readiness score and reduces the surface area investors can question in due diligence.`}
+            ? "No actions completed this week yet. Completing actions updates your completion and signals operational momentum to the platform."
+            : `You've resolved ${analytics.completedThisWeek} action${analytics.completedThisWeek === 1 ? "" : "s"} this week${completedToday > 0 ? `, including ${completedToday} today` : ""}. Each completed action improves your completion and reduces the surface area investors can question in due diligence.`}
         </p>
       </div>
 
       <AdviceBox
         lines={[
           analytics.completedThisWeek === 0
-            ? "Complete at least 1 action today to start building momentum. Even a small win — like uploading a document — improves your readiness score."
+            ? "Complete at least 1 action today to start building momentum. Even a small win — like uploading a document — improves your completion."
             : analytics.completedThisWeek >= 5
             ? `${analytics.completedThisWeek} completions this week is strong. Consistency matters — founders who maintain 3+ completions per week close their rounds 40% faster on average.`
             : `${analytics.completedThisWeek} this week is a solid start. Aim for a daily rate of ${Math.max(1, Math.ceil((analytics.open + analytics.overdue) / 14))} to clear your backlog in 2 weeks.`,

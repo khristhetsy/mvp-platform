@@ -13,7 +13,7 @@ export type MilestoneKey =
 const MILESTONE_LABELS: Record<MilestoneKey, { title: string; subtitle: string; emoji: string }> = {
   first_contact_added:     { emoji: "🎯", title: "First investor added!",       subtitle: "Your CRM is live. Keep building your list." },
   first_document_uploaded: { emoji: "📄", title: "First document uploaded!",    subtitle: "Your data room is taking shape." },
-  readiness_80:            { emoji: "⭐", title: "80% readiness score!",        subtitle: "You're in the top tier of founders on the platform." },
+  readiness_80:            { emoji: "⭐", title: "80% completion!",              subtitle: "You're in the top tier of founders on the platform." },
   deal_room_answer:        { emoji: "💬", title: "First deal room answer!",     subtitle: "Investors can see your responses. Keep going." },
   outreach_sent:           { emoji: "🚀", title: "First outreach sent!",        subtitle: "You're officially in the market. Track responses carefully." },
   profile_complete:        { emoji: "✅", title: "Company profile complete!",   subtitle: "Your listing is investor-ready." },

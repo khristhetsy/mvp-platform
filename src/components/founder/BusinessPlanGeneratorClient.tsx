@@ -190,7 +190,7 @@ export function BusinessPlanGeneratorClient() {
       <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-center">
         <p className="text-base font-semibold text-emerald-800">{t("plan_finalized_and_saved_to_documents")}</p>
         <p className="mt-1 text-sm text-emerald-700">
-          Your business plan PDF is in your Documents and counts toward your readiness score. Our team can now review it.
+          Your business plan PDF is in your Documents and counts toward your completion. Our team can now review it.
         </p>
         <button onClick={() => setFinalized(false)} className="mt-4 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700">
           Keep editing

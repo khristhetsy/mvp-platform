@@ -131,7 +131,7 @@ export default async function InvestorOpportunitiesPage() {
         <div className="flex items-start gap-2.5 rounded-xl border border-[var(--indigo-soft)] border-l-[3px] border-l-[var(--indigo)] bg-[var(--indigo-soft)] px-4 py-3 text-xs leading-relaxed text-slate-600">
           <span aria-hidden="true">ⓘ</span>
           <span>
-            <b className="text-[var(--navy)]">Information display only.</b> Readiness scores and
+            <b className="text-[var(--navy)]">Information display only.</b> Capital Readiness Ratings and
             fill levels are informational. Pledges are non-binding indications of interest, not
             commitments. Deal access is subject to accreditation verification. Nothing here is
             investment advice or a recommendation.

@@ -19,7 +19,7 @@ export function generateOutreachDraft(input: {
       ? `$${Number(input.company.funding_amount).toLocaleString("en-US")}`
       : "our current round";
   const readiness =
-    input.readinessScore != null ? `Readiness score: ${input.readinessScore}/100.` : "";
+    input.readinessScore != null ? `Capital Readiness Rating: ${input.readinessScore}/100.` : "";
   const sectorFit = input.contact.preferred_sectors
     ? `Your focus on ${input.contact.preferred_sectors} aligns with ${companyName}.`
     : `We believe ${companyName} may fit your investment focus.`;

@@ -107,7 +107,7 @@ function getQualifyRequirements(state: FounderJourneyState): Requirement[] {
   return [
     { label: "Onboarding complete", met: state.conditions.onboardingComplete },
     { label: "Required documents uploaded (financials, cap table, pitch deck)", met: state.conditions.requiredDocsUploaded },
-    { label: "Readiness score ≥ 75", met: state.conditions.readinessQualified },
+    { label: "Completion ≥ 75%", met: state.conditions.readinessQualified },
   ];
 }
 
@@ -310,7 +310,7 @@ export default async function FounderJourneyPage() {
                           <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
                             <ScoreGauge score={readiness} stroke="#10b981" />
                             <div className="min-w-0">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Readiness score</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Completion</p>
                               <p className={state.conditions.readinessQualified ? "text-sm font-semibold text-emerald-600" : "text-sm font-semibold text-amber-600"}>
                                 {state.conditions.readinessQualified ? "Qualified ✓" : "Building"}
                               </p>

@@ -295,7 +295,7 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
         companyId: company.id,
         href: "/founder/readiness",
         sourceModule: "remediation",
-        reason: "Closing remediation tasks improves readiness score and marketplace posture.",
+        reason: "Closing remediation tasks improves completion and marketplace posture.",
         createdFrom: "founder_nba",
       }),
     );
@@ -306,8 +306,8 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
       createNextBestAction({
         id: buildActionId(["founder", "readiness_score", company.id]),
         role: "founder",
-        title: "Improve readiness score",
-        description: `Your readiness score is ${ctx.readinessScore}. Target ${READINESS_SCORE_THRESHOLD}+ for stronger investor confidence.`,
+        title: "Improve completion",
+        description: `Your completion is ${ctx.readinessScore}%. Target ${READINESS_SCORE_THRESHOLD}%+ for stronger investor confidence.`,
         priority: "high",
         category: "readiness",
         entityType: "company",
@@ -315,7 +315,7 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
         companyId: company.id,
         href: "/founder/readiness",
         sourceModule: "diligence",
-        reason: "Readiness score is below the institutional threshold.",
+        reason: "Completion is below the institutional threshold.",
         createdFrom: "founder_nba",
       }),
     );

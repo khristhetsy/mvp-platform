@@ -39,7 +39,7 @@ export function generateSocialOutreachDraft(input: {
   const stage = company.revenue_stage ?? "growth stage";
   const raise = formatRaise(company);
   const readinessLine =
-    readinessScore != null ? `Institutional readiness score: ${readinessScore}/100.` : "";
+    readinessScore != null ? `Capital Readiness Rating: ${readinessScore}/100.` : "";
   const onboardingLine = `Onboarding progress: ${onboardingPercent}%.`;
   const publishedLine = isPublished
     ? `${name} is published on iCapOS for qualified investor discovery.`

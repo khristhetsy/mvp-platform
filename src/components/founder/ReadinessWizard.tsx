@@ -239,7 +239,7 @@ export function ReadinessWizard({
           <ScoreRing score={currentScore} />
         </div>
         <p className="text-base font-semibold text-emerald-900">You&apos;re already at {currentScore} — above the {targetScore} threshold!</p>
-        <p className="mt-1 text-sm text-emerald-700">Your profile is investor-ready. Keep your documents current and maintain your readiness score as you grow.</p>
+        <p className="mt-1 text-sm text-emerald-700">Your profile is investor-ready. Keep your documents current and maintain your completion as you grow.</p>
         <Link href="/founder/matching" className="mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-white" style={{ background: "#16a34a" }}>
           Browse investor matches →
         </Link>
@@ -327,7 +327,7 @@ export function ReadinessWizard({
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
           <p className="text-sm font-semibold text-emerald-900">{t("all_steps_completed")}</p>
           <p className="mt-1 text-xs text-emerald-700">
-            Reload the page to see your updated readiness score, then browse your investor matches.
+            Reload the page to see your updated completion, then browse your investor matches.
           </p>
           <Link
             href="/founder/matching"

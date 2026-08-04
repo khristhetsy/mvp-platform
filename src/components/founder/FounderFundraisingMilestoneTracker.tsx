@@ -24,7 +24,7 @@ const STAGES: Stage[] = [
     actions: [
       "Upload your pitch deck and financial model",
       "Complete company profile (description, stage, raise amount)",
-      "Reach 65+ readiness score to unlock institutional conversations",
+      "Reach 65%+ completion to unlock institutional conversations",
     ],
   },
   {

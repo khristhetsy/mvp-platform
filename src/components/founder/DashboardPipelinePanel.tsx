@@ -322,7 +322,7 @@ function DrawerContent({
               : "No intro requests yet. If you have interested investors, send each a short message inviting them to request a formal intro.",
             introCount > 0
               ? `Investors who request intros convert to meetings at 3–4× the rate of passive interest. Treat each request as a near-certain first meeting opportunity.`
-              : "Investors typically request intros only when your listing score is above 70 and your data room is complete. Check your readiness score above.",
+              : "Investors typically request intros only when your listing score is above 70 and your data room is complete. Check your completion above.",
             responded.length > 0
               ? `You've responded to ${responded.length} intro${responded.length === 1 ? "" : "s"}. Make sure each has a calendar invite sent — a response without a scheduled meeting rarely converts.`
               : "Once you start receiving intros, prioritise scheduling calls within 48 hours. Urgency signals seriousness and keeps investors engaged.",

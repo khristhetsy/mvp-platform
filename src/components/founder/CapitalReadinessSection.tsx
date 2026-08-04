@@ -282,7 +282,7 @@ export function CapitalReadinessSection({
           .sort((a, b) => a.points / a.max - b.points / b.max)
           .slice(0, 3);
         if (weakest.length === 0) {
-          return ["Generate an investable readiness score to see targeted guidance on which factors to strengthen first."];
+          return ["Generate your CRR to see targeted guidance on which factors to strengthen first."];
         }
         return weakest.map(
           (f) =>
@@ -394,7 +394,7 @@ export function CapitalReadinessSection({
           ? `${savedCount} investor${savedCount === 1 ? " has" : "s have"} saved your deal but haven't expressed interest. These are warm prospects — send a direct update with your latest metrics to nudge them toward active interest.`
           : `Make sure your listing includes a strong company summary and clear funding ask. Investors save deals when the profile is compelling enough to return to later.`,
         totalActivity > 0
-          ? `Your total of ${totalActivity} interactions is a signal of market interest. Convert this momentum by closing your document gaps — investors who are already watching you will upgrade to interest when your readiness score crosses 80.`
+          ? `Your total of ${totalActivity} interactions is a signal of market interest. Convert this momentum by closing your document gaps — investors who are already watching you will upgrade to interest when your completion crosses 80%.`
           : `Upload your pitch deck and financial model first. Investors rarely interact with listings that have an empty data room, even if the summary is strong.`,
       ],
     },

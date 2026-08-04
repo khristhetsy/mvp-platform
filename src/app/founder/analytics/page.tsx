@@ -86,7 +86,7 @@ export default async function FounderAnalyticsPage() {
                   Your analytics are ready — now generate some activity
                 </p>
                 <p style={{ fontSize: 13, color: "#2E78F5", margin: "0 0 12px", lineHeight: 1.6 }}>
-                  Charts and metrics populate as you upload documents, add investors, and build your readiness score. Here&apos;s what to do first:
+                  Charts and metrics populate as you upload documents, add investors, and build your completion. Here&apos;s what to do first:
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   <a href="/founder/documents" style={{
@@ -108,7 +108,7 @@ export default async function FounderAnalyticsPage() {
                     background: "white", border: "1px solid #c4b5fd", borderRadius: 8,
                     padding: "6px 14px", textDecoration: "none",
                   }}>
-                    Check readiness score
+                    Check completion
                   </a>
                 </div>
               </div>

@@ -38,7 +38,7 @@ export const investors = {
       { h: "Late-stage dead ends", p: "Deals die in diligence on discoverable issues — cap table problems, financial hygiene, governance gaps — after the cost is already sunk." },
     ],
     metrics: [
-      { value: "−50–70%", label: "Screening time per deal, with a readiness score replacing the manual first pass" },
+      { value: "−50–70%", label: "Screening time per deal, with a Capital Readiness Rating replacing the manual first pass" },
       { value: "3–5×", label: "Qualified deal-flow ratio, filtering on fit rather than taking raw inbound" },
       { value: "30–50%", label: "Faster diligence cycles, from data rooms that arrive in a consistent structure" },
     ],

@@ -157,7 +157,7 @@ export default async function FounderQualifyPage() {
                   href="/founder/readiness"
                   className="mt-3 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-500"
                 >
-                  Improve your readiness score →
+                  Improve your completion →
                 </Link>
               ) : null}
             </>
@@ -230,7 +230,7 @@ export default async function FounderQualifyPage() {
               <p className="font-medium text-slate-900">{t("not_ready_to_submit_yet")}</p>
               <ul className="mt-2 space-y-1 text-slate-500">
                 {!readinessQualified ? (
-                  <li>• Reach a readiness score of {READINESS_THRESHOLD}%.</li>
+                  <li>• Reach a completion of {READINESS_THRESHOLD}%.</li>
                 ) : null}
                 {missingDocs.map((row) => (
                   <li key={row.doc.code}>• Upload your {row.doc.label.toLowerCase()}.</li>

@@ -661,7 +661,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 Who you&apos;re raising from, and where you are
               </p>
-              <p className="mt-1 text-sm text-slate-500">Select all that apply. This sharpens your investor matches and your readiness score.</p>
+              <p className="mt-1 text-sm text-slate-500">Select all that apply. This sharpens your investor matches and your completion.</p>
 
               <p className="mt-6 mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Seeking</p>
               <label className="block text-sm font-medium text-slate-700">Type of investor(s) <span className="text-rose-600">*</span></label>
