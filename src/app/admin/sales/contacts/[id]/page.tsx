@@ -9,6 +9,7 @@ import { getSalesScope } from "@/lib/sales/scope";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { SalesHubHeader } from "../../SalesHubHeader";
 import { ContactProfileClient, type LinkedCompany } from "./ContactProfileClient";
+import { fetchPartnerMessages } from "@/lib/crm-connectors/odoo/messages";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,13 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
     ? await Promise.all([listAssignableStaff(), listLeadAssignableStaff()])
     : [[] as { id: string; name: string }[], [] as { id: string; name: string }[]];
   const activity = await listContactActivity(id);
+
+  // Pull this contact's Odoo chatter (messages) live, so the Send message history
+  // reflects the conversation in Odoo. Best-effort — returns [] if Odoo is off.
+  const odooMessages =
+    data.contact.source === "odoo" && data.contact.external_id
+      ? await fetchPartnerMessages(data.contact.external_id)
+      : [];
 
   // Link this CRM contact to a platform company (by the founder's email) so we can
   // show their linked company record + One pager. Null when there's no account.
@@ -83,7 +91,7 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} leadStaff={leadStaff} activity={activity} isSuperAdmin={isSuperAdmin(profile)} onePager={onePager} company={linkedCompany} />
+      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} leadStaff={leadStaff} activity={activity} isSuperAdmin={isSuperAdmin(profile)} onePager={onePager} company={linkedCompany} odooMessages={odooMessages} />
     </AppShell>
   );
 }

@@ -16,6 +16,7 @@ type Contact = {
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
+type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
 const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
@@ -205,7 +206,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [] }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[] }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -714,8 +715,23 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg === "Saved." ? "Message posted." : noteMsg}</span>}
                       </div>
                       <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history</div>
-                        <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No messages yet."}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history{odooMessages.length ? ` · ${odooMessages.length} from Odoo` : ""}</div>
+                        {odooMessages.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
+                            {odooMessages.map((m) => (
+                              <div key={m.id} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                                  <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{m.author ?? "—"}</span>
+                                  {m.date ? ` · ${new Date(m.date).toLocaleString()}` : ""}
+                                </div>
+                                {m.subject ? <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{m.subject}</div> : null}
+                                {m.body ? <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div> : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No messages yet."}</div>
+                        )}
                       </div>
                     </div>
                   )}
