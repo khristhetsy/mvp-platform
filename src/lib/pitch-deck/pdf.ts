@@ -51,15 +51,71 @@ export function renderDeckPdf(deck: PitchDeck, company: { name: string }, chartD
   });
 }
 
-function slideHasChart(chart: "projections" | "market" | "funds", d: DeckChartData): boolean {
+type DeckChartKind = "projections" | "market" | "funds" | "problem" | "solution" | "competition" | "traction";
+
+function slideHasChart(chart: DeckChartKind, d: DeckChartData): boolean {
   if (chart === "projections") return d.projections.length > 0;
   if (chart === "market") return !!(d.market.tam || d.market.sam || d.market.som);
+  if (chart === "problem") return d.problem.length > 0;
+  if (chart === "solution") return d.solution.length > 0;
+  if (chart === "competition") return d.competition.length > 0;
+  if (chart === "traction") return d.traction.series.length > 0;
   return d.allocation.length > 0;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawChart(doc: any, chart: "projections" | "market" | "funds", d: DeckChartData, x: number, y: number, w: number, h: number, theme: DeckTheme): void {
+function drawChart(doc: any, chart: DeckChartKind, d: DeckChartData, x: number, y: number, w: number, h: number, theme: DeckTheme): void {
   const CH = theme.chart;
+  if (chart === "problem") {
+    const bars = d.problem;
+    const max = Math.max(...bars.map((p) => p.value), 1);
+    bars.forEach((p, i) => {
+      const ry = y + i * 40;
+      const bw = Math.max((p.value / max) * (w - 70), 3);
+      doc.font("Helvetica").fontSize(9).fillColor(theme.body).text(p.label, x, ry, { width: w - 20 });
+      doc.rect(x, ry + 15, bw, 13).fill(CH[0]);
+      doc.fontSize(9).fillColor(theme.footer).text(`${p.value}${p.unit ? ` ${p.unit}` : ""}`, x + bw + 5, ry + 17);
+    });
+    return;
+  }
+  if (chart === "solution") {
+    const rows = d.solution;
+    const max = Math.max(...rows.flatMap((s) => [s.before, s.after]), 1);
+    const ax = x + 90, aw = w - 100;
+    const xFor = (v: number) => ax + (v / max) * aw;
+    rows.forEach((s, i) => {
+      const ry = y + 12 + i * 34;
+      doc.font("Helvetica").fontSize(9).fillColor(theme.body).text(s.label, x, ry - 5, { width: 84 });
+      doc.lineWidth(2).moveTo(xFor(s.after), ry + 4).lineTo(xFor(s.before), ry + 4).stroke(theme.footer);
+      doc.circle(xFor(s.before), ry + 4, 4).fill(theme.footer);
+      doc.circle(xFor(s.after), ry + 4, 4).fill(CH[0]);
+    });
+    return;
+  }
+  if (chart === "competition") {
+    d.competition.forEach((p, i) => {
+      const ry = y + i * 22;
+      doc.rect(x, ry + 2, 8, 8).fill(p.you ? CH[0] : theme.footer);
+      doc.font("Helvetica").fontSize(9).fillColor(theme.body).text(`${p.label}${p.you ? " (you)" : ""} — automation ${p.x}/10, adoption ${p.y}/10`, x + 14, ry);
+    });
+    return;
+  }
+  if (chart === "traction") {
+    const ser = d.traction.series;
+    const max = Math.max(...ser.map((p) => p.value), 1);
+    const base = y + h - 24, n = ser.length;
+    const xFor = (i: number) => x + (n <= 1 ? 0 : (i / (n - 1)) * (w - 20));
+    const yFor = (v: number) => base - (v / max) * (h - 44);
+    doc.lineWidth(2);
+    ser.forEach((p, i) => {
+      if (i > 0) doc.moveTo(xFor(i - 1), yFor(ser[i - 1].value)).lineTo(xFor(i), yFor(p.value)).stroke(CH[0]);
+    });
+    ser.forEach((p, i) => {
+      doc.circle(xFor(i), yFor(p.value), 3).fill(CH[0]);
+      doc.font("Helvetica").fontSize(8).fillColor(theme.footer).text(p.period, xFor(i) - 12, base + 5, { width: 24, align: "center" });
+    });
+    return;
+  }
   if (chart === "projections") {
     const yrs = d.projections;
     const max = Math.max(...yrs.flatMap((p) => [p.revenue, p.grossProfit]), 1);

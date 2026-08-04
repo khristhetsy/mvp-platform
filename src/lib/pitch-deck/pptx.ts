@@ -5,9 +5,15 @@ import { getDeckTheme, hex, type DeckTheme } from "./themes";
 import type { PitchDeck } from "./types";
 import type { DeckChartData } from "./chart-data";
 
-function hasChart(chart: "projections" | "market" | "funds", d: DeckChartData): boolean {
+type DeckChartKind = "projections" | "market" | "funds" | "problem" | "solution" | "competition" | "traction";
+
+function hasChart(chart: DeckChartKind, d: DeckChartData): boolean {
   if (chart === "projections") return d.projections.length > 0;
   if (chart === "market") return !!(d.market.tam || d.market.sam || d.market.som);
+  if (chart === "problem") return d.problem.length > 0;
+  if (chart === "solution") return d.solution.length > 0;
+  if (chart === "competition") return d.competition.length > 0;
+  if (chart === "traction") return d.traction.series.length > 0;
   return d.allocation.length > 0;
 }
 
@@ -39,10 +45,32 @@ export async function renderDeckPptx(deck: PitchDeck, company: { name: string },
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addChart(pptx: PptxGenJS, slide: any, chart: "projections" | "market" | "funds", d: DeckChartData, theme: DeckTheme): void {
+function addChart(pptx: PptxGenJS, slide: any, chart: DeckChartKind, d: DeckChartData, theme: DeckTheme): void {
   const box = { x: 5.4, y: 2.0, w: 4.0, h: 2.8 };
   const CH = theme.chart.map(hex);
   const bodyC = hex(theme.body), footC = hex(theme.footer);
+  if (chart === "problem") {
+    slide.addChart(pptx.ChartType.bar, [{ name: "Cost of status quo", labels: d.problem.map((p) => p.label), values: d.problem.map((p) => p.value) }], { ...box, barDir: "bar", chartColors: CH, showLegend: false, catAxisLabelColor: bodyC, valAxisLabelColor: footC });
+    return;
+  }
+  if (chart === "solution") {
+    slide.addChart(pptx.ChartType.bar, [
+      { name: "Before", labels: d.solution.map((s) => s.label), values: d.solution.map((s) => s.before) },
+      { name: "With product", labels: d.solution.map((s) => s.label), values: d.solution.map((s) => s.after) },
+    ], { ...box, chartColors: [hex(theme.footer), CH[0]], showLegend: true, legendPos: "b", legendColor: bodyC, catAxisLabelColor: bodyC, valAxisLabelColor: footC });
+    return;
+  }
+  if (chart === "competition") {
+    slide.addChart(pptx.ChartType.bar, [
+      { name: "Automation depth", labels: d.competition.map((p) => p.label), values: d.competition.map((p) => p.x) },
+      { name: "Ease of adoption", labels: d.competition.map((p) => p.label), values: d.competition.map((p) => p.y) },
+    ], { ...box, chartColors: [CH[0], CH[1]], showLegend: true, legendPos: "b", legendColor: bodyC, catAxisLabelColor: bodyC, valAxisLabelColor: footC });
+    return;
+  }
+  if (chart === "traction") {
+    slide.addChart(pptx.ChartType.line, [{ name: d.traction.unit || "Traction", labels: d.traction.series.map((p) => p.period), values: d.traction.series.map((p) => p.value) }], { ...box, chartColors: [CH[0]], showLegend: false, catAxisLabelColor: bodyC, valAxisLabelColor: footC });
+    return;
+  }
   if (chart === "projections") {
     slide.addChart(pptx.ChartType.bar, [
       { name: "Revenue", labels: d.projections.map((_, i) => `Year ${i + 1}`), values: d.projections.map((p) => p.revenue) },

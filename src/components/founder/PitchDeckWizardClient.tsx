@@ -3,10 +3,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DECK_SLIDES, DECK_GROUPS } from "@/lib/pitch-deck/slides";
 import { DECK_THEMES, getDeckTheme, type DeckTheme } from "@/lib/pitch-deck/themes";
+import type { DeckChartData } from "@/lib/pitch-deck/chart-data";
 
 type SlideContent = { headline: string; body: string; aiGenerated: boolean };
 type Deck = { slides: Record<string, SlideContent>; theme: string; status: string; shareToken: string | null };
-type ChartData = { projections: { revenue: number; grossProfit: number }[]; allocation: { label: string; pct: number }[]; market: { tam: number | null; sam: number | null; som: number | null } };
+type ChartData = DeckChartData;
+type DeckChartKind = "projections" | "market" | "funds" | "problem" | "solution" | "competition" | "traction";
+const CHART_LABEL: Record<DeckChartKind, string> = {
+  projections: "projections",
+  market: "market size",
+  funds: "use of funds",
+  problem: "cost-of-status-quo",
+  solution: "before / after",
+  competition: "positioning",
+  traction: "traction",
+};
 
 const INDIGO = "#2E78F5";
 function chMoney(n: number): string {
@@ -204,7 +215,7 @@ export function PitchDeckWizardClient() {
           ) : (
             <SlidePreview headline={active.headline} body={active.body} eyebrow={activeDef.title} chart={activeDef.chart} data={chartData} theme={theme} big />
           )}
-          {activeDef.chart && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8 }}><i className="ti ti-sparkles" aria-hidden="true" /> This slide auto-draws a chart from your business plan{activeDef.chart === "projections" ? " projections" : activeDef.chart === "market" ? " market size" : " use of funds"}. Edit those numbers on the Business plan page.</div>}
+          {activeDef.chart && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8 }}><i className="ti ti-sparkles" aria-hidden="true" /> This slide auto-draws its {CHART_LABEL[activeDef.chart]} chart from your business plan. Edit those numbers on the Business plan page.</div>}
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
             <button onClick={() => setActiveId(DECK_SLIDES[Math.max(0, activeIdx - 1)].id)} disabled={activeIdx === 0} style={btn}><i className="ti ti-arrow-left" aria-hidden="true" /> Prev</button>
@@ -218,9 +229,19 @@ export function PitchDeckWizardClient() {
   );
 }
 
-function SlidePreview({ headline, body, eyebrow, big, chart, data, theme }: { headline: string; body: string; eyebrow: string; big?: boolean; chart?: "projections" | "market" | "funds"; data?: ChartData | null; theme: DeckTheme }) {
+function slidePreviewHasChart(chart: DeckChartKind, data: ChartData): boolean {
+  if (chart === "projections") return data.projections.length > 0;
+  if (chart === "market") return !!(data.market.tam || data.market.sam || data.market.som);
+  if (chart === "problem") return data.problem.length > 0;
+  if (chart === "solution") return data.solution.length > 0;
+  if (chart === "competition") return data.competition.length > 0;
+  if (chart === "traction") return data.traction.series.length > 0;
+  return data.allocation.length > 0;
+}
+
+function SlidePreview({ headline, body, eyebrow, big, chart, data, theme }: { headline: string; body: string; eyebrow: string; big?: boolean; chart?: DeckChartKind; data?: ChartData | null; theme: DeckTheme }) {
   const bullets = body.split("\n").map((l) => l.replace(/^•\s*/, "").trim()).filter(Boolean);
-  const hasChart = chart && data && (chart === "projections" ? data.projections.length > 0 : chart === "market" ? (data.market.tam || data.market.sam || data.market.som) : data.allocation.length > 0);
+  const hasChart = chart && data && slidePreviewHasChart(chart, data);
   return (
     <div>
       {!big && <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Live preview</label>}
@@ -240,8 +261,77 @@ function SlidePreview({ headline, body, eyebrow, big, chart, data, theme }: { he
   );
 }
 
-function DeckChart({ chart, data, big, theme }: { chart: "projections" | "market" | "funds"; data: ChartData; big: boolean; theme: DeckTheme }) {
+function DeckChart({ chart, data, big, theme }: { chart: DeckChartKind; data: ChartData; big: boolean; theme: DeckTheme }) {
   const CH = theme.chart;
+  if (chart === "problem") {
+    const bars = data.problem;
+    const max = Math.max(...bars.map((b) => b.value), 1);
+    const W = 200, rowH = big ? 26 : 20, H = bars.length * rowH + 4;
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Problem cost">
+        {bars.map((b, i) => {
+          const cy = i * rowH, bw = Math.max((b.value / max) * 96, 2);
+          return (<g key={i}>
+            <text x={0} y={cy + rowH / 2 + 3} fontSize={big ? 8 : 7} fill={theme.footer}>{b.label}</text>
+            <rect x={96} y={cy + rowH / 2 - 6} width={bw} height={11} rx={2} fill={CH[0]} />
+            <text x={96 + bw + 4} y={cy + rowH / 2 + 3} fontSize={big ? 8 : 7} fill={theme.body}>{b.value}{b.unit ? ` ${b.unit}` : ""}</text>
+          </g>);
+        })}
+      </svg>
+    );
+  }
+  if (chart === "solution") {
+    const rows = data.solution;
+    const max = Math.max(...rows.flatMap((s) => [s.before, s.after]), 1);
+    const W = 200, rowH = big ? 28 : 22, H = rows.length * rowH + 4, ax = 78, aw = 110;
+    const xFor = (v: number) => ax + (v / max) * aw;
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Before and after">
+        {rows.map((s, i) => {
+          const cy = i * rowH + rowH / 2;
+          return (<g key={i}>
+            <text x={0} y={cy + 3} fontSize={big ? 8 : 7} fill={theme.footer}>{s.label}</text>
+            <line x1={xFor(s.after)} y1={cy} x2={xFor(s.before)} y2={cy} stroke={theme.footer} strokeWidth={1.5} />
+            <circle cx={xFor(s.before)} cy={cy} r={4} fill={theme.footer} />
+            <circle cx={xFor(s.after)} cy={cy} r={4} fill={CH[0]} />
+          </g>);
+        })}
+      </svg>
+    );
+  }
+  if (chart === "competition") {
+    const W = 200, H = big ? 130 : 104, p0 = 24, p1 = W - 8, q0 = 8, q1 = H - 18;
+    const X = (v: number) => p0 + (v / 10) * (p1 - p0);
+    const Y = (v: number) => q1 - (v / 10) * (q1 - q0);
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Competitive positioning">
+        <line x1={p0} y1={q1} x2={p1} y2={q1} stroke={theme.footer} strokeWidth={0.75} />
+        <line x1={p0} y1={q0} x2={p0} y2={q1} stroke={theme.footer} strokeWidth={0.75} />
+        {data.competition.map((p, i) => (
+          <g key={i}>
+            <circle cx={X(p.x)} cy={Y(p.y)} r={p.you ? 5 : 4} fill={p.you ? CH[0] : theme.footer} />
+            <text x={X(p.x)} y={Y(p.y) - 7} fontSize={big ? 7.5 : 6.5} fill={p.you ? CH[0] : theme.body} textAnchor="middle">{p.label}</text>
+          </g>
+        ))}
+        <text x={(p0 + p1) / 2} y={H - 3} fontSize={6.5} fill={theme.footer} textAnchor="middle">automation →</text>
+      </svg>
+    );
+  }
+  if (chart === "traction") {
+    const ser = data.traction.series;
+    const max = Math.max(...ser.map((p) => p.value), 1);
+    const W = 200, H = big ? 120 : 96, base = H - 16, top = 10, n = ser.length;
+    const X = (i: number) => 12 + (n <= 1 ? 0 : (i / (n - 1)) * (W - 24));
+    const Yv = (v: number) => base - (v / max) * (base - top);
+    const pts = ser.map((p, i) => `${X(i)},${Yv(p.value)}`).join(" ");
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Traction growth">
+        <polyline points={pts} fill="none" stroke={CH[0]} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {ser.map((p, i) => <circle key={i} cx={X(i)} cy={Yv(p.value)} r={2.5} fill={CH[0]} />)}
+        {ser.map((p, i) => <text key={i} x={X(i)} y={H - 3} fontSize={big ? 7.5 : 6.5} fill={theme.footer} textAnchor="middle">{p.period}</text>)}
+      </svg>
+    );
+  }
   if (chart === "projections") {
     const yrs = data.projections;
     const max = Math.max(...yrs.flatMap((y) => [y.revenue, y.grossProfit]), 1);
