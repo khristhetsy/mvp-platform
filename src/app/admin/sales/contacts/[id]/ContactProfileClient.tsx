@@ -230,7 +230,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [prefOrig, setPrefOrig] = useState<Record<string, string>>(seedPrefs);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
-  const [profileSub, setProfileSub] = useState<"profile" | "notelog">("profile");
+  const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog">("profile");
   // Option lists per profile field (Odoo selection / many2many) for the pickers.
   const [fieldOptions, setFieldOptions] = useState<Record<string, string[]>>({});
   useEffect(() => {
@@ -602,7 +602,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <div>
                   {/* Founder/Investor Profile · Note Log · Activity strip */}
                   <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
-                    {([["profile", profile.title], ["notelog", "Note Log"]] as const).map(([k, label]) => (
+                    {([["sendmsg", "Send message"], ["profile", profile.title], ["notelog", "Note Log"]] as const).map(([k, label]) => (
                       <button key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
                     ))}
                     <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
@@ -697,6 +697,28 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     </div>
                   </div>
                   </>)}
+                  {profileSub === "sendmsg" && (
+                    <div style={{ paddingTop: 4 }}>
+                      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                        {contact.email
+                          ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
+                          : <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No email on file</span>}
+                        {contact.phone
+                          ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>
+                          : null}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message on this record</div>
+                      <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Write a message…" style={{ ...inp, width: "100%", minHeight: 64, resize: "vertical" }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                        <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Send message</button>
+                        {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg === "Saved." ? "Message posted." : noteMsg}</span>}
+                      </div>
+                      <div style={{ marginTop: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history</div>
+                        <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No messages yet."}</div>
+                      </div>
+                    </div>
+                  )}
                   {profileSub === "notelog" && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>
                       <div>
