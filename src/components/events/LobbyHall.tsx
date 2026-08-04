@@ -243,10 +243,10 @@ export function LobbyHall({
 
         </div>
 
-        {hasSide && !leftOpen && (
-          <button type="button" onClick={() => setLeftOpen(true)} aria-label="Show agenda panel"
-            style={{ order: 0, flex: "0 0 auto", alignSelf: "stretch", writingMode: "vertical-rl", background: "#f7f9fc", border: "none", borderRight: "1px solid var(--line)", color: "var(--accent)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "0 4px" }}>
-            Agenda ›
+        {hasSide && (
+          <button type="button" onClick={() => setLeftOpen((v) => !v)} aria-label={leftOpen ? "Hide agenda panel" : "Show agenda panel"} aria-expanded={leftOpen}
+            style={{ order: 0, flex: "0 0 auto", alignSelf: "stretch", writingMode: "vertical-rl", background: "#f7f9fc", border: "none", borderRight: "1px solid var(--line)", color: "var(--accent)", fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", padding: "0 6px" }}>
+            {leftOpen ? "‹ Agenda" : "Agenda ›"}
           </button>
         )}
         {hasSide && (
@@ -320,12 +320,10 @@ export function LobbyHall({
             </div>
           )}
         </aside>
-        {!rightOpen && (
-          <button type="button" onClick={() => setRightOpen(true)} aria-label="Show menu panel"
-            style={{ order: 4, flex: "0 0 auto", alignSelf: "stretch", writingMode: "vertical-rl", background: "#f7f9fc", border: "none", borderLeft: "1px solid var(--line)", color: "var(--accent)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "0 4px" }}>
-            ‹ Menu
-          </button>
-        )}
+        <button type="button" onClick={() => setRightOpen((v) => !v)} aria-label={rightOpen ? "Hide menu panel" : "Show menu panel"} aria-expanded={rightOpen}
+          style={{ order: 4, flex: "0 0 auto", alignSelf: "stretch", writingMode: "vertical-rl", background: "#f7f9fc", border: "none", borderLeft: "1px solid var(--line)", color: "var(--accent)", fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", padding: "0 6px" }}>
+          {rightOpen ? "Menu ›" : "‹ Menu"}
+        </button>
         </div>
 
         <p className={styles.caption}>Hover or tap a doorway to look inside, then enter.</p>
