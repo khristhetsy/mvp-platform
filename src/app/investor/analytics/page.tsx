@@ -88,7 +88,6 @@ export default async function InvestorAnalyticsPage() {
             value={String(analytics.recentActivityCount)}
             detail="Events in your timeline"
             accent="blue"
-            href="/investor/analytics"
           />
         </section>
 

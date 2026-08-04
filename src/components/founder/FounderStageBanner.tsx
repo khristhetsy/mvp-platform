@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FounderJourneyState } from "@/lib/founder-journey/types";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 
@@ -42,6 +44,7 @@ function getCTA(
   isButton: boolean;
   disabled?: boolean;
   note?: string;
+  action?: "requestApproval";
 } {
   const { stage, conditions, pendingApproval, canRequestApproval } = state;
 
@@ -50,6 +53,7 @@ function getCTA(
       return {
         text: "Request Qualify review →",
         isButton: true,
+        disabled: true,
         note: "Coming in next section",
       };
     }
@@ -64,7 +68,7 @@ function getCTA(
       return { text: "Review pending — check back soon", isButton: false };
     }
     if (canRequestApproval) {
-      return { text: "Ready for review — request approval", isButton: true };
+      return { text: "Ready for review — request approval", isButton: true, action: "requestApproval" };
     }
     return { text: "Complete requirements to advance", isButton: false };
   }
@@ -85,9 +89,27 @@ export function FounderStageBanner({
   state: FounderJourneyState;
   onboardingPercent?: number;
 }) {
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const stageIndex = state.stageIndex;
   const stageLabel = STAGE_LABELS[state.stage] ?? state.stage;
   const cta = getCTA(state, onboardingPercent ?? 0);
+
+  async function handleCta() {
+    if (cta.action !== "requestApproval" || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/founder/stage-approval-request", { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not submit for review.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit for review.");
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-white px-5 py-4">
@@ -111,13 +133,16 @@ export function FounderStageBanner({
             <div className="flex flex-col items-start gap-0.5 sm:items-end">
               <button
                 type="button"
+                onClick={handleCta}
                 className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors disabled:opacity-50"
-                disabled={Boolean(cta.disabled)}
-                aria-disabled={Boolean(cta.disabled)}
+                disabled={Boolean(cta.disabled) || submitting}
+                aria-disabled={Boolean(cta.disabled) || submitting}
               >
-                {cta.text}
+                {submitting ? "Submitting…" : cta.text}
               </button>
-              {cta.note ? (
+              {error ? (
+                <span className="text-[10px] text-red-500">{error}</span>
+              ) : cta.note ? (
                 <span className="text-[10px] text-slate-400">{cta.note}</span>
               ) : null}
             </div>

@@ -86,17 +86,13 @@ export default async function AdminLearningAnalyticsPage() {
             label="Completion rate"
             value={`${completionRate}%`}
             detail={`${completedProgress.count ?? 0} completed / ${progressCount.count ?? 0} progress rows`}
-            accent="violet"
-            href="/admin/learning/analytics"
-          />
-          <MetricCard label="Quiz pass rate" value={`${quizPassRate}%`} detail="passed attempts / total attempts" accent="blue" href="/admin/learning/analytics" />
+            accent="violet"          />
+          <MetricCard label="Quiz pass rate" value={`${quizPassRate}%`} detail="passed attempts / total attempts" accent="blue" />
           <MetricCard
             label="Incomplete founders"
             value={String(incompleteFounders.count ?? 0)}
             detail="Distinct founders with unfinished progress"
-            accent="slate"
-            href="/admin/learning/analytics"
-          />
+            accent="slate"          />
         </section>
 
         <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -104,11 +100,9 @@ export default async function AdminLearningAnalyticsPage() {
             label="Lesson completions"
             value={String(completedLessons.count ?? 0)}
             detail="founder_lesson_progress (completed)"
-            accent="indigo"
-            href="/admin/learning/analytics"
-          />
-          <MetricCard label="Quiz attempts" value={String(quizAttempts.count ?? 0)} detail="founder_quiz_attempts" accent="violet" href="/admin/learning/analytics" />
-          <MetricCard label="Quiz passes" value={String(passedAttempts.count ?? 0)} detail="founder_quiz_attempts (passed)" accent="blue" href="/admin/learning/analytics" />
+            accent="indigo"          />
+          <MetricCard label="Quiz attempts" value={String(quizAttempts.count ?? 0)} detail="founder_quiz_attempts" accent="violet" />
+          <MetricCard label="Quiz passes" value={String(passedAttempts.count ?? 0)} detail="founder_quiz_attempts (passed)" accent="blue" />
           <MetricCard
             label="Certificates issued"
             value={String(certificatesIssued.count ?? 0)}
@@ -123,16 +117,12 @@ export default async function AdminLearningAnalyticsPage() {
             label="Admin course enrollments"
             value={String(adminCourseEnrollments.count ?? 0)}
             detail="learning_course_progress"
-            accent="indigo"
-            href="/admin/learning/analytics"
-          />
+            accent="indigo"          />
           <MetricCard
             label="Admin course completions"
             value={String(adminCourseCompletions.count ?? 0)}
             detail="learning_course_progress (completed)"
-            accent="violet"
-            href="/admin/learning/analytics"
-          />
+            accent="violet"          />
         </section>
 
         <WorkspacePanel title="Phase 1 limitations" subtitle="Safe metrics only; founder UX unchanged">

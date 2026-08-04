@@ -108,6 +108,7 @@ export function ManualOutreachBuilder({
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [drafting, setDrafting] = useState(false);
 
   // Create-list sub-flow (Source → Select → Name & save) + reusable saved lists.
   const [createSub, setCreateSub] = useState<0 | 1 | 2>(0);
@@ -199,6 +200,37 @@ export function ManualOutreachBuilder({
       setMessage("Network error sending test.");
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function draftEmails() {
+    if (drafting) return;
+    const contactId = [...selected][0] ?? contactList[0]?.id;
+    if (!contactId) {
+      setMessage("Select at least one recipient first.");
+      return;
+    }
+    setDrafting(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/founder/outreach/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "intro", contactId }),
+      });
+      const data = (await res.json().catch(() => null)) as { draft?: { subject?: string; body?: string }; error?: string } | null;
+      if (!res.ok) {
+        setMessage(data?.error ?? "Couldn't draft emails.");
+        return;
+      }
+      if (data?.draft?.subject) setSubject(data.draft.subject);
+      if (data?.draft?.body) setEmailBody(data.draft.body);
+      setDirty(true);
+      setMessage("Draft ready — edit anything below.");
+    } catch {
+      setMessage("Network error drafting emails.");
+    } finally {
+      setDrafting(false);
     }
   }
 
@@ -382,8 +414,8 @@ export function ManualOutreachBuilder({
             placeholder="Tone — warm, concise…"
             className="ml-auto w-48 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
           />
-          <button type="button" className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
-            Draft emails
+          <button type="button" onClick={() => void draftEmails()} disabled={drafting} className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
+            {drafting ? "Drafting…" : "Draft emails"}
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-500">
