@@ -81,8 +81,8 @@ export function LobbyHall({
   const [sel, setSel] = useState<{ member: PresenceMember; x: number; y: number } | null>(null);
   // The YOU marker walks to a hovered booth; clicking the doorway enters the room.
   const [youPos, setYouPos] = useState<{ left: number; top: number }>({ left: 50, top: 82 });
-  const [leftOpen, setLeftOpen] = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
   const walkTo = (left: number, top: number) => setYouPos({ left, top: top + 9 });
 
   // Other attendees standing in the Lobby become the drifting figures (the
