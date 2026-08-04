@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { computeDataRoomState, DATA_ROOM_UNLOCKS } from "@/lib/data-room/completeness";
+import { computeDataRoomState, groupDataRoomByFolder, DATA_ROOM_UNLOCKS } from "@/lib/data-room/completeness";
+import { DocumentViewButton } from "./DocumentViewButton";
 import type { DocumentRecord } from "@/lib/supabase/types";
 
 /**
@@ -89,33 +90,48 @@ export function DataRoomReadinessCard({
         </div>
       )}
 
-      {/* Item checklist */}
+      {/* Item checklist, organized into folders */}
       {showAllItems && (
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {state.items.map((item) => {
-            const done = item.status !== "missing";
-            return (
-              <li key={item.code} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className={`inline-flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] ${done ? "bg-[#1D9E75] text-white" : "border border-slate-300 text-transparent"}`}>✓</span>
-                  <span className="truncate text-sm text-slate-700">
-                    {item.label}
-                    {item.core && <span className="ml-1.5 rounded bg-indigo-50 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-700">core</span>}
-                  </span>
-                </span>
-                {done ? (
-                  <span className="flex-none text-[11px] font-medium text-emerald-700">
-                    {item.status === "needs_review" ? "In review" : "Added"}
-                  </span>
-                ) : (
-                  <Link href={item.href} className="flex-none rounded-md border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50">
-                    {item.cta}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mt-4 space-y-4">
+          {groupDataRoomByFolder(state.items).map(({ folder, items }) => (
+            <div key={folder}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{folder}</p>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {items.map((item) => {
+                  const done = item.status !== "missing";
+                  return (
+                    <li key={item.code} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className={`inline-flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] ${done ? "bg-[#1D9E75] text-white" : "border border-slate-300 text-transparent"}`}>✓</span>
+                        <span className="truncate text-sm text-slate-700">
+                          {item.label}
+                          {item.core && <span className="ml-1.5 rounded bg-indigo-50 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-700">core</span>}
+                        </span>
+                      </span>
+                      {done ? (
+                        <span className="flex flex-none items-center gap-2">
+                          {item.documentId && item.status === "uploaded" && (
+                            <DocumentViewButton
+                              documentId={item.documentId}
+                              className="rounded-md border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                            />
+                          )}
+                          <span className="text-[11px] font-medium text-emerald-700">
+                            {item.status === "needs_review" ? "In review" : "Added"}
+                          </span>
+                        </span>
+                      ) : (
+                        <Link href={item.href} className="flex-none rounded-md border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50">
+                          {item.cta}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
 
       {!complete && (

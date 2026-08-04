@@ -23,6 +23,10 @@ export interface DataRoomItem {
   href: string;
   /** Button copy for the fastest path. */
   cta: string;
+  /** Folder/section this document belongs to in the browsable room. */
+  folder: string;
+  /** id of the uploaded document, if present (for opening/viewing it). */
+  documentId: string | null;
 }
 
 export interface DataRoomState {
@@ -62,6 +66,36 @@ function isCore(label: string, code: string): boolean {
   return CORE_LABELS.has(label) || CORE_CODES.has(code.toUpperCase());
 }
 
+/** Which folder/section each required document belongs to in the browsable room. */
+const FOLDERS: Record<string, string> = {
+  "Pitch deck": "Company",
+  "Business plan": "Company",
+  "Team bios": "Company",
+  "Financial model": "Financials",
+  "Cap table": "Financials",
+  "Legal documents": "Legal",
+  "Corporate documents": "Legal",
+  "Customer contracts": "Legal",
+  "Market research": "Market",
+};
+
+export const DATA_ROOM_FOLDER_ORDER = ["Company", "Financials", "Legal", "Market", "Other"] as const;
+
+function folderFor(label: string): string {
+  return FOLDERS[label] ?? "Other";
+}
+
+/** Group a computed data-room state's items into ordered folders (empty folders dropped). */
+export function groupDataRoomByFolder(items: DataRoomItem[]): Array<{ folder: string; items: DataRoomItem[] }> {
+  const byFolder = new Map<string, DataRoomItem[]>();
+  for (const item of items) {
+    const arr = byFolder.get(item.folder) ?? [];
+    arr.push(item);
+    byFolder.set(item.folder, arr);
+  }
+  return DATA_ROOM_FOLDER_ORDER.filter((f) => byFolder.has(f)).map((f) => ({ folder: f, items: byFolder.get(f)! }));
+}
+
 export function computeDataRoomState(
   documents: DocumentRecord[],
   /** Canonical document-type codes marked "not applicable" — excluded from totals. */
@@ -83,6 +117,8 @@ export function computeDataRoomState(
       path,
       href: gen ? gen.href : "/founder/documents",
       cta: gen ? gen.cta : "Upload",
+      folder: folderFor(c.label),
+      documentId: c.documentId,
     };
   });
 

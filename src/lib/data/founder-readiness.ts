@@ -9,6 +9,8 @@ export type DocumentChecklistItem = {
   status: "missing" | "uploaded" | "needs_review" | "not_applicable";
   fileName: string | null;
   uploadedAt: string | null;
+  /** id of the matched uploaded document, if any (for opening/viewing it). */
+  documentId: string | null;
 };
 
 export type ProfileCompletionItem = {
@@ -63,6 +65,7 @@ export function buildDocumentChecklist(
         status: isNa ? "not_applicable" : "missing",
         fileName: null,
         uploadedAt: null,
+        documentId: null,
       };
     }
 
@@ -78,6 +81,7 @@ export function buildDocumentChecklist(
       status,
       fileName: uploaded.file_name,
       uploadedAt: uploaded.created_at,
+      documentId: uploaded.id,
     };
   });
 }
