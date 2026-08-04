@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
 import { DataRoomAccessPanel } from "@/components/founder/DataRoomAccessPanel";
+import { DataRoomActivityPanel } from "@/components/founder/DataRoomActivityPanel";
+import { listDataRoomActivity } from "@/lib/data-room/activity";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -19,6 +21,7 @@ export default async function FounderDataRoomPage() {
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
+  const activity = company ? await listDataRoomActivity(company.id) : [];
 
   return (
     <FounderAppShell
@@ -33,8 +36,9 @@ export default async function FounderDataRoomPage() {
             description={t("everything_investors_and_our_diligence_team_ne")}
           />
           <DataRoomReadinessCard documents={documents} />
-          <div className="mt-6">
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <DataRoomAccessPanel />
+            <DataRoomActivityPanel items={activity} />
           </div>
         </WorkspacePageContainer>
       </FounderFeatureGate>
