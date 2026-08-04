@@ -7,12 +7,11 @@ import { Menu, X } from "lucide-react";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
 
 export const marketingNavItems = [
-  { href: "/", label: "Overview" },
-  { href: "/deals", label: "Marketplace" },
+  { href: "/", label: "Home" },
   { href: "/founders", label: "Founders" },
   { href: "/investors", label: "Investors" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/submit-company", label: "Submit Company" },
+  { href: "/events", label: "Events" },
+  { href: "/about", label: "About" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
