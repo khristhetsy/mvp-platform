@@ -116,6 +116,22 @@ export async function listInvestorProfilesForAdmin() {
   >;
 }
 
+export async function setInvestorArchived(investorProfileId: string, archived: boolean) {
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin
+    .from("investor_profiles")
+    .update({ archived_at: archived ? new Date().toISOString() : null } as never)
+    .eq("id", investorProfileId)
+    .select("id, profile_id, archived_at")
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Failed to ${archived ? "archive" : "restore"} investor: ${error?.message ?? "not found"}`);
+  }
+
+  return data as unknown as { id: string; profile_id: string; archived_at: string | null };
+}
+
 export async function applyInvestorReview(input: {
   investorProfileId: string;
   adminId: string;

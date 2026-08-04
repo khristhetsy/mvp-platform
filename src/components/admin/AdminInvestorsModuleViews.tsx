@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { AdminInvestorReviewCard } from "@/components/AdminInvestorReviewCard";
@@ -249,10 +249,17 @@ function AdminInvestorsModuleViewsInner({
   const { filters } = useAdminQueryFilters("investors");
   const investorFilters = filters as InvestorQueryFilters;
 
-  const filteredProfiles = useMemo(
-    () => filterInvestorProfiles(investorProfiles, investorFilters, profileLookup),
-    [investorProfiles, investorFilters, profileLookup],
+  const [showArchived, setShowArchived] = useState(false);
+
+  const archivedCount = useMemo(
+    () => investorProfiles.filter((row) => Boolean(row.archived_at)).length,
+    [investorProfiles],
   );
+
+  const filteredProfiles = useMemo(() => {
+    const base = filterInvestorProfiles(investorProfiles, investorFilters, profileLookup);
+    return base.filter((row) => (showArchived ? Boolean(row.archived_at) : !row.archived_at));
+  }, [investorProfiles, investorFilters, profileLookup, showArchived]);
 
   const pendingQueue = useMemo(
     () =>
@@ -311,6 +318,21 @@ function AdminInvestorsModuleViewsInner({
       />
 
       <AdminQueryFilterBar page="investors" className="mb-4" />
+
+      {(archivedCount > 0 || showArchived) && (
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            {showArchived ? "← Back to active investors" : `Show archived (${archivedCount})`}
+          </button>
+          {showArchived && (
+            <span className="text-xs text-slate-500">Archived investors are hidden from the default list. Use Restore on a card to bring one back.</span>
+          )}
+        </div>
+      )}
 
       {view === "table" ? (
         <WorkspacePanel title={t("all_investors")} subtitle={`${filteredProfiles.length} onboarding records`}>

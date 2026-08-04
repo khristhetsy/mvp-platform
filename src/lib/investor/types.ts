@@ -25,6 +25,7 @@ export type InvestorProfileRecord = {
   submitted_at: string | null;
   approved_at: string | null;
   approved_by: string | null;
+  archived_at: string | null;
   kyc_status: InvestorKycStatus;
   kyc_submitted_at: string | null;
   kyc_reviewed_at: string | null;
