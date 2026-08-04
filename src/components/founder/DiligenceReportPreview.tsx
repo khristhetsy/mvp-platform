@@ -50,7 +50,7 @@ export function DiligenceReportPreview({ report, readinessScore }: { report: Rep
           style={{ border: `5px solid ${band.ring}` }}
         >
           <span className="text-[19px] font-semibold leading-none tabular-nums" style={{ color: band.text }}>{score}</span>
-          <span className="text-[8px]" style={{ color: band.ring }}>/100</span>
+          <span className="text-[8px]" style={{ color: band.ring }}>% done</span>
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">Completion · {band.label}</p>

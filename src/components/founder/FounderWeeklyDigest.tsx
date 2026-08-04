@@ -131,7 +131,7 @@ function computePriorities(opts: {
     p.push(
       gap <= 10
         ? `You're ${gap} points from the 80 threshold — one or two uploads will cross it.`
-        : `Bring your readiness score from ${opts.readinessScore} to 80 — that unlocks institutional investor conversations.`,
+        : `Bring your completion from ${opts.readinessScore}% to 80% — that unlocks institutional investor conversations.`,
     );
   }
 

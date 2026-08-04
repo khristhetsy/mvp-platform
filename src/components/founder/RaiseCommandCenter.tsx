@@ -234,8 +234,8 @@ function MetricsStrip({
   const metrics = [
     {
       label: "Completion",
-      value: `${readinessScore}`,
-      sub: "/100",
+      value: `${readinessScore}%`,
+      sub: "complete",
       color: readinessScore >= 80 ? "#16a34a" : readinessScore >= 65 ? "#d97706" : "#dc2626",
     },
     {

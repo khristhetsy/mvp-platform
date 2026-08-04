@@ -20,7 +20,7 @@ const UNLOCKS: Record<string, Unlock> = {
     badge: "Stage 2 · Qualify",
     title: "Time to get fundraise-ready",
     subtitle: "Onboarding's done. Here's what just unlocked to prepare your raise.",
-    items: ["Readiness score & checklist", "Document checklist", "AI diligence report"],
+    items: ["Completion & checklist", "Document checklist", "AI diligence report"],
     cta: { href: "/founder/readiness", label: "Build your readiness" },
   },
   deploy: {

@@ -118,8 +118,8 @@ export function FounderReadinessDonutCards({
         ? `${needsReviewCount} document${needsReviewCount > 1 ? "s are" : " is"} awaiting review — follow up with your admin reviewer to accelerate approval.`
         : "No documents are pending review. Prioritize uploading any missing items to maintain momentum.",
       readinessScore < 80
-        ? `You are ${80 - readinessScore} points from the 80/100 threshold. Closing your document gaps is the fastest path — most investors filter below that level.`
-        : "You are above the 80/100 benchmark. Focus on profile completion and diligence review to reach institutional-grade status.",
+        ? `You are ${80 - readinessScore} points from the 80% threshold. Closing your document gaps is the fastest path — most investors filter below that level.`
+        : "You are above the 80% benchmark. Focus on profile completion and diligence review to reach institutional-grade status.",
     ];
     return pts;
   }
@@ -185,7 +185,7 @@ export function FounderReadinessDonutCards({
           title: "Completion",
           sub: readinessDetail,
           stats: [
-            { v: `${readinessScore}/100`, l: "Overall score" },
+            { v: `${readinessScore}%`, l: "Complete" },
             { v: `${uploadedCount}/${checklistTotal}`, l: "Docs uploaded" },
             { v: String(missingCount), l: "Missing docs" },
           ],
@@ -217,7 +217,7 @@ export function FounderReadinessDonutCards({
                 : "#A32D2D",
           })),
           meaning:
-            `A score of ${readinessScore} means ${readinessScore >= 80 ? "your profile is above the institutional benchmark — continue strengthening your data room" : `your core materials are present but key verification documents are missing. Institutional investors typically require 80+ before taking a first meeting`}.`,
+            `Completion of ${readinessScore}% means ${readinessScore >= 80 ? "your profile is above the institutional benchmark — continue strengthening your data room" : `your core materials are present but key verification documents are missing. Institutional investors typically require 80%+ before taking a first meeting`}.`,
           advice: scoreAdvice(),
           href: "/founder/readiness",
         };
@@ -358,7 +358,7 @@ export function FounderReadinessDonutCards({
     {
       key: "score",
       label: "Completion",
-      value: `${readinessScore}/100`,
+      value: `${readinessScore}%`,
       detail: readinessDetail,
       pct: readinessScore / 100,
       color: "#2E78F5",

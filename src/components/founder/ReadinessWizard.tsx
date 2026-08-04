@@ -264,7 +264,7 @@ export function ReadinessWizard({
 
         <div className="flex-1">
           <p className="text-sm font-semibold text-slate-900">
-            {companyName} · {currentScore}/100
+            {companyName} · {currentScore}% complete
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
             Target: {targetScore} (institutional threshold)

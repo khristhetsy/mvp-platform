@@ -446,10 +446,10 @@ function DrawerContent({
             : latestScore === null
             ? "Your latest report has no score yet. Complete all sections of the diligence questionnaire to generate a score."
             : trend !== null && trend > 0
-            ? `Your readiness score has improved by ${trend} point${trend === 1 ? "" : "s"} since your last report — positive momentum. ${latestScore >= 80 ? "At 80+, you're in investor-ready territory." : `Continue addressing gaps to reach the 80+ threshold investors expect from raise-ready companies.`}`
+            ? `Your completion has improved by ${trend} point${trend === 1 ? "" : "s"} since your last report — positive momentum. ${latestScore >= 80 ? "At 80%+, you're in investor-ready territory." : `Continue addressing gaps to reach the 80%+ threshold investors expect from raise-ready companies.`}`
             : trend !== null && trend < 0
             ? `Your score dropped ${Math.abs(trend)} point${Math.abs(trend) === 1 ? "" : "s"} since the last report. Review what changed — gaps in documentation, missing data room items, or compliance issues can cause score drops.`
-            : `Your readiness score is ${latestScore}/100. ${latestScore >= 80 ? "Excellent — you're presenting a well-prepared, investor-ready profile." : latestScore >= 50 ? "Good foundation, but there are specific gaps to address before you'll be considered fully investor-ready." : "Significant preparation required. Focus on the critical missing items in your readiness report before engaging investors seriously."}`}
+            : `Your completion is ${latestScore}%. ${latestScore >= 80 ? "Excellent — you're presenting a well-prepared, investor-ready profile." : latestScore >= 50 ? "Good foundation, but there are specific gaps to address before you'll be considered fully investor-ready." : "Significant preparation required. Focus on the critical missing items in your readiness report before engaging investors seriously."}`}
         </p>
       </div>
 
@@ -458,10 +458,10 @@ function DrawerContent({
           snapshots.length === 0
             ? "Run your first readiness assessment today. It takes 10–15 minutes and gives you a prioritised list of what to fix — investors who review your diligence report before a meeting convert at much higher rates."
             : latestScore !== null && latestScore < 50
-            ? `At ${latestScore}/100, focus on the critical items first: incorporate your entity, complete your cap table, and upload a current pitch deck. These three items alone can move your score by 20–30 points.`
+            ? `At ${latestScore}% complete, focus on the critical items first: incorporate your entity, complete your cap table, and upload a current pitch deck. These three items alone can move your completion by 20–30 points.`
             : latestScore !== null && latestScore < 80
-            ? `At ${latestScore}/100, you're in the mid-range. Typical gaps at this stage are: missing financial model, incomplete data room, no written investor update template, and no formal advisory board. Fixing two of these can push you past 80.`
-            : `Your score of ${latestScore}/100 puts you in the investor-ready range. Use this as a credibility signal in conversations — a high diligence score reduces perceived risk and often leads to faster term sheet decisions.`,
+            ? `At ${latestScore}% complete, you're in the mid-range. Typical gaps at this stage are: missing financial model, incomplete data room, no written investor update template, and no formal advisory board. Fixing two of these can push you past 80%.`
+            : `Your completion of ${latestScore}% puts you in the investor-ready range. Use this as a credibility signal in conversations — a strong diligence profile reduces perceived risk and often leads to faster term sheet decisions.`,
           snapshots.length > 1 && trend !== null
             ? trend > 0
               ? `Your ${trend}-point improvement is meaningful. At this rate, share your progress with prospective investors — showing that you're actively improving your readiness signals coachability and execution discipline.`

@@ -21,7 +21,7 @@ function requirementsToAdvance(state: FounderJourneyState): Requirement[] {
       return [
         { label: "Onboarding complete", met: c.onboardingComplete, href: "/founder/onboarding" },
         { label: "Core documents uploaded (pitch deck, financials, cap table)", met: c.requiredDocsUploaded, href: "/founder/readiness/data-room" },
-        { label: "Readiness score ≥ 75", met: c.readinessQualified, href: "/founder/readiness" },
+        { label: "Completion ≥ 75%", met: c.readinessQualified, href: "/founder/readiness" },
       ];
     case "deploy":
       return [{ label: "Open a deal room or receive investor interest", met: c.hasDealRoom || c.hasInvestorInterest, href: "/founder/deal-room" }];

@@ -181,7 +181,7 @@ function DrawerContent({
         <div className="mt-2">
           <BRow name="Onboarding completion" badge={`${a.onboardingPercent}%`} variant={a.onboardingPercent >= 80 ? "success" : a.onboardingPercent >= 50 ? "medium" : "high"} />
           <BRow name="Fully completed" badge={a.onboardingCompletedAt ? new Date(a.onboardingCompletedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not yet"} variant={a.onboardingCompletedAt ? "success" : "neutral"} />
-          <BRow name="Completion" badge={a.readinessScore != null ? `${a.readinessScore}/100` : "Not yet assessed"} variant={a.readinessScore != null && a.readinessScore >= 80 ? "success" : a.readinessScore != null && a.readinessScore >= 50 ? "medium" : "neutral"} />
+          <BRow name="Completion" badge={a.readinessScore != null ? `${a.readinessScore}% complete` : "Not yet assessed"} variant={a.readinessScore != null && a.readinessScore >= 80 ? "success" : a.readinessScore != null && a.readinessScore >= 50 ? "medium" : "neutral"} />
           <BRow name="Learning modules" badge={`${a.learningModulesCompleted}/${a.learningModulesPublished}`} variant={a.learningModulesCompleted === a.learningModulesPublished && a.learningModulesPublished > 0 ? "success" : "neutral"} />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
@@ -193,7 +193,7 @@ function DrawerContent({
         <AdviceBox lines={[
           a.onboardingPercent < 100 ? `You're at ${a.onboardingPercent}% — the remaining ${remaining}% is blocking full marketplace visibility. Prioritise the next incomplete step today to move the needle quickly.` : "Onboarding complete. Keep your documents current and your profile updated — investors check upload dates during diligence.",
           a.onboardingPercent < 80 ? "Investors on iCapOS filter for profiles that are at least 80% complete. Crossing that threshold significantly increases your discoverability in search results." : a.onboardingPercent < 100 ? "You're in the top tier of completion. The remaining steps are typically quick wins — document uploads or profile text — rather than large tasks." : `Completed on ${a.onboardingCompletedAt ? new Date(a.onboardingCompletedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "record"}. Focus energy on investor engagement now that setup is done.`,
-          a.readinessScore != null ? `Your readiness score of ${a.readinessScore}/100 is the investor-facing quality signal. Aim for 80+ to maximise first-meeting conversion rate.` : "Complete onboarding to unlock your first diligence report and readiness score — the key metric institutional investors use to filter listings.",
+          a.readinessScore != null ? `Your completion of ${a.readinessScore}% is the investor-facing quality signal. Aim for 80% to maximise first-meeting conversion rate.` : "Complete onboarding to unlock your first diligence report and completion score — the key signal institutional investors use to filter listings.",
         ]} />
       </div>
     );
@@ -212,7 +212,7 @@ function DrawerContent({
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label={t("current_score")} value={latestScore != null ? `${latestScore}/100` : "—"} />
+          <DStatBox label={t("current_score")} value={latestScore != null ? `${latestScore}%` : "—"} />
           <DStatBox label={t("reports")} value={String(snapshotCount)} />
           <DStatBox label={t("trend")} value={trend != null ? (trend > 0 ? `+${trend}` : String(trend)) : "—"} />
         </div>
@@ -225,7 +225,7 @@ function DrawerContent({
               <BRow
                 key={snap.createdAt}
                 name={new Date(snap.createdAt).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
-                badge={snap.score != null ? `${snap.score}/100` : "—"}
+                badge={snap.score != null ? `${snap.score}%` : "—"}
                 variant={snap.score != null && snap.score >= 80 ? "success" : snap.score != null && snap.score >= 50 ? "medium" : i === 0 ? "high" : "neutral"}
               />
             ))
@@ -492,7 +492,7 @@ export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnaly
       {/* Row 1 */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ACard label={t("onboarding_progress")} value={`${a.onboardingPercent}%`} detail={a.onboardingCompletedAt ? `Completed ${new Date(a.onboardingCompletedAt).toLocaleDateString("en-US")}` : "Current snapshot"} icon={<IcoCheck />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("onboarding")} />
-        <ACard label={t("readiness_score")} value={a.readinessScore != null ? `${a.readinessScore}` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#1A6CE4" onClick={() => setOpen("readiness")} />
+        <ACard label={t("readiness_score")} value={a.readinessScore != null ? `${a.readinessScore}%` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#1A6CE4" onClick={() => setOpen("readiness")} />
         <ACard label={t("private_contacts")} value={String(a.privateContactCount)} detail="Founder CRM contacts" icon={<IcoUsers />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("contacts")} />
         <ACard label={t("investor_pledges")} value={a.pledgeTotalDisplay} detail={`${a.pledgeInvestorCount} investors · platform activity`} icon={<IcoDollar />} iconBg="#FEF3CD" valColor="#854F0B" onClick={() => setOpen("pledges")} />
       </section>
