@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -24,12 +25,12 @@ function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
 const cardBox: React.CSSProperties = { background: "var(--muted)", borderRadius: 8, padding: 11 };
 
-export function OpportunityDetailClient({ initial, stages }: { initial: Opp; stages: Stage[] }) {
+export function OpportunityDetailClient({ initial, stages, founderContact = null }: { initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null }) {
   const router = useRouter();
   const [o, setO] = useState<Opp>(initial);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState<"notes" | "extra">("notes");
+  const [tab, setTab] = useState<"notes" | "extra" | "founder">("notes");
   const [noteInput, setNoteInput] = useState("");
 
   async function saveNote() {
@@ -172,8 +173,13 @@ export function OpportunityDetailClient({ initial, stages }: { initial: Opp; sta
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid #eef1f5", margin: "16px 0 12px" }}>
             <button onClick={() => setTab("notes")} style={{ fontSize: 12, fontWeight: tab === "notes" ? 600 : 400, color: tab === "notes" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "notes" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Internal notes</button>
             <button onClick={() => setTab("extra")} style={{ fontSize: 12, fontWeight: tab === "extra" ? 600 : 400, color: tab === "extra" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "extra" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Extra info</button>
+            {founderContact && (
+              <button onClick={() => setTab("founder")} style={{ fontSize: 12, fontWeight: tab === "founder" ? 600 : 400, color: tab === "founder" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "founder" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Founder Profile</button>
+            )}
           </div>
-          {tab === "notes" ? (
+          {tab === "founder" && founderContact ? (
+            <FounderProfileMirror contact={founderContact} />
+          ) : tab === "notes" ? (
             <div>
               <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 48, resize: "vertical" }} />
               <div style={{ margin: "6px 0 12px" }}>
