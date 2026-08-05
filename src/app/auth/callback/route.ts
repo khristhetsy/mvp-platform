@@ -8,7 +8,9 @@ import { profileRoleFromPublicMetadata } from "@/lib/auth/signup-role";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next");
+  const rawNext = requestUrl.searchParams.get("next");
+  // Only allow internal, non-protocol-relative paths — blocks open redirects.
+  const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
 
   if (code) {
     const supabase = await createServerSupabaseClient();

@@ -501,7 +501,7 @@ export function WorkspaceSidebar({
     const Icon = getWorkspaceNavIcon(item.href);
     return (
       <Link
-        key={item.href}
+        key={`${item.href}|${item.label}`}
         href={item.href}
         onClick={onClose}
         aria-current={active ? "page" : undefined}
@@ -539,7 +539,7 @@ export function WorkspaceSidebar({
       const Icon = getWorkspaceNavIcon(item.href);
       return (
         <button
-          key={item.href}
+          key={`${item.href}|${item.label}`}
           type="button"
           aria-haspopup="true"
           title={locked ? lockHint(item) : undefined}
