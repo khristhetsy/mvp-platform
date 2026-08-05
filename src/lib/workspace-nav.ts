@@ -497,6 +497,19 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
   },
 ];
 
+/** Founder stages and their menu items — for the admin stage-menu editor. */
+export type StageMenuGroup = { stage: string; items: { href: string; label: string }[] };
+export function getFounderStageMenuCatalog(): StageMenuGroup[] {
+  const section = founderWorkspaceNavSectionsV2.find((s) => s.title === "Your raise");
+  if (!section) return [];
+  return section.items
+    .filter((it) => it.children && it.children.length > 0)
+    .map((it) => ({
+      stage: it.label,
+      items: (it.children ?? []).map((c) => ({ href: c.href, label: c.label })),
+    }));
+}
+
 /** Build-time flag: serve the 4-step founder nav. Off by default → V1 unchanged.
  *  Used as the default/SSR value; the runtime toggle (feature_flags via
  *  /api/feature-controls) can override it per request without a redeploy. */

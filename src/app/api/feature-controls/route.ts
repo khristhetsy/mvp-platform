@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFeatureFlags, disabledHrefsFor, type FeatureAudience } from "@/lib/feature-controls";
-import { getFounderNavV2RolloutPct } from "@/lib/settings/platform-settings";
+import { getFounderNavV2RolloutPct, getFounderStageMenuHidden } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -46,5 +46,11 @@ export async function GET(): Promise<Response> {
     }
   }
 
-  return NextResponse.json({ disabledHrefs: disabledHrefsFor(flags, audience), founderNavV2 });
+  // Founder stage-menu editor: hrefs an admin unchecked from a stage are hidden
+  // globally, unioned with the feature-toggle hides.
+  const disabledHrefs = disabledHrefsFor(flags, audience);
+  const merged =
+    audience === "founder" ? [...new Set([...disabledHrefs, ...(await getFounderStageMenuHidden())])] : disabledHrefs;
+
+  return NextResponse.json({ disabledHrefs: merged, founderNavV2 });
 }

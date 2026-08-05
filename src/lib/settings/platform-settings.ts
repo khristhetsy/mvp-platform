@@ -14,6 +14,37 @@ function db(): SupabaseClient {
 }
 
 const AUTOMATION_KEY = "investor_outreach_automation";
+const FOUNDER_STAGE_MENU_KEY = "founder_stage_menu";
+
+/** Founder-nav menu hrefs hidden per the admin stage-menu editor (global). */
+export async function getFounderStageMenuHidden(): Promise<string[]> {
+  try {
+    const { data } = await db()
+      .from("platform_settings")
+      .select("value")
+      .eq("key", FOUNDER_STAGE_MENU_KEY)
+      .maybeSingle();
+    const hidden = (data as { value?: { hidden?: unknown } } | null)?.value?.hidden;
+    return Array.isArray(hidden) ? hidden.filter((h): h is string => typeof h === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setFounderStageMenuHidden(hidden: string[], updatedBy: string | null): Promise<boolean> {
+  try {
+    const clean = [...new Set(hidden.filter((h) => typeof h === "string" && h.startsWith("/")))];
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert(
+        { key: FOUNDER_STAGE_MENU_KEY, value: { hidden: clean }, updated_by: updatedBy, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+    return !error;
+  } catch {
+    return false;
+  }
+}
 
 /** Read a boolean setting; returns `fallback` if unset or unreadable. */
 export async function getBoolSetting(key: string, fallback = false): Promise<boolean> {
