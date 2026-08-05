@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
+import { summarizeDocumentById } from "@/lib/documents/summarize";
+import { rescoreCompanyReadiness } from "@/lib/ai/rescore";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { writeAuditLog } from "@/lib/data/audit";
@@ -493,6 +495,21 @@ export async function POST(request: Request) {
     }
   } catch {
     // analytics is best-effort
+  }
+
+  // After the response is sent, summarize the uploaded document and re-score the
+  // company. Runs in the same invocation via after() (serverless-safe), so the
+  // Capital Readiness engine can actually read this document's content.
+  if (documentId && companyId) {
+    const docId = documentId;
+    after(async () => {
+      try {
+        await summarizeDocumentById(admin, docId);
+        await rescoreCompanyReadiness(admin, companyId);
+      } catch (err) {
+        console.error("[upload] post-upload summarize/rescore failed", err);
+      }
+    });
   }
 
   return NextResponse.json({
