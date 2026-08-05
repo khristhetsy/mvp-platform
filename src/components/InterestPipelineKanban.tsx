@@ -47,7 +47,7 @@ const COLUMNS: { key: PipelineCard["column"]; label: string; color: string; dot:
   { key: "watching", label: "Watching", color: "bg-slate-100 text-slate-700", dot: "bg-slate-400" },
   { key: "interested", label: "Interested", color: "bg-amber-50 text-amber-800", dot: "bg-amber-400" },
   { key: "intro", label: "Intro requested", color: "bg-blue-50 text-blue-800", dot: "bg-blue-400" },
-  { key: "pledged", label: "Pledged", color: "bg-emerald-50 text-emerald-800", dot: "bg-emerald-500" },
+  { key: "pledged", label: "Indicated", color: "bg-emerald-50 text-emerald-800", dot: "bg-emerald-500" },
 ];
 
 export function InterestPipelineKanban({
@@ -136,7 +136,7 @@ export function InterestPipelineKanban({
         <div className="flex gap-2">
           {totalAmount ? (
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-              Total pledged: {totalAmount}
+              Total indicated: {totalAmount}
             </span>
           ) : null}
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">

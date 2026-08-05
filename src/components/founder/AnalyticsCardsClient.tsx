@@ -308,8 +308,8 @@ function DrawerContent({
         </div>
         <p className="mt-5 text-xs font-semibold text-slate-900">{t("activity_breakdown")}</p>
         <div className="mt-2">
-          <BRow name="Indicative pledges" badge={a.pledgeTotalDisplay} variant={a.pledgeInvestorCount > 0 ? "success" : "neutral"} />
-          <BRow name="Investors pledging" badge={`${a.pledgeInvestorCount} investor${a.pledgeInvestorCount === 1 ? "" : "s"}`} variant={a.pledgeInvestorCount > 0 ? "success" : "neutral"} />
+          <BRow name="Indications of interest" badge={a.pledgeTotalDisplay} variant={a.pledgeInvestorCount > 0 ? "success" : "neutral"} />
+          <BRow name="Investors indicating" badge={`${a.pledgeInvestorCount} investor${a.pledgeInvestorCount === 1 ? "" : "s"}`} variant={a.pledgeInvestorCount > 0 ? "success" : "neutral"} />
           <BRow name="Expressed interest" badge={`${a.investorInterestCount} investor${a.investorInterestCount === 1 ? "" : "s"}`} variant={a.investorInterestCount > 0 ? "medium" : "neutral"} />
           <BRow name="Intro requests" badge={`${a.introRequestCount} pending`} variant={a.introRequestCount > 0 ? "high" : "neutral"} />
           <BRow name="Saved deals" badge={`${a.savedByInvestorsCount} investor${a.savedByInvestorsCount === 1 ? "" : "s"}`} variant="neutral" />

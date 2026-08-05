@@ -24,7 +24,7 @@ const PROFILE_HINTS: Record<string, { hint: string; href: string }> = {
   company_name: { hint: "Your company name is the first thing investors see.", href: "/founder/settings" },
   industry: { hint: "Industry helps investors filter by their focus area — without it you won't appear in their searches.", href: "/founder/settings" },
   business_description: { hint: "A clear 2–3 sentence description of what you do and for whom. Aim for 50+ words.", href: "/founder/settings" },
-  funding_amount: { hint: "How much you're raising in this round. Required for pledge and match calculations.", href: "/founder/settings" },
+  funding_amount: { hint: "How much you're raising in this round. Required for interest and match calculations.", href: "/founder/settings" },
   use_of_funds: { hint: "Investors always ask: 'What will you do with the money?' Answer it in your profile.", href: "/founder/settings" },
   revenue_stage: { hint: "Pre-revenue, seed, growth — this unlocks stage-appropriate investor matches.", href: "/founder/settings" },
   team_summary: { hint: "A brief description of your founding team. Investors invest in people first.", href: "/founder/settings" },

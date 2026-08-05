@@ -193,7 +193,7 @@ export async function buildDueDiligencePdf(
     sectionTitle(doc, "Investor-readiness indicators (aggregate)");
     bulletList(doc, [
       `Expressed interests: ${summary.totalExpressedInterests ?? sumRows(companies, "expressed_interest_count")}`,
-      `Indicative pledge total: ${summary.totalIndicativePledge ?? sumRows(companies, "indicative_pledge_total")}`,
+      `Total indicated: ${summary.totalIndicativePledge ?? sumRows(companies, "indicative_pledge_total")}`,
       `Intro requests: ${sumRows(companies, "intro_request_count")}`,
       `Message threads: ${sumRows(companies, "message_thread_count")}`,
       `Scheduled meetings: ${sumRows(companies, "meetings_scheduled_count")}`,

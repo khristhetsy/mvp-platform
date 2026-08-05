@@ -85,7 +85,7 @@ export function RoundCloseTracker() {
           {hasTarget ? (
             <p className="mt-0.5 text-xs text-slate-500">
               {stats.fillPct}% of{" "}
-              {formatCurrency(stats.fundingTarget!, stats.currency)} target pledged
+              {formatCurrency(stats.fundingTarget!, stats.currency)} target indicated
             </p>
           ) : (
             <p className="mt-0.5 text-xs text-slate-500">

@@ -31,7 +31,7 @@ function donutSlicePath(cx: number, cy: number, rOuter: number, rInner: number, 
 }
 
 const DONUT_COLORS = ["#2E78F5", "#3B6D11", "#0369a1", "#854F0B"] as const;
-const DONUT_LABELS = ["Interested", "Pledged", "Intro Req.", "Follow-up"] as const;
+const DONUT_LABELS = ["Interested", "Indicated", "Intro Req.", "Follow-up"] as const;
 
 function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, number] }>) {
   const t = useTranslations("founderCmp");
@@ -164,7 +164,7 @@ function filterRows(rows: FounderInvestorRelationRow[], query: string) {
 
 const PIPELINE_GROUPS = [
   { id: "interested", title: "Interested", actionTypes: ["interested", "saved_deal"] },
-  { id: "pledged", title: "Pledged / Indicative", actionTypes: ["pledged", "indicative_interest"] },
+  { id: "pledged", title: "Indications", actionTypes: ["pledged", "indicative_interest"] },
   { id: "intro", title: "Intro Requested", actionTypes: ["intro_requested"] },
   { id: "follow_up", title: "Follow-up", actionTypes: ["follow_up"] },
 ] as const;
@@ -207,7 +207,7 @@ type DrawerGroup = "interested" | "pledged" | "intro" | "followup";
 
 const DRAWER_CFG = {
   interested: { label: "Interested",      ac: "#2E78F5", ab: "#EEEDFE" },
-  pledged:    { label: "Pledged",          ac: "#0F6E56", ab: "#E1F5EE" },
+  pledged:    { label: "Indicated",          ac: "#0F6E56", ab: "#E1F5EE" },
   intro:      { label: "Intro requested", ac: "#185FA5", ab: "#E6F1FB" },
   followup:   { label: "Follow-up",       ac: "#854F0B", ab: "#FAEEDA" },
 } as const;
@@ -291,12 +291,12 @@ function PipelineDrawerContent({
     pledged: {
       count: pc,
       stats: [
-        { l: "Firm pledges", v: String(firmCount) },
+        { l: "Firm indications", v: String(firmCount) },
         { l: "Indicative",   v: String(indicativeCount) },
         { l: "Committed",    v: crmView.summary.totalPledgedDisplay },
       ],
       rows: pledgedRows,
-      meaning: `You have ${pc} investor${pc !== 1 ? "s" : ""} at commitment stage — ${firmCount} firm pledge${firmCount !== 1 ? "s" : ""} and ${indicativeCount} indicative interest${indicativeCount !== 1 ? "s" : ""}. Investors who commit typically finalize within 6–8 weeks when kept warm with regular updates.`,
+      meaning: `You have ${pc} investor${pc !== 1 ? "s" : ""} at commitment stage — ${firmCount} firm indication${firmCount !== 1 ? "s" : ""} and ${indicativeCount} indicative interest${indicativeCount !== 1 ? "s" : ""}. Investors who commit typically finalize within 6–8 weeks when kept warm with regular updates.`,
       ai: `${crmView.summary.totalPledgedDisplay} in committed capital is strong traction. To protect ${pc === 1 ? "this pledge" : "these pledges"}, send each investor a brief milestone update this week — investors who receive consistent progress notes are 2× more likely to finalize and less likely to reduce their check size.`,
     },
     intro: {
@@ -483,7 +483,7 @@ function FounderInvestorsModuleViewsInner({
     }
     return [
       { id: "interested", title: "Interested", items: groups.interested.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
-      { id: "pledged", title: "Pledged / Indicative", items: groups.pledged.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
+      { id: "pledged", title: "Indications", items: groups.pledged.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
       { id: "intro", title: "Intro Requested", items: groups.intro_requested.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
       { id: "follow_up", title: "Follow-up", items: groups.follow_up.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
     ];

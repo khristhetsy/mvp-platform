@@ -119,7 +119,7 @@ export const investorPledgeSchema = z
   .object({
     companyId: z.string().uuid().optional(),
     companySlug: z.string().min(1).optional(),
-    pledgeAmount: z.coerce.number().positive("Pledge amount must be greater than zero."),
+    pledgeAmount: z.coerce.number().positive("Indicated amount must be greater than zero."),
     pledgeCurrency: z.string().length(3).optional().default("USD"),
   })
   .refine((value) => Boolean(value.companyId || value.companySlug), {

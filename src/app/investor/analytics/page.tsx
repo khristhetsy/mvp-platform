@@ -107,7 +107,7 @@ export default async function InvestorAnalyticsPage() {
           <WorkspacePanel title={t("portfolio_pending_interest")} subtitle={t("from_your_interest_records")}>
             <p className="text-sm text-slate-700">
               <span className="font-medium text-slate-900">{analytics.portfolioInterestCount}</span> companies with
-              interest, pledge, or indicative amounts tracked.
+              interest or indicative amounts tracked.
             </p>
             <p className="mt-2 text-sm text-slate-600">
               Pledged: {analytics.pledgeTotalDisplay} · Indicative: {analytics.indicativeTotalDisplay}

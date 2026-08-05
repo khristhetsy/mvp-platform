@@ -182,12 +182,12 @@ function DrawerContent({
         <p className="mt-5 text-xs font-semibold text-slate-900">{t("interest_breakdown")}</p>
         <div className="mt-2">
           <BRow
-            name="Total indicative pledges"
+            name="Total indications of interest"
             badge={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
             variant={pledgeSummary.totalPledged > 0 ? "success" : "neutral"}
           />
           <BRow
-            name="Investors pledging"
+            name="Investors indicating"
             badge={`${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}`}
             variant={pledgeSummary.investorCount > 0 ? "medium" : "neutral"}
           />
@@ -212,7 +212,7 @@ function DrawerContent({
           <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {pledgeSummary.totalPledged === 0
-              ? "No indicative pledges yet. These appear once investors express formal interest in your listing on the marketplace — you need a published listing and complete data room to start receiving them."
+              ? "No indications of interest yet. These appear once investors express formal interest in your listing on the marketplace — you need a published listing and complete data room to start receiving them."
               : `${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} in indicative interest from ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}. These are non-binding signals — not committed capital. ${avgPledge > 0 ? `Your average pledge size of ${formatPledgeTotal(avgPledge, pledgeSummary.currency)} helps calibrate your round structure.` : ""}`}
           </p>
         </div>
@@ -220,13 +220,13 @@ function DrawerContent({
         <AdviceBox
           lines={[
             pledgeSummary.investorCount === 0
-              ? "No pledges yet. The fastest path to first interest is completing your data room — investors rarely pledge without reviewing your pitch deck and financial model."
+              ? "No indications of interest yet. The fastest path to first interest is completing your data room — investors rarely indicate interest without reviewing your pitch deck and financial model."
               : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}. Schedule a call with each this week — pledges convert to commitments at a much higher rate after a direct conversation.`,
             pendingIntros > 0
               ? `${pendingIntros} unanswered intro request${pendingIntros === 1 ? "" : "s"} — these investors are actively trying to connect. Reply today to convert them into meetings and potential pledges.`
               : interestCount > 0
               ? `${interestCount} investor${interestCount === 1 ? " has" : "s have"} expressed interest but haven't formally pledged. Send each a personalised message with your latest metrics to nudge them toward a pledge.`
-              : "Focus on getting your listing published with a complete data room. Investors who find compelling listings pledge within 48–72 hours of discovering them.",
+              : "Focus on getting your listing published with a complete data room. Investors who find compelling listings indicate interest within 48–72 hours of discovering them.",
             target > 0
               ? fillPct >= 50
                 ? `You're at ${fillPct}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target — strong momentum. Use this traction in conversations with new investors as social proof.`
@@ -287,7 +287,7 @@ function DrawerContent({
             variant={interestCount + introCount + savedCount > 0 ? "medium" : "neutral"}
           />
           <BRow
-            name="Indicative pledges"
+            name="Indications of interest"
             badge={pledgeSummary.investorCount > 0 ? `${pledgeSummary.investorCount} investors` : "None yet"}
             variant={pledgeSummary.investorCount > 0 ? "success" : "neutral"}
           />
@@ -318,7 +318,7 @@ function DrawerContent({
             isPublished && pledgeSummary.investorCount > 0
               ? `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging — now is the time to schedule follow-up calls and convert pledges to commitments.`
               : isPublished
-              ? "You're live but have no pledges yet. Share your iCapOS profile URL directly with warm contacts to accelerate first engagement."
+              ? "You're live but have no indications of interest yet. Share your iCapOS profile URL directly with warm contacts to accelerate first engagement."
               : "Before submitting, ensure your pitch deck is uploaded and your funding target is set — these are the two fields most commonly missing at review.",
             isPublished
               ? `Listings with complete data rooms receive ${pledgeSummary.totalPledged === 0 ? "3–5×" : "significantly"} more investor interactions. ${pledgeSummary.totalPledged === 0 ? "Upload any missing documents to improve your discoverability." : "Keep your documents current to maintain investor confidence."}`
@@ -356,7 +356,7 @@ function DrawerContent({
           variant={target > 0 ? "medium" : "critical"}
         />
         <BRow
-          name="Total pledged (indicative)"
+          name="Total indicated"
           badge={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
           variant={pledgeSummary.totalPledged > 0 ? "success" : "neutral"}
         />
@@ -371,7 +371,7 @@ function DrawerContent({
           variant={fillPct >= 75 ? "success" : fillPct >= 40 ? "medium" : "neutral"}
         />
         <BRow
-          name="Investors pledging"
+          name="Investors indicating"
           badge={`${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}`}
           variant={pledgeSummary.investorCount > 0 ? "medium" : "neutral"}
         />
@@ -405,7 +405,7 @@ function DrawerContent({
           target === 0
             ? "Set your funding target in Company settings immediately. It's one of the first things investors check — a missing target signals an undefined raise, which reduces engagement."
             : fillPct >= 75
-            ? `At ${fillPct}% filled, you're in strong position. Focus on converting existing pledges to commitments rather than adding new investors — depth beats breadth at this stage.`
+            ? `At ${fillPct}% filled, you're in strong position. Focus on converting existing indications to commitments rather than adding new investors — depth beats breadth at this stage.`
             : fillPct >= 40
             ? `At ${fillPct}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target, you have real momentum. Use this traction in outreach: "we're ${fillPct}% filled with ${pledgeSummary.investorCount} investors" is a powerful opener.`
             : pledgeSummary.totalPledged > 0
@@ -415,7 +415,7 @@ function DrawerContent({
             ? `Your ${pledgeSummary.investorCount} current investor${pledgeSummary.investorCount === 1 ? "" : "s"} represent your best referral channel. Ask each if they know 2–3 other investors who fit your thesis — warm intros are 4× more likely to close.`
             : target > 0 && fillPct < 25
             ? "Review whether your target is calibrated to your stage. Seed rounds typically range $500K–$3M. An overly large target relative to your traction can deter investors who worry about lead investor dynamics."
-            : "Maintain weekly investor updates to keep momentum — investors who receive regular updates are 2× more likely to convert from pledge to commitment.",
+            : "Maintain weekly investor updates to keep momentum — investors who receive regular updates are 2× more likely to convert from indication to commitment.",
           target > 0 && remaining > 0
             ? `You need ${formatPledgeTotal(remaining, pledgeSummary.currency)} more to reach your target. With ${interestCount + introCount} active signals in your pipeline, converting even half of these would ${(interestCount + introCount) > 0 ? "materially close the gap" : "require expanding your investor outreach"}.`
             : target === 0

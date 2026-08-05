@@ -132,7 +132,7 @@ export default async function InvestorOpportunitiesPage() {
           <span aria-hidden="true">ⓘ</span>
           <span>
             <b className="text-[var(--navy)]">Information display only.</b> Capital Readiness Ratings and
-            fill levels are informational. Pledges are non-binding indications of interest, not
+            fill levels are informational. These are non-binding indications of interest, not
             commitments. Deal access is subject to accreditation verification. Nothing here is
             investment advice or a recommendation.
           </span>

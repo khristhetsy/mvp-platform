@@ -51,11 +51,11 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
     filterKey: "other",
   },
   pledge_amount_submitted: {
-    label: "Pledge Submitted",
+    label: "Interest Submitted",
     emoji: "💰",
     bg: "#dcfce7", color: "#14532d",
     badgeBg: "#dcfce7", badgeColor: "#14532d",
-    note: "Indicative pledge amount submitted for this round.",
+    note: "Indicative amount submitted for this round.",
     filterKey: "interest",
   },
   message_thread_created: {

@@ -129,7 +129,7 @@ export default async function FounderCapitalRaisePage() {
                 fundingAmount={company.funding_amount ? Number(company.funding_amount) : null}
               />
               <p className="mt-4 text-xs leading-5 text-slate-500">
-                Pledges are indicative and not legally committed investment.
+                Indications of interest are indicative and not legally committed investment.
                 {pledgeSummary.totalPledged === 0 && !pledgeError && (
                   <>{" "}Publish your company profile to start receiving interest.</>
                 )}

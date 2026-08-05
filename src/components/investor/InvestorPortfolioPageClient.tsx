@@ -516,7 +516,7 @@ export function InvestorPortfolioPageClient() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-900">{pledge.company_name}</p>
           <p className="text-[11px] text-slate-400">
-            Pledge:{" "}
+            Indication:{" "}
             <span className="font-semibold text-slate-700">
               {fmtCurrency(pledge.pledge_amount, pledge.pledge_currency ?? "USD")}
             </span>
@@ -667,7 +667,7 @@ export function InvestorPortfolioPageClient() {
               {unlinkedPledges.length > 0 && (
                 <div>
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    Platform pledges · {unlinkedPledges.length}
+                    Platform indications · {unlinkedPledges.length}
                   </p>
                   <div className="overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
                     {unlinkedPledges.map((p) => <PledgeCard key={p.id} pledge={p} />)}
@@ -687,7 +687,7 @@ export function InvestorPortfolioPageClient() {
               {!unlinkedPledges.length && !committedList.length && (
                 <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center">
                   <p className="text-sm text-slate-500">
-                    No commitments yet. Pledges you make on the platform will appear here automatically.
+                    No commitments yet. Indications of interest you make on the platform will appear here automatically.
                   </p>
                   <button
                     type="button"
@@ -785,7 +785,7 @@ export function InvestorPortfolioPageClient() {
               <div>
                 <label className={labelCls}>
                   {form.status === "committed"
-                    ? "Pledge amount ($)"
+                    ? "Indicated amount ($)"
                     : form.status === "tracking"
                     ? "Target amount ($, optional)"
                     : "Amount invested ($) *"}

@@ -7,7 +7,7 @@ export const contentType = OG_CONTENT_TYPE;
 
 export default function Image() {
   return new ImageResponse(
-    BrandOg({ eyebrow: "For investors", title: "Rated deal flow, at a volume you set.", tagline: "Free accounts · your mandate · your monthly cap · pledge-only" }),
+    BrandOg({ eyebrow: "For investors", title: "Rated deal flow, at a volume you set.", tagline: "Free accounts · your mandate · your monthly cap · indication-only" }),
     { ...size },
   );
 }

@@ -11,7 +11,7 @@ export const investors = {
     sub: "Accounts are free. You define your mandate and your monthly limit — and you never receive more than you agreed to. Every company arrives with a readiness rating already attached.",
     primaryCta: { label: "Create a free account", href: "/start" },
     secondaryCta: { label: "Attend the Expo", href: "/events" },
-    compliance: "iCapOS is pledge-only. No transactions, subscriptions, or funds are processed on the platform.",
+    compliance: "iCapOS is indication-only. No transactions, subscriptions, or funds are processed on the platform.",
     panel: {
       title: "Your volume preferences",
       badge: "Active",

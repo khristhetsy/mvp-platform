@@ -183,7 +183,7 @@ export function InvestorCompanyReportView({
               </dd>
             </div>
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <dt className="text-slate-500">Indicative pledge total</dt>
+              <dt className="text-slate-500">Total indicated</dt>
               <dd className="min-w-0 text-right font-medium text-slate-900">{pledgeLabel}</dd>
             </div>
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

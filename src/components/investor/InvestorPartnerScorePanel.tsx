@@ -93,7 +93,7 @@ function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
       title: "Follow-through",
       chip: `${Math.round(p.followThrough)} / 100 · 35% of score`,
       explain:
-        "Turning interest into committed action — opening deal rooms and honoring SPV pledges — minus founders you went quiet on. It's the heaviest driver.",
+        "Turning interest into committed action — opening deal rooms and honoring SPV commitments — minus founders you went quiet on. It's the heaviest driver.",
       rows: [
         { label: "Interest → deal room", value: pct(f.conversionRate) },
         { label: "Pledges honored", value: pct(f.pledgeHonorRate) },
@@ -115,7 +115,7 @@ function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
       title: "Credibility",
       chip: `${Math.round(p.credibility)} / 100 · 20% of score`,
       explain:
-        "Signals that you're a serious, verifiable partner — accreditation, a complete investor profile, and pledges that match your stated check size.",
+        "Signals that you're a serious, verifiable partner — accreditation, a complete investor profile, and commitments that match your stated check size.",
       rows: [
         { label: "Accredited status", value: accreditedValue, highlight: !f.accredited },
         { label: "Also counts", value: "Profile completeness" },

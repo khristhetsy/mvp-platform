@@ -71,7 +71,7 @@ function buildAdvice(r: FounderInvestorRow): string[] {
   }
 
   if (r.pledgeCount > 0) {
-    tips.push("They've pledged on the platform before — a warm signal. Reference the traction that fits their thesis.");
+    tips.push("They've indicated interest on the platform before — a warm signal. Reference the traction that fits their thesis.");
   } else {
     tips.push("No activity history yet — treat as a cold, high-fit prospect. Publish a complete data room before requesting an introduction.");
   }

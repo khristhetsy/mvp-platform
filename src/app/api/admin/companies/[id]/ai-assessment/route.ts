@@ -149,7 +149,7 @@ export async function POST(
     `Compliance: ${compliance.openCount} open events (${compliance.criticalCount} critical, ${compliance.highCount} high)`,
     "",
     `Investor signals: ${investorActivity.savedDeals} saves, ${investorActivity.interests} interests, ${investorActivity.introRequests} intro requests`,
-    investorActivity.pledgeTotal > 0 ? `Indicative pledge total: $${investorActivity.pledgeTotal.toLocaleString()}` : null,
+    investorActivity.pledgeTotal > 0 ? `Total indicated: $${investorActivity.pledgeTotal.toLocaleString()}` : null,
   ].filter(Boolean).join("\n");
 
   try {

@@ -106,9 +106,9 @@ function fallbackResult(
   if (interestedCount > 0 && totalPledged === 0) {
     recommendations.push({
       priority: "high",
-      title: "Convert interest to pledge commitments",
-      action: `${interestedCount} investor${interestedCount !== 1 ? "s" : ""} expressed interest but no pledges recorded. Send them your one-pager and set up intro calls this week.`,
-      metric: `${interestedCount} interested, $0 pledged`,
+      title: "Convert interest to commitments",
+      action: `${interestedCount} investor${interestedCount !== 1 ? "s" : ""} expressed interest but no indications of interest recorded. Send them your one-pager and set up intro calls this week.`,
+      metric: `${interestedCount} interested, $0 indicated`,
     });
   }
 

@@ -199,7 +199,7 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
               Target raised
             </th>
             <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Pledge amount
+              Indicated amount
             </th>
             <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
               CRR
@@ -268,7 +268,7 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
                 {row.fundingTarget ?? <span className="text-slate-300">—</span>}
               </td>
 
-              {/* Pledge amount */}
+              {/* Indicated amount */}
               <td className="px-4 py-3 text-xs text-slate-700">
                 {row.myPledgeAmount != null ? (
                   new Intl.NumberFormat("en-US", {

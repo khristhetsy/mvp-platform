@@ -245,7 +245,7 @@ function MetricsStrip({
       color: "#2E78F5",
     },
     {
-      label: "Pledged",
+      label: "Indicated",
       value: pledgePct !== null ? `${pledgePct}%` : "$0",
       sub: pledgePct !== null ? " of target" : " raised",
       color: pledgePct && pledgePct >= 50 ? "#16a34a" : "#2E78F5",

@@ -625,7 +625,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                   <input className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.investment_size} onChange={(e) => setForm((f) => ({ ...f, investment_size: e.target.value }))} placeholder="e.g. $250K – $1M" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Pledge Amount ($)</label>
+                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Indicated amount ($)</label>
                   <input type="number" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.pledge_amount} onChange={(e) => setForm((f) => ({ ...f, pledge_amount: e.target.value }))} placeholder="250000" />
                 </div>
                 <div>

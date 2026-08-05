@@ -127,7 +127,7 @@ export const about = {
     items: [
       { h: "We charge a subscription, not a percentage", p: "No success fees, no carry, no commission on anything that happens after an introduction. Our incentive is that the product works well enough that you keep paying for it." },
       { h: "We protect the investor side first", p: "Investors set their own monthly volume caps, and we honour them even when it means a founder's distribution list comes up short. A network that stops reading is worth nothing to anyone." },
-      { h: "We stay out of the transaction", p: "iCapOS is pledge-only. No funds, no subscriptions, no transactions on the platform. We're not a broker-dealer, funding portal, investment adviser, or placement agent, and we don't take transaction-based compensation." },
+      { h: "We stay out of the transaction", p: "iCapOS is indication-only. No funds, no subscriptions, no transactions on the platform. We're not a broker-dealer, funding portal, investment adviser, or placement agent, and we don't take transaction-based compensation." },
       { h: "We don't quote numbers we can't stand behind", p: "Where a figure is modeled rather than measured, we say so — or we leave it off the page. When we have instrumented cohort results, they'll be published as results." },
     ],
   },

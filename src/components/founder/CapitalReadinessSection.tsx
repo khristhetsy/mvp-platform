@@ -303,32 +303,32 @@ export function CapitalReadinessSection({
           <BRow name="Listing published" status={raiseProgress === "Published" ? "Live" : "Not live"} variant={raiseProgress === "Published" ? "success" : "critical"} />
           <BRow name="Company profile" status={companyStatus ?? "Pending"} variant={companyStatus === "approved" ? "success" : "medium"} />
           <BRow name="Data room" status={uploadedCount > 0 ? "Active" : "Empty"} variant={uploadedCount > 0 ? "success" : "high"} />
-          <BRow name="Indicative pledges" status={pledgeSummary.investorCount > 0 ? `${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}` : "None yet"} variant={pledgeSummary.investorCount > 0 ? "success" : "neutral"} />
+          <BRow name="Indications of interest" status={pledgeSummary.investorCount > 0 ? `${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}` : "None yet"} variant={pledgeSummary.investorCount > 0 ? "success" : "neutral"} />
           <BRow name="Investor activity" status={totalActivity > 0 ? `${totalActivity} interactions` : "No activity"} variant={totalActivity > 0 ? "medium" : "neutral"} />
         </div>
       ),
-      meaning: `Your listing is ${raiseProgress === "Published" ? "live on the marketplace and receiving traffic" : "not yet published — investors cannot find you"}. ${target > 0 ? `At ${Math.round(fillPct * 100)}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target with ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging interest, you are in ${fillPct > 0.5 ? "strong" : fillPct > 0.2 ? "early" : "very early"} momentum.` : "Set a funding target to track your raise progress."}`,
+      meaning: `Your listing is ${raiseProgress === "Published" ? "live on the marketplace and receiving traffic" : "not yet published — investors cannot find you"}. ${target > 0 ? `At ${Math.round(fillPct * 100)}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target with ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} indicating interest, you are in ${fillPct > 0.5 ? "strong" : fillPct > 0.2 ? "early" : "very early"} momentum.` : "Set a funding target to track your raise progress."}`,
       advice: [
         raiseProgress !== "Published"
           ? `Your listing is not live. Complete your company profile and submit for admin review — you are invisible to investors until published.`
           : pledgeSummary.investorCount === 0
-          ? `You're published but have 0 pledges. Review your pitch deck for clarity, ensure your funding target is realistic, and share your iCapOS profile directly with warm contacts.`
-          : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}. Schedule calls with each to move from indication to commitment.`,
+          ? `You're published but have 0 indications of interest. Review your pitch deck for clarity, ensure your funding target is realistic, and share your iCapOS profile directly with warm contacts.`
+          : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} indicating ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}. Schedule calls with each to move from indication to commitment.`,
         missingTypes.length > 0
           ? `Your data room is incomplete — ${missingTypes.length} document${missingTypes.length === 1 ? "" : "s"} missing. Investors who open your profile expect a full data room. Uploading ${missingTypes[0] ? DOC_LABELS[missingTypes[0]] ?? missingTypes[0] : "missing documents"} first is highest priority.`
           : `Your data room is complete. Make sure each document is current and dated within the last 12 months before taking investor meetings.`,
         target > 0 && fillPct < 1
-          ? `You need ${formatPledgeTotal(target - pledgeSummary.totalPledged, pledgeSummary.currency)} more to reach your target. At your current pace, focus on converting your ${interestCount} expressed interest${interestCount === 1 ? "" : "s"} and ${introCount} pending intro${introCount === 1 ? "" : "s"} into committed pledges.`
+          ? `You need ${formatPledgeTotal(target - pledgeSummary.totalPledged, pledgeSummary.currency)} more to reach your target. At your current pace, focus on converting your ${interestCount} expressed interest${interestCount === 1 ? "" : "s"} and ${introCount} pending intro${introCount === 1 ? "" : "s"} into commitments.`
           : `Set a clear funding target if you haven't — investors use it to gauge round structure and decide whether your raise fits their typical check size.`,
       ],
     },
     interest: {
       title: "Indicative interest",
-      sub: "Non-binding pledges from investors on the platform",
+      sub: "Non-binding indications of interest from investors on the platform",
       stats: [
-        { label: "Total pledged", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency) },
+        { label: "Total indicated", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency) },
         { label: "Investors", value: String(pledgeSummary.investorCount) },
-        { label: "Avg pledge", value: pledgeSummary.investorCount > 0 ? formatPledgeTotal(Math.round(pledgeSummary.totalPledged / pledgeSummary.investorCount), pledgeSummary.currency) : "—" },
+        { label: "Avg indication", value: pledgeSummary.investorCount > 0 ? formatPledgeTotal(Math.round(pledgeSummary.totalPledged / pledgeSummary.investorCount), pledgeSummary.currency) : "—" },
       ],
       breakdown: (
         <div>
@@ -336,24 +336,24 @@ export function CapitalReadinessSection({
             <p className="py-2 text-xs text-slate-500">{t("no_pledges_yet_publish_your_listing_to_start")}</p>
           ) : (
             <>
-              <BRow name="Indicative pledge total" status={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} variant="success" />
+              <BRow name="Total indicated" status={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} variant="success" />
               <BRow name="Expressed interest" status={`${interestCount} investor${interestCount === 1 ? "" : "s"}`} variant={interestCount > 0 ? "medium" : "neutral"} />
               <BRow name="Intro requests" status={`${introCount} pending`} variant={introCount > 0 ? "high" : "neutral"} />
               <BRow name="Saved deals" status={`${savedCount} investor${savedCount === 1 ? "" : "s"}`} variant="neutral" />
-              <BRow name="Pledges are non-binding" status="Indicative only" variant="neutral" />
+              <BRow name="Indications are non-binding" status="Indicative only" variant="neutral" />
             </>
           )}
         </div>
       ),
-      meaning: `These pledges are non-binding expressions of interest, not committed capital. They signal investor intent and help validate your raise to other investors. ${pledgeSummary.investorCount > 0 ? `Your average pledge of ${formatPledgeTotal(Math.round(pledgeSummary.totalPledged / pledgeSummary.investorCount), pledgeSummary.currency)} is a data point for calibrating your round structure.` : "Pledges appear once investors express interest in your listing."}`,
+      meaning: `These indications are non-binding expressions of interest, not committed capital. They signal investor intent and help validate your raise to other investors. ${pledgeSummary.investorCount > 0 ? `Your average indication of ${formatPledgeTotal(Math.round(pledgeSummary.totalPledged / pledgeSummary.investorCount), pledgeSummary.currency)} is a data point for calibrating your round structure.` : "Indications appear once investors express interest in your listing."}`,
       advice: [
         pledgeSummary.investorCount === 0
-          ? `You have 0 pledges. The fastest path to first interest is completing your data room — investors don't pledge until they can review your documents.`
-          : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} — none of these are committed. Schedule a call with each this week to move toward a term sheet.`,
+          ? `You have 0 indications of interest. The fastest path to first interest is completing your data room — investors don't indicate interest until they can review your documents.`
+          : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} indicating ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} — none of these are committed. Schedule a call with each this week to move toward a term sheet.`,
         introCount > 0
           ? `You have ${introCount} unanswered intro request${introCount === 1 ? "" : "s"}. Every day without a response reduces conversion probability. Reply today even just to set a meeting time.`
           : `You have no pending intro requests. Make sure your listing is published and your summary is compelling — the intro request is the primary first-contact action for investors.`,
-        `Once you have 3+ pledges, use them as social proof with other investors. A "we have ${pledgeSummary.investorCount + 2} investors in at similar levels" line in outreach increases conversion significantly.`,
+        `Once you have 3+ indications of interest, use them as social proof with other investors. A "we have ${pledgeSummary.investorCount + 2} investors in at similar levels" line in outreach increases conversion significantly.`,
       ],
     },
     activity: {

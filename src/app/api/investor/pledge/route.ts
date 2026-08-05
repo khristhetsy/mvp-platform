@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const parsed = investorPledgeSchema.safeParse(body);
 
   if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? "Invalid pledge request.";
+    const message = parsed.error.issues[0]?.message ?? "Invalid interest request.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
@@ -33,13 +33,13 @@ export async function POST(request: Request) {
   );
 
   if ("error" in result && result.error) {
-    const message = "message" in result.error ? result.error.message : "Unable to submit pledge amount.";
+    const message = "message" in result.error ? result.error.message : "Unable to submit indicated amount.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const data = "data" in result ? result.data : null;
   if (!data) {
-    return NextResponse.json({ error: "Unable to submit pledge amount." }, { status: 400 });
+    return NextResponse.json({ error: "Unable to submit indicated amount." }, { status: 400 });
   }
 
   await writeAuditLog(auth.supabase, {

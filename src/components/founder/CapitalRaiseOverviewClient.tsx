@@ -173,12 +173,12 @@ function DrawerContent({
         <p className="mt-5 text-xs font-semibold text-slate-900">{t("pledge_breakdown")}</p>
         <div className="mt-2">
           <BRow
-            name="Total indicative pledges"
+            name="Total indications of interest"
             badge={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
             variant={pledgeSummary.totalPledged > 0 ? "success" : "neutral"}
           />
           <BRow
-            name="Investors pledging"
+            name="Investors indicating"
             badge={`${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}`}
             variant={pledgeSummary.investorCount > 0 ? "medium" : "neutral"}
           />
@@ -215,7 +215,7 @@ function DrawerContent({
           <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {pledgeSummary.totalPledged === 0
-              ? "No indicative pledges yet. Pledges appear when investors formally express interest in your listing — you need a published listing and a complete data room to start receiving them."
+              ? "No indications of interest yet. Indications appear when investors formally express interest in your listing — you need a published listing and a complete data room to start receiving them."
               : `${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} in indicative interest from ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}. These are non-binding signals, not committed capital. ${target > 0 ? `You're at ${fillPct}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target.` : "Setting a funding target will let investors assess whether your round fits their check size."}`}
           </p>
         </div>
@@ -223,13 +223,13 @@ function DrawerContent({
         <AdviceBox
           lines={[
             pledgeSummary.investorCount === 0
-              ? "No pledges yet. The fastest path to first interest is completing your data room — investors rarely pledge without reviewing your pitch deck and financial model."
+              ? "No indications of interest yet. The fastest path to first interest is completing your data room — investors rarely indicate interest without reviewing your pitch deck and financial model."
               : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}. Schedule a call with each this week — pledges convert to commitments at much higher rates after a direct conversation.`,
             pendingIntros > 0
               ? `${pendingIntros} unanswered intro request${pendingIntros === 1 ? "" : "s"} — these investors are actively trying to connect. Reply today to convert them into meetings and potential pledges.`
               : totalSignals > 0
               ? `${totalSignals} investors are tracking your deal. Send each a personalised update with your latest metrics to nudge them toward a formal pledge.`
-              : "Focus on publishing your listing with a complete data room. Investors who find compelling listings typically pledge within 48–72 hours of discovering them.",
+              : "Focus on publishing your listing with a complete data room. Investors who find compelling listings typically indicate interest within 48–72 hours of discovering them.",
             target > 0 && fillPct < 50
               ? `At ${fillPct}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target, the key lever is converting your ${totalSignals} pipeline signals into pledges — each new pledge also creates social proof that accelerates the next one.`
               : target > 0 && fillPct >= 50
@@ -261,7 +261,7 @@ function DrawerContent({
       <p className="mt-5 text-xs font-semibold text-slate-900">{t("investor_funnel")}</p>
       <div className="mt-2">
         <BRow
-          name="Investors pledging"
+          name="Investors indicating"
           badge={`${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}`}
           variant={pledgeSummary.investorCount > 0 ? "success" : "neutral"}
         />
@@ -302,14 +302,14 @@ function DrawerContent({
             ? "No investor activity yet. The two fastest levers are: (1) ensure your listing is published and (2) upload a current pitch deck — these are the top two missing items for most unengaged listings."
             : pledgeSummary.investorCount > 0
             ? `${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? " has" : "s have"} pledged — these are your highest-priority relationships. Follow up with each personally this week to begin converting indicative interest into committed capital.`
-            : `No pledges yet, but ${totalSignals} investors are in your pipeline. Your next goal is converting one of these into a formal pledge — start with the ${introCount > 0 ? `${introCount} intro request${introCount === 1 ? "" : "s"}` : `${interestCount} interested investor${interestCount === 1 ? "" : "s"}`} as they've shown the strongest intent.`,
+            : `No indications of interest yet, but ${totalSignals} investors are in your pipeline. Your next goal is converting one of these into a formal commitment — start with the ${introCount > 0 ? `${introCount} intro request${introCount === 1 ? "" : "s"}` : `${interestCount} interested investor${interestCount === 1 ? "" : "s"}`} as they've shown the strongest intent.`,
           pendingIntros > 0
-            ? `${pendingIntros} unanswered intro request${pendingIntros === 1 ? "" : "s"} — investors who request introductions are 4–6× more likely to pledge than passive browsers. These are your hottest leads right now.`
+            ? `${pendingIntros} unanswered intro request${pendingIntros === 1 ? "" : "s"} — investors who request introductions are 4–6× more likely to indicate interest than passive browsers. These are your hottest leads right now.`
             : interestCount > 0
             ? `${interestCount} investor${interestCount === 1 ? " has" : "s have"} expressed formal interest. Send each a personalised message with your latest metrics and a calendar link — converting 1–2 into intro calls this week will compound your pipeline.`
             : savedCount > 0
             ? `${savedCount} investor${savedCount === 1 ? " has" : "s have"} saved your deal — they're tracking it without committing. A direct message referencing recent company progress can re-activate their interest.`
-            : "Build your pipeline by sharing your iCapOS profile with warm contacts. Personal introductions convert to pledges at 3–5× the rate of cold discovery.",
+            : "Build your pipeline by sharing your iCapOS profile with warm contacts. Personal introductions convert to indications of interest at 3–5× the rate of cold discovery.",
           pledgeSummary.investorCount + totalSignals > 0
             ? `Investor velocity matters as much as total count. ${pledgeSummary.investorCount + totalSignals} total engaged investors is a real signal — log every interaction and track response rates to identify which outreach channels are working.`
             : "Once you have your first investor engaged, focus on deepening that relationship before broadening outreach — one strong reference investor anchors your round credibility.",

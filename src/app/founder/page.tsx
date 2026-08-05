@@ -351,7 +351,7 @@ export default async function FounderDashboardPage() {
                 </div>
               ) : null}
               <p className="mt-4 text-xs leading-5 text-slate-500">
-                Pledges are indicative and not legally committed investment.
+                Indications of interest are indicative and not legally committed investment.
               </p>
             </WorkspacePanel>
 

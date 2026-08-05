@@ -6,7 +6,7 @@ import { MandateExplorer } from "@/components/marketing-site/MandateExplorer";
 export const metadata: Metadata = {
   title: "For investors — iCapOS",
   description:
-    "Rated deal flow, at a volume you set. Free accounts, your mandate, your monthly cap — every company arrives with a readiness rating attached. iCapOS is pledge-only; no transactions are processed.",
+    "Rated deal flow, at a volume you set. Free accounts, your mandate, your monthly cap — every company arrives with a readiness rating attached. iCapOS is indication-only; no transactions are processed.",
   alternates: { canonical: "/investors" },
 };
 
