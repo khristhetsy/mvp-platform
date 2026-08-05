@@ -405,9 +405,12 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
     items: [
       {
         href: "/founder",
-        label: "1 · Rate",
+        label: "Dashboard",
+      },
+      {
+        href: "/founder",
+        label: "Stage 1 – Rate",
         children: [
-          { href: "/founder", label: "Dashboard" },
           { href: "/founder/journey", label: "My Progress" },
           { href: "/founder/actions", label: "Action Center" },
           { href: "/founder/readiness/wizard", label: "Your score", minStage: "qualify" },
@@ -416,7 +419,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
       },
       {
         href: "/founder/readiness",
-        label: "2 · Ready",
+        label: "Stage 2 – Ready",
         minStage: "qualify",
         children: [
           { href: "/founder/readiness", label: "Readiness checklist", minStage: "qualify" },
@@ -433,7 +436,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
       },
       {
         href: "/founder/investors",
-        label: "3 · Match",
+        label: "Stage 3 – Match",
         minStage: "deploy",
         children: [
           { href: "/founder/deploy", label: "Automated outreach", minStage: "deploy" },
@@ -444,7 +447,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
       },
       {
         href: "/founder/deal-room",
-        label: "4 · Raise",
+        label: "Stage 4 – Raise",
         minStage: "deploy",
         children: [
           { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
