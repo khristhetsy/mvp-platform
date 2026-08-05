@@ -8,6 +8,7 @@ import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
   id: string; title: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null;
+  contact_crm_id: string | null;
   stage_id: string | null; stage_name: string | null; value_cents: number | null;
   billing: "yearly" | "monthly"; probability: number | null; expected_close: string | null;
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
@@ -25,13 +26,64 @@ function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
 const cardBox: React.CSSProperties = { background: "var(--muted)", borderRadius: 8, padding: 11 };
 
-export function OpportunityDetailClient({ initial, stages, founderContact = null }: { initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null }) {
+type OTask = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; source: "deal" | "contact" };
+
+export function OpportunityDetailClient({ initial, stages, founderContact = null, staff = [] }: { initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null; staff?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [o, setO] = useState<Opp>(initial);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState<"notes" | "extra" | "founder">("notes");
+  const [tab, setTab] = useState<"notes" | "extra" | "founder" | "tasks">("notes");
   const [noteInput, setNoteInput] = useState("");
+  const [oppTasks, setOppTasks] = useState<OTask[]>([]);
+  const [tasksLoaded, setTasksLoaded] = useState(false);
+  const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
+  const [taskDraft, setTaskDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+
+  async function loadTasks() {
+    try {
+      const reqs = [fetch(`/api/sales/tasks?scope=all&opportunityId=${o.id}`)];
+      if (o.contact_crm_id) reqs.push(fetch(`/api/sales/tasks?scope=all&contactCrmId=${encodeURIComponent(o.contact_crm_id)}`));
+      const results = await Promise.all(reqs);
+      const jsons = await Promise.all(results.map((r) => (r.ok ? r.json() : Promise.resolve({ tasks: [] }))));
+      const map = new Map<string, OTask>();
+      for (const t of (jsons[0]?.tasks ?? [])) map.set(t.id, { ...t, source: "deal" });
+      for (const t of (jsons[1]?.tasks ?? [])) if (!map.has(t.id)) map.set(t.id, { ...t, source: "contact" });
+      setOppTasks([...map.values()]);
+    } catch {
+      setOppTasks([]);
+    }
+    setTasksLoaded(true);
+  }
+  function openTasks() {
+    setTab("tasks");
+    if (!tasksLoaded) void loadTasks();
+  }
+  async function createTask() {
+    if (!taskDraft.title.trim()) return;
+    setBusy(true);
+    try {
+      await fetch("/api/sales/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: taskDraft.title, taskType: taskDraft.taskType, dueDate: taskDraft.dueDate || null, assigneeId: taskDraft.assigneeId || null, opportunityId: o.id, contactCrmId: o.contact_crm_id, contactName: o.contact_name }),
+      });
+      setTaskDraft({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+      await loadTasks();
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function taskDone(id: string) {
+    setBusy(true);
+    try { await fetch(`/api/sales/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) }); await loadTasks(); }
+    finally { setBusy(false); }
+  }
+  async function taskDelete(id: string) {
+    setBusy(true);
+    try { await fetch(`/api/sales/tasks/${id}`, { method: "DELETE" }); setConfirmTaskId(null); await loadTasks(); }
+    finally { setBusy(false); }
+  }
 
   async function saveNote() {
     const text = noteInput.trim();
@@ -176,9 +228,63 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             {founderContact && (
               <button onClick={() => setTab("founder")} style={{ fontSize: 12, fontWeight: tab === "founder" ? 600 : 400, color: tab === "founder" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "founder" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Founder Profile</button>
             )}
+            <button onClick={openTasks} style={{ fontSize: 12, fontWeight: tab === "tasks" ? 600 : 400, color: tab === "tasks" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "tasks" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Tasks{tasksLoaded && oppTasks.length ? ` · ${oppTasks.length}` : ""}</button>
           </div>
           {tab === "founder" && founderContact ? (
             <FounderProfileMirror contact={founderContact} />
+          ) : tab === "tasks" ? (
+            <div>
+              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks link to this opportunity{o.contact_name ? ` and ${o.contact_name}` : ""}. Shows the deal&rsquo;s and the contact&rsquo;s tasks.</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
+                <input value={taskDraft.title} onChange={(e) => setTaskDraft({ ...taskDraft, title: e.target.value })} placeholder="Task title" style={inp} />
+                <select value={taskDraft.taskType} onChange={(e) => setTaskDraft({ ...taskDraft, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
+                <input type="date" value={taskDraft.dueDate} onChange={(e) => setTaskDraft({ ...taskDraft, dueDate: e.target.value })} style={inp} />
+                <select value={taskDraft.assigneeId} onChange={(e) => setTaskDraft({ ...taskDraft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <button onClick={createTask} disabled={busy || !taskDraft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !taskDraft.title.trim() ? 0.5 : 1 }}>Add task</button>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 84px 96px 66px 64px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
+                  <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
+                </div>
+                {!tasksLoaded ? (
+                  <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>Loading…</p>
+                ) : oppTasks.length === 0 ? (
+                  <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks for this opportunity or contact yet.</p>
+                ) : oppTasks.map((ct) => {
+                  const cdone = ct.status === "done";
+                  if (confirmTaskId === ct.id) {
+                    return (
+                      <div key={ct.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
+                        <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{ct.title}&rdquo;? This can&rsquo;t be undone.</span>
+                        <span style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
+                          <button onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={ct.id} style={{ display: "grid", gridTemplateColumns: "1fr 74px 84px 96px 66px 64px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
+                      <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <span style={{ textDecoration: cdone ? "line-through" : "none", color: cdone ? "var(--muted-foreground)" : "var(--foreground)" }}>{ct.title}</span>
+                        <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}> · {ct.source}</span>
+                      </span>
+                      <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{ct.task_type}</span>
+                      <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{ct.due_date ? ct.due_date.slice(5) : "—"}</span>
+                      <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
+                      <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
+                      <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓</button>}
+                        <button onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : tab === "notes" ? (
             <div>
               <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 48, resize: "vertical" }} />
