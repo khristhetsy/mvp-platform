@@ -10,6 +10,8 @@ export type SalesTask = {
   status: "open" | "done" | "snoozed"; assignee_id: string | null; assignee_name: string | null;
   opportunity_id: string | null; contact_crm_id: string | null; contact_name: string | null;
   created_at: string; done_at: string | null;
+  /** Enriched from sales_opportunities so the client knows whether the linked deal is still open. */
+  opportunity_status: "open" | "won" | "lost" | "archived" | null; opportunity_name: string | null;
 };
 
 const SELECT = "id, title, task_type, summary, due_date, status, assignee_id, opportunity_id, contact_crm_id, contact_name, created_at, done_at, assignee:profiles!sales_tasks_assignee_id_fkey(full_name, email)";
@@ -23,6 +25,7 @@ function mapRow(r: Record<string, unknown>): SalesTask {
     assignee_name: a?.full_name ?? a?.email ?? null,
     opportunity_id: (r.opportunity_id as string) ?? null, contact_crm_id: (r.contact_crm_id as string) ?? null,
     contact_name: (r.contact_name as string) ?? null, created_at: String(r.created_at), done_at: (r.done_at as string) ?? null,
+    opportunity_status: null, opportunity_name: null,
   };
 }
 
@@ -39,7 +42,22 @@ export async function listTasks(opts: { scope?: "my" | "all" | "overdue"; assign
   }
   if (opts.scope === "overdue") q = q.eq("status", "open").lt("due_date", new Date().toISOString().slice(0, 10));
   const { data } = await q;
-  return ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);
+  const tasks = ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);
+
+  // Enrich with the linked opportunity's status/name so the client can decide
+  // whether to prompt for a next task (only while the deal is still open).
+  const oppIds = [...new Set(tasks.map((t) => t.opportunity_id).filter(Boolean))] as string[];
+  if (oppIds.length) {
+    const res = await db().from("sales_opportunities").select("id, name, status").in("id", oppIds);
+    const opps = (res.data ?? []) as Array<{ id: string; name: string | null; status: string | null }>;
+    const byId = new Map(opps.map((o) => [o.id, o] as const));
+    for (const t of tasks) {
+      const o = t.opportunity_id ? byId.get(t.opportunity_id) : undefined;
+      t.opportunity_status = (o?.status as SalesTask["opportunity_status"]) ?? null;
+      t.opportunity_name = o?.name ?? null;
+    }
+  }
+  return tasks;
 }
 
 export type CreateTaskInput = {

@@ -8,7 +8,20 @@ type Task = {
   id: string; title: string; task_type: string; summary: string | null; due_date: string | null;
   status: "open" | "done" | "snoozed"; assignee_id: string | null; assignee_name: string | null; opportunity_id: string | null;
   contact_crm_id: string | null; contact_name: string | null;
+  opportunity_status: string | null; opportunity_name: string | null;
 };
+
+/** Add N business days (skip weekends) → YYYY-MM-DD. */
+function addBusinessDays(n: number): string {
+  const d = new Date();
+  let added = 0;
+  while (added < n) {
+    d.setDate(d.getDate() + 1);
+    const wd = d.getDay();
+    if (wd !== 0 && wd !== 6) added++;
+  }
+  return d.toISOString().slice(0, 10);
+}
 type Scope = "my" | "all" | "overdue";
 type Staff = { id: string; name: string };
 const TASK_TYPES = ["Call", "Email", "Demo", "Follow-up", "Proposal"];
@@ -37,6 +50,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [nextStep, setNextStep] = useState<{ task: Task; title: string; taskType: string; dueDate: string; assigneeId: string } | null>(null);
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
 
@@ -69,6 +83,30 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
     try {
       await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: draft.title, taskType: draft.taskType, dueDate: draft.dueDate || null, assigneeId: draft.assigneeId || null }) });
       setAdding(false); setDraft({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+      await load(scope);
+    } finally { setBusy(false); }
+  }
+  async function markDone(t: Task) {
+    await patch(t.id, { status: "done" });
+    // Prompt for the next task only while the linked opportunity is still open.
+    if (t.opportunity_id && t.opportunity_status === "open") {
+      setNextStep({ task: t, title: t.title, taskType: t.task_type, dueDate: addBusinessDays(3), assigneeId: t.assignee_id ?? "" });
+    }
+  }
+  async function createNextStep() {
+    if (!nextStep) return;
+    const ns = nextStep;
+    setBusy(true);
+    try {
+      await fetch("/api/sales/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: ns.title, taskType: ns.taskType, dueDate: ns.dueDate || null, assigneeId: ns.assigneeId || null,
+          opportunityId: ns.task.opportunity_id, contactCrmId: ns.task.contact_crm_id, contactName: ns.task.contact_name,
+        }),
+      });
+      setNextStep(null);
       await load(scope);
     } finally { setBusy(false); }
   }
@@ -105,6 +143,28 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
               <button onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+            </div>
+          </div>
+        )}
+
+        {nextStep && (
+          <div style={{ padding: 14, borderTop: "0.5px solid #eef1f5", background: "#E6F1FB" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ color: "#0F6E56" }}>✓</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Task completed — this deal is still open</span>
+              {nextStep.task.opportunity_name && <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#854F0B", background: "#FAEEDA", borderRadius: 999, padding: "2px 9px" }}>{nextStep.task.opportunity_name}</span>}
+            </div>
+            <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "4px 0 10px" }}>Keep the opportunity moving — schedule the next step. You&rsquo;ll be prompted after each task until the deal is marked Won or Lost.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 130px", gap: 8 }}>
+              <input value={nextStep.title} onChange={(e) => setNextStep({ ...nextStep, title: e.target.value })} style={inp} />
+              <select value={nextStep.taskType} onChange={(e) => setNextStep({ ...nextStep, taskType: e.target.value })} style={inp}>{TASK_TYPES.map((x) => <option key={x}>{x}</option>)}</select>
+              <input type="date" value={nextStep.dueDate} onChange={(e) => setNextStep({ ...nextStep, dueDate: e.target.value })} style={inp} />
+              <select value={nextStep.assigneeId} onChange={(e) => setNextStep({ ...nextStep, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 11, flexWrap: "wrap" }}>
+              <button onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>+ Create next task</button>
+              <button onClick={() => setNextStep(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>Not now</button>
+              <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>No prompt once the deal is Won or Lost</span>
             </div>
           </div>
         )}
@@ -175,7 +235,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                   <span className="cLbl" data-label="Status" style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: done ? "#0F6E56" : "#854F0B", background: done ? "#E1F5EE" : "#FAEEDA" }}>{done ? "Done" : "Open"}</span>
                   <div className="tActions">
                     <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-                    {!done && <button onClick={() => patch(t.id, { status: "done" })} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓ Done</button>}
+                    {!done && <button onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓ Done</button>}
                     {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
                     <button onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                   </div>
