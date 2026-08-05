@@ -411,6 +411,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         href: "/founder/onboarding",
         label: "Stage 1 – Onboarding",
         children: [
+          { href: "/founder/stages/onboarding", label: "Stage guide" },
           { href: "/founder/settings", label: "Company profile" },
           { href: "/founder/journey", label: "My Progress" },
           { href: "/founder/actions", label: "Action Center" },
@@ -422,6 +423,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         label: "Stage 2 – Preparation",
         minStage: "qualify",
         children: [
+          { href: "/founder/stages/preparation", label: "Stage guide", minStage: "qualify" },
           { href: "/founder/readiness/wizard", label: "Capital Readiness Rating", minStage: "qualify" },
           { href: "/founder/readiness", label: "Readiness checklist", minStage: "qualify" },
           { href: "/founder/readiness/data-room", label: "Data room", minStage: "qualify" },
@@ -441,6 +443,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         label: "Stage 3 – Marketing",
         minStage: "deploy",
         children: [
+          { href: "/founder/stages/marketing", label: "Stage guide", minStage: "deploy" },
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
           { href: "/founder/deploy", label: "Automated outreach", minStage: "deploy" },
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
@@ -453,6 +456,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         label: "Stage 4 – Closing",
         minStage: "deploy",
         children: [
+          { href: "/founder/stages/closing", label: "Stage guide", minStage: "deploy" },
           { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
           { href: "/founder/offering-type", label: "Offering type", minStage: "deploy" },
           { href: "/founder/spvs", label: "SPVs & closings" },
