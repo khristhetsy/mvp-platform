@@ -23,14 +23,20 @@ export function SalesHubTabs() {
   const searchParams = useSearchParams();
   const viewAs = searchParams.get("viewAs"); // null | "me" | userId
   const [members, setMembers] = useState<Member[]>([]);
+  const [canViewTeam, setCanViewTeam] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Super-admin only: the endpoint returns [] for everyone else, which hides the switcher.
+  // Gated on the manage_crm permission: Member Sales reps get canViewTeam=false,
+  // so the View toggle is hidden and they only ever see their own accounts.
   useEffect(() => {
     let active = true;
-    fetch("/api/sales/contacts/assignable-members")
+    fetch("/api/sales/view-scope")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (active && Array.isArray(d?.members)) setMembers(d.members); })
+      .then((d) => {
+        if (!active || !d) return;
+        setCanViewTeam(Boolean(d.canViewTeam));
+        if (Array.isArray(d.members)) setMembers(d.members);
+      })
       .catch(() => {});
     return () => { active = false; };
   }, []);
@@ -72,7 +78,7 @@ export function SalesHubTabs() {
         })}
       </div>
 
-      {members.length > 0 && (
+      {canViewTeam && (
         <div style={{ position: "relative", paddingBottom: 6 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "3px 4px 3px 9px" }}>
             <i className="ti ti-eye" style={{ fontSize: 14, color: "#4338CA" }} aria-hidden="true" />
@@ -80,10 +86,12 @@ export function SalesHubTabs() {
             <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
               <button onClick={() => setView("me")} style={seg(mode === "me")}>Me</button>
               <button onClick={() => setView("team")} style={seg(mode === "team")}>Team</button>
-              <button onClick={() => setMenuOpen((v) => !v)} style={{ ...seg(mode === "user"), display: "inline-flex", alignItems: "center", gap: 4 }}>
-                {selectedMember ? selectedMember.name : "Someone else"}
-                <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
-              </button>
+              {members.length > 0 && (
+                <button onClick={() => setMenuOpen((v) => !v)} style={{ ...seg(mode === "user"), display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {selectedMember ? selectedMember.name : "Someone else"}
+                  <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
+                </button>
+              )}
             </div>
           </div>
           {menuOpen && (

@@ -14,6 +14,9 @@ import { createServiceRoleClient, serviceRoleClientUntyped } from "@/lib/supabas
 
 export type SalesScope = {
   isManager: boolean;
+  /** Can view team / other reps' records + use the View toggle. Gated on the
+   *  `manage_crm` permission (manager/admin/super) — Member Sales reps are false. */
+  canViewTeam: boolean;
   canSeeAllContacts: boolean;
   ownerId: string | null;
   isSuperAdmin: boolean;
@@ -23,9 +26,9 @@ export type SalesScope = {
   viewOwnerId: string | null | undefined;
 };
 
-/** Resolves the viewAs param to an owner filter — only for super admins. */
-function resolveViewAs(isSuper: boolean, selfId: string, viewAs?: string | null): string | null | undefined {
-  if (!isSuper || !viewAs) return undefined;
+/** Resolves the viewAs param to an owner filter — only for users who can view the team. */
+function resolveViewAs(canView: boolean, selfId: string, viewAs?: string | null): string | null | undefined {
+  if (!canView || !viewAs) return undefined;
   const v = viewAs.trim().toLowerCase();
   if (v === "me") return selfId;
   if (v === "team" || v === "all") return null;
@@ -36,7 +39,7 @@ function resolveViewAs(isSuper: boolean, selfId: string, viewAs?: string | null)
  *  analytics, forecast, tasks). Honors a super admin's viewAs, else the user's
  *  own scope. null = no filter (see all). */
 export function effectiveSalesOwner(scope: SalesScope): string | null {
-  return scope.viewOwnerId !== undefined ? scope.viewOwnerId : scope.isManager ? null : scope.ownerId;
+  return scope.viewOwnerId !== undefined ? scope.viewOwnerId : scope.canViewTeam ? null : scope.ownerId;
 }
 
 /** Same, for the Contacts list (which keys off canSeeAllContacts, not isManager). */
@@ -77,17 +80,21 @@ export async function getSalesScope(
       isSuper ||
       (slug != null && INTERNAL_ROLE_RANK[slug] >= INTERNAL_ROLE_RANK.admin) ||
       (slug == null && profile.role === "admin");
-    const canSeeAllContacts = isAdmin || (await departmentSeesAllContacts(profile.id));
+    // Team view is gated on the manage_crm permission (managers/admins have it,
+    // Member Sales reps do not) — additive to the admin-tier check.
+    const canViewTeam = isAdmin || eff.permissions.includes("manage_crm");
+    const canSeeAllContacts = canViewTeam || (await departmentSeesAllContacts(profile.id));
     return {
       isManager: isAdmin,
+      canViewTeam,
       canSeeAllContacts,
-      ownerId: isAdmin ? null : profile.id,
+      ownerId: canViewTeam ? null : profile.id,
       isSuperAdmin: isSuper,
-      viewOwnerId: resolveViewAs(isSuper, profile.id, viewAs),
+      viewOwnerId: resolveViewAs(canViewTeam, profile.id, viewAs),
     };
   } catch {
     // Fail closed: on a lookup error, scope to the user's own records rather than
     // exposing everyone's. Assign controls also stay hidden.
-    return { isManager: false, canSeeAllContacts: false, ownerId: profile.id, isSuperAdmin: false, viewOwnerId: undefined };
+    return { isManager: false, canViewTeam: false, canSeeAllContacts: false, ownerId: profile.id, isSuperAdmin: false, viewOwnerId: undefined };
   }
 }
