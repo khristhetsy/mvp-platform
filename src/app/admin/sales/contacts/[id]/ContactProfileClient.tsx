@@ -215,6 +215,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [busy, setBusy] = useState(false);
   const [showTask, setShowTask] = useState(false);
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null }[]>([]);
+  const [tasksLoaded, setTasksLoaded] = useState(false);
+  const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
   // Self-contained editor for the structured "Additional details" fields.
@@ -231,7 +234,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [prefOrig, setPrefOrig] = useState<Record<string, string>>(seedPrefs);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
-  const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog">("profile");
+  const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog" | "tasks">("profile");
   // Option lists per profile field (Odoo selection / many2many) for the pickers.
   const [fieldOptions, setFieldOptions] = useState<Record<string, string[]>>({});
   useEffect(() => {
@@ -393,7 +396,30 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     try {
       await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
       setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+      await loadContactTasks();
     } finally { setBusy(false); }
+  }
+  async function loadContactTasks() {
+    try {
+      const res = await fetch(`/api/sales/tasks?scope=all&contactCrmId=${encodeURIComponent(contact.id)}`);
+      const data = res.ok ? await res.json() : { tasks: [] };
+      setContactTasks(data.tasks ?? []);
+    } catch { setContactTasks([]); }
+    setTasksLoaded(true);
+  }
+  async function taskDone(id: string) {
+    setBusy(true);
+    try { await fetch(`/api/sales/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) }); await loadContactTasks(); }
+    finally { setBusy(false); }
+  }
+  async function taskDelete(id: string) {
+    setBusy(true);
+    try { await fetch(`/api/sales/tasks/${id}`, { method: "DELETE" }); setConfirmTaskId(null); await loadContactTasks(); }
+    finally { setBusy(false); }
+  }
+  function openTasksTab() {
+    setProfileSub("tasks");
+    if (!tasksLoaded) void loadContactTasks();
   }
 
   const address = [contact.street, contact.street2, contact.city, contact.state, contact.zip, contact.country].filter(Boolean).join(", ") || null;
@@ -603,9 +629,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <div>
                   {/* Founder/Investor Profile · Note Log · Activity strip */}
                   <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
-                    {([["sendmsg", "Send message"], ["profile", profile.title], ["notelog", "Note Log"]] as const).map(([k, label]) => (
+                    {([["sendmsg", "Send message"], ["profile", profile.title]] as const).map(([k, label]) => (
                       <button key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
                     ))}
+                    <button onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
+                    <button onClick={() => setProfileSub("notelog")} style={{ background: "none", border: "none", borderBottom: profileSub === "notelog" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "notelog" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "notelog" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Note Log</button>
                     <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
                   </div>
                   {profileSub === "profile" && (<>
@@ -698,6 +726,57 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     </div>
                   </div>
                   </>)}
+                  {profileSub === "tasks" && (
+                    <div style={{ paddingTop: 4 }}>
+                      <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks auto-link to {contact.name}.</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
+                        <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Task title" style={inp} />
+                        <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
+                        <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
+                        <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{assignableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
+                          <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
+                        </div>
+                        {!tasksLoaded ? (
+                          <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>Loading…</p>
+                        ) : contactTasks.length === 0 ? (
+                          <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks for this contact yet.</p>
+                        ) : contactTasks.map((ct) => {
+                          const cdone = ct.status === "done";
+                          if (confirmTaskId === ct.id) {
+                            return (
+                              <div key={ct.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
+                                <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{ct.title}&rdquo;? This can&rsquo;t be undone.</span>
+                                <span style={{ display: "flex", gap: 6 }}>
+                                  <button onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
+                                  <button onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+                                </span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div key={ct.id} style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
+                              <span style={{ textDecoration: cdone ? "line-through" : "none", color: cdone ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.title}</span>
+                              <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{ct.task_type}</span>
+                              <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{ct.due_date ? ct.due_date.slice(5) : "—"}</span>
+                              <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
+                              <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
+                              <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓</button>}
+                                <button onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {profileSub === "sendmsg" && (
                     <div style={{ paddingTop: 4 }}>
                       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
