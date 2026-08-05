@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { z } from "zod";
 import { adminWorkspaceNavSections } from "@/lib/workspace-nav";
 import { FormField } from "@/components/ui/FormField";
@@ -88,6 +88,31 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
   const [resetSent, setResetSent] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
+  const [photo, setPhoto] = useState<string | null>(avatarUrl);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  async function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    setPhotoError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/profile/avatar", { method: "POST", body: fd });
+      const data = (await res.json().catch(() => null)) as { avatarUrl?: string; error?: string } | null;
+      if (res.ok && data?.avatarUrl) setPhoto(data.avatarUrl);
+      else setPhotoError(data?.error ?? "Could not upload photo.");
+    } catch {
+      setPhotoError("Could not upload photo.");
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = "";
+    }
+  }
+
   const initials = getInitials(name, email);
   const memberSince = new Date(createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
@@ -156,14 +181,29 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
     <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
       {/* Left sidebar */}
       <div className="flex flex-col items-center gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-panel)]">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={name || email || "Profile photo"} referrerPolicy="no-referrer" className="h-[72px] w-[72px] rounded-full object-cover" />
-        ) : (
-          <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#dbeafe] text-xl font-medium text-[#1d4ed8]">
-            {initials}
+        <div className="flex flex-col items-center gap-1">
+          <div className="relative h-[72px] w-[72px]">
+            {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photo} alt={name || email || "Profile photo"} referrerPolicy="no-referrer" className="h-[72px] w-[72px] rounded-full object-cover" />
+            ) : (
+              <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#dbeafe] text-xl font-medium text-[#1d4ed8]">
+                {initials}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoUploading}
+              aria-label="Upload profile photo"
+              className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#2563eb] text-white disabled:opacity-60"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+            </button>
+            <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onPhotoChange} className="hidden" />
           </div>
-        )}
+          {photoUploading ? <span className="text-[10px] text-slate-500">Uploading…</span> : photoError ? <span className="max-w-[96px] text-center text-[10px] text-red-600">{photoError}</span> : null}
+        </div>
         <div className="text-center">
           <p className="text-sm font-medium text-slate-950">{name || email}</p>
           <p className="mt-1 text-xs text-slate-500">{email}</p>
