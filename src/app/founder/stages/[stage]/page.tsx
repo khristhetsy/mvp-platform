@@ -22,7 +22,7 @@ export default async function FounderStageGuidePage({
   const profile = await requireRole(["founder"]);
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
-  const progress = await computeStageProgress(supabase, company, stage);
+  const progress = await computeStageProgress(supabase, company, stage, profile.id);
 
   return (
     <FounderAppShell
