@@ -7,6 +7,16 @@ export const dynamic = "force-dynamic";
 const MAX_BYTES = 3 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
+// GET /api/profile/avatar — the current user's avatar URL (for the header).
+export async function GET() {
+  const auth = await requireApiProfile(["founder", "investor", "admin", "analyst"]);
+  if ("error" in auth) return auth.error;
+  const admin = createServiceRoleClient();
+  const { data } = await admin.from("profiles").select("avatar_url").eq("id", auth.profile.id).maybeSingle();
+  const avatarUrl = (data as { avatar_url?: string | null } | null)?.avatar_url ?? null;
+  return NextResponse.json({ avatarUrl });
+}
+
 // POST /api/profile/avatar — upload a profile photo. Uses the service role to
 // store in the `avatars` bucket, so no storage RLS policies are needed.
 export async function POST(request: Request) {

@@ -148,8 +148,18 @@ function ProfileDropdown({
   const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    let on = true;
+    fetch("/api/profile/avatar")
+      .then((r) => r.json())
+      .then((d) => { if (on && d?.avatarUrl) setPhotoUrl(d.avatarUrl as string); })
+      .catch(() => {});
+    return () => { on = false; };
+  }, []);
 
   const initials = profileName
     .split(" ")
@@ -210,8 +220,13 @@ function ProfileDropdown({
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5 hover:border-slate-300 hover:bg-slate-50 transition-colors"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--blue)] text-[10px] font-semibold text-white shrink-0">
-          {initials || "iC"}
+        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-[var(--blue)] text-[10px] font-semibold text-white shrink-0">
+          {photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoUrl} alt="" referrerPolicy="no-referrer" className="h-8 w-8 object-cover" />
+          ) : (
+            initials || "iC"
+          )}
         </div>
         <div className="hidden text-left sm:block">
           <p className="text-sm font-medium leading-tight text-slate-950">{profileName}</p>
