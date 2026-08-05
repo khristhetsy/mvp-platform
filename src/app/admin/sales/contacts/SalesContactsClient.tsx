@@ -89,7 +89,7 @@ function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort
   return sp.toString();
 }
 
-export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?: boolean }) {
+export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; basePath?: string }) {
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
@@ -505,12 +505,12 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <input type="checkbox" checked={selected.has(c.id) || selectAllMatching} onChange={() => toggleRow(c.id)} aria-label={`Select ${c.name}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
                           </div>
-                          <Link href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, gridColumn: "2 / -1", padding: "10px 14px", alignItems: "center", textDecoration: "none", color: "var(--foreground)" }}>
+                          <Link href={`${basePath}/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, gridColumn: "2 / -1", padding: "10px 14px", alignItems: "center", textDecoration: "none", color: "var(--foreground)" }}>
                             {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                           </Link>
                         </div>
                       ) : (
-                        <Link key={c.id} href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
+                        <Link key={c.id} href={`${basePath}/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
                           {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                         </Link>
                       ))}

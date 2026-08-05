@@ -18,7 +18,7 @@ export default async function MarketingContactsPage() {
           <i className="ti ti-link" aria-hidden="true" /> One universal list shared across Sales, IR &amp; Marketing — you see only your Lead-assigned contacts (admins see all).
         </p>
       </div>
-      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} />
+      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} basePath="/admin/marketing/contacts" />
     </div>
   );
 }

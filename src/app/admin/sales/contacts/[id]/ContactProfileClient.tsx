@@ -206,7 +206,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [] }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[] }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -431,7 +431,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 12, color: "var(--muted-foreground)" }}>
-        <Link href="/admin/sales/contacts" style={{ color: "var(--muted-foreground)", textDecoration: "none" }}>← Contacts</Link>
+        <Link href={basePath} style={{ color: "var(--muted-foreground)", textDecoration: "none" }}>← Contacts</Link>
         <span>/</span><span style={{ color: "var(--foreground)" }}>{contact.name}</span>
       </div>
 

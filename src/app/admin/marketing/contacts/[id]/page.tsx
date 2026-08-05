@@ -1,43 +1,22 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
-import { marketingDb } from "@/lib/marketing/db";
-import { getSequences } from "@/lib/marketing/sequences";
-import type { MarketingContact } from "@/lib/marketing/types";
-import { MarketingContactProfile } from "./MarketingContactProfile";
+import { loadContactPageProps } from "@/lib/sales/contact-page-data";
+import { ContactProfileClient } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
 
 export const dynamic = "force-dynamic";
 
+// Marketing → Contacts opens the same universal contact (crm_contacts) as Sales,
+// but stays inside the Marketing Hub shell (provided by the marketing layout) and
+// links back to Marketing Contacts — no jump to the Sales Hub.
 export default async function MarketingContactPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole(["admin"]);
+  const profile = await requireRole(["admin", "analyst"]);
   const { id } = await params;
-  const db = marketingDb();
-
-  const { data: contact } = await db
-    .from("marketing_contacts")
-    .select("id,email,first_name,last_name,company,title,source,tags,created_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (!contact) notFound();
-
-  const [{ data: memberships }, { data: allLists }, sequences, { data: unsub }] = await Promise.all([
-    db.from("marketing_list_contacts").select("list_id, marketing_lists(id,name)").eq("contact_id", id),
-    db.from("marketing_lists").select("id,name").order("created_at", { ascending: false }),
-    getSequences().catch(() => []),
-    db.from("marketing_unsubscribes").select("email,reason,unsubscribed_at").eq("email", contact.email).maybeSingle(),
-  ]);
-
-  type Embed = { marketing_lists: { id: string; name: string } | { id: string; name: string }[] | null };
-  const memberLists = ((memberships ?? []) as Embed[])
-    .map((m) => (Array.isArray(m.marketing_lists) ? m.marketing_lists[0] ?? null : m.marketing_lists))
-    .filter((l): l is { id: string; name: string } => Boolean(l));
+  const props = await loadContactPageProps(profile, id);
+  if (!props) notFound();
 
   return (
-    <MarketingContactProfile
-      contact={contact as MarketingContact}
-      memberLists={memberLists}
-      allLists={(allLists ?? []) as { id: string; name: string }[]}
-      sequences={(sequences ?? []).filter((s) => s.status === "active" || s.status === "draft").map((s) => ({ id: s.id, name: s.name }))}
-      unsubscribed={unsub ? { unsubscribed_at: (unsub as { unsubscribed_at: string }).unsubscribed_at } : null}
-    />
+    <div style={{ padding: 24 }}>
+      <ContactProfileClient {...props} basePath="/admin/marketing/contacts" />
+    </div>
   );
 }
