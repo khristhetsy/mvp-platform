@@ -6,7 +6,11 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
 import { DataRoomAccessPanel } from "@/components/founder/DataRoomAccessPanel";
 import { DataRoomActivityPanel } from "@/components/founder/DataRoomActivityPanel";
+import { DataRoomEngagementPanel } from "@/components/founder/DataRoomEngagementPanel";
+import { DataRoomQAPanel } from "@/components/founder/DataRoomQAPanel";
 import { listDataRoomActivity } from "@/lib/data-room/activity";
+import { listDataRoomEngagement } from "@/lib/data-room/engagement";
+import { listCompanyQuestions } from "@/lib/data-room/qa";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -21,7 +25,13 @@ export default async function FounderDataRoomPage() {
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
-  const activity = company ? await listDataRoomActivity(company.id) : [];
+  const [activity, engagement, questions] = company
+    ? await Promise.all([
+        listDataRoomActivity(company.id),
+        listDataRoomEngagement(company.id),
+        listCompanyQuestions(company.id),
+      ])
+    : [[], { items: [], totalViews: 0, maxViews: 0, uniqueInvestors: 0 }, []];
 
   return (
     <FounderAppShell
@@ -39,6 +49,8 @@ export default async function FounderDataRoomPage() {
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <DataRoomAccessPanel />
             <DataRoomActivityPanel items={activity} />
+            <DataRoomEngagementPanel engagement={engagement} />
+            <DataRoomQAPanel questions={questions} />
           </div>
         </WorkspacePageContainer>
       </FounderFeatureGate>
