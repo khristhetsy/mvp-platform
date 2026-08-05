@@ -41,8 +41,12 @@ export function buildDocumentChecklist(
   const uploadedByType = new Map<string, DocumentRecord>();
 
   for (const document of documents) {
-    if (document.document_type) {
-      uploadedByType.set(document.document_type.toUpperCase(), document);
+    if (!document.document_type) continue;
+    const key = document.document_type.toUpperCase();
+    const existing = uploadedByType.get(key);
+    // Keep the most recently uploaded document for each type.
+    if (!existing || (document.created_at ?? "") > (existing.created_at ?? "")) {
+      uploadedByType.set(key, document);
     }
   }
 

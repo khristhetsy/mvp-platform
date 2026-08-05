@@ -7,6 +7,17 @@ export const dynamic = "force-dynamic";
 const MAX_BYTES = 3 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
+// Verify the bytes are actually a raster image (magic numbers), not just a
+// file with an image content-type set by the client.
+function looksLikeImage(b: Uint8Array): boolean {
+  if (b.length < 12) return false;
+  const jpg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  const png = b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;
+  const gif = b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38;
+  const webp = b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
+  return jpg || png || gif || webp;
+}
+
 // GET /api/profile/avatar — the current user's avatar URL (for the header).
 export async function GET() {
   const auth = await requireApiProfile(["founder", "investor", "admin", "analyst"]);
@@ -35,6 +46,9 @@ export async function POST(request: Request) {
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/gif" ? "gif" : "jpg";
   const path = `${auth.profile.id}/avatar.${ext}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!looksLikeImage(bytes)) {
+    return NextResponse.json({ error: "That file isn't a valid image." }, { status: 400 });
+  }
 
   const { error: uploadError } = await admin.storage
     .from("avatars")

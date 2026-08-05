@@ -51,12 +51,17 @@ export function renderBusinessPlanPdf(
       }
 
       const charts = normalizeCharts(plan.charts);
+      // Start a new page if the upcoming block wouldn't fit, so charts never clip.
+      const need = (h: number) => {
+        if (doc.y + h > doc.page.height - doc.page.margins.bottom) doc.addPage();
+      };
 
       // Each section's chart is drawn right beneath that section's text.
       const drawSectionChart = (id: string) => {
         if (id === "market") {
           const marketRows = ([["TAM", charts.market.tam], ["SAM", charts.market.sam], ["SOM", charts.market.som]] as const).filter(([, v]) => v != null) as Array<[string, number]>;
           if (!marketRows.length) return;
+          need(marketRows.length * 18 + 30);
           h2("Market size");
           const maxV = Math.max(...marketRows.map(([, v]) => v), 1);
           const x0 = 56 + 44;
@@ -72,6 +77,7 @@ export function renderBusinessPlanPdf(
         }
         if (id === "use_of_funds") {
           if (!charts.allocation.length) return;
+          need(charts.allocation.length * 15 + 30);
           h2("Use of funds");
           for (let i = 0; i < charts.allocation.length; i++) {
             const a = charts.allocation[i];
@@ -84,6 +90,7 @@ export function renderBusinessPlanPdf(
         }
         if (id === "problem") {
           if (!charts.problem.length) return;
+          need(charts.problem.length * 18 + 30);
           h2("Cost of the status quo");
           const maxP = Math.max(...charts.problem.map((p) => p.value), 1);
           const x0 = 56 + 150;
@@ -99,6 +106,7 @@ export function renderBusinessPlanPdf(
         }
         if (id === "solution") {
           if (!charts.solution.length) return;
+          need(charts.solution.length * 15 + 30);
           h2("Before and after");
           for (const s of charts.solution) {
             const y = doc.y;
@@ -109,6 +117,7 @@ export function renderBusinessPlanPdf(
         }
         if (id === "competition") {
           if (!charts.competition.length) return;
+          need(charts.competition.length * 15 + 30);
           h2("Positioning");
           for (const p of charts.competition) {
             const y = doc.y;
@@ -120,6 +129,7 @@ export function renderBusinessPlanPdf(
         }
         if (id === "traction") {
           if (!charts.traction.series.length) return;
+          need(40 + charts.traction.milestones.length * 14);
           h2("Traction over time");
           const tr = charts.traction;
           doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(tr.series.map((p) => `${p.period}: ${p.value}${tr.unit ? ` ${tr.unit}` : ""}`).join("    "), 56, doc.y);
