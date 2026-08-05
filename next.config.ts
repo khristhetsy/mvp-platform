@@ -5,7 +5,10 @@ import type { NextConfig } from "next";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdfkit"],
+  // pdfkit (PDF gen), pdfjs-dist (PDF text extraction), exceljs (XLSX extraction)
+  // must stay external — bundling them for the serverless runtime breaks their
+  // runtime imports on Vercel (works in dev, fails in prod → no text extracted).
+  serverExternalPackages: ["pdfkit", "pdfjs-dist", "exceljs"],
   turbopack: {
     root: __dirname,
   },

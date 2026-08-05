@@ -454,6 +454,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
   const [rescoreError, setRescoreError] = useState<string | null>(null);
   const [rescoreAllProgress, setRescoreAllProgress] = useState<{ done: number; total: number } | null>(null);
   const [summaryProgress, setSummaryProgress] = useState<{ done: number } | null>(null);
+  const [summaryResult, setSummaryResult] = useState<string | null>(null);
 
   const filtered = rows.filter((r) => {
     const matchSearch =
@@ -479,31 +480,42 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
     // re-scores affected companies. Loop batches until nothing remains.
     setSummaryProgress({ done: 0 });
     setRescoreError(null);
+    setSummaryResult(null);
     let done = 0;
+    const skipped: Record<string, number> = {};
     for (let guard = 0; guard < 300; guard++) {
+      let j: { summarized?: number; remaining?: number; skipped?: Record<string, number>; error?: string };
       try {
         const res = await fetch("/api/admin/documents/backfill-summaries", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ limit: 8 }),
         });
-        const j = await res.json().catch(() => ({}));
+        j = await res.json().catch(() => ({}));
         if (!res.ok) {
           setRescoreError(j.error ?? "Summary backfill failed.");
           setSummaryProgress(null);
           return;
         }
-        done += j.summarized ?? 0;
-        setSummaryProgress({ done });
-        if (!j.remaining || j.remaining <= 0) break;
       } catch {
         setRescoreError("Network error during summary backfill.");
         setSummaryProgress(null);
         return;
       }
+      done += j.summarized ?? 0;
+      for (const [k, v] of Object.entries(j.skipped ?? {})) skipped[k] = (skipped[k] ?? 0) + (v as number);
+      setSummaryProgress({ done });
+      if (!j.remaining || j.remaining <= 0) break; // all handled
+      if ((j.summarized ?? 0) === 0) break; // no progress — remaining docs can't be summarized right now
     }
     setSummaryProgress(null);
-    window.location.reload();
+    if (done > 0) {
+      window.location.reload();
+      return;
+    }
+    // Nothing generated — surface why, so the cause is visible instead of silent.
+    const parts = Object.entries(skipped).map(([k, v]) => `${k.replaceAll("_", " ")} × ${v}`);
+    setSummaryResult(parts.length ? `No summaries generated. Skipped — ${parts.join(", ")}.` : "No documents needed summaries.");
   }
 
   async function rescoreAll() {
@@ -632,6 +644,17 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
           {rescoreError && (
             <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
               {rescoreError}
+            </div>
+          )}
+
+          {summaryResult && (
+            <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {summaryResult}
+              <span className="mt-1 block text-xs text-amber-700">
+                &ldquo;download failed&rdquo; = the file isn&rsquo;t in storage (e.g. seeded/demo docs). &ldquo;no
+                text&rdquo; = the PDF has no extractable text (scanned image, or extraction failed). &ldquo;no api
+                key&rdquo; = ANTHROPIC_API_KEY missing.
+              </span>
             </div>
           )}
 
