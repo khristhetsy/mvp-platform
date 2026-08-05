@@ -14,6 +14,9 @@ export type FounderInvestorMatchCard = {
   investorType: string | null;
   checkBand: string | null;
   reasons: string[];
+  /** Opaque reference (investor/prospect id) — sent back on an intro request,
+   *  never shown to the founder, so identity stays private. */
+  ref: string;
 };
 
 export type FounderMatchingCenter = {
@@ -67,6 +70,7 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
     investorType: investor.investor_type ?? null,
     checkBand: checkBand(investor.check_size_min ?? null, investor.check_size_max ?? null),
     reasons: match.matchReasons.slice(0, 4),
+    ref: investor.profile_id,
   }));
 
   return { cards, total: cards.length, strong: cards.filter((c) => c.matchScore >= 70).length };

@@ -1,11 +1,18 @@
+"use client";
+
 // Shared anonymized match-card list for the founder + investor Matching Centers.
 // Identity is withheld; only fit score, coarse descriptors, and reason chips show.
+// Founder cards may carry an opaque `introRef` + `introEndpoint` to request a
+// brokered introduction without revealing the investor's identity.
+import { useState } from "react";
+
 export type MatchCenterCard = {
   matchScore: number;
   tag: string;
   title: string;
   subtitle: string | null;
   reasons: string[];
+  introRef?: string;
 };
 
 function barColor(score: number): string {
@@ -14,12 +21,46 @@ function barColor(score: number): string {
   return "#cbd5e1";
 }
 
+function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  async function request() {
+    setState("loading");
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: introRef }),
+      });
+      setState(res.ok ? "done" : "error");
+    } catch {
+      setState("error");
+    }
+  }
+
+  if (state === "done") {
+    return <span className="text-xs font-medium text-emerald-600">Requested — the iCapOS team will follow up.</span>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={request}
+      disabled={state === "loading"}
+      className="rounded-lg bg-[var(--brand-indigo,#2E78F5)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+    >
+      {state === "loading" ? "Requesting…" : state === "error" ? "Retry request" : "Request introduction"}
+    </button>
+  );
+}
+
 export function MatchingCenterList({
   cards,
   emptyText,
+  introEndpoint,
 }: {
   cards: MatchCenterCard[];
   emptyText: string;
+  introEndpoint?: string;
 }) {
   if (cards.length === 0) {
     return (
@@ -57,6 +98,12 @@ export function MatchingCenterList({
                   {r}
                 </span>
               ))}
+            </div>
+          )}
+
+          {introEndpoint && c.introRef && (
+            <div className="mt-4 flex justify-end">
+              <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
             </div>
           )}
         </div>

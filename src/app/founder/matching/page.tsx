@@ -16,7 +16,35 @@ function titleCase(s: string): string {
 export default async function FounderMatchingPage() {
   const profile = await requireRole(["founder"]);
   const company = await ensureFounderCompanyForUser(profile);
-  const data = company ? await loadFounderMatchingCenter(company) : { cards: [], total: 0, strong: 0 };
+
+  // Only surface investor matches once the company is admin-approved or published.
+  const eligible = Boolean(company && (company.review_status === "approved" || company.is_published));
+
+  if (!eligible) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle={company?.company_name ?? "Your company"}
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="Matching"
+            title="Matching Center"
+            description="Ranked investor matches unlock once your company is approved or published."
+          />
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center">
+            <p className="text-sm font-medium text-slate-900">Not available yet</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+              Complete your readiness materials and get admin approval (or publish to the marketplace) to see investor
+              contacts matched to your company.
+            </p>
+          </div>
+        </WorkspacePageContainer>
+      </FounderAppShell>
+    );
+  }
+
+  const data = await loadFounderMatchingCenter(company!);
 
   const cards: MatchCenterCard[] = data.cards.map((c) => ({
     matchScore: c.matchScore,
@@ -24,6 +52,7 @@ export default async function FounderMatchingPage() {
     title: c.investorType ? `${titleCase(c.investorType)} investor` : "Investor",
     subtitle: c.checkBand ? `Typical check ${c.checkBand}` : null,
     reasons: c.reasons,
+    introRef: c.ref,
   }));
 
   return (
@@ -50,6 +79,7 @@ export default async function FounderMatchingPage() {
         <div className="mt-6">
           <MatchingCenterList
             cards={cards}
+            introEndpoint="/api/founder/matching/intro"
             emptyText="No investor matches yet. Complete your profile and readiness materials to surface matched investors."
           />
         </div>
