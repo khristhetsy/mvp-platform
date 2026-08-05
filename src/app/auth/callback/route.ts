@@ -39,6 +39,20 @@ export async function GET(request: Request) {
         requestedPlan: parseRequestedPlan(user.user_metadata?.requested_plan),
       });
 
+      // Capture the profile photo an OAuth provider (Google / LinkedIn) returns,
+      // so the avatar shows automatically. Best-effort — never block the login.
+      const providerAvatar =
+        (user.user_metadata?.avatar_url as string | undefined) ??
+        (user.user_metadata?.picture as string | undefined) ??
+        null;
+      if (providerAvatar) {
+        try {
+          await supabase.from("profiles").update({ avatar_url: providerAvatar } as never).eq("id", user.id);
+        } catch {
+          /* avatar_url column may not exist yet — ignore */
+        }
+      }
+
       const redirectPath =
         next ||
         (isNewProfile && profile.role === "founder"

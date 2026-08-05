@@ -32,6 +32,7 @@ export default async function AdminProfilePage() {
         role={profile.role}
         isSuperAdmin={profile.is_super_admin ?? false}
         createdAt={profile.created_at}
+        avatarUrl={(profile as { avatar_url?: string | null }).avatar_url ?? null}
       />
 
       <div className="mt-6">

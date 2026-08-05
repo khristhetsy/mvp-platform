@@ -62,9 +62,10 @@ type Props = {
   role: string;
   isSuperAdmin: boolean;
   createdAt: string;
+  avatarUrl?: string | null;
 };
 
-export function AdminProfileClient({ initialName, email, role, isSuperAdmin, createdAt }: Readonly<Props>) {
+export function AdminProfileClient({ initialName, email, role, isSuperAdmin, createdAt, avatarUrl = null }: Readonly<Props>) {
   const t = useTranslations("adminCmp");
   const { getError, inputCls, validate, clearError } = useFormValidation();
 
@@ -155,9 +156,14 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
     <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
       {/* Left sidebar */}
       <div className="flex flex-col items-center gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-panel)]">
-        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#dbeafe] text-xl font-medium text-[#1d4ed8]">
-          {initials}
-        </div>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt={name || email || "Profile photo"} referrerPolicy="no-referrer" className="h-[72px] w-[72px] rounded-full object-cover" />
+        ) : (
+          <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#dbeafe] text-xl font-medium text-[#1d4ed8]">
+            {initials}
+          </div>
+        )}
         <div className="text-center">
           <p className="text-sm font-medium text-slate-950">{name || email}</p>
           <p className="mt-1 text-xs text-slate-500">{email}</p>
