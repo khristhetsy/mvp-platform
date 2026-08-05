@@ -1,5 +1,9 @@
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "./claude";
-import { requiredDocumentTypes } from "./documents/required-types";
+import { missingRequiredDocumentLabels } from "./data/founder-readiness";
+
+function titleCaseCode(code: string): string {
+  return code.replaceAll("_", " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
 
 type AnalysisInput = {
   companyName: string;
@@ -19,9 +23,10 @@ export type GeneratedDiligenceReport = {
 };
 
 export async function generateDiligenceReport(input: AnalysisInput): Promise<GeneratedDiligenceReport> {
-  const missingDocuments = requiredDocumentTypes.filter(
-    (documentType) => !input.uploadedDocumentTypes.includes(documentType),
-  );
+  // Normalize DB codes → required labels (with aliases) so uploaded documents are
+  // actually credited instead of everything reading as missing.
+  const missingDocuments = missingRequiredDocumentLabels(input.uploadedDocumentTypes);
+  const uploadedLabels = [...new Set(input.uploadedDocumentTypes.map(titleCaseCode))];
 
   const documentNextSteps =
     missingDocuments.length > 0
@@ -49,8 +54,13 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
         content: JSON.stringify({
           task: "Create an investor diligence summary with risks, missing items, and next steps. Return plain text only.",
           companyName: input.companyName,
+          uploadedDocuments: uploadedLabels,
           documentSummaries: input.documentSummaries,
           missingDocuments,
+          note:
+            input.documentSummaries.length === 0 && uploadedLabels.length > 0
+              ? "Documents listed in uploadedDocuments ARE on file but not yet AI-summarized. Acknowledge they are present and pending content analysis — do NOT state that no documents exist."
+              : undefined,
         }),
       },
     ],

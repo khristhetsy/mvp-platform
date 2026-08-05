@@ -44,15 +44,20 @@ describe("generateDiligenceReport", () => {
   it("returns a Claude-generated summary when ANTHROPIC_API_KEY is set", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
 
+    // Real uploads are DB codes (PITCH_DECK), not labels — and FINANCIAL_STATEMENTS
+    // is an alias for the "Financial model" requirement.
     const report = await generateDiligenceReport({
       companyName: "Acme Corp",
       documentSummaries: ["Pitch deck summary"],
-      uploadedDocumentTypes: [requiredDocumentTypes[0] ?? "pitch_deck"],
+      uploadedDocumentTypes: ["PITCH_DECK", "FINANCIAL_STATEMENTS"],
     });
 
     expect(report.generatedBy).toBe("claude");
     expect(report.isDemo).toBe(false);
     expect(report.executiveSummary).toContain("Strong market positioning");
-    expect(report.missingDocuments.length).toBe(requiredDocumentTypes.length - 1);
+    // Pitch deck + Financial model (via alias) are covered → 2 fewer missing.
+    expect(report.missingDocuments).not.toContain("Pitch deck");
+    expect(report.missingDocuments).not.toContain("Financial model");
+    expect(report.missingDocuments.length).toBe(requiredDocumentTypes.length - 2);
   });
 });

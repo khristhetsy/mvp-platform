@@ -90,6 +90,23 @@ export function buildDocumentChecklist(
   });
 }
 
+/**
+ * Required document labels not covered by the uploaded type codes, honoring the
+ * same code/alias mapping as the readiness checklist. Fixes the diligence report
+ * comparing human labels ("Pitch deck") against DB codes ("PITCH_DECK").
+ */
+export function missingRequiredDocumentLabels(
+  uploadedTypeCodes: readonly string[],
+  requiredLabels: readonly string[] = requiredDocumentTypes,
+): string[] {
+  const uploaded = new Set(uploadedTypeCodes.map((c) => c.toUpperCase()));
+  return requiredLabels.filter((label) => {
+    const code = documentTypeCode(label);
+    const aliases = DOC_TYPE_ALIASES[code] ?? [];
+    return !uploaded.has(code) && !aliases.some((a) => uploaded.has(a.toUpperCase()));
+  });
+}
+
 export function computeReadinessScore(
   uploadedTypeCodes: string[],
   requiredLabels: readonly string[] = requiredDocumentTypes,
