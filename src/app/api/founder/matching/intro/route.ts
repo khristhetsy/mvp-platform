@@ -3,7 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
-import { writeAuditLog } from "@/lib/data/audit";
+import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +25,8 @@ export async function POST(request: Request) {
   const admin = createServiceRoleClient();
 
   if (isProspectInvestorId(ref)) {
-    // Prospect isn't a platform user — record a brokered-intro request for the team.
-    await writeAuditLog(admin, {
-      userId: auth.profile.id,
-      action: "matching.prospect_intro_requested",
-      entityType: "matching_intro",
-      entityId: company.id,
-      metadata: { companyId: company.id, investorRef: ref, kind: "prospect" },
-    });
+    // Prospect isn't a platform user — queue a brokered-intro request for the team.
+    await createProspectIntroRequest({ companyId: company.id, founderId: auth.profile.id, investorRef: ref });
     return NextResponse.json({ ok: true, brokered: true });
   }
 
