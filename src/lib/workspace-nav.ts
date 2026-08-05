@@ -440,7 +440,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         minStage: "deploy",
         children: [
           { href: "/founder/deploy", label: "Automated outreach", minStage: "deploy" },
-          { href: "/founder/investor-pipeline", label: "Manual outreach", minStage: "deploy" },
+          { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
           { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },
         ],

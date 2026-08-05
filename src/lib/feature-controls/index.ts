@@ -43,7 +43,10 @@ export const FEATURES: FeatureDef[] = [
     investor: ["/investor/opportunities", "/investor/watchlist", "/investor/interest-pipeline", "/investor/deal-room", "/investor/deals", "/investor/spvs", "/investor/portfolio", "/investor/activity"],
   } },
   { key: "fundraising", label: "Fundraising suite", group: "Fundraising & market", hrefs: {
-    founder: ["/founder/investors", "/founder/matching", "/founder/investor-pipeline", "/founder/investors/outreach", "/founder/investors/matches", "/founder/deal-room", "/founder/capital-raise", "/founder/spvs"],
+    founder: ["/founder/investors", "/founder/matching", "/founder/investors/outreach", "/founder/investors/matches", "/founder/deal-room", "/founder/capital-raise", "/founder/spvs"],
+  } },
+  { key: "investor_crm", label: "Investor CRM", group: "Fundraising & market", hrefs: {
+    founder: ["/founder/investor-pipeline"],
   } },
   { key: "events", label: "Events", group: "Fundraising & market", hrefs: { founder: ["/events", "/founder/events"], investor: ["/events"], admin: ["/admin/events", "/admin/events/applications", "/admin/events/sponsors", "/admin/events/analytics", "/admin/events/gamification"] } },
   { key: "partner_score", label: "Partner Score", group: "Fundraising & market", hrefs: { investor: ["/investor/partner-score"] } },
