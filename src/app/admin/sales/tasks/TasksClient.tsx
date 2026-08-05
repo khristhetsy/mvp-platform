@@ -36,6 +36,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
   const [draft, setDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
 
@@ -108,12 +109,41 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
           </div>
         )}
 
+        <style>{`
+          .tHead,.tRow{display:grid;grid-template-columns:minmax(0,1fr) 92px 100px 128px 82px minmax(150px,auto);gap:10px;align-items:center;}
+          .tActions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+          @media(max-width:760px){
+            .tHead{display:none;}
+            .tRow{grid-template-columns:1fr 1fr;row-gap:6px;}
+            .tRow .cTask{grid-column:1 / -1;}
+            .tActions{grid-column:1 / -1;justify-content:flex-start;}
+            .cLbl[data-label]::before{content:attr(data-label)": ";color:var(--muted-foreground);font-size:10px;text-transform:uppercase;letter-spacing:.04em;}
+          }
+        `}</style>
+
+        {!loading && tasks.length > 0 && (
+          <div className="tHead" style={{ padding: "8px 14px", borderTop: "0.5px solid #eef1f5", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--muted-foreground)" }}>
+            <span>Task</span><span>Type</span><span>Due date</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
+          </div>
+        )}
+
         {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
           : tasks.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No tasks. Create one, or add tasks from a contact or opportunity.</p>
           : tasks.map((t) => {
               const due = dueLabel(t.due_date);
               const tc = TYPE_COLOR[t.task_type] ?? { color: "#5F5E5A", bg: "#F1EFE8" };
               const done = t.status === "done";
+              if (confirmId === t.id) {
+                return (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
+                    <span style={{ fontSize: 12.5, color: "#A32D2D" }}>⚠ Delete &ldquo;{t.title}&rdquo;{t.contact_name ? ` for ${t.contact_name}` : ""}? This can&rsquo;t be undone.</span>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <button onClick={async () => { await del(t.id); setConfirmId(null); }} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Delete</button>
+                      <button onClick={() => setConfirmId(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+                    </div>
+                  </div>
+                );
+              }
               if (editId === t.id) {
                 return (
                   <div key={t.id} style={{ padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto", gap: 8, alignItems: "center" }}>
@@ -129,21 +159,26 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                 );
               }
               return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "var(--muted-foreground)" : due.color, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, textDecoration: done ? "line-through" : "none", color: done ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                      {t.contact_name ? (t.contact_crm_id ? <Link href={`/admin/sales/contacts/${t.contact_crm_id}`} style={{ color: "#185FA5", textDecoration: "none" }}>{t.contact_name}</Link> : t.contact_name) : t.opportunity_id ? <Link href={`/admin/sales/opportunities/${t.opportunity_id}`} style={{ color: "#185FA5", textDecoration: "none" }}>opportunity</Link> : "—"}
-                      {t.assignee_name ? ` · ${t.assignee_name}` : ""}
+                <div key={t.id} className="tRow" style={{ padding: "10px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
+                  <div className="cTask" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "var(--muted-foreground)" : due.color, flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, textDecoration: done ? "line-through" : "none", color: done ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                        {t.contact_name ? (t.contact_crm_id ? <Link href={`/admin/sales/contacts/${t.contact_crm_id}`} style={{ color: "#185FA5", textDecoration: "none" }}>{t.contact_name}</Link> : t.contact_name) : t.opportunity_id ? <Link href={`/admin/sales/opportunities/${t.opportunity_id}`} style={{ color: "#185FA5", textDecoration: "none" }}>opportunity</Link> : "—"}
+                      </div>
                     </div>
                   </div>
-                  <span style={{ fontSize: 10.5, color: tc.color, background: tc.bg, borderRadius: 8, padding: "2px 8px" }}>{t.task_type}</span>
-                  <span style={{ fontSize: 11, color: due.color, width: 78, textAlign: "right" }}>{done ? "Done" : due.text}</span>
-                  <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-                  {!done && <button onClick={() => patch(t.id, { status: "done" })} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓ Done</button>}
-                  {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
-                  <button onClick={() => del(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                  <span className="cLbl" data-label="Type" style={{ fontSize: 10.5, color: tc.color, background: tc.bg, borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{t.task_type}</span>
+                  <span className="cLbl" data-label="Due" style={{ fontSize: 11, color: due.color }}>{due.text}</span>
+                  <span className="cLbl" data-label="Assignee" style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.assignee_name ?? "—"}</span>
+                  <span className="cLbl" data-label="Status" style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: done ? "#0F6E56" : "#854F0B", background: done ? "#E1F5EE" : "#FAEEDA" }}>{done ? "Done" : "Open"}</span>
+                  <div className="tActions">
+                    <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
+                    {!done && <button onClick={() => patch(t.id, { status: "done" })} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓ Done</button>}
+                    {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
+                    <button onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                  </div>
                 </div>
               );
             })}
