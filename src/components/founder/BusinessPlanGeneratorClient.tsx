@@ -11,6 +11,7 @@ import type { BusinessPlan } from "@/lib/business-plan/types";
 import type { AllocationSlice, MarketSize, PainBar, BeforeAfter, MatrixPoint, TractionChart as TractionData } from "@/lib/business-plan/charts";
 import { DEFAULT_CHARTS } from "@/lib/business-plan/charts";
 import { ProjectionsChart, MarketChart, FundsChart, ProblemChart, SolutionChart, CompetitionChart, TractionChart } from "./BusinessPlanSectionChart";
+import { BusinessPlanLivePreview } from "./BusinessPlanLivePreview";
 import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 type SectionMap = BusinessPlan["sections"];
@@ -38,6 +39,7 @@ export function BusinessPlanGeneratorClient() {
   const [finalizing, setFinalizing] = useState(false);
   const [finalized, setFinalized] = useState(false);
   const [stage, setStage] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [allocation, setAllocation] = useState<AllocationSlice[]>(DEFAULT_ALLOC);
@@ -57,6 +59,7 @@ export function BusinessPlanGeneratorClient() {
         if (!on) return;
         if (j.error) { setError(typeof j.error === "string" ? j.error : "Could not load."); return; }
         setStage((j.company?.stage as string | null) ?? null);
+        setCompanyName((j.company?.company_name as string | null) ?? null);
         setSections((j.plan?.sections as SectionMap) ?? {});
         const a = (j.plan?.assumptions && Object.keys(j.plan.assumptions).length ? j.plan.assumptions : j.defaultAssumptions) as ProjectionAssumptions;
         setAssumptions(a);
@@ -242,7 +245,7 @@ export function BusinessPlanGeneratorClient() {
 
       {error && <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-[230px_1fr]">
+      <div className="mt-4 grid gap-4 md:grid-cols-[210px_1fr] lg:grid-cols-[210px_1fr_300px]">
         {/* Section nav */}
         <aside className="rounded-xl border border-[var(--border-subtle)] bg-white p-3">
           {SECTION_GROUPS.filter((g) => visibleSections.some((s) => s.group === g)).map((g) => (
@@ -355,6 +358,21 @@ export function BusinessPlanGeneratorClient() {
             </>
           )}
         </section>
+
+        {/* Live side preview — current section, updates as you type */}
+        <BusinessPlanLivePreview
+          sectionId={activeId}
+          sectionTitle={def.title}
+          content={sections[activeId]?.content ?? ""}
+          companyName={companyName}
+          market={market}
+          allocation={allocation}
+          problem={problem}
+          solution={solution}
+          competition={competition}
+          traction={traction}
+          projections={projections}
+        />
       </div>
 
       {preview && (
