@@ -453,6 +453,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
   const [rescoring, setRescoring] = useState<string | null>(null);
   const [rescoreError, setRescoreError] = useState<string | null>(null);
   const [rescoreAllProgress, setRescoreAllProgress] = useState<{ done: number; total: number } | null>(null);
+  const [summaryProgress, setSummaryProgress] = useState<{ done: number } | null>(null);
 
   const filtered = rows.filter((r) => {
     const matchSearch =
@@ -472,6 +473,38 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
 
     return matchSearch && matchFilter;
   });
+
+  async function backfillSummaries() {
+    // Generate documents.ai_summary for docs that lack one, then the endpoint
+    // re-scores affected companies. Loop batches until nothing remains.
+    setSummaryProgress({ done: 0 });
+    setRescoreError(null);
+    let done = 0;
+    for (let guard = 0; guard < 300; guard++) {
+      try {
+        const res = await fetch("/api/admin/documents/backfill-summaries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 8 }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setRescoreError(j.error ?? "Summary backfill failed.");
+          setSummaryProgress(null);
+          return;
+        }
+        done += j.summarized ?? 0;
+        setSummaryProgress({ done });
+        if (!j.remaining || j.remaining <= 0) break;
+      } catch {
+        setRescoreError("Network error during summary backfill.");
+        setSummaryProgress(null);
+        return;
+      }
+    }
+    setSummaryProgress(null);
+    window.location.reload();
+  }
 
   async function rescoreAll() {
     // Re-score all companies (replaces existing scores with latest engine)
@@ -578,9 +611,17 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
               <option value="overridden">Admin overridden</option>
             </select>
             <button
+              onClick={backfillSummaries}
+              disabled={summaryProgress !== null || rescoreAllProgress !== null}
+              title="Generate AI summaries for documents that lack one, then re-score affected companies. Fixes low scores caused by missing document summaries."
+              className="ml-auto rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
+            >
+              {summaryProgress ? `Summarizing… ${summaryProgress.done} done` : "Generate summaries"}
+            </button>
+            <button
               onClick={rescoreAll}
-              disabled={rescoreAllProgress !== null}
-              className="ml-auto rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+              disabled={rescoreAllProgress !== null || summaryProgress !== null}
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
             >
               {rescoreAllProgress
                 ? `Scoring ${rescoreAllProgress.done} / ${rescoreAllProgress.total}…`
