@@ -7,6 +7,7 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { ReportExportButtons } from "@/components/founder/ReportExportButtons";
 import { GenerateMyReportButton } from "@/components/founder/GenerateMyReportButton";
+import { DiligenceReportDocument } from "@/components/founder/DiligenceReportDocument";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -38,13 +39,6 @@ export default async function DiligenceReportPage() {
   const riskFlags = diligenceReport?.risk_flags ?? [];
   const missingDocuments = diligenceReport?.missing_documents ?? [];
   const recommendations = splitLines(diligenceReport?.recommendations);
-  const sections = [
-    { title: "Business overview", body: diligenceReport?.business_overview },
-    { title: "Financial review", body: diligenceReport?.financial_review },
-    { title: "Market review", body: diligenceReport?.market_review },
-    { title: "Legal review", body: diligenceReport?.legal_review },
-    { title: "Team review", body: diligenceReport?.team_review },
-  ].filter((section) => section.body?.trim());
 
   return (
     <FounderAppShell>
@@ -79,8 +73,9 @@ export default async function DiligenceReportPage() {
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("diligence_report")}</p>
                   <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{companyName}</h1>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                    {diligenceReport.executive_summary ?? "Executive summary pending."}
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Investor-style diligence generated from your uploaded documents. Regenerate after adding materials
+                    for a sharper result.
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
                     Generated {new Date(diligenceReport.created_at).toLocaleString("en-US")}
@@ -100,38 +95,14 @@ export default async function DiligenceReportPage() {
               </div>
             </section>
 
-            {sections.length > 0 ? (
-              <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.8fr]">
-                <div className="grid gap-4">
-                  {sections.map((section) => (
-                    <article key={section.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                      <h2 className="font-semibold text-slate-950">{section.title}</h2>
-                      <p className="mt-3 text-sm leading-6 text-slate-600">{section.body}</p>
-                    </article>
-                  ))}
-                </div>
-                <aside className="grid gap-4">
-                  {[
-                    ["Risk flags", riskFlags],
-                    ["Missing documents", missingDocuments],
-                    ["Recommended next steps", recommendations],
-                  ].map(([title, items]) => (
-                    <div key={title as string} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                      <h2 className="font-semibold text-slate-950">{title as string}</h2>
-                      {(items as string[]).length === 0 ? (
-                        <p className="mt-3 text-sm text-slate-500">{t("none_listed")}</p>
-                      ) : (
-                        <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                          {(items as string[]).map((item) => (
-                            <li key={item}>• {item}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </aside>
-              </section>
-            ) : null}
+            <DiligenceReportDocument
+              companyName={companyName}
+              generatedAt={new Date(diligenceReport.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              executiveSummary={diligenceReport.executive_summary}
+              missingDocuments={missingDocuments as string[]}
+              recommendations={recommendations}
+              riskFlags={riskFlags as string[]}
+            />
           </>
         )}
       </FounderFeatureGate>
