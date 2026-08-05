@@ -35,6 +35,14 @@
   overflow: hidden;
   background: linear-gradient(180deg, var(--wall) 0%, var(--wall) 30%, var(--floor) 30%, var(--floor) 86%, var(--navy) 86%);
 }
+.stageBg {
+  position: absolute; inset: 0; z-index: 0;
+  background-size: cover; background-position: center;
+}
+.scrim {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(6,14,28,.42) 0%, rgba(6,14,28,.12) 26%, rgba(6,14,28,.30) 100%);
+}
 .gridLines {
   position: absolute; left: 0; right: 0; top: 30%; bottom: 14%;
   background-image:

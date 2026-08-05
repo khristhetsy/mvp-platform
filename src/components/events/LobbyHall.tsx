@@ -66,6 +66,7 @@ export function LobbyHall({
   viewerName,
   viewerRole,
   quickLinks,
+  backgroundUrl,
 }: {
   slug: string;
   eventTitle: string;
@@ -75,6 +76,7 @@ export function LobbyHall({
   viewerName?: string | null;
   viewerRole?: string | null;
   quickLinks?: QuickLink[];
+  backgroundUrl?: string | null;
 }) {
   const t = useTranslations("eventsCmp");
   const { byRoom, total, members, me, announcement, incomingWave, dismissWave, sendWave } = useEventPresence();
@@ -141,7 +143,14 @@ export function LobbyHall({
       <div className={styles.hall}>
         <div className={styles.frame}>
         <div className={styles.stage}>
-          <div className={styles.gridLines} aria-hidden />
+          {backgroundUrl ? (
+            <>
+              <div className={styles.stageBg} style={{ backgroundImage: `url("${backgroundUrl}")` }} aria-hidden />
+              <div className={styles.scrim} aria-hidden />
+            </>
+          ) : (
+            <div className={styles.gridLines} aria-hidden />
+          )}
 
           <div className={styles.welcome}>
             <p className={styles.welcomeEy}>{t("welcome_to")}</p>

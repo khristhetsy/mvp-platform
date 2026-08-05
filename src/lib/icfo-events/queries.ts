@@ -39,6 +39,7 @@ function mapEvent(r: EventRow): EventRecord {
     endsAt: (r.ends_at as string | null) ?? null,
     timezone: (r.timezone as string | null) ?? null,
     coverPath: (r.cover_path as string | null) ?? null,
+    lobbyBackgroundPath: (r.lobby_background_path as string | null) ?? null,
     coverOverlay: Number(r.cover_overlay ?? 55),
     coverFocal: (r.cover_focal as string | null) ?? "center",
     bannerTitle: (r.banner_title as string | null) ?? null,

@@ -7,6 +7,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LobbyHall } from "@/components/events/LobbyHall";
@@ -87,6 +88,7 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
               viewerName={me?.name ?? null}
               viewerRole={viewerRole}
               quickLinks={quickLinks ? [...quickLinks] : undefined}
+              backgroundUrl={bannerPublicUrl(supabase, event.lobbyBackgroundPath)}
             />
           </div>
           <EventPollWidget slug={slug} />

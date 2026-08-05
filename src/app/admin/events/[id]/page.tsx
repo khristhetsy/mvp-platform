@@ -12,6 +12,7 @@ import { listInternalUsers } from "@/lib/rbac/internal-users";
 import { EventDetailManager } from "@/components/admin-events/EventDetailManager";
 import { EventModeratorsManager } from "@/components/admin-events/EventModeratorsManager";
 import { EventBannerEditor } from "@/components/admin-events/EventBannerEditor";
+import { EventLobbyBackgroundEditor } from "@/components/admin-events/EventLobbyBackgroundEditor";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage event" };
@@ -50,14 +51,21 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
         liveVideoConfigured={isLiveVideoConfigured()}
         canEdit={canEdit}
         bannerSlot={
-          <EventBannerEditor
-            eventId={id}
-            eventTitle={event.title}
-            initialUrl={bannerPublicUrl(admin, event.coverPath)}
-            initialOverlay={event.coverOverlay}
-            initialFocal={event.coverFocal}
-            canEdit={canEdit}
-          />
+          <>
+            <EventBannerEditor
+              eventId={id}
+              eventTitle={event.title}
+              initialUrl={bannerPublicUrl(admin, event.coverPath)}
+              initialOverlay={event.coverOverlay}
+              initialFocal={event.coverFocal}
+              canEdit={canEdit}
+            />
+            <EventLobbyBackgroundEditor
+              eventId={id}
+              initialUrl={bannerPublicUrl(admin, event.lobbyBackgroundPath)}
+              canEdit={canEdit}
+            />
+          </>
         }
       />
       <div className="mx-auto max-w-4xl px-4 pb-8">

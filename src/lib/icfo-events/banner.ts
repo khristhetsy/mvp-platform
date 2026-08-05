@@ -42,6 +42,16 @@ export function bannerPublicUrl(supabase: SupabaseClient<Database>, path: string
   return data?.publicUrl ?? null;
 }
 
+/** Set (or clear with null) the immersive lobby background image path. */
+export async function setEventLobbyBackground(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  path: string | null,
+): Promise<void> {
+  const { error } = await raw(supabase).from("events").update({ lobby_background_path: path }).eq("id", eventId);
+  if (error) throw new Error(error.message);
+}
+
 export async function setEventCover(
   supabase: SupabaseClient<Database>,
   eventId: string,
