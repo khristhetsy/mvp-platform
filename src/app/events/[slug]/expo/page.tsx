@@ -12,6 +12,7 @@ import { isBanned } from "@/lib/icfo-events/engagement";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { SponsorHall } from "@/components/events/SponsorHall";
 
@@ -48,6 +49,7 @@ export default async function ExpoPage({ params }: { params: Promise<{ slug: str
             <SponsorHall sponsors={sponsors} />
           </div>
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
 
         </EventPresenceProvider>

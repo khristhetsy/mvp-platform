@@ -16,6 +16,7 @@ import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { SectorTracksRoom, type TrackData } from "@/components/events/SectorTracksRoom";
 import type { EventSession } from "@/lib/icfo-events/types";
@@ -82,6 +83,7 @@ export default async function TracksPage({ params }: { params: Promise<{ slug: s
           </div>
           <p className="mt-3 text-center text-xs text-[var(--text-muted)]">{t("parallel_sector_rooms_each_with_its_own_now_pl")}</p>
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
         </EventPresenceProvider>
       </section>

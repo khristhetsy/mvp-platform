@@ -24,6 +24,7 @@ import { CallInBar } from "@/components/events/CallInBar";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 
 export const dynamic = "force-dynamic";
@@ -208,6 +209,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
             </div>
           </div>
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
         </EventPresenceProvider>
       </section>

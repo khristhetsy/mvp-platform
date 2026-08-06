@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
+import { useEventPresence } from "@/components/events/EventPresenceProvider";
 import type { NetworkingSuggestion, NetworkingConnection } from "@/lib/icfo-events/networking";
 
 function initials(name: string): string {
@@ -27,6 +28,7 @@ export function NetworkingConnections({
   initialConnections: NetworkingConnection[];
 }) {
   const t = useTranslations("eventsCmp");
+  const { sendCall } = useEventPresence();
   const [connections, setConnections] = useState<NetworkingConnection[]>(initialConnections);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,12 @@ export function NetworkingConnections({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not start the call.");
-      if (json.meetUrl) window.open(json.meetUrl as string, "_blank", "noopener");
+      if (json.meetUrl) {
+        // Ping the other attendee with a live incoming-call popup (if they're in
+        // the venue), then open the Meet for ourselves.
+        sendCall(c.otherProfileId, json.meetUrl as string);
+        window.open(json.meetUrl as string, "_blank", "noopener");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the call.");
     } finally {

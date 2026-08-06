@@ -9,6 +9,7 @@ import { NetworkingConnections } from "@/components/events/NetworkingConnections
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -67,6 +68,7 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
             </div>
           </div>
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
 
         </EventPresenceProvider>

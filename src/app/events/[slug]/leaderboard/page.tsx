@@ -12,6 +12,7 @@ import { isBanned } from "@/lib/icfo-events/engagement";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { GamificationDashboard } from "@/components/events/GamificationDashboard";
 
@@ -51,6 +52,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ sl
             <GamificationDashboard stats={stats} rank={rank} missions={missions} leaderboard={leaderboard.slice(0, 10)} meId={profile.id} />
           </div>
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
 
         </EventPresenceProvider>

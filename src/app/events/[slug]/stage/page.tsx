@@ -17,6 +17,7 @@ import { LiveStagePlayer } from "@/components/events/LiveStagePlayer";
 import { LiveViewerCount } from "@/components/events/LiveViewerCount";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 
 export const dynamic = "force-dynamic";
@@ -119,6 +120,7 @@ export default async function MainStagePage({ params }: { params: Promise<{ slug
             </div>
           </div>
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
         </EventPresenceProvider>
       </section>

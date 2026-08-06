@@ -12,6 +12,7 @@ import { EventPresenceProvider } from "@/components/events/EventPresenceProvider
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LobbyHall } from "@/components/events/LobbyHall";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { EventPollWidget } from "@/components/events/EventPollWidget";
 import { isBanned } from "@/lib/icfo-events/engagement";
@@ -93,6 +94,7 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
           </div>
           <EventPollWidget slug={slug} />
           <LiveAnnouncementPopup />
+          <IncomingCallBanner />
           <EventInfoDesk slug={slug} />
 
         </EventPresenceProvider>
