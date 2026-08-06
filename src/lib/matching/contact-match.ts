@@ -1,6 +1,7 @@
 import type { ScoredInvestorContact } from "@/lib/investors/load-investor-matches";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { activeRatingScore } from "@/lib/investors/preferences";
+import { splitProfileCsv } from "@/lib/profile/options";
 import {
   matchInvestorToCompany,
   type CompanyMatchProfile,
@@ -23,6 +24,10 @@ export function buildCompanyMatchProfile(company: {
   slug?: string | null;
   industry?: string | null;
   revenue_stage?: string | null;
+  funding_stage?: string | null;
+  operating_stage?: string | null;
+  seeking_investor_types?: string | null;
+  seeking_capital_types?: string | null;
   state?: string | null;
   country?: string | null;
   funding_amount?: number | null;
@@ -32,12 +37,18 @@ export function buildCompanyMatchProfile(company: {
   published_at?: string | null;
   readinessScore?: number | null;
 }): CompanyMatchProfile {
+  // Funding stage + operating stage + revenue stage all feed the stage factor.
+  const stageParts = [company.funding_stage, company.operating_stage, company.revenue_stage]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
+  const soughtInvestorTypes = splitProfileCsv(company.seeking_investor_types);
+  const soughtCapitalTypes = splitProfileCsv(company.seeking_capital_types);
   return {
     id: company.id,
     companyName: company.company_name ?? "",
     slug: company.slug ?? null,
     industry: company.industry ?? null,
-    stage: company.revenue_stage ?? null,
+    stage: stageParts.length ? stageParts.join(", ") : (company.revenue_stage ?? null),
     geography: [company.state, company.country].filter(Boolean).join(", ") || null,
     fundingAmount: company.funding_amount ?? null,
     readinessScore: company.readinessScore ?? null,
@@ -46,6 +57,8 @@ export function buildCompanyMatchProfile(company: {
     isPublished: Boolean(company.is_published),
     marketplaceVisible: Boolean(company.marketplace_visible),
     publishedAt: company.published_at ?? null,
+    ...(soughtInvestorTypes.length ? { soughtInvestorTypes } : {}),
+    ...(soughtCapitalTypes.length ? { soughtCapitalTypes } : {}),
   };
 }
 

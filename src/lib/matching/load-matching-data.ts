@@ -7,6 +7,7 @@ import {
   type InvestorMatchProfile,
 } from "@/lib/matching/investor-company-matching";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { splitProfileCsv } from "@/lib/profile/options";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company, Database } from "@/lib/supabase/types";
 
@@ -15,16 +16,29 @@ function formatGeography(company: Pick<Company, "state" | "country">) {
   return parts.length ? parts.join(", ") : null;
 }
 
+/** Combine funding stage + operating stage + revenue stage into one haystack so
+ *  all three feed the engine's stage factor (token overlap vs investor stages). */
+function combinedStage(company: Company): string | null {
+  const cx = company as unknown as Record<string, unknown>;
+  const parts = [cx.funding_stage, cx.operating_stage, company.revenue_stage]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
+  return parts.length ? parts.join(", ") : company.revenue_stage;
+}
+
 export function companyToMatchProfile(
   company: Company,
   input?: { readinessScore?: number | null; slug?: string | null },
 ): CompanyMatchProfile {
+  const cx = company as unknown as Record<string, unknown>;
+  const soughtInvestorTypes = splitProfileCsv(cx.seeking_investor_types);
+  const soughtCapitalTypes = splitProfileCsv(cx.seeking_capital_types);
   return {
     id: company.id,
     companyName: company.company_name,
     slug: input?.slug ?? company.slug,
     industry: company.industry,
-    stage: company.revenue_stage,
+    stage: combinedStage(company),
     geography: formatGeography(company),
     fundingAmount: company.funding_amount,
     readinessScore: input?.readinessScore ?? null,
@@ -33,6 +47,8 @@ export function companyToMatchProfile(
     isPublished: Boolean(company.is_published),
     marketplaceVisible: Boolean(company.marketplace_visible),
     publishedAt: company.published_at ?? null,
+    ...(soughtInvestorTypes.length ? { soughtInvestorTypes } : {}),
+    ...(soughtCapitalTypes.length ? { soughtCapitalTypes } : {}),
   };
 }
 

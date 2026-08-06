@@ -42,6 +42,16 @@ export const companyUpdateSchema = z.object({
   revenue_stage: z.string().min(2).optional(),
   founder_goals: z.string().min(10).optional(),
   team_summary: z.string().max(1000).optional(),
+  // Investor-fit categories (multi-selects arrive as comma-separated strings;
+  // all accept "" to clear). Columns added in migration 20260803002.
+  seeking_investor_types: z.string().max(300).optional(),
+  seeking_capital_types: z.string().max(300).optional(),
+  active_investor_preference: z.string().max(300).optional(),
+  funding_stage: z.string().max(300).optional(),
+  operating_stage: z.string().max(300).optional(),
+  business_entity: z.string().max(120).optional(),
+  annual_ebitda: z.string().max(200).optional(),
+  management_team: z.string().max(1000).optional(),
 });
 
 export const founderOnboardingStepSchema = z.object({

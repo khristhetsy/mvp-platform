@@ -5,25 +5,25 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
+import {
+  REVENUE_STAGE_OPTIONS as STAGES,
+  USE_OF_FUNDS_OPTIONS as FUND_USES,
+  INVESTOR_TYPE_OPTIONS as INVESTOR_TYPE_OPTS,
+  CAPITAL_TYPE_OPTIONS as CAPITAL_TYPE_OPTS,
+  INVESTOR_PREFERENCE_OPTIONS as INVESTOR_PREF_OPTS,
+  BUSINESS_ENTITY_OPTIONS as BUSINESS_ENTITY_OPTS,
+  FUNDING_STAGE_OPTIONS as FUNDING_STAGE_OPTS,
+  OPERATING_STAGE_OPTIONS as OPERATING_STAGE_OPTS,
+} from "@/lib/profile/options";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
+// Option lists shared with the Company Profile settings form + matching inputs
+// live in @/lib/profile/options. Industries + timelines stay local to onboarding.
 const INDUSTRIES = [
   "FinTech", "HealthTech", "SaaS / B2B Software", "EdTech", "CleanTech",
   "E-commerce", "AI / ML", "Real Estate", "Consumer", "Deep Tech",
   "Marketplace", "Logistics", "Hardware", "Other",
-];
-
-const STAGES = [
-  { id: "pre_revenue",   label: "Pre-revenue",   sub: "Idea, prototype, or early development" },
-  { id: "early_revenue", label: "Early revenue", sub: "Up to $100K ARR" },
-  { id: "growing",       label: "Growing",       sub: "$100K – $1M ARR" },
-  { id: "scaling",       label: "Scaling",       sub: "$1M+ ARR" },
-];
-
-const FUND_USES = [
-  "Hire team", "Build product", "Marketing & sales",
-  "R&D", "Operations", "International expansion", "Working capital",
 ];
 
 const TIMELINES = [
@@ -32,15 +32,6 @@ const TIMELINES = [
   { id: "12m",       label: "6 – 12 months",   sub: "Early planning phase" },
   { id: "exploring", label: "Just exploring",  sub: "Learning the process" },
 ];
-
-// "Raise & stage" step (step 7). Investor types + funding stage use the platform
-// taxonomy; the rest are the agreed proposed sets.
-const INVESTOR_TYPE_OPTS = ["Individual angel", "Angel group / syndicate", "Family office", "Venture fund", "Corporate / strategic", "Other"];
-const CAPITAL_TYPE_OPTS = ["Equity", "SAFE", "Convertible note", "Venture debt", "Revenue-based"];
-const INVESTOR_PREF_OPTS = ["Lead investor", "Follow-on / co-invest", "Hands-on / operator", "Passive", "No preference"];
-const BUSINESS_ENTITY_OPTS = ["Delaware C-Corp", "LLC", "S-Corp", "Public benefit corp", "Not yet incorporated"];
-const FUNDING_STAGE_OPTS = ["Pre-seed", "Seed", "Series A", "Series B", "Growth", "Other"];
-const OPERATING_STAGE_OPTS = ["Idea", "Building / MVP", "Pre-revenue", "Revenue", "Scaling"];
 
 /* ─────────────────────────── helpers ──────────────────────── */
 

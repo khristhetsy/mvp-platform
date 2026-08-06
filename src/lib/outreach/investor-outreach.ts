@@ -95,17 +95,22 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     .maybeSingle();
   if (existing) return { created: false };
 
+  // select("*") so the investor-fit columns (seeking_*, funding_stage,
+  // operating_stage — migration 20260803002, not in the generated type) flow
+  // into the match profile too.
   const { data: comp } = await db
     .from("companies")
-    .select("company_name, slug, funding_amount, revenue_stage, use_of_funds, industry, state, country, review_status, is_published, marketplace_visible, published_at")
+    .select("*")
     .eq("id", companyId)
     .maybeSingle();
   if (!comp) return { created: false };
-  const c = comp as {
+  const c = comp as unknown as {
     company_name: string | null; slug: string | null;
     funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null;
     state: string | null; country: string | null; review_status: string | null;
     is_published: boolean | null; marketplace_visible: boolean | null; published_at: string | null;
+    seeking_investor_types: string | null; seeking_capital_types: string | null;
+    funding_stage: string | null; operating_stage: string | null;
   };
 
   // Admin match/qualification rules (industry required, thresholds).

@@ -1,20 +1,25 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { industryOptionsFor } from "@/lib/industries";
+import {
+  REVENUE_STAGE_OPTIONS,
+  INVESTOR_TYPE_OPTIONS,
+  CAPITAL_TYPE_OPTIONS,
+  INVESTOR_PREFERENCE_OPTIONS,
+  FUNDING_STAGE_OPTIONS,
+  OPERATING_STAGE_OPTIONS,
+  BUSINESS_ENTITY_OPTIONS,
+  splitProfileCsv,
+} from "@/lib/profile/options";
 
-/* ── Revenue stage options ──────────────────────────────────── */
+/* ── Revenue stage options (shared canonical list) ──────────── */
 
-const STAGES = [
-  { id: "pre_revenue",   label: "Pre-revenue",   sub: "Idea, prototype, or early development" },
-  { id: "early_revenue", label: "Early revenue", sub: "Up to $100K ARR" },
-  { id: "growing",       label: "Growing",       sub: "$100K – $1M ARR" },
-  { id: "scaling",       label: "Scaling",       sub: "$1M+ ARR" },
-];
+const STAGES = REVENUE_STAGE_OPTIONS;
 
 /* ── Draft generators ───────────────────────────────────────── */
 
@@ -95,30 +100,73 @@ const GOALS_BENCHMARK =
 
 /* ── Field definitions (one combined list) ──────────────────── */
 
-type FieldType = "text" | "select-industry" | "select-stage" | "number" | "textarea" | "logo";
-type FieldDef = { key: string; label: string; type: FieldType; required?: boolean; placeholder?: string; ai?: "description" | "useOfFunds" | "goals" };
+type FieldType = "text" | "select-industry" | "select-stage" | "number" | "textarea" | "logo" | "chips-multi" | "chips-single";
+type FieldDef = {
+  key: string;
+  label: string;
+  type: FieldType;
+  required?: boolean;
+  placeholder?: string;
+  ai?: "description" | "useOfFunds" | "goals";
+  options?: readonly string[];
+  section?: string;
+  hint?: string;
+};
 
+// Layout order: company basics first, then the 11 investor-fit categories in the
+// exact order they feed the Investor Fit Score. "Amount of capital" consolidates
+// the old "Funding target" + "Founder goals & investor fit" fields.
 const FIELDS: FieldDef[] = [
-  { key: "company_name", label: "Company name", type: "text", required: true },
-  { key: "industry", label: "Industry", type: "select-industry", required: true },
-  { key: "website", label: "Website", type: "text", placeholder: "https://example.com" },
-  { key: "logo_url", label: "Company logo", type: "logo" },
-  { key: "business_description", label: "Description", type: "textarea", required: true, ai: "description" },
-  { key: "revenue_stage", label: "Revenue stage", type: "select-stage" },
-  { key: "funding_amount", label: "Funding target (USD)", type: "number", placeholder: "e.g. 1500000" },
-  { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds" },
-  { key: "founder_goals", label: "Founder goals & investor fit", type: "textarea", ai: "goals" },
-  { key: "team_summary", label: "Team summary", type: "textarea" },
-  { key: "country", label: "Country", type: "text", placeholder: "e.g. United States" },
-  { key: "state", label: "State / Province", type: "text", placeholder: "e.g. California" },
-  { key: "incorporation_jurisdiction", label: "Country of incorporation", type: "text", placeholder: "e.g. Delaware C-Corp" },
+  // ── Company basics ──
+  { key: "company_name", label: "Company name", type: "text", required: true, section: "Company basics" },
+  { key: "website", label: "Website", type: "text", placeholder: "https://example.com", section: "Company basics" },
+  { key: "logo_url", label: "Company logo", type: "logo", section: "Company basics" },
+  { key: "business_description", label: "Description", type: "textarea", required: true, ai: "description", section: "Company basics" },
+  { key: "team_summary", label: "Team summary", type: "textarea", section: "Company basics" },
+  { key: "country", label: "Country", type: "text", placeholder: "e.g. United States", section: "Company basics" },
+  { key: "state", label: "State / Province", type: "text", placeholder: "e.g. California", section: "Company basics" },
+  { key: "incorporation_jurisdiction", label: "Country of incorporation", type: "text", placeholder: "e.g. Delaware C-Corp", section: "Company basics" },
+
+  // ── Investor fit profile (the 11 categories, in matching order) ──
+  { key: "seeking_investor_types", label: "Type of investor(s)", type: "chips-multi", options: INVESTOR_TYPE_OPTIONS, section: "Investor fit profile" },
+  { key: "seeking_capital_types", label: "Type(s) of capital", type: "chips-multi", options: CAPITAL_TYPE_OPTIONS, section: "Investor fit profile" },
+  { key: "active_investor_preference", label: "Active investor preference", type: "chips-multi", options: INVESTOR_PREFERENCE_OPTIONS, section: "Investor fit profile" },
+  { key: "funding_amount", label: "Amount of capital (USD)", type: "number", placeholder: "e.g. 1500000", section: "Investor fit profile" },
+  { key: "founder_goals", label: "Investor-fit notes", type: "textarea", ai: "goals", hint: "What you want beyond capital — network, board experience, portfolio synergies.", section: "Investor fit profile" },
+  { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds", section: "Investor fit profile" },
+  { key: "funding_stage", label: "Funding stage", type: "chips-multi", options: FUNDING_STAGE_OPTIONS, section: "Investor fit profile" },
+  { key: "industry", label: "Type of industries", type: "select-industry", required: true, section: "Investor fit profile" },
+  { key: "revenue_stage", label: "Revenue stage", type: "select-stage", section: "Investor fit profile" },
+  { key: "annual_ebitda", label: "Annual EBITDA", type: "text", placeholder: "e.g. -$120,000 (0 if pre-revenue)", section: "Investor fit profile" },
+  { key: "operating_stage", label: "Operating stage", type: "chips-multi", options: OPERATING_STAGE_OPTIONS, section: "Investor fit profile" },
+  { key: "management_team", label: "Management team", type: "textarea", placeholder: "e.g. 2 co-founders, 3 full-time", section: "Investor fit profile" },
+  { key: "business_entity", label: "Business entity", type: "chips-single", options: BUSINESS_ENTITY_OPTIONS, section: "Investor fit profile" },
 ];
+
+// The first field key of each section — used to render a section header above it
+// without mutating state during render.
+const SECTION_FIRST_KEYS: Set<string> = (() => {
+  const seen = new Set<string>();
+  const firsts = new Set<string>();
+  for (const f of FIELDS) {
+    if (f.section && !seen.has(f.section)) {
+      seen.add(f.section);
+      firsts.add(f.key);
+    }
+  }
+  return firsts;
+})();
 
 type Props = { company: Company | null };
 
 export function CompanySettingsForm({ company }: Props) {
   const router = useRouter();
   const { getError, setApiErrors, clearError } = useFormValidation();
+
+  // Seeking + Company & stage columns (migration 20260803002) aren't in the
+  // generated Company type yet, so read them through a Record view.
+  const cx = (company ?? {}) as Record<string, unknown>;
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
   const seed = useMemo<Record<string, string>>(() => ({
     company_name: company?.company_name ?? "",
@@ -134,6 +182,16 @@ export function CompanySettingsForm({ company }: Props) {
     country: company?.country ?? "",
     state: company?.state ?? "",
     incorporation_jurisdiction: company?.incorporation_jurisdiction ?? "",
+    // Investor-fit categories
+    seeking_investor_types: str(cx.seeking_investor_types),
+    seeking_capital_types: str(cx.seeking_capital_types),
+    active_investor_preference: str(cx.active_investor_preference),
+    funding_stage: str(cx.funding_stage),
+    operating_stage: str(cx.operating_stage),
+    business_entity: str(cx.business_entity),
+    annual_ebitda: str(cx.annual_ebitda),
+    management_team: str(cx.management_team),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [company]);
 
   const [values, setValues] = useState<Record<string, string>>(seed);
@@ -214,6 +272,16 @@ export function CompanySettingsForm({ company }: Props) {
   function displayNode(f: FieldDef) {
     const v = values[f.key] ?? "";
     if (!v) return <span className="text-slate-400">—</span>;
+    if (f.type === "chips-multi" || f.type === "chips-single") {
+      const parts = f.type === "chips-multi" ? splitProfileCsv(v) : [v];
+      return (
+        <span className="flex flex-wrap gap-1">
+          {parts.map((p) => (
+            <span key={p} className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{p}</span>
+          ))}
+        </span>
+      );
+    }
     if (f.key === "funding_amount") return <span className="text-slate-800">${Number(v).toLocaleString()}</span>;
     if (f.type === "select-stage") {
       const s = STAGES.find((x) => x.id === v);
@@ -231,6 +299,33 @@ export function CompanySettingsForm({ company }: Props) {
 
   function editControl(f: FieldDef) {
     const v = values[f.key] ?? "";
+    if (f.type === "chips-multi" || f.type === "chips-single") {
+      const opts = f.options ?? [];
+      const selected = f.type === "chips-multi" ? splitProfileCsv(v) : (v ? [v] : []);
+      const toggle = (opt: string) => {
+        if (f.type === "chips-single") { setVal(f.key, selected.includes(opt) ? "" : opt); return; }
+        const next = selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt];
+        setVal(f.key, next.join(", "));
+      };
+      return (
+        <div className="flex flex-wrap gap-2">
+          {opts.map((opt) => {
+            const on = selected.includes(opt);
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => toggle(opt)}
+                className="rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: on ? "#2E78F5" : "transparent", borderColor: on ? "#2E78F5" : "#e2e8f0", color: on ? "white" : "#475569" }}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
     if (f.type === "select-industry") {
       return (
         <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
@@ -286,31 +381,44 @@ export function CompanySettingsForm({ company }: Props) {
 
       <div>
         {FIELDS.map((f) => {
-          const editing = editingKey === f.key;
-          const err = getError(f.key);
-          if (editing) {
-            return (
-              <div key={f.key} className="flex flex-col gap-2 rounded-lg bg-slate-50 px-3 py-3 md:flex-row md:gap-4 md:items-start">
-                <span className="w-40 shrink-0 pt-2 text-sm text-slate-500">{f.label}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">{editControl(f)}</div>
-                    <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50">✓</button>
-                    <button onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
+            const editing = editingKey === f.key;
+            const err = getError(f.key);
+            const header = f.section && SECTION_FIRST_KEYS.has(f.key) ? f.section : null;
+
+            const sectionHeader = header ? (
+              <p className="mb-1.5 mt-6 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 first:mt-0">{header}</p>
+            ) : null;
+
+            if (editing) {
+              return (
+                <Fragment key={f.key}>
+                  {sectionHeader}
+                  <div className="flex flex-col gap-2 rounded-lg bg-slate-50 px-3 py-3 md:flex-row md:gap-4 md:items-start">
+                    <span className="w-40 shrink-0 pt-2 text-sm text-slate-500">{f.label}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start gap-2">
+                        <div className="min-w-0 flex-1">{editControl(f)}</div>
+                        <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50">✓</button>
+                        <button onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
+                      </div>
+                      {f.hint ? <p className="mt-1 text-xs text-slate-400">{f.hint}</p> : null}
+                      {err ? <p className="mt-1 text-xs text-red-600">{err}</p> : null}
+                    </div>
                   </div>
-                  {err ? <p className="mt-1 text-xs text-red-600">{err}</p> : null}
+                </Fragment>
+              );
+            }
+            return (
+              <Fragment key={f.key}>
+                {sectionHeader}
+                <div onClick={() => { setEditingKey(f.key); setMessage(null); }} className="group flex cursor-pointer items-start gap-4 border-b border-slate-100 py-2.5 hover:bg-slate-50/60 rounded-md px-1 -mx-1">
+                  <span className="w-40 shrink-0 text-sm text-slate-500">{f.label}</span>
+                  <span className="min-w-0 flex-1 text-sm">{displayNode(f)}</span>
+                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-xs pt-0.5">✎</span>
                 </div>
-              </div>
+              </Fragment>
             );
-          }
-          return (
-            <div key={f.key} onClick={() => { setEditingKey(f.key); setMessage(null); }} className="group flex cursor-pointer items-start gap-4 border-b border-slate-100 py-2.5 last:border-0 hover:bg-slate-50/60 rounded-md px-1 -mx-1">
-              <span className="w-40 shrink-0 text-sm text-slate-500">{f.label}</span>
-              <span className="min-w-0 flex-1 text-sm">{displayNode(f)}</span>
-              <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-xs pt-0.5">✎</span>
-            </div>
-          );
-        })}
+          })}
       </div>
 
       {message ? (

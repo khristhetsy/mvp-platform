@@ -45,7 +45,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: permission.error }, { status: permission.status });
   }
 
-  const { data, error } = await auth.supabase.from("companies").update(parsed.data).eq("id", id).select("*").single();
+  // Cast to the row-update type: some investor-fit columns (migration 20260803002)
+  // aren't in the generated Company type yet, but exist in the database.
+  const updatePayload = parsed.data as Database["public"]["Tables"]["companies"]["Update"];
+  const { data, error } = await auth.supabase.from("companies").update(updatePayload).eq("id", id).select("*").single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
