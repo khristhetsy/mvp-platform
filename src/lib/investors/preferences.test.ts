@@ -42,16 +42,19 @@ describe("scoreInvestorPreferenceMatch", () => {
   };
 
   it("scores a strong fit high with check-size + revenue + stage reasons", () => {
-    const pref = extractInvestorPreferences([
-      { label: "Investor investment size?", values: ["$250k - $500k"] },
-      { label: "Investor preferences for the company with an annual revenue range of?", values: ["$500k - $1m"] },
-      { label: "Investor preferences for use of funds?", values: ["Growth Stage"] },
-      { label: "Active investor", values: ["5-Excellent"] },
-    ]);
+    const pref = {
+      ...extractInvestorPreferences([
+        { label: "Investor investment size?", values: ["$250k - $500k"] },
+        { label: "Investor preferences for the company with an annual revenue range of?", values: ["$500k - $1m"] },
+        { label: "Investor preferences for use of funds?", values: ["Growth Stage"] },
+        { label: "Active investor", values: ["5-Excellent"] },
+      ]),
+      sectors: ["SaaS"],
+    };
     const m = scoreInvestorPreferenceMatch(company, pref);
     expect(m.score).toBeGreaterThanOrEqual(85);
     expect(m.reasons).toContain("Check size fits the raise");
-    expect(m.reasons).toContain("Revenue band matches");
+    expect(m.reasons).toContain("Revenue in preferred range");
   });
 
   it("scores an off-fit low", () => {

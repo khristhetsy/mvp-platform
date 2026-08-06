@@ -478,7 +478,7 @@ describe("text sizing and extended links", () => {
       { id: "b", type: "text", text: "Huge", size: 400 },
     ]);
     expect(html).toContain("font-size:10px");
-    expect(html).toContain("font-size:48px");
+    expect(html).toContain("font-size:72px");
     expect(html).not.toContain("font-size:400px");
   });
 

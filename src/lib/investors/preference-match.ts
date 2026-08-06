@@ -91,6 +91,17 @@ export function scoreInvestorPreferenceMatch(
   const total = W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity;
   if (total <= 0) return { score: 50, reasons: [] };
 
+  // No scoreable preferences at all → neutral. Avoids a misleading 0% for an
+  // investor who simply hasn't stated any criteria (or whose only values were
+  // masked as non-discriminating) — neutral, not a false non-match.
+  const hasSignal =
+    pref.sectors.length > 0 ||
+    pref.useOfFunds.length > 0 ||
+    pref.investmentSize.length > 0 ||
+    pref.revenueRange.length > 0 ||
+    activeRatingScore(pref) != null;
+  if (!hasSignal) return { score: 50, reasons: [] };
+
   let points = 0;
   const reasons: string[] = [];
 

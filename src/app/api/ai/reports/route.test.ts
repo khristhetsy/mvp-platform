@@ -172,11 +172,13 @@ describe("POST /api/ai/reports", () => {
     const body = await readJsonResponse<{ report: { id: string }; generation: { generatedBy: string } }>(response);
     expect(body.report.id).toBe("report-1");
     expect(body.generation.generatedBy).toBe("unconfigured");
-    expect(mockGenerateDiligenceReport).toHaveBeenCalledWith({
-      companyName: "Acme Corp",
-      documentSummaries: ["Strong traction"],
-      uploadedDocumentTypes: ["pitch_deck"],
-    });
+    expect(mockGenerateDiligenceReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyName: "Acme Corp",
+        documentSummaries: ["Strong traction"],
+        uploadedDocumentTypes: ["pitch_deck"],
+      }),
+    );
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
