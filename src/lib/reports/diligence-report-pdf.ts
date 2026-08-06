@@ -9,6 +9,9 @@ const MUTED = "#64748b";
 const BODY = "#1e293b";
 const RED = "#b42318";
 
+const IMPORTANT_NOTICE =
+  "This summary is a procedural status document only. It reflects what materials are on file and what is outstanding. It does not reflect a completed review of any document's contents. No conclusions about the company's suitability for investment should be drawn from this summary at this stage. All findings are preliminary and subject to material revision upon completion of full document review.";
+
 export type DiligenceReportRow = {
   executive_summary: string | null;
   business_overview: string | null;
@@ -72,6 +75,9 @@ export function renderDiligenceReportPdf(companyName: string, report: DiligenceR
           .fillColor(NAVY)
           .text(`Readiness score: ${report.readiness_score}`);
       }
+
+      h2("Important notice");
+      para(IMPORTANT_NOTICE);
 
       h2("Executive summary");
       para(report.executive_summary);
