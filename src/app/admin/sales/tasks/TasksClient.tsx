@@ -148,23 +148,51 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
         )}
 
         {nextStep && (
-          <div style={{ padding: 14, borderTop: "0.5px solid #eef1f5", background: "#E6F1FB" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ color: "#0F6E56" }}>✓</span>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Task completed — this deal is still open</span>
-              {nextStep.task.opportunity_name && <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#854F0B", background: "#FAEEDA", borderRadius: 999, padding: "2px 9px" }}>{nextStep.task.opportunity_name}</span>}
-            </div>
-            <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "4px 0 10px" }}>Keep the opportunity moving — schedule the next step. You&rsquo;ll be prompted after each task until the deal is marked Won or Lost.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 130px", gap: 8 }}>
-              <input value={nextStep.title} onChange={(e) => setNextStep({ ...nextStep, title: e.target.value })} style={inp} />
-              <select value={nextStep.taskType} onChange={(e) => setNextStep({ ...nextStep, taskType: e.target.value })} style={inp}>{TASK_TYPES.map((x) => <option key={x}>{x}</option>)}</select>
-              <input type="date" value={nextStep.dueDate} onChange={(e) => setNextStep({ ...nextStep, dueDate: e.target.value })} style={inp} />
-              <select value={nextStep.assigneeId} onChange={(e) => setNextStep({ ...nextStep, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 11, flexWrap: "wrap" }}>
-              <button onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>+ Create next task</button>
-              <button onClick={() => setNextStep(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>Not now</button>
-              <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>No prompt once the deal is Won or Lost</span>
+          <div
+            onClick={() => setNextStep(null)}
+            style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(4,12,28,.5)", padding: 16 }}
+          >
+            <div
+              role="dialog"
+              aria-label="Create the next step"
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 430, background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 16, padding: 20, boxShadow: "0 12px 40px rgba(12,35,64,.22)" }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E1F5EE", color: "#0F6E56", fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 999 }}>✓ Task marked done</span>
+              <p style={{ margin: "14px 0 2px", fontSize: 18, fontWeight: 600, color: "var(--foreground)" }}>Create the next step?</p>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
+                Keep {nextStep.task.opportunity_name ? <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>{nextStep.task.opportunity_name}</strong> : "this deal"} moving — this opportunity is still open.
+              </p>
+
+              <label style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Task</label>
+              <input value={nextStep.title} onChange={(e) => setNextStep({ ...nextStep, title: e.target.value })} autoFocus style={{ ...inp, width: "100%", marginBottom: 12, boxSizing: "border-box" }} />
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Type</label>
+                  <select value={nextStep.taskType} onChange={(e) => setNextStep({ ...nextStep, taskType: e.target.value })} style={{ ...inp, width: "100%", boxSizing: "border-box" }}>{TASK_TYPES.map((x) => <option key={x}>{x}</option>)}</select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Due date</label>
+                  <input type="date" value={nextStep.dueDate} onChange={(e) => setNextStep({ ...nextStep, dueDate: e.target.value })} style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Assignee</label>
+                  <select value={nextStep.assigneeId} onChange={(e) => setNextStep({ ...nextStep, assigneeId: e.target.value })} style={{ ...inp, width: "100%", boxSizing: "border-box" }}><option value="">Me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                </div>
+              </div>
+
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#E6F1FB", color: "#185FA5", fontSize: 11, padding: "3px 9px", borderRadius: 999 }}>Due +3 business days</span>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>Create task</button>
+                <button onClick={() => setNextStep(null)} style={{ fontSize: 12.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Skip</button>
+              </div>
+
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ color: "var(--muted-foreground)", fontSize: 14, lineHeight: 1 }}>ℹ</span>
+                <p style={{ margin: 0, fontSize: 11.5, color: "var(--muted-foreground)", lineHeight: 1.55 }}>When the opportunity is <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>Won</strong> or <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>Lost</strong>, this prompt is skipped — the deal is closed.</p>
+              </div>
             </div>
           </div>
         )}
