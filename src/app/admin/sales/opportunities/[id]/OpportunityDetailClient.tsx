@@ -39,6 +39,9 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [taskDraft, setTaskDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  // Company name (from the linked contact) shown under the opportunity title. Its
+  // profile is the CRM contact record — there's no standalone company page.
+  const companyName = founderContact?.company?.trim() || null;
 
   async function loadTasks() {
     try {
@@ -192,7 +195,26 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
           ) : (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{o.title}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 600 }}>{o.title}</div>
+                  {companyName && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted-foreground)" }}>
+                        <i className="ti ti-building" aria-hidden="true" style={{ fontSize: 14 }} />
+                        <span style={{ fontWeight: 500, color: "var(--foreground)" }}>{companyName}</span>
+                      </span>
+                      {o.contact_crm_id && (
+                        <button
+                          onClick={() => router.push(`/admin/sales/contacts/${o.contact_crm_id}`)}
+                          title="Open the company's profile"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "none", borderRadius: 999, padding: "3px 9px", cursor: "pointer" }}
+                        >
+                          View company profile <i className="ti ti-external-link" aria-hidden="true" style={{ fontSize: 12 }} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: 2, color: "#EF9F27", fontSize: 16, cursor: "pointer" }}>
                   {[1, 2, 3].map((n) => <span key={n} onClick={() => patch({ priority: o.priority === n ? 0 : n })} style={{ color: n <= o.priority ? "#EF9F27" : "var(--muted-foreground)" }}>★</span>)}
                 </div>
