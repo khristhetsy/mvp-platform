@@ -80,6 +80,7 @@ export const sessionInput = z.object({
   position: z.number().default(0),
   doorsOpen: z.boolean().optional(),
   chatEnabled: z.boolean().optional(),
+  isHeadline: z.boolean().optional(),
 });
 export type SessionInput = z.infer<typeof sessionInput>;
 

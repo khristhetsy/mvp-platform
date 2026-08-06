@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench } from "lucide-react";
+import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench, Pin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
@@ -460,6 +460,28 @@ export function EventDetailManager({
     setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }
 
+  // Pin a session as the Main Stage headline (or unpin). Only one per event, so
+  // pinning one clears the flag on the others locally too.
+  async function setHeadline(s: EventSession, value: boolean) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${s.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isHeadline: value }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(formatApiError(json.error, "Could not update the Main Stage pin."));
+      setSessions((prev) =>
+        prev.map((x) =>
+          x.id === s.id ? (json.session as EventSession) : value ? { ...x, isHeadline: false } : x,
+        ),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the Main Stage pin.");
+    }
+  }
+
   // Drag-to-reorder sessions. The list reorders live as you drag; the new order
   // is saved when you drop.
   const [dragId, setDragId] = useState<string | null>(null);
@@ -874,10 +896,24 @@ export function EventDetailManager({
                           {s.recordingPath && (
                             <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
                           )}
+                          {s.isHeadline && (
+                            <span className="ml-2 inline-flex items-center gap-1 rounded bg-[var(--navy)] px-2 py-0.5 text-xs font-medium text-white">
+                              <Pin className="h-3 w-3" /> Main Stage
+                            </span>
+                          )}
                         </div>
                       </div>
                       {canEdit && (
                         <div className="flex items-center gap-3">
+                          {s.type !== "talk_show" && (
+                            <button
+                              onClick={() => setHeadline(s, !s.isHeadline)}
+                              className={`text-xs font-medium hover:underline ${s.isHeadline ? "text-emerald-700" : "text-[var(--blue)]"}`}
+                              title="Pin this session as the Main Stage headline — it stays on Main Stage even when other sessions go live"
+                            >
+                              {s.isHeadline ? "Unpin Main Stage" : "Pin to Main Stage"}
+                            </button>
+                          )}
                           <button onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
                             Edit
                           </button>

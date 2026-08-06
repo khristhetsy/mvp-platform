@@ -25,13 +25,18 @@ function headlineCompare(a: EventSession, b: EventSession): number {
   return byStartAsc(a, b);
 }
 
-/** The headline Main Stage session: a live non-talk-show session if one is on
- *  air, otherwise the next scheduled one. Talk shows have their own room. */
+/** The headline Main Stage session. If an admin has pinned a session (isHeadline)
+ *  it always fills Main Stage — so another session going live can never steal the
+ *  slot. Otherwise: a live non-talk-show session if one is on air, else the next
+ *  scheduled one. Talk shows have their own room. */
 export function pickMainStageSession(sessions: EventSession[]): EventSession | null {
   const eligible = sessions.filter((s) => s.type !== "talk_show" && s.status !== "draft");
-  const live = eligible.filter((s) => s.status === "live").sort(headlineCompare);
+  // A pinned, not-yet-ended session takes priority over the auto-pick.
+  const pinned = eligible.filter((s) => s.isHeadline && s.status !== "ended");
+  const pool = pinned.length ? pinned : eligible;
+  const live = pool.filter((s) => s.status === "live").sort(headlineCompare);
   if (live.length) return live[0];
-  const scheduled = eligible.filter((s) => s.status === "scheduled").sort(headlineCompare);
+  const scheduled = pool.filter((s) => s.status === "scheduled").sort(headlineCompare);
   return scheduled[0] ?? null;
 }
 

@@ -29,6 +29,7 @@ function mapSession(r: Row): EventSession {
     position: Number(r.position ?? 0),
     doorsOpen: Boolean(r.doors_open),
     chatEnabled: r.chat_enabled !== false,
+    isHeadline: Boolean(r.is_headline),
   };
 }
 
@@ -76,6 +77,7 @@ export async function updateSession(
   if (input.position !== undefined) patch.position = input.position;
   if (input.doorsOpen !== undefined) patch.doors_open = input.doorsOpen;
   if (input.chatEnabled !== undefined) patch.chat_enabled = input.chatEnabled;
+  if (input.isHeadline !== undefined) patch.is_headline = input.isHeadline;
   const { data, error } = await raw(supabase)
     .from("sessions")
     .update(patch)
@@ -83,7 +85,17 @@ export async function updateSession(
     .select("*")
     .single();
   if (error) throw new Error(error.message);
-  return mapSession(data as Row);
+  const row = data as Row;
+  // Only one session per event can be the pinned Main Stage headline — clear the
+  // flag on every sibling when this one is pinned.
+  if (input.isHeadline === true && row.event_id) {
+    await raw(supabase)
+      .from("sessions")
+      .update({ is_headline: false })
+      .eq("event_id", String(row.event_id))
+      .neq("id", id);
+  }
+  return mapSession(row);
 }
 
 export async function deleteSession(supabase: SupabaseClient<Database>, id: string): Promise<void> {

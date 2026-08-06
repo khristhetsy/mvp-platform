@@ -36,6 +36,9 @@ export interface EventSession {
   /** When true, the live panel shows the attendee Chat tab (in addition to
    *  Q&A). When false, Q&A only. */
   chatEnabled: boolean;
+  /** When true, this session is pinned as the Main Stage headline: it always
+   *  fills Main Stage regardless of what else goes live. Only one per event. */
+  isHeadline: boolean;
 }
 
 export interface EventRecord {
