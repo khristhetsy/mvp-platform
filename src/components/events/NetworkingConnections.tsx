@@ -69,6 +69,27 @@ export function NetworkingConnections({
     }
   }
 
+  // Google Meet can't be embedded, so a call opens in a new tab (pop-out). The
+  // other attendee gets a notification with the same Meet link.
+  async function startCall(c: NetworkingConnection) {
+    setBusy(c.id);
+    setError(null);
+    try {
+      const res = await fetch("/api/events/networking/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, connectionId: c.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not start the call.");
+      if (json.meetUrl) window.open(json.meetUrl as string, "_blank", "noopener");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start the call.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function respond(connectionId: string, action: "accept" | "decline") {
     setBusy(connectionId);
     setError(null);
@@ -187,10 +208,23 @@ export function NetworkingConnections({
               <li key={c.id} className="flex items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
                 <Avatar name={c.otherName} />
                 <span className="text-sm font-medium text-[var(--navy)]">{c.otherName}</span>
-                <span className="ml-auto text-xs font-medium text-emerald-700">{t("connected")}</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs font-medium text-emerald-700">{t("connected")}</span>
+                  <button
+                    onClick={() => startCall(c)}
+                    disabled={busy === c.id}
+                    className="rounded-md bg-[var(--blue)] px-2.5 py-1 text-xs font-medium text-white hover:bg-[var(--blue-hover)] disabled:opacity-50"
+                    title="Start a Google Meet — opens in a new tab"
+                  >
+                    {busy === c.id ? "…" : "Video call"}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
+          <p className="mt-3 text-xs text-[var(--text-muted)]">
+            Starting a call opens a Google Meet in a new tab and invites your connection to join.
+          </p>
         </div>
       )}
     </div>
