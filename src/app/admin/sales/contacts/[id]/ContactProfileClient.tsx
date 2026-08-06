@@ -51,10 +51,30 @@ function StatusPill({ status }: { status: string }) {
   const t = LEAD_TONE[status.toLowerCase()] ?? { bg: "#F1EFE8", c: "#5F5E5A" };
   return <span style={{ fontSize: 11, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 20, padding: "2px 10px", textTransform: "capitalize" }}>{status}</span>;
 }
-function Chip({ label, value }: { label: string; value: string | number }) {
+function Chip({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) {
+  const [hover, setHover] = useState(false);
+  const clickable = Boolean(onClick);
   return (
-    <div style={{ background: "#F6F8FB", borderRadius: 8, padding: "9px 12px" }}>
-      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</div>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } } : undefined}
+      style={{
+        background: clickable && hover ? "#EEF3FF" : "#F6F8FB",
+        border: `1px solid ${clickable && hover ? "#2E78F5" : "transparent"}`,
+        borderRadius: 8,
+        padding: "9px 12px",
+        cursor: clickable ? "pointer" : "default",
+        transition: "background .12s, border-color .12s",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</div>
+        {clickable && <i className="ti ti-arrow-right" aria-hidden="true" style={{ fontSize: 13, color: hover ? "#2E78F5" : "#9aa4b2" }} />}
+      </div>
       <div style={{ fontSize: 18, fontWeight: 600, color: "#0A1A40", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
     </div>
   );
@@ -425,6 +445,18 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const address = [contact.street, contact.street2, contact.city, contact.state, contact.zip, contact.country].filter(Boolean).join(", ") || null;
   const pipelineCents = opportunities.reduce((a, o) => a + (o.value_cents ?? 0), 0);
   const openOpps = opportunities.filter((o) => o.status === "open").length;
+  // Stat cards deep-link to their data: one deal opens directly; several scroll
+  // to the linked-opportunities list. Last activity opens the activity feed.
+  const goToOpps = () => {
+    if (opportunities.length === 1) { router.push(`/admin/sales/opportunities/${opportunities[0].id}`); return; }
+    if (opportunities.length === 0) return;
+    setSection("details");
+    setTimeout(() => document.getElementById("linked-opps")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  };
+  const goToActivity = () => {
+    setSection("activity");
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 60);
+  };
   const lastActLabel = acts[0] ? actWhen(acts[0].created_at) : "—";
   const subtitle = [contact.job_position, contact.company, [contact.city, contact.country].filter(Boolean).join(", ") || null].filter(Boolean).join(" · ") || "—";
 
@@ -461,10 +493,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
-            <Chip label="Opportunities" value={opportunities.length} />
-            <Chip label="Pipeline value" value={money(pipelineCents)} />
-            <Chip label="Open opps" value={openOpps} />
-            <Chip label="Last activity" value={lastActLabel} />
+            <Chip label="Opportunities" value={opportunities.length} onClick={goToOpps} />
+            <Chip label="Pipeline value" value={money(pipelineCents)} onClick={goToOpps} />
+            <Chip label="Open opps" value={openOpps} onClick={goToOpps} />
+            <Chip label="Last activity" value={lastActLabel} onClick={goToActivity} />
           </div>
         </div>
 
@@ -937,7 +969,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {/* Linked opportunities */}
         {section === "details" && opportunities.length > 0 && (
-          <div style={{ padding: "0 16px 16px" }}>
+          <div id="linked-opps" style={{ padding: "0 16px 16px", scrollMarginTop: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Linked opportunities</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {opportunities.map((o) => (
