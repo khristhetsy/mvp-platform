@@ -88,8 +88,11 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
   }
   async function markDone(t: Task) {
     await patch(t.id, { status: "done" });
-    // Prompt for the next task only while the linked opportunity is still open.
-    if (t.opportunity_id && t.opportunity_status === "open") {
+    // Prompt for the next step on every completed task — unless the linked
+    // opportunity is already closed (Won / Lost / archived). Tasks with no
+    // linked opportunity still prompt (there's no closed deal to suppress it).
+    const closed = t.opportunity_status === "won" || t.opportunity_status === "lost" || t.opportunity_status === "archived";
+    if (!closed) {
       setNextStep({ task: t, title: t.title, taskType: t.task_type, dueDate: addBusinessDays(3), assigneeId: t.assignee_id ?? "" });
     }
   }
@@ -161,7 +164,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E1F5EE", color: "#0F6E56", fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 999 }}>✓ Task marked done</span>
               <p style={{ margin: "14px 0 2px", fontSize: 18, fontWeight: 600, color: "var(--foreground)" }}>Create the next step?</p>
               <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-                Keep {nextStep.task.opportunity_name ? <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>{nextStep.task.opportunity_name}</strong> : "this deal"} moving — this opportunity is still open.
+                Keep things moving{nextStep.task.opportunity_name ? <> with <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>{nextStep.task.opportunity_name}</strong></> : nextStep.task.contact_name ? <> with <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>{nextStep.task.contact_name}</strong></> : null} — schedule the next step.
               </p>
 
               <label style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Task</label>
