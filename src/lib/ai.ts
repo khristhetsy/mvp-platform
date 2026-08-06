@@ -9,6 +9,9 @@ type AnalysisInput = {
   companyName: string;
   documentSummaries: string[];
   uploadedDocumentTypes: string[];
+  /** Document types the founder marked "not applicable" (e.g. no customer
+   *  contracts for this business) — excluded from the missing list. */
+  notApplicableDocumentTypes?: string[];
 };
 
 export type GeneratedDiligenceReport = {
@@ -24,9 +27,11 @@ export type GeneratedDiligenceReport = {
 
 export async function generateDiligenceReport(input: AnalysisInput): Promise<GeneratedDiligenceReport> {
   // Normalize DB codes → required labels (with aliases) so uploaded documents are
-  // actually credited instead of everything reading as missing.
-  const missingDocuments = missingRequiredDocumentLabels(input.uploadedDocumentTypes);
+  // actually credited instead of everything reading as missing. Types the founder
+  // marked "not applicable" are excluded from the missing list too.
+  const missingDocuments = missingRequiredDocumentLabels(input.uploadedDocumentTypes, undefined, input.notApplicableDocumentTypes ?? []);
   const uploadedLabels = [...new Set(input.uploadedDocumentTypes.map(titleCaseCode))];
+  const notApplicableLabels = [...new Set((input.notApplicableDocumentTypes ?? []).map(titleCaseCode))];
 
   const documentNextSteps =
     missingDocuments.length > 0
@@ -55,8 +60,13 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
           task: "Create an investor diligence summary with risks, missing items, and next steps. Return plain text only.",
           companyName: input.companyName,
           uploadedDocuments: uploadedLabels,
+          notApplicableDocuments: notApplicableLabels,
           documentSummaries: input.documentSummaries,
           missingDocuments,
+          naNote:
+            notApplicableLabels.length > 0
+              ? "Documents in notApplicableDocuments were marked not applicable by the founder (this business genuinely has none — e.g. a SaaS or biotech with no customer contracts). Do NOT list them as missing or frame them as gaps or risks."
+              : undefined,
           note:
             input.documentSummaries.length === 0 && uploadedLabels.length > 0
               ? "Documents listed in uploadedDocuments ARE on file but not yet AI-summarized. Acknowledge they are present and pending content analysis — do NOT state that no documents exist."

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateDiligenceReport } from "@/lib/ai";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 
 // Shared diligence-report generation used by both the staff route
 // (POST /api/ai/reports) and the founder self-serve route
@@ -70,12 +71,16 @@ export async function generateAndSaveDiligenceReport(
     .select("document_type, ai_summary")
     .eq("company_id", companyId);
 
+  // Document types the founder marked "not applicable" — excluded from missing.
+  const notApplicableDocumentTypes = await loadNotApplicableTypes(db as unknown as SupabaseClient, companyId).catch(() => [] as string[]);
+
   const report = await generateDiligenceReport({
     companyName: company.company_name,
     documentSummaries:
       documents?.flatMap((d) => (d.ai_summary ? [d.ai_summary as string] : [])) ?? [],
     uploadedDocumentTypes:
       documents?.flatMap((d) => (d.document_type ? [d.document_type as string] : [])) ?? [],
+    notApplicableDocumentTypes,
   });
 
   const { data: savedReport, error: reportError } = await db

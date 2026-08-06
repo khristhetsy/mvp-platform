@@ -98,12 +98,18 @@ export function buildDocumentChecklist(
 export function missingRequiredDocumentLabels(
   uploadedTypeCodes: readonly string[],
   requiredLabels: readonly string[] = requiredDocumentTypes,
+  notApplicableCodes: readonly string[] = [],
 ): string[] {
   const uploaded = new Set(uploadedTypeCodes.map((c) => c.toUpperCase()));
+  const na = new Set(notApplicableCodes.map((c) => c.toUpperCase()));
   return requiredLabels.filter((label) => {
     const code = documentTypeCode(label);
     const aliases = DOC_TYPE_ALIASES[code] ?? [];
-    return !uploaded.has(code) && !aliases.some((a) => uploaded.has(a.toUpperCase()));
+    const present = uploaded.has(code) || aliases.some((a) => uploaded.has(a.toUpperCase()));
+    // A type the founder marked "not applicable" (e.g. no customer contracts for
+    // this business) is never counted as missing.
+    const markedNa = na.has(code) || aliases.some((a) => na.has(a.toUpperCase()));
+    return !present && !markedNa;
   });
 }
 
