@@ -99,6 +99,11 @@ export default async function DiligenceReportPage() {
               companyName={companyName}
               generatedAt={new Date(diligenceReport.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               executiveSummary={diligenceReport.executive_summary}
+              businessOverview={diligenceReport.business_overview}
+              financialReview={diligenceReport.financial_review}
+              marketReview={diligenceReport.market_review}
+              legalReview={diligenceReport.legal_review}
+              teamReview={diligenceReport.team_review}
               missingDocuments={missingDocuments as string[]}
               recommendations={recommendations}
               riskFlags={riskFlags as string[]}

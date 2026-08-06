@@ -81,6 +81,11 @@ export async function generateAndSaveDiligenceReport(
     uploadedDocumentTypes:
       documents?.flatMap((d) => (d.document_type ? [d.document_type as string] : [])) ?? [],
     notApplicableDocumentTypes,
+    industry: (company as { industry?: string | null }).industry ?? null,
+    revenueStage: (company as { revenue_stage?: string | null }).revenue_stage ?? null,
+    fundingAmount: (company as { funding_amount?: number | null }).funding_amount ?? null,
+    businessDescription: (company as { business_description?: string | null }).business_description ?? null,
+    useOfFunds: (company as { use_of_funds?: string | null }).use_of_funds ?? null,
   });
 
   const { data: savedReport, error: reportError } = await db

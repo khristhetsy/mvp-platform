@@ -59,10 +59,18 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+const IMPORTANT_NOTICE =
+  "This summary is a procedural status document only. It reflects what materials are on file and what is outstanding. It does not reflect a completed review of any document's contents. No conclusions about the company's suitability for investment should be drawn from this summary at this stage. All findings are preliminary and subject to material revision upon completion of full document review.";
+
 export function DiligenceReportDocument({
   companyName,
   generatedAt,
   executiveSummary,
+  businessOverview,
+  financialReview,
+  marketReview,
+  legalReview,
+  teamReview,
   missingDocuments,
   recommendations,
   riskFlags,
@@ -70,15 +78,30 @@ export function DiligenceReportDocument({
   companyName: string;
   generatedAt: string | null;
   executiveSummary: string | null | undefined;
+  businessOverview?: string | null;
+  financialReview?: string | null;
+  marketReview?: string | null;
+  legalReview?: string | null;
+  teamReview?: string | null;
   missingDocuments: string[];
   recommendations: string[];
   riskFlags: string[];
 }) {
   const sections = useMemo(() => parseSections(executiveSummary), [executiveSummary]);
 
+  const reviews = [
+    { id: "business-overview", label: "Business overview", body: businessOverview },
+    { id: "financial-review", label: "Financial review", body: financialReview },
+    { id: "market-review", label: "Market review", body: marketReview },
+    { id: "legal-compliance-review", label: "Legal & compliance review", body: legalReview },
+    { id: "team-review", label: "Team review", body: teamReview },
+  ].map((r) => ({ ...r, body: r.body && r.body.trim().length > 0 ? r.body.trim() : "Not provided." }));
+
   const toc: { id: string; label: string }[] = [
+    { id: "important-notice", label: "Important notice" },
     ...sections.map((s) => ({ id: s.id, label: s.heading })),
-    ...(riskFlags.length ? [{ id: "risk-flags", label: "Risk flags" }] : []),
+    ...reviews.map((r) => ({ id: r.id, label: r.label })),
+    { id: "risk-flags", label: "Risk flags" },
     ...(missingDocuments.length ? [{ id: "missing-documents", label: "Missing documents" }] : []),
     ...(recommendations.length ? [{ id: "next-steps", label: "Next steps" }] : []),
   ];
@@ -107,6 +130,11 @@ export function DiligenceReportDocument({
         <h1 className="mt-1 text-2xl font-semibold text-[#0c2340]">{companyName}</h1>
         {generatedAt && <p className="mt-0.5 text-xs text-slate-400">Generated {generatedAt} · Preliminary</p>}
 
+        <div id="important-notice" className="scroll-mt-4">
+          <p className="mb-2 mt-7 font-mono text-[10px] uppercase tracking-[0.09em] text-[#2E78F5]">Important notice</p>
+          <p className="mt-1.5 text-sm leading-6 text-slate-700">{IMPORTANT_NOTICE}</p>
+        </div>
+
         {sections.map((s) => (
           <div key={s.id} id={s.id} className="scroll-mt-4">
             <p className="mb-2 mt-7 font-mono text-[10px] uppercase tracking-[0.09em] text-[#2E78F5]">{s.heading}</p>
@@ -116,9 +144,20 @@ export function DiligenceReportDocument({
           </div>
         ))}
 
-        {riskFlags.length > 0 && (
-          <div id="risk-flags" className="scroll-mt-4">
-            <p className="mb-2 mt-7 font-mono text-[10px] uppercase tracking-[0.09em] text-[#2E78F5]">Risk flags</p>
+        {reviews.map((r) => (
+          <div key={r.id} id={r.id} className="scroll-mt-4">
+            <p className="mb-2 mt-7 font-mono text-[10px] uppercase tracking-[0.09em] text-[#2E78F5]">{r.label}</p>
+            {bodyParts(r.body).map((p, i) => (
+              <p key={i} className={`mt-1.5 text-sm leading-6 ${r.body === "Not provided." ? "italic text-slate-400" : "text-slate-700"}`}>{p}</p>
+            ))}
+          </div>
+        ))}
+
+        <div id="risk-flags" className="scroll-mt-4">
+          <p className="mb-2 mt-7 font-mono text-[10px] uppercase tracking-[0.09em] text-[#2E78F5]">Risk flags</p>
+          {riskFlags.length === 0 ? (
+            <p className="mt-1.5 text-sm italic text-slate-400">None recorded.</p>
+          ) : (
             <ul className="space-y-1.5">
               {riskFlags.map((r) => (
                 <li key={r} className="flex items-start gap-2 text-sm text-slate-700">
@@ -127,8 +166,8 @@ export function DiligenceReportDocument({
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          )}
+        </div>
 
         {missingDocuments.length > 0 && (
           <div id="missing-documents" className="scroll-mt-4">
