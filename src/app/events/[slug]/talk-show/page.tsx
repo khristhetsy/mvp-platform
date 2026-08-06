@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Video } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -10,6 +10,7 @@ import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { isBanned } from "@/lib/icfo-events/engagement";
 import { pickTalkShowSession } from "@/lib/icfo-events/rooms";
+import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
 import { loadSegments } from "@/lib/icfo-events/segments";
@@ -39,6 +40,18 @@ function fmtTime(iso: string | null): string {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+/** Label the join button by meeting host (Google Meet / Zoom can't be embedded). */
+function joinLabel(url: string): string {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "");
+    if (h.includes("meet.google")) return "Join Google Meet";
+    if (h.includes("zoom")) return "Join Zoom";
+    return "Join the live session";
+  } catch {
+    return "Join the live session";
+  }
+}
+
 export default async function TalkShowPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const t = await getTranslations("appPages");
@@ -55,12 +68,19 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
   const stage = pickTalkShowSession(event.sessions);
   const isLive = stage?.status === "live";
 
-  // A live session streamed via a pasted link (Vimeo/YouTube/Zoom/Meet) or a
-  // Whereby room is a "watch party": render the video player as the stage
-  // surface instead of the couch. Everything else keeps the avatar couch.
+  // A live session with an EMBEDDABLE link (Vimeo/YouTube via external, or a
+  // Whereby room) is a "watch party": render the video player as the stage
+  // surface. Google Meet / Zoom can't be iframed, so those keep the couch (with
+  // all its features) and get a Join button instead.
+  const externalEmbed =
+    stage?.videoProvider === "external" && stage.videoRef ? embeddableLiveUrl(stage.videoRef) : null;
   const isWatchEmbed = Boolean(
-    isLive && stage?.videoRef && (stage.videoProvider === "external" || stage.videoProvider === "whereby"),
+    isLive && stage?.videoRef && (stage.videoProvider === "whereby" || externalEmbed),
   );
+  // Live via a non-embeddable meeting link (Google Meet / Zoom): keep the couch
+  // and everything else, and surface a Join button above it.
+  const joinUrl =
+    isLive && stage?.videoProvider === "external" && stage.videoRef && !externalEmbed ? stage.videoRef : null;
 
   const [questions, chat, queue] =
     profile && stage && isLive
@@ -117,14 +137,27 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                         caption={stage.abstract ? stage.abstract.slice(0, 90) : subtitle}
                       />
                     ) : (
-                      <TalkShowCouch
-                        sessionId={stage.id}
-                        presenceRoom={PRESENCE_ROOM}
-                        segmentTitle={stage.abstract ? stage.abstract.slice(0, 70) : isLive ? "On air now" : "Up next"}
-                        initialSegments={segments}
-                        runOfShow={runOfShow}
-                        isLive={Boolean(isLive)}
-                      />
+                      <>
+                        {joinUrl && (
+                          <a
+                            href={joinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mb-3 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95"
+                            style={{ background: "#1D9E75" }}
+                          >
+                            <Video className="h-4 w-4" /> {joinLabel(joinUrl)} ↗
+                          </a>
+                        )}
+                        <TalkShowCouch
+                          sessionId={stage.id}
+                          presenceRoom={PRESENCE_ROOM}
+                          segmentTitle={stage.abstract ? stage.abstract.slice(0, 70) : isLive ? "On air now" : "Up next"}
+                          initialSegments={segments}
+                          runOfShow={runOfShow}
+                          isLive={Boolean(isLive)}
+                        />
+                      </>
                     )
                   ) : (
                     <div className="rounded-2xl px-6 py-12 text-center text-sm" style={{ background: "#0a1422", color: "#8e9bb0" }}>
