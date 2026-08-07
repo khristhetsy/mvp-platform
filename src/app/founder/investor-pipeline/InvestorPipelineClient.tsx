@@ -5,6 +5,17 @@ import { useState } from "react";
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
 type InvestorSource = "manual" | "platform_match";
+type PipelineStage = "new" | "contacted" | "interested" | "meeting" | "committed" | "passed";
+
+// Ordered kanban stages for the Investor CRM board view, with a column accent.
+const PIPELINE_STAGES: { id: PipelineStage; label: string; color: string }[] = [
+  { id: "new",        label: "New",        color: "#185FA5" },
+  { id: "contacted",  label: "Contacted",  color: "#BA7517" },
+  { id: "interested", label: "Interested", color: "#534AB7" },
+  { id: "meeting",    label: "Meeting",    color: "#1D9E75" },
+  { id: "committed",  label: "Committed",  color: "#0F6E56" },
+  { id: "passed",     label: "Passed",     color: "#A32D2D" },
+];
 
 interface PipelineInvestor {
   id: string;
@@ -18,6 +29,7 @@ interface PipelineInvestor {
   meeting_requested: MeetingStatus;
   match_score: number | null;
   outreach_status: OutreachStatus;
+  pipeline_stage: PipelineStage;
   source: InvestorSource;
   platform_investor_id: string | null;
   preferred_stages: string[] | null;
@@ -156,6 +168,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
   const [search, setSearch] = useState("");
   const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
+  const [viewMode, setViewMode] = useState<"table" | "board">("board");
 
   // Add / edit modal
   const [showModal, setShowModal] = useState(false);
@@ -250,6 +263,11 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   async function handleOutreachChange(id: string, status: OutreachStatus) {
     setInvestors((prev) => prev.map((i) => i.id === id ? { ...i, outreach_status: status } : i));
     await fetch(`/api/founder/investor-pipeline/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outreach_status: status }) });
+  }
+
+  async function handleStageChange(id: string, stage: PipelineStage) {
+    setInvestors((prev) => prev.map((i) => i.id === id ? { ...i, pipeline_stage: stage } : i));
+    await fetch(`/api/founder/investor-pipeline/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pipeline_stage: stage }) });
   }
 
   // ── Import from matches ───────────────────────────────────────────────────────
@@ -383,6 +401,20 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           ))}
         </select>
         <div className="flex-1" />
+        <div className="inline-flex overflow-hidden rounded-lg border" style={{ borderColor: "var(--border-subtle)" }}>
+          {(["board", "table"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setViewMode(m)}
+              className="px-3 py-2 text-sm font-medium capitalize transition-colors"
+              style={viewMode === m
+                ? { background: "var(--blue)", color: "#fff" }
+                : { background: "#fff", color: "var(--text-secondary)" }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
         <button onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
           Export CSV
         </button>
@@ -394,7 +426,61 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
         </button>
       </div>
 
+      {/* Board view — kanban by pipeline stage */}
+      {viewMode === "board" && (
+        <div className="overflow-x-auto pb-2">
+          <div className="flex gap-3" style={{ minWidth: `${PIPELINE_STAGES.length * 222}px` }}>
+            {PIPELINE_STAGES.map((stage) => {
+              const cards = filtered.filter((i) => (i.pipeline_stage ?? "new") === stage.id);
+              return (
+                <div key={stage.id} className="w-[210px] flex-none">
+                  <div className="flex items-center justify-between pb-1.5" style={{ borderBottom: `2px solid ${stage.color}` }}>
+                    <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{stage.label}</span>
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{cards.length}</span>
+                  </div>
+                  <div className="mt-2.5 flex flex-col gap-2">
+                    {cards.length === 0 ? (
+                      <div className="rounded-lg border border-dashed py-6 text-center text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>—</div>
+                    ) : cards.map((inv) => (
+                      <div key={inv.id} className="rounded-lg border bg-white p-2.5" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
+                        <div className="flex items-start justify-between gap-1.5">
+                          <button onClick={() => setProfileOf(inv)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                          {inv.source === "platform_match" && !inv.platform_investor_id && (
+                            <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                          {inv.investor_type}{inv.investment_size ? ` · ${inv.investment_size}` : ""}
+                        </p>
+                        {inv.match_score != null && (
+                          <p className="mt-0.5 text-right text-[11px]" style={{ color: inv.match_score >= 70 ? "#0F6E56" : "var(--text-muted)" }}>{inv.match_score}% match</p>
+                        )}
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <button onClick={() => setProfileOf(inv)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
+                          <select
+                            value={inv.pipeline_stage ?? "new"}
+                            onChange={(e) => handleStageChange(inv.id, e.target.value as PipelineStage)}
+                            className="flex-1 rounded-md border px-1.5 py-1 text-[11px]"
+                            style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+                            aria-label={`Move ${inv.name} to another stage`}
+                          >
+                            {PIPELINE_STAGES.map((s) => (
+                              <option key={s.id} value={s.id}>{s.id === stage.id ? stage.label : `Move → ${s.label}`}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Table */}
+      {viewMode === "table" && (
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
         <div className="overflow-x-auto">
           <table className="enterprise-table enterprise-table--comfortable w-full min-w-[900px] border-collapse bg-white">
@@ -453,6 +539,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           </table>
         </div>
       </div>
+      )}
 
       {/* ── Profile popup ──────────────────────────────────────────────────────── */}
       {profileOf && (

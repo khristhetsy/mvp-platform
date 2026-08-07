@@ -26,7 +26,7 @@ export default async function InvestorPipelinePage() {
   const { data: initialInvestors } = await untyped(supabase)
     .from("pipeline_investors")
     .select(
-      "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,source,platform_investor_id,last_contact_date,next_follow_up_date,preferred_stages,focus_sectors,notes,created_at,updated_at"
+      "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,pipeline_stage,source,platform_investor_id,last_contact_date,next_follow_up_date,preferred_stages,focus_sectors,notes,created_at,updated_at"
     )
     .eq("founder_id", profile.id)
     .order("created_at", { ascending: false });
