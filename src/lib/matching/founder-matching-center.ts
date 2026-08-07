@@ -1,6 +1,6 @@
 // Founder-facing Matching Center: rank investor contacts (registered members +
-// internal CRM prospects) against the founder's company, anonymized. Mirrors the
-// admin center (matching-center.ts) but scoped to one company and identity-safe.
+// internal CRM prospects) against the founder's company. Names + firm are shown
+// to founders; direct contact still happens through a brokered introduction.
 import type { Company } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { companyToMatchProfile, loadApprovedInvestorMatchProfiles } from "@/lib/matching/load-matching-data";
@@ -14,9 +14,11 @@ export type FounderInvestorMatchCard = {
   investorType: string | null;
   checkBand: string | null;
   reasons: string[];
-  /** Opaque reference (investor/prospect id) — sent back on an intro request,
-   *  never shown to the founder, so identity stays private. */
+  /** Reference (investor/prospect id) — sent back on an intro request. */
   ref: string;
+  /** Investor identity (now surfaced to founders). */
+  name: string;
+  firm: string | null;
   /** Detail-panel inputs (fit breakdown + criteria) for the click-to-open modal. */
   fitSector: number;
   fitStage: number;
@@ -73,15 +75,37 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
   const investors = [...members, ...prospects.profiles];
   const ranked = rankInvestorsForCompany(profile, investors, limit, cfg.engineWeights);
 
+  // Resolve real names + firms for the ranked investors. Members come from their
+  // profile + investor_profile; prospects carry a name from the CRM import.
+  const admin = createServiceRoleClient();
+  const memberIds = ranked.map((r) => r.investor.profile_id).filter((id) => !isProspectInvestorId(id));
+  const nameById = new Map<string, string>();
+  const firmById = new Map<string, string>();
+  if (memberIds.length) {
+    const [profs, ips] = await Promise.all([
+      admin.from("profiles").select("id, full_name").in("id", memberIds),
+      admin.from("investor_profiles").select("profile_id, firm_name").in("profile_id", memberIds),
+    ]);
+    for (const p of (profs.data ?? []) as Array<{ id: string; full_name: string | null }>) if (p.full_name) nameById.set(p.id, p.full_name);
+    for (const ip of (ips.data ?? []) as Array<{ profile_id: string; firm_name: string | null }>) if (ip.firm_name) firmById.set(ip.profile_id, ip.firm_name);
+  }
+  const prospectName = (id: string): string => {
+    const n = prospects.names.get(id);
+    return (n ? n.replace(/\s*·\s*prospect\s*$/i, "") : "").trim() || "Investor";
+  };
+
   const cards: FounderInvestorMatchCard[] = ranked.map(({ investor, match }) => {
     const has = (re: RegExp) => match.matchReasons.some((x) => re.test(x));
+    const isP = isProspectInvestorId(investor.profile_id);
     return {
       matchScore: match.matchScore,
-      isProspect: isProspectInvestorId(investor.profile_id),
+      isProspect: isP,
       investorType: investor.investor_type ?? null,
       checkBand: checkBand(investor.check_size_min ?? null, investor.check_size_max ?? null),
       reasons: match.matchReasons.slice(0, 4),
       ref: investor.profile_id,
+      name: isP ? prospectName(investor.profile_id) : (nameById.get(investor.profile_id) ?? "Investor"),
+      firm: isP ? null : (firmById.get(investor.profile_id) ?? null),
       // Fit bars derived from the same match reasons the engine emitted.
       fitSector: has(/sector/i) ? 100 : 0,
       fitStage: has(/stage/i) ? 100 : 0,

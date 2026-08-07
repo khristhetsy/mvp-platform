@@ -47,19 +47,20 @@ export default async function FounderMatchingPage() {
   const data = await loadFounderMatchingCenter(company!);
 
   const cards: MatchCenterCard[] = data.cards.map((c) => {
-    const title = c.investorType ? `${titleCase(c.investorType)} investor` : "Investor";
+    const label = c.investorType ? `${titleCase(c.investorType)}` : "Investor";
+    const subtitle = [c.firm, label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null;
     return {
       matchScore: c.matchScore,
       tag: c.isProspect ? "Prospect" : "Member",
-      title,
-      subtitle: c.checkBand ? `Typical check ${c.checkBand}` : null,
+      title: c.name,
+      subtitle,
       reasons: c.reasons,
       introRef: c.ref,
       detail: {
-        name: title,
+        name: c.name,
         band: c.matchScore >= 70 ? "high" : c.matchScore >= 45 ? "mid" : "low",
         matchScore: c.matchScore,
-        label: c.investorType ? titleCase(c.investorType) : "Investor",
+        label,
         fitSector: c.fitSector,
         fitStage: c.fitStage,
         fitCheck: c.fitCheck,
