@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { INVESTOR_TYPE_OPTIONS, FUNDING_STAGE_OPTIONS } from "@/lib/profile/options";
 import { INDUSTRY_OPTIONS } from "@/lib/industries";
+import { InvestorDetailModal, type InvestorDetail } from "@/components/founder/InvestorDetailModal";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
@@ -169,7 +169,8 @@ const EMPTY_FORM = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
-  const router = useRouter();
+  const [detail, setDetail] = useState<{ data: InvestorDetail; introRef: string | null; hideFit: boolean } | null>(null);
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
   const [search, setSearch] = useState("");
   const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
@@ -270,6 +271,19 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   async function handleOutreachChange(id: string, status: OutreachStatus) {
     setInvestors((prev) => prev.map((i) => i.id === id ? { ...i, outreach_status: status } : i));
     await fetch(`/api/founder/investor-pipeline/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outreach_status: status }) });
+  }
+
+  async function openDetail(id: string) {
+    setDetailLoadingId(id);
+    try {
+      const r = await fetch(`/api/founder/investor-pipeline/${id}/detail`);
+      if (r.ok) {
+        const d = (await r.json()) as { detail: InvestorDetail; introRef: string | null; hideFit: boolean };
+        setDetail({ data: d.detail, introRef: d.introRef, hideFit: d.hideFit });
+      }
+    } finally {
+      setDetailLoadingId(null);
+    }
   }
 
   async function handleStageChange(id: string, stage: PipelineStage) {
@@ -473,7 +487,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                         style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", opacity: draggingId === inv.id ? 0.5 : 1 }}
                       >
                         <div className="flex items-start justify-between gap-1.5">
-                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                          <button onClick={() => openDetail(inv.id)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
                           {inv.source === "platform_match" && !inv.platform_investor_id && (
                             <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
                           )}
@@ -485,7 +499,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                           <p className="mt-0.5 text-right text-[11px]" style={{ color: inv.match_score >= 70 ? "#0F6E56" : "var(--text-muted)" }}>{inv.match_score}% match</p>
                         )}
                         <div className="mt-2 flex items-center gap-1.5">
-                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
+                          <button onClick={() => openDetail(inv.id)} disabled={detailLoadingId === inv.id} className="rounded-md border px-2 py-1 text-[11px] font-medium disabled:opacity-60" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>{detailLoadingId === inv.id ? "…" : "Open"}</button>
                           <select
                             value={inv.pipeline_stage ?? "new"}
                             onChange={(e) => handleStageChange(inv.id, e.target.value as PipelineStage)}
@@ -568,6 +582,18 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           </table>
         </div>
       </div>
+      )}
+
+      {/* Shared investor detail popup (fit breakdown + criteria + AI positioning). */}
+      {detail && (
+        <InvestorDetailModal
+          detail={detail.data}
+          hideFit={detail.hideFit}
+          introEndpoint="/api/founder/matching/intro"
+          introRef={detail.introRef ?? undefined}
+          draftEndpoint="/api/founder/matching/draft-note"
+          onClose={() => setDetail(null)}
+        />
       )}
 
       {/* ── Profile popup ──────────────────────────────────────────────────────── */}

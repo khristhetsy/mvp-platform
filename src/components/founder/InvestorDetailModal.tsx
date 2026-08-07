@@ -106,12 +106,16 @@ export function InvestorDetailModal({
   draftEndpoint,
   introEndpoint,
   introRef,
+  hideFit = false,
 }: {
   detail: InvestorDetail;
   onClose: () => void;
   draftEndpoint?: string;
   introEndpoint?: string;
   introRef?: string;
+  /** Hide the fit breakdown + AI positioning when there's no match data
+   *  (e.g. a manually-added investor with no engine-computed fit). */
+  hideFit?: boolean;
 }) {
   const advice = buildAdvice(r);
   const [note, setNote] = useState("");
@@ -169,13 +173,17 @@ export function InvestorDetailModal({
             🔒 Contact details hidden — introductions run through iCapOS
           </div>
 
-          <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Fit breakdown</p>
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <FitBar label="Sector" value={r.fitSector} />
-            <FitBar label="Stage" value={r.fitStage} />
-            <FitBar label="Check" value={r.fitCheck} />
-            <FitBar label="Geography" value={r.fitGeo} />
-          </div>
+          {!hideFit && (
+            <>
+              <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Fit breakdown</p>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <FitBar label="Sector" value={r.fitSector} />
+                <FitBar label="Stage" value={r.fitStage} />
+                <FitBar label="Check" value={r.fitCheck} />
+                <FitBar label="Geography" value={r.fitGeo} />
+              </div>
+            </>
+          )}
 
           <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Criteria</p>
           <dl className="mt-1 text-[13px]">
@@ -196,6 +204,7 @@ export function InvestorDetailModal({
             <div className="flex justify-between py-2"><dt className="text-slate-500">Investor score</dt><dd className="font-medium text-slate-800">{r.scoreRated && r.investorScore != null ? `${r.investorScore}${r.scoreTier ? ` · ${r.scoreTier}` : ""}` : "New"}</dd></div>
           </dl>
 
+          {!hideFit && (
           <div className="mt-4 rounded-xl p-4" style={{ background: "#0c2340" }}>
             <div className="mb-2 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "#2E78F5" }}>AI</span>
@@ -263,6 +272,7 @@ export function InvestorDetailModal({
               </div>
             )}
           </div>
+          )}
 
           <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2.5 text-[11px] text-slate-500">
             <b>Confidential.</b> This investor directory is private to your account — do not share or export it. Contact happens only through an iCapOS-coordinated introduction; founders don&apos;t contact investors directly.
