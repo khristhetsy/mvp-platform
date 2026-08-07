@@ -95,6 +95,36 @@ export default async function DocumentUploadPage() {
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="cap-surface-card p-4 sm:p-6">
 
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="text-[var(--blue-hover)]">📎</span>
+              <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
+            </div>
+            <p className="mt-1.5 text-[13px] leading-6 text-slate-600">
+              Upload PDF, Word, Excel, or CSV files, up to 25&nbsp;MB each. For the AI diligence report to read a
+              document, use one of these formats:{" "}
+              <span className="font-medium text-slate-800">PDF (.pdf)</span>,{" "}
+              <span className="font-medium text-slate-800">Word (.docx)</span>,{" "}
+              <span className="font-medium text-slate-800">Excel (.xlsx, .xls)</span>, or{" "}
+              <span className="font-medium text-slate-800">CSV (.csv)</span>.
+            </p>
+            <ul className="mt-2.5 space-y-1.5 text-[12.5px] leading-5 text-slate-600">
+              <li className="flex items-start gap-2">
+                <span aria-hidden="true" className="text-slate-400">•</span>
+                The <span className="font-medium text-slate-800">pitch deck must be a PDF</span>.
+              </li>
+              <li className="flex items-start gap-2">
+                <span aria-hidden="true" className="text-amber-600">•</span>
+                Old <span className="font-medium text-slate-800">.doc</span> files upload but can&apos;t be analyzed — save as{" "}
+                <span className="font-medium text-slate-800">.docx</span> first.
+              </li>
+              <li className="flex items-start gap-2">
+                <span aria-hidden="true" className="text-amber-600">•</span>
+                Scanned or image-only PDFs have no readable text — upload a text-based PDF so the report can read it.
+              </li>
+            </ul>
+          </div>
+
           {!company ? (
             <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
               <p className="font-semibold">{t("no_company_profile_is_linked_to_your_account")}</p>
