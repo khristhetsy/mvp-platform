@@ -125,6 +125,7 @@ export function MatchingCenterList({
   const [selected, setSelected] = useState<MatchCenterCard | null>(null);
   const [q, setQ] = useState("");
   const [minMatch, setMinMatch] = useState(0);
+  const [view, setView] = useState<"list" | "cards">("list");
 
   if (cards.length === 0) {
     return (
@@ -165,13 +166,67 @@ export function MatchingCenterList({
           {label}
         </button>
       ))}
+      <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
+        {(["list", "cards"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setView(m)}
+            className={`px-3 py-1 text-xs font-medium capitalize transition-colors ${view === m ? "bg-[var(--brand-indigo,#2E78F5)] text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
     </div>
-    <div className="space-y-4">
-      {visible.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-          No matches for that search.
+    {visible.length === 0 ? (
+      <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
+        No matches for that search.
+      </div>
+    ) : view === "list" ? (
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="hidden grid-cols-[1.7fr_1fr_1.6fr_64px_1.5fr] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-wide text-slate-400 sm:grid">
+          <span>Investor</span><span>Type</span><span>Match reasons</span><span className="text-center">Match</span><span className="text-right">Actions</span>
         </div>
-      ) : visible.map((c, i) => (
+        {visible.map((c, i) => {
+          const label = (c.subtitle ?? "").split(" · ")[0] || c.subtitle || "";
+          return (
+            <div
+              key={i}
+              onClick={c.detail ? () => setSelected(c) : undefined}
+              role={c.detail ? "button" : undefined}
+              tabIndex={c.detail ? 0 : undefined}
+              onKeyDown={c.detail ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c); } } : undefined}
+              className={`grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[1.7fr_1fr_1.6fr_64px_1.5fr] sm:items-center sm:gap-3 ${c.detail ? "cursor-pointer transition-colors hover:bg-slate-50" : ""}`}
+            >
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-slate-900">
+                  {c.title}
+                  <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">{c.tag}</span>
+                </p>
+                {c.subtitle && <p className="truncate text-[11px] text-slate-500 sm:hidden">{c.subtitle}</p>}
+              </div>
+              <span className="text-[12px] text-slate-600">{label || "—"}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {c.reasons.slice(0, 3).map((r) => (
+                  <span key={r} className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-600">{r}</span>
+                ))}
+                {c.reasons.length > 3 && <span className="rounded-full border border-indigo-200 px-2 py-0.5 text-[10px] font-medium text-[var(--brand-indigo,#2E78F5)]">+{c.reasons.length - 3}</span>}
+              </div>
+              <span className="text-[15px] font-semibold sm:text-center" style={{ color: barColor(c.matchScore) }}>{c.matchScore}</span>
+              {(introEndpoint || followUpEndpoint) ? (
+                <div className="flex items-center gap-2 sm:justify-end" onClick={(e) => e.stopPropagation()}>
+                  {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
+                  {introEndpoint && c.introRef && <IntroButton introRef={c.introRef} endpoint={introEndpoint} />}
+                </div>
+              ) : <span />}
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+    <div className="space-y-4">
+      {visible.map((c, i) => (
         <div
           key={i}
           onClick={c.detail ? () => setSelected(c) : undefined}
@@ -216,6 +271,7 @@ export function MatchingCenterList({
         </div>
       ))}
     </div>
+    )}
     {selected?.detail && (
       <InvestorDetailModal
         detail={selected.detail}
