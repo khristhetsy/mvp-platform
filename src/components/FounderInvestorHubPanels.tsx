@@ -49,6 +49,18 @@ const CONTACT_STATUSES = [
   "not_interested",
 ] as const;
 
+const SOURCE_LABELS: Record<string, string> = {
+  matching: "From Matching",
+  manual: "Manual",
+  import: "Imported",
+  csv: "Imported",
+};
+
+function sourceLabel(source: string | null | undefined): string {
+  const key = (source ?? "manual").toLowerCase();
+  return SOURCE_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function FounderInvestorHubPanels({
   companyName,
   contacts: initialContacts,
@@ -72,6 +84,7 @@ export function FounderInvestorHubPanels({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialTargets]);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -84,6 +97,9 @@ export function FounderInvestorHubPanels({
       if (statusFilter !== "all" && row.status !== statusFilter) {
         return false;
       }
+      if (sourceFilter !== "all" && (row.source ?? "manual") !== sourceFilter) {
+        return false;
+      }
       if (!q) {
         return true;
       }
@@ -93,7 +109,14 @@ export function FounderInvestorHubPanels({
         (row.email?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [contacts, search, statusFilter]);
+  }, [contacts, search, statusFilter, sourceFilter]);
+
+  // Source values present across the loaded contacts — drives the filter options.
+  const sourceOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of contacts) set.add(row.source ?? "manual");
+    return Array.from(set).sort();
+  }, [contacts]);
 
   const contactInPipeline = useMemo(() => {
     const map = new Map<string, EnrichedOutreachTarget>();
@@ -438,6 +461,19 @@ export function FounderInvestorHubPanels({
                 </option>
               ))}
             </select>
+            <select
+              value={sourceFilter}
+              onChange={(event) => setSourceFilter(event.target.value)}
+              className="rounded-lg border px-3 py-1.5 text-sm"
+              aria-label="Filter by source"
+            >
+              <option value="all">All sources</option>
+              {sourceOptions.map((src) => (
+                <option key={src} value={src}>
+                  {sourceLabel(src)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="mt-4 divide-y divide-slate-100">
@@ -657,6 +693,11 @@ function ContactRow({
       <p className="font-medium text-slate-900">
         {row.investor_name}
         {row.firm_name ? ` · ${row.firm_name}` : ""}
+        {row.source === "matching" ? (
+          <span className="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 align-middle">
+            From Matching
+          </span>
+        ) : null}
       </p>
       {row.email ? <p className="text-xs text-slate-500">{row.email}</p> : null}
       {row.linkedin_url ? (
@@ -667,7 +708,7 @@ function ContactRow({
         </p>
       ) : null}
       <p className="mt-1 text-xs text-slate-500">
-        {row.status} · {row.source}
+        {row.status} · {sourceLabel(row.source)}
         {row.preferred_sectors ? ` · ${row.preferred_sectors}` : ""}
         {pipelineTarget ? ` · pipeline: ${pipelineTarget.status}` : ""}
       </p>

@@ -114,11 +114,13 @@ export function MatchingCenterList({
   emptyText,
   introEndpoint,
   followUpEndpoint,
+  draftEndpoint,
 }: {
   cards: MatchCenterCard[];
   emptyText: string;
   introEndpoint?: string;
   followUpEndpoint?: string;
+  draftEndpoint?: string;
 }) {
   const [selected, setSelected] = useState<InvestorDetail | null>(null);
   const [q, setQ] = useState("");
@@ -214,7 +216,7 @@ export function MatchingCenterList({
         </div>
       ))}
     </div>
-    {selected && <InvestorDetailModal detail={selected} onClose={() => setSelected(null)} />}
+    {selected && <InvestorDetailModal detail={selected} onClose={() => setSelected(null)} draftEndpoint={draftEndpoint} />}
     </>
   );
 }

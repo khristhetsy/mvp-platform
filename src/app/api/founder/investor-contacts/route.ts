@@ -12,10 +12,12 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const status = url.searchParams.get("status") ?? undefined;
   const search = url.searchParams.get("search") ?? undefined;
+  const source = url.searchParams.get("source") ?? undefined;
 
   const result = await listFounderInvestorContacts(auth.supabase, auth.profile.id, auth.company.id, {
     status: status ?? undefined,
     search: search ?? undefined,
+    source: source ?? undefined,
   });
 
   if (result.error) {

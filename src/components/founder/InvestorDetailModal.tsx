@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 // Shared, anonymized investor detail panel — the fit-breakdown + criteria + AI
 // positioning modal used by both the Outreach board (FounderPrivateMarketBoard)
 // and the Matching Center. Takes a minimal `InvestorDetail` so any list can open
@@ -98,8 +100,28 @@ function FitBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function InvestorDetailModal({ detail: r, onClose }: { detail: InvestorDetail; onClose: () => void }) {
+export function InvestorDetailModal({ detail: r, onClose, draftEndpoint }: { detail: InvestorDetail; onClose: () => void; draftEndpoint?: string }) {
   const advice = buildAdvice(r);
+  const [note, setNote] = useState("");
+  const [drafting, setDrafting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function draft() {
+    if (!draftEndpoint) return;
+    setDrafting(true);
+    setCopied(false);
+    try {
+      const res = await fetch(draftEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: r.name, investorType: r.label, sectors: r.sectors, checkSize: r.checkSize }),
+      });
+      const j = (await res.json().catch(() => null)) as { note?: string } | null;
+      if (res.ok && j?.note) setNote(j.note);
+    } finally {
+      setDrafting(false);
+    }
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -157,6 +179,45 @@ export function InvestorDetailModal({ detail: r, onClose }: { detail: InvestorDe
                 <span>{a}</span>
               </div>
             ))}
+
+            {draftEndpoint && (
+              <div className="mt-3 border-t pt-3" style={{ borderColor: "#1e2c47" }}>
+                {!note ? (
+                  <button
+                    type="button"
+                    onClick={draft}
+                    disabled={drafting}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60"
+                    style={{ background: "#2E78F5" }}
+                  >
+                    <i className="ti ti-sparkles" aria-hidden="true" /> {drafting ? "Drafting…" : "Draft my intro note"}
+                  </button>
+                ) : (
+                  <>
+                    <textarea
+                      value={note}
+                      onChange={(e) => { setNote(e.target.value); setCopied(false); }}
+                      rows={5}
+                      className="w-full rounded-md p-2.5 text-[11.5px] leading-relaxed outline-none"
+                      style={{ background: "#0a1730", border: "0.5px solid #1e2c47", color: "#c3cede" }}
+                    />
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      <button type="button" onClick={draft} disabled={drafting} className="rounded-md px-2.5 py-1 text-[11px]" style={{ background: "transparent", border: "0.5px solid #2b3a57", color: "#aeb8c7" }}>
+                        {drafting ? "…" : "Regenerate"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { void navigator.clipboard?.writeText(note); setCopied(true); }}
+                        className="rounded-md px-2.5 py-1 text-[11px] font-medium text-white"
+                        style={{ background: "#2E78F5" }}
+                      >
+                        {copied ? "Copied ✓" : "Copy note"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2.5 text-[11px] text-slate-500">

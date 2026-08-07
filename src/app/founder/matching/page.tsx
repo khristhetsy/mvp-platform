@@ -107,6 +107,7 @@ export default async function FounderMatchingPage() {
             cards={cards}
             introEndpoint="/api/founder/matching/intro"
             followUpEndpoint="/api/founder/matching/follow-up"
+            draftEndpoint="/api/founder/matching/draft-note"
             emptyText="No investor matches yet. Complete your profile and readiness materials to surface matched investors."
           />
         </div>

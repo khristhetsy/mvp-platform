@@ -6,7 +6,7 @@ export async function listFounderInvestorContacts(
   supabase: SupabaseClient<Database>,
   founderId: string,
   companyId: string,
-  filters?: { status?: string; search?: string },
+  filters?: { status?: string; search?: string; source?: string },
 ) {
   let query = supabase
     .from("founder_investor_contacts")
@@ -18,6 +18,9 @@ export async function listFounderInvestorContacts(
 
   if (filters?.status && filters.status !== "all") {
     query = query.eq("status", filters.status);
+  }
+  if (filters?.source && filters.source !== "all") {
+    query = query.eq("source", filters.source);
   }
 
   const { data, error } = await query;
