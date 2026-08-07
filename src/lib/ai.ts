@@ -54,6 +54,13 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
       ? [`Upload missing documents: ${missingDocuments.join(", ")}`]
       : ["Upload required diligence documents for review."];
 
+  // Financial review basis: a pre-revenue company is assessed on projections; a
+  // revenue-generating company must supply actual financial statements.
+  const rs = (input.revenueStage ?? "").toLowerCase();
+  const isPreRevenue =
+    !rs || rs.includes("pre") || rs.includes("idea") || rs.includes("mvp") || rs.includes("building") || rs.includes("prototype") || rs.includes("concept");
+  const financialBasis = isPreRevenue ? "projections" : "actuals";
+
   if (!isClaudeConfigured()) {
     return {
       executiveSummary:
