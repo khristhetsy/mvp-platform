@@ -13,6 +13,7 @@ export interface ProspectIntroRequest {
   founderName: string | null;
   prospectName: string | null;
   investorRef: string;
+  note: string | null;
   status: ProspectIntroStatus;
   createdAt: string;
 }
@@ -21,17 +22,20 @@ function loose(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
 }
 
-/** Idempotent per (company, prospect) — re-requesting refreshes nothing new. */
+/** Idempotent per (company, prospect). Re-requesting is a no-op unless a `note`
+ *  is supplied, in which case the row's note is refreshed with the latest pitch. */
 export async function createProspectIntroRequest(input: {
   companyId: string;
   founderId: string;
   investorRef: string;
+  note?: string | null;
 }): Promise<void> {
+  const note = input.note?.trim() || null;
   await loose()
     .from("prospect_intro_requests")
     .upsert(
-      { company_id: input.companyId, founder_id: input.founderId, investor_ref: input.investorRef },
-      { onConflict: "company_id,investor_ref", ignoreDuplicates: true },
+      { company_id: input.companyId, founder_id: input.founderId, investor_ref: input.investorRef, ...(note ? { note } : {}) },
+      { onConflict: "company_id,investor_ref", ignoreDuplicates: !note },
     );
 }
 
@@ -39,7 +43,7 @@ export async function listProspectIntroRequests(status?: ProspectIntroStatus): P
   const admin = loose();
   let q = admin
     .from("prospect_intro_requests")
-    .select("id, company_id, founder_id, investor_ref, status, created_at")
+    .select("id, company_id, founder_id, investor_ref, note, status, created_at")
     .order("created_at", { ascending: false });
   if (status) q = q.eq("status", status);
   const { data } = await q;
@@ -78,6 +82,7 @@ export async function listProspectIntroRequests(status?: ProspectIntroStatus): P
       founderName: founderName.get(String(r.founder_id)) ?? null,
       prospectName: pid ? prospectName.get(pid) ?? null : null,
       investorRef: ref,
+      note: (r.note as string | null) ?? null,
       status: (r.status as ProspectIntroStatus) ?? "new",
       createdAt: String(r.created_at),
     };

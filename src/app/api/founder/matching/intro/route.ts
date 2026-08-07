@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       .eq("investor_ref", ref)
       .maybeSingle();
     if (!existingProspect && (await overCap())) return capError();
-    await createProspectIntroRequest({ companyId: company.id, founderId, investorRef: ref });
+    await createProspectIntroRequest({ companyId: company.id, founderId, investorRef: ref, note });
     return NextResponse.json({ ok: true, brokered: true });
   }
 

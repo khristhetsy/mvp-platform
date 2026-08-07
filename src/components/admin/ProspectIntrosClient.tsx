@@ -74,6 +74,12 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   {r.founderName ? `${r.founderName} · ` : ""}
                   {fmt(r.createdAt)}
                 </p>
+                {r.note && (
+                  <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">✍️ Founder&apos;s intro note</p>
+                    <p className="mt-1 whitespace-pre-wrap text-xs italic text-slate-700">&ldquo;{r.note}&rdquo;</p>
+                  </div>
+                )}
               </div>
               <div className="flex flex-none items-center gap-2">
                 <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[r.status]}`}>

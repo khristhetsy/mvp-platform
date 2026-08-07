@@ -10,10 +10,15 @@ type IntroRow = {
   id: string;
   status?: string | null;
   message?: string | null;
+  facilitator_note?: string | null;
+  facilitated_at?: string | null;
   created_at?: string;
   profiles?: { full_name?: string | null; email?: string | null } | Array<{ full_name?: string | null; email?: string | null }> | null;
   companies?: { company_name?: string | null } | Array<{ company_name?: string | null }> | null;
 };
+
+/** The message stored when a founder requests an intro without writing a note. */
+const DEFAULT_INTRO_MESSAGE = "Founder requested an introduction via the Matching Center.";
 
 function resolveProfile(profiles: IntroRow["profiles"]): { name: string; email: string | null } {
   if (!profiles) return { name: "Unknown", email: null };
@@ -212,10 +217,20 @@ export function AdminIntroQueue({ introRequests, canDelete = false }: Props) {
               )}
             </div>
 
-            {/* Message */}
-            {row.message && (
-              <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs italic text-slate-600">
-                &ldquo;{row.message}&rdquo;
+            {/* Message — distinguish the founder's own note from the default string */}
+            {row.message && row.message !== DEFAULT_INTRO_MESSAGE ? (
+              <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">✍️ Founder&apos;s intro note</p>
+                <p className="mt-1 whitespace-pre-wrap text-xs italic text-slate-700">&ldquo;{row.message}&rdquo;</p>
+              </div>
+            ) : row.message ? (
+              <p className="mt-2 text-[11px] text-slate-400">Requested via the Matching Center — no note attached.</p>
+            ) : null}
+
+            {/* Facilitator note recorded when the request was actioned */}
+            {!isPending && row.facilitator_note && (
+              <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <span className="font-semibold text-slate-500">Facilitator note:</span> {row.facilitator_note}
               </p>
             )}
 
