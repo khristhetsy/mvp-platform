@@ -169,6 +169,8 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   const [search, setSearch] = useState("");
   const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
   const [viewMode, setViewMode] = useState<"table" | "board">("board");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
 
   // Add / edit modal
   const [showModal, setShowModal] = useState(false);
@@ -432,17 +434,39 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           <div className="flex gap-3" style={{ minWidth: `${PIPELINE_STAGES.length * 222}px` }}>
             {PIPELINE_STAGES.map((stage) => {
               const cards = filtered.filter((i) => (i.pipeline_stage ?? "new") === stage.id);
+              const isDropTarget = dragOverStage === stage.id;
               return (
-                <div key={stage.id} className="w-[210px] flex-none">
-                  <div className="flex items-center justify-between pb-1.5" style={{ borderBottom: `2px solid ${stage.color}` }}>
+                <div
+                  key={stage.id}
+                  className="w-[210px] flex-none rounded-lg transition-colors"
+                  style={isDropTarget ? { background: `${stage.color}14` } : undefined}
+                  onDragOver={(e) => { if (draggingId) { e.preventDefault(); setDragOverStage(stage.id); } }}
+                  onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverStage((s) => (s === stage.id ? null : s)); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggingId) {
+                      const inv = investors.find((i) => i.id === draggingId);
+                      if (inv && (inv.pipeline_stage ?? "new") !== stage.id) handleStageChange(draggingId, stage.id);
+                    }
+                    setDraggingId(null); setDragOverStage(null);
+                  }}
+                >
+                  <div className="flex items-center justify-between px-1 pb-1.5" style={{ borderBottom: `2px solid ${stage.color}` }}>
                     <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{stage.label}</span>
                     <span className="text-xs" style={{ color: "var(--text-muted)" }}>{cards.length}</span>
                   </div>
-                  <div className="mt-2.5 flex flex-col gap-2">
+                  <div className="mt-2.5 flex min-h-[60px] flex-col gap-2 px-1 pb-2">
                     {cards.length === 0 ? (
-                      <div className="rounded-lg border border-dashed py-6 text-center text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>—</div>
+                      <div className="rounded-lg border border-dashed py-6 text-center text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>{isDropTarget ? "Drop here" : "—"}</div>
                     ) : cards.map((inv) => (
-                      <div key={inv.id} className="rounded-lg border bg-white p-2.5" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
+                      <div
+                        key={inv.id}
+                        draggable
+                        onDragStart={(e) => { setDraggingId(inv.id); e.dataTransfer.effectAllowed = "move"; }}
+                        onDragEnd={() => { setDraggingId(null); setDragOverStage(null); }}
+                        className="cursor-grab rounded-lg border bg-white p-2.5 active:cursor-grabbing"
+                        style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", opacity: draggingId === inv.id ? 0.5 : 1 }}
+                      >
                         <div className="flex items-start justify-between gap-1.5">
                           <button onClick={() => setProfileOf(inv)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
                           {inv.source === "platform_match" && !inv.platform_investor_id && (
