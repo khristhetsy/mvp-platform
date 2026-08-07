@@ -51,6 +51,15 @@ export function CompanyWorkspaceReportsPanel({
         Source: /admin/reports · Company filter applied via URL parameters
       </p>
 
+      <div className="mt-3">
+        <Link
+          href={`/admin/report-compare/${companyId}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50/30"
+        >
+          Compare last two report versions
+        </Link>
+      </div>
+
       <GenerateDiligenceReportButton companyId={companyId} />
     </WorkspacePanel>
   );

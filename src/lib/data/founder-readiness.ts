@@ -160,6 +160,21 @@ export async function getLatestDiligenceReport(
     .maybeSingle();
 }
 
+/** The most recent diligence report versions for a company, newest first —
+ *  used to compare the current report against the previous one. */
+export async function listRecentDiligenceReports(
+  supabase: SupabaseClient<Database>,
+  companyId: string,
+  limit = 2,
+) {
+  return supabase
+    .from("diligence_reports")
+    .select("*")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+}
+
 export async function getLatestAdminReview(
   supabase: SupabaseClient<Database>,
   companyId: string,

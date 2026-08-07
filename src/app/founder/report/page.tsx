@@ -4,10 +4,12 @@ import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { track } from "@/lib/analytics/posthog";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
-import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { listRecentDiligenceReports } from "@/lib/data/founder-readiness";
 import { ReportExportButtons } from "@/components/founder/ReportExportButtons";
 import { GenerateMyReportButton } from "@/components/founder/GenerateMyReportButton";
 import { DiligenceReportDocument } from "@/components/founder/DiligenceReportDocument";
+import { ReportCompareToggle } from "@/components/founder/ReportCompareToggle";
+import type { DiligenceReportRow } from "@/components/founder/DiligenceReportCompare";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -26,9 +28,12 @@ export default async function DiligenceReportPage() {
   const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
-  const { data: diligenceReport } = company
-    ? await getLatestDiligenceReport(supabase, company.id)
+  const { data: recentReports } = company
+    ? await listRecentDiligenceReports(supabase, company.id, 2)
     : { data: null };
+  const reportVersions = (recentReports ?? []) as unknown as DiligenceReportRow[];
+  const diligenceReport = recentReports?.[0] ?? null;
+  const previousReport = reportVersions.length > 1 ? reportVersions[1] : null;
 
   const companyName = company?.company_name ?? "Your company";
 
@@ -83,6 +88,12 @@ export default async function DiligenceReportPage() {
                   <div className="mt-4 flex flex-wrap items-start gap-3">
                     <ReportExportButtons />
                     <GenerateMyReportButton variant="secondary" label="Regenerate" />
+                    {previousReport ? (
+                      <ReportCompareToggle
+                        current={diligenceReport as unknown as DiligenceReportRow}
+                        previous={previousReport}
+                      />
+                    ) : null}
                   </div>
                 </div>
                 {typeof diligenceReport.readiness_score === "number" ? (
