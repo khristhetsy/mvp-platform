@@ -36,6 +36,7 @@ interface PlatformMatch {
   geographies: string[];
   matchScore: number;
   matchReasons: string[];
+  isProspect?: boolean;
   alreadyImported: boolean;
 }
 
@@ -286,8 +287,9 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             focus_sectors: m.focusSectors,
             location: m.geographies[0] ?? null,
             match_score: Math.round(m.matchScore),
-            source: "platform_match",
-            platform_investor_id: m.investorId,
+            // Prospects aren't platform accounts — store by name, no profile FK.
+            source: m.isProspect ? "matching_prospect" : "platform_match",
+            platform_investor_id: m.isProspect ? null : m.investorId,
             outreach_status: "not_started",
           }),
         });
@@ -563,7 +565,12 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                               className="rounded border-slate-300 text-blue-600" onClick={(e) => e.stopPropagation()} />
                           </td>
                           <td className="px-4 py-2.5">
-                            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.investorName}</p>
+                            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                              {m.investorName}
+                              {m.isProspect && (
+                                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 align-middle">Prospect</span>
+                              )}
+                            </p>
                             {m.geographies[0] && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{m.geographies[0]}</p>}
                             {already && <p className="text-xs text-blue-600 font-medium mt-0.5">Already in pipeline</p>}
                           </td>
