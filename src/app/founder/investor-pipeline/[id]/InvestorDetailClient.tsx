@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+type InvestorNote = { id: string; body: string; created_at: string };
 
 type PipelineStage = "new" | "contacted" | "interested" | "meeting" | "committed" | "passed";
 
@@ -35,12 +37,27 @@ export type PipelineInvestorDetail = {
 export function InvestorDetailClient({ investor }: { investor: PipelineInvestorDetail }) {
   const router = useRouter();
   const [stage, setStage] = useState<PipelineStage>(investor.pipeline_stage ?? "new");
-  const [notes, setNotes] = useState(investor.notes ?? "");
+  const [tab, setTab] = useState<"notes" | "details">("notes");
+  const [notes, setNotes] = useState<InvestorNote[]>([]);
+  const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [introState, setIntroState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [followState, setFollowState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
   const isMember = Boolean(investor.platform_investor_id);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/founder/investor-pipeline/${investor.id}/notes`)
+      .then((r) => (r.ok ? r.json() : { notes: [] }))
+      .then((d: { notes?: InvestorNote[] }) => { if (active) setNotes(d.notes ?? []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [investor.id]);
+
+  function fmtNoteDate(iso: string) {
+    return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  }
 
   async function changeStage(next: PipelineStage) {
     setStage(next);
@@ -52,15 +69,24 @@ export function InvestorDetailClient({ investor }: { investor: PipelineInvestorD
     router.refresh();
   }
 
-  async function saveNote() {
+  async function addNote() {
+    const body = noteDraft.trim();
+    if (!body) return;
     setSavingNote(true);
-    await fetch(`/api/founder/investor-pipeline/${investor.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes }),
-    });
-    setSavingNote(false);
-    router.refresh();
+    try {
+      const r = await fetch(`/api/founder/investor-pipeline/${investor.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      if (r.ok) {
+        const d = (await r.json()) as { note: InvestorNote };
+        setNotes((prev) => [d.note, ...prev]);
+        setNoteDraft("");
+      }
+    } finally {
+      setSavingNote(false);
+    }
   }
 
   async function requestIntro() {
@@ -164,39 +190,65 @@ export function InvestorDetailClient({ investor }: { investor: PipelineInvestorD
           {metric("Stage", STAGES.find((s) => s.id === stage)?.label ?? "New")}
         </div>
 
-        {/* Details — no contact information */}
-        <div className="mt-5 grid gap-x-10 border-b border-slate-100 pb-5 sm:grid-cols-2">
-          {row("Investor type", investor.investor_type)}
-          {row("Source", investor.source === "platform_match" ? "Matching" : "Manual")}
-          {row("Focus sectors", investor.focus_sectors?.length ? investor.focus_sectors.join(", ") : "—")}
-          {row("Geography", investor.location ?? "—")}
-          {row("Preferred stages", investor.preferred_stages?.length ? investor.preferred_stages.join(", ") : "—")}
-          {row("Meeting", investor.meeting_requested === "none" ? "None" : investor.meeting_requested)}
-        </div>
-
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
           <span aria-hidden="true">🔒</span> Contact details are hidden — introductions are coordinated through iCapOS.
         </div>
 
-        {/* Notes */}
-        <div className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Private notes</p>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={4}
-            placeholder="Add a private note…"
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-          />
-          <button
-            type="button"
-            onClick={saveNote}
-            disabled={savingNote}
-            className="mt-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {savingNote ? "Saving…" : "Save note"}
-          </button>
+        {/* Tabs: Notes (timestamped history) + Details */}
+        <div className="mt-6 flex gap-6 border-b border-slate-200">
+          {([["notes", "Notes"], ["details", "Details"]] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`-mb-px pb-2 text-sm font-medium transition-colors ${tab === id ? "border-b-2 border-indigo-500 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              {label}{id === "notes" && notes.length > 0 ? ` (${notes.length})` : ""}
+            </button>
+          ))}
         </div>
+
+        {tab === "notes" ? (
+          <div className="mt-4">
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              rows={3}
+              placeholder="Add a private note about this investor…"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={addNote}
+                disabled={savingNote || !noteDraft.trim()}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {savingNote ? "Saving…" : "Save note"}
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2.5">
+              {notes.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-400">No notes yet. Add the first one above.</p>
+              ) : notes.map((n) => (
+                <div key={n.id} className="rounded-lg border border-slate-200 px-3 py-2.5">
+                  <p className="text-[11px] text-slate-400">{fmtNoteDate(n.created_at)} · You</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">{n.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-x-10 sm:grid-cols-2">
+            {row("Investor type", investor.investor_type)}
+            {row("Source", investor.source === "platform_match" ? "Matching" : "Manual")}
+            {row("Focus sectors", investor.focus_sectors?.length ? investor.focus_sectors.join(", ") : "—")}
+            {row("Geography", investor.location ?? "—")}
+            {row("Preferred stages", investor.preferred_stages?.length ? investor.preferred_stages.join(", ") : "—")}
+            {row("Meeting", investor.meeting_requested === "none" ? "None" : investor.meeting_requested)}
+          </div>
+        )}
       </div>
     </div>
   );
