@@ -66,6 +66,8 @@ export function MatchingCenterList({
   introEndpoint?: string;
 }) {
   const [selected, setSelected] = useState<InvestorDetail | null>(null);
+  const [q, setQ] = useState("");
+  const [minMatch, setMinMatch] = useState(0);
 
   if (cards.length === 0) {
     return (
@@ -75,10 +77,44 @@ export function MatchingCenterList({
     );
   }
 
+  const query = q.trim().toLowerCase();
+  const visible = cards.filter((c) => {
+    if (c.matchScore < minMatch) return false;
+    if (!query) return true;
+    return `${c.title} ${c.subtitle ?? ""} ${c.tag} ${c.reasons.join(" ")}`.toLowerCase().includes(query);
+  });
+  const FILTERS: [string, number][] = [["All", 0], ["≥ 70%", 70], ["≥ 90%", 90]];
+
   return (
     <>
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <i className="ti ti-search text-slate-400" aria-hidden="true" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search matches — type, sector, reason…"
+          className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+          aria-label="Search matches"
+        />
+      </div>
+      {FILTERS.map(([label, v]) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => setMinMatch(v)}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${minMatch === v ? "border-[var(--brand-indigo,#2E78F5)] bg-indigo-50 text-[var(--brand-indigo,#2E78F5)]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
     <div className="space-y-4">
-      {cards.map((c, i) => (
+      {visible.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
+          No matches for that search.
+        </div>
+      ) : visible.map((c, i) => (
         <div
           key={i}
           onClick={c.detail ? () => setSelected(c.detail!) : undefined}
