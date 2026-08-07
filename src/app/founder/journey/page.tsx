@@ -3,8 +3,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
-import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { OUTREACH_THRESHOLD, computeInvestableCrr } from "@/lib/crr/investable-score";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FounderStageBanner } from "@/components/founder/FounderStageBanner";
@@ -110,9 +110,6 @@ function getQualifyRequirements(state: FounderJourneyState): Requirement[] {
     { label: "Completion ≥ 75%", met: state.conditions.readinessQualified },
   ];
 }
-
-// Investable Score gates automated investor outreach at this level.
-const OUTREACH_THRESHOLD = 70;
 
 /** Circular 0–100 score gauge (server-rendered SVG). */
 function ScoreGauge({ score, stroke }: { score: number; stroke: string }) {
@@ -223,20 +220,9 @@ export default async function FounderJourneyPage() {
   const currentIndex = state.stageIndex;
   const qualifyRequirements = getQualifyRequirements(state);
 
-  // Investable Score: a composite of the founder's real signals (readiness,
-  // profile completeness, onboarding, documents). Gates automated outreach.
-  const readiness = state.conditions.readinessScore ?? 0;
-  const profilePercent = buildProfileCompletion(company).percent;
-  const investableScore = Math.round(
-    Math.min(
-      100,
-      0.6 * readiness +
-        0.3 * profilePercent +
-        (state.conditions.onboardingComplete ? 5 : 0) +
-        (state.conditions.requiredDocsUploaded ? 5 : 0),
-    ),
-  );
-  const outreachReady = investableScore >= OUTREACH_THRESHOLD;
+  // Capital Readiness Rating (CRR): the single canonical score, shared with the
+  // dashboard via computeInvestableCrr. Gates automated outreach.
+  const { crr: investableScore, readiness, profilePercent, outreachReady } = computeInvestableCrr(state, company);
   const outreachGap = OUTREACH_THRESHOLD - investableScore;
 
   return (

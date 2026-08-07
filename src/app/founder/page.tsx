@@ -10,6 +10,8 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
+import { computeInvestableCrr, OUTREACH_THRESHOLD } from "@/lib/crr/investable-score";
 import { READINESS_FACTORS } from "@/lib/ai/readiness-scoring";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
@@ -29,7 +31,6 @@ import { requireRole } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
-import { founderFacingScore } from "@/lib/crr/select-score";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
@@ -107,8 +108,7 @@ export default async function FounderDashboardPage() {
   const checklistReadinessScore = computeReadinessScore(uploadedTypeCodes);
   const readinessScore = diligenceReport?.readiness_score ?? checklistReadinessScore;
 
-  // Investable Readiness (13-factor) — founder-facing, read server-side.
-  let investableScore: number | null = null;
+  // Investable Readiness factor breakdown (13-factor) — powers the CRR drawer.
   let investableFactors: Array<{ name: string; points: number; max: number; rating: string }> | null = null;
   if (company) {
     const { data: scoreRow } = await serviceSupabase
@@ -119,10 +119,6 @@ export default async function FounderDashboardPage() {
       .limit(1)
       .maybeSingle();
     if (scoreRow) {
-      // Founder sees the CRR under their own stage profile (falls back to the raw
-      // engine score until the profile columns are populated).
-      const fundingStage = (company as { funding_stage?: string | null }).funding_stage ?? null;
-      investableScore = founderFacingScore(scoreRow as Record<string, unknown>, fundingStage);
       const fs = ((scoreRow as { factor_scores?: unknown }).factor_scores ?? {}) as Record<string, { pts?: number; max?: number; rating?: string }>;
       investableFactors = READINESS_FACTORS.map((f) => {
         const entry = fs[f.key];
@@ -138,6 +134,12 @@ export default async function FounderDashboardPage() {
   const readinessDetail = diligenceReport
     ? "Latest stored diligence report"
     : "Estimate from required document checklist";
+
+  // Canonical Capital Readiness Rating — the SAME score the Journey page shows,
+  // so founders see one CRR everywhere (was previously a different number here).
+  const journeyState = await evaluateFounderJourney(supabase, profile.id);
+  const crrResult = computeInvestableCrr(journeyState, company);
+  const crrSubtitle = `Readiness ${crrResult.readiness} · Profile ${crrResult.profilePercent}%`;
   const investorActivityTotal =
     (investorActivity?.interests.length ?? 0) +
     (investorActivity?.introRequests.length ?? 0) +
@@ -190,7 +192,10 @@ export default async function FounderDashboardPage() {
           <CapitalReadinessSection
             readinessScore={readinessScore}
             readinessDetail={readinessDetail}
-            investableScore={investableScore}
+            investableScore={crrResult.crr}
+            crrSubtitle={crrSubtitle}
+            outreachReady={crrResult.outreachReady}
+            outreachThreshold={OUTREACH_THRESHOLD}
             investableFactors={investableFactors}
             raiseProgress={raiseProgress}
             companyStatus={company?.status ?? null}

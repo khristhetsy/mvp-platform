@@ -217,6 +217,9 @@ const DOC_LABELS: Record<string, string> = {
 export function CapitalReadinessSection({
   investableScore = null,
   investableFactors = null,
+  crrSubtitle,
+  outreachReady,
+  outreachThreshold = 70,
   raiseProgress,
   companyStatus,
   companyFundingAmount,
@@ -229,6 +232,11 @@ export function CapitalReadinessSection({
   readinessDetail: string;
   investableScore?: number | null;
   investableFactors?: InvestableFactor[] | null;
+  /** Sub-line under the CRR number (e.g. "Readiness 78 · Profile 100%"). */
+  crrSubtitle?: string;
+  /** Whether the CRR clears the outreach threshold (drives the status pill). */
+  outreachReady?: boolean;
+  outreachThreshold?: number;
   raiseProgress: string;
   companyStatus: string | null;
   companyFundingAmount: number | null;
@@ -428,7 +436,12 @@ export function CapitalReadinessSection({
             <div className="mt-2 flex items-center justify-between gap-2">
               <div>
                 <p className="font-mono text-xl font-semibold text-slate-950">{investableScore != null ? `${investableScore}/100` : "Not scored"}</p>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">Data room {uploadedCount}/{REQUIRED_DOC_TYPES.length} · one fundability score</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{crrSubtitle ?? `Data room ${uploadedCount}/${REQUIRED_DOC_TYPES.length} · one fundability score`}</p>
+                {investableScore != null && outreachReady != null && (
+                  <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${outreachReady ? "bg-[#EAF3DE] text-[#3B6D11]" : "bg-[#FAEEDA] text-[#854F0B]"}`}>
+                    {outreachReady ? "Outreach ready" : `${Math.max(0, outreachThreshold - investableScore)} to unlock outreach`}
+                  </span>
+                )}
               </div>
               <DonutChart pct={(investableScore ?? 0) / 100} color="#7F77DD" />
             </div>
