@@ -11,7 +11,7 @@ import type { BusinessPlan } from "@/lib/business-plan/types";
 import type { AllocationSlice, MarketSize, PainBar, BeforeAfter, MatrixPoint, TractionChart as TractionData } from "@/lib/business-plan/charts";
 import { DEFAULT_CHARTS } from "@/lib/business-plan/charts";
 import { ProjectionsChart, MarketChart, FundsChart, ProblemChart, SolutionChart, CompetitionChart, TractionChart } from "./BusinessPlanSectionChart";
-import { BusinessPlanLivePreview } from "./BusinessPlanLivePreview";
+import { BusinessPlanLivePreview, type PlanDesign } from "./BusinessPlanLivePreview";
 import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 type SectionMap = BusinessPlan["sections"];
@@ -50,6 +50,7 @@ export function BusinessPlanGeneratorClient() {
   const [traction, setTraction] = useState<TractionData>(DEFAULT_CHARTS.traction);
   const [filling, setFilling] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [design, setDesign] = useState<PlanDesign>("modern");
 
   useEffect(() => {
     let on = true;
@@ -72,6 +73,8 @@ export function BusinessPlanGeneratorClient() {
         if (Array.isArray(ch.solution) && ch.solution.length) setSolution(ch.solution);
         if (Array.isArray(ch.competition) && ch.competition.length) setCompetition(ch.competition);
         if (ch.traction && Array.isArray(ch.traction.series) && ch.traction.series.length) setTraction(ch.traction);
+        const d = (ch as { design?: string }).design;
+        if (d && ["classic", "modern", "navy", "sidebar", "bold"].includes(d)) setDesign(d as PlanDesign);
       })
       .catch(() => on && setError("Could not load your business plan."))
       .finally(() => on && setLoading(false));
@@ -138,7 +141,7 @@ export function BusinessPlanGeneratorClient() {
       const res = await fetch("/api/founder/business-plan", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market, problem, solution, competition, traction }, ...(status ? { status } : {}) }),
+        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market, problem, solution, competition, traction, design }, ...(status ? { status } : {}) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "Could not save.");
@@ -372,6 +375,8 @@ export function BusinessPlanGeneratorClient() {
           competition={competition}
           traction={traction}
           projections={projections}
+          design={design}
+          onDesignChange={setDesign}
         />
       </div>
 
