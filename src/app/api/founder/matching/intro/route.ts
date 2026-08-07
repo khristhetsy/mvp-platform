@@ -17,8 +17,9 @@ export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const body = (await request.json().catch(() => null)) as { ref?: string } | null;
+  const body = (await request.json().catch(() => null)) as { ref?: string; note?: string } | null;
   const ref = body?.ref?.trim();
+  const note = body?.note?.trim();
   if (!ref) return NextResponse.json({ error: "ref is required." }, { status: 400 });
 
   const company = await ensureFounderCompanyForUser(auth.profile);
@@ -73,9 +74,12 @@ export async function POST(request: Request) {
     const { error } = await admin.from("intro_requests").insert({
       company_id: company.id,
       investor_id: ref,
-      message: "Founder requested an introduction via the Matching Center.",
+      message: note || "Founder requested an introduction via the Matching Center.",
     } as never);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  } else if (note) {
+    // Intro already open — refresh its message with the founder's latest note.
+    await admin.from("intro_requests").update({ message: note } as never).eq("id", (existing as { id: string }).id);
   }
 
   return NextResponse.json({ ok: true, brokered: false });

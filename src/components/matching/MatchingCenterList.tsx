@@ -122,7 +122,7 @@ export function MatchingCenterList({
   followUpEndpoint?: string;
   draftEndpoint?: string;
 }) {
-  const [selected, setSelected] = useState<InvestorDetail | null>(null);
+  const [selected, setSelected] = useState<MatchCenterCard | null>(null);
   const [q, setQ] = useState("");
   const [minMatch, setMinMatch] = useState(0);
 
@@ -174,10 +174,10 @@ export function MatchingCenterList({
       ) : visible.map((c, i) => (
         <div
           key={i}
-          onClick={c.detail ? () => setSelected(c.detail!) : undefined}
+          onClick={c.detail ? () => setSelected(c) : undefined}
           role={c.detail ? "button" : undefined}
           tabIndex={c.detail ? 0 : undefined}
-          onKeyDown={c.detail ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c.detail!); } } : undefined}
+          onKeyDown={c.detail ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c); } } : undefined}
           className={`rounded-2xl border border-slate-200 bg-white p-5 ${c.detail ? "cursor-pointer transition-colors hover:border-[var(--brand-indigo,#2E78F5)]" : ""}`}
         >
           <div className="flex items-start justify-between gap-3">
@@ -216,7 +216,15 @@ export function MatchingCenterList({
         </div>
       ))}
     </div>
-    {selected && <InvestorDetailModal detail={selected} onClose={() => setSelected(null)} draftEndpoint={draftEndpoint} />}
+    {selected?.detail && (
+      <InvestorDetailModal
+        detail={selected.detail}
+        onClose={() => setSelected(null)}
+        draftEndpoint={draftEndpoint}
+        introEndpoint={introEndpoint}
+        introRef={selected.introRef}
+      />
+    )}
     </>
   );
 }

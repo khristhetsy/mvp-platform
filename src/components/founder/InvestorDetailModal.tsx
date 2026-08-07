@@ -100,11 +100,39 @@ function FitBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function InvestorDetailModal({ detail: r, onClose, draftEndpoint }: { detail: InvestorDetail; onClose: () => void; draftEndpoint?: string }) {
+export function InvestorDetailModal({
+  detail: r,
+  onClose,
+  draftEndpoint,
+  introEndpoint,
+  introRef,
+}: {
+  detail: InvestorDetail;
+  onClose: () => void;
+  draftEndpoint?: string;
+  introEndpoint?: string;
+  introRef?: string;
+}) {
   const advice = buildAdvice(r);
   const [note, setNote] = useState("");
   const [drafting, setDrafting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sendState, setSendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  async function sendWithNote() {
+    if (!introEndpoint || !introRef) return;
+    setSendState("sending");
+    try {
+      const res = await fetch(introEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: introRef, note }),
+      });
+      setSendState(res.ok ? "sent" : "error");
+    } catch {
+      setSendState("error");
+    }
+  }
 
   async function draft() {
     if (!draftEndpoint) return;
@@ -213,7 +241,23 @@ export function InvestorDetailModal({ detail: r, onClose, draftEndpoint }: { det
                       >
                         {copied ? "Copied ✓" : "Copy note"}
                       </button>
+                      {introEndpoint && introRef && (
+                        <button
+                          type="button"
+                          onClick={sendWithNote}
+                          disabled={sendState === "sending" || sendState === "sent"}
+                          className="rounded-md px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-70"
+                          style={{ background: sendState === "sent" ? "#17a06a" : "#7F77DD" }}
+                        >
+                          {sendState === "sending" ? "Sending…" : sendState === "sent" ? "Request sent ✓" : sendState === "error" ? "Retry" : "Send with request"}
+                        </button>
+                      )}
                     </div>
+                    {sendState === "sent" && (
+                      <p className="mt-1.5 text-right text-[10.5px]" style={{ color: "#8fe3bf" }}>
+                        Your note is attached — the iCapOS team will facilitate the introduction.
+                      </p>
+                    )}
                   </>
                 )}
               </div>
