@@ -1,12 +1,24 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { generateDiligenceReport } from "@/lib/ai";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { ensureCompanyDocumentSummaries } from "@/lib/documents/summarize";
 
 // Shared diligence-report generation used by both the staff route
 // (POST /api/ai/reports) and the founder self-serve route
 // (POST /api/founder/report/generate), so the two can never drift.
 
 export type ReportSection = { title: string; body: string };
+
+/** DB document code → human label matching the report's source-mapping prompt
+ *  (e.g. BUSINESS_PLAN → "Business Plan", TEAM_BIOS → "Team Bios"). */
+function titleCaseDocumentType(code: string): string {
+  return code
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export function findSectionBody(sections: ReportSection[], keywords: string[]): string {
   const section = sections.find((item) => {
@@ -66,6 +78,11 @@ export async function generateAndSaveDiligenceReport(
     throw new Error("Company not found.");
   }
 
+  // Automatically AI-analyze any documents that haven't been summarized yet, so
+  // the report's review sections are written from real document content instead
+  // of coming back "Not provided." Best-effort: never blocks report generation.
+  await ensureCompanyDocumentSummaries(db as unknown as SupabaseClient<Database>, companyId).catch(() => null);
+
   const { data: documents } = await db
     .from("documents")
     .select("document_type, ai_summary")
@@ -78,6 +95,12 @@ export async function generateAndSaveDiligenceReport(
     companyName: company.company_name,
     documentSummaries:
       documents?.flatMap((d) => (d.ai_summary ? [d.ai_summary as string] : [])) ?? [],
+    documentSummariesByType:
+      documents?.flatMap((d) =>
+        d.ai_summary
+          ? [{ type: titleCaseDocumentType((d.document_type as string) ?? ""), summary: d.ai_summary as string }]
+          : [],
+      ) ?? [],
     uploadedDocumentTypes:
       documents?.flatMap((d) => (d.document_type ? [d.document_type as string] : [])) ?? [],
     notApplicableDocumentTypes,

@@ -8,6 +8,9 @@ function titleCaseCode(code: string): string {
 type AnalysisInput = {
   companyName: string;
   documentSummaries: string[];
+  /** Per-document summaries tagged with their document type, so each review
+   *  section can be grounded in the right source (business plan, team bios…). */
+  documentSummariesByType?: Array<{ type: string; summary: string }>;
   uploadedDocumentTypes: string[];
   /** Document types the founder marked "not applicable" (e.g. no customer
    *  contracts for this business) — excluded from the missing list. */
@@ -80,6 +83,7 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
           notApplicableDocuments: notApplicableLabels,
           missingDocuments,
           documentSummaries: input.documentSummaries,
+          documentsByType: input.documentSummariesByType ?? [],
           naNote:
             notApplicableLabels.length > 0
               ? "Documents in notApplicableDocuments were marked not applicable by the founder (this business genuinely has none — e.g. a SaaS or biotech with no customer contracts). Do NOT list them as missing or frame them as gaps or risks."
@@ -100,10 +104,14 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
         '{ "executiveSummary": string, "sections": [{ "title": string, "body": string }], "riskFlags": string[] }',
         "The sections array MUST contain exactly these titles, in this order, using these exact strings:",
         '"Business overview", "Financial review", "Market review", "Legal & compliance review", "Team review".',
-        "Write each section body as 2–5 substantive sentences grounded in the documentSummaries, business context, and uploadedDocuments.",
-        "If a section has no supporting evidence yet, set its body to exactly 'Not provided.'.",
+        "Each entry in documentsByType has a `type` (the document) and its `summary`. Ground each section in its designated source document:",
+        '"Business overview", "Financial review", and "Market review" come from the "Business Plan" document.',
+        '"Team review" comes from the "Team Bios" document.',
+        '"Legal & compliance review" comes from the "Legal Documents" and "Corporate Documents".',
+        "Write each section body as 2–5 substantive sentences grounded ONLY in that section's designated source document (plus business context).",
+        "If a section's designated source document is absent or has no supporting content, set its body to exactly 'Not provided.' — do NOT fill it from other documents.",
         "executiveSummary: 2–4 sentences framing the company and the current state of diligence.",
-        "riskFlags: concrete, specific diligence risks (each one sentence); use an empty array if none are supportable.",
+        "riskFlags: concrete, specific diligence risks synthesized across ALL provided documents (each one sentence); use an empty array if none are supportable.",
         "Do NOT provide investment advice, recommend investing, or guarantee funding. Do NOT invent numbers, documents, or facts not present in the inputs.",
       ].join(" "),
     },
