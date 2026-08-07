@@ -87,6 +87,27 @@ export async function summarizeDocumentById(
   return { status: "ok" };
 }
 
+/**
+ * Analyze every un-summarized document for one company: extract text and store
+ * an ai_summary for each, so downstream consumers (diligence report, readiness
+ * engine) have real content to work from. Bounded and best-effort — a document
+ * that can't be summarized (scanned PDF, download failure) is simply skipped.
+ */
+export async function ensureCompanyDocumentSummaries(
+  admin: SupabaseClient<Database>,
+  companyId: string,
+  opts: { max?: number } = {},
+): Promise<{ summarized: number; attempted: number }> {
+  if (!isClaudeConfigured()) return { summarized: 0, attempted: 0 };
+  const pending = await listDocumentsNeedingSummary(admin, { companyId, limit: opts.max ?? 12 });
+  let summarized = 0;
+  for (const doc of pending) {
+    const res = await summarizeDocumentById(admin, doc.id).catch(() => null);
+    if (res?.status === "ok") summarized += 1;
+  }
+  return { summarized, attempted: pending.length };
+}
+
 /** Documents (optionally for one company) that still need a summary. */
 export async function listDocumentsNeedingSummary(
   admin: SupabaseClient<Database>,
