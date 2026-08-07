@@ -16,6 +16,10 @@ export type MatchCenterCard = {
   introRef?: string;
   /** When present, clicking the card opens the anonymized detail panel. */
   detail?: InvestorDetail;
+  /** True once an intro has been facilitated — enables the Follow-up action. */
+  connected?: boolean;
+  /** Data used to create the founder-CRM lead on "Add to follow-up". */
+  followUp?: { name: string; firm: string | null; investorType: string | null };
 };
 
 function barColor(score: number): string {
@@ -56,14 +60,65 @@ function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: strin
   );
 }
 
+/** Follow-up is gated: green + active only when the investor is connected (an
+ *  intro has been facilitated). Otherwise it's muted and clicking shows a note. */
+function FollowUpButton({ card, endpoint }: { card: MatchCenterCard; endpoint: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [showNote, setShowNote] = useState(false);
+
+  if (!card.connected) {
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setShowNote((v) => !v)}
+          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-400"
+          title="Follow-up unlocks once you're connected"
+        >
+          Follow-up
+        </button>
+        {showNote && (
+          <div className="absolute right-0 z-10 mt-1 w-64 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-left text-[11px] leading-4 text-amber-800 shadow-sm">
+            <b>Follow-up unlocks once you&apos;re connected.</b> Request an introduction first — after {card.title} accepts, you can track and follow up here.
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (state === "done") return <span className="text-xs font-medium text-emerald-600">Added to follow-up ✓</span>;
+
+  async function add() {
+    if (!card.followUp) return;
+    setState("loading");
+    try {
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(card.followUp) });
+      setState(res.ok ? "done" : "error");
+    } catch {
+      setState("error");
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={add}
+      disabled={state === "loading"}
+      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+    >
+      {state === "loading" ? "Adding…" : state === "error" ? "Retry" : "Follow-up"}
+    </button>
+  );
+}
+
 export function MatchingCenterList({
   cards,
   emptyText,
   introEndpoint,
+  followUpEndpoint,
 }: {
   cards: MatchCenterCard[];
   emptyText: string;
   introEndpoint?: string;
+  followUpEndpoint?: string;
 }) {
   const [selected, setSelected] = useState<InvestorDetail | null>(null);
   const [q, setQ] = useState("");
@@ -150,9 +205,10 @@ export function MatchingCenterList({
             </div>
           )}
 
-          {introEndpoint && c.introRef && (
-            <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
-              <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
+          {(introEndpoint || followUpEndpoint) && (
+            <div className="mt-4 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+              {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
+              {introEndpoint && c.introRef && <IntroButton introRef={c.introRef} endpoint={introEndpoint} />}
             </div>
           )}
         </div>

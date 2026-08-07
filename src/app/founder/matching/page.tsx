@@ -56,6 +56,8 @@ export default async function FounderMatchingPage() {
       subtitle,
       reasons: c.reasons,
       introRef: c.ref,
+      connected: c.connected,
+      followUp: { name: c.name, firm: c.firm, investorType: c.investorType },
       detail: {
         name: c.name,
         band: c.matchScore >= 70 ? "high" : c.matchScore >= 45 ? "mid" : "low",
@@ -104,6 +106,7 @@ export default async function FounderMatchingPage() {
           <MatchingCenterList
             cards={cards}
             introEndpoint="/api/founder/matching/intro"
+            followUpEndpoint="/api/founder/matching/follow-up"
             emptyText="No investor matches yet. Complete your profile and readiness materials to surface matched investors."
           />
         </div>

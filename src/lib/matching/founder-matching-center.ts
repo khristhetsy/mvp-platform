@@ -19,6 +19,9 @@ export type FounderInvestorMatchCard = {
   /** Investor identity (now surfaced to founders). */
   name: string;
   firm: string | null;
+  /** True once an introduction with this investor has been facilitated — gates
+   *  the founder's Follow-up action. Prospects (non-members) are never connected. */
+  connected: boolean;
   /** Detail-panel inputs (fit breakdown + criteria) for the click-to-open modal. */
   fitSector: number;
   fitStage: number;
@@ -81,13 +84,16 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
   const memberIds = ranked.map((r) => r.investor.profile_id).filter((id) => !isProspectInvestorId(id));
   const nameById = new Map<string, string>();
   const firmById = new Map<string, string>();
+  const connectedSet = new Set<string>();
   if (memberIds.length) {
-    const [profs, ips] = await Promise.all([
+    const [profs, ips, intros] = await Promise.all([
       admin.from("profiles").select("id, full_name").in("id", memberIds),
       admin.from("investor_profiles").select("profile_id, firm_name").in("profile_id", memberIds),
+      admin.from("intro_requests").select("investor_id").eq("company_id", company.id).eq("status", "facilitated").in("investor_id", memberIds),
     ]);
     for (const p of (profs.data ?? []) as Array<{ id: string; full_name: string | null }>) if (p.full_name) nameById.set(p.id, p.full_name);
     for (const ip of (ips.data ?? []) as Array<{ profile_id: string; firm_name: string | null }>) if (ip.firm_name) firmById.set(ip.profile_id, ip.firm_name);
+    for (const r of (intros.data ?? []) as Array<{ investor_id: string }>) connectedSet.add(r.investor_id);
   }
   const prospectName = (id: string): string => {
     const n = prospects.names.get(id);
@@ -106,6 +112,7 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
       ref: investor.profile_id,
       name: isP ? prospectName(investor.profile_id) : (nameById.get(investor.profile_id) ?? "Investor"),
       firm: isP ? null : (firmById.get(investor.profile_id) ?? null),
+      connected: !isP && connectedSet.has(investor.profile_id),
       // Fit bars derived from the same match reasons the engine emitted.
       fitSector: has(/sector/i) ? 100 : 0,
       fitStage: has(/stage/i) ? 100 : 0,
