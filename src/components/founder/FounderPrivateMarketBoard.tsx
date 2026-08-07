@@ -5,6 +5,42 @@ import { LayoutGrid } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { FounderInvestorRow, OutreachStatus } from "@/lib/founder/private-market";
 
+/** Chip list that condenses long value sets: shows the first `max` chips then a
+ *  "+N more" toggle to expand, and "Show less" to re-collapse. Reusable for any
+ *  overflowing chip column (industry/sector, investor types, …). */
+function ChipList({ values, max = 3, chipClass }: { values: string[]; max?: number; chipClass?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!values.length) return <span className="text-slate-300">—</span>;
+  const shown = expanded ? values : values.slice(0, max);
+  const hidden = values.length - shown.length;
+  const cls = chipClass ?? "rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600";
+  return (
+    <>
+      {shown.map((s) => (
+        <span key={s} className={cls}>{s}</span>
+      ))}
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+          className="rounded border border-[var(--blue-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--blue-hover)] hover:bg-[var(--blue-muted)]"
+        >
+          +{hidden} more
+        </button>
+      )}
+      {expanded && values.length > max && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+          className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-50"
+        >
+          Show less
+        </button>
+      )}
+    </>
+  );
+}
+
 const SIGIL: Record<string, string> = {
   high: "bg-[var(--teal-muted)] text-[var(--teal)]",
   mid: "bg-[var(--blue-muted)] text-[var(--blue-hover)]",
@@ -254,11 +290,7 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
 
             <div className="flex flex-wrap items-center gap-1">
               <span className="sm:hidden mr-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">Sector:</span>
-              {r.sectors.length ? (
-                r.sectors.map((s) => (
-                  <span key={s} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{s}</span>
-                ))
-              ) : <span className="text-slate-300">—</span>}
+              <ChipList values={r.sectors} max={3} />
             </div>
 
             <div className="text-right">
