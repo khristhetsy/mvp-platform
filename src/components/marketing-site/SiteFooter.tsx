@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Linkedin, Youtube, Instagram, type LucideIcon } from "lucide-react";
 import { SiteWordmark } from "@/components/marketing-site/SiteWordmark";
 
 /**
@@ -26,10 +27,10 @@ const COMPANY_LINKS = [
   { href: "/terms", label: "Terms of Service" },
   { href: "/privacy", label: "Privacy Policy" },
 ];
-const SOCIALS = [
-  { href: "https://www.linkedin.com/company/icfocapital", label: "LinkedIn" },
-  { href: "https://www.youtube.com/@icfocapital", label: "YouTube" },
-  { href: "https://www.instagram.com/icfocapital", label: "Instagram" },
+const SOCIALS: { href: string; label: string; Icon: LucideIcon }[] = [
+  { href: "https://www.linkedin.com/company/icfocapital", label: "LinkedIn", Icon: Linkedin },
+  { href: "https://www.youtube.com/@icfocapital", label: "YouTube", Icon: Youtube },
+  { href: "https://www.instagram.com/icfocapital", label: "Instagram", Icon: Instagram },
 ];
 
 export function SiteFooter() {
@@ -46,9 +47,19 @@ export function SiteFooter() {
             La Jolla, California 92037<br />
             <a href="tel:+16199569114" className="transition-colors hover:text-white">(619) 956-9114</a>
           </address>
-          <div className="mt-4 flex gap-4 font-site-mono text-xs">
+          <div className="mt-4 flex gap-2.5">
             {SOCIALS.map((s) => (
-              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="text-white/60 transition-colors hover:text-white">{s.label}</a>
+              <a
+                key={s.label}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                title={s.label}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/[0.06] text-white/70 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white"
+              >
+                <s.Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+              </a>
             ))}
           </div>
         </div>
