@@ -153,6 +153,23 @@ export function BusinessPlanGeneratorClient() {
     }
   }
 
+  // Picking a design persists it immediately (stashed in charts.design) so the
+  // PDF and share link — which read the SAVED plan — reflect it without a manual
+  // Save. Uses the chosen value directly to avoid stale state in the request.
+  async function changeDesign(d: PlanDesign) {
+    setDesign(d);
+    try {
+      await fetch("/api/founder/business-plan", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market, problem, solution, competition, traction, design: d } }),
+      });
+      setSavedAt(new Date().toLocaleTimeString());
+    } catch {
+      // Non-blocking: the preview already reflects the choice; next Save will persist it.
+    }
+  }
+
   async function downloadPdf() {
     await save();
     window.open("/api/founder/business-plan/pdf", "_blank", "noopener");
@@ -376,7 +393,7 @@ export function BusinessPlanGeneratorClient() {
           traction={traction}
           projections={projections}
           design={design}
-          onDesignChange={setDesign}
+          onDesignChange={changeDesign}
         />
       </div>
 
