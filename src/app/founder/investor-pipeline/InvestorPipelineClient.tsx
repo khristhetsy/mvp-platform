@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { INVESTOR_TYPE_OPTIONS, FUNDING_STAGE_OPTIONS } from "@/lib/profile/options";
+import { INDUSTRY_OPTIONS } from "@/lib/industries";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
@@ -53,12 +55,16 @@ interface PlatformMatch {
   alreadyImported: boolean;
 }
 
-const INVESTOR_TYPES = [
-  "Venture Capital",
-  "Angel Syndicate",
-  "Family Office",
-  "Strategic / Corporate",
-];
+// Use the canonical shared profile vocabulary so the Investor CRM speaks the
+// same language as the Company Profile, onboarding, and investor matching.
+const INVESTOR_TYPES: string[] = [...INVESTOR_TYPE_OPTIONS];
+
+/** Canonical options plus any non-canonical value already saved, so legacy
+ *  investors (e.g. "Venture Capital") stay visible instead of vanishing. */
+function withLegacy(canonical: string[], ...current: string[]): string[] {
+  const extras = current.filter((v) => v && !canonical.includes(v));
+  return [...new Set([...extras, ...canonical])];
+}
 
 const OUTREACH_LABELS: Record<OutreachStatus, string> = {
   not_started: "Not Started",
@@ -73,11 +79,8 @@ const MEETING_LABELS: Record<MeetingStatus, string> = {
   scheduled: "Scheduled",
 };
 
-const STAGE_OPTIONS = ["Pre-Seed", "Seed", "Series A", "Series B", "Series C+"];
-const SECTOR_OPTIONS = [
-  "Fintech", "SaaS", "HealthTech", "EdTech", "CleanTech",
-  "AI / ML", "PropTech", "Consumer", "B2B", "Other",
-];
+const STAGE_OPTIONS: string[] = [...FUNDING_STAGE_OPTIONS];
+const SECTOR_OPTIONS: string[] = [...INDUSTRY_OPTIONS];
 
 // ─── Badge sub-components ────────────────────────────────────────────────────
 
@@ -151,7 +154,7 @@ function MatchBar({ score }: { score: number | null }) {
 const EMPTY_FORM = {
   name: "",
   location: "",
-  investor_type: "Venture Capital",
+  investor_type: "Venture fund",
   investment_size: "",
   pledge_amount: "",
   interested: false,
@@ -304,7 +307,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: m.investorName,
-            investor_type: m.investorType ?? "Venture Capital",
+            investor_type: m.investorType ?? "Venture fund",
             investment_size: m.investmentSize !== "Not set" ? m.investmentSize : null,
             focus_sectors: m.focusSectors,
             location: m.geographies[0] ?? null,
@@ -689,7 +692,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                             {m.geographies[0] && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{m.geographies[0]}</p>}
                             {already && <p className="text-xs text-blue-600 font-medium mt-0.5">Already in pipeline</p>}
                           </td>
-                          <td className="px-4 py-2.5"><TypeBadge type={m.investorType ?? "Venture Capital"} /></td>
+                          <td className="px-4 py-2.5"><TypeBadge type={m.investorType ?? "Venture fund"} /></td>
                           <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{m.investmentSize}</td>
                           <td className="px-4 py-2.5"><MatchBar score={m.matchScore} /></td>
                         </tr>
@@ -739,7 +742,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Investor Type</label>
                   <select className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.investor_type} onChange={(e) => setForm((f) => ({ ...f, investor_type: e.target.value }))}>
-                    {INVESTOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {withLegacy(INVESTOR_TYPES, form.investor_type).map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
@@ -775,13 +778,13 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Preferred Stages</label>
                   <div className="flex flex-wrap gap-1.5">
-                    {STAGE_OPTIONS.map((s) => <button key={s} type="button" onClick={() => toggleStage(s)} className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${form.preferred_stages.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"}`}>{s}</button>)}
+                    {withLegacy(STAGE_OPTIONS, ...form.preferred_stages).map((s) => <button key={s} type="button" onClick={() => toggleStage(s)} className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${form.preferred_stages.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"}`}>{s}</button>)}
                   </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Focus Sectors</label>
                   <div className="flex flex-wrap gap-1.5">
-                    {SECTOR_OPTIONS.map((s) => <button key={s} type="button" onClick={() => toggleSector(s)} className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${form.focus_sectors.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"}`}>{s}</button>)}
+                    {withLegacy(SECTOR_OPTIONS, ...form.focus_sectors).map((s) => <button key={s} type="button" onClick={() => toggleSector(s)} className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${form.focus_sectors.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"}`}>{s}</button>)}
                   </div>
                 </div>
                 <div className="col-span-2">
