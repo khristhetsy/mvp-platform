@@ -287,8 +287,10 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             focus_sectors: m.focusSectors,
             location: m.geographies[0] ?? null,
             match_score: Math.round(m.matchScore),
-            // Prospects aren't platform accounts — store by name, no profile FK.
-            source: m.isProspect ? "matching_prospect" : "platform_match",
+            // Both come from the matching engine (source: platform_match).
+            // Prospects aren't platform accounts, so they carry no profile FK —
+            // the null platform_investor_id is what marks them as non-members.
+            source: "platform_match",
             platform_investor_id: m.isProspect ? null : m.investorId,
             outreach_status: "not_started",
           }),
