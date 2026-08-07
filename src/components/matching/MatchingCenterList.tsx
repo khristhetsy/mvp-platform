@@ -5,6 +5,7 @@
 // Founder cards may carry an opaque `introRef` + `introEndpoint` to request a
 // brokered introduction without revealing the investor's identity.
 import { useState } from "react";
+import { InvestorDetailModal, type InvestorDetail } from "@/components/founder/InvestorDetailModal";
 
 export type MatchCenterCard = {
   matchScore: number;
@@ -13,6 +14,8 @@ export type MatchCenterCard = {
   subtitle: string | null;
   reasons: string[];
   introRef?: string;
+  /** When present, clicking the card opens the anonymized detail panel. */
+  detail?: InvestorDetail;
 };
 
 function barColor(score: number): string {
@@ -62,6 +65,8 @@ export function MatchingCenterList({
   emptyText: string;
   introEndpoint?: string;
 }) {
+  const [selected, setSelected] = useState<InvestorDetail | null>(null);
+
   if (cards.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center">
@@ -71,9 +76,17 @@ export function MatchingCenterList({
   }
 
   return (
+    <>
     <div className="space-y-4">
       {cards.map((c, i) => (
-        <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div
+          key={i}
+          onClick={c.detail ? () => setSelected(c.detail!) : undefined}
+          role={c.detail ? "button" : undefined}
+          tabIndex={c.detail ? 0 : undefined}
+          onKeyDown={c.detail ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c.detail!); } } : undefined}
+          className={`rounded-2xl border border-slate-200 bg-white p-5 ${c.detail ? "cursor-pointer transition-colors hover:border-[var(--brand-indigo,#2E78F5)]" : ""}`}
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
@@ -102,12 +115,14 @@ export function MatchingCenterList({
           )}
 
           {introEndpoint && c.introRef && (
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
               <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
             </div>
           )}
         </div>
       ))}
     </div>
+    {selected && <InvestorDetailModal detail={selected} onClose={() => setSelected(null)} />}
+    </>
   );
 }

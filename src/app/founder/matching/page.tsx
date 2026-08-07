@@ -46,14 +46,37 @@ export default async function FounderMatchingPage() {
 
   const data = await loadFounderMatchingCenter(company!);
 
-  const cards: MatchCenterCard[] = data.cards.map((c) => ({
-    matchScore: c.matchScore,
-    tag: c.isProspect ? "Prospect" : "Member",
-    title: c.investorType ? `${titleCase(c.investorType)} investor` : "Investor",
-    subtitle: c.checkBand ? `Typical check ${c.checkBand}` : null,
-    reasons: c.reasons,
-    introRef: c.ref,
-  }));
+  const cards: MatchCenterCard[] = data.cards.map((c) => {
+    const title = c.investorType ? `${titleCase(c.investorType)} investor` : "Investor";
+    return {
+      matchScore: c.matchScore,
+      tag: c.isProspect ? "Prospect" : "Member",
+      title,
+      subtitle: c.checkBand ? `Typical check ${c.checkBand}` : null,
+      reasons: c.reasons,
+      introRef: c.ref,
+      detail: {
+        name: title,
+        band: c.matchScore >= 70 ? "high" : c.matchScore >= 45 ? "mid" : "low",
+        matchScore: c.matchScore,
+        label: c.investorType ? titleCase(c.investorType) : "Investor",
+        fitSector: c.fitSector,
+        fitStage: c.fitStage,
+        fitCheck: c.fitCheck,
+        fitGeo: c.fitGeo,
+        sectors: c.sectors,
+        capitalTypes: c.capitalTypes,
+        stages: c.stages,
+        geographies: c.geographies,
+        checkSize: c.checkBand ?? "—",
+        pledgeCount: 0,
+        indicated: 0,
+        investorScore: null,
+        scoreTier: null,
+        scoreRated: false,
+      },
+    };
+  });
 
   return (
     <FounderAppShell

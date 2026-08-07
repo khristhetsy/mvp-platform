@@ -17,6 +17,15 @@ export type FounderInvestorMatchCard = {
   /** Opaque reference (investor/prospect id) — sent back on an intro request,
    *  never shown to the founder, so identity stays private. */
   ref: string;
+  /** Detail-panel inputs (fit breakdown + criteria) for the click-to-open modal. */
+  fitSector: number;
+  fitStage: number;
+  fitCheck: number;
+  fitGeo: number;
+  sectors: string[];
+  capitalTypes: string[];
+  stages: string[];
+  geographies: string[];
 };
 
 export type FounderMatchingCenter = {
@@ -64,14 +73,26 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
   const investors = [...members, ...prospects.profiles];
   const ranked = rankInvestorsForCompany(profile, investors, limit, cfg.engineWeights);
 
-  const cards: FounderInvestorMatchCard[] = ranked.map(({ investor, match }) => ({
-    matchScore: match.matchScore,
-    isProspect: isProspectInvestorId(investor.profile_id),
-    investorType: investor.investor_type ?? null,
-    checkBand: checkBand(investor.check_size_min ?? null, investor.check_size_max ?? null),
-    reasons: match.matchReasons.slice(0, 4),
-    ref: investor.profile_id,
-  }));
+  const cards: FounderInvestorMatchCard[] = ranked.map(({ investor, match }) => {
+    const has = (re: RegExp) => match.matchReasons.some((x) => re.test(x));
+    return {
+      matchScore: match.matchScore,
+      isProspect: isProspectInvestorId(investor.profile_id),
+      investorType: investor.investor_type ?? null,
+      checkBand: checkBand(investor.check_size_min ?? null, investor.check_size_max ?? null),
+      reasons: match.matchReasons.slice(0, 4),
+      ref: investor.profile_id,
+      // Fit bars derived from the same match reasons the engine emitted.
+      fitSector: has(/sector/i) ? 100 : 0,
+      fitStage: has(/stage/i) ? 100 : 0,
+      fitCheck: has(/check/i) ? 100 : 0,
+      fitGeo: has(/geograph/i) ? 100 : 0,
+      sectors: investor.preferred_sectors ?? [],
+      capitalTypes: investor.capitalTypes ?? [],
+      stages: investor.preferred_stages ?? [],
+      geographies: investor.preferred_geographies ?? [],
+    };
+  });
 
   return { cards, total: cards.length, strong: cards.filter((c) => c.matchScore >= 70).length };
 }
