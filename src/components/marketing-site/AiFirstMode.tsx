@@ -8,8 +8,8 @@ import { useEffect, useRef, useState } from "react";
  * AI-first mode (spec §8) — a full-screen conversational shell, context-aware per
  * page. Auto-opens on "/" and "/events"; opens on-click anywhere else, tailored
  * to the page you're on. Bottom line is signup: a persistent "Get started" button
- * (→ /start) stays visible in every context, and each context surfaces a
- * signup-first card. Uses the guardrailed `assistant` task; never promises funding.
+ * (→ /auth/sign-up) stays visible in every context. Uses the guardrailed
+ * `assistant` task; never promises funding.
  */
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -24,12 +24,9 @@ export type NextEvent = {
   registration_open: boolean | null;
 } | null;
 
-type SignupCard = { eyebrow: string; title: string; body: string; cta: string; href: string };
-type CtxConfig = { label: string; title: string; sub: string; placeholder: string; openers: string[]; card?: SignupCard };
+type CtxConfig = { label: string; title: string; sub: string; placeholder: string; openers: string[] };
 
 const SIGNUP = "/auth/sign-up";
-const SIGNUP_FOUNDER = "/auth/sign-up?role=founder";
-const SIGNUP_INVESTOR = "/auth/sign-up?role=investor";
 
 const CONTEXTS: Record<Ctx, CtxConfig> = {
   home: {
@@ -38,7 +35,6 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Tell me whether you're raising or investing and I'll take you to the right place. Nothing here offers or sells securities.",
     placeholder: "Type what you're trying to do…",
     openers: ["I'm a founder raising a seed round", "I'm an investor looking for climate deals", "How does it work?", "How do I get started?"],
-    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free Capital Readiness Rating and see where you stand — no card required.", cta: "Run the free rating", href: SIGNUP_FOUNDER },
   },
   events: {
     label: "events",
@@ -53,7 +49,6 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask how readiness, matching, and distribution work — then start free. No polished deck required, and nothing here offers or sells securities.",
     placeholder: "Ask about getting investor-ready…",
     openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my CRR scored?", "How do I get started?"],
-    card: { eyebrow: "Start free · no card", title: "Run your Capital Readiness Rating", body: "Create your account, score your company on the five dimensions investors screen on, and see what to fix.", cta: "Run the free rating", href: SIGNUP_FOUNDER },
   },
   investors: {
     label: "investors",
@@ -61,7 +56,6 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask how mandates, matching, and the volume cap work. Free investor accounts — nothing here offers or sells securities.",
     placeholder: "Ask about deal flow and mandates…",
     openers: ["How does matching work?", "How do I set my mandate?", "What's the volume cap?", "How do I get started?"],
-    card: { eyebrow: "Free · your mandate", title: "Create your free investor account", body: "Set a mandate and a monthly cap, and see rated, diligence-ready companies that fit.", cta: "Create your free account", href: SIGNUP_INVESTOR },
   },
   pricing: {
     label: "pricing",
@@ -69,7 +63,6 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask what's included or how self-serve works. The readiness rating is free — you only choose a plan when you're ready to distribute.",
     placeholder: "Ask about plans and what's included…",
     openers: ["What's the difference between the plans?", "Is it really self-serve?", "Can I book a demo?", "How do I get started?"],
-    card: { eyebrow: "Start free", title: "Create your account", body: "The Capital Readiness Rating is free with no card — choose a plan only when you're ready to distribute.", cta: "Run the free rating", href: SIGNUP_FOUNDER },
   },
   readiness: {
     label: "readiness",
@@ -77,7 +70,6 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask what the rating measures and how to run it. It's free, and it's what iCapOS produces — not what it requires.",
     placeholder: "Ask about the readiness rating…",
     openers: ["What does the rating measure?", "How is it scored?", "How long does it take?", "How do I get started?"],
-    card: { eyebrow: "Free · no card", title: "Run your Capital Readiness Rating", body: "Create your account and get a structured score with an ordered list of what to fix.", cta: "Run the free rating", href: SIGNUP_FOUNDER },
   },
   about: {
     label: "about",
@@ -85,7 +77,6 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask about the iCFO network, the conference series, and sixteen years of investor relations. Nothing here offers or sells securities.",
     placeholder: "Ask about iCapOS and iCFO…",
     openers: ["What is the iCFO network?", "How do the conferences work?", "How does iCapOS make money?", "How do I get started?"],
-    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free readiness rating and see where you stand — no card required.", cta: "Run the free rating", href: SIGNUP_FOUNDER },
   },
 };
 
@@ -273,15 +264,6 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
                 <div className="mt-0.5 text-[13px] text-white/60">{[fmtEventDate(nextEvent.starts_at), nextEvent.city].filter(Boolean).join(" · ")}</div>
               ) : null}
               <Link href="/events" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">Register <span aria-hidden="true">↗</span></Link>
-            </div>
-          ) : cfg.card ? (
-            <div className="flex w-full flex-wrap items-center gap-4 rounded-2xl border border-site-blue-lt/40 bg-site-blue/[0.18] px-5 py-4 text-left">
-              <div className="min-w-[220px] flex-1">
-                <div className="font-site-mono text-[10px] uppercase tracking-[0.12em] text-site-blue-lt">{cfg.card.eyebrow}</div>
-                <div className="mt-1.5 text-[17px] font-medium text-white">{cfg.card.title}</div>
-                <div className="mt-0.5 text-[13px] leading-6 text-white/60">{cfg.card.body}</div>
-              </div>
-              <Link href={cfg.card.href} className="whitespace-nowrap rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{cfg.card.cta} →</Link>
             </div>
           ) : null}
 
