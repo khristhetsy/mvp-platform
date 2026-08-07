@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
@@ -165,6 +166,7 @@ const EMPTY_FORM = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
+  const router = useRouter();
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
   const [search, setSearch] = useState("");
   const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
@@ -468,7 +470,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                         style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", opacity: draggingId === inv.id ? 0.5 : 1 }}
                       >
                         <div className="flex items-start justify-between gap-1.5">
-                          <button onClick={() => setProfileOf(inv)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
                           {inv.source === "platform_match" && !inv.platform_investor_id && (
                             <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
                           )}
@@ -480,7 +482,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                           <p className="mt-0.5 text-right text-[11px]" style={{ color: inv.match_score >= 70 ? "#0F6E56" : "var(--text-muted)" }}>{inv.match_score}% match</p>
                         )}
                         <div className="mt-2 flex items-center gap-1.5">
-                          <button onClick={() => setProfileOf(inv)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
+                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
                           <select
                             value={inv.pipeline_stage ?? "new"}
                             onChange={(e) => handleStageChange(inv.id, e.target.value as PipelineStage)}
