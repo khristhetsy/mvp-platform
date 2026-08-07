@@ -21,6 +21,38 @@ function money(n: number): string {
   return n < 0 ? `-${s}` : s;
 }
 
+// The founder's chosen document design (stored in plan.charts.design). Each theme
+// tweaks the cover + section headings so the PDF matches the on-screen preview.
+type PlanDesign = "classic" | "modern" | "navy" | "sidebar" | "bold";
+type PdfTheme = {
+  accent: string;
+  headingFont: string;
+  headingSize: number;
+  headingUpper: boolean;
+  headingColor: string;
+  rule: boolean;
+  leftTick: boolean;
+  coverBand: boolean;
+  coverTitleFont: string;
+};
+function isPlanDesign(v: unknown): v is PlanDesign {
+  return v === "classic" || v === "modern" || v === "navy" || v === "sidebar" || v === "bold";
+}
+function themeForDesign(d: PlanDesign): PdfTheme {
+  switch (d) {
+    case "classic":
+      return { accent: "#9a8f7a", headingFont: "Times-Bold", headingSize: 12, headingUpper: false, headingColor: NAVY, rule: true, leftTick: false, coverBand: false, coverTitleFont: "Times-Bold" };
+    case "navy":
+      return { accent: NAVY, headingFont: "Helvetica-Bold", headingSize: 9, headingUpper: true, headingColor: NAVY, rule: false, leftTick: false, coverBand: true, coverTitleFont: "Helvetica-Bold" };
+    case "sidebar":
+      return { accent: INDIGO, headingFont: "Helvetica-Bold", headingSize: 9.5, headingUpper: true, headingColor: INDIGO, rule: false, leftTick: true, coverBand: false, coverTitleFont: "Helvetica-Bold" };
+    case "bold":
+      return { accent: INDIGO, headingFont: "Helvetica-Bold", headingSize: 13, headingUpper: false, headingColor: NAVY, rule: false, leftTick: false, coverBand: false, coverTitleFont: "Helvetica-Bold" };
+    default:
+      return { accent: INDIGO, headingFont: "Helvetica-Bold", headingSize: 9, headingUpper: true, headingColor: INDIGO, rule: false, leftTick: false, coverBand: false, coverTitleFont: "Helvetica-Bold" };
+  }
+}
+
 export function renderBusinessPlanPdf(
   plan: BusinessPlan,
   company: { name: string; industry: string | null; stage: string | null; fundingAmount: number | null },
@@ -32,18 +64,49 @@ export function renderBusinessPlanPdf(
       doc.on("data", (c) => chunks.push(Buffer.from(c)));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
 
+      const rawDesign = (plan.charts as Record<string, unknown> | null | undefined)?.design;
+      const theme = themeForDesign(isPlanDesign(rawDesign) ? rawDesign : "modern");
+
       const body = (t: string) => doc.font("Helvetica").fontSize(10.5).fillColor("#1e293b").text(t, { lineGap: 2 });
-      const h2 = (t: string) =>
-        doc.moveDown(0.8).font("Helvetica-Bold").fontSize(9).fillColor(INDIGO).text(t.toUpperCase(), { characterSpacing: 0.6 }).moveDown(0.2);
+      const h2 = (t: string) => {
+        doc.moveDown(0.8);
+        const y = doc.y;
+        if (theme.leftTick) doc.rect(56, y + 2, 3, theme.headingSize).fill(theme.accent);
+        doc
+          .font(theme.headingFont)
+          .fontSize(theme.headingSize)
+          .fillColor(theme.headingColor)
+          .text(theme.headingUpper ? t.toUpperCase() : t, theme.leftTick ? 64 : 56, y, {
+            characterSpacing: theme.headingUpper ? 0.6 : 0,
+            width: doc.page.width - 112,
+          });
+        if (theme.rule) {
+          const ry = doc.y + 2;
+          doc.moveTo(56, ry).lineTo(doc.page.width - 56, ry).lineWidth(0.5).strokeColor("#ded6c5").stroke();
+          doc.y = ry + 3;
+        }
+        doc.x = 56;
+        doc.moveDown(0.2);
+      };
 
       // Cover
-      doc.font("Helvetica-Bold").fontSize(9).fillColor(INDIGO).text("BUSINESS PLAN", { characterSpacing: 1 });
-      doc.moveDown(0.2).font("Helvetica-Bold").fontSize(22).fillColor(NAVY).text(company.name);
       const meta = [company.industry, company.stage, company.fundingAmount ? `Target raise $${company.fundingAmount.toLocaleString()}` : null]
         .filter(Boolean)
         .join("  ·  ");
-      doc.moveDown(0.2).font("Helvetica").fontSize(10).fillColor(MUTED).text(meta || "");
-      doc.moveDown(1);
+      if (theme.coverBand) {
+        const bandH = 96;
+        doc.rect(0, 0, doc.page.width, bandH).fill(NAVY);
+        doc.font("Helvetica-Bold").fontSize(9).fillColor("#7fa0d6").text("BUSINESS PLAN", 56, 26, { characterSpacing: 1 });
+        doc.font(theme.coverTitleFont).fontSize(22).fillColor("#ffffff").text(company.name, 56, 40, { width: doc.page.width - 112 });
+        doc.font("Helvetica").fontSize(10).fillColor("#aeb8c7").text(meta || "", 56, 74, { width: doc.page.width - 112 });
+        doc.x = 56;
+        doc.y = bandH + 18;
+      } else {
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(theme.accent).text("BUSINESS PLAN", { characterSpacing: 1 });
+        doc.moveDown(0.2).font(theme.coverTitleFont).fontSize(22).fillColor(NAVY).text(company.name);
+        doc.moveDown(0.2).font("Helvetica").fontSize(10).fillColor(MUTED).text(meta || "");
+        doc.moveDown(1);
+      }
 
       if (plan.execSummary) {
         h2("Executive summary");
