@@ -1,6 +1,7 @@
 // Extract plain text from an uploaded document's bytes, for AI summarization.
-// Supports PDF (pdfjs-dist) and XLSX/CSV/plain text. Returns "" when the type
-// isn't extractable — callers should skip summarizing rather than fabricate.
+// Supports PDF (pdfjs-dist), Word .docx (mammoth), and XLSX/CSV/plain text.
+// Returns "" when the type isn't extractable — callers should skip summarizing
+// rather than fabricate.
 
 const MAX_CHARS = 16000;
 const MAX_PDF_PAGES = 25;
@@ -15,8 +16,17 @@ function isXlsx(mime: string, name: string) {
     /\.(xlsx|xls)$/i.test(name)
   );
 }
+function isDocx(mime: string, name: string) {
+  return mime.includes("wordprocessingml") || /\.docx$/i.test(name);
+}
 function isCsvOrText(mime: string, name: string) {
   return mime.startsWith("text/") || /\.(csv|tsv|txt|md)$/i.test(name);
+}
+
+async function extractDocx(bytes: Uint8Array): Promise<string> {
+  const mammoth = (await import("mammoth")).default;
+  const { value } = await mammoth.extractRawText({ buffer: Buffer.from(bytes) });
+  return value ?? "";
 }
 
 async function extractPdf(bytes: Uint8Array): Promise<string> {
@@ -73,6 +83,7 @@ export async function extractDocumentText(
   try {
     let text = "";
     if (isPdf(mime, fileName)) text = await extractPdf(bytes);
+    else if (isDocx(mime, fileName)) text = await extractDocx(bytes);
     else if (isXlsx(mime, fileName)) text = await extractXlsx(bytes);
     else if (isCsvOrText(mime, fileName)) text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     else return "";
