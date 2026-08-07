@@ -54,13 +54,6 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
       ? [`Upload missing documents: ${missingDocuments.join(", ")}`]
       : ["Upload required diligence documents for review."];
 
-  // Financial review basis: a pre-revenue company is assessed on projections; a
-  // revenue-generating company must supply actual financial statements.
-  const rs = (input.revenueStage ?? "").toLowerCase();
-  const isPreRevenue =
-    !rs || rs.includes("pre") || rs.includes("idea") || rs.includes("mvp") || rs.includes("building") || rs.includes("prototype") || rs.includes("concept");
-  const financialBasis = isPreRevenue ? "projections" : "actuals";
-
   if (!isClaudeConfigured()) {
     return {
       executiveSummary:
@@ -91,7 +84,6 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
           missingDocuments,
           documentSummaries: input.documentSummaries,
           documentsByType: input.documentSummariesByType ?? [],
-          financialBasis,
           naNote:
             notApplicableLabels.length > 0
               ? "Documents in notApplicableDocuments were marked not applicable by the founder (this business genuinely has none — e.g. a SaaS or biotech with no customer contracts). Do NOT list them as missing or frame them as gaps or risks."
@@ -114,13 +106,11 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
         '"Business overview", "Financial review", "Market review", "Legal & compliance review", "Team review".',
         "Each entry in documentsByType has a `type` (the document) and its `summary`. Ground each section in its designated source document:",
         '"Business overview" and "Market review" come from the "Business Plan" document.',
+        '"Financial review" comes from the "Financial Statements" document. Every company needs financial reporting regardless of revenue stage; if no "Financial Statements" document is present, set "Financial review" to exactly "Not provided." and add a risk flag noting financial statements are required.',
         '"Team review" comes from the "Team Bios" document.',
         '"Legal & compliance review" comes from the "Legal Documents" and "Corporate Documents".',
-        "Financial review depends on financialBasis:",
-        'If financialBasis is "projections" (pre-revenue), base "Financial review" on the financial projections in the "Business Plan" (and "Financial Model" if present); assess the assumptions and their reasonableness, and do NOT treat the absence of historical statements as a gap.',
-        'If financialBasis is "actuals" (revenue-generating), the company MUST provide a "Financial Statements" document; base "Financial review" on it. If no "Financial Statements" document is present, set "Financial review" to exactly "Actual financial statements are required for a revenue-generating company but were not provided." and add a matching risk flag.',
         "Write each section body as 2–5 substantive sentences grounded ONLY in that section's designated source document (plus business context).",
-        "If a section's designated source document is absent or has no supporting content, set its body to exactly 'Not provided.' — do NOT fill it from other documents (Financial review follows its own rule above).",
+        "If a section's designated source document is absent or has no supporting content, set its body to exactly 'Not provided.' — do NOT fill it from other documents.",
         "executiveSummary: 2–4 sentences framing the company and the current state of diligence.",
         "riskFlags: concrete, specific diligence risks synthesized across ALL provided documents (each one sentence); use an empty array if none are supportable.",
         "Do NOT provide investment advice, recommend investing, or guarantee funding. Do NOT invent numbers, documents, or facts not present in the inputs.",
