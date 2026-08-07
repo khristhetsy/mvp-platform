@@ -18,6 +18,9 @@ type AutomationConfig = {
   cadence: "weekly" | "daily";
   pause: { enabled: boolean; until: string | null };
 };
+type ConnectionConfig = {
+  monthlyByPlan: { basic: number; professional: number };
+};
 
 const WEIGHT_LABELS: [keyof EngineWeights, string][] = [
   ["sector", "Sector fit"],
@@ -48,6 +51,7 @@ const FIELD_LABELS: [keyof MatchConfig["requiredFields"], string][] = [
 export function MatchQualificationControls() {
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [auto, setAuto] = useState<AutomationConfig | null>(null);
+  const [conn, setConn] = useState<ConnectionConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +63,7 @@ export function MatchQualificationControls() {
         if (!active) return;
         if (d?.matchConfig) setConfig(d.matchConfig as MatchConfig);
         if (d?.automation) setAuto(d.automation as AutomationConfig);
+        if (d?.connection) setConn(d.connection as ConnectionConfig);
       })
       .catch(() => {});
     return () => { active = false; };
@@ -77,6 +82,24 @@ export function MatchQualificationControls() {
       if (!res.ok) setError("Couldn't save automation. Please try again.");
     } catch {
       setError("Network error saving automation.");
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const saveConn = useCallback(async (next: ConnectionConfig) => {
+    setConn(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/investor-outreach", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_connection_config", config: next }),
+      });
+      if (!res.ok) setError("Couldn't save connection limits. Please try again.");
+    } catch {
+      setError("Network error saving connection limits.");
     } finally {
       setSaving(false);
     }
@@ -160,6 +183,33 @@ export function MatchQualificationControls() {
                   className="w-full rounded-lg border border-slate-300 px-1.5 py-1 text-[12px]" />
               </label>
             </div>
+          </div>
+        </div>
+      )}
+
+      {conn && (
+        <div className="mt-4 rounded-lg border border-slate-200 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Founder connection requests</div>
+          <p className="mt-0.5 text-[11px] leading-5 text-slate-500">How many investor connection requests a founder can send per month, by subscription plan. Resets on the 1st. When the cap is reached, the founder&rsquo;s request is blocked with an upgrade prompt.</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <label className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-700">
+              <span>Basic <span className="text-[10px] text-slate-400">$499/mo</span></span>
+              <span className="flex items-center gap-1.5">
+                <input type="number" min={0} max={100000} value={conn.monthlyByPlan.basic}
+                  onChange={(e) => setConn({ ...conn, monthlyByPlan: { ...conn.monthlyByPlan, basic: Number(e.target.value) } })}
+                  onBlur={() => saveConn(conn)} className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
+                <span className="text-[11px] text-slate-500">/ mo</span>
+              </span>
+            </label>
+            <label className="flex items-center justify-between gap-2 rounded-lg border-2 border-indigo-300 px-3 py-2 text-[13px] text-slate-700">
+              <span>Professional <span className="text-[10px] text-slate-400">$1,000/mo</span></span>
+              <span className="flex items-center gap-1.5">
+                <input type="number" min={0} max={100000} value={conn.monthlyByPlan.professional}
+                  onChange={(e) => setConn({ ...conn, monthlyByPlan: { ...conn.monthlyByPlan, professional: Number(e.target.value) } })}
+                  onBlur={() => saveConn(conn)} className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
+                <span className="text-[11px] text-slate-500">/ mo</span>
+              </span>
+            </label>
           </div>
         </div>
       )}

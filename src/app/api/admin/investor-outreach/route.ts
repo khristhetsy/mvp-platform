@@ -22,6 +22,10 @@ import {
   setAutomationConfig,
   DEFAULT_AUTOMATION_CONFIG,
   type AutomationConfig,
+  getFounderConnectionConfig,
+  setFounderConnectionConfig,
+  DEFAULT_FOUNDER_CONNECTION_CONFIG,
+  type FounderConnectionConfig,
 } from "@/lib/settings/platform-settings";
 import { resolveFounderOutreachConfig, loadOutreachGlobals } from "@/lib/outreach/founder-overrides";
 
@@ -124,13 +128,14 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  const [liveSend, matchConfig, message, automation] = await Promise.all([
+  const [liveSend, matchConfig, message, automation, connection] = await Promise.all([
     getOutreachAutomationEnabled(),
     getInvestorMatchConfig(),
     getOutreachMessage(),
     getAutomationConfig(),
+    getFounderConnectionConfig(),
   ]);
-  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig, message, automation });
+  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig, message, automation, connection });
 }
 
 // PATCH — automation switch, or the match/qualification control config.
@@ -198,6 +203,20 @@ export async function PATCH(req: Request): Promise<Response> {
     };
     const ok = await setAutomationConfig(config, gate.userId);
     return NextResponse.json({ ok, automation: config });
+  }
+
+  if (body?.action === "set_connection_config" && body.config && typeof body.config === "object") {
+    const c = body.config as Partial<FounderConnectionConfig>;
+    const clampCap = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100000 ? Math.round(n) : d);
+    const mbp = (c.monthlyByPlan ?? {}) as Partial<FounderConnectionConfig["monthlyByPlan"]>;
+    const config: FounderConnectionConfig = {
+      monthlyByPlan: {
+        basic: clampCap(mbp.basic, DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.basic),
+        professional: clampCap(mbp.professional, DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.professional),
+      },
+    };
+    const ok = await setFounderConnectionConfig(config, gate.userId);
+    return NextResponse.json({ ok, connection: config });
   }
 
   if (body?.action === "set_message" && body.config && typeof body.config === "object") {

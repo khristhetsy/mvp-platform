@@ -294,3 +294,46 @@ export async function setAutomationConfig(cfg: AutomationConfig, updatedBy: stri
     return false;
   }
 }
+
+/**
+ * Founder-initiated investor connection requests — monthly cap per subscription
+ * plan. Distinct from AutomationConfig (which caps platform-initiated intros):
+ * this caps how many intro/connect requests a founder may SEND per calendar
+ * month. Trial + basic use the `basic` cap; professional uses `professional`.
+ */
+export type FounderConnectionConfig = {
+  monthlyByPlan: { basic: number; professional: number };
+};
+
+export const DEFAULT_FOUNDER_CONNECTION_CONFIG: FounderConnectionConfig = {
+  monthlyByPlan: { basic: 5, professional: 20 },
+};
+
+const FOUNDER_CONNECTION_CONFIG_KEY = "founder_connection_config";
+
+export async function getFounderConnectionConfig(): Promise<FounderConnectionConfig> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", FOUNDER_CONNECTION_CONFIG_KEY).maybeSingle();
+    const v = (data as { value?: Partial<FounderConnectionConfig> } | null)?.value;
+    const mbp = (v?.monthlyByPlan ?? {}) as Partial<FounderConnectionConfig["monthlyByPlan"]>;
+    return {
+      monthlyByPlan: {
+        basic: typeof mbp.basic === "number" ? mbp.basic : DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.basic,
+        professional: typeof mbp.professional === "number" ? mbp.professional : DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.professional,
+      },
+    };
+  } catch {
+    return DEFAULT_FOUNDER_CONNECTION_CONFIG;
+  }
+}
+
+export async function setFounderConnectionConfig(cfg: FounderConnectionConfig, updatedBy: string | null): Promise<boolean> {
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert({ key: FOUNDER_CONNECTION_CONFIG_KEY, value: cfg, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return !error;
+  } catch {
+    return false;
+  }
+}
