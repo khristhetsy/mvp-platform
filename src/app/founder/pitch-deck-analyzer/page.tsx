@@ -8,6 +8,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { notFound } from "next/navigation";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getPitchDeckAnalysis } from "@/lib/pitch-deck/analysis-store";
 import { PitchDeckAnalyzerClient } from "@/components/founder/PitchDeckAnalyzerClient";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +35,8 @@ export default async function PitchDeckAnalyzerPage() {
         .maybeSingle()
     : { data: null };
 
+  const saved = company ? await getPitchDeckAnalysis(createServiceRoleClient(), company.id) : null;
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -49,6 +53,8 @@ export default async function PitchDeckAnalyzerPage() {
             hasPitchDeck={Boolean(pitchDeck)}
             pitchDeckFileName={pitchDeck?.file_name ?? null}
             pitchDeckDate={pitchDeck?.created_at ?? null}
+            initialAnalysis={saved?.analysis ?? null}
+            initialSavedAt={saved?.updatedAt ?? null}
           />
         </WorkspacePageContainer>
       </FounderFeatureGate>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { PitchDeckAnalysis, PitchDeckSection } from "@/app/api/founder/pitch-deck-analyze/route";
@@ -104,29 +104,87 @@ function SectionCard({ section }: { section: PitchDeckSection }) {
   );
 }
 
+function ToolbarButton({ onClick, disabled, icon, label }: { onClick: () => void; disabled?: boolean; icon: ReactNode; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        border: "1px solid #cbd5e1", background: "white", color: "#475569",
+        borderRadius: 8, padding: "7px 12px", fontSize: 13, fontWeight: 600,
+        cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      {icon}{label}
+    </button>
+  );
+}
+
+function analysisToMarkdown(a: PitchDeckAnalysis, company: string): string {
+  const lines = [
+    `# Pitch deck analysis — ${company}`,
+    ``,
+    `**Overall score:** ${a.overallScore}/100`,
+    ``,
+    `${a.overallVerdict}`,
+    ``,
+    `## Simulated investor first impression`,
+    a.investorReaction,
+    ``,
+    `## Top strengths`,
+    ...a.topStrengths.map((s) => `- ${s}`),
+    ``,
+    `## Top gaps`,
+    ...a.topGaps.map((g) => `- ${g}`),
+    ``,
+    `## Section-by-section breakdown`,
+    ...a.sections.flatMap((s) => [
+      ``,
+      `### ${s.name} — ${s.score}/100 (${s.verdict.replace("_", " ")})`,
+      s.feedback,
+      `_Quick fix: ${s.tip}_`,
+    ]),
+  ];
+  return lines.join("\n");
+}
+
 export function PitchDeckAnalyzerClient({
   hasPitchDeck,
   pitchDeckFileName,
   pitchDeckDate,
+  initialAnalysis = null,
+  initialSavedAt = null,
 }: {
   hasPitchDeck: boolean;
   pitchDeckFileName: string | null;
   pitchDeckDate: string | null;
+  initialAnalysis?: PitchDeckAnalysis | null;
+  initialSavedAt?: string | null;
 }) {
   const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState<PitchDeckAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<PitchDeckAnalysis | null>(initialAnalysis);
   const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(initialSavedAt);
+  const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  function fmtTime(iso: string) {
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
 
   async function run() {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/founder/pitch-deck-analyze", { method: "POST" });
-      const json = await res.json() as { analysis?: PitchDeckAnalysis; error?: string };
+      const json = await res.json() as { analysis?: PitchDeckAnalysis; savedAt?: string | null; error?: string };
       if (!res.ok || json.error) {
         setError(json.error ?? "Analysis failed.");
       } else if (json.analysis) {
         setAnalysis(json.analysis);
+        if (json.savedAt) setSavedAt(json.savedAt);
       }
     } catch {
       setError("Unable to reach AI. Please try again.");
@@ -135,11 +193,57 @@ export function PitchDeckAnalyzerClient({
     }
   }
 
+  async function save() {
+    if (!analysis) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/founder/pitch-deck-analyze/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis }),
+      });
+      const json = await res.json().catch(() => ({})) as { savedAt?: string };
+      if (res.ok && json.savedAt) setSavedAt(json.savedAt);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function downloadPdf() {
+    setExportingPdf(true);
+    try {
+      const res = await fetch("/api/founder/pitch-deck-analyze/pdf", { method: "POST" });
+      if (!res.ok) { setError("Could not generate the PDF. Save your analysis first."); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Pitch deck analysis.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
+  function exportMarkdown() {
+    if (!analysis) return;
+    const md = analysisToMarkdown(analysis, pitchDeckFileName ?? "Your company");
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Pitch deck analysis.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <style>{"@media print { .pda-toolbar, .pda-analyze-card { display: none !important; } nav, aside, header { display: none !important; } }"}</style>
 
       {/* Status card */}
-      <div style={{
+      <div className="pda-analyze-card" style={{
         background: "white", border: "1px solid #e5e7eb",
         borderRadius: 14, padding: "20px 24px",
       }}>
@@ -228,6 +332,23 @@ export function PitchDeckAnalyzerClient({
       {/* Analysis results */}
       {analysis && (
         <>
+          {/* Action toolbar — Save / Print / PDF / Export */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }} className="pda-toolbar">
+            {savedAt && <span style={{ fontSize: 12, color: "#059669", marginRight: "auto" }}>Saved {fmtTime(savedAt)}</span>}
+            <ToolbarButton onClick={() => void save()} disabled={saving} label={saving ? "Saving…" : "Save"} icon={
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            } />
+            <ToolbarButton onClick={() => window.print()} label="Print" icon={
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            } />
+            <ToolbarButton onClick={() => void downloadPdf()} disabled={exportingPdf} label={exportingPdf ? "PDF…" : "PDF"} icon={
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            } />
+            <ToolbarButton onClick={exportMarkdown} label="Export" icon={
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            } />
+          </div>
+
           {/* Overall score */}
           <div style={{
             background: "white", border: `1px solid ${ACCENT}30`,

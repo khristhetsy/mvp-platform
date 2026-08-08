@@ -4,6 +4,7 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
+import { savePitchDeckAnalysis } from "@/lib/pitch-deck/analysis-store";
 
 export type PitchDeckSection = {
   name: string;
@@ -190,7 +191,8 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
     }
 
     analysis.source = "ai";
-    return NextResponse.json({ analysis });
+    const savedAt = await savePitchDeckAnalysis(admin, company.id, analysis).catch(() => null);
+    return NextResponse.json({ analysis, savedAt });
   } catch {
     return NextResponse.json({ analysis: fallbackAnalysis() });
   }
