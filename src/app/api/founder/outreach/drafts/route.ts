@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     contact,
     readinessScore: readiness.readinessScore,
     founderName: auth.profile.full_name,
+    tone: parsed.data.tone,
   });
 
   return NextResponse.json({ draft });

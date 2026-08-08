@@ -329,6 +329,7 @@ export const socialOutreachDraftUpdateSchema = z.object({
 export const outreachDraftSchema = z.object({
   kind: z.enum(["intro", "follow_up", "meeting_request", "investor_update"]),
   contactId: z.string().uuid(),
+  tone: z.string().max(60).optional(),
 });
 
 export const outreachCampaignSchema = z.object({

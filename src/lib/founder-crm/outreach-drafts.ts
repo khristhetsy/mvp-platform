@@ -9,6 +9,8 @@ export function generateOutreachDraft(input: {
   contact: Pick<FounderInvestorContactRecord, "investor_name" | "firm_name" | "preferred_sectors" | "notes">;
   readinessScore?: number | null;
   founderName?: string | null;
+  /** Tone preset (Warm | Direct | Concise | Formal | Storytelling) or free text. */
+  tone?: string | null;
 }) {
   const companyName = input.company.company_name;
   const investorName = input.contact.investor_name;
@@ -24,23 +26,84 @@ export function generateOutreachDraft(input: {
     ? `Your focus on ${input.contact.preferred_sectors} aligns with ${companyName}.`
     : `We believe ${companyName} may fit your investment focus.`;
   const founder = input.founderName ?? "Founder";
+  const notes = input.contact.notes ? `Notes: ${input.contact.notes}\n\n` : "";
+
+  // Which tone preset drives the intro copy (free text falls back to Warm).
+  const t = (input.tone ?? "").trim().toLowerCase();
+  const toneKey = ["warm", "direct", "concise", "formal", "storytelling"].find((k) => t.includes(k)) ?? "warm";
 
   switch (input.kind) {
-    case "intro":
-      return {
-        subject: `Introduction — ${companyName}`,
-        body: `Hi ${investorName}${firm},
+    case "intro": {
+      const INTRO: Record<string, { subject: string; body: string }> = {
+        warm: {
+          subject: `A quick hello about ${companyName}`,
+          body: `Hi ${investorName}${firm},
 
-I'm ${founder}, founder of ${companyName} (${industry}). We are raising ${raise} and would value a brief introduction to explore fit.
+I'm ${founder} — I founded ${companyName}, working in ${industry}. I've been following investors like you and thought there might be a real fit.
+
+${sectorFit} We're raising ${raise}, and I'd love to share what we're building over a short call.
+
+${notes}${readiness}
+
+Would you be open to a quick intro?
+
+Warmly,
+${founder}`,
+        },
+        direct: {
+          subject: `${companyName} — ${raise} round, quick intro?`,
+          body: `Hi ${investorName},
+
+${founder} here, founder of ${companyName} (${industry}). We're raising ${raise}. ${sectorFit}
+
+${readiness}
+
+Worth a 15-minute call? I can send the deck ahead.
+
+${founder}`,
+        },
+        concise: {
+          subject: `${companyName}`,
+          body: `Hi ${investorName},
+
+${companyName} — ${industry}, raising ${raise}. ${sectorFit} ${readiness}
+
+Open to a quick intro?
+
+${founder}`,
+        },
+        formal: {
+          subject: `Introduction: ${companyName}`,
+          body: `Dear ${investorName}${firm},
+
+My name is ${founder}, founder of ${companyName}, a company operating in ${industry}. We are currently raising ${raise} and are selectively engaging investors whose mandate aligns with our profile.
 
 ${sectorFit}
 ${readiness}
 
-${input.contact.notes ? `Notes: ${input.contact.notes}\n\n` : ""}Happy to share our deck and schedule a short call at your convenience.
+${notes}I would welcome the opportunity to share our materials and arrange a brief introductory call at your convenience.
+
+Kind regards,
+${founder}`,
+        },
+        storytelling: {
+          subject: `Why we built ${companyName}`,
+          body: `Hi ${investorName},
+
+A while back we kept running into the same problem in ${industry} — so we built ${companyName} to solve it. It's grown into something I think you'd find interesting.
+
+${sectorFit} We're now raising ${raise} to take the next step.
+
+${notes}${readiness}
+
+I'd love to tell you the rest over a short call — open to a quick intro?
 
 Best,
 ${founder}`,
+        },
       };
+      return INTRO[toneKey] ?? INTRO.warm;
+    }
     case "follow_up":
       return {
         subject: `Following up — ${companyName}`,
