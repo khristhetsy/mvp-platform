@@ -34,10 +34,18 @@ export type PipelineInvestorDetail = {
   notes: string | null;
 };
 
-export function InvestorDetailClient({ investor }: { investor: PipelineInvestorDetail }) {
+export type InvestorPreference = { label: string; values: string[] };
+
+export function InvestorDetailClient({
+  investor,
+  preferences = [],
+}: {
+  investor: PipelineInvestorDetail;
+  preferences?: InvestorPreference[];
+}) {
   const router = useRouter();
   const [stage, setStage] = useState<PipelineStage>(investor.pipeline_stage ?? "new");
-  const [tab, setTab] = useState<"notes" | "details">("notes");
+  const [tab, setTab] = useState<"notes" | "details" | "preferences">("notes");
   const [notes, setNotes] = useState<InvestorNote[]>([]);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -196,7 +204,7 @@ export function InvestorDetailClient({ investor }: { investor: PipelineInvestorD
 
         {/* Tabs: Notes (timestamped history) + Details */}
         <div className="mt-6 flex gap-6 border-b border-slate-200">
-          {([["notes", "Notes"], ["details", "Details"]] as const).map(([id, label]) => (
+          {([["notes", "Notes"], ["details", "Details"], ["preferences", "Preferences"]] as const).map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -239,7 +247,7 @@ export function InvestorDetailClient({ investor }: { investor: PipelineInvestorD
               ))}
             </div>
           </div>
-        ) : (
+        ) : tab === "details" ? (
           <div className="mt-4 grid gap-x-10 sm:grid-cols-2">
             {row("Investor type", investor.investor_type)}
             {row("Source", investor.source === "platform_match" ? "Matching" : "Manual")}
@@ -247,6 +255,29 @@ export function InvestorDetailClient({ investor }: { investor: PipelineInvestorD
             {row("Geography", investor.location ?? "—")}
             {row("Preferred stages", investor.preferred_stages?.length ? investor.preferred_stages.join(", ") : "—")}
             {row("Meeting", investor.meeting_requested === "none" ? "None" : investor.meeting_requested)}
+          </div>
+        ) : (
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Investor preferences</p>
+            {preferences.length === 0 ? (
+              <p className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-400">
+                No stated preferences on file for this investor.
+              </p>
+            ) : (
+              <div className="mt-3 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+                {preferences.map((p) => (
+                  <div key={p.label}>
+                    <p className="text-xs text-slate-500">{p.label}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {p.values.map((v) => (
+                        <span key={v} className="rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">{v}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-4 text-[11px] text-slate-400">The investor&apos;s stated criteria for companies they back — use them to judge fit. Contact details stay hidden.</p>
           </div>
         )}
       </div>

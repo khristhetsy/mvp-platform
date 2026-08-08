@@ -4,8 +4,10 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
+import { loadInvestorPreferences } from "@/lib/investors/contact-preferences";
 import { InvestorDetailClient, type PipelineInvestorDetail } from "./InvestorDetailClient";
 
 function untyped(client: unknown): SupabaseClient {
@@ -36,6 +38,31 @@ export default async function InvestorDetailPage({
 
   if (!data) notFound();
 
+  // Investor preferences from the CRM contact — resolve an email to look up by
+  // (never displayed): stored contact email → member profile → prospect record.
+  const admin = createServiceRoleClient();
+  const { data: link } = await untyped(admin)
+    .from("pipeline_investors")
+    .select("contact_email, platform_investor_id, name")
+    .eq("id", id)
+    .eq("founder_id", profile.id)
+    .maybeSingle();
+  let email: string | null = (link?.contact_email as string | null) ?? null;
+  if (!email && link?.platform_investor_id) {
+    const { data: p } = await untyped(admin).from("profiles").select("email").eq("id", link.platform_investor_id).maybeSingle();
+    email = (p?.email as string | null) ?? null;
+  }
+  if (!email && link?.name) {
+    const { data: pi } = await untyped(admin)
+      .from("prospect_investors")
+      .select("email")
+      .ilike("name", `${String(link.name).trim()}%`)
+      .limit(1)
+      .maybeSingle();
+    email = (pi?.email as string | null) ?? null;
+  }
+  const preferences = await loadInvestorPreferences(admin, email).catch(() => []);
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -43,7 +70,7 @@ export default async function InvestorDetailPage({
     >
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
-          <InvestorDetailClient investor={data as PipelineInvestorDetail} />
+          <InvestorDetailClient investor={data as PipelineInvestorDetail} preferences={preferences} />
         </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>
