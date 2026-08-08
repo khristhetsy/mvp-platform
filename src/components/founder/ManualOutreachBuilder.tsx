@@ -69,9 +69,24 @@ function Switch({ on, onClick, label }: { on: boolean; onClick: () => void; labe
       aria-checked={on}
       aria-label={label}
       onClick={onClick}
-      className={`relative h-[21px] w-[38px] shrink-0 rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-indigo-300 ${on ? "bg-indigo-600" : "bg-slate-300"}`}
+      className="outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+      style={{
+        position: "relative", flexShrink: 0,
+        width: 40, height: 22, borderRadius: 9999,
+        border: "none", cursor: "pointer", padding: 0,
+        transition: "background-color 0.15s ease",
+        background: on ? "#4f46e5" : "#cbd5e1",
+      }}
     >
-      <span className={`absolute top-0.5 h-[17px] w-[17px] rounded-full bg-white shadow-sm transition-transform ${on ? "translate-x-[19px]" : "translate-x-0.5"}`} />
+      <span
+        style={{
+          position: "absolute", top: 2, left: 2,
+          width: 18, height: 18, borderRadius: "50%",
+          background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+          transition: "transform 0.15s ease",
+          transform: on ? "translateX(18px)" : "translateX(0)",
+        }}
+      />
     </button>
   );
 }
