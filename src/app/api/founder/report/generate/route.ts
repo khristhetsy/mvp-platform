@@ -4,20 +4,17 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { writeAuditLog } from "@/lib/data/audit";
-import {
-  FOUNDER_REPORT_COOLDOWN_MS,
-  generateAndSaveDiligenceReport,
-  msUntilNextAllowedGeneration,
-} from "@/lib/reports/generate-and-save";
+import { generateAndSaveDiligenceReport } from "@/lib/reports/generate-and-save";
 
 /**
  * Founder self-serve diligence report generation.
  *
  * A founder can only ever generate for their OWN company: the company id comes
  * from their membership, never from the request body, so there is nothing to
- * tamper with. Generation calls a paid AI model, so it's capped at one run per
- * company per 24h (DB-backed, survives cold starts) plus a short in-memory
- * burst guard. Staff can still regenerate at will via POST /api/ai/reports.
+ * tamper with. Generation calls a paid AI model, so it's protected by a short
+ * in-memory burst guard (a few runs per hour) — but founders may regenerate
+ * freely within 24h so they can iterate as they improve their materials.
+ * Staff can also regenerate at will via POST /api/ai/reports.
  */
 export async function POST(): Promise<NextResponse> {
   try {
@@ -41,18 +38,8 @@ export async function POST(): Promise<NextResponse> {
 
     const admin = createServiceRoleClient();
 
-    const waitMs = await msUntilNextAllowedGeneration(admin, company.id);
-    if (waitMs > 0) {
-      const hours = Math.ceil(waitMs / (60 * 60 * 1000));
-      return NextResponse.json(
-        {
-          error: `You generated a report recently. You can generate a new one in about ${hours} hour${hours === 1 ? "" : "s"}.`,
-          retryAfterMs: waitMs,
-        },
-        { status: 429, headers: { "Retry-After": String(Math.ceil(waitMs / 1000)) } },
-      );
-    }
-
+    // No 24h cooldown — founders may regenerate within the day (still guarded by
+    // the per-hour burst limit above) so they can iterate on their materials.
     const result = await generateAndSaveDiligenceReport(admin, company.id);
 
     await writeAuditLog(admin, {
@@ -65,7 +52,7 @@ export async function POST(): Promise<NextResponse> {
 
     return NextResponse.json({
       ...result,
-      cooldownMs: FOUNDER_REPORT_COOLDOWN_MS,
+      cooldownMs: 0,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Report generation failed.";

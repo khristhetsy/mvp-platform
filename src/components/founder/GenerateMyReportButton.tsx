@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 /**
  * Founder self-serve: generate the diligence report for your own company.
  * The company is resolved server-side from the founder's membership, so this
- * sends no body. Capped at one generation per company per 24h.
+ * sends no body. Founders may regenerate freely within 24h (guarded only by a
+ * short per-hour burst limit server-side).
  */
 export function GenerateMyReportButton({
   variant = "primary",
