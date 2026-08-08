@@ -12,6 +12,8 @@ import {
   getLatestDiligenceReport,
 } from "@/lib/data/founder-readiness";
 import { listCompanyDocuments } from "@/lib/data/documents";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   ReadinessWizard,
   type WizardDoc,
@@ -37,7 +39,13 @@ export default async function ReadinessWizardPage() {
   const supabase = await createServerSupabaseClient();
 
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
-  const checklist = buildDocumentChecklist(documents);
+  // Documents the founder marked "not applicable" (e.g. a SaaS with no customer
+  // contracts) — excluded from the gap list and the score so they aren't nagged
+  // to upload something that doesn't apply.
+  const notApplicableCodes = company
+    ? await loadNotApplicableTypes(createServiceRoleClient(), company.id).catch(() => [] as string[])
+    : [];
+  const checklist = buildDocumentChecklist(documents, undefined, notApplicableCodes);
   const profileCompletion = buildProfileCompletion(company);
 
   const { data: diligenceReport } = company
@@ -45,7 +53,7 @@ export default async function ReadinessWizardPage() {
     : { data: null };
 
   const uploadedTypeCodes = documents.flatMap((d) => (d.document_type ? [d.document_type] : []));
-  const currentScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
+  const currentScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes, undefined, notApplicableCodes);
   const targetScore = 80;
 
   const missingDocs: WizardDoc[] = checklist

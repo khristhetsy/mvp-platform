@@ -116,10 +116,16 @@ export function missingRequiredDocumentLabels(
 export function computeReadinessScore(
   uploadedTypeCodes: string[],
   requiredLabels: readonly string[] = requiredDocumentTypes,
+  /** Canonical codes the founder marked "not applicable" — excluded so a
+   *  business type that genuinely has no such document isn't penalized. */
+  notApplicableCodes: readonly string[] = [],
 ) {
-  const missingCount = requiredLabels.filter(
-    (label) => !uploadedTypeCodes.includes(documentTypeCode(label)),
-  ).length;
+  const na = new Set(notApplicableCodes.map((c) => c.toUpperCase()));
+  const missingCount = requiredLabels.filter((label) => {
+    const code = documentTypeCode(label);
+    if (na.has(code)) return false; // N/A — neither missing nor required.
+    return !uploadedTypeCodes.includes(code);
+  }).length;
 
   return Math.max(55, 90 - missingCount * 6);
 }

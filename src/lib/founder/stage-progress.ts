@@ -4,8 +4,9 @@
 // roll-up over the measured steps.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company, Database } from "@/lib/supabase/types";
-import { buildProfileCompletion, buildDocumentChecklist, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { buildProfileCompletion, buildDocumentChecklist, getLatestDiligenceReport, computeReadinessScore } from "@/lib/data/founder-readiness";
 import { listCompanyDocuments } from "@/lib/data/documents";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { getBusinessPlan } from "@/lib/business-plan/store";
 import { BUSINESS_PLAN_SECTIONS } from "@/lib/business-plan/sections";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -66,7 +67,8 @@ export async function computeStageProgress(
     ]);
 
     const documents = docsRes.data ?? [];
-    const checklist = buildDocumentChecklist(documents);
+    const notApplicableCodes = await loadNotApplicableTypes(createServiceRoleClient(), company.id).catch(() => [] as string[]);
+    const checklist = buildDocumentChecklist(documents, undefined, notApplicableCodes);
     const applicable = checklist.filter((c) => c.status !== "not_applicable");
     const uploadedCount = applicable.filter((c) => c.status === "uploaded" || c.status === "needs_review").length;
     const docsPercent = applicable.length ? (uploadedCount / applicable.length) * 100 : 0;
@@ -82,14 +84,17 @@ export async function computeStageProgress(
         100
       : 0;
 
-    const hasReport = Boolean((reportRes as { data?: unknown } | null)?.data);
+    const diligenceReport = (reportRes as { data?: { readiness_score?: number | null } | null } | null)?.data ?? null;
+    const hasReport = Boolean(diligenceReport);
 
-    const { data: scoreRow } = await (supabase as unknown as SupabaseClient)
-      .from("company_readiness_scores")
-      .select("total_score")
-      .eq("company_id", company.id)
-      .maybeSingle();
-    const hasScore = (scoreRow as { total_score?: number | null } | null)?.total_score != null;
+    // Capital Readiness Rating step: reflect the founder's actual readiness (the
+    // diligence report's score, or the N/A-aware checklist estimate) as progress
+    // toward the institutional target, instead of a binary total_score check that
+    // this flow never writes. Done once readiness clears the target.
+    const uploadedTypeCodes = documents.flatMap((d) => (d.document_type ? [d.document_type] : []));
+    const readiness = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes, undefined, notApplicableCodes);
+    const READINESS_TARGET = 80;
+    const readinessStep = readiness >= READINESS_TARGET ? step(100) : step(readiness);
 
     if (slug === "onboarding") {
       return rollup({
@@ -98,7 +103,7 @@ export async function computeStageProgress(
       });
     }
     return rollup({
-      "/founder/readiness/wizard": step(hasScore ? 100 : 0),
+      "/founder/readiness/wizard": readinessStep,
       "/founder/business-plan": step(planPercent),
       "/founder/pitch-deck": step(hasDoc("Pitch deck") ? 100 : 0),
       "/founder/readiness/data-room": step(docsPercent),
