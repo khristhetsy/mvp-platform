@@ -60,6 +60,13 @@ const DEFAULT_SEQUENCE: SeqStep[] = [
   { label: "Final — “Closing the loop”", dayOffset: 7 },
 ];
 const MERGE_FIELDS = ["{{first_name}}", "{{company}}", "{{founder_preview}}", "{{sector}}"];
+const TONE_PRESETS = ["Warm", "Direct", "Concise", "Formal", "Storytelling"] as const;
+
+/** Fill the recipient-specific merge field we know for the live preview; leave the
+ *  rest as tokens (they resolve per recipient at send time). */
+function resolvePreview(text: string, firstName: string | null): string {
+  return firstName ? text.replaceAll("{{first_name}}", firstName) : text;
+}
 
 function Switch({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
@@ -112,6 +119,9 @@ export function ManualOutreachBuilder({
   const [autoFollowUps, setAutoFollowUps] = useState(true);
   const [stopOnReply, setStopOnReply] = useState(initial?.stopOnReply ?? true);
   const [sequence] = useState<SeqStep[]>(initial?.sequence?.length ? initial.sequence : DEFAULT_SEQUENCE);
+  const [tone, setTone] = useState("Warm");
+  const [customTone, setCustomTone] = useState("");
+  const [previewStep, setPreviewStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"draft" | "queued">(initial?.status ?? "draft");
   const [message, setMessage] = useState<string | null>(null);
@@ -231,7 +241,7 @@ export function ManualOutreachBuilder({
       const res = await fetch("/api/founder/outreach/drafts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "intro", contactId }),
+        body: JSON.stringify({ kind: "intro", contactId, tone: tone === "Custom" ? customTone.trim() : tone }),
       });
       const data = (await res.json().catch(() => null)) as { draft?: { subject?: string; body?: string }; error?: string } | null;
       if (!res.ok) {
@@ -425,17 +435,41 @@ export function ManualOutreachBuilder({
       <div className="mt-4 rounded-lg border border-indigo-300 bg-indigo-50 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-slate-900">✦ AI outreach kit</span>
-          <input
-            placeholder="Tone — warm, concise…"
-            className="ml-auto w-48 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
-          />
-          <button type="button" onClick={() => void draftEmails()} disabled={drafting} className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
+          <button type="button" onClick={() => void draftEmails()} disabled={drafting} className="ml-auto rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
             {drafting ? "Drafting…" : "Draft emails"}
           </button>
         </div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="mr-0.5 text-xs text-slate-500">Tone:</span>
+          {TONE_PRESETS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTone(t)}
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${tone === t ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300"}`}
+            >
+              {t}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setTone("Custom")}
+            className={`rounded-full border border-dashed px-2.5 py-1 text-xs font-medium transition-colors ${tone === "Custom" ? "border-indigo-600 text-indigo-700" : "border-slate-300 text-slate-500 hover:border-indigo-300"}`}
+          >
+            Custom…
+          </button>
+          {tone === "Custom" && (
+            <input
+              value={customTone}
+              onChange={(e) => setCustomTone(e.target.value)}
+              placeholder="e.g. punchy, founder-to-founder"
+              className="w-52 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+            />
+          )}
+        </div>
         <p className="mt-2 text-xs text-slate-500">
-          Claude drafts your subject, body, and the full follow-up sequence from your company profile. Everything stays
-          editable.
+          Claude drafts your subject, body, and the full follow-up sequence from your company profile in the chosen tone.
+          Everything stays editable.
         </p>
       </div>
 
@@ -723,33 +757,78 @@ export function ManualOutreachBuilder({
 
         {/* Sequence */}
         {tab === 2 ? (
-          <div>
-            <div className="flex items-center justify-between gap-4 py-2.5">
-              <div>
-                <p className="text-sm font-medium text-slate-900">Automatic follow-ups</p>
-                <p className="text-xs text-slate-500">Send the steps below on schedule until they reply.</p>
+          (() => {
+            const firstRecipient = contactList.find((c) => selected.has(c.id)) ?? contactList[0] ?? null;
+            const firstName = firstRecipient?.name ? firstRecipient.name.split(/\s+/)[0] : null;
+            const step = Math.min(previewStep, Math.max(0, activeSteps.length - 1));
+            const stepData = activeSteps[step];
+            const others = Math.max(0, selectedCount - 1);
+            return (
+              <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
+                {/* Left: steps + toggles */}
+                <div>
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Automatic follow-ups</p>
+                      <p className="text-xs text-slate-500">Click a step to preview what it sends.</p>
+                    </div>
+                    <Switch on={autoFollowUps} onClick={() => { setAutoFollowUps((v) => !v); markDirty(); }} label="Automatic follow-ups" />
+                  </div>
+                  <ul className="space-y-1">
+                    {activeSteps.map((s, i) => (
+                      <li key={s.label}>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewStep(i)}
+                          className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${i === step ? "border-indigo-300 bg-indigo-50" : "border-transparent hover:bg-slate-50"}`}
+                        >
+                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ${i === step ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>{i + 1}</span>
+                          <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{s.label}</span>
+                          <span className="shrink-0 text-xs text-slate-500">Day {s.dayOffset}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Stop when the investor replies</p>
+                      <p className="text-xs text-slate-500">No more auto-sends once they respond.</p>
+                    </div>
+                    <Switch on={stopOnReply} onClick={() => { setStopOnReply((v) => !v); markDirty(); }} label="Stop on reply" />
+                  </div>
+                </div>
+
+                {/* Right: live preview of what this step sends */}
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
+                    <span className="text-xs font-medium text-slate-500">Preview · Step {step + 1}{stepData ? ` · sends Day ${stepData.dayOffset}` : ""}</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">{tone === "Custom" ? (customTone.trim() || "Custom") : tone} tone</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-wide text-slate-400">To</p>
+                    <p className="mb-2.5 text-[13px] text-slate-700">
+                      {firstRecipient ? (firstRecipient.name || firstRecipient.email || "Recipient") : "No recipient selected"}
+                      {firstRecipient?.detail ? <span className="text-slate-400"> · {firstRecipient.detail}</span> : null}
+                      {others > 0 ? <span className="text-slate-400"> (and {others} more)</span> : null}
+                    </p>
+                    {step === 0 ? (
+                      <>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-400">Subject</p>
+                        <p className="mb-2.5 text-[13px] font-medium text-slate-900">{resolvePreview(subject, firstName)}</p>
+                        <div className="border-t border-slate-200 pt-2.5 text-[13px] leading-6 text-slate-700 whitespace-pre-wrap">{resolvePreview(emailBody, firstName)}</div>
+                      </>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-[13px] text-slate-600">
+                        <p className="font-medium text-slate-800">{stepData?.label}</p>
+                        <p className="mt-1 text-slate-500">A short follow-up on the initial email above, sent on day {stepData?.dayOffset} if they haven&apos;t replied.</p>
+                      </div>
+                    )}
+                    <p className="mt-3 text-[10.5px] text-slate-400">Merge fields fill per recipient at send time — this is exactly what {firstName ?? "each investor"} receives.</p>
+                  </div>
+                </div>
               </div>
-              <Switch on={autoFollowUps} onClick={() => { setAutoFollowUps((v) => !v); markDirty(); }} label="Automatic follow-ups" />
-            </div>
-            <ul className="divide-y divide-slate-100">
-              {activeSteps.map((s, i) => (
-                <li key={s.label} className="flex items-center gap-3 py-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] text-white">
-                    {i + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{s.label}</span>
-                  <span className="shrink-0 text-xs text-slate-500">Day {s.dayOffset}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-2 flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
-              <div>
-                <p className="text-sm font-medium text-slate-900">Stop when the investor replies</p>
-                <p className="text-xs text-slate-500">No more auto-sends once they respond.</p>
-              </div>
-              <Switch on={stopOnReply} onClick={() => { setStopOnReply((v) => !v); markDirty(); }} label="Stop on reply" />
-            </div>
-          </div>
+            );
+          })()
         ) : null}
 
         {/* Review */}
