@@ -431,6 +431,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/documents", label: "Documents", minStage: "qualify" },
           { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
           { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
+          { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
           { href: "/founder/report", label: "AI diligence report", minStage: "deploy" },
