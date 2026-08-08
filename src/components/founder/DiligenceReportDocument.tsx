@@ -89,18 +89,31 @@ export function DiligenceReportDocument({
 }) {
   const sections = useMemo(() => parseSections(executiveSummary), [executiveSummary]);
 
+  // The source document each section is analyzed from — surfaced in the empty
+  // state so the founder knows exactly what to upload to fill it.
+  const SECTION_SOURCES: Record<string, string> = {
+    "business-overview": "Business Plan",
+    "financial-review": "Financial Statements",
+    "market-review": "Business Plan or Market Research",
+    "legal-compliance-review": "Legal or Corporate Documents",
+    "team-review": "Team Bios",
+  };
+
   const reviews = [
     { id: "business-overview", label: "Business overview", body: businessOverview },
     { id: "financial-review", label: "Financial review", body: financialReview },
     { id: "market-review", label: "Market review", body: marketReview },
     { id: "legal-compliance-review", label: "Legal & compliance review", body: legalReview },
     { id: "team-review", label: "Team review", body: teamReview },
-  ].map((r) => ({ ...r, body: r.body && r.body.trim().length > 0 ? r.body.trim() : "Not provided." }));
+  ].map((r) => {
+    const text = r.body && r.body.trim().length > 0 && r.body.trim() !== "Not provided." ? r.body.trim() : null;
+    return { ...r, text, provided: Boolean(text), source: SECTION_SOURCES[r.id] };
+  });
 
-  const toc: { id: string; label: string }[] = [
+  const toc: { id: string; label: string; provided?: boolean }[] = [
     { id: "important-notice", label: "Important notice" },
     ...sections.map((s) => ({ id: s.id, label: s.heading })),
-    ...reviews.map((r) => ({ id: r.id, label: r.label })),
+    ...reviews.map((r) => ({ id: r.id, label: r.label, provided: r.provided })),
     { id: "risk-flags", label: "Risk flags" },
     ...(missingDocuments.length ? [{ id: "missing-documents", label: "Missing documents" }] : []),
     ...(recommendations.length ? [{ id: "next-steps", label: "Next steps" }] : []),
@@ -116,9 +129,14 @@ export function DiligenceReportDocument({
             <button
               key={item.id}
               onClick={() => scrollTo(item.id)}
-              className="block w-full rounded-md px-2 py-1.5 text-left text-[13px] text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             >
-              {item.label}
+              <span className="min-w-0 truncate">{item.label}</span>
+              {item.provided === true ? (
+                <span className="flex-none text-emerald-600" title="Analyzed" aria-label="Analyzed">✓</span>
+              ) : item.provided === false ? (
+                <span className="flex-none text-slate-300" title="Pending" aria-label="Pending">○</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -147,9 +165,18 @@ export function DiligenceReportDocument({
         {reviews.map((r) => (
           <div key={r.id} id={r.id} className="scroll-mt-4">
             <p className="mb-2 mt-7 font-mono text-[10px] uppercase tracking-[0.09em] text-[#2E78F5]">{r.label}</p>
-            {bodyParts(r.body).map((p, i) => (
-              <p key={i} className={`mt-1.5 text-sm leading-6 ${r.body === "Not provided." ? "italic text-slate-400" : "text-slate-700"}`}>{p}</p>
-            ))}
+            {r.provided ? (
+              bodyParts(r.text!).map((p, i) => (
+                <p key={i} className="mt-1.5 text-sm leading-6 text-slate-700">{p}</p>
+              ))
+            ) : (
+              <div className="mt-1.5 flex items-center gap-2.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5">
+                <span aria-hidden="true" className="text-slate-400">📄</span>
+                <span className="text-[13px] text-slate-500">
+                  Not yet analyzed — add a <b className="font-medium text-slate-700">{r.source}</b> to populate this section.
+                </span>
+              </div>
+            )}
           </div>
         ))}
 
