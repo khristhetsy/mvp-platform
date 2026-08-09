@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { buildFounderInvestorCrmView } from "@/lib/data/investor-crm";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
@@ -117,7 +117,7 @@ function buildDeployInsights(input: {
 export default async function FounderDeployPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;

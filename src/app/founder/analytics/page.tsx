@@ -5,7 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadFounderAnalytics } from "@/lib/analytics/founder-analytics";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { AnalyticsCardsClient } from "@/components/founder/AnalyticsCardsClient";
 import { AnalyticsChartPanelsClient } from "@/components/founder/AnalyticsChartPanelsClient";
@@ -22,8 +22,9 @@ function formatStatusCounts(counts: Record<string, number>) {
 export default async function FounderAnalyticsPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
-  const analytics = await loadFounderAnalytics(profile);
+  const { company } = await getActiveCompanyForUser(profile);
+  // Profile-scoped analytics belong to the founder raise; a Deal Company shows none.
+  const analytics = company ? await loadFounderAnalytics(profile) : null;
 
   // Determine if the founder has generated any meaningful activity yet
   const hasActivity = analytics
