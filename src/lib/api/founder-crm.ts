@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import type { Company, Database, Profile } from "@/lib/supabase/types";
 
 export type FounderInvestorCrmApiContext = {
@@ -37,7 +37,9 @@ export async function requireFounderInvestorCrmApi(): Promise<FounderInvestorCrm
     };
   }
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  // Scope the CRM to the ACTIVE account. A Deal Company has no founder company,
+  // so its CRM reads empty and writes are refused here (as they are pre-onboarding).
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) {
     return {
       error: NextResponse.json({ error: "Company profile required." }, { status: 400 }),

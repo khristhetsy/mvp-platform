@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
@@ -23,14 +23,18 @@ export async function POST(request: Request) {
   const note = body?.note?.trim();
   if (!ref) return NextResponse.json({ error: "ref is required." }, { status: 400 });
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company, org } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 400 });
 
   const admin = createServiceRoleClient();
   const founderId = auth.profile.id;
 
   // API-layer guard (spec §3a): demo / email-disabled accounts cannot dispatch.
-  if (!(await emailDispatchAllowedForUser(admin, founderId))) {
+  // Tightened to the ACTIVE org — the account in view decides, not any account.
+  const emailBlocked = org
+    ? !org.email_dispatch_enabled
+    : !(await emailDispatchAllowedForUser(admin, founderId));
+  if (emailBlocked) {
     return NextResponse.json({ error: EMAIL_DISABLED_MESSAGE, code: "email_disabled" }, { status: 403 });
   }
 
@@ -79,6 +83,7 @@ export async function POST(request: Request) {
     if (await overCap()) return capError();
     const { error } = await admin.from("intro_requests").insert({
       company_id: company.id,
+      org_id: org?.id ?? null,
       investor_id: ref,
       message: note || "Founder requested an introduction via the Matching Center.",
     } as never);
