@@ -1,22 +1,27 @@
 import { cookies } from "next/headers";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isOrgMember, listMyOrganizations } from "@/lib/organizations/organizations";
 
 /**
- * Resolve the user's ACTIVE org for query scoping (app layer). RLS can't read a
- * cookie, so `is_member(org_id)` alone would show data across ALL a user's orgs;
- * scoping to the one they switched to happens HERE — reads add `.eq("org_id",
- * activeOrgId)`. Reads the validated active-org cookie, re-checks membership
- * (never trusts the cookie), and falls back to the user's first org.
+ * Resolve the user's ACTIVE org id for query scoping (app layer). RLS can't read a
+ * cookie, so scoping to the account the user switched to happens HERE.
  *
- * SAFE / INERT until callers start filtering by the returned id — adding this
- * helper changes no behavior on its own.
+ * Uses the SERVICE-ROLE client for the membership/org lookups: we already have a
+ * trusted, authenticated `userId`, and we only ever read that user's own rows.
+ * Going through the RLS-bound client here was a bug — if RLS hid the user's
+ * memberships the cookie check failed and we fell back to the wrong (first) org,
+ * leaking one account's data into another.
+ *
+ * The `_supabase` param is kept for call-site compatibility but intentionally
+ * unused — resolution must not depend on the caller's RLS context.
  */
-export async function getActiveOrgId(supabase: unknown, userId: string): Promise<string | null> {
+export async function getActiveOrgId(_supabase: unknown, userId: string): Promise<string | null> {
+  const admin = createServiceRoleClient();
   const jar = await cookies();
   const cookieOrg = jar.get("active_org")?.value ?? null;
-  if (cookieOrg && (await isOrgMember(supabase, userId, cookieOrg))) {
+  if (cookieOrg && (await isOrgMember(admin, userId, cookieOrg))) {
     return cookieOrg;
   }
-  const orgs = await listMyOrganizations(supabase, userId);
+  const orgs = await listMyOrganizations(admin, userId);
   return orgs[0]?.id ?? null;
 }
