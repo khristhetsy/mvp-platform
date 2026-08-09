@@ -17,6 +17,7 @@ export const INTERNAL_PERMISSIONS = [
   // Finance & compliance
   "manage_learning",
   "manage_billing",
+  "manage_accounts",
   "manage_diligence",
   "manage_compliance",
   "view_audit_logs",
@@ -54,6 +55,7 @@ export const INTERNAL_PERMISSION_LABELS: Record<InternalPermission, string> = {
   manage_matching: "Manage Matching",
   manage_learning: "Manage Learning",
   manage_billing: "Manage Billing",
+  manage_accounts: "Manage Accounts (multi-account / Deal Company)",
   manage_diligence: "Manage Diligence",
   manage_compliance: "Manage Compliance",
   view_audit_logs: "View Audit Logs",
