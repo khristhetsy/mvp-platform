@@ -11,7 +11,7 @@ import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -43,7 +43,7 @@ const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[]
 export default async function DocumentUploadPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const {
     data: { user: authUser },

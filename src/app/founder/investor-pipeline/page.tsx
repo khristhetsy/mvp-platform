@@ -3,7 +3,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -19,17 +19,22 @@ export const dynamic = "force-dynamic";
 export default async function InvestorPipelinePage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company, org } = await getActiveCompanyForUser(profile);
 
-  // Pre-load investors server-side (safe columns only — no contact_email/phone)
+  // Pre-load investors server-side (safe columns only — no contact_email/phone).
+  // Scope to the ACTIVE account: filter by org_id when the org model applies, so
+  // a Deal Company shows no pipeline; fall back to founder_id pre-backfill. RLS
+  // still restricts to the user's own rows either way.
   const supabase = await createServerSupabaseClient();
-  const { data: initialInvestors } = await untyped(supabase)
+  const pipelineQuery = untyped(supabase)
     .from("pipeline_investors")
     .select(
       "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,pipeline_stage,source,platform_investor_id,last_contact_date,next_follow_up_date,preferred_stages,focus_sectors,notes,created_at,updated_at"
     )
-    .eq("founder_id", profile.id)
     .order("created_at", { ascending: false });
+  const { data: initialInvestors } = await (org
+    ? pipelineQuery.eq("org_id", org.id)
+    : pipelineQuery.eq("founder_id", profile.id));
 
   return (
     <FounderAppShell
