@@ -26,6 +26,7 @@ export function AppShell({
   profileSubtitle,
   profileEmail,
   planBadge,
+  accountSwitcher,
 }: Readonly<{
   children: React.ReactNode;
   role?: Role;
@@ -34,6 +35,7 @@ export function AppShell({
   profileSubtitle?: string;
   profileEmail?: string;
   planBadge?: React.ReactNode;
+  accountSwitcher?: React.ReactNode;
 }>) {
   const insideAppShell = useContext(AppShellContext);
   const pathname = usePathname();
@@ -54,6 +56,7 @@ export function AppShell({
           profileSubtitle={profileSubtitle}
           profileEmail={profileEmail}
           planBadge={planBadge}
+          accountSwitcher={accountSwitcher}
         >
           {children}
         </WorkspaceShell>

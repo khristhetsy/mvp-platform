@@ -32,6 +32,7 @@ type Props = {
   profileName: string;
   profileSubtitle?: string;
   profileEmail?: string;
+  accountSwitcher?: React.ReactNode;
   onMenuClick?: () => void;
 };
 
@@ -289,7 +290,7 @@ function ProfileDropdown({
   );
 }
 
-export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, onMenuClick }: Readonly<Props>) {
+export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick }: Readonly<Props>) {
   const t = useTranslations("sharedCmp");
   const companyLabel = profileSubtitle?.trim() || "Select company";
 
@@ -328,15 +329,19 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             <span className="hidden lg:inline">{t("search")}</span>
             <kbd className="hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 lg:inline">⌘K</kbd>
           </button>
-          <button
-            type="button"
-            aria-label={`Current company: ${companyLabel}`}
-            aria-disabled="true"
-            className="hidden max-w-[200px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-slate-950 md:flex lg:max-w-xs"
-          >
-            <span className="truncate">{companyLabel}</span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
-          </button>
+          {accountSwitcher ? (
+            <div className="hidden md:block">{accountSwitcher}</div>
+          ) : (
+            <button
+              type="button"
+              aria-label={`Current company: ${companyLabel}`}
+              aria-disabled="true"
+              className="hidden max-w-[200px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-slate-950 md:flex lg:max-w-xs"
+            >
+              <span className="truncate">{companyLabel}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
+            </button>
+          )}
           <NotificationBellDropdown />
           <ProfileDropdown
             profileName={profileName}

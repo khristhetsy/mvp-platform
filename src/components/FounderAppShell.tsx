@@ -6,6 +6,7 @@ import { maybeNotifyTrialStatus } from "@/lib/notifications/trial-alerts";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { OfferingTypePrompt } from "@/components/founder/OfferingTypePrompt";
+import { AccountSwitcherServer } from "@/components/account/AccountSwitcherServer";
 
 type FounderAppShellProps = Readonly<{
   children: React.ReactNode;
@@ -52,6 +53,7 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       profileSubtitle={profileSubtitle}
       profileEmail={profile?.email ?? undefined}
       planBadge={planBadge}
+      accountSwitcher={<AccountSwitcherServer />}
     >
       {needsClassification ? <OfferingTypePrompt needsClassification /> : null}
       {children}
