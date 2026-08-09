@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireApiProfile } from "@/lib/api/auth";
+import { requirePermissionApi } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ function loose(client: unknown): SupabaseClient {
 // email-dispatch-disabled org of either type directly, no Stripe/checkout.
 // For demo + internal use only — real founders always go through signup.
 export async function POST(request: Request) {
-  const auth = await requireApiProfile(["admin", "analyst"]);
+  const auth = await requirePermissionApi("manage_accounts");
   if ("error" in auth) return auth.error;
 
   const body = (await request.json().catch(() => null)) as
