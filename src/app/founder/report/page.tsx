@@ -3,7 +3,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { track } from "@/lib/analytics/posthog";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listRecentDiligenceReports } from "@/lib/data/founder-readiness";
 import { ReportExportButtons } from "@/components/founder/ReportExportButtons";
 import { GenerateMyReportButton } from "@/components/founder/GenerateMyReportButton";
@@ -26,7 +26,7 @@ function splitLines(value: string | null | undefined) {
 export default async function DiligenceReportPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const { data: recentReports } = company
     ? await listRecentDiligenceReports(supabase, company.id, 2)

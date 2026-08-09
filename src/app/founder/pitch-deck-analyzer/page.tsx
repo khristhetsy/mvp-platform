@@ -3,7 +3,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function PitchDeckAnalyzerPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
   const flags = await loadFeatureFlags(supabase);

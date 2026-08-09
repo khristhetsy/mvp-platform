@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
+import { getActiveOrgId } from "@/lib/organizations/active-org";
 
 // pipeline_investors is not yet in generated Supabase types — use untyped client.
 function untyped(client: unknown): SupabaseClient {
@@ -16,11 +17,16 @@ export async function GET() {
   if ("error" in auth) return auth.error;
   const { supabase, profile } = auth;
 
-  const { data, error } = await untyped(supabase)
+  // Scope to the ACTIVE account (org_id) so a Deal Company shows its own pipeline;
+  // fall back to founder_id pre-backfill. RLS still restricts to the user's rows.
+  const orgId = await getActiveOrgId(supabase, profile.id);
+  const listQuery = untyped(supabase)
     .from("pipeline_investors")
     .select(SAFE_COLUMNS)
-    .eq("founder_id", profile.id)
     .order("created_at", { ascending: false });
+  const { data, error } = await (orgId
+    ? listQuery.eq("org_id", orgId)
+    : listQuery.eq("founder_id", profile.id));
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ investors: data ?? [] });
@@ -60,10 +66,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Investor name is required." }, { status: 400 });
   }
 
+  // Stamp the ACTIVE account so a new investor belongs to the account in view.
+  const orgId = await getActiveOrgId(supabase, profile.id);
+
   const { data, error } = await untyped(supabase)
     .from("pipeline_investors")
     .insert({
       founder_id: profile.id,
+      org_id: orgId,
       name: String(name).trim(),
       location: location ?? null,
       investor_type: investor_type ?? "Venture Capital",
