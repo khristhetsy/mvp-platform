@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { requirePermissionPage } from "@/lib/api/permissions";
+import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listAllOrganizations } from "@/lib/organizations/organizations";
 import { AdminAccountsClient } from "@/components/admin/AdminAccountsClient";
@@ -9,7 +9,7 @@ import { AdminAccountsClient } from "@/components/admin/AdminAccountsClient";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAccountsPage() {
-  const { profile } = await requirePermissionPage("manage_accounts");
+  const profile = await requireRole(["admin", "analyst"]);
   const orgs = await listAllOrganizations(createServiceRoleClient()).catch(() => []);
 
   return (
