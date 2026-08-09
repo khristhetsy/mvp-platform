@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { OUTREACH_THRESHOLD, computeInvestableCrr } from "@/lib/crr/investable-score";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -179,7 +179,32 @@ type StageCounts = {
 export default async function FounderJourneyPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
+
+  // A Deal Company has no fundraising journey — the journey engine is keyed to the
+  // founder profile, so render a clear empty state instead of leaking another
+  // account's stage timeline or CRR.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("founder_journey")}
+          title={t("your_icapos_journey")}
+          description={t("track_your_progress_through_each_stage_from_pr")}
+        />
+        <div className="rounded-2xl border border-[#E3E8F2] bg-white p-8 text-center">
+          <p className="text-sm text-[#5A6782]">
+            This account doesn&apos;t have a fundraising journey. Switch to a Founder
+            account to track your raise progress.
+          </p>
+        </div>
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const state = await evaluateFounderJourney(supabase, profile.id);
 

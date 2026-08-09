@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import {
   QUALIFY_REQUIRED_DOCUMENTS,
@@ -53,7 +53,31 @@ function UploadIcon() {
 export default async function FounderQualifyPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
+
+  // A Deal Company has no qualification journey — the engine is keyed to the
+  // founder profile, so show an empty state rather than another account's status.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("stage_2_qualify")}
+          title={t("prove_you_re_investor_ready")}
+          description={t("upload_your_due_diligence_materials_and_reach")}
+        />
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+          <p className="text-sm text-slate-600">
+            This account doesn&apos;t have a qualification journey. Switch to a
+            Founder account to prepare your raise.
+          </p>
+        </div>
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const state = await evaluateFounderJourney(supabase, profile.id);
 
