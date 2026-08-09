@@ -146,10 +146,32 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
       aria-checked={on}
       aria-label={label}
       onClick={onClick}
-      className={`relative h-[22px] w-10 shrink-0 rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-indigo-300 ${on ? "bg-indigo-600" : "bg-slate-300"}`}
+      style={{
+        position: "relative",
+        height: 22,
+        width: 40,
+        flexShrink: 0,
+        padding: 0,
+        border: "none",
+        borderRadius: 9999,
+        cursor: "pointer",
+        transition: "background-color 150ms",
+        backgroundColor: on ? "#4f46e5" : "#cbd5e1",
+      }}
     >
       <span
-        className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform ${on ? "translate-x-[20px]" : "translate-x-0.5"}`}
+        style={{
+          position: "absolute",
+          top: 2,
+          left: 2,
+          height: 18,
+          width: 18,
+          borderRadius: 9999,
+          backgroundColor: "#ffffff",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+          transition: "transform 150ms",
+          transform: on ? "translateX(18px)" : "translateX(0)",
+        }}
       />
     </button>
   );
