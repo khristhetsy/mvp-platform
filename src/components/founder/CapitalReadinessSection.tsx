@@ -7,13 +7,6 @@ import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
 type DrawerKey = "investable" | "raise" | "interest" | "activity";
 
-interface InvestableFactor {
-  name: string;
-  points: number;
-  max: number;
-  rating: string;
-}
-
 function investableBand(score: number): string {
   if (score >= 70) return "Investment ready";
   if (score >= 45) return "Developing";
@@ -216,8 +209,8 @@ const DOC_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 export function CapitalReadinessSection({
   investableScore = null,
-  investableFactors = null,
   crrSubtitle,
+  crrParts,
   outreachReady,
   outreachThreshold = 70,
   raiseProgress,
@@ -231,9 +224,11 @@ export function CapitalReadinessSection({
   readinessScore: number;
   readinessDetail: string;
   investableScore?: number | null;
-  investableFactors?: InvestableFactor[] | null;
   /** Sub-line under the CRR number (e.g. "Readiness 78 · Profile 100%"). */
   crrSubtitle?: string;
+  /** The CRR's own components, shown in the drawer breakdown (replaces the
+   *  old 13-factor model — the CRR is now the only score surfaced). */
+  crrParts?: { readiness: number; profilePercent: number; onboardingComplete: boolean; docsUploaded: boolean };
   /** Whether the CRR clears the outreach threshold (drives the status pill). */
   outreachReady?: boolean;
   outreachThreshold?: number;
@@ -266,36 +261,35 @@ export function CapitalReadinessSection({
   const drawerConfig = {
     investable: {
       title: "Capital Readiness Rating (CRR)",
-      sub: "Your single fundability score — iCapOS 13-factor model",
+      sub: "Your single readiness score — gates automated outreach",
       stats: [
         { label: "CRR", value: `${investableScore ?? 0}/100` },
         { label: "Band", value: investableBand(investableScore ?? 0) },
-        { label: "Data room", value: `${uploadedCount}/${REQUIRED_DOC_TYPES.length}` },
+        { label: "Outreach", value: (outreachReady ?? false) ? "Unlocked" : "Locked" },
       ],
       breakdown: (
         <div>
-          {(investableFactors ?? []).length === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No factor breakdown available yet.</p>
+          {crrParts ? (
+            <>
+              <BRow name="Readiness (60%)" status={`${crrParts.readiness}/100`} variant={factorVariant(crrParts.readiness, 100)} />
+              <BRow name="Profile completeness (30%)" status={`${crrParts.profilePercent}%`} variant={factorVariant(crrParts.profilePercent, 100)} />
+              <BRow name="Onboarding complete" status={crrParts.onboardingComplete ? "+5" : "0"} variant={crrParts.onboardingComplete ? "success" : "high"} />
+              <BRow name="Required documents uploaded" status={crrParts.docsUploaded ? "+5" : "0"} variant={crrParts.docsUploaded ? "success" : "high"} />
+            </>
           ) : (
-            (investableFactors ?? []).map((f) => (
-              <BRow key={f.name} name={f.name} status={`${f.points}/${f.max}`} variant={factorVariant(f.points, f.max)} />
-            ))
+            <p className="py-2 text-xs text-slate-500">No breakdown available yet.</p>
           )}
         </div>
       ),
-      meaning: `Your Capital Readiness Rating of ${investableScore ?? 0} is your single fundability score, weighing 13 factors — team, traction, market, unit economics, governance and more. Your data room (${uploadedCount}/${REQUIRED_DOC_TYPES.length} documents) is one input, not a separate score. ${(investableScore ?? 0) >= 70 ? "You're in a strong band for investor conversations." : (investableScore ?? 0) >= 45 ? "You're developing — closing the weakest factors below will move you toward the investable range." : "You're early — focus on the lowest-scoring factors first."}`,
+      meaning: `Your Capital Readiness Rating of ${investableScore ?? 0} is your single readiness score. It combines your readiness signal (60%), profile completeness (30%), and onboarding and document milestones. At ${outreachThreshold} or above, automated investor outreach unlocks. ${(investableScore ?? 0) >= outreachThreshold ? "You've cleared the threshold — matched investors can be reached." : `You're ${Math.max(0, outreachThreshold - (investableScore ?? 0))} point(s) away — raise your lowest component below to qualify.`}`,
       advice: (() => {
-        const weakest = [...(investableFactors ?? [])]
-          .filter((f) => f.max > 0)
-          .sort((a, b) => a.points / a.max - b.points / b.max)
-          .slice(0, 3);
-        if (weakest.length === 0) {
-          return ["Generate your CRR to see targeted guidance on which factors to strengthen first."];
-        }
-        return weakest.map(
-          (f) =>
-            `${f.name} is scoring ${f.points}/${f.max}. This is one of your lowest factors — improving it has the highest marginal impact on your CRR.`,
-        );
+        if (!crrParts) return ["Complete onboarding and your company profile to generate your CRR."];
+        const tips: string[] = [];
+        if (crrParts.readiness < 75) tips.push(`Your readiness signal is ${crrParts.readiness}/100 and carries the most weight (60%). Strengthen your data room and readiness materials to lift it.`);
+        if (crrParts.profilePercent < 100) tips.push(`Your company profile is ${crrParts.profilePercent}% complete (30% of CRR). Finish the remaining fields for an easy gain.`);
+        if (!crrParts.onboardingComplete) tips.push("Complete onboarding for a +5 CRR bonus.");
+        if (!crrParts.docsUploaded) tips.push("Upload the required diligence documents for a +5 CRR bonus.");
+        return tips.length ? tips.slice(0, 3) : ["Your CRR components are all strong — keep your materials current before investor conversations."];
       })(),
     },
     raise: {

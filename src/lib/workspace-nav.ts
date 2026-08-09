@@ -220,6 +220,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings"      },
       { href: "/admin/crm/connectors",    label: "Contact Sync",     requiredPermission: "manage_crm"          },
       { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
+      { href: "/admin/accounts",          label: "Accounts",         requiredPermission: "manage_billing"      },
       { href: "/admin/profile",           label: "My Profile",       requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/integrations",
