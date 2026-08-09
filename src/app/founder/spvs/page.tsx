@@ -9,7 +9,7 @@ import { listFounderChecklistSummary } from "@/lib/spv/checklist";
 import { listFounderClosingSummaries } from "@/lib/spv/closing-reviews";
 import { listFounderPackageSummaries } from "@/lib/spv/document-packages";
 import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
@@ -34,7 +34,7 @@ export default async function FounderSpvsPage() {
   > = {};
 
   try {
-    company = await ensureFounderCompanyForUser(profile);
+    company = (await getActiveCompanyForUser(profile)).company;
   } catch (error) {
     companyError = formatError(error);
   }

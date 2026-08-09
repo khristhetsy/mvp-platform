@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
@@ -32,7 +32,7 @@ type RawInvestor = {
 export default async function CommandCenterPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
 

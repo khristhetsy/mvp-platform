@@ -9,7 +9,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildFounderInvestorCrmView } from "@/lib/data/investor-crm";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function FounderInvestorsPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
 

@@ -5,7 +5,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMilestones, type MilestoneCategory, type MilestoneResult } from "@/lib/data/founder-milestones";
 
 export const dynamic = "force-dynamic";
@@ -265,7 +265,7 @@ export default async function FounderMilestonesPage() {
   const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   const categories = await loadFounderMilestones(supabase, serviceSupabase, company, profile.id);
 

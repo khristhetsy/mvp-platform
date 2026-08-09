@@ -5,7 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadInvestorPreferences } from "@/lib/investors/contact-preferences";
 import { InvestorDetailClient, type PipelineInvestorDetail } from "./InvestorDetailClient";
@@ -23,7 +23,7 @@ export default async function InvestorDetailPage({
 }) {
   const profile = await requireRole(["founder"]);
   const { id } = await params;
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
   // Safe columns only — never contact_email / contact_phone.

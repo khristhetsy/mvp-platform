@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
@@ -69,7 +69,7 @@ export default async function FounderPreviewPage({
   const isEmbed = (await searchParams).embed === "1";
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) notFound();
 
   const admin = createServiceRoleClient();

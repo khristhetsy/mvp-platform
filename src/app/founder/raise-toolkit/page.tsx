@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +152,7 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
 export default async function RaiseToolkitPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   return (
     <FounderAppShell

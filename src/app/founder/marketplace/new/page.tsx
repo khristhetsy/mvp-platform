@@ -4,7 +4,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ListingForm } from "./listing-form";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderNewListingPage() {
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   let offeringType: string | null = null;
   if (company) {

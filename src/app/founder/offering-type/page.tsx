@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ProgressSteps } from "@/components/onboarding/ProgressSteps";
 import { DisclosureBanner } from "@/components/onboarding/DisclosureBanner";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderOfferingTypePage() {
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) redirect("/founder/onboarding");
 
   // Pre-select the saved value only if the founder previously attested (returning

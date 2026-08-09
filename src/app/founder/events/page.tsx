@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
 import type { EventRecord } from "@/lib/icfo-events/types";
 
@@ -32,7 +32,7 @@ export default async function FounderEventsPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   let events: EventRecord[] = [];
   try {
