@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { generateOutreachDraft } from "@/lib/founder-crm/outreach-drafts";
+import { generateOutreachDraftAI } from "@/lib/founder-crm/outreach-drafts";
 import { evaluateFounderOutreachReadiness } from "@/lib/founder-crm/outreach-readiness";
 import { notifyFounderOutreachBlocked } from "@/lib/notifications/founder-outreach-events";
 import { outreachDraftSchema } from "@/lib/validation";
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Contact not found." }, { status: 404 });
   }
 
-  const draft = generateOutreachDraft({
+  const draft = await generateOutreachDraftAI({
     kind: parsed.data.kind,
     company: auth.company,
     contact,

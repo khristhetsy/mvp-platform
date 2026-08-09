@@ -1,7 +1,82 @@
 import type { FounderInvestorContactRecord } from "@/lib/founder-crm/types";
 import type { Company } from "@/lib/supabase/types";
+import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
 
 export type OutreachDraftKind = "intro" | "follow_up" | "meeting_request" | "investor_update";
+
+type OutreachDraftInput = {
+  kind: OutreachDraftKind;
+  company: Company;
+  contact: Pick<FounderInvestorContactRecord, "investor_name" | "firm_name" | "preferred_sectors" | "notes">;
+  readinessScore?: number | null;
+  founderName?: string | null;
+  tone?: string | null;
+};
+
+function stripFences(s: string): string {
+  return s.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+}
+
+/**
+ * AI-written outreach draft — Claude writes bespoke copy for this investor in the
+ * requested tone. Falls back to the deterministic template (generateOutreachDraft)
+ * when Claude isn't configured or the response can't be parsed, so callers always
+ * get a usable draft.
+ */
+export async function generateOutreachDraftAI(input: OutreachDraftInput): Promise<{ subject: string; body: string }> {
+  const template = generateOutreachDraft(input);
+  if (!isClaudeConfigured()) return template;
+
+  const c = input.company as Company & { business_description?: string | null; use_of_funds?: string | null };
+  const tone = (input.tone ?? "").trim() || "Warm";
+  const kindLabel: Record<OutreachDraftKind, string> = {
+    intro: "a first cold-outreach introduction",
+    follow_up: "a short follow-up to a prior message",
+    meeting_request: "a request to schedule a short call",
+    investor_update: "a brief progress update",
+  };
+
+  const system = [
+    "You are a startup founder writing a short outreach email to an investor.",
+    `This email is ${kindLabel[input.kind]}. Write it in a ${tone} tone.`,
+    "Keep it under ~130 words, specific to this investor and company, and free of clichés, hype, or filler.",
+    "Do NOT invent facts, metrics, traction, or names not given in the input. Never promise returns or guarantee funding.",
+    'Return ONLY valid JSON (no markdown): { "subject": string, "body": string }. The body may use \\n for line breaks and should end with a sign-off using the founder\'s name.',
+  ].join(" ");
+
+  const context = {
+    tone,
+    founderName: input.founderName ?? "the founder",
+    company: {
+      name: c.company_name,
+      industry: c.industry ?? null,
+      description: c.business_description ?? null,
+      raiseAmount: c.funding_amount ?? null,
+      useOfFunds: c.use_of_funds ?? null,
+      capitalReadinessRating: input.readinessScore ?? null,
+    },
+    investor: {
+      name: input.contact.investor_name,
+      firm: input.contact.firm_name ?? null,
+      focusSectors: input.contact.preferred_sectors ?? null,
+    },
+    founderNotesOnInvestor: input.contact.notes ?? null,
+  };
+
+  try {
+    const raw = await claudeComplete(
+      [{ role: "user", content: JSON.stringify(context) }],
+      { model: CLAUDE_SONNET, maxTokens: 500, system },
+    );
+    const parsed = JSON.parse(stripFences(raw)) as { subject?: string; body?: string };
+    if (parsed?.subject?.trim() && parsed?.body?.trim()) {
+      return { subject: parsed.subject.trim(), body: parsed.body.trim() };
+    }
+  } catch {
+    // fall through to the template
+  }
+  return template;
+}
 
 export function generateOutreachDraft(input: {
   kind: OutreachDraftKind;
