@@ -2,7 +2,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getFounderMatchQueue, countViewersForFounder } from "@/lib/matching/queue";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
@@ -17,11 +17,13 @@ function titleCase(s: string): string {
 
 export default async function FounderMatchesPage() {
   const profile = await requireRole(["founder"]);
-  const [{ items, companyIds }, company] = await Promise.all([
-    getFounderMatchQueue(profile.id),
-    ensureFounderCompanyForUser(profile),
-  ]);
-  const viewers = await countViewersForFounder(companyIds);
+  // Matching is a founder-raise surface; a Deal Company (null company) shows none
+  // of it — including the profile-scoped inbound queue and viewer count.
+  const { company } = await getActiveCompanyForUser(profile);
+  const queue = company ? await getFounderMatchQueue(profile.id) : null;
+  const items = queue?.items ?? [];
+  const companyIds = queue?.companyIds ?? [];
+  const viewers = company ? await countViewersForFounder(companyIds) : 0;
   const data = company ? await loadFounderMatchingCenter(company) : { cards: [], total: 0, strong: 0 };
 
   const cards: MatchCenterCard[] = data.cards.map((c) => {

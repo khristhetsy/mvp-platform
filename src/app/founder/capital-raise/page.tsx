@@ -8,7 +8,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderInvestorPipelineKanban } from "@/components/FounderInvestorPipelineKanban";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
@@ -34,7 +34,7 @@ export default async function FounderCapitalRaisePage() {
   let investorActivity: Awaited<ReturnType<typeof listFounderInvestorActivity>> | null = null;
 
   try {
-    company = await ensureFounderCompanyForUser(profile);
+    company = (await getActiveCompanyForUser(profile)).company;
   } catch (error) {
     companyError = formatError(error);
   }

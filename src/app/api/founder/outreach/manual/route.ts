@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 import {
@@ -19,7 +19,7 @@ export async function GET() {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ campaign: null, recipients: [] });
 
   const [campaign, recipients] = await Promise.all([
@@ -61,12 +61,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add at least one investor before starting." }, { status: 400 });
   }
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company, org } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
   // API-layer guard (spec §3a): starting a sequence queues live email dispatch,
   // so a demo / email-disabled account is refused here — saving a draft is fine.
-  if (body.action === "start" && !(await emailDispatchAllowedForUser(createServiceRoleClient(), auth.profile.id))) {
+  // Tightened to the ACTIVE org: if the account in view has email disabled it's
+  // blocked even when another of the user's accounts allows dispatch. Falls back
+  // to the any-org check only when there's no org model for this user yet.
+  const emailBlocked = org
+    ? !org.email_dispatch_enabled
+    : !(await emailDispatchAllowedForUser(createServiceRoleClient(), auth.profile.id));
+  if (body.action === "start" && emailBlocked) {
     return NextResponse.json({ error: EMAIL_DISABLED_MESSAGE, code: "email_disabled" }, { status: 403 });
   }
 

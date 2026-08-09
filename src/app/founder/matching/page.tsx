@@ -2,7 +2,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
 
@@ -15,7 +15,7 @@ function titleCase(s: string): string {
 
 export default async function FounderMatchingPage() {
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   // Only surface investor matches once the company is admin-approved or published.
   const eligible = Boolean(company && (company.review_status === "approved" || company.is_published));
