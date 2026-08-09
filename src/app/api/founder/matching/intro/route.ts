@@ -6,6 +6,7 @@ import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,11 @@ export async function POST(request: Request) {
 
   const admin = createServiceRoleClient();
   const founderId = auth.profile.id;
+
+  // API-layer guard (spec §3a): demo / email-disabled accounts cannot dispatch.
+  if (!(await emailDispatchAllowedForUser(admin, founderId))) {
+    return NextResponse.json({ error: EMAIL_DISABLED_MESSAGE, code: "email_disabled" }, { status: 403 });
+  }
 
   // Per-plan monthly cap on how many investor connection requests this founder
   // may send. Trial/basic use the basic cap; professional uses the professional

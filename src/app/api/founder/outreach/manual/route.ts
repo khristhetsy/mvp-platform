@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 import {
   getManualOutreach,
   getManualRecipients,
@@ -61,6 +63,12 @@ export async function POST(request: Request) {
 
   const company = await ensureFounderCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
+
+  // API-layer guard (spec §3a): starting a sequence queues live email dispatch,
+  // so a demo / email-disabled account is refused here — saving a draft is fine.
+  if (body.action === "start" && !(await emailDispatchAllowedForUser(createServiceRoleClient(), auth.profile.id))) {
+    return NextResponse.json({ error: EMAIL_DISABLED_MESSAGE, code: "email_disabled" }, { status: 403 });
+  }
 
   const payload: ManualOutreach = {
     status: body.action === "start" ? "queued" : "draft",

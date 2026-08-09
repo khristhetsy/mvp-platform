@@ -95,3 +95,27 @@ export async function isOrgMember(supabase: unknown, userId: string, orgId: stri
     .maybeSingle();
   return Boolean(data);
 }
+
+/** The clear error surfaced when a send is blocked (spec §4, §6). */
+export const EMAIL_DISABLED_MESSAGE = "Email dispatch is disabled for this account.";
+
+/**
+ * API-layer guard (spec §3a, §7): may this user dispatch outbound email
+ * (Distribution sends, Introduction requests)? Blocks admin-direct / demo
+ * accounts whose org has `email_dispatch_enabled = false`. Until active-org
+ * scoping lands, the user is allowed if ANY of their orgs permits dispatch, so
+ * a real founder is never blocked and a pure demo account always is. Fails open
+ * for users with no org row yet (pre-backfill), so nothing regresses.
+ */
+export async function emailDispatchAllowedForUser(admin: unknown, userId: string): Promise<boolean> {
+  const { data: mems } = await loose(admin).from("memberships").select("org_id").eq("user_id", userId);
+  const ids = (mems ?? []).map((m: { org_id: string }) => m.org_id);
+  if (!ids.length) return true; // no org model for this user yet — don't block
+  const { data: orgs } = await loose(admin)
+    .from("organizations")
+    .select("email_dispatch_enabled")
+    .in("id", ids);
+  const rows = (orgs ?? []) as Array<{ email_dispatch_enabled: boolean }>;
+  if (!rows.length) return true;
+  return rows.some((o) => o.email_dispatch_enabled);
+}
