@@ -3,7 +3,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getStageGuide } from "@/lib/founder/stage-guides";
 import { computeStageProgress } from "@/lib/founder/stage-progress";
 import { StageGuideView } from "@/components/founder/StageGuide";
@@ -20,7 +20,7 @@ export default async function FounderStageGuidePage({
   if (!guide) notFound();
 
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const progress = await computeStageProgress(supabase, company, stage, profile.id);
 

@@ -15,7 +15,7 @@ import {
   getLatestAdminReview,
   getLatestDiligenceReport,
 } from "@/lib/data/founder-readiness";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export default async function FounderReadinessDiligencePage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
   const [{ data: diligenceReport }, { data: adminReview }] = company

@@ -12,7 +12,7 @@ import { listDataRoomActivity } from "@/lib/data-room/activity";
 import { listDataRoomEngagement } from "@/lib/data-room/engagement";
 import { listCompanyQuestions } from "@/lib/data-room/qa";
 import { listCompanyDocuments } from "@/lib/data/documents";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -22,7 +22,7 @@ export const metadata = { title: "Data room" };
 export default async function FounderDataRoomPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
   const [activity, engagement, questions] = company
