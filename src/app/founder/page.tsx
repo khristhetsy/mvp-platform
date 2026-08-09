@@ -23,7 +23,7 @@ import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
@@ -47,13 +47,16 @@ export const dynamic = "force-dynamic";
 export default async function FounderDashboardPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company, isDealCompany } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const { data: diligenceReport } = company ? await getLatestDiligenceReport(supabase, company.id) : { data: null };
   // Side effect: advances the founder's journey stage (result no longer rendered).
-  await advanceFounderJourney(supabase, profile.id);
+  // Skipped on a company-less account (e.g. Deal Company) — nothing to advance.
+  if (company) {
+    await advanceFounderJourney(supabase, profile.id);
+  }
   const onboardingProgress = company
     ? computeFounderOnboardingProgress({
         company,
@@ -113,15 +116,28 @@ export default async function FounderDashboardPage() {
 
   // Canonical Capital Readiness Rating — the SAME score the Journey page shows,
   // so founders see one CRR everywhere (was previously a different number here).
-  const journeyState = await evaluateFounderJourney(supabase, profile.id);
-  const crrResult = computeInvestableCrr(journeyState, company);
-  const crrSubtitle = `Readiness ${crrResult.readiness} · Profile ${crrResult.profilePercent}%`;
-  const crrParts = {
-    readiness: crrResult.readiness,
-    profilePercent: crrResult.profilePercent,
-    onboardingComplete: journeyState.conditions.onboardingComplete,
-    docsUploaded: journeyState.conditions.requiredDocsUploaded,
+  // Only computed when the active account has a founder company; a Deal Company
+  // (or an account with no company) shows a zeroed CRR rather than leaking the
+  // profile-scoped journey of another account.
+  let crrResult = { crr: 0, readiness: 0, profilePercent: 0, outreachReady: false };
+  let crrSubtitle = isDealCompany ? "No raise on this account" : "No company yet";
+  let crrParts = {
+    readiness: 0,
+    profilePercent: 0,
+    onboardingComplete: false,
+    docsUploaded: false,
   };
+  if (company) {
+    const journeyState = await evaluateFounderJourney(supabase, profile.id);
+    crrResult = computeInvestableCrr(journeyState, company);
+    crrSubtitle = `Readiness ${crrResult.readiness} · Profile ${crrResult.profilePercent}%`;
+    crrParts = {
+      readiness: crrResult.readiness,
+      profilePercent: crrResult.profilePercent,
+      onboardingComplete: journeyState.conditions.onboardingComplete,
+      docsUploaded: journeyState.conditions.requiredDocsUploaded,
+    };
+  }
   const investorActivityTotal =
     (investorActivity?.interests.length ?? 0) +
     (investorActivity?.introRequests.length ?? 0) +
