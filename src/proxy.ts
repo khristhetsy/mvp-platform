@@ -263,8 +263,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role, is_super_admin").eq("id", user.id).single();
   const role = profile?.role?.toLowerCase();
+  // Super admins have unrestricted access — never department-scoped or feature-gated.
+  const isSuperAdmin = (profile as { is_super_admin?: boolean } | null)?.is_super_admin === true;
 
   if (!isKnownRole(role)) {
     if (apiRequest) {
@@ -299,7 +301,7 @@ export async function proxy(request: NextRequest) {
   //
   // See resolveDepartmentAction for how a failed lookup is treated: pages stay
   // permissive, enforcing API routes fail closed.
-  if (zone === "admin" && apiRequest && adminApiScopingMode() !== "off") {
+  if (zone === "admin" && apiRequest && !isSuperAdmin && adminApiScopingMode() !== "off") {
     const featurePath = pathname.replace(/^\/api/, "");
     const check = await checkDepartmentAccess(supabase, user.id, featurePath);
     const action = resolveDepartmentAction("api", adminApiScopingMode(), check);
@@ -315,7 +317,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (zone === "admin" && !apiRequest) {
+  if (zone === "admin" && !apiRequest && !isSuperAdmin) {
     const check = await checkDepartmentAccess(supabase, user.id, pathname);
     if (resolveDepartmentAction("page", adminApiScopingMode(), check) === "block") {
       const url = request.nextUrl.clone();
