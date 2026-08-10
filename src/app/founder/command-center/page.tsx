@@ -56,12 +56,14 @@ export default async function CommandCenterPage() {
       .select("room_id, status")
       .in("status", ["pending", "requested"])
       .limit(200),
-    supabase
-      .from("pipeline_investors")
-      .select("id, name, investor_type, outreach_status, meeting_requested, last_contact_date, next_follow_up_date, match_score, notes")
-      .eq("founder_id", profile.id)
-      .order("next_follow_up_date", { ascending: true })
-      .limit(50) as unknown as Promise<{ data: RawInvestor[] | null }>,
+    company
+      ? (supabase
+          .from("pipeline_investors")
+          .select("id, name, investor_type, outreach_status, meeting_requested, last_contact_date, next_follow_up_date, match_score, notes")
+          .eq("founder_id", profile.id)
+          .order("next_follow_up_date", { ascending: true })
+          .limit(50) as unknown as Promise<{ data: RawInvestor[] | null }>)
+      : Promise.resolve({ data: [] as RawInvestor[] | null }),
     company ? listCompanyDocuments(supabase, company.id) : Promise.resolve({ data: [] }),
     company ? getLatestDiligenceReport(supabase, company.id) : Promise.resolve({ data: null }),
   ]);

@@ -3,10 +3,17 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { requestStageApproval } from "@/lib/founder-journey/advance";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function POST(): Promise<NextResponse> {
   const profile = await requireRole(["founder"]);
   const supabase = await createServerSupabaseClient();
+
+  // Guard: no founder-raise journey on a company-less account (e.g. Deal Company).
+  const { company } = await getActiveCompanyForUser(profile);
+  if (!company) {
+    return NextResponse.json({ error: "No active raise on this account." }, { status: 400 });
+  }
 
   const state = await evaluateFounderJourney(supabase, profile.id);
 
