@@ -3,20 +3,16 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { canUser } from "@/lib/rbac/effective-permissions";
 import { listAllOrganizations } from "@/lib/organizations/organizations";
 import { AdminAccountsClient } from "@/components/admin/AdminAccountsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAccountsPage() {
-  // Any staff can VIEW the registry; creating/comping is gated on the
-  // manage_accounts permission (super admins have it automatically; a super admin
-  // grants it to e.g. a salesperson in Admin → User Permissions).
+  // Any admin/analyst staff (incl. Sales) can view AND create demo/internal
+  // accounts here — no per-person permission grant required.
   const profile = await requireRole(["admin", "analyst"]);
-  const supabase = await createServerSupabaseClient();
-  const canManage = await canUser(supabase, profile.id, "manage_accounts", profile);
+  const canManage = true;
   const orgs = await listAllOrganizations(createServiceRoleClient()).catch(() => []);
 
   return (
