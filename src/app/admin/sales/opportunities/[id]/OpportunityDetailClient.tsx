@@ -27,13 +27,34 @@ const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadiu
 const cardBox: React.CSSProperties = { background: "var(--muted)", borderRadius: 8, padding: 11 };
 
 type OTask = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; source: "deal" | "contact" };
+type ActivityItem = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 
-export function OpportunityDetailClient({ initial, stages, founderContact = null, staff = [] }: { initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null; staff?: { id: string; name: string }[] }) {
+const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
+  note: { icon: "ti-note", color: "#4338CA", bg: "#EEF2FF" },
+  opp_note: { icon: "ti-note", color: "#4338CA", bg: "#EEF2FF" },
+  call: { icon: "ti-phone", color: "#0F6E56", bg: "#E1F5EE" },
+  email: { icon: "ti-mail", color: "#185FA5", bg: "#E6F1FB" },
+  email_draft: { icon: "ti-mail", color: "#185FA5", bg: "#E6F1FB" },
+  message: { icon: "ti-message", color: "#854F0B", bg: "#FAEEDA" },
+  task_created: { icon: "ti-checkbox", color: "#5F5E5A", bg: "#F1EFE8" },
+  task_done: { icon: "ti-check", color: "#0F6E56", bg: "#E1F5EE" },
+  stage_changed: { icon: "ti-arrow-right", color: "#185FA5", bg: "#E6F1FB" },
+  won: { icon: "ti-trophy", color: "#0F6E56", bg: "#E1F5EE" },
+  lost: { icon: "ti-x", color: "#A32D2D", bg: "#FCEBEB" },
+  converted: { icon: "ti-user-check", color: "#0F6E56", bg: "#E1F5EE" },
+  contact_edit: { icon: "ti-edit", color: "#5F5E5A", bg: "#F1EFE8" },
+};
+
+function actWhen(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+export function OpportunityDetailClient({ initial, stages, founderContact = null, contactActivity = [], staff = [] }: { initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null; contactActivity?: ActivityItem[]; staff?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [o, setO] = useState<Opp>(initial);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState<"notes" | "extra" | "founder" | "tasks">("notes");
+  const [tab, setTab] = useState<"notes" | "activity" | "extra" | "founder" | "tasks">("notes");
   const [noteInput, setNoteInput] = useState("");
   const [oppTasks, setOppTasks] = useState<OTask[]>([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
@@ -129,7 +150,15 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
     router.push("/admin/sales/opportunities");
   }
   function logTouch(channel: "call" | "email" | "message") {
-    void fetch(`/api/sales/opportunities/${o.id}/touch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel }) });
+    void (async () => {
+      await fetch(`/api/sales/opportunities/${o.id}/touch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel }) }).catch(() => {});
+      // Also record it in Internal notes so the outreach is visible on the deal.
+      const verb = channel === "call" ? "Called" : channel === "email" ? "Emailed" : "Texted";
+      const target = channel === "email" ? o.contact_email : o.contact_phone;
+      const stamp = `[${new Date().toISOString().slice(0, 10)}] ${verb}${target ? ` ${target}` : ""}`;
+      const next = o.notes ? `${o.notes}\n${stamp}` : stamp;
+      await patch({ notes: next });
+    })();
   }
 
   const currentSort = stages.find((s) => s.id === o.stage_id)?.sort_order ?? -1;
@@ -246,6 +275,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
           {/* Notes / extra tabs */}
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid #eef1f5", margin: "16px 0 12px" }}>
             <button onClick={() => setTab("notes")} style={{ fontSize: 12, fontWeight: tab === "notes" ? 600 : 400, color: tab === "notes" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "notes" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Internal notes</button>
+            <button onClick={() => setTab("activity")} style={{ fontSize: 12, fontWeight: tab === "activity" ? 600 : 400, color: tab === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity{contactActivity.length ? ` · ${contactActivity.length}` : ""}</button>
             <button onClick={() => setTab("extra")} style={{ fontSize: 12, fontWeight: tab === "extra" ? 600 : 400, color: tab === "extra" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "extra" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Extra info</button>
             {founderContact && (
               <button onClick={() => setTab("founder")} style={{ fontSize: 12, fontWeight: tab === "founder" ? 600 : 400, color: tab === "founder" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "founder" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Founder Profile</button>
@@ -314,6 +344,27 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                 <button onClick={saveNote} disabled={busy || !noteInput.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !noteInput.trim() ? 0.5 : 1 }}>Save note</button>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 11, whiteSpace: "pre-wrap", lineHeight: 1.6, minHeight: 40 }}>{o.notes || "No notes yet."}</div>
+            </div>
+          ) : tab === "activity" ? (
+            <div>
+              <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "0 0 12px" }}>Full note log and activity for this contact — shared across all their opportunities.</p>
+              {contactActivity.length === 0 ? (
+                <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No activity yet. Calls, notes, emails, tasks, and stage changes appear here.</div>
+              ) : (
+                <div style={{ position: "relative", paddingLeft: 26 }}>
+                  <div style={{ position: "absolute", left: 9, top: 4, bottom: 4, width: 1.5, background: "var(--border)" }} />
+                  {contactActivity.map((a) => {
+                    const ic = ACT_ICON[a.kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" };
+                    return (
+                      <div key={a.id} style={{ position: "relative", marginBottom: 14 }}>
+                        <span style={{ position: "absolute", left: -24, top: 1, width: 18, height: 18, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></span>
+                        <div style={{ fontSize: 12 }}>{a.summary}</div>
+                        <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{a.actor_name ?? "System"} · {actWhen(a.created_at)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", fontSize: 12 }}>
