@@ -170,6 +170,7 @@ export default async function DocumentUploadPage() {
           ) : null}
         </div>
 
+        {company ? (
         <div className="space-y-5">
           {/* Document quality analyzer */}
           <DocumentQualityPanel documents={documents ?? []} notApplicableTypes={notApplicableTypes} />
@@ -204,6 +205,7 @@ export default async function DocumentUploadPage() {
             </Link>
           </div>
         </div>
+        ) : null}
       </section>
         </WorkspacePageContainer>
       </FounderFeatureGate>
