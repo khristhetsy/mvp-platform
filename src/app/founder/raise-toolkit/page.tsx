@@ -5,6 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -153,6 +154,23 @@ export default async function RaiseToolkitPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (no active company) has no raise to prepare — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("raise_toolkit")}
+          title={t("fundraising_tools")}
+          description={t("everything_you_need_to_prepare_practice_and_cl")}
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
 
   return (
     <FounderAppShell

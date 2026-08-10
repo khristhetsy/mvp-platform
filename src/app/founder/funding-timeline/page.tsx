@@ -7,16 +7,35 @@ import { notFound } from "next/navigation";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { FundingTimelinePlanner } from "@/components/founder/FundingTimelinePlanner";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
 export default async function FundingTimelinePage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
+  const { company } = await getActiveCompanyForUser(profile);
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "raise_toolkit_guides")) notFound();
+
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("fundraising")}
+          title={t("funding_timeline_planner")}
+          description={t("reverse_engineer_your_raise_calendar_from_clos")}
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
 
   return (
     <FounderAppShell

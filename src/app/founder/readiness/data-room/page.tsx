@@ -15,6 +15,7 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Data room" };
@@ -23,6 +24,26 @@ export default async function FounderDataRoomPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (no active company) has no data room — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow={t("due_diligence")}
+            title={t("your_data_room")}
+            description={t("everything_investors_and_our_diligence_team_ne")}
+          />
+          <DealCompanyEmptyState />
+        </WorkspacePageContainer>
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
   const [activity, engagement, questions] = company

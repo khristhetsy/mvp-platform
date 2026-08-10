@@ -11,6 +11,7 @@ import { notFound } from "next/navigation";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getPitchDeckAnalysis } from "@/lib/pitch-deck/analysis-store";
 import { PitchDeckAnalyzerClient } from "@/components/founder/PitchDeckAnalyzerClient";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,25 @@ export default async function PitchDeckAnalyzerPage() {
 
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "pitch_deck_analyzer")) notFound();
+
+  // Deal Company (no active company) has no deck to analyze — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow={t("raise_toolkit_2")}
+            title={t("pitch_deck_ai_analyzer")}
+            description={t("get_scored_slide_by_slide_ai_feedback_on_your")}
+          />
+          <DealCompanyEmptyState />
+        </WorkspacePageContainer>
+      </FounderAppShell>
+    );
+  }
 
   // Check if a pitch deck is already uploaded
   const { data: pitchDeck } = company

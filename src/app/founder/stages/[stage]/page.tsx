@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
@@ -21,6 +23,26 @@ export default async function FounderStageGuidePage({
 
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (no active company) has no stage progress — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow={guide.stageLabel}
+            title={guide.title}
+            description={guide.intro}
+          />
+          <DealCompanyEmptyState />
+        </WorkspacePageContainer>
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const progress = await computeStageProgress(supabase, company, stage, profile.id);
 

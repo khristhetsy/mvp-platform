@@ -41,6 +41,7 @@ import { DashboardExpandableSection } from "@/components/founder/DashboardExpand
 import { FirstRunModal } from "@/components/founder/FirstRunModal";
 import { RoundCloseTracker } from "@/components/founder/RoundCloseTracker";
 import { FounderInvestorEngagementTimeline } from "@/components/founder/FounderInvestorEngagementTimeline";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,25 @@ export default async function FounderDashboardPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company, isDealCompany } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (or any account with no active company) has no raise to show —
+  // render the shell + header with a single empty state instead of raise scaffolding.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("founder_terminal")}
+          title="Your company"
+          description={t("readiness_capital_raise_investor_engagement_an")}
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };

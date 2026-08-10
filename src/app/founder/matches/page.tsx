@@ -8,6 +8,7 @@ import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-cente
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,23 @@ export default async function FounderMatchesPage() {
   // Matching is a founder-raise surface; a Deal Company (null company) shows none
   // of it — including the profile-scoped inbound queue and viewer count.
   const { company } = await getActiveCompanyForUser(profile);
+
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow="Matching"
+          title="Investor matches"
+          description="Search the investor network — request an introduction or add a connected investor to follow-up. Investors who've expressed interest in you appear below."
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
+
   const queue = company ? await getFounderMatchQueue(profile.id) : null;
   const items = queue?.items ?? [];
   const companyIds = queue?.companyIds ?? [];

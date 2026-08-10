@@ -14,6 +14,7 @@ import {
   type CommandCenterRoom,
   type CommandCenterInvestor,
 } from "@/components/founder/RaiseCommandCenter";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,26 @@ export default async function CommandCenterPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (no active company) has no raise war room — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <div className="mx-auto max-w-3xl space-y-6">
+          <PageHeader
+            eyebrow={t("command_center")}
+            title={t("raise_war_room")}
+            description={t("every_active_deal_room_pending_follow_up_and_n")}
+          />
+          <DealCompanyEmptyState />
+        </div>
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
 

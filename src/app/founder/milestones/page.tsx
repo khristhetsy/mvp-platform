@@ -7,6 +7,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMilestones, type MilestoneCategory, type MilestoneResult } from "@/lib/data/founder-milestones";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -266,6 +267,22 @@ export default async function FounderMilestonesPage() {
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
   const { company } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (no active company) has no milestones to track — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell>
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow={t("progress")}
+            title={t("milestones")}
+            description={t("track_your_fundraising_journey_from_setting_up")}
+          />
+          <DealCompanyEmptyState />
+        </WorkspacePageContainer>
+      </FounderAppShell>
+    );
+  }
 
   const categories = await loadFounderMilestones(supabase, serviceSupabase, company, profile.id);
 

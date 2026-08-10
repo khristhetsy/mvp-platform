@@ -58,7 +58,7 @@ export default async function FounderSettingsPage() {
                 <p className="mt-0.5 text-xs text-slate-500">{t("edit_your_public_listing_and_company_details")}</p>
               </div>
               <div className="p-6">
-                <CompanySettingsForm company={company} />
+                {company ? <CompanySettingsForm company={company} /> : null}
                 {company ? (
                   <div className="mt-8">
                     <CollaborationDiscussionPanel
@@ -87,19 +87,21 @@ export default async function FounderSettingsPage() {
                 companyName={company.company_name}
               />
             )}
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
-                <span className="text-xs font-medium text-slate-500">One pager — exactly what investors see</span>
-                <Link href="/founder/preview" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
-                  Open full page ↗
-                </Link>
+            {company ? (
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
+                  <span className="text-xs font-medium text-slate-500">One pager — exactly what investors see</span>
+                  <Link href="/founder/preview" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                    Open full page ↗
+                  </Link>
+                </div>
+                <iframe
+                  src="/founder/preview?embed=1"
+                  title="One pager preview"
+                  className="h-[640px] w-full border-0"
+                />
               </div>
-              <iframe
-                src="/founder/preview?embed=1"
-                title="One pager preview"
-                className="h-[640px] w-full border-0"
-              />
-            </div>
+            ) : null}
           </div>
         }
       />

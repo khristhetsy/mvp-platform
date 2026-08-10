@@ -24,6 +24,9 @@ export default async function InvestorDetailPage({
   const profile = await requireRole(["founder"]);
   const { id } = await params;
   const { company } = await getActiveCompanyForUser(profile);
+  // A Deal Company (null active company) has no founder pipeline — deep-links 404
+  // rather than surfacing a founder-account investor.
+  if (!company) notFound();
   const supabase = await createServerSupabaseClient();
 
   // Safe columns only — never contact_email / contact_phone.

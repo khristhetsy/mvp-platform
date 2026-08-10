@@ -19,6 +19,7 @@ import {
   type WizardDoc,
   type WizardProfileItem,
 } from "@/components/founder/ReadinessWizard";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,26 @@ export default async function ReadinessWizardPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
+
+  // Deal Company (no active company) has no readiness to improve — show a single empty state.
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <div className="mx-auto max-w-2xl space-y-6">
+          <PageHeader
+            eyebrow={t("readiness")}
+            title={t("score_improvement_wizard")}
+            description={t("complete_each_step_to_reach_80_and_unlock_inst")}
+          />
+          <DealCompanyEmptyState />
+        </div>
+      </FounderAppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
 
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];

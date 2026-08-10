@@ -7,16 +7,35 @@ import { notFound } from "next/navigation";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PitchPracticeSimulator } from "@/components/founder/PitchPracticeSimulator";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 
 export default async function PitchPracticePage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
+  const { company } = await getActiveCompanyForUser(profile);
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "raise_toolkit_guides")) notFound();
+
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("fundraising_prep")}
+          title={t("pitch_practice_simulator")}
+          description={t("answer_real_investor_questions_using_proven_fr")}
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
 
   return (
     <FounderAppShell

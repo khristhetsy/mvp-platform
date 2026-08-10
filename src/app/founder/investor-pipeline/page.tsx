@@ -7,6 +7,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { InvestorPipelineClient } from "./InvestorPipelineClient";
 
 // pipeline_investors is not yet in generated types — cast to untyped client.
@@ -20,6 +21,22 @@ export default async function InvestorPipelinePage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company, org } = await getActiveCompanyForUser(profile);
+
+  if (!company) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle="No active raise"
+      >
+        <PageHeader
+          eyebrow={t("investor_pipeline")}
+          title={t("investor_pipeline")}
+          description={t("track_and_manage_your_investor_relationships_p")}
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
 
   // Pre-load investors server-side (safe columns only — no contact_email/phone).
   // Scope to the ACTIVE account: filter by org_id when the org model applies, so
