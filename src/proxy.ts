@@ -123,6 +123,10 @@ const DEPARTMENT_EXEMPT_PREFIXES = [
   "/admin/schedule",
   "/admin/meet",
   "/admin/meetings",
+  // Platform-admin account registry (create/comp demo + internal accounts).
+  // Owner-level governance, guarded by its own requireRole([admin, analyst]) gate
+  // and not a departmental workflow — so it's never department-scoped.
+  "/admin/accounts",
 ] as const;
 
 function isDepartmentExempt(p: string): boolean {
