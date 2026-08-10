@@ -209,7 +209,7 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
         aria-label="Open AI mode"
         className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-site-blue px-5 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-site-blue-hi"
       >
-        <span aria-hidden="true">✦</span> AI Mode
+        <span aria-hidden="true"><i className="ti ti-sparkles" aria-hidden="true" /></span> AI Mode
       </button>
     );
   }

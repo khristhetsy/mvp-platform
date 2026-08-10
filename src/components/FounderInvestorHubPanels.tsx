@@ -314,7 +314,7 @@ export function FounderInvestorHubPanels({
           className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "coach" ? "text-white" : "text-slate-600"}`}
           style={hubTab === "coach" ? { background: "#2E78F5" } : {}}
         >
-          ✦ Outreach coach
+          <i className="ti ti-sparkles" aria-hidden="true" /> Outreach coach
         </button>
       </div>
 
@@ -363,7 +363,7 @@ export function FounderInvestorHubPanels({
           {readiness.requirements.map((row) => (
             <li key={row.key} className="flex items-center gap-2 text-sm">
               <span className={row.met ? "text-emerald-600" : "text-amber-600"}>
-                {row.met ? "✓" : "○"}
+                {row.met ? <i className="ti ti-check" aria-hidden="true" /> : "○"}
               </span>
               <span className={row.met ? "text-slate-700" : "text-slate-900"}>{row.label}</span>
             </li>

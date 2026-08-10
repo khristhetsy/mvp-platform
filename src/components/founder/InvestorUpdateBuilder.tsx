@@ -178,7 +178,7 @@ function SectionEditor({
         <p className="mb-2 text-[11px] text-slate-500">{section.description}</p>
         {showTip ? (
           <div className="mb-2 rounded-lg bg-indigo-50 px-3 py-2 text-[11px] leading-relaxed text-indigo-800">
-            💡 {section.tip}
+            <i className="ti ti-bulb" aria-hidden="true" /> {section.tip}
           </div>
         ) : null}
         <textarea
@@ -243,19 +243,19 @@ export function InvestorUpdateBuilder() {
     text += `${headline}\n\n`;
 
     if (values.metrics) {
-      text += `📊 Metrics\n${values.metrics}\n\n`;
+      text += `Metrics\n${values.metrics}\n\n`;
     }
     if (values.wins) {
-      text += `✅ Wins\n${values.wins}\n\n`;
+      text += `Wins\n${values.wins}\n\n`;
     }
     if (values.challenges) {
-      text += `⚠️ Challenges\n${values.challenges}\n\n`;
+      text += `Challenges\n${values.challenges}\n\n`;
     }
     if (values.focus) {
-      text += `🎯 Focus next ${frequency === "monthly" ? "month" : "quarter"}\n${values.focus}\n\n`;
+      text += `Focus next ${frequency === "monthly" ? "month" : "quarter"}\n${values.focus}\n\n`;
     }
     if (values.asks) {
-      text += `🙏 Asks\n${values.asks}\n\n`;
+      text += `Asks\n${values.asks}\n\n`;
     }
     text += `Thanks for your continued support,\n[Your name]\n${co}`;
     return text;

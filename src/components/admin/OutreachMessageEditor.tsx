@@ -107,7 +107,7 @@ export function OutreachMessageEditor() {
       </label>
 
       <p className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-3 text-[10.5px] leading-5 text-slate-400">
-        <span aria-hidden="true">🔒</span> Locked footer — introduction generated from platform fit scoring; not investment advice or a solicitation. Every send includes an unsubscribe link.
+        <span aria-hidden="true"><i className="ti ti-lock" aria-hidden="true" /></span> Locked footer — introduction generated from platform fit scoring; not investment advice or a solicitation. Every send includes an unsubscribe link.
       </p>
 
       <div className="mt-3 flex items-center gap-3">

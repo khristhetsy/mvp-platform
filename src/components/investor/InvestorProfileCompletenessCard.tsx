@@ -91,7 +91,7 @@ export function InvestorProfileCompletenessCard({
   if (pct === 100) {
     return (
       <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-        <span className="text-xl">✓</span>
+        <span className="text-xl"><i className="ti ti-check" aria-hidden="true" /></span>
         <div>
           <p className="text-sm font-semibold text-emerald-900">{t("profile_complete")}</p>
           <p className="text-xs text-emerald-700">

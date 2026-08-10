@@ -46,7 +46,7 @@ export function OpsAdvicePopup() {
     <div style={{ position: "fixed", right: 24, bottom: 24, width: 340, background: "#fff", border: "0.5px solid #BFDBFE", borderLeft: "3px solid #2E78F5", borderRadius: 12, boxShadow: "0 8px 28px rgb(12 35 64 / 0.16)", padding: "14px 16px", zIndex: 300 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#2E78F5", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>AI</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#1A4E9E" }}>💡 {current.title}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#1A4E9E" }}><i className="ti ti-bulb" aria-hidden="true" /> {current.title}</span>
         <button onClick={dismiss} aria-label="Dismiss" style={{ marginLeft: "auto", fontSize: 15, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", lineHeight: 1 }}>×</button>
       </div>
       <div style={{ fontSize: 12.5, color: "var(--foreground)", lineHeight: 1.55 }}>{current.message}</div>

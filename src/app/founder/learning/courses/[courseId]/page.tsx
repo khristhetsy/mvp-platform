@@ -157,7 +157,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
             >
               <div>
                 <p className={`text-sm font-semibold ${quizPassed ? "text-emerald-800" : "text-amber-900"}`}>
-                  {quizPassed ? "✓ Final quiz passed" : "🔒 Final quiz required to complete"}
+                  {quizPassed ? <><i className="ti ti-check" aria-hidden="true" /> Final quiz passed</> : <><i className="ti ti-lock" aria-hidden="true" /> Final quiz required to complete</>}
                 </p>
                 <p className={`mt-0.5 text-xs ${quizPassed ? "text-emerald-700" : "text-amber-700"}`}>
                   {quizPassed
@@ -211,7 +211,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
                                 >
                                   <div className="flex items-center gap-3 min-w-0">
                                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-medium text-slate-500">
-                                      {done ? "✓" : idx + 1}
+                                      {done ? <i className="ti ti-check" aria-hidden="true" /> : idx + 1}
                                     </span>
                                     <span className={`truncate ${done ? "text-slate-400 line-through" : "text-slate-800"}`}>
                                       {l.title}

@@ -271,7 +271,7 @@ function KpiDrawer({ kpi, onClose }: { kpi: CeoKpi; onClose: () => void }) {
       <div onClick={(e) => e.stopPropagation()} style={{ width: "min(460px, 94vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <div><div style={{ fontSize: 15, fontWeight: 700, color: navy }}>{kpi.label}</div><div style={{ fontSize: 12, color: "#6B7690" }}>{kpi.owner} · target {formatKpi(kpi.target, kpi.fmt)}</div></div>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 18, color: "#6B7690", cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} aria-label="Close" style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 18, color: "#6B7690", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
 
         <div style={{ background: "#F6F8FB", borderRadius: 10, padding: 12, marginBottom: 14 }}>

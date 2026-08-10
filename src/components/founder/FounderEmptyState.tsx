@@ -48,11 +48,11 @@ export function FounderEmptyState({
       {/* Icon circle */}
       <div style={{
         width: 64, height: 64, borderRadius: "50%",
-        background: "#EEEDFE",
+        background: "#EEEDFE", color: "#4338CA",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 30, marginBottom: 20,
       }}>
-        {icon}
+        <i className={`ti ${icon}`} aria-hidden="true" />
       </div>
 
       <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: "0 0 10px" }}>
@@ -80,11 +80,11 @@ export function FounderEmptyState({
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: "50%",
-                  background: "#EEEDFE",
+                  background: "#EEEDFE", color: "#4338CA",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 14, flexShrink: 0,
                 }}>
-                  {step.icon}
+                  <i className={`ti ${step.icon}`} aria-hidden="true" />
                 </div>
                 <p style={{ fontSize: 13, color: "#374151", margin: 0 }}>{step.label}</p>
               </div>

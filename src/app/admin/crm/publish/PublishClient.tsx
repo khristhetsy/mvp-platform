@@ -143,7 +143,7 @@ export function PublishClient({ items, segmentSizes, canApprove }: { items: Publ
                       {flags.length > 0 && (
                         <ul className="mt-1.5 space-y-0.5">
                           {flags.map((f, i) => (
-                            <li key={i} className="text-xs text-red-700">✕ {f.rule.replaceAll("_", " ")}: <span className="text-red-600">{f.detail}</span></li>
+                            <li key={i} className="text-xs text-red-700"><i className="ti ti-x" aria-hidden="true" /> {f.rule.replaceAll("_", " ")}: <span className="text-red-600">{f.detail}</span></li>
                           ))}
                         </ul>
                       )}

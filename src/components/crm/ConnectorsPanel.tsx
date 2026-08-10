@@ -152,7 +152,7 @@ export function ConnectorsPanel() {
               }`}
             >
               {testResult[s.id].ok
-                ? `✓ Connected — ${testResult[s.id].count.toLocaleString()} contacts visible in ${s.label}.`
+                ? `Connected — ${testResult[s.id].count.toLocaleString()} contacts visible in ${s.label}.`
                 : `Connection failed: ${testResult[s.id].error ?? "unknown error"}`}
             </div>
           )}

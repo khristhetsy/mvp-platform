@@ -57,7 +57,7 @@ export function MeetingAiPanel({ sessionId, onTaskCreated }: { sessionId: string
   return (
     <div style={{ background: "linear-gradient(180deg,#F7FAFF,#fff)", border: "0.5px solid #D6E4F7", borderRadius: 12, padding: 14, marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#185FA5" }}>✦ AI Chief-of-Staff</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#185FA5" }}><i className="ti ti-sparkles" aria-hidden="true" /> AI Chief-of-Staff</span>
         {brief?.model === null && brief && <span style={{ fontSize: 10, color: MUTED }}>heuristic</span>}
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           <button onClick={() => void genBrief(!!brief)} disabled={briefBusy} style={btn(BLUE, "#fff")}>{briefBusy ? "Thinking…" : brief ? "Refresh brief" : "Generate brief"}</button>

@@ -86,7 +86,7 @@ export function AccountSwitcher({
             >
               <span className="min-w-0 flex-1 truncate text-slate-800">{o.name}</span>
               <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{TYPE_LABEL[o.type]}</span>
-              {o.id === active?.id && <span className="text-emerald-600">✓</span>}
+              {o.id === active?.id && <span className="text-emerald-600"><i className="ti ti-check" aria-hidden="true" /></span>}
             </button>
           ))}
 
@@ -115,7 +115,7 @@ export function AccountSwitcher({
             // Locked state (Basic) — non-interactive card + upgrade action.
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 opacity-90">
               <div className="flex items-center gap-1.5">
-                <span aria-hidden="true" className="text-slate-400">🔒</span>
+                <span aria-hidden="true" className="text-slate-400"><i className="ti ti-lock" aria-hidden="true" /></span>
                 <p className="text-[13px] font-medium text-slate-600">Add a company</p>
               </div>
               <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Professional plan required — adding a company isn&apos;t available on Basic.</p>

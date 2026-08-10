@@ -224,7 +224,7 @@ function ClauseCard({ clause }: { clause: Clause }) {
               background: "transparent",
             }}
           >
-            {t === "plain" ? "Plain English" : t === "flags" ? "🚩 Red flags" : "💡 Negotiate"}
+            {t === "plain" ? "Plain English" : t === "flags" ? "Red flags" : "Negotiate"}
           </button>
         ))}
       </div>

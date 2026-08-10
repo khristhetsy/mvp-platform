@@ -139,7 +139,7 @@ export function EventEmailWizard({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Send failed.");
-      setTestMsg(`Sent to ${json.to} ✓`);
+      setTestMsg(`Sent to ${json.to}`);
     } catch (e) {
       setTestMsg(e instanceof Error ? e.message : "Send failed.");
     } finally {
@@ -248,7 +248,7 @@ export function EventEmailWizard({
           const done = step > n;
           return (
             <div key={label} className="flex items-center gap-2">
-              <span className={`flex h-6 w-6 items-center justify-center rounded-full ${active ? "bg-[var(--blue)] text-white" : done ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{done ? "✓" : n}</span>
+              <span className={`flex h-6 w-6 items-center justify-center rounded-full ${active ? "bg-[var(--blue)] text-white" : done ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{done ? <i className="ti ti-check" aria-hidden="true" /> : n}</span>
               <span className={active ? "text-[var(--navy)]" : "text-[var(--text-muted)]"}>{label}</span>
               {n < 3 && <span className="mx-1 text-slate-300">→</span>}
             </div>
@@ -338,7 +338,7 @@ export function EventEmailWizard({
               <label className="flex items-center gap-2"><input type="checkbox" checked={includeLobby || lobbyForced} disabled={lobbyForced} onChange={(e) => setIncludeLobby(e.target.checked)} /> Lobby CTA {lobbyForced && <span className="text-xs text-[var(--text-muted)]">(forced on for day-of)</span>}</label>
             </div>
 
-            <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">🔒 Compliance footer is locked into every event template (education/community only — not an offer of securities). A working unsubscribe link is added automatically on send.</div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]"><i className="ti ti-lock" aria-hidden="true" /> Compliance footer is locked into every event template (education/community only — not an offer of securities). A working unsubscribe link is added automatically on send.</div>
 
             {/* quick proof send (§9) */}
             <div className="rounded-lg border border-[var(--border-subtle)] p-2.5">

@@ -87,7 +87,7 @@ export default async function FounderCapitalRaisePage() {
       {!company ? (
         <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_track_capital_raise_progress")}>
           <FounderEmptyState
-            icon="💰"
+            icon="ti-coin"
             title={t("complete_your_profile_to_track_your_raise")}
             description={t("set_your_funding_target_publish_your_company_p")}
             action={{ label: "Complete onboarding", href: "/founder/onboarding" }}
@@ -146,7 +146,7 @@ export default async function FounderCapitalRaisePage() {
                   investorActivity.introRequests.length === 0 &&
                   investorActivity.savedDeals.length === 0) ? (
                 <FounderEmptyState
-                  icon="🎯"
+                  icon="ti-target"
                   title={t("no_investor_activity_yet")}
                   description={t("investor_interests_intro_requests_and_saved_de")}
                   action={{ label: "Publish your profile", href: "/founder/settings" }}

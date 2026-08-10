@@ -188,7 +188,7 @@ export default async function MyLearningPlanPage() {
                             : "bg-slate-100 text-slate-500"
                       }`}
                     >
-                      {lesson.done ? "✓" : idx + 1}
+                      {lesson.done ? <i className="ti ti-check" aria-hidden="true" /> : idx + 1}
                     </div>
                     {/* Body */}
                     <div className="min-w-0 flex-1">

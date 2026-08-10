@@ -165,12 +165,12 @@ export function InvestorDetailModal({
               <p className="text-xs text-slate-500">{r.label} · Match {r.matchScore}%</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
 
         <div className="px-5 pb-5">
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
-            🔒 Contact details hidden — introductions run through iCapOS
+            <i className="ti ti-lock" aria-hidden="true" /> Contact details hidden — introductions run through iCapOS
           </div>
 
           {!hideFit && (
@@ -248,7 +248,7 @@ export function InvestorDetailModal({
                         className="rounded-md px-2.5 py-1 text-[11px] font-medium text-white"
                         style={{ background: "#2E78F5" }}
                       >
-                        {copied ? "Copied ✓" : "Copy note"}
+                        {copied ? "Copied" : "Copy note"}
                       </button>
                       {introEndpoint && introRef && (
                         <button
@@ -258,7 +258,7 @@ export function InvestorDetailModal({
                           className="rounded-md px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-70"
                           style={{ background: sendState === "sent" ? "#17a06a" : "#7F77DD" }}
                         >
-                          {sendState === "sending" ? "Sending…" : sendState === "sent" ? "Request sent ✓" : sendState === "error" ? "Retry" : "Send with request"}
+                          {sendState === "sending" ? "Sending…" : sendState === "sent" ? "Request sent" : sendState === "error" ? "Retry" : "Send with request"}
                         </button>
                       )}
                     </div>

@@ -14,19 +14,19 @@ const RECOMMENDATION_STYLES: Record<AIAssessmentRecommendation, {
     badge: "bg-emerald-50 text-emerald-800 ring-emerald-200",
     border: "border-emerald-200",
     label: "Recommend approval",
-    icon: "✓",
+    icon: "ti-check",
   },
   request_changes: {
     badge: "bg-amber-50 text-amber-800 ring-amber-200",
     border: "border-amber-200",
     label: "Request changes",
-    icon: "△",
+    icon: "ti-alert-triangle",
   },
   decline: {
     badge: "bg-red-50 text-red-800 ring-red-200",
     border: "border-red-200",
     label: "Recommend decline",
-    icon: "✕",
+    icon: "ti-x",
   },
 };
 
@@ -110,7 +110,7 @@ export function AdminCompanyAIAssessment({ companyId }: { companyId: string }) {
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div className="flex items-center gap-3">
           <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${style.badge}`}>
-            <span>{style.icon}</span>
+            <i className={`ti ${style.icon}`} aria-hidden="true" />
             {style.label}
           </span>
         </div>

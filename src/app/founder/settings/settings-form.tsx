@@ -363,7 +363,7 @@ export function CompanySettingsForm({ company }: Props) {
             className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-3 hover:border-indigo-300"
           >
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadLogo(file); }} />
-            {v ? <img src={v} alt="Company logo" className="h-10 w-10 rounded-lg object-contain ring-1 ring-slate-200" /> : <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200 text-lg">🏢</div>}
+            {v ? <img src={v} alt="Company logo" className="h-10 w-10 rounded-lg object-contain ring-1 ring-slate-200" /> : <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200 text-lg"><i className="ti ti-building" aria-hidden="true" /></div>}
             <span className="text-sm text-slate-600">{logoUploading ? "Uploading…" : v ? "Replace logo" : "Click to upload"} <span className="text-xs text-slate-400">· PNG, JPG, WebP, SVG · max 2 MB</span></span>
           </div>
           <input className={`${editInputCls} mt-2 text-xs`} value={v} placeholder="Or paste a logo URL: https://…" onChange={(e) => setVal(f.key, e.target.value)} />
@@ -398,7 +398,7 @@ export function CompanySettingsForm({ company }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">{editControl(f)}</div>
-                        <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50">✓</button>
+                        <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50"><i className="ti ti-check" aria-hidden="true" /></button>
                         <button onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
                       </div>
                       {f.hint ? <p className="mt-1 text-xs text-slate-400">{f.hint}</p> : null}
@@ -414,7 +414,7 @@ export function CompanySettingsForm({ company }: Props) {
                 <div onClick={() => { setEditingKey(f.key); setMessage(null); }} className="group flex cursor-pointer items-start gap-4 border-b border-slate-100 py-2.5 hover:bg-slate-50/60 rounded-md px-1 -mx-1">
                   <span className="w-40 shrink-0 text-sm text-slate-500">{f.label}</span>
                   <span className="min-w-0 flex-1 text-sm">{displayNode(f)}</span>
-                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-xs pt-0.5">✎</span>
+                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-xs pt-0.5"><i className="ti ti-pencil" aria-hidden="true" /></span>
                 </div>
               </Fragment>
             );

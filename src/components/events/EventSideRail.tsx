@@ -87,7 +87,7 @@ export function EventSideRail({
             alreadyRegistered ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-700"
           }`}
         >
-          {alreadyRegistered ? `✓ ${t("youre_registered")}` : t("free_registration")}
+          {alreadyRegistered ? <><i className="ti ti-check" aria-hidden="true" /> {t("youre_registered")}</> : t("free_registration")}
         </div>
       )}
 

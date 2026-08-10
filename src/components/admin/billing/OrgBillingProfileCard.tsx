@@ -39,7 +39,7 @@ export function OrgBillingProfileCard() {
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-900">Billing profile</h2>
         {editing
-          ? <span className="rounded-md bg-[#1A6CE4]/10 px-2 py-0.5 text-[11px] font-medium text-[#1A6CE4]">✎ Editing</span>
+          ? <span className="rounded-md bg-[#1A6CE4]/10 px-2 py-0.5 text-[11px] font-medium text-[#1A6CE4]"><i className="ti ti-pencil" aria-hidden="true" /> Editing</span>
           : <button onClick={() => setEditing(true)} className="text-xs font-medium text-[#1A6CE4] hover:underline">Edit</button>}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">

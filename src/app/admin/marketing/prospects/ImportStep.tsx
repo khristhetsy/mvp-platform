@@ -9,10 +9,10 @@ const card: React.CSSProperties = { background: "#fff", border: "0.5px solid #e2
 const srcCard: React.CSSProperties = { background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 11, padding: 13 };
 
 const SOON = [
-  { ic: "📇", t: "Google Contacts", s: "Sync a labeled group or all contacts" },
-  { ic: "🟠", t: "HubSpot", s: "Pull a list or saved view · maps lifecycle stage" },
-  { ic: "🐵", t: "Mailchimp", s: "Import an audience · respects prior unsubs" },
-  { ic: "💠", t: "Salesforce", s: "Report or campaign member pull" },
+  { ic: "ti-address-book", t: "Google Contacts", s: "Sync a labeled group or all contacts" },
+  { ic: "ti-plug", t: "HubSpot", s: "Pull a list or saved view · maps lifecycle stage" },
+  { ic: "ti-mail", t: "Mailchimp", s: "Import an audience · respects prior unsubs" },
+  { ic: "ti-cloud", t: "Salesforce", s: "Report or campaign member pull" },
 ];
 
 export function ImportStep({ overview }: { overview: ImportOverview }) {
@@ -84,7 +84,7 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
             style={{ flex: 1, border: "none", borderRadius: 7, padding: "9px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
               background: side === s ? (s === "founder" ? "#2E78F5" : "#6C3FB5") : "transparent",
               color: side === s ? "#fff" : "var(--muted-foreground)" }}>
-            {s === "founder" ? "🚀 Founders" : "💼 Investors"}
+            {s === "founder" ? <><i className="ti ti-rocket" aria-hidden="true" /> Founders</> : <><i className="ti ti-briefcase" aria-hidden="true" /> Investors</>}
           </button>
         ))}
       </div>
@@ -111,13 +111,13 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
         <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 12 }}>Already in your stack — no new spend, no ToS risk.</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div style={{ ...srcCard, borderColor: "#2E78F5", background: "#EFF6FF" }}>
-            <div style={{ fontSize: 18, marginBottom: 6 }}>🗂️</div>
+            <div style={{ fontSize: 18, marginBottom: 6 }}><i className="ti ti-folders" aria-hidden="true" /></div>
             <div style={{ fontWeight: 700, fontSize: 13 }}>Odoo CRM</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>Founder + investor lists synced</div>
             <div style={{ fontSize: 10, color: "#1A6CE4", fontWeight: 700, marginTop: 7, textTransform: "uppercase", letterSpacing: "0.06em" }}>{overview.odoo.toLocaleString()} mirrored</div>
           </div>
           <div style={srcCard}>
-            <div style={{ fontSize: 18, marginBottom: 6 }}>⚡</div>
+            <div style={{ fontSize: 18, marginBottom: 6 }}><i className="ti ti-bolt" aria-hidden="true" /></div>
             <div style={{ fontWeight: 700, fontSize: 13 }}>iCapOS platform</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>Founder / investor signups not yet in the pipeline</div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 9 }}>
@@ -138,7 +138,7 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {SOON.map((x) => (
             <div key={x.t} style={{ ...srcCard, opacity: 0.62 }}>
-              <div style={{ fontSize: 18, marginBottom: 6 }}>{x.ic}</div>
+              <div style={{ fontSize: 18, marginBottom: 6 }}><i className={`ti ${x.ic}`} aria-hidden="true" /></div>
               <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>{x.t} <span style={{ fontSize: 9.5, fontWeight: 800, textTransform: "uppercase", color: "var(--muted-foreground)", background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 20, padding: "2px 7px" }}>Soon</span></div>
               <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{x.s}</div>
             </div>
@@ -173,7 +173,7 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
                       border: `0.5px solid ${form.side === s ? (s === "founder" ? "#2E78F5" : "#8B5CE0") : "var(--border)"}`,
                       background: form.side === s ? (s === "founder" ? "#2E78F5" : "#6C3FB5") : "var(--muted)",
                       color: form.side === s ? "#fff" : "var(--muted-foreground)" }}>
-                    {s === "founder" ? "🚀 Founder" : "💼 Investor"}
+                    {s === "founder" ? <><i className="ti ti-rocket" aria-hidden="true" /> Founder</> : <><i className="ti ti-briefcase" aria-hidden="true" /> Investor</>}
                   </button>
                 ))}
               </div>

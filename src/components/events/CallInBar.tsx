@@ -149,7 +149,7 @@ export function CallInBar({
       )}
       {myEntry?.status === "requested" && (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-[var(--text-secondary)]">✋ Hand raised — waiting for the host.</span>
+          <span className="text-sm text-[var(--text-secondary)]"><i className="ti ti-hand-stop" aria-hidden="true" /> Hand raised — waiting for the host.</span>
           <button onClick={withdraw} disabled={busy} className="text-xs text-rose-600 hover:underline disabled:opacity-50">
             Lower hand
           </button>
@@ -157,7 +157,7 @@ export function CallInBar({
       )}
       {myEntry?.status === "invited" && (
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm font-medium text-emerald-700">🎤 You&apos;re invited to come on!</span>
+          <span className="text-sm font-medium text-emerald-700"><i className="ti ti-microphone" aria-hidden="true" /> You&apos;re invited to come on!</span>
           {roomUrl && (
             <a href={roomUrl} target="_blank" rel="noopener noreferrer" className="cap-btn-primary rounded-md px-3 py-1.5 text-sm font-medium">
               Join with camera →
@@ -165,7 +165,7 @@ export function CallInBar({
           )}
         </div>
       )}
-      {myEntry?.status === "onstage" && <span className="text-sm font-medium text-[var(--indigo)]">🎙️ You&apos;re on stage.</span>}
+      {myEntry?.status === "onstage" && <span className="text-sm font-medium text-[var(--indigo)]"><i className="ti ti-microphone-2" aria-hidden="true" /> You&apos;re on stage.</span>}
     </div>
   );
 }

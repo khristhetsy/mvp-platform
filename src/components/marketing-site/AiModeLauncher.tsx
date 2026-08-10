@@ -24,7 +24,7 @@ export function AiModeLauncher({
       onClick={() => window.dispatchEvent(new CustomEvent("icapos:open-ai-first"))}
       className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-colors ${styles} ${className}`}
     >
-      <span aria-hidden="true">✦</span> {label}
+      <span aria-hidden="true"><i className="ti ti-sparkles" aria-hidden="true" /></span> {label}
     </button>
   );
 }

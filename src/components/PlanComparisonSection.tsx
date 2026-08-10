@@ -149,9 +149,9 @@ export function PlanComparisonSection({
                 {FEATURE_COMPARISON.map((row) => (
                   <tr key={row.featureKey}>
                     <td className="px-6 py-3 font-medium text-slate-800">{row.label}</td>
-                    <td className="px-6 py-3 text-slate-600">{row.trial ? "✓" : "—"}</td>
-                    <td className="px-6 py-3 text-slate-600">{row.basic ? "✓" : "—"}</td>
-                    <td className="px-6 py-3 text-slate-600">{row.professional ? "✓" : "—"}</td>
+                    <td className="px-6 py-3 text-slate-600">{row.trial ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
+                    <td className="px-6 py-3 text-slate-600">{row.basic ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
+                    <td className="px-6 py-3 text-slate-600">{row.professional ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                   </tr>
                 ))}
               </tbody>

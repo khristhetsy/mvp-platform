@@ -33,7 +33,7 @@ export function MatchStatusStepper({ activeStatus }: Readonly<{ activeStatus?: M
                 ].join(" ")}
                 aria-hidden="true"
               >
-                {done ? "✓" : i + 1}
+                {done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
               </span>
               {step.label}
             </span>

@@ -115,7 +115,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
             <div key={list.id} style={{ padding: "14px 18px", borderBottom: i < lists.length - 1 ? "0.5px solid var(--border)" : "none", display: "flex", alignItems: "center", justifyContent: "space-between", borderStyle: "dashed", background: "#fafbfe", opacity: 0.85 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--muted-foreground)", textDecoration: "line-through" }}>{list.name}</div>
-                <div style={{ fontSize: 11.5, color: "#1a7f4e", marginTop: 3 }}>✓ Deleted — will not reappear. Undo within 30 seconds.</div>
+                <div style={{ fontSize: 11.5, color: "#1a7f4e", marginTop: 3 }}><i className="ti ti-check" aria-hidden="true" /> Deleted — will not reappear. Undo within 30 seconds.</div>
               </div>
               <button onClick={() => undoDelete(list.id)}
                 style={{ fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "#0A1A40", cursor: "pointer" }}>
@@ -281,7 +281,7 @@ function ManageContactsDrawer({ list, onClose, onCountChange }: { list: ListWith
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}{c.company ? ` · ${c.company}` : ""}</div>
                 </div>
                 {memberIds.has(c.id) ? (
-                  <span style={{ fontSize: 11, color: "#0F6E56", whiteSpace: "nowrap" }}>✓ Added</span>
+                  <span style={{ fontSize: 11, color: "#0F6E56", whiteSpace: "nowrap" }}><i className="ti ti-check" aria-hidden="true" /> Added</span>
                 ) : (
                   <button onClick={() => add(c.id)} disabled={busyId === c.id}
                     style={{ fontSize: 12, padding: "4px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", whiteSpace: "nowrap" }}>{busyId === c.id ? "…" : "Add"}</button>

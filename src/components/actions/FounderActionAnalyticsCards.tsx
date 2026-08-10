@@ -199,7 +199,7 @@ function DrawerContent({
       className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
       aria-label="Close"
     >
-      ✕
+      <i className="ti ti-x" aria-hidden="true" />
     </button>
   );
 

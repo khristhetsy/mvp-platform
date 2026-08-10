@@ -131,7 +131,7 @@ export function CopilotPanel({
     <div style={{ position: "fixed", right: 20, bottom: 20, zIndex: 55, width: 380, maxWidth: "calc(100vw - 40px)", height: 560, maxHeight: "calc(100vh - 40px)", background: "#fff", border: "0.5px solid #d7dce4", borderRadius: 16, boxShadow: "0 12px 40px rgb(12 35 64 / 0.22)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", borderBottom: "0.5px solid #eef1f5" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 24, height: 24, borderRadius: 6, background: PURPLE, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>✦</span>
+          <span style={{ width: 24, height: 24, borderRadius: 6, background: PURPLE, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{title}</span>
         </div>
         <button type="button" onClick={() => setOpen(false)} aria-label="Close" style={{ background: "none", border: "none", color: "#7a8494", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>

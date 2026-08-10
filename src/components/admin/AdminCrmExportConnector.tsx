@@ -110,7 +110,7 @@ export function AdminCrmExportConnector() {
                   <span className="font-mono text-[10px] text-slate-500">
                     {f.sourceField} → {f.hubspotField}
                   </span>
-                  <span className="ml-1 text-slate-700">{f.exported ? "✓" : "—"}</span>
+                  <span className="ml-1 text-slate-700">{f.exported ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</span>
                   {!f.exported && f.skippedReason ? (
                     <span className="block text-[10px] text-slate-400">{f.skippedReason}</span>
                   ) : null}

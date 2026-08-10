@@ -78,7 +78,7 @@ export default function AboutPage() {
           <Eyebrow>{a.pillar2.eyebrow}</Eyebrow>
           <H2>{a.pillar2.title}</H2>
           {a.pillar2.paras.map((p, i) => (<p key={i} className="mt-4 max-w-3xl text-[15px] leading-7 text-site-muted">{p}</p>))}
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2">{a.pillar2.points.map((p) => (<li key={p} className="flex gap-2 text-[14px] text-site-ink"><span className="text-site-blue">✓</span>{p}</li>))}</ul>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">{a.pillar2.points.map((p) => (<li key={p} className="flex gap-2 text-[14px] text-site-ink"><span className="text-site-blue"><i className="ti ti-check" aria-hidden="true" /></span>{p}</li>))}</ul>
           <div className="mt-8 overflow-hidden rounded-2xl border border-site-line">
             <div className="flex items-baseline justify-between bg-site-paper px-5 py-3"><span className="font-site-display text-sm font-bold text-site-navy">{a.pillar2.composition.title}</span><span className="text-[12px] text-site-muted">{a.pillar2.composition.sub}</span></div>
             <table className="w-full text-left text-sm">
@@ -107,7 +107,7 @@ export default function AboutPage() {
           <Eyebrow>{a.whyExists.eyebrow}</Eyebrow>
           <H2>{a.whyExists.title}</H2>
           {a.whyExists.paras.map((p, i) => (<p key={i} className="mt-4 text-[15px] leading-7 text-site-muted">{p}</p>))}
-          <ul className="mt-4 space-y-2">{a.whyExists.points.map((p) => (<li key={p} className="flex gap-2 text-[14px] text-site-ink"><span className="text-site-blue">✓</span>{p}</li>))}</ul>
+          <ul className="mt-4 space-y-2">{a.whyExists.points.map((p) => (<li key={p} className="flex gap-2 text-[14px] text-site-ink"><span className="text-site-blue"><i className="ti ti-check" aria-hidden="true" /></span>{p}</li>))}</ul>
         </div>
       </section>
 

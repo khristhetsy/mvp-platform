@@ -33,7 +33,7 @@ export function InvestorQueue({ rows }: { rows: InvestorRow[] }) {
         <div></div><div>Investor</div><div>Firm</div><div>Approval</div><div>KYC</div><div></div>
       </div>
       {rows.length === 0 ? (
-        <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No investors in onboarding. 🎉</p>
+        <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No investors in onboarding. <i className="ti ti-circle-check" aria-hidden="true" /></p>
       ) : rows.map((r) => {
         const ap = APPROVAL[r.approval] ?? APPROVAL.draft;
         const ky = KYC[r.kyc] ?? KYC.not_started;

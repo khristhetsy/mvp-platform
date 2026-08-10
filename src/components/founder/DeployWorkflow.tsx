@@ -271,7 +271,7 @@ function SettingsPanel() {
         </p>
         <div className="ml-auto flex items-center gap-3">
           {status === "saved" && !dirty ? (
-            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><span aria-hidden>✓</span> Saved</span>
+            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><span aria-hidden><i className="ti ti-check" aria-hidden="true" /></span> Saved</span>
           ) : status === "error" ? (
             <span className="text-xs font-medium text-red-600">Couldn&apos;t save — retry</span>
           ) : dirty ? (
@@ -375,7 +375,7 @@ export function DeployWorkflow({
                     : "border-amber-200 bg-amber-50 text-amber-900"
                 }`}
               >
-                <span aria-hidden="true">{scoreReady ? "✓" : "ⓘ"}</span>
+                <span aria-hidden="true">{scoreReady ? <i className="ti ti-check" aria-hidden="true" /> : "ⓘ"}</span>
                 <span>
                   {scoreReady ? (
                     <>

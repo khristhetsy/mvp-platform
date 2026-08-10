@@ -46,7 +46,7 @@ export default async function InvestorCoursePage({
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {course.whatYouWillLearn.map((item, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                <span className="mt-0.5 text-emerald-500">✓</span>
+                <span className="mt-0.5 text-emerald-500"><i className="ti ti-check" aria-hidden="true" /></span>
                 {item}
               </li>
             ))}

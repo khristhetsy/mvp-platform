@@ -45,7 +45,7 @@ export default function StartPage() {
           <Eyebrow>{s.yourData.eyebrow}</Eyebrow>
           <h2 className="mt-3 font-site-display text-2xl font-extrabold tracking-tight text-site-navy sm:text-3xl">{s.yourData.title}</h2>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-            {s.yourData.points.map((p) => (<li key={p} className="flex gap-2 rounded-xl border border-site-line bg-site-paper px-4 py-3 text-[14px] text-site-ink"><span className="text-site-blue">✓</span>{p}</li>))}
+            {s.yourData.points.map((p) => (<li key={p} className="flex gap-2 rounded-xl border border-site-line bg-site-paper px-4 py-3 text-[14px] text-site-ink"><span className="text-site-blue"><i className="ti ti-check" aria-hidden="true" /></span>{p}</li>))}
           </ul>
         </div>
       </section>

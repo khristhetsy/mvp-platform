@@ -34,7 +34,7 @@ export default async function UnsubscribePage({ searchParams }: Props) {
   return (
     <div style={page}>
       <div style={card}>
-        <div style={check}>✓</div>
+        <div style={check}><i className="ti ti-check" aria-hidden="true" /></div>
         <h1 style={heading}>{t("you_ve_been_unsubscribed")}</h1>
         <p style={body}>
           <strong>{email}</strong> has been removed from our mailing list.

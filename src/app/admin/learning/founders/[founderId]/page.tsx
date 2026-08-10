@@ -189,7 +189,7 @@ export default async function AdminFounderLearningDetailPage({
                 className="rounded-2xl border p-4 text-center"
                 style={{ borderColor: meta.borderColor, background: unlocked ? meta.bgColor : "#F8FAFC" }}
               >
-                <p className="text-lg">{unlocked ? meta.icon : "🔒"}</p>
+                <p className="text-lg">{unlocked ? <i className={`ti ${meta.icon}`} aria-hidden="true" /> : <i className="ti ti-lock" aria-hidden="true" />}</p>
                 <p className="mt-1 text-xl font-bold" style={{ color: unlocked ? meta.color : "#94A3B8" }}>
                   {unlocked ? `${pct}%` : "—"}
                 </p>
@@ -225,7 +225,7 @@ export default async function AdminFounderLearningDetailPage({
         {recommendations.length > 0 && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-700">
-              🤖 Performance recommendations
+              <i className="ti ti-robot" aria-hidden="true" /> Performance recommendations
             </p>
             <div className="space-y-2">
               {recommendations.map((rec, idx) => (

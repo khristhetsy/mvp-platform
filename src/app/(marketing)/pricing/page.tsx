@@ -56,7 +56,7 @@ export default function PricingPage() {
               <div className="mt-3 flex items-baseline gap-1"><span className="font-site-display text-4xl font-extrabold">{t.price}</span><span className="text-sm text-white/50">{t.per}</span></div>
               <p className="mt-2 text-sm text-white/65">{t.desc}</p>
               <ul className="mt-5 space-y-2.5">
-                {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt">✓</span>{f}</li>))}
+                {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
               </ul>
               <Link href={t.cta.href} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
             </div>

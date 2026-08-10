@@ -133,7 +133,7 @@ export function DiligenceReportDocument({
             >
               <span className="min-w-0 truncate">{item.label}</span>
               {item.provided === true ? (
-                <span className="flex-none text-emerald-600" title="Analyzed" aria-label="Analyzed">✓</span>
+                <span className="flex-none text-emerald-600" title="Analyzed" aria-label="Analyzed"><i className="ti ti-check" aria-hidden="true" /></span>
               ) : item.provided === false ? (
                 <span className="flex-none text-slate-300" title="Pending" aria-label="Pending">○</span>
               ) : null}
@@ -171,7 +171,7 @@ export function DiligenceReportDocument({
               ))
             ) : (
               <div className="mt-1.5 flex items-center gap-2.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5">
-                <span aria-hidden="true" className="text-slate-400">📄</span>
+                <span aria-hidden="true" className="text-slate-400"><i className="ti ti-file-text" aria-hidden="true" /></span>
                 <span className="text-[13px] text-slate-500">
                   Not yet analyzed — add a <b className="font-medium text-slate-700">{r.source}</b> to populate this section.
                 </span>
@@ -202,7 +202,7 @@ export function DiligenceReportDocument({
             <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
               {missingDocuments.map((doc) => (
                 <div key={doc} className="flex items-center gap-2 text-sm text-slate-700">
-                  <span className="text-rose-500">✕</span>
+                  <span className="text-rose-500"><i className="ti ti-x" aria-hidden="true" /></span>
                   {doc}
                 </div>
               ))}

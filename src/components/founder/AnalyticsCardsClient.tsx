@@ -154,7 +154,7 @@ function DrawerContent({
 }) {
   const t = useTranslations("founderCmp");
   const closeBtn = (
-    <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Close">✕</button>
+    <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Close"><i className="ti ti-x" aria-hidden="true" /></button>
   );
 
   const totalOutreach = Object.values(a.outreachByStatus).reduce((s, v) => s + v, 0);

@@ -54,7 +54,7 @@ export function FounderLearningProgramView({
       {programLocked ? (
         <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <span aria-hidden className="text-base">
-            🔒
+            <i className="ti ti-lock" aria-hidden="true" />
           </span>
           <p>
             Complete <strong>{previousStageLabel(program.stage)}</strong> to unlock this program (80% stage
@@ -112,7 +112,7 @@ export function FounderLearningProgramView({
                         {moduleLocked ? (
                           <div className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2 text-sm text-slate-500">
                             <span className="flex items-center gap-2">
-                              <span aria-hidden>🔒</span>
+                              <span aria-hidden><i className="ti ti-lock" aria-hidden="true" /></span>
                               {lesson.title}
                             </span>
                             <span className="text-xs">{t("locked")}</span>

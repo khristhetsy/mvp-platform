@@ -190,7 +190,7 @@ function MembersTab() {
                 const on = u.departmentIds.includes(d.id);
                 return (
                   <button key={d.id} onClick={() => toggle(u.userId, d.id, !on)} style={{ fontSize: 11.5, fontWeight: 600, borderRadius: 16, padding: "4px 11px", cursor: "pointer", border: on ? `1px solid ${royal}` : "1px solid #E4E8F0", background: on ? "#E8F0FD" : "#fff", color: on ? royal : "#6B7690" }}>
-                    {on ? "✓ " : "+ "}{d.name}
+                    {on ? <i className="ti ti-check" aria-hidden="true" /> : "+"} {d.name}
                   </button>
                 );
               })}

@@ -323,7 +323,7 @@ export default async function FounderJourneyPage() {
                             <div className="min-w-0">
                               <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Completion</p>
                               <p className={state.conditions.readinessQualified ? "text-sm font-semibold text-emerald-600" : "text-sm font-semibold text-amber-600"}>
-                                {state.conditions.readinessQualified ? "Qualified ✓" : "Building"}
+                                {state.conditions.readinessQualified ? <>Qualified <i className="ti ti-check" aria-hidden="true" /></> : "Building"}
                               </p>
                               <p className="mt-0.5 text-[10px] text-slate-400">Threshold ≥ 75</p>
                             </div>
@@ -340,8 +340,8 @@ export default async function FounderJourneyPage() {
                                 <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-slate-500">
                                   <span>Readiness <b className="text-slate-800">{readiness}</b></span>
                                   <span>Profile <b className="text-slate-800">{profilePercent}</b></span>
-                                  <span>Documents <b className="text-slate-800">{state.conditions.requiredDocsUploaded ? "✓" : "—"}</b></span>
-                                  <span>Onboarding <b className="text-slate-800">{state.conditions.onboardingComplete ? "✓" : "—"}</b></span>
+                                  <span>Documents <b className="text-slate-800">{state.conditions.requiredDocsUploaded ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</b></span>
+                                  <span>Onboarding <b className="text-slate-800">{state.conditions.onboardingComplete ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</b></span>
                                 </div>
                               </div>
                             </div>

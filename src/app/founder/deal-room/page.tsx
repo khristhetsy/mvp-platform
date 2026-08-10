@@ -88,14 +88,14 @@ export default async function FounderDealRoomIndexPage() {
           <WorkspacePanel title={t("rooms")} subtitle={t("your_company_deal_rooms")}>
             {(rooms ?? []).length === 0 ? (
               <FounderEmptyState
-                icon="🔐"
+                icon="ti-lock-access"
                 title={t("no_deal_rooms_yet")}
                 description={t("deal_rooms_open_when_an_investor_expresses_int")}
                 steps={[
-                  { icon: "📋", label: "Publish your company profile to become visible to investors" },
-                  { icon: "👀", label: "An investor views your listing and requests access" },
-                  { icon: "🔐", label: "A deal room opens — you exchange documents and answer questions" },
-                  { icon: "🤝", label: "Diligence completes and you negotiate terms" },
+                  { icon: "ti-clipboard-list", label: "Publish your company profile to become visible to investors" },
+                  { icon: "ti-eye", label: "An investor views your listing and requests access" },
+                  { icon: "ti-lock-access", label: "A deal room opens — you exchange documents and answer questions" },
+                  { icon: "ti-users", label: "Diligence completes and you negotiate terms" },
                 ]}
                 action={{ label: "Publish your profile", href: "/founder/settings" }}
                 secondaryAction={{ label: "Upload documents", href: "/founder/documents" }}

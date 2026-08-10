@@ -49,7 +49,7 @@ export function OnStageGuests({ sessionId }: { sessionId: string }) {
       <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("on_stage_now")}</span>
       {onstage.map((g) => (
         <span key={g.id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--indigo-soft)] px-3 py-1 text-sm font-medium text-[var(--indigo)]">
-          🎙️ {g.displayName}
+          <i className="ti ti-microphone-2" aria-hidden="true" /> {g.displayName}
           {g.roleLabel && <span className="text-xs text-[var(--text-muted)]">· {g.roleLabel}</span>}
         </span>
       ))}

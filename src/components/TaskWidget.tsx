@@ -184,9 +184,9 @@ export function TaskWidget() {
               onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
               style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", flex: 1 }}
             >
-              <option value="high">🔴 High</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="low">🟢 Low</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
             </select>
             <input
               type="date"
@@ -205,7 +205,7 @@ export function TaskWidget() {
               onClick={() => setShowForm(false)}
               style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}
             >
-              ✕
+              <i className="ti ti-x" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -261,7 +261,7 @@ export function TaskWidget() {
                     {/* Due date */}
                     {task.due_date && (
                       <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>
-                        📅 {relativeDate(task.due_date)}
+                        <i className="ti ti-calendar" aria-hidden="true" /> {relativeDate(task.due_date)}
                       </span>
                     )}
                     {/* Assigned badge */}
@@ -285,7 +285,7 @@ export function TaskWidget() {
                   title={t("delete_task")}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "0 2px", fontSize: 12, flexShrink: 0, opacity: 0.5 }}
                 >
-                  ✕
+                  <i className="ti ti-x" aria-hidden="true" />
                 </button>
               </div>
             );

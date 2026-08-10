@@ -188,9 +188,9 @@ function TaskCard({
             onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
             style={inputStyle}
           >
-            <option value="high">🔴 High</option>
-            <option value="medium">🟡 Medium</option>
-            <option value="low">🟢 Low</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
           </select>
           <input
             type="date"
@@ -288,7 +288,7 @@ function TaskCard({
                 opacity: calLoading ? 0.5 : 1,
               }}
             >
-              {calLoading ? "…" : task.google_calendar_event_id ? "📅 Synced" : "📅 Add"}
+              {calLoading ? "…" : task.google_calendar_event_id ? <><i className="ti ti-calendar" aria-hidden="true" /> Synced</> : <><i className="ti ti-calendar" aria-hidden="true" /> Add</>}
             </button>
           )}
           <button
@@ -296,14 +296,14 @@ function TaskCard({
             title="Edit task"
             style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 13, opacity: 0.65, padding: "0 2px" }}
           >
-            ✎
+            <i className="ti ti-pencil" aria-hidden="true" />
           </button>
           <button
             onClick={() => onDelete(task.id)}
             title="Delete task"
             style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 11, opacity: 0.55, padding: "0 2px" }}
           >
-            ✕
+            <i className="ti ti-x" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -332,7 +332,7 @@ function TaskCard({
         </span>
         {task.due_date && (
           <span style={{ fontSize: 10, color: overdue ? "#A32D2D" : "#64748b", fontWeight: overdue ? 500 : 400 }}>
-            📅 {dateLabel}
+<i className="ti ti-calendar" aria-hidden="true" /> {dateLabel}
           </span>
         )}
       </div>
@@ -583,14 +583,14 @@ function ListView({
                       style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 13, opacity: 0.65, padding: "0 2px" }}
                       title="Edit"
                     >
-                      ✎
+                      <i className="ti ti-pencil" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => onDelete(task.id)}
                       style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 11, opacity: 0.55, padding: "0 2px" }}
                       title="Delete"
                     >
-                      ✕
+                      <i className="ti ti-x" aria-hidden="true" />
                     </button>
                   </div>
                 </td>
@@ -636,7 +636,7 @@ function CalendarCellButton({ task, onCalendarUpdate }: { task: Task; onCalendar
         whiteSpace: "nowrap" as const,
       }}
     >
-      {loading ? "…" : task.google_calendar_event_id ? "📅 Synced" : "📅 Add"}
+      {loading ? "…" : task.google_calendar_event_id ? <><i className="ti ti-calendar" aria-hidden="true" /> Synced</> : <><i className="ti ti-calendar" aria-hidden="true" /> Add</>}
     </button>
   );
 }
@@ -915,9 +915,9 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
         </select>
         <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} style={filterSelectStyle}>
           <option value="">All priorities</option>
-          <option value="high">🔴 High</option>
-          <option value="medium">🟡 Medium</option>
-          <option value="low">🟢 Low</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
         </select>
         <select value={filterDue} onChange={(e) => setFilterDue(e.target.value)} style={filterSelectStyle}>
           <option value="">All due dates</option>
@@ -1005,9 +1005,9 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
                 onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
                 style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340" }}
               >
-                <option value="high">🔴 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🟢 Low</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
               </select>
             </div>
             <div>
@@ -1064,7 +1064,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
           width: 34, height: 34, borderRadius: 8, background: GCAL_LIGHT,
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          <span style={{ fontSize: 18 }}>📅</span>
+          <span style={{ fontSize: 18 }}><i className="ti ti-calendar" aria-hidden="true" /></span>
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: "#0c2340", marginBottom: 2 }}>
@@ -1091,7 +1091,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
         )}
         {googleConnected && (
           <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 6, background: "#E1F5EE", color: "#0F6E56", fontWeight: 500, flexShrink: 0 }}>
-            ✓ Connected
+<i className="ti ti-circle-check" aria-hidden="true" /> Connected
           </span>
         )}
       </div>

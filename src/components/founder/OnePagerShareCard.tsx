@@ -87,7 +87,7 @@ export function OnePagerShareCard({
             transition: "background 0.2s",
           }}
         >
-          {copied ? "✓ Copied!" : "Copy link"}
+          {copied ? "Copied!" : "Copy link"}
         </button>
 
         {/* Open in new tab */}

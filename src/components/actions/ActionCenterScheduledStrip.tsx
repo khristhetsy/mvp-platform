@@ -24,7 +24,7 @@ export function ActionCenterScheduledStrip({
           className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition-all hover:border-slate-400 hover:shadow-sm"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm">
-            📋
+            <i className="ti ti-clipboard-list" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t("weekly_digest")}</p>
@@ -54,7 +54,7 @@ export function ActionCenterScheduledStrip({
 
           {needsFollowUp.length > 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">⚠ Needs follow-up</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500"><i className="ti ti-alert-triangle" aria-hidden="true" /> Needs follow-up</p>
               <ul className="mt-1.5 space-y-1">
                 {needsFollowUp.map((item) => (
                   <li key={item.id}>
@@ -70,7 +70,7 @@ export function ActionCenterScheduledStrip({
 
           {recentlyReminded.length > 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">🕐 Recently reminded</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500"><i className="ti ti-clock" aria-hidden="true" /> Recently reminded</p>
               <ul className="mt-1.5 space-y-1">
                 {recentlyReminded.map((item, i) => (
                   <li key={`${item.title}-${i}`}>

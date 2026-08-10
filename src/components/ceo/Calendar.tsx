@@ -116,7 +116,7 @@ function EventChip({ ev, onDelete }: { ev: DayEvent; onDelete?: (id: string) => 
     <div title={ev.note ?? ev.meeting.name} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, lineHeight: 1.3, padding: "3px 6px", borderRadius: 5, background: `${c}14`, color: navy, borderLeft: `3px ${ev.oneOff ? "dashed" : "solid"} ${c}` }}>
       <span style={{ fontWeight: 700, color: c }}>{ev.time}</span>
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.meeting.name}</span>
-      {ev.oneOff && ev.occurrenceId && onDelete && <button onClick={() => onDelete(ev.occurrenceId!)} style={{ marginLeft: "auto", border: "none", background: "none", color: "#98A2B3", cursor: "pointer", fontSize: 11, padding: 0 }} aria-label="Remove">✕</button>}
+      {ev.oneOff && ev.occurrenceId && onDelete && <button onClick={() => onDelete(ev.occurrenceId!)} style={{ marginLeft: "auto", border: "none", background: "none", color: "#98A2B3", cursor: "pointer", fontSize: 11, padding: 0 }} aria-label="Remove"><i className="ti ti-x" aria-hidden="true" /></button>}
     </div>
   );
 }

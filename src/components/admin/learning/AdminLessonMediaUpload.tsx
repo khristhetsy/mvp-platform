@@ -283,10 +283,10 @@ export function AdminLessonMediaUpload({
             </p>
           ) : null}
           {renderStatus === "ready" ? (
-            <p className="text-emerald-700">✓ Video ready</p>
+            <p className="text-emerald-700"><i className="ti ti-check" aria-hidden="true" /> Video ready</p>
           ) : null}
           {renderStatus === "failed" ? (
-            <p className="text-red-700">× Rendering failed — try again</p>
+            <p className="text-red-700"><i className="ti ti-x" aria-hidden="true" /> Rendering failed — try again</p>
           ) : null}
         </div>
       </div>
@@ -330,7 +330,7 @@ function MediaColumn({
   if (state === "done") {
     return (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-        <p className="text-sm font-semibold text-emerald-800">✓ {fileName ?? "Uploaded"}</p>
+        <p className="text-sm font-semibold text-emerald-800"><i className="ti ti-check" aria-hidden="true" /> {fileName ?? "Uploaded"}</p>
         <div className="mt-2 flex gap-2">
           <button type="button" onClick={onReplace} className="text-xs text-indigo-600">
             Replace

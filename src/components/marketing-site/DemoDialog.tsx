@@ -139,7 +139,7 @@ export function DemoDialog() {
       <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-site-line bg-white shadow-2xl">
         <div className="flex items-center justify-between bg-site-navy px-5 py-4 text-white">
           <h2 id="demo-title" className="font-site-display text-base font-bold">Book a 30-minute walkthrough</h2>
-          <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-white/70 hover:text-white">✕</button>
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-white/70 hover:text-white"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
 
         {done ? (

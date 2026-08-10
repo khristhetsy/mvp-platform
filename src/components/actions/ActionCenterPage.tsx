@@ -184,7 +184,7 @@ function PriorityGroupedList({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {isOverdue ? "⚠ " : ""}
+                        {isOverdue ? <><i className="ti ti-alert-triangle" aria-hidden="true" /> </> : ""}
                         {new Date(action.dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     )}

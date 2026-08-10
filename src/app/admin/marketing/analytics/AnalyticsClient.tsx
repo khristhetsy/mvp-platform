@@ -412,7 +412,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
             </div>
           ))}
           <div style={{ marginTop: 10, padding: "8px 10px", background: "#EAF3DE", borderRadius: 8, fontSize: 12, color: "#3B6D11" }}>
-            ✓ Domain health: good
+<i className="ti ti-check" aria-hidden="true" /> Domain health: good
           </div>
         </div>
       </div>

@@ -33,7 +33,7 @@ function ResponseTimeBadge({ createdAt, respondedAt }: { createdAt: string | nul
     const label = responded === 0 ? "responded today" : `responded in ${days ?? "?"}d`;
     return (
       <span style={{ fontSize: 9, fontWeight: 600, background: "#EAF3DE", color: "#1E6D3C", padding: "2px 7px", borderRadius: 20 }}>
-        ✓ {label}
+        <i className="ti ti-check" aria-hidden="true" /> {label}
       </span>
     );
   }
@@ -53,7 +53,7 @@ function ResponseTimeBadge({ createdAt, respondedAt }: { createdAt: string | nul
       background: urgent ? "#FCEBEB" : "#FAEEDA",
       color: urgent ? "#A32D2D" : "#854F0B",
     }}>
-      {urgent ? "⚠ " : ""}{days}d unanswered
+      {urgent ? (<><i className="ti ti-alert-triangle" aria-hidden="true" /> </>) : null}{days}d unanswered
     </span>
   );
 }
@@ -124,7 +124,7 @@ function IntelligenceBanner({ questions }: { questions: Question[] }) {
         <Chip label={`${unanswered.length} unanswered`} color={unanswered.length > 0 ? "#854F0B" : "#1E6D3C"} bg={unanswered.length > 0 ? "#FAEEDA" : "#EAF3DE"} />
         {oldestUnanswered >= 1 && (
           <Chip
-            label={`oldest unanswered: ${oldestUnanswered}d ${oldestUnanswered >= 3 ? "⚠" : ""}`}
+            label={`oldest unanswered: ${oldestUnanswered}d`}
             color={oldestUnanswered >= 3 ? "#A32D2D" : "#854F0B"}
             bg={oldestUnanswered >= 3 ? "#FCEBEB" : "#FAEEDA"}
           />

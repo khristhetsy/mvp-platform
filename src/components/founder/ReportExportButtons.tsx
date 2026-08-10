@@ -12,7 +12,7 @@ export function ReportExportButtons() {
         href="/api/founder/report/pdf?download=1"
         className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4]"
       >
-        ⬇ Download PDF
+        <i className="ti ti-download" aria-hidden="true" /> Download PDF
       </a>
       <a
         href="/api/founder/report/pdf"
@@ -20,7 +20,7 @@ export function ReportExportButtons() {
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
       >
-        🖨 Print
+        <i className="ti ti-printer" aria-hidden="true" /> Print
         <span className="sr-only">(opens the PDF in a new tab)</span>
       </a>
     </div>

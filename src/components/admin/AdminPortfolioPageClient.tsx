@@ -167,7 +167,7 @@ export function AdminPortfolioPageClient() {
             gap: 10,
           }}
         >
-          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠</span>
+          <span style={{ fontSize: 16, flexShrink: 0 }}><i className="ti ti-alert-triangle" aria-hidden="true" /></span>
           <p style={{ margin: 0, fontSize: 12.5, color: "#854F0B", flex: 1 }}>
             <strong style={{ fontWeight: 500 }}>{staleRows.length} investment{staleRows.length > 1 ? "s" : ""}</strong> have
             self-reported valuations older than {STALE_VAL_DAYS} days or no valuation on record.
@@ -187,7 +187,7 @@ export function AdminPortfolioPageClient() {
               whiteSpace: "nowrap",
             }}
           >
-            {notifying ? "Sending…" : notifySent ? "✓ Notified" : "Notify investors"}
+            {notifying ? "Sending…" : notifySent ? (<><i className="ti ti-check" aria-hidden="true" /> Notified</>) : "Notify investors"}
           </button>
         </div>
       )}
@@ -214,7 +214,7 @@ export function AdminPortfolioPageClient() {
         >
           <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap" }}>
             {(["", "deal_room", "self_reported", "stale"] as const).map((s) => {
-              const label = s === "" ? "All deals" : s === "deal_room" ? "Deal room" : s === "self_reported" ? "Self-reported" : `Stale val. ⚠`;
+              const label = s === "" ? "All deals" : s === "deal_room" ? "Deal room" : s === "self_reported" ? "Self-reported" : `Stale val.`;
               const active = filterSource === s;
               return (
                 <button
@@ -324,7 +324,7 @@ export function AdminPortfolioPageClient() {
                             <p style={{ margin: 0, fontWeight: 500, fontSize: 12, color: "var(--color-text-primary)" }}>{inv.company_name}</p>
                             {stale && (
                               <p style={{ margin: 0, fontSize: 10.5, color: "#854F0B" }}>
-                                Val. {daysOld != null ? `${daysOld}d old` : "never updated"} ⚠
+                                Val. {daysOld != null ? `${daysOld}d old` : "never updated"} <i className="ti ti-alert-triangle" aria-hidden="true" />
                               </p>
                             )}
                           </div>

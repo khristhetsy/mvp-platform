@@ -97,7 +97,7 @@ export default async function DocumentUploadPage() {
 
           <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
             <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="text-[var(--blue-hover)]">📎</span>
+              <span aria-hidden="true" className="text-[var(--blue-hover)]"><i className="ti ti-paperclip" aria-hidden="true" /></span>
               <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
             </div>
             <p className="mt-1.5 text-[13px] leading-6 text-slate-600">

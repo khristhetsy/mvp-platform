@@ -396,8 +396,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <span style={{ background: ch.bg, color: ch.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>{item.channel}</span>
                 <div style={{ display: "flex", gap: 2 }}>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit">✎</button>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
               </div>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
@@ -408,7 +408,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "0.5px solid var(--border-subtle)", paddingTop: 8 }}>
                 {item.task_id ? (
-                  <span style={{ fontSize: 11, color: "#0F6E56", fontWeight: 500 }}>✓ Synced to Tasks</span>
+                  <span style={{ fontSize: 11, color: "#0F6E56", fontWeight: 500 }}><i className="ti ti-check" aria-hidden="true" /> Synced to Tasks</span>
                 ) : (
                   <button style={{ ...btnGhost, padding: "4px 9px", fontSize: 11 }} disabled={busy === "sync-" + item.id} onClick={() => syncTask(item)}>
                     {busy === "sync-" + item.id ? "…" : "→ Add to Tasks"}
@@ -452,8 +452,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 <option value="done">Done</option>
               </select>
               <div style={{ display: "flex", gap: 2 }}>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit">✎</button>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
+                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
               </div>
             </div>
           );
@@ -473,7 +473,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
     return (
       <div style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, padding: "16px 16px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 8, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, flexShrink: 0 }}>✦</div>
+          <div style={{ width: 34, height: 34, borderRadius: 8, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, flexShrink: 0 }}><i className="ti ti-sparkles" aria-hidden="true" /></div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>{plan.name}</div>
             {plan.objective && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{plan.objective}</div>}
@@ -502,8 +502,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                           {item.due_date && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Due {item.due_date}</span>}
                           <span style={{ background: pr.bg, color: pr.color, fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 6, textTransform: "capitalize" }}>{item.priority}</span>
                           <Badge map={ITEM_STATUS_MAP} value={item.status} />
-                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 4px", fontSize: 14 }} onClick={() => openEdit(item)} title="Edit">✎</button>
-                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 4px", fontSize: 14 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
+                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 4px", fontSize: 14 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 4px", fontSize: 14 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
                         </div>
                       </div>
                     );
@@ -536,7 +536,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               onClick={() => { setShowCmo(true); setShowCreate(false); }}
               title={aiEnabled ? "Generate a draft with the AI CMO" : "AI not configured — shows a starter outline"}
             >
-              ✦ AI CMO
+              <i className="ti ti-sparkles" aria-hidden="true" /> AI CMO
             </button>
           </div>
 
@@ -605,13 +605,13 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     </div>
                     <div style={{ display: "flex", gap: 8, marginTop: 7, fontSize: 11, color: "var(--text-muted)" }}>
                       <span>{p.item_count ?? 0} initiatives</span>
-                      {p.generated_by === "claude" && <span style={{ color: ACCENT }}>✦ AI</span>}
+                      {p.generated_by === "claude" && <span style={{ color: ACCENT }}><i className="ti ti-sparkles" aria-hidden="true" /> AI</span>}
                     </div>
                   </button>
                   <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                    <button style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11 }} onClick={() => startPlanEdit(p)}>✎ Edit</button>
+                    <button style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11 }} onClick={() => startPlanEdit(p)}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
                     <button style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11, color: "#A32D2D", borderColor: "#F0A0A0" }} disabled={busy === "plan-del-" + p.id} onClick={() => deletePlan(p.id, p.name)}>
-                      {busy === "plan-del-" + p.id ? "Deleting…" : "✕ Delete"}
+                      {busy === "plan-del-" + p.id ? "Deleting…" : <><i className="ti ti-x" aria-hidden="true" /> Delete</>}
                     </button>
                   </div>
                 </div>
@@ -642,8 +642,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
           {showCmo && (
             <div style={{ ...card, padding: 14, display: "flex", flexDirection: "column", gap: 8, borderColor: ACCENT }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ fontSize: 12, fontWeight: 500, margin: 0, color: ACCENT }}>✦ AI CMO</p>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 16 }} onClick={() => { setShowCmo(false); setDraft(null); }}>✕</button>
+                <p style={{ fontSize: 12, fontWeight: 500, margin: 0, color: ACCENT }}><i className="ti ti-sparkles" aria-hidden="true" /> AI CMO</p>
+                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 16 }} onClick={() => { setShowCmo(false); setDraft(null); }}><i className="ti ti-x" aria-hidden="true" /></button>
               </div>
               {!draft ? (
                 <>
@@ -715,7 +715,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               ))}
             </div>
             {detail.generated_by === "claude" && (
-              <div style={{ fontSize: 11, color: ACCENT, background: "#EEEDFE", borderRadius: 7, padding: "6px 10px" }}>✦ Generated by AI CMO</div>
+              <div style={{ fontSize: 11, color: ACCENT, background: "#EEEDFE", borderRadius: 7, padding: "6px 10px" }}><i className="ti ti-sparkles" aria-hidden="true" /> Generated by AI CMO</div>
             )}
           </div>
         )}
@@ -730,7 +730,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 8, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontSize: 16, color: ACCENT }}>✦</span>
+                  <span style={{ fontSize: 16, color: ACCENT }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
                 </div>
                 <div style={{ flex: 1 }}>
                   {(() => {
@@ -760,7 +760,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               <div style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, padding: 14, marginBottom: 14, background: "#fafafa", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>Share plan with Admin team</p>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 15 }} onClick={() => setShareOpen(false)}>✕</button>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 15 }} onClick={() => setShareOpen(false)}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
@@ -769,7 +769,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     style={{ ...inputStyle, fontSize: 11, color: "var(--text-muted)", background: "#f1f1f1", flex: 1 }}
                   />
                   <button style={{ ...btnPrimary, padding: "8px 14px", fontSize: 11, whiteSpace: "nowrap" }} onClick={copyPlanLink}>
-                    {copyDone ? "✓ Copied" : "Copy link"}
+                    {copyDone ? <><i className="ti ti-check" aria-hidden="true" /> Copied</> : "Copy link"}
                   </button>
                 </div>
                 {adminUsers.length > 0 && (

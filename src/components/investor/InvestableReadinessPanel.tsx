@@ -27,6 +27,10 @@ type Props = {
   learningBasePath?: string;
 };
 
+// Evidence status → Tabler outline icon + color
+const EV_ICON = { pass: "ti-circle-check", warn: "ti-alert-triangle", fail: "ti-circle-x" } as const;
+const EV_COLOR = { pass: "#0F6E56", warn: "#854F0B", fail: "#A32D2D" } as const;
+
 const FACTOR_COLORS: Record<string, string> = {
   revenue_cashflow:   "#378ADD",
   customer_traction:  "#10B981",
@@ -117,9 +121,10 @@ function FactorModal({
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-6 py-5">
           <button
             onClick={onClose}
+            aria-label="Close"
             className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           >
-            ✕
+            <i className="ti ti-x" aria-hidden="true" />
           </button>
           <span
             className="rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -189,7 +194,9 @@ function FactorModal({
               <div className="divide-y divide-slate-100 rounded-xl border border-slate-100">
                 {score.evidence.map((e, i) => (
                   <div key={i} className="flex gap-3 px-4 py-3">
-                    <span className="mt-0.5 shrink-0">{e.icon}</span>
+                    <span className="mt-0.5 shrink-0">
+                      <i className={`ti ${EV_ICON[e.icon]}`} style={{ color: EV_COLOR[e.icon] }} aria-hidden="true" />
+                    </span>
                     <div>
                       <p className="text-sm text-slate-700">{e.text}</p>
                       <p className="mt-0.5 text-xs text-slate-400">{e.src}</p>
@@ -960,7 +967,7 @@ function RecommendationCard({ rec, index, learningBasePath }: { rec: Recommendat
           {/* eLearning courses */}
           {rec.courses.length > 0 && (
             <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3">
-              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">📚 Recommended courses on iCapOS</p>
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2"><i className="ti ti-book" aria-hidden="true" /> Recommended courses on iCapOS</p>
               <div className="flex flex-col gap-1.5">
                 {rec.courses.map((c) => (
                   <a
@@ -994,7 +1001,7 @@ function RecommendationsTab({ factorScores, learningBasePath }: { factorScores: 
   if (recs.length === 0) {
     return (
       <div className="px-6 py-10 text-center">
-        <p className="text-3xl">🎉</p>
+        <p className="text-3xl"><i className="ti ti-circle-check" aria-hidden="true" /></p>
         <p className="mt-2 text-sm font-medium text-slate-700">{t("no_critical_gaps_found")}</p>
         <p className="mt-1 text-xs text-slate-400">{t("this_company_scores_well_across_all_factors")}</p>
       </div>

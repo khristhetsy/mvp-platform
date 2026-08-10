@@ -39,7 +39,7 @@ export function MeetingWorkflowCard({ meeting, sessions, onRefresh }: { meeting:
             {[DAY[meeting.dayOfWeek], `${meeting.durationMin} min`, meeting.timeLocal].map((t) => <span key={t} style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99, background: "rgba(255,255,255,.12)", color: "#DCE6F8" }}>{t}</span>)}
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            {meeting.gcalEventId ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "#B9F6CA" }}>✓ Calendar synced</span>
+            {meeting.gcalEventId ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "#B9F6CA" }}><i className="ti ti-check" aria-hidden="true" /> Calendar synced</span>
               : <button onClick={sync} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: navy, background: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Syncing…" : "Sync to Google Calendar"}</button>}
           </div>
         </div>
@@ -196,7 +196,7 @@ export function MeetingLog({ meetings, sessions }: { meetings: CeoMeeting[]; ses
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         {filters.map(([k, l]) => <button key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === k ? royal : "#EEF1F7", color: filter === k ? "#fff" : "#6B7690" }}>{l}</button>)}
-        <button onClick={analyze} disabled={analyzing} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: analyzing ? "default" : "pointer", opacity: analyzing ? 0.7 : 1 }}>{analyzing ? "Analyzing…" : "✦ Analyze with AI"}</button>
+        <button onClick={analyze} disabled={analyzing} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: analyzing ? "default" : "pointer", opacity: analyzing ? 0.7 : 1 }}>{analyzing ? "Analyzing…" : (<><i className="ti ti-sparkles" aria-hidden="true" /> Analyze with AI</>)}</button>
       </div>
 
       {analyzeMsg && <div style={{ fontSize: 12, color: "#D6455D", marginBottom: 12 }}>{analyzeMsg}</div>}
@@ -229,7 +229,7 @@ function AnalysisPanel({ a, onClose }: { a: MeetingAnalysis; onClose: () => void
     <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 16, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".8px", textTransform: "uppercase", color: royal }}>AI Chief of Staff · meeting-log analysis</div>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 16, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss">✕</button>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 16, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss"><i className="ti ti-x" aria-hidden="true" /></button>
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: navy, marginTop: 6, lineHeight: 1.5 }}>{a.headline}</div>
       {block("Recurring themes", a.themes, "#1A6CE4")}

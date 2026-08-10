@@ -140,7 +140,7 @@ function MetricDrawerContent({
       className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
       aria-label="Close"
     >
-      ✕
+      <i className="ti ti-x" aria-hidden="true" />
     </button>
   );
 
@@ -516,7 +516,7 @@ function OutreachKit({
                 className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition"
                 style={{ background: copiedSubject ? "#EAF3DE" : "#EEEDFE", color: copiedSubject ? "#1E6D3C" : "#2E78F5" }}
               >
-                {copiedSubject ? "Copied ✓" : "Copy"}
+                {copiedSubject ? "Copied" : "Copy"}
               </button>
             </div>
             <p className="rounded-lg bg-white px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
@@ -534,7 +534,7 @@ function OutreachKit({
                 className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition"
                 style={{ background: copiedBody ? "#EAF3DE" : "#EEEDFE", color: copiedBody ? "#1E6D3C" : "#2E78F5" }}
               >
-                {copiedBody ? "Copied ✓" : "Copy"}
+                {copiedBody ? "Copied" : "Copy"}
               </button>
             </div>
             <textarea
@@ -760,7 +760,7 @@ function InvestorDrawerContent({
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
           aria-label="Close"
         >
-          ✕
+          <i className="ti ti-x" aria-hidden="true" />
         </button>
       </div>
 

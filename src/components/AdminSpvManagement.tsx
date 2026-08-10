@@ -747,7 +747,7 @@ export function AdminSpvManagement({
                             key={item.key}
                             className={item.met ? "text-emerald-800" : "text-amber-900"}
                           >
-                            {item.met ? "✓" : "○"} {item.label}
+                            {item.met ? <i className="ti ti-check" aria-hidden="true" /> : "○"} {item.label}
                           </li>
                         ))}
                       </ul>

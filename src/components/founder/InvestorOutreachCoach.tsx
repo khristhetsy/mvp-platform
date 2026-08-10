@@ -40,7 +40,7 @@ function CopyButton({ text }: { text: string }) {
         border: "none", cursor: "pointer",
       }}
     >
-      {copied ? "Copied ✓" : "Copy"}
+      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
@@ -114,7 +114,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
       {/* Watch out */}
       <div style={{ background: "#FAEEDA", borderRadius: 10, padding: "10px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 12 }} aria-hidden="true">⚠</span>
+          <span style={{ fontSize: 12 }} aria-hidden="true"><i className="ti ti-alert-triangle" aria-hidden="true" /></span>
           <span style={{ fontSize: 10, fontWeight: 700, color: "#854F0B", textTransform: "uppercase", letterSpacing: ".07em" }}>{t("watch_out")}</span>
         </div>
         <p style={{ fontSize: 12, color: "#633806", margin: 0, lineHeight: 1.5 }}>{result.watchOut}</p>
@@ -127,7 +127,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {result.source === "claude" && (
               <span style={{ fontSize: 9, fontWeight: 600, background: "#EEEDFE", color: ACCENT, padding: "2px 7px", borderRadius: 20 }}>
-                ✦ AI-generated
+                <i className="ti ti-sparkles" aria-hidden="true" /> AI-generated
               </span>
             )}
             <CopyButton text={emailDraft} />
@@ -159,7 +159,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
           cursor: "pointer", alignSelf: "flex-start",
         }}
       >
-        ↺ Generate for a different investor
+        <i className="ti ti-refresh" aria-hidden="true" /> Generate for a different investor
       </button>
     </div>
   );

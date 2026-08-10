@@ -209,7 +209,7 @@ export default function MarketingHomePage() {
                 <h3 className="font-site-display text-xl font-bold text-site-navy">{side.h}</h3>
                 <p className="mt-2 text-sm leading-6 text-site-muted">{side.p}</p>
                 <ul className="mt-4 space-y-2">
-                  {side.points.map((pt) => (<li key={pt} className="flex gap-2 text-[13px] text-site-ink"><span className="text-site-blue">✓</span>{pt}</li>))}
+                  {side.points.map((pt) => (<li key={pt} className="flex gap-2 text-[13px] text-site-ink"><span className="text-site-blue"><i className="ti ti-check" aria-hidden="true" /></span>{pt}</li>))}
                 </ul>
                 <Link href={side.cta.href} className="mt-5 inline-block rounded-lg border border-site-line bg-white px-4 py-2 text-sm font-semibold text-site-navy transition-colors hover:border-site-blue-hi hover:text-site-blue-hi">{side.cta.label}</Link>
               </div>

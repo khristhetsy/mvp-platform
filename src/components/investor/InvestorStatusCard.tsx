@@ -86,7 +86,7 @@ export function InvestorStatusCard({
               }`}
             >
               <span className={`inline-flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-semibold ${done ? "bg-emerald-500 text-white" : current ? "bg-indigo-500 text-white" : "bg-slate-300 text-white"}`}>
-                {done ? "✓" : i + 1}
+                {done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
               </span>
               <span className="truncate">{label}</span>
             </li>

@@ -317,7 +317,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
                       disabled={Boolean(loading)}
                       onClick={() => setDealVerified(deal.id, !deal.verified)}
                     >
-                      {deal.verified ? "Verified ✓" : "Verify"}
+                      {deal.verified ? (<>Verified <i className="ti ti-check" aria-hidden="true" /></>) : "Verify"}
                     </button>
                   </li>
                 ))}
@@ -350,7 +350,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
       {resolved && !reopen ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
           <p className="text-sm font-medium text-slate-800">
-            {status === "approved" ? "✓ Approved" : "Rejected"}
+            {status === "approved" ? (<><i className="ti ti-check" aria-hidden="true" /> Approved</>) : "Rejected"}
             {status === "approved" && row.approved_at ? ` on ${formatDate(row.approved_at)}` : ""}
             {" · no further review needed."}
           </p>
@@ -384,7 +384,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
                 disabled={drafting || Boolean(loading)}
                 onClick={() => void generateDraft()}
               >
-                {drafting ? "Drafting…" : "✦ Generate with AI"}
+                {drafting ? "Drafting…" : (<><i className="ti ti-sparkles" aria-hidden="true" /> Generate with AI</>)}
               </button>
             </div>
           </div>

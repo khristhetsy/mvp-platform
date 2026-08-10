@@ -2,38 +2,40 @@ import { getCompanyWorkspaceHref, getDrilldownHref } from "@/lib/ui/drilldown-li
 import { OPERATIONAL_CATEGORY_LABELS } from "@/lib/operational-activity/event-categories";
 import type { OperationalActivityFeedItem, OperationalEventCategory } from "@/lib/operational-activity/types";
 
+// Values are Tabler icon class names (rendered as <i className={`ti ${icon}`} />).
 const CATEGORY_ICONS: Record<OperationalEventCategory, string> = {
-  crm: "◆",
-  onboarding: "◎",
-  diligence: "▣",
-  compliance: "⚠",
-  spv: "SPV",
-  investor: "●",
-  founder: "★",
-  reporting: "▤",
-  messaging: "✉",
-  outreach: "→",
-  system: "⚙",
-  imports: "↑",
-  analytics: "▥",
+  crm: "ti-address-book",
+  onboarding: "ti-user-plus",
+  diligence: "ti-file-search",
+  compliance: "ti-alert-triangle",
+  spv: "ti-briefcase",
+  investor: "ti-user",
+  founder: "ti-star",
+  reporting: "ti-report",
+  messaging: "ti-mail",
+  outreach: "ti-send",
+  system: "ti-settings",
+  imports: "ti-upload",
+  analytics: "ti-chart-bar",
 };
 
 const EVENT_TYPE_ICONS: Record<string, string> = {
-  investor_interest_expressed: "●",
-  investor_intro_requested: "→",
-  investor_deal_saved: "◆",
-  spv_status_changed: "SPV",
-  spv_readiness_updated: "✓",
-  compliance_event_created: "⚠",
-  import_previewed: "↑",
-  import_completed: "✓",
-  export_generated: "↓",
-  report_generated: "▤",
-  founder_onboarding_completed: "◎",
+  investor_interest_expressed: "ti-heart",
+  investor_intro_requested: "ti-send",
+  investor_deal_saved: "ti-bookmark",
+  spv_status_changed: "ti-briefcase",
+  spv_readiness_updated: "ti-circle-check",
+  compliance_event_created: "ti-alert-triangle",
+  import_previewed: "ti-eye",
+  import_completed: "ti-circle-check",
+  export_generated: "ti-download",
+  report_generated: "ti-report",
+  founder_onboarding_completed: "ti-user-check",
 };
 
+/** Returns a Tabler icon class name. Render as `<i className={\`ti ${icon}\`} />`. */
 export function getOperationalCategoryIcon(category: OperationalEventCategory): string {
-  return CATEGORY_ICONS[category] ?? "·";
+  return CATEGORY_ICONS[category] ?? "ti-point";
 }
 
 export function getOperationalEventIcon(eventType: string, category: OperationalEventCategory): string {

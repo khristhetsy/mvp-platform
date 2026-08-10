@@ -27,7 +27,7 @@ function CmoBox({ title, text, actions }: { title: string; text: string; actions
   return (
     <div style={{ background: "linear-gradient(135deg,#0c2340 0%,#1a3a60 100%)", borderRadius: 12, padding: "14px 16px" }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: "#EEEDFE", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-        <span style={{ width: 14, height: 14, background: "#2E78F5", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff" }}>★</span>
+        <span style={{ width: 14, height: 14, background: "#2E78F5", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff" }}><i className="ti ti-star" aria-hidden="true" /></span>
         CMO Recommendation
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 6 }}>{title}</div>
@@ -178,7 +178,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Total contacts — {totalContacts.toLocaleString()}</div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("all_time_mail_myicfos_com")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
+                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
                   <StatBox val={totalContacts.toLocaleString()} label={t("total_contacts")} />
@@ -221,7 +221,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Emails sent — {sent.toLocaleString()}</div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("last_30_days_all_campaigns")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
+                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
                   <StatBox val={sent.toLocaleString()} label={t("sent_this_month")} />
@@ -264,7 +264,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Open rate — {openRate.toFixed(1)}%</div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("last_30_days_all_campaigns_mail_myicfos_com")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
+                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
                   <StatBox val={`${openRate.toFixed(1)}%`} label={t("avg_open_rate")} />
@@ -321,7 +321,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Click rate — {clickRate.toFixed(1)}%</div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("last_30_days_all_campaigns")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
+                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
                   <StatBox val={`${clickRate.toFixed(1)}%`} label={t("click_rate")} />

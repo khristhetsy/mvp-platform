@@ -1,4 +1,4 @@
-// Reusable onboarding step indicator. Done (green ✓), active (royal, bold),
+// Reusable onboarding step indicator. Done (green check), active (royal, bold),
 // upcoming (gray). Connector bars fill green behind completed steps. Labels hide
 // under 640px (dots remain). Matches icapos-offering-type-mockup.html.
 
@@ -22,7 +22,7 @@ export function ProgressSteps({
                 ].join(" ")}
                 aria-hidden="true"
               >
-                {done ? "✓" : stepNum}
+                {done ? <i className="ti ti-check" aria-hidden="true" /> : stepNum}
               </span>
               <span className={`hidden sm:inline ${active ? "font-semibold text-[#16223F]" : ""}`}>{label}</span>
               <span className="sr-only">

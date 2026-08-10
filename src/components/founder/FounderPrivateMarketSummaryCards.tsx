@@ -99,7 +99,7 @@ export function FounderPrivateMarketSummaryCards({
                 <h3 className="text-base font-bold text-[var(--navy)]">{cfg.title}</h3>
                 <p className="text-xs text-slate-500">{cfg.sub}</p>
               </div>
-              <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="text-slate-400 hover:text-slate-700">✕</button>
+              <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
 
             <dl className="mt-4 text-[13px]">

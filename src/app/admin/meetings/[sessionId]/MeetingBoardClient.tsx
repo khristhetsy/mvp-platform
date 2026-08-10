@@ -135,12 +135,12 @@ function HubAnalyticsPanel({ departmentId }: { departmentId: string }) {
     return () => { alive = false; };
   }, [departmentId]);
 
-  if (loading) return <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}>Loading 📡 analytics…</div>;
-  if (!data || !data.available) return <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}>📡 No linked Hub analytics for this department.</div>;
+  if (loading) return <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}>Loading <i className="ti ti-broadcast" aria-hidden="true" /> analytics…</div>;
+  if (!data || !data.available) return <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}><i className="ti ti-broadcast" aria-hidden="true" /> No linked Hub analytics for this department.</div>;
   return (
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: MUTED }}>📡 {data.source}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: MUTED }}><i className="ti ti-broadcast" aria-hidden="true" /> {data.source}</span>
         {data.hubHref && <Link href={data.hubHref} style={{ marginLeft: "auto", fontSize: 11, color: BLUE, textDecoration: "none" }}>Open Hub →</Link>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
@@ -198,7 +198,7 @@ function DepartmentsTab({ sessionId, sections, entries, deptNames }: { sessionId
       {active !== "__general__" && (
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <Link href={`/admin/meetings/kpi?dept=${active}`} style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#E6F1FB", borderRadius: 7, padding: "5px 10px", textDecoration: "none" }}>📊 KPI Sheet</Link>
+            <Link href={`/admin/meetings/kpi?dept=${active}`} style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#E6F1FB", borderRadius: 7, padding: "5px 10px", textDecoration: "none" }}><i className="ti ti-chart-bar" aria-hidden="true" /> KPI Sheet</Link>
           </div>
           <HubAnalyticsPanel key={active} departmentId={active} />
         </>
@@ -418,7 +418,7 @@ function SectionCard({ sessionId, section, entry }: { sessionId: string; section
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{section.title}</span>
           {pill(status)}
-          <span style={{ marginLeft: "auto", fontSize: 11.5, color: MUTED }}>🔒 Locked until the meeting starts</span>
+          <span style={{ marginLeft: "auto", fontSize: 11.5, color: MUTED }}><i className="ti ti-lock" aria-hidden="true" /> Locked until the meeting starts</span>
         </div>
         <p style={{ fontSize: 12, color: MUTED, margin: "8px 0 0" }}>This department&apos;s prep is private until the meeting is started.</p>
       </div>
@@ -434,7 +434,7 @@ function SectionCard({ sessionId, section, entry }: { sessionId: string; section
         <span style={{ marginLeft: "auto", fontSize: 11, color: MUTED }}>{saving ? "Saving…" : savedAt ? `Saved ${savedAt}` : ""}</span>
       </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#185FA5" }}>✦ AI</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#185FA5" }}><i className="ti ti-sparkles" aria-hidden="true" /> AI</span>
         <button onClick={() => void assist("draft")} disabled={ai !== null} style={aiBtn}>{ai === "draft" ? "Drafting…" : "Draft"}</button>
         <button onClick={() => void assist("polish")} disabled={ai !== null || !content.trim()} style={aiBtn}>{ai === "polish" ? "Polishing…" : "Polish"}</button>
         <button onClick={() => void assist("points")} disabled={ai !== null} style={aiBtn}>{ai === "points" ? "Thinking…" : "Talking points"}</button>

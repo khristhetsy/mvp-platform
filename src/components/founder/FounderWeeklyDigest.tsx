@@ -194,7 +194,7 @@ export function FounderWeeklyDigest({
             className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
             style={{ background: "#EEEDFE" }}
           >
-            📋
+            <i className="ti ti-clipboard-list" aria-hidden="true" />
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">

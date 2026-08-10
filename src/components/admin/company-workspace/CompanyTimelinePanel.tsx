@@ -53,7 +53,7 @@ export function CompanyTimelinePanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] text-slate-400" aria-hidden>
-                      {getOperationalEventIcon(row.event_type, row.event_category)}
+                      <i className={`ti ${getOperationalEventIcon(row.event_type, row.event_category)}`} aria-hidden="true" />
                     </span>
                     <p className="text-sm font-medium text-slate-900">{row.title}</p>
                     <StatusBadge

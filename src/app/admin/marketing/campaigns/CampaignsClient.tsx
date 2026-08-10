@@ -349,7 +349,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       )}
       {healthMsg && (
         <div style={{ marginBottom: 16, fontSize: 12, color: healthMsg.ok ? "#065F46" : "#991B1B", background: healthMsg.ok ? "#ECFDF5" : "#FEF2F2", border: `0.5px solid ${healthMsg.ok ? "#A7F3D0" : "#FECACA"}`, borderRadius: 8, padding: "9px 12px" }}>
-          {healthMsg.ok ? "✓ " : "⚠ "}{healthMsg.text}
+          {healthMsg.ok ? <><i className="ti ti-check" aria-hidden="true" /> </> : <><i className="ti ti-alert-triangle" aria-hidden="true" /> </>}{healthMsg.text}
         </div>
       )}
       {!resendReady && (
@@ -384,7 +384,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   >
                     {!senders.some((s) => s.email === form.from_email) && form.from_email && <option value={form.from_email}>{form.from_email}</option>}
                     {senders.map((s) => <option key={s.email} value={s.email}>{s.name} &lt;{s.email}&gt;</option>)}
-                    <option value="__custom__">✎ Custom address…</option>
+                    <option value="__custom__">Custom address…</option>
                   </select>
                 ) : (
                   <input
@@ -428,7 +428,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "var(--muted)" }}>
                 <span style={{ fontSize: 12.5, fontWeight: 600 }}>Preview &amp; edit</span>
                 <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "1px 7px" }}>Editing this campaign only</span>
-                {previewSaved && <span style={{ fontSize: 10.5, color: "#0F6E56" }}>✓ Saved</span>}
+                {previewSaved && <span style={{ fontSize: 10.5, color: "#0F6E56" }}><i className="ti ti-check" aria-hidden="true" /> Saved</span>}
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                   <button onClick={undoPreview} style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>↩ Undo</button>
                   <button onClick={savePreview} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>Save changes</button>
@@ -456,7 +456,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
 
           {form.scheduled_at && (
             <div style={{ marginTop: 10, fontSize: 12, color: "#185FA5", padding: "6px 10px", background: "#E6F1FB", borderRadius: 6 }}>
-              📅 Will be scheduled to send at {new Date(form.scheduled_at).toLocaleString()}
+<i className="ti ti-calendar" aria-hidden="true" /> Will be scheduled to send at {new Date(form.scheduled_at).toLocaleString()}
             </div>
           )}
           <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -490,8 +490,8 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
-            <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 9px", background: view === "list" ? "#1A6CE4" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>☰</button>
-            <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 9px", background: view === "grid" ? "#1A6CE4" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>▦</button>
+            <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 9px", background: view === "list" ? "#1A6CE4" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /></button>
+            <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 9px", background: view === "grid" ? "#1A6CE4" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
           </div>
           <select value={sortKey} onChange={(e) => setSortKey(e.target.value as "created" | "name" | "opens")} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
             <option value="created">Newest</option>
@@ -541,7 +541,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   </div>
                   {scheduledAt && (
                     <div style={{ fontSize: 11, color: "#185FA5", marginTop: 3 }}>
-                      📅 Scheduled: {new Date(scheduledAt).toLocaleString()}
+<i className="ti ti-calendar" aria-hidden="true" /> Scheduled: {new Date(scheduledAt).toLocaleString()}
                     </div>
                   )}
                 </div>
@@ -591,7 +591,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   <button onClick={() => handleSendTest(c.id)} disabled={testingId === c.id || !resendReady}
                     title="Send one copy to your own email to validate delivery, opens, and clicks against a real inbox"
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: resendReady ? "pointer" : "not-allowed", color: "var(--muted-foreground)", opacity: resendReady ? 1 : 0.5 }}>
-                    {testingId === c.id ? "Sending…" : "✉ Send test to me"}
+                    {testingId === c.id ? "Sending…" : <><i className="ti ti-mail" aria-hidden="true" /> Send test to me</>}
                   </button>
                   <button onClick={() => setArchived(c.id, !c.archived)} disabled={acting === c.id + "archive"}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
@@ -625,7 +625,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{editing ? "Edit campaign" : drawerTab === "preview" ? "Email preview" : "Campaign analytics"}</h3>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {analyticsData && !editing && EDITABLE_STATUSES.includes(analyticsData.status) && (
-                  <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>✎ Edit</button>
+                  <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
                 )}
                 <button onClick={() => setExpanded((v) => !v)} title={expanded ? "Collapse" : "Expand"}
                   style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>
@@ -664,7 +664,7 @@ function ScheduleButton({ onSchedule, acting }: { onSchedule: (at: string) => vo
     return (
       <button onClick={() => setOpen(true)}
         style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
-        📅 Schedule
+        <i className="ti ti-calendar" aria-hidden="true" /> Schedule
       </button>
     );
   }
@@ -714,7 +714,7 @@ function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onC
               }} style={inp}>
                 {!senders.some((s) => s.email === form.from_email) && form.from_email && <option value={form.from_email}>{form.from_email}</option>}
                 {senders.map((s) => <option key={s.email} value={s.email}>{s.name} &lt;{s.email}&gt;</option>)}
-                <option value="__custom__">✎ Custom address…</option>
+                <option value="__custom__">Custom address…</option>
               </select>
             ) : (
               <input value={form.from_email} onChange={(e) => set({ from_email: e.target.value })} style={inp} />
@@ -813,7 +813,7 @@ function AnalyticsPanel({ data }: { data: CampaignDetail }) {
           <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{data.from_name} &lt;{data.from_email}&gt;</span>
         </div>
         {data.scheduled_at && (
-          <div style={{ fontSize: 11, color: "#185FA5", marginTop: 4 }}>📅 Scheduled: {new Date(data.scheduled_at).toLocaleString()}</div>
+          <div style={{ fontSize: 11, color: "#185FA5", marginTop: 4 }}><i className="ti ti-calendar" aria-hidden="true" /> Scheduled: {new Date(data.scheduled_at).toLocaleString()}</div>
         )}
         {data.sent_at && (
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>Sent: {new Date(data.sent_at).toLocaleString()}</div>

@@ -273,7 +273,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Active Opportunities — {matchCount}</div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("published_listings_matched_to_your_investor")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
+                  <button onClick={() => setOpen(null)} aria-label="Close" style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
@@ -311,7 +311,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Watchlist — {watchlistCount} {watchlistCount === 1 ? "company" : "companies"}</div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("companies_saved_for_further_review")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
+                  <button onClick={() => setOpen(null)} aria-label="Close" style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
@@ -350,7 +350,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Expressed Interest — {interestCount}</div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("non_binding_indications_of_interest_submitte")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
+                  <button onClick={() => setOpen(null)} aria-label="Close" style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
@@ -397,7 +397,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Portfolio — {portfolioTotal} total</div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("your_full_investor_activity_across_the_platf")}</div>
                   </div>
-                  <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
+                  <button onClick={() => setOpen(null)} aria-label="Close" style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>

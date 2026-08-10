@@ -51,7 +51,7 @@ function Group({ label, metrics, onOpen }: { label: string; metrics: IrMetric[];
           <div key={m.key} role="button" tabIndex={0} onClick={() => onOpen(m.key)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(m.key); } }}
             style={{ background: "var(--surface-1, #F6F8FB)", borderRadius: 10, padding: "12px 13px", cursor: "pointer", border: "1.5px solid transparent" }}>
-            <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 5 }}>{m.label} <span style={{ color: ACCENT }} title="AI insight">✦</span></div>
+            <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 5 }}>{m.label} <span style={{ color: ACCENT }} title="AI insight"><i className="ti ti-sparkles" aria-hidden="true" /></span></div>
             <div style={{ fontSize: 21, fontWeight: 600, color: NAVY, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{m.value}</div>
             <div style={{ fontSize: 11, color: MUTED }}>{m.delta}</div>
             <Bars series={m.series} />
@@ -85,7 +85,7 @@ function InsightDrawer({ metricKey, label, onClose }: { metricKey: string; label
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}>
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`AI insight — ${label}`} style={{ width: "min(440px, 96vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>✦ AI IR Analyst — {label}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}><i className="ti ti-sparkles" aria-hidden="true" /> AI IR Analyst — {label}</div>
           <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
         </div>
         {loading ? <p style={{ fontSize: 12.5, color: MUTED }}>Analyzing…</p> : insight ? (

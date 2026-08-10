@@ -112,7 +112,7 @@ export function FollowUpNudgesPanel({ targets }: { targets: EnrichedOutreachTarg
               color: nudge.urgency === "overdue" ? "#b91c1c" : "#92400e",
               fontSize: 11, fontWeight: 600,
             }}>
-              {nudge.urgency === "overdue" ? "⚠ " : ""}{nudge.daysSince}d ago
+              {nudge.urgency === "overdue" ? <><i className="ti ti-alert-triangle" aria-hidden="true" /> </> : ""}{nudge.daysSince}d ago
             </div>
 
             {/* Status chip */}

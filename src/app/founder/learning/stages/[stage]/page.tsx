@@ -132,7 +132,7 @@ export default async function StageContentPage({
           {/* Locked gate */}
           {!unlocked && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
-              <p className="text-4xl">🔒</p>
+              <p className="text-4xl"><i className="ti ti-lock" aria-hidden="true" /></p>
               <h2 className="mt-3 text-lg font-semibold text-slate-900">{t("stage_locked")}</h2>
               <p className="mt-2 text-sm text-slate-600">
                 Complete{" "}
@@ -198,7 +198,7 @@ export default async function StageContentPage({
                   </div>
                   {pct >= CAPITAL_STAGE_UNLOCK_THRESHOLD ? (
                     <p className="mt-2 text-xs font-semibold" style={{ color: meta.color }}>
-                      ✓ Stage complete — next stage unlocked
+                      <i className="ti ti-check" aria-hidden="true" /> Stage complete — next stage unlocked
                     </p>
                   ) : (
                     <p className="mt-2 text-xs" style={{ color: meta.color }}>
@@ -240,7 +240,7 @@ export default async function StageContentPage({
                                       : "bg-slate-100 text-slate-400"
                                 }`}
                               >
-                                {done ? "✓" : idx + 1}
+                                {done ? <i className="ti ti-check" aria-hidden="true" /> : idx + 1}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
@@ -313,7 +313,7 @@ export default async function StageContentPage({
                     {deliverableRow ? (
                       <div className="mt-4 rounded-lg bg-green-50 p-3">
                         <p className="text-xs font-semibold text-green-700">
-                          ✓ Submitted
+                          <i className="ti ti-check" aria-hidden="true" /> Submitted
                           {deliverableRow.ai_score != null && ` · AI score: ${deliverableRow.ai_score}/100`}
                         </p>
                         {deliverableRow.ai_feedback && (
@@ -339,7 +339,7 @@ export default async function StageContentPage({
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                     <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                        {meta.icon} Additional courses
+                        <i className={`ti ${meta.icon}`} aria-hidden="true" /> Additional courses
                       </p>
                     </div>
                     <div className="divide-y divide-slate-100">
@@ -383,7 +383,7 @@ export default async function StageContentPage({
                           href={`/founder/learning/stages/${s}`}
                           className={`flex items-center gap-3 px-5 py-3 transition hover:bg-slate-50 ${s === stage ? "bg-slate-50" : ""}`}
                         >
-                          <span className="text-sm">{su ? sm.icon : "🔒"}</span>
+                          <span className="text-sm">{su ? <i className={`ti ${sm.icon}`} aria-hidden="true" /> : <i className="ti ti-lock" aria-hidden="true" />}</span>
                           <span className={`flex-1 text-xs font-medium ${su ? "text-slate-800" : "text-slate-400"}`}>
                             {sm.label}
                           </span>

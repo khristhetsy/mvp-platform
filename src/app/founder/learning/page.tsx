@@ -261,7 +261,7 @@ export default async function FounderLearningPage() {
                               : "bg-slate-100 text-slate-400"
                         }`}
                       >
-                        {done ? "✓" : idx + 1}
+                        {done ? <i className="ti ti-check" aria-hidden="true" /> : idx + 1}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p

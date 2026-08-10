@@ -97,7 +97,7 @@ function FlowStepper() {
                         : "bg-slate-100 text-slate-400"
                   }`}
                 >
-                  {done ? "✓" : i + 1}
+                  {done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
                 </div>
                 <span className={`mt-1.5 text-[11px] font-semibold ${current ? "text-indigo-700" : done ? "text-slate-800" : "text-slate-400"}`}>
                   {step.label}

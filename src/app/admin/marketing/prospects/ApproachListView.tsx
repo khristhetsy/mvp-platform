@@ -119,7 +119,7 @@ export function ApproachListView() {
                     <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", padding: "2px 0 9px" }}>
                       {[r.side ? cap(r.side) : null, r.lead_status ? `Lead: ${cap(r.lead_status)}` : null, r.email_status ? `Email: ${cap(r.email_status)}` : null, r.phone ? "Has phone" : null].filter(Boolean).join(" · ")}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><span>✨</span><span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "#1A6CE4" }}>AI approach advice</span></div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><span><i className="ti ti-sparkles" aria-hidden="true" /></span><span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "#1A6CE4" }}>AI approach advice</span></div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
                       <div style={{ gridColumn: "1 / -1", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "8px 10px" }}><div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "var(--muted-foreground)" }}>Angle</div><div style={{ fontSize: 11.5 }}>{r.advice.angle}</div></div>
                       <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "8px 10px" }}><div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "var(--muted-foreground)" }}>Channel</div><div style={{ fontSize: 11.5 }}>{r.advice.channel}</div></div>

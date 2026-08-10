@@ -144,7 +144,7 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
         >
           {saving ? "Saving…" : "Save company basics"}
         </button>
-        {saved ? <span className="text-sm font-medium text-emerald-700">Saved ✓</span> : null}
+        {saved ? <span className="text-sm font-medium text-emerald-700">Saved <i className="ti ti-check" aria-hidden="true" /></span> : null}
       </div>
       <p className="text-xs text-slate-400">Changes are audited. Industry, stage, and funding target feed the company profile, matching, and readiness.</p>
     </div>

@@ -119,7 +119,7 @@ export function PipelineClient() {
                       <div style={{ fontSize: 11, color: "#185FA5", marginTop: 2 }}>{o.value_cents != null ? money(o.value_cents) : ""}{o.contact_name ? <span style={{ color: "var(--muted-foreground)" }}> · {o.contact_name}</span> : ""}</div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
                         {isStalled(o) ? <span style={{ fontSize: 10, color: "#A32D2D" }}><i className="ti ti-clock" aria-hidden="true" /> stalled</span>
-                          : o.priority > 0 ? <span style={{ fontSize: 11, color: "#EF9F27" }}>{"★".repeat(o.priority)}</span>
+                          : o.priority > 0 ? <span style={{ fontSize: 11, color: "#EF9F27" }}>{Array.from({ length: o.priority }).map((_, i) => <i key={i} className="ti ti-star-filled" aria-hidden="true" />)}</span>
                           : <span />}
                         {o.probability != null && <span style={{ fontSize: 10, color: "#3B6D11" }}>{o.probability}%</span>}
                       </div>
@@ -151,8 +151,8 @@ export function PipelineClient() {
               <button onClick={() => call(`/api/sales/stages/${s.id}`, "PATCH", { isWon: !s.is_won })} disabled={busy} style={{ fontSize: 10.5, fontWeight: 600, color: s.is_won ? "#0F6E56" : "var(--muted-foreground)", background: s.is_won ? "#E1F5EE" : "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Won stage</button>
               <button onClick={() => moveStage(s, -1)} disabled={busy || i === 0} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === 0 ? 0.3 : 1 }}>↑</button>
               <button onClick={() => moveStage(s, 1)} disabled={busy || i === stages.length - 1} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === stages.length - 1 ? 0.3 : 1 }}>↓</button>
-              <button onClick={() => renameStage(s)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}>✎</button>
-              <button onClick={() => { if (confirm(`Delete stage "${s.name}"? Opportunities in it become unstaged.`)) void call(`/api/sales/stages/${s.id}`, "DELETE"); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>🗑</button>
+              <button onClick={() => renameStage(s)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-pencil" aria-hidden="true" /></button>
+              <button onClick={() => { if (confirm(`Delete stage "${s.name}"? Opportunities in it become unstaged.`)) void call(`/api/sales/stages/${s.id}`, "DELETE"); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}><i className="ti ti-trash" aria-hidden="true" /></button>
             </div>
           ))}
         </div>

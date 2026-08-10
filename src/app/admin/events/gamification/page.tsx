@@ -36,7 +36,7 @@ export default async function AdminGamificationPage() {
         </p>
 
         <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#d5e6ff] bg-[#f2f8ff] px-4 py-3 text-sm text-[#1c3d63]">
-          <span aria-hidden className="text-base">💡</span>
+          <span aria-hidden className="text-base"><i className="ti ti-bulb" aria-hidden="true" /></span>
           <p className="leading-relaxed">
             These values also fund <b>iCFO Points</b> — the redeemable, no-cash-value member balance (1:1 with the
             leaderboard). A value of <b>15</b> means an attendee earns 15 Points for that action.{" "}

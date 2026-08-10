@@ -59,7 +59,7 @@ export const marketplaceCopy = {
     amountNote: "Any amount entered is informational only and creates no commitment.",
     submit: "Submit non-binding interest",
     submitting: "Submitting…",
-    success: "✓ Interest recorded — you'll be notified when the offering is live on the portal.",
+    success: "Interest recorded — you'll be notified when the offering is live on the portal.",
     closedError: "This offering is no longer collecting interest.",
     genericError: "Something went wrong. Please try again.",
   },

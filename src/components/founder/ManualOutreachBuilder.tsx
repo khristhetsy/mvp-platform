@@ -434,7 +434,7 @@ export function ManualOutreachBuilder({
       {/* AI kit */}
       <div className="mt-4 rounded-lg border border-indigo-300 bg-indigo-50 p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-slate-900">✦ AI outreach kit</span>
+          <span className="text-sm font-medium text-slate-900"><i className="ti ti-sparkles" aria-hidden="true" /> AI outreach kit</span>
           <button type="button" onClick={() => void draftEmails()} disabled={drafting} className="ml-auto rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
             {drafting ? "Drafting…" : "Draft emails"}
           </button>
@@ -651,7 +651,7 @@ export function ManualOutreachBuilder({
                             <span
                               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${on ? "bg-indigo-600 text-[11px] text-white" : "border-[1.5px] border-slate-300"}`}
                             >
-                              {on ? "✓" : ""}
+                              {on ? <i className="ti ti-check" aria-hidden="true" /> : ""}
                             </span>
                             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
                               {c.name.slice(0, 2).toUpperCase()}

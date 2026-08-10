@@ -187,7 +187,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
 
           {courses.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white px-8 py-16 text-center">
-              <p className="text-3xl">📚</p>
+              <p className="text-3xl"><i className="ti ti-book" aria-hidden="true" /></p>
               <p className="mt-3 text-sm font-medium text-slate-700">{t("no_courses_found")}</p>
               <p className="mt-1 text-xs text-slate-400">{t("try_removing_a_filter")}</p>
               <Link
@@ -225,7 +225,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                           className="flex h-full items-center justify-center text-3xl"
                           style={{ background: badge.bg }}
                         >
-                          📚
+                          <i className="ti ti-book" aria-hidden="true" />
                         </div>
                       )}
                       {course.video_url && (

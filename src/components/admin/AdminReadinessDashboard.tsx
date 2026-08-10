@@ -15,6 +15,10 @@ import { useState, useTransition } from "react";
 import { READINESS_FACTORS } from "@/lib/ai/readiness-scoring";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 
+// Evidence status → Tabler outline icon + color
+const EV_ICON = { pass: "ti-circle-check", warn: "ti-alert-triangle", fail: "ti-circle-x" } as const;
+const EV_COLOR = { pass: "#0F6E56", warn: "#854F0B", fail: "#A32D2D" } as const;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CompanyScore = {
@@ -119,7 +123,7 @@ function FactorPopup({
             onClick={onClose}
             className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
           >
-            ✕
+            <i className="ti ti-x" aria-hidden="true" />
           </button>
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
             {def.tag}
@@ -205,7 +209,9 @@ function FactorPopup({
               <div className="divide-y divide-slate-100 rounded-xl border border-slate-100">
                 {score.evidence.map((e, i) => (
                   <div key={i} className="flex gap-3 px-4 py-3">
-                    <span className="mt-0.5 shrink-0">{e.icon}</span>
+                    <span className="mt-0.5 shrink-0">
+                      <i className={`ti ${EV_ICON[e.icon]}`} style={{ color: EV_COLOR[e.icon] }} aria-hidden="true" />
+                    </span>
                     <div>
                       <p className="text-sm text-slate-700">{e.text}</p>
                       <p className="mt-0.5 text-xs text-slate-400">{e.src}</p>

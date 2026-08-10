@@ -350,7 +350,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
                 Generating… this may take 20–30 seconds
               </>
             ) : (
-              "✦ Generate course"
+              <><i className="ti ti-sparkles" aria-hidden="true" /> Generate course</>
             )}
           </button>
         </div>

@@ -154,10 +154,10 @@ type EditForm = {
 /* ─── main component ────────────────────────────────────────────── */
 
 const TASK_TYPES: { value: TaskType; label: string; icon: string; pill: string; text: string; svgIcon: React.ReactNode }[] = [
-  { value: "learning",          label: "Learning",          icon: "📚", pill: "bg-[#0C2340]", text: "text-[#AFA9EC]", svgIcon: <IcoBook /> },
-  { value: "operations",        label: "Operations",        icon: "⚙️", pill: "bg-[#1E3A5F]", text: "text-[#93C5FD]", svgIcon: <IcoSettings /> },
-  { value: "investor_outreach", label: "Investor outreach", icon: "🤝", pill: "bg-[#2D1B5E]", text: "text-[#C4B5FD]", svgIcon: <IcoHandshake /> },
-  { value: "deal_diligence",    label: "Deal & diligence",  icon: "🔍", pill: "bg-[#1A2E1A]", text: "text-[#86EFAC]", svgIcon: <IcoSearch /> },
+  { value: "learning",          label: "Learning",          icon: "ti-book", pill: "bg-[#0C2340]", text: "text-[#AFA9EC]", svgIcon: <IcoBook /> },
+  { value: "operations",        label: "Operations",        icon: "ti-settings", pill: "bg-[#1E3A5F]", text: "text-[#93C5FD]", svgIcon: <IcoSettings /> },
+  { value: "investor_outreach", label: "Investor outreach", icon: "ti-users", pill: "bg-[#2D1B5E]", text: "text-[#C4B5FD]", svgIcon: <IcoHandshake /> },
+  { value: "deal_diligence",    label: "Deal & diligence",  icon: "ti-search", pill: "bg-[#1A2E1A]", text: "text-[#86EFAC]", svgIcon: <IcoSearch /> },
 ];
 
 export function InvestorTasksPageClient({
@@ -416,7 +416,7 @@ export function InvestorTasksPageClient({
                 className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
                 <option value="">No type</option>
                 {TASK_TYPES.map((tt) => (
-                  <option key={tt.value} value={tt.value}>{tt.icon} {tt.label}</option>
+                  <option key={tt.value} value={tt.value}>{tt.label}</option>
                 ))}
               </select>
             )}
@@ -427,7 +427,7 @@ export function InvestorTasksPageClient({
               {saving ? "…" : "Save"}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100">✕</button>
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100" aria-label="Cancel"><i className="ti ti-x" aria-hidden="true" /></button>
           </div>
         </div>
       )}
@@ -543,7 +543,7 @@ export function InvestorTasksPageClient({
                 <PriorityPill priority={task.priority} />
                 {task.due_date && (
                   <span className={`text-[11px] ${overdue ? "text-red-500" : "text-slate-400"}`}>
-                    {overdue ? "⚠ " : ""}{fmt(task.due_date)}
+                    {overdue ? <><i className="ti ti-alert-triangle" aria-hidden="true" /> </> : ""}{fmt(task.due_date)}
                   </span>
                 )}
                 {isSynced && (
@@ -654,7 +654,7 @@ export function InvestorTasksPageClient({
                       </div>
                       {task.due_date && (
                         <p className={`mt-1.5 text-[11px] ${overdue ? "text-red-500" : "text-slate-400"}`}>
-                          {overdue ? "⚠ " : "📅 "}{fmt(task.due_date)}
+                          {overdue ? <><i className="ti ti-alert-triangle" aria-hidden="true" /> </> : <><i className="ti ti-calendar" aria-hidden="true" /> </>}{fmt(task.due_date)}
                         </p>
                       )}
                       {task.google_calendar_event_id && (
@@ -824,7 +824,7 @@ export function InvestorTasksPageClient({
                 </div>
                 {task.due_date && (
                   <p className={`mt-2 text-[11px] ${overdue ? "text-red-500" : "text-slate-400"}`}>
-                    {overdue ? "⚠ " : "📅 "}{fmt(task.due_date)}
+                    {overdue ? <><i className="ti ti-alert-triangle" aria-hidden="true" /> </> : <><i className="ti ti-calendar" aria-hidden="true" /> </>}{fmt(task.due_date)}
                   </p>
                 )}
                 {isSynced && <p className="mt-1 text-[11px] text-blue-600">{t("in_calendar")}</p>}

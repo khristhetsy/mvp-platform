@@ -648,7 +648,7 @@ export function EventDetailManager({
 
       {!canEdit && (
         <div className="mt-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          <span aria-hidden>🔒</span> View only — you can see this event but don&rsquo;t have permission to edit it.
+          <span aria-hidden><i className="ti ti-lock" aria-hidden="true" /></span> View only — you can see this event but don&rsquo;t have permission to edit it.
         </div>
       )}
 

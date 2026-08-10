@@ -51,7 +51,7 @@ export function ModuleCard({
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
           {c.flags.map((f, i) => (
             <span key={i} style={{ fontSize: 11, fontWeight: 500, padding: "3px 9px", borderRadius: 6, background: f.kind === "hard_gate" ? "#FAEEDA" : "#E6F1FB", color: f.kind === "hard_gate" ? "#854F0B" : "#185FA5", border: `1px solid ${f.kind === "hard_gate" ? "#EDD8AE" : "#B5D4F4"}` }}>
-              {f.kind === "hard_gate" ? "⛔ Gate" : "Guardrail"} · {f.label}
+              {f.kind === "hard_gate" ? (<><i className="ti ti-ban" aria-hidden="true" /> Gate</>) : "Guardrail"} · {f.label}
             </span>
           ))}
         </div>

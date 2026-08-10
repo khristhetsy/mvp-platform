@@ -75,7 +75,7 @@ export function StageProgressCard({ state }: { state: FounderJourneyState }) {
             {reqs.map((r) => (
               <li key={r.label} className="flex items-center justify-between gap-3 text-sm">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className={`inline-flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] ${r.met ? "bg-emerald-500 text-white" : "border border-slate-300 text-transparent"}`}>✓</span>
+                  <span className={`inline-flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] ${r.met ? "bg-emerald-500 text-white" : "border border-slate-300 text-transparent"}`}><i className="ti ti-check" aria-hidden="true" /></span>
                   <span className={`truncate ${r.met ? "text-slate-700" : "text-slate-500"}`}>{r.label}</span>
                 </span>
                 {!r.met && r.href ? (

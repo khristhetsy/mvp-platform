@@ -154,7 +154,7 @@ export function InvestorDetailClient({
             className="rounded-lg bg-[var(--brand-indigo,#2E78F5)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             title={isMember ? "" : "Introductions to prospects are coordinated by iCapOS"}
           >
-            {introState === "loading" ? "Requesting…" : introState === "done" ? "Introduction requested ✓" : "Request introduction"}
+            {introState === "loading" ? "Requesting…" : introState === "done" ? <>Introduction requested <i className="ti ti-check" aria-hidden="true" /></> : "Request introduction"}
           </button>
           <button
             type="button"
@@ -162,7 +162,7 @@ export function InvestorDetailClient({
             disabled={followState === "loading" || followState === "done"}
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
-            {followState === "loading" ? "Adding…" : followState === "done" ? "Added to follow-up ✓" : "Add to follow-up"}
+            {followState === "loading" ? "Adding…" : followState === "done" ? <>Added to follow-up <i className="ti ti-check" aria-hidden="true" /></> : "Add to follow-up"}
           </button>
         </div>
 
@@ -199,7 +199,7 @@ export function InvestorDetailClient({
         </div>
 
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
-          <span aria-hidden="true">🔒</span> Contact details are hidden — introductions are coordinated through iCapOS.
+          <span aria-hidden="true"><i className="ti ti-lock" aria-hidden="true" /></span> Contact details are hidden — introductions are coordinated through iCapOS.
         </div>
 
         {/* Tabs: Notes (timestamped history) + Details */}

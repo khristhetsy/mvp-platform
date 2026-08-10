@@ -94,7 +94,7 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
                 </div>
               ) : status === "investor_interested" ? (
                 <p className="mt-1 rounded-lg bg-[#E6F7F0] px-3 py-2 text-[12px] font-semibold text-[#0B5C41]">
-                  ✓ Interest sent — awaiting the founder&apos;s approval to introduce.
+                  <i className="ti ti-check" aria-hidden="true" /> Interest sent — awaiting the founder&apos;s approval to introduce.
                 </p>
               ) : (
                 <p className="mt-1 rounded-lg bg-[#EEF1F7] px-3 py-2 text-[12px] text-[#2E3A54]">

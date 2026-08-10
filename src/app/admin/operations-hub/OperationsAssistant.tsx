@@ -67,7 +67,7 @@ export function OperationsAssistant({ entityType, entityId }: { entityType: stri
         <div style={{ padding: "8px 12px", borderBottom: "0.5px solid var(--border)", display: "flex", flexWrap: "wrap", gap: 6 }}>
           {facts.steps.map((s) => (
             <span key={s.id} style={{ fontSize: 10, display: "inline-flex", alignItems: "center", gap: 3, color: s.completed ? "#0F6E56" : "var(--muted-foreground)" }}>
-              <span>{s.completed ? "✓" : "○"}</span>{s.title}
+              <span>{s.completed ? <i className="ti ti-check" aria-hidden="true" /> : <i className="ti ti-circle" aria-hidden="true" />}</span>{s.title}
             </span>
           ))}
         </div>

@@ -98,7 +98,7 @@ export function LobbyHall({
   }, [incomingWave, dismissWave]);
 
   const tickerItems = [
-    ...(announcement ? [`📢 ${announcement.title}`] : []),
+    ...(announcement ? [`${announcement.title}`] : []),
     ...DOORS.filter((d) => d.room).map((d) => `${cap(d.label)} — ${d.meta(byRoom[d.room as string] ?? 0)}`),
   ];
   const hrefFor = (key: string) => venueZones(slug, tracksHref).find((z) => z.key === key)?.href ?? `/events/${slug}`;
@@ -196,16 +196,16 @@ export function LobbyHall({
 
           {/* help & info desk → opens the AI assistant */}
           <button type="button" className={styles.desk} onClick={openDesk}>
-            <span className={styles.deskBox}>💬</span>
+            <span className={styles.deskBox}><i className="ti ti-message" aria-hidden="true" /></span>
             <span className={styles.deskNm}>{t("help_info_desk")}</span>
             <br />
-            <span className={styles.deskHint}>✨ Ask AI</span>
+            <span className={styles.deskHint}><i className="ti ti-sparkles" aria-hidden="true" /> Ask AI</span>
           </button>
 
-          <span className={styles.plant} style={{ left: "16%", top: "33%" }} aria-hidden>🪴</span>
-          <span className={styles.plant} style={{ left: "82%", top: "33%" }} aria-hidden>🌿</span>
-          <span className={styles.plant} style={{ left: "14%", top: "62%" }} aria-hidden>🌱</span>
-          <span className={styles.plant} style={{ left: "84%", top: "62%" }} aria-hidden>🪴</span>
+          <span className={styles.plant} style={{ left: "16%", top: "33%" }} aria-hidden><i className="ti ti-plant-2" aria-hidden="true" /></span>
+          <span className={styles.plant} style={{ left: "82%", top: "33%" }} aria-hidden><i className="ti ti-plant" aria-hidden="true" /></span>
+          <span className={styles.plant} style={{ left: "14%", top: "62%" }} aria-hidden><i className="ti ti-plant-2" aria-hidden="true" /></span>
+          <span className={styles.plant} style={{ left: "84%", top: "62%" }} aria-hidden><i className="ti ti-plant-2" aria-hidden="true" /></span>
 
           {/* other attendees */}
           {others.map((m, i) => {
@@ -353,8 +353,8 @@ export function LobbyHall({
               <p className={styles.profHint}>This is you.</p>
             ) : (
               <div className={styles.profAct}>
-                <button type="button" onClick={() => { sendWave(sel.member.id, "wave"); setSel(null); }}>👋 Wave</button>
-                <button type="button" onClick={() => { sendWave(sel.member.id, "hi"); setSel(null); }}>💬 Say hi</button>
+                <button type="button" onClick={() => { sendWave(sel.member.id, "wave"); setSel(null); }}><i className="ti ti-hand-two-fingers" aria-hidden="true" /> Wave</button>
+                <button type="button" onClick={() => { sendWave(sel.member.id, "hi"); setSel(null); }}><i className="ti ti-message" aria-hidden="true" /> Say hi</button>
               </div>
             )}
           </div>
@@ -363,7 +363,7 @@ export function LobbyHall({
 
       {incomingWave && (
         <div className={styles.waveToast} role="status">
-          {incomingWave.kind === "hi" ? "💬" : "👋"} {incomingWave.fromName}{" "}
+          {incomingWave.kind === "hi" ? <i className="ti ti-message" aria-hidden="true" /> : <i className="ti ti-hand-two-fingers" aria-hidden="true" />} {incomingWave.fromName}{" "}
           {incomingWave.kind === "hi" ? "says hi" : "waved at you"}
         </div>
       )}

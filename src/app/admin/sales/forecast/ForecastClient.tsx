@@ -169,7 +169,7 @@ function Card({ label, value, sub, onClick }: { label: string; value: string; su
     <div role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       onClick={onClick} onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
       style={{ background: "var(--surface-1, #F6F8FB)", borderRadius: 10, padding: "12px 14px", cursor: onClick ? "pointer" : "default" }}>
-      <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 5 }}>{label} <span style={{ color: BRIGHT }} title="AI insight">✦</span></div>
+      <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 5 }}>{label} <span style={{ color: BRIGHT }} title="AI insight"><i className="ti ti-sparkles" aria-hidden="true" /></span></div>
       <div style={{ fontSize: 22, fontWeight: 600, color: NAVY, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{sub}</div>}
     </div>
@@ -536,7 +536,7 @@ function Journal() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 10, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 5, padding: "1px 7px", textTransform: "uppercase" }}>{e.entry_type}</span>
                 <span style={{ fontSize: 11, color: MUTED }}>{e.author_name ?? "System"} · {new Date(e.created_at).toLocaleString()}</span>
-                <button onClick={() => void pin(e.id, !e.pinned)} title="Pin" style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: e.pinned ? BRIGHT : MUTED }}>{e.pinned ? "★" : "☆"}</button>
+                <button onClick={() => void pin(e.id, !e.pinned)} title="Pin" style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: e.pinned ? BRIGHT : MUTED }}>{e.pinned ? <i className="ti ti-star-filled" aria-hidden="true" /> : <i className="ti ti-star" aria-hidden="true" />}</button>
               </div>
               <div style={{ fontSize: 12.5, color: NAVY, whiteSpace: "pre-wrap" }}>{e.body}</div>
               {e.tags.length > 0 && <div style={{ marginTop: 4, display: "flex", gap: 5, flexWrap: "wrap" }}>{e.tags.map((tag) => <span key={tag} style={{ fontSize: 10, color: "#185FA5" }}>#{tag}</span>)}</div>}
@@ -562,7 +562,7 @@ function InsightDrawer({ metric, scenarioId, onClose, onAction }: { metric: Metr
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}>
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`AI insight — ${LABEL[metric]}`} style={{ width: "min(440px, 96vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>✦ AI Sales — {LABEL[metric]}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}><i className="ti ti-sparkles" aria-hidden="true" /> AI Sales — {LABEL[metric]}</div>
           <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
         </div>
         {loading ? <p style={{ fontSize: 12.5, color: MUTED }}>Analyzing…</p> : insight ? (

@@ -20,7 +20,7 @@ type ActivityConfig = {
 const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   saved_deal: {
     label: "Deal Saved",
-    emoji: "🔖",
+    emoji: "ti-bookmark",
     bg: "#fef9c3", color: "#854d0e",
     badgeBg: "#fef9c3", badgeColor: "#854d0e",
     note: "Added to your watchlist for further review.",
@@ -28,7 +28,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   expressed_interest: {
     label: "Expressed Interest",
-    emoji: "⭐",
+    emoji: "ti-star",
     bg: "#dbeafe", color: "#1e40af",
     badgeBg: "#dbeafe", badgeColor: "#1e40af",
     note: "Non-binding indication of interest submitted. Deal room access unlocked.",
@@ -36,7 +36,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   requested_intro: {
     label: "Intro Requested",
-    emoji: "🤝",
+    emoji: "ti-users",
     bg: "#ecfdf5", color: "#065f46",
     badgeBg: "#ecfdf5", badgeColor: "#065f46",
     note: "Intro request sent to admin for founder connection.",
@@ -44,7 +44,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   follow_up_requested: {
     label: "Follow-up",
-    emoji: "🔁",
+    emoji: "ti-refresh",
     bg: "#fef3c7", color: "#92400e",
     badgeBg: "#fef3c7", badgeColor: "#92400e",
     note: "Follow-up flagged for this opportunity.",
@@ -52,7 +52,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   pledge_amount_submitted: {
     label: "Interest Submitted",
-    emoji: "💰",
+    emoji: "ti-coin",
     bg: "#dcfce7", color: "#14532d",
     badgeBg: "#dcfce7", badgeColor: "#14532d",
     note: "Indicative amount submitted for this round.",
@@ -60,7 +60,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   message_thread_created: {
     label: "Thread Started",
-    emoji: "💬",
+    emoji: "ti-message",
     bg: "#ede9fe", color: "#5b21b6",
     badgeBg: "#ede9fe", badgeColor: "#5b21b6",
     note: "New message thread opened with the founder.",
@@ -68,7 +68,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   message_sent: {
     label: "Message Sent",
-    emoji: "💬",
+    emoji: "ti-message",
     bg: "#ede9fe", color: "#5b21b6",
     badgeBg: "#ede9fe", badgeColor: "#5b21b6",
     note: "Message sent via deal room thread.",
@@ -76,7 +76,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   meeting_requested: {
     label: "Meeting Requested",
-    emoji: "📅",
+    emoji: "ti-calendar",
     bg: "#e0e7ff", color: "#3730a3",
     badgeBg: "#e0e7ff", badgeColor: "#3730a3",
     note: "Meeting request submitted to the founder.",
@@ -84,7 +84,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   meeting_accepted: {
     label: "Meeting Accepted",
-    emoji: "✅",
+    emoji: "ti-circle-check",
     bg: "#ecfdf5", color: "#065f46",
     badgeBg: "#ecfdf5", badgeColor: "#065f46",
     note: "Founder accepted your meeting request.",
@@ -92,7 +92,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   meeting_declined: {
     label: "Meeting Declined",
-    emoji: "❌",
+    emoji: "ti-circle-x",
     bg: "#fee2e2", color: "#991b1b",
     badgeBg: "#fee2e2", badgeColor: "#991b1b",
     note: "Founder declined this meeting request.",
@@ -100,7 +100,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   report_viewed: {
     label: "Report Viewed",
-    emoji: "📄",
+    emoji: "ti-file-text",
     bg: "#f1f5f9", color: "#475569",
     badgeBg: "#f1f5f9", badgeColor: "#475569",
     note: "Full investor diligence report accessed.",
@@ -108,7 +108,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
   },
   spv_interest_expressed: {
     label: "SPV Interest",
-    emoji: "🏦",
+    emoji: "ti-building-bank",
     bg: "#f0fdf4", color: "#166534",
     badgeBg: "#f0fdf4", badgeColor: "#166534",
     note: "Expressed interest in SPV participation for this company.",
@@ -118,7 +118,7 @@ const ACTIVITY_CONFIG: Record<string, ActivityConfig> = {
 
 const FALLBACK_CONFIG: ActivityConfig = {
   label: "Activity",
-  emoji: "📌",
+  emoji: "ti-pin",
   bg: "#f1f5f9", color: "#475569",
   badgeBg: "#f1f5f9", badgeColor: "#475569",
   note: "",
@@ -276,7 +276,7 @@ export function InvestorActivityTimelineClient({
                     {/* Left col: dot + line */}
                     <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", width: 36, flexShrink: 0, paddingTop: 2 }}>
                       <div style={{ width: 28, height: 28, borderRadius: "50%", background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, zIndex: 1 }}>
-                        {cfg.emoji}
+                        <i className={`ti ${cfg.emoji}`} aria-hidden="true" />
                       </div>
                       {!isLast && (
                         <div style={{ width: 2, flex: 1, minHeight: 16, margin: "2px 0", background: "#f1f5f9", borderRadius: 1 }} />

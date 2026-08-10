@@ -145,7 +145,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
             <select value={draft.assigneeId} onChange={(e) => setDraft({ ...draft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
           </div>
         )}
@@ -161,7 +161,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
               onClick={(e) => e.stopPropagation()}
               style={{ width: "100%", maxWidth: 430, background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 16, padding: 20, boxShadow: "0 12px 40px rgba(12,35,64,.22)" }}
             >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E1F5EE", color: "#0F6E56", fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 999 }}>✓ Task marked done</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#E1F5EE", color: "#0F6E56", fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 999 }}><i className="ti ti-check" aria-hidden="true" /> Task marked done</span>
               <p style={{ margin: "14px 0 2px", fontSize: 18, fontWeight: 600, color: "var(--foreground)" }}>Create the next step?</p>
               <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
                 Keep things moving{nextStep.task.opportunity_name ? <> with <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>{nextStep.task.opportunity_name}</strong></> : nextStep.task.contact_name ? <> with <strong style={{ fontWeight: 600, color: "var(--foreground)" }}>{nextStep.task.contact_name}</strong></> : null} — schedule the next step.
@@ -227,7 +227,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
               if (confirmId === t.id) {
                 return (
                   <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
-                    <span style={{ fontSize: 12.5, color: "#A32D2D" }}>⚠ Delete &ldquo;{t.title}&rdquo;{t.contact_name ? ` for ${t.contact_name}` : ""}? This can&rsquo;t be undone.</span>
+                    <span style={{ fontSize: 12.5, color: "#A32D2D" }}><i className="ti ti-alert-triangle" aria-hidden="true" /> Delete &ldquo;{t.title}&rdquo;{t.contact_name ? ` for ${t.contact_name}` : ""}? This can&rsquo;t be undone.</span>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                       <button onClick={async () => { await del(t.id); setConfirmId(null); }} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Delete</button>
                       <button onClick={() => setConfirmId(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
@@ -244,7 +244,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                     <select value={edit.assigneeId} onChange={(e) => setEdit({ ...edit, assigneeId: e.target.value })} style={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => saveEdit(t.id)} disabled={busy || !edit.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                      <button onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
                     </div>
                   </div>
                 );
@@ -266,7 +266,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                   <span className="cLbl" data-label="Status" style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: done ? "#0F6E56" : "#854F0B", background: done ? "#E1F5EE" : "#FAEEDA" }}>{done ? "Done" : "Open"}</span>
                   <div className="tActions">
                     <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-                    {!done && <button onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓ Done</button>}
+                    {!done && <button onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
                     {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
                     <button onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                   </div>

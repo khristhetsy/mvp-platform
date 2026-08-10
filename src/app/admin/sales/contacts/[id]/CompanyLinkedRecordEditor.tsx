@@ -60,7 +60,7 @@ function Chips({ options, value, onToggle, single = false }: { options: string[]
           <button key={o} type="button" onClick={() => onToggle(o)}
             style={{ borderRadius: 999, padding: "3px 10px", fontSize: 11.5, cursor: "pointer",
               border: on ? "1px solid #2E78F5" : "1px solid #e2e8f0", background: on ? "#EEEDFE" : "white", color: on ? "#3C3489" : "#475569" }}>
-            {o}{single && on ? " ✓" : ""}
+            {o}{single && on ? <> <i className="ti ti-check" aria-hidden="true" /></> : ""}
           </button>
         );
       })}

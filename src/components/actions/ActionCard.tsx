@@ -122,7 +122,7 @@ export function ActionCard({
           {/* Due date */}
           {action.dueAt ? (
             <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: overdue ? 600 : 400, color: overdue ? "#A32D2D" : "#94a3b8" }}>
-              {overdue ? "⚠ Overdue · " : "Due "}
+              {overdue ? (<><i className="ti ti-alert-triangle" aria-hidden="true" /> Overdue · </>) : "Due "}
               {new Date(action.dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </p>
           ) : null}

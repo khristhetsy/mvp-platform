@@ -320,7 +320,7 @@ function Drawer({
             onClick={onClose}
             style={{ width: 28, height: 28, borderRadius: "50%", border: "0.5px solid #e2e6ed", background: "#f8fafc", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}
           >
-            ✕
+            <i className="ti ti-x" aria-hidden="true" />
           </button>
         </div>
 

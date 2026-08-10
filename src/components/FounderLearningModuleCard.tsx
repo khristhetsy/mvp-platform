@@ -51,7 +51,7 @@ export function FounderLearningModuleCard({
       <p className="mt-2 text-sm leading-6 text-slate-600">{module.description}</p>
       {locked ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-800">
-          <span aria-hidden>🔒</span>
+          <span aria-hidden><i className="ti ti-lock" aria-hidden="true" /></span>
           {lockMessage ?? "Complete the previous stage to unlock"}
         </p>
       ) : null}

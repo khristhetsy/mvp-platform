@@ -81,7 +81,7 @@ export function InvestorDealBrief({ companyId }: { companyId: string }) {
           className="shrink-0 text-xs text-slate-400 hover:text-slate-600 transition-colors"
           aria-label="Dismiss brief"
         >
-          ✕
+          <i className="ti ti-x" aria-hidden="true" />
         </button>
       </div>
 

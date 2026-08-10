@@ -129,7 +129,7 @@ export function AdminLearningStageOverridePanel({ founderId, companyId, adminNam
               )}
               {current === true && (
                 <p className="mt-1.5 text-[10px] font-semibold text-amber-700">
-                  ⚠ Force unlock — audit log entry will be created on save
+                  <i className="ti ti-alert-triangle" aria-hidden="true" /> Force unlock — audit log entry will be created on save
                 </p>
               )}
             </div>
@@ -142,7 +142,7 @@ export function AdminLearningStageOverridePanel({ founderId, companyId, adminNam
           disabled={isPending}
           className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
         >
-          {isPending ? "Saving…" : saved ? "✓ Saved" : "Save stage settings"}
+          {isPending ? "Saving…" : saved ? <><i className="ti ti-check" aria-hidden="true" /> Saved</> : "Save stage settings"}
         </button>
       </div>
     </div>

@@ -23,21 +23,21 @@ function setDismissed() {
 const STEPS = [
   {
     step: 1,
-    icon: "📄",
+    icon: "ti-file-text",
     title: "Upload your first document",
     description: "Start with your pitch deck or financial model. Documents build your completion and unlock investor data rooms.",
     action: { label: "Go to Documents", href: "/founder/documents" },
   },
   {
     step: 2,
-    icon: "🎯",
+    icon: "ti-target",
     title: "Add an investor to your CRM",
     description: "Track your outreach in one place. Add investors manually or import from a spreadsheet.",
     action: { label: "Open CRM", href: "/founder/investors/outreach" },
   },
   {
     step: 3,
-    icon: "🚀",
+    icon: "ti-rocket",
     title: "Share your one-pager",
     description: "Publish your company profile and send a shareable link to investors — no login required on their end.",
     action: { label: "Go to Settings", href: "/founder/settings" },
@@ -162,7 +162,7 @@ export function FirstRunModal({ hasNoDocuments }: Props) {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 26, flexShrink: 0,
             }}>
-              {currentStep.icon}
+              <i className={`ti ${currentStep.icon}`} aria-hidden="true" />
             </div>
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#2E78F5", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 4px" }}>

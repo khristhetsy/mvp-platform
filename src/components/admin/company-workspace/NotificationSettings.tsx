@@ -353,13 +353,13 @@ export function NotificationSettings() {
               onClick={() => update({ timezone: detectBrowserTimezone() })}
               className="mt-1 self-start text-xs font-medium text-blue-600 hover:text-blue-700"
             >
-              📍 Use my current zone ({detectBrowserTimezone()})
+              <i className="ti ti-map-pin" aria-hidden="true" /> Use my current zone ({detectBrowserTimezone()})
             </button>
           </div>
 
           {prefs.quiet_start && prefs.quiet_end ? (
             <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-[13px] text-blue-900">
-              <span aria-hidden="true">🕗</span>
+              <span aria-hidden="true"><i className="ti ti-clock" aria-hidden="true" /></span>
               <span>
                 Notifications are muted <b>{to12h(prefs.quiet_start)} → {to12h(prefs.quiet_end)}</b> in{" "}
                 <b>{tzOffsetLabel(prefs.timezone ?? "UTC")}</b>. The times above are interpreted in this zone.

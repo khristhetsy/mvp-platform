@@ -158,12 +158,12 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
               <p className="text-xs text-slate-500">{r.label} · Match {r.matchScore}%</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
 
         <div className="px-5 pb-5">
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
-            🔒 Contact details hidden — introductions run through iCapOS
+            <i className="ti ti-lock" aria-hidden="true" /> Contact details hidden — introductions run through iCapOS
           </div>
 
           <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Fit breakdown</p>
@@ -248,7 +248,7 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
             </div>
           </div>
         </div>
-        <span className="font-mono text-[11px] text-slate-400">🔒 Confidential directory</span>
+        <span className="font-mono text-[11px] text-slate-400"><i className="ti ti-lock" aria-hidden="true" /> Confidential directory</span>
       </div>
 
       <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${COLS}`}>

@@ -386,7 +386,7 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
                     onClick={() => void sendResetEmail()}
                     className="rounded-md border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                   >
-                    {resetSending ? "Sending…" : resetSent ? "Reset email sent ✓" : "Send reset email"}
+                    {resetSending ? "Sending…" : resetSent ? (<>Reset email sent <i className="ti ti-check" aria-hidden="true" /></>) : "Send reset email"}
                   </button>
                   {resetError && <p className="mt-2 text-xs text-red-600">{resetError}</p>}
                 </div>

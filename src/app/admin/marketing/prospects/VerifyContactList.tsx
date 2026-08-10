@@ -240,7 +240,7 @@ export function VerifyContactList() {
       {/* carry-over banner — the selection brought over from Create List */}
       {carried ? (
         <div style={{ padding: "9px 14px", background: "#EEF2FF", borderBottom: "0.5px solid #C7D2FE", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ color: "#4338CA", fontSize: 13 }}>🗂</span>
+          <span style={{ color: "#4338CA", fontSize: 13 }}><i className="ti ti-folders" aria-hidden="true" /></span>
           <span style={{ fontSize: 12, color: "#3730A3" }}>
             {carried.hadIds
               ? <>Verifying <b>“{carried.name}”</b> — {carried.count.toLocaleString()} contacts carried over and pre-selected.</>
@@ -259,11 +259,11 @@ export function VerifyContactList() {
         <button onClick={findMissingBulk} disabled={running || sel.size === 0}
           style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#4F46E5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}
           title="Search the internet + company website for missing phone/email on the selected contacts">
-          {`✨ Find missing info (${sel.size})`}
+          <><i className="ti ti-sparkles" aria-hidden="true" /> Find missing info ({sel.size})</>
         </button>
         <button onClick={verifyAll} disabled={running}
           style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running ? 0.5 : 1 }}>
-          {running ? "Verifying…" : "✨ Verify all contacts"}
+          {running ? "Verifying…" : <><i className="ti ti-sparkles" aria-hidden="true" /> Verify all contacts</>}
         </button>
         <button onClick={verifySelected} disabled={running || sel.size === 0}
           style={{ fontSize: 11.5, fontWeight: 700, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7F3D0", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}>
@@ -304,14 +304,14 @@ export function VerifyContactList() {
               <a href={linkedinSearchUrl(r.name, r.company)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10.5, fontWeight: 700, color: "#0369A1", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ background: "#0A66C2", color: "#fff", borderRadius: 3, padding: "0 3px", fontSize: 9 }}>in</span>Find</a>
               {missing && !s ? (
                 <button onClick={() => findMissing(r.id)} title="Suggest missing email/phone from the company website + licensed provider"
-                  style={{ fontSize: 12, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: 0 }}>✨</button>
+                  style={{ fontSize: 12, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: 0 }}><i className="ti ti-sparkles" aria-hidden="true" /></button>
               ) : null}
             </div>
           </div>
           {missing && s ? (
             <div style={{ padding: "8px 14px 10px 40px", borderBottom: "0.5px solid var(--border)", background: "#FBFCFE" }}>
               {s.loading ? (
-                <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>✨ Searching company website & licensed provider…</span>
+                <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}><i className="ti ti-sparkles" aria-hidden="true" /> Searching company website & licensed provider…</span>
               ) : s.suggestions.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {s.suggestions.map((sg) => (

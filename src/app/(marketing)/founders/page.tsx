@@ -60,7 +60,7 @@ export default function FoundersPage() {
               <div className="font-site-display text-lg font-bold">{f.heavyLifting.doesTitle}</div>
               <div className="font-site-mono text-xs uppercase tracking-wider text-site-blue-lt">{f.heavyLifting.doesSub}</div>
               <ul className="mt-4 space-y-2.5">
-                {f.heavyLifting.does.map((d) => (<li key={d} className="flex gap-2.5 text-[14px] text-white/85"><span className="text-site-blue-lt">✓</span>{d}</li>))}
+                {f.heavyLifting.does.map((d) => (<li key={d} className="flex gap-2.5 text-[14px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{d}</li>))}
               </ul>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
@@ -110,7 +110,7 @@ export default function FoundersPage() {
                 <h3 className="font-site-display text-xl font-bold text-site-navy">{w.h}</h3>
                 <p className="mt-2 text-sm leading-6 text-site-muted">{w.p}</p>
                 <ul className="mt-4 space-y-2">
-                  {w.points.map((pt) => (<li key={pt} className="flex gap-2 text-[13px] text-site-ink"><span className="text-site-blue">✓</span>{pt}</li>))}
+                  {w.points.map((pt) => (<li key={pt} className="flex gap-2 text-[13px] text-site-ink"><span className="text-site-blue"><i className="ti ti-check" aria-hidden="true" /></span>{pt}</li>))}
                 </ul>
               </div>
             ))}

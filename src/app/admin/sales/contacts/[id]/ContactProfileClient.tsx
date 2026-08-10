@@ -99,7 +99,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 // One click-to-edit profile field. In edit mode, fields with a known option list
 // (Odoo selection / many2many) show a searchable checkbox dropdown with chips
-// (Option 1); free-text fields fall back to a plain input. Inline save (✓) + undo.
+// (Option 1); free-text fields fall back to a plain input. Inline save (check) + undo.
 function EditablePrefRow({
   label, value, changed, editing, rating, options, onOpen, onChange, onSave, onUndo,
 }: {
@@ -357,7 +357,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     }
   }
 
-  // The ✓ on a row saves just that field immediately (writes only its override),
+  // The check on a row saves just that field immediately (writes only its override),
   // then re-reads the profile so the grouping stays canonical and reseeds the
   // editor baseline. This is what makes a single click-to-edit actually persist.
   async function saveField(key: string) {
@@ -800,7 +800,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
                               <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
                               <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓</button>}
+                                {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
                                 <button onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                               </span>
                             </div>
@@ -883,7 +883,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
           </div>
         )}

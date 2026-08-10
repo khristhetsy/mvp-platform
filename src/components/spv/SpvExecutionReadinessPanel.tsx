@@ -44,7 +44,7 @@ export function SpvExecutionReadinessPanel({
       <ul className="mt-2 space-y-1 text-xs text-slate-700">
         {summary.signers.map((signer) => (
           <li key={signer.signerType} className={signer.status === "present" ? "text-emerald-800" : "text-amber-900"}>
-            {signer.status === "present" ? "✓" : "○"} {signer.label}
+            {signer.status === "present" ? <i className="ti ti-check" aria-hidden="true" /> : "○"} {signer.label}
             {signer.presentCount > 0 || signer.requiredCount > 0
               ? ` (${signer.presentCount}/${signer.requiredCount})`
               : null}

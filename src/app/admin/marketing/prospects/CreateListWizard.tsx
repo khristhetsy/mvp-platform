@@ -158,7 +158,7 @@ export function CreateListWizard() {
     const done = i < step, active = i === step;
     return (
       <span key={t} style={{ fontSize: 10.5, fontWeight: active ? 800 : done ? 700 : 600, color: done ? "#0F6E56" : active ? "#1A6CE4" : "var(--muted-foreground)" }}>
-        {done ? "✓ " : ""}{i + 1} {t}
+        {done ? <><i className="ti ti-check" aria-hidden="true" /> </> : ""}{i + 1} {t}
       </span>
     );
   });
@@ -230,7 +230,7 @@ export function CreateListWizard() {
             </span>
             {total > rows.length ? (
               <button onClick={() => setAllMatching(true)} style={{ fontSize: 10.5, fontWeight: 700, color: allMatching ? "#065F46" : "#fff", background: allMatching ? "#ECFDF5" : "#0F6E56", border: allMatching ? "0.5px solid #A7F3D0" : "none", borderRadius: 999, padding: "3px 10px", cursor: "pointer" }}>
-                {allMatching ? `✓ All ${total.toLocaleString()}` : `Select all ${total.toLocaleString()}`}
+                {allMatching ? <><i className="ti ti-check" aria-hidden="true" /> All {total.toLocaleString()}</> : `Select all ${total.toLocaleString()}`}
               </button>
             ) : null}
             {!allMatching && <button onClick={() => setSeldIds((prev) => new Set([...prev, ...rows.map((r) => r.id)]))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select page</button>}
@@ -265,7 +265,7 @@ export function CreateListWizard() {
         <div>
           {done ? (
             <div style={{ background: "#ECFDF5", border: "0.5px solid #A7F3D0", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 16 }}>✓</span>
+              <span style={{ fontSize: 16 }}><i className="ti ti-check" aria-hidden="true" /></span>
               <div style={{ flex: 1, minWidth: 180 }}><div style={{ fontSize: 13, fontWeight: 700, color: "#065F46" }}>{msg}</div><div style={{ fontSize: 11.5, color: "#047857" }}>It&rsquo;s saved to your Contact Lists. Next: verify emails and fill missing details.</div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={goVerify} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Verify &amp; Correct →</button>

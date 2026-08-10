@@ -63,7 +63,7 @@ export function FounderCourseLanding({
       <ul className="grid gap-2 sm:grid-cols-2">
         {course.whatYouWillLearn.map((item) => (
           <li key={item} className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-            ✓ {item}
+            <i className="ti ti-check" aria-hidden="true" /> {item}
           </li>
         ))}
       </ul>

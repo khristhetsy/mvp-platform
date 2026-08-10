@@ -66,7 +66,7 @@ export function SalesAdvisor({ viewAs }: { viewAs?: string }) {
               <span style={{ width: 24, height: 24, borderRadius: 6, background: "#EEF2FF", color: "#4338CA", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
               <div style={{ fontSize: 13, fontWeight: 500 }}>AI sales advisor</div>
               <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#0F6E56", background: "#E1F5EE", borderRadius: 8, padding: "2px 8px" }}>grounded in your data</span>
-              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 16, marginLeft: 4 }}>✕</button>
+              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 16, marginLeft: 4 }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
               {messages.map((m, i) => (

@@ -42,7 +42,7 @@ export function WizardShell({
           return (
             <span key={s.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 10.5, fontWeight: active ? 800 : done ? 700 : 600, color: done ? "#0F6E56" : active ? "#1A6CE4" : "var(--muted-foreground)" }}>
-                {done ? "✓ " : ""}{i + 1} {s.label}
+                {done ? <><i className="ti ti-check" aria-hidden="true" /> </> : ""}{i + 1} {s.label}
               </span>
               {i < steps.length - 1 ? <span style={{ color: "var(--border-strong,#cbd5e1)" }}>·</span> : null}
             </span>

@@ -364,10 +364,10 @@ export function FounderConversationalOnboarding({
               className="flex h-16 w-16 items-center justify-center rounded-full text-3xl mb-5"
               style={{ background: "#EEEDFE" }}
             >
-              🎉
+              <i className="ti ti-circle-check" aria-hidden="true" />
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-              ✓ Stage 1 complete
+              <i className="ti ti-check" aria-hidden="true" /> Stage 1 complete
             </span>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
               Nice work, {firstName} — you&apos;re in Stage 2.

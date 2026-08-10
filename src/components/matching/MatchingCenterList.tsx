@@ -85,7 +85,7 @@ function FollowUpButton({ card, endpoint }: { card: MatchCenterCard; endpoint: s
       </div>
     );
   }
-  if (state === "done") return <span className="text-xs font-medium text-emerald-600">Added to follow-up ✓</span>;
+  if (state === "done") return <span className="text-xs font-medium text-emerald-600">Added to follow-up <i className="ti ti-check" aria-hidden="true" /></span>;
 
   async function add() {
     if (!card.followUp) return;

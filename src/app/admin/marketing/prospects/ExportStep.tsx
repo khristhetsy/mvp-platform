@@ -63,7 +63,7 @@ export function ExportStep() {
                 const on = cols.has(c.key);
                 return (
                   <button key={c.key} onClick={() => toggle(c.key)} style={{ fontSize: 11, fontWeight: 600, borderRadius: 999, padding: "4px 11px", cursor: "pointer", border: on ? "0.5px solid #93C5FD" : "0.5px solid var(--border)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)" }}>
-                    {on ? "✓ " : "＋ "}{c.label}
+                    {on ? <><i className="ti ti-check" aria-hidden="true" /> </> : "＋ "}{c.label}
                   </button>
                 );
               })}

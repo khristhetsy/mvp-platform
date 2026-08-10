@@ -29,7 +29,7 @@ export function GuidedBanner() {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", border: "0.5px solid #BFDBFE", background: "#EFF6FF", borderRadius: 12, padding: "11px 14px", marginBottom: 16 }}>
-      <span style={{ fontSize: 15 }}>✨</span>
+      <span style={{ fontSize: 15 }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
       <div style={{ flex: 1, minWidth: 220 }}>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1A4E9E" }}>Set up your campaign</div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginTop: 3 }}>
@@ -42,7 +42,7 @@ export function GuidedBanner() {
         </div>
       </div>
       <Link href="/admin/marketing/prospects" style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 7, padding: "7px 14px", textDecoration: "none" }}>Start →</Link>
-      <button onClick={dismiss} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#1A6CE4", lineHeight: 1 }}>✕</button>
+      <button onClick={dismiss} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#1A6CE4", lineHeight: 1 }}><i className="ti ti-x" aria-hidden="true" /></button>
     </div>
   );
 }

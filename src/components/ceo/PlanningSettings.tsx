@@ -69,7 +69,7 @@ export function PlanningTab() {
     <div style={{ maxWidth: 760 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: navy }}>Planning · Goals</div>
-        <button onClick={suggest} disabled={suggesting} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: royal, background: "#EEF3FC", border: "none", borderRadius: 8, padding: "8px 13px", cursor: suggesting ? "default" : "pointer", opacity: suggesting ? 0.7 : 1 }}>{suggesting ? "Thinking…" : "✦ Suggest goals"}</button>
+        <button onClick={suggest} disabled={suggesting} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: royal, background: "#EEF3FC", border: "none", borderRadius: 8, padding: "8px 13px", cursor: suggesting ? "default" : "pointer", opacity: suggesting ? 0.7 : 1 }}>{suggesting ? "Thinking…" : (<><i className="ti ti-sparkles" aria-hidden="true" /> Suggest goals</>)}</button>
         <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{adding ? "Cancel" : "+ New goal"}</button>
       </div>
 
@@ -78,7 +78,7 @@ export function PlanningTab() {
         <div style={{ background: "#F7FAFF", border: "1px solid #DCE7FA", borderRadius: 12, padding: 12, marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: royal }}>AI-suggested goals</div>
-            <button onClick={() => setSuggestions(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 15, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss">✕</button>
+            <button onClick={() => setSuggestions(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 15, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss"><i className="ti ti-x" aria-hidden="true" /></button>
           </div>
           {suggestions.map((g, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 0", borderTop: i ? "1px solid #E4ECF9" : "none" }}>

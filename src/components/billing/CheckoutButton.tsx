@@ -86,7 +86,7 @@ export function CheckoutButton({
           <div onClick={(e) => e.stopPropagation()} style={{ width: 400, maxWidth: "92vw", background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "0.5px solid #e2e6ed" }}>
               <div style={{ fontSize: 15, fontWeight: 500, color: "#0c2340" }}>Confirm your subscription</div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close" style={{ border: "none", background: "transparent", color: "#98a4b8", fontSize: 16, cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close" style={{ border: "none", background: "transparent", color: "#98a4b8", fontSize: 16, cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
 
             <div style={{ padding: "18px 20px" }}>

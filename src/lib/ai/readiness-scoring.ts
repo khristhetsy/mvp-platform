@@ -37,7 +37,7 @@ export type FactorSubScore = {
 };
 
 export type FactorEvidence = {
-  icon: "✅" | "⚠️" | "❌";
+  icon: "pass" | "warn" | "fail";
   text: string;
   src: string;
 };
@@ -194,12 +194,12 @@ function scoreRevenueCashflow(
 
     const evidence: FactorEvidence[] = [];
     evidence.push(hasFinancials
-      ? { icon: "✅", text: financialSummary ? "Financial / cost documentation uploaded and reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
-      : { icon: "❌", text: "Financial statements missing — development costs and burn rate unknown", src: "Document checklist" });
-    if (hasGrantRevenue) evidence.push({ icon: "✅", text: "Grant revenue, milestone payments, or licensing income referenced — key life science revenue signal", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No grant/milestone revenue documented — include NIH, SBIR, STTR grants or licensing milestones", src: "AI summaries" });
-    if (hasCostPlan) evidence.push({ icon: "✅", text: "Development/clinical cost breakdown found", src: "AI summaries" });
-    if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+      ? { icon: "pass", text: financialSummary ? "Financial / cost documentation uploaded and reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "fail", text: "Financial statements missing — development costs and burn rate unknown", src: "Document checklist" });
+    if (hasGrantRevenue) evidence.push({ icon: "pass", text: "Grant revenue, milestone payments, or licensing income referenced — key life science revenue signal", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No grant/milestone revenue documented — include NIH, SBIR, STTR grants or licensing milestones", src: "AI summaries" });
+    if (hasCostPlan) evidence.push({ icon: "pass", text: "Development/clinical cost breakdown found", src: "AI summaries" });
+    if (fundingAmount) evidence.push({ icon: "pass", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
 
     const flags: FactorFlag[] = [];
     if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Development cost documentation and burn rate are critical investor questions even for pre-revenue life science companies." });
@@ -258,12 +258,12 @@ function scoreRevenueCashflow(
 
     const evidence: FactorEvidence[] = [];
     evidence.push(hasFinancials
-      ? { icon: "✅", text: financialSummary ? "Financial / cost documentation reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
-      : { icon: "❌", text: "Financial statements missing — development costs unknown", src: "Document checklist" });
-    if (hasDevContracts) evidence.push({ icon: "✅", text: "Development contracts, pilot orders, or NRE funding referenced — strong hardware revenue signal", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No development contracts or pilot orders documented — include any NRE deals, government contracts, or LOIs", src: "AI summaries" });
-    if (hasCostPlan) evidence.push({ icon: "✅", text: "BOM or unit manufacturing cost data found", src: "AI summaries" });
-    if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+      ? { icon: "pass", text: financialSummary ? "Financial / cost documentation reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "fail", text: "Financial statements missing — development costs unknown", src: "Document checklist" });
+    if (hasDevContracts) evidence.push({ icon: "pass", text: "Development contracts, pilot orders, or NRE funding referenced — strong hardware revenue signal", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No development contracts or pilot orders documented — include any NRE deals, government contracts, or LOIs", src: "AI summaries" });
+    if (hasCostPlan) evidence.push({ icon: "pass", text: "BOM or unit manufacturing cost data found", src: "AI summaries" });
+    if (fundingAmount) evidence.push({ icon: "pass", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
 
     const flags: FactorFlag[] = [];
     if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Hardware investors need development cost and burn documentation. Upload financial statements even for pre-revenue stage." });
@@ -323,12 +323,12 @@ function scoreRevenueCashflow(
 
     const evidence: FactorEvidence[] = [];
     evidence.push(hasFinancials
-      ? { icon: "✅", text: financialSummary ? "Financial / project cost documentation reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
-      : { icon: "❌", text: "Financial statements missing — project economics unknown", src: "Document checklist" });
-    if (hasCTRevenue) evidence.push({ icon: "✅", text: "PPAs, off-take agreements, or government awards referenced — strong cleantech revenue signal", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No PPAs, off-take agreements, or government awards documented", src: "AI summaries" });
-    if (hasCTEcon) evidence.push({ icon: "✅", text: "Project economics (LCOE, CapEx/MW, IRR) found", src: "AI summaries" });
-    if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+      ? { icon: "pass", text: financialSummary ? "Financial / project cost documentation reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "fail", text: "Financial statements missing — project economics unknown", src: "Document checklist" });
+    if (hasCTRevenue) evidence.push({ icon: "pass", text: "PPAs, off-take agreements, or government awards referenced — strong cleantech revenue signal", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No PPAs, off-take agreements, or government awards documented", src: "AI summaries" });
+    if (hasCTEcon) evidence.push({ icon: "pass", text: "Project economics (LCOE, CapEx/MW, IRR) found", src: "AI summaries" });
+    if (fundingAmount) evidence.push({ icon: "pass", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
 
     const flags: FactorFlag[] = [];
     if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Cleantech investors need project cost documentation (CapEx, OpEx, development budget). Upload financials even in pre-revenue stage." });
@@ -370,22 +370,22 @@ function scoreRevenueCashflow(
 
   const evidence: FactorEvidence[] = [];
   if (hasFinancials) {
-    evidence.push({ icon: "✅", text: financialSummary ? "Financial statements uploaded with AI analysis" : "Financial statements uploaded — AI summary pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
+    evidence.push({ icon: "pass", text: financialSummary ? "Financial statements uploaded with AI analysis" : "Financial statements uploaded — AI summary pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
   } else {
-    evidence.push({ icon: "❌", text: "Financial statements not uploaded — score hard-capped at 7/18", src: "Document checklist" });
+    evidence.push({ icon: "fail", text: "Financial statements not uploaded — score hard-capped at 7/18", src: "Document checklist" });
   }
   if (hasBizPlan) {
-    evidence.push({ icon: "✅", text: bizPlanSummary ? "Business plan with projections analysed" : "Business plan uploaded — AI summary pending", src: "BUSINESS_PLAN" });
+    evidence.push({ icon: "pass", text: bizPlanSummary ? "Business plan with projections analysed" : "Business plan uploaded — AI summary pending", src: "BUSINESS_PLAN" });
   } else {
-    evidence.push({ icon: "⚠️", text: "Business plan missing — projections unverifiable", src: "Document checklist" });
+    evidence.push({ icon: "warn", text: "Business plan missing — projections unverifiable", src: "Document checklist" });
   }
   if (revenueStage) {
-    evidence.push({ icon: isPreRevenue ? "⚠️" : "✅", text: `Revenue stage: ${revenueStage}${isPreRevenue ? " — pre-revenue significantly limits score" : ""}`, src: "Company profile" });
+    evidence.push({ icon: isPreRevenue ? "warn" : "pass", text: `Revenue stage: ${revenueStage}${isPreRevenue ? " — pre-revenue significantly limits score" : ""}`, src: "Company profile" });
   } else {
-    evidence.push({ icon: "❌", text: "Revenue stage not set", src: "Company profile" });
+    evidence.push({ icon: "fail", text: "Revenue stage not set", src: "Company profile" });
   }
-  if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
-  else evidence.push({ icon: "⚠️", text: "Funding target not declared", src: "Company profile" });
+  if (fundingAmount) evidence.push({ icon: "pass", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+  else evidence.push({ icon: "warn", text: "Funding target not declared", src: "Company profile" });
 
   const flags: FactorFlag[] = [];
   if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Investors cannot assess cash position without financial statements. Hard-capped at 7/18." });
@@ -493,14 +493,14 @@ function scoreCustomerTraction(
     else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 2);
 
     const evidence: FactorEvidence[] = [];
-    if (hasTrial) evidence.push({ icon: "✅", text: "Clinical trial stage evidence found (preclinical / Phase I / II / III)", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No clinical trial stage mentioned — document your R&D or trial progress", src: "AI summaries" });
-    if (hasRegulatory) evidence.push({ icon: "✅", text: "Regulatory milestone or designation referenced (FDA, EMA, 510k, etc.)", src: "AI summaries" });
-    if (hasPartnership) evidence.push({ icon: "✅", text: "Strategic partnership or collaboration agreement referenced", src: "AI summaries" });
-    if (hasGrant) evidence.push({ icon: "✅", text: "Grant or non-dilutive funding (NIH, SBIR, STTR, etc.) confirmed", src: "AI summaries" });
-    if (hasKol) evidence.push({ icon: "✅", text: "KOL endorsement, advisory board, or peer-reviewed publication referenced", src: "AI summaries" });
-    if (hasMetrics) evidence.push({ icon: "✅", text: "Clinical data, efficacy metrics, or patient outcomes referenced", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No quantitative clinical data found — investors expect efficacy or safety numbers", src: "AI summaries" });
+    if (hasTrial) evidence.push({ icon: "pass", text: "Clinical trial stage evidence found (preclinical / Phase I / II / III)", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No clinical trial stage mentioned — document your R&D or trial progress", src: "AI summaries" });
+    if (hasRegulatory) evidence.push({ icon: "pass", text: "Regulatory milestone or designation referenced (FDA, EMA, 510k, etc.)", src: "AI summaries" });
+    if (hasPartnership) evidence.push({ icon: "pass", text: "Strategic partnership or collaboration agreement referenced", src: "AI summaries" });
+    if (hasGrant) evidence.push({ icon: "pass", text: "Grant or non-dilutive funding (NIH, SBIR, STTR, etc.) confirmed", src: "AI summaries" });
+    if (hasKol) evidence.push({ icon: "pass", text: "KOL endorsement, advisory board, or peer-reviewed publication referenced", src: "AI summaries" });
+    if (hasMetrics) evidence.push({ icon: "pass", text: "Clinical data, efficacy metrics, or patient outcomes referenced", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No quantitative clinical data found — investors expect efficacy or safety numbers", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasTrial && !hasPartnership && !hasGrant)
@@ -574,13 +574,13 @@ function scoreCustomerTraction(
     else if (!pitchSummary && !bizSummary && !financialSummary) pts = Math.min(pts, 2);
 
     const evidence: FactorEvidence[] = [];
-    if (hasOrders) evidence.push({ icon: "✅", text: "Design wins, purchase orders, or LOIs referenced — strong hardware demand signal", src: "AI summaries" });
-    else if (hasDeployments) evidence.push({ icon: "✅", text: "Prototype deployed or beta customers mentioned", src: "AI summaries" });
-    else if (hasPrototype) evidence.push({ icon: "⚠️", text: "Prototype exists but no customer deployments or orders documented", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No prototype, deployment, or order evidence found", src: "AI summaries" });
-    if (hasPartners) evidence.push({ icon: "✅", text: "Manufacturing or supply chain partners referenced — de-risks production", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No manufacturing partner documented — investors want to see CM or supply chain strategy", src: "AI summaries" });
-    if (hasMetrics) evidence.push({ icon: "✅", text: "Hardware performance metrics or unit figures found", src: "AI summaries" });
+    if (hasOrders) evidence.push({ icon: "pass", text: "Design wins, purchase orders, or LOIs referenced — strong hardware demand signal", src: "AI summaries" });
+    else if (hasDeployments) evidence.push({ icon: "pass", text: "Prototype deployed or beta customers mentioned", src: "AI summaries" });
+    else if (hasPrototype) evidence.push({ icon: "warn", text: "Prototype exists but no customer deployments or orders documented", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No prototype, deployment, or order evidence found", src: "AI summaries" });
+    if (hasPartners) evidence.push({ icon: "pass", text: "Manufacturing or supply chain partners referenced — de-risks production", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No manufacturing partner documented — investors want to see CM or supply chain strategy", src: "AI summaries" });
+    if (hasMetrics) evidence.push({ icon: "pass", text: "Hardware performance metrics or unit figures found", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasPrototype && !hasOrders && !hasDeployments) flags.push({ severity: "red", label: "No hardware traction", detail: "No prototype, deployment, or order evidence found. Document your current hardware development stage, any customer pilots, and design wins or LOIs." });
@@ -648,11 +648,11 @@ function scoreCustomerTraction(
     else if (!pitchSummary && !bizSummary && !financialSummary) pts = Math.min(pts, 2);
 
     const evidence: FactorEvidence[] = [];
-    if (hasOfftake) evidence.push({ icon: "✅", text: "PPAs or off-take agreements referenced — primary cleantech traction signal", src: "AI summaries" });
-    else if (hasPartners) evidence.push({ icon: "⚠️", text: "Utility or government partners referenced but no signed PPA/off-take found", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No PPAs, off-take agreements, or project deployments found", src: "AI summaries" });
-    if (hasProject) evidence.push({ icon: "✅", text: "Cleantech project deployed or pilot operational", src: "AI summaries" });
-    if (hasMetrics) evidence.push({ icon: "✅", text: "Energy output, LCOE, or carbon impact metrics referenced", src: "AI summaries" });
+    if (hasOfftake) evidence.push({ icon: "pass", text: "PPAs or off-take agreements referenced — primary cleantech traction signal", src: "AI summaries" });
+    else if (hasPartners) evidence.push({ icon: "warn", text: "Utility or government partners referenced but no signed PPA/off-take found", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No PPAs, off-take agreements, or project deployments found", src: "AI summaries" });
+    if (hasProject) evidence.push({ icon: "pass", text: "Cleantech project deployed or pilot operational", src: "AI summaries" });
+    if (hasMetrics) evidence.push({ icon: "pass", text: "Energy output, LCOE, or carbon impact metrics referenced", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasOfftake && !hasProject) flags.push({ severity: "red", label: "No cleantech traction", detail: "No PPAs, off-take agreements, or project deployments found. Document any signed or LOI-stage off-take agreements, pilot deployments, or government project awards." });
@@ -703,15 +703,15 @@ function scoreCustomerTraction(
   else if (isPreRevenue && !hasLoi) pts = Math.min(pts, 5); // pre-revenue without LOIs capped
 
   const evidence: FactorEvidence[] = [];
-  if (hasLoi) evidence.push({ icon: "✅", text: "Letters of Intent, signed contracts, or pilot agreements referenced — strongest possible traction signal", src: "AI summaries" });
-  else if (hasPayingCustomers) evidence.push({ icon: "✅", text: "Paying customers or recurring revenue (MRR/ARR) confirmed", src: "AI summaries" });
-  else if (hasGeneralCustomers) evidence.push({ icon: "⚠️", text: "Customer or user references found — no paying customers or LOIs confirmed", src: "AI summaries" });
-  else evidence.push({ icon: "❌", text: "No customer traction evidence found in documents", src: "AI summaries" });
+  if (hasLoi) evidence.push({ icon: "pass", text: "Letters of Intent, signed contracts, or pilot agreements referenced — strongest possible traction signal", src: "AI summaries" });
+  else if (hasPayingCustomers) evidence.push({ icon: "pass", text: "Paying customers or recurring revenue (MRR/ARR) confirmed", src: "AI summaries" });
+  else if (hasGeneralCustomers) evidence.push({ icon: "warn", text: "Customer or user references found — no paying customers or LOIs confirmed", src: "AI summaries" });
+  else evidence.push({ icon: "fail", text: "No customer traction evidence found in documents", src: "AI summaries" });
 
-  if (hasMetrics) evidence.push({ icon: "✅", text: "Specific traction metrics (numbers, percentages, growth rates) found", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No specific traction metrics — investors expect numbers, not narratives", src: "AI summaries" });
+  if (hasMetrics) evidence.push({ icon: "pass", text: "Specific traction metrics (numbers, percentages, growth rates) found", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No specific traction metrics — investors expect numbers, not narratives", src: "AI summaries" });
 
-  if (isPreRevenue && !hasLoi) evidence.push({ icon: "⚠️", text: "Pre-revenue company — LOIs or pilots are critical to demonstrate demand", src: "Risk assessment" });
+  if (isPreRevenue && !hasLoi) evidence.push({ icon: "warn", text: "Pre-revenue company — LOIs or pilots are critical to demonstrate demand", src: "Risk assessment" });
 
   const flags: FactorFlag[] = [];
   if (!hasGeneralCustomers && !hasLoi) flags.push({ severity: "red", label: "No customer evidence", detail: "No customer, user, or traction evidence found. This is the question every investor asks first. Upload pitch or biz plan with customer data." });
@@ -840,7 +840,7 @@ function scoreFounderTeam(
   const evidence: FactorEvidence[] = [];
   if (hasPitch) {
     evidence.push({
-      icon: hasTeamDepth ? "✅" : hasTeamEvidence ? "⚠️" : "⚠️",
+      icon: hasTeamDepth ? "pass" : hasTeamEvidence ? "warn" : "warn",
       text: hasTeamDepth
         ? "Pitch deck — team depth (multiple roles/advisors) confirmed"
         : hasTeamEvidence
@@ -851,15 +851,15 @@ function scoreFounderTeam(
       src: "PITCH_DECK",
     });
   } else {
-    evidence.push({ icon: "❌", text: "Pitch deck missing — team background unverifiable, score capped at 8/15", src: "Document checklist" });
+    evidence.push({ icon: "fail", text: "Pitch deck missing — team background unverifiable, score capped at 8/15", src: "Document checklist" });
   }
   if (hasBizPlan) {
-    evidence.push({ icon: hasTeamEvidence ? "✅" : "⚠️", text: hasTeamEvidence ? "Business plan references founder/team background" : "Business plan uploaded — no team context detected", src: "BUSINESS_PLAN" });
+    evidence.push({ icon: hasTeamEvidence ? "pass" : "warn", text: hasTeamEvidence ? "Business plan references founder/team background" : "Business plan uploaded — no team context detected", src: "BUSINESS_PLAN" });
   } else {
-    evidence.push({ icon: "⚠️", text: "Business plan missing — secondary team evidence unavailable", src: "Document checklist" });
+    evidence.push({ icon: "warn", text: "Business plan missing — secondary team evidence unavailable", src: "Document checklist" });
   }
   if (hasPriorExperience) evidence.push({
-    icon: "✅",
+    icon: "pass",
     text: isLifeScience(industry)
       ? "Scientific credentials, publications, patents, or prior clinical/device development experience found"
       : isHardware(industry)
@@ -870,7 +870,7 @@ function scoreFounderTeam(
     src: "AI summaries",
   });
   else evidence.push({
-    icon: "⚠️",
+    icon: "warn",
     text: isLifeScience(industry)
       ? "No scientific credentials or prior clinical/biotech experience detected — include PhD, publications, patents, or clinical advisory roles"
       : isHardware(industry)
@@ -880,8 +880,8 @@ function scoreFounderTeam(
       : "No prior exit or venture experience detected in documents",
     src: "AI summaries",
   });
-  if (industry) evidence.push({ icon: "✅", text: `Industry declared: ${industry}`, src: "Company profile" });
-  else evidence.push({ icon: "⚠️", text: "Industry not set on profile", src: "Company profile" });
+  if (industry) evidence.push({ icon: "pass", text: `Industry declared: ${industry}`, src: "Company profile" });
+  else evidence.push({ icon: "warn", text: "Industry not set on profile", src: "Company profile" });
 
   const flags: FactorFlag[] = [];
   if (!hasPitch) flags.push({ severity: "red", label: "No team evidence", detail: "Pitch deck with a team slide is required. Score capped at 8/15 without it." });
@@ -935,14 +935,14 @@ function scoreGovernanceLegal(
 
   const evidence: FactorEvidence[] = [];
   if (hasIncorp) {
-    evidence.push({ icon: "✅", text: incorpSummary ? "Incorporation documents uploaded and reviewed" : "Incorporation documents uploaded — AI review pending (partial credit)", src: "INCORPORATION_DOCS" });
+    evidence.push({ icon: "pass", text: incorpSummary ? "Incorporation documents uploaded and reviewed" : "Incorporation documents uploaded — AI review pending (partial credit)", src: "INCORPORATION_DOCS" });
   } else {
-    evidence.push({ icon: "❌", text: "Incorporation docs missing — score hard-capped at 5/12", src: "Document checklist" });
+    evidence.push({ icon: "fail", text: "Incorporation docs missing — score hard-capped at 5/12", src: "Document checklist" });
   }
   if (hasCapTable) {
-    evidence.push({ icon: "✅", text: capSummary ? "Cap table uploaded and reviewed" : "Cap table uploaded — AI review pending (partial credit)", src: "CAP_TABLE" });
+    evidence.push({ icon: "pass", text: capSummary ? "Cap table uploaded and reviewed" : "Cap table uploaded — AI review pending (partial credit)", src: "CAP_TABLE" });
   } else {
-    evidence.push({ icon: "❌", text: "Cap table missing — equity structure unverifiable", src: "Document checklist" });
+    evidence.push({ icon: "fail", text: "Cap table missing — equity structure unverifiable", src: "Document checklist" });
   }
 
   const flags: FactorFlag[] = [];
@@ -1047,18 +1047,18 @@ function scoreMarketEvidence(
 
   const evidence: FactorEvidence[] = [];
   if (hasPitch) {
-    evidence.push({ icon: hasTractionEvidence ? "✅" : pitchSummary ? "⚠️" : "⚠️", text: hasTractionEvidence ? "Pitch deck with specific traction metrics confirmed" : pitchSummary ? "Pitch deck — no specific traction data detected" : "Pitch deck uploaded — AI summary pending", src: "PITCH_DECK" });
+    evidence.push({ icon: hasTractionEvidence ? "pass" : pitchSummary ? "warn" : "warn", text: hasTractionEvidence ? "Pitch deck with specific traction metrics confirmed" : pitchSummary ? "Pitch deck — no specific traction data detected" : "Pitch deck uploaded — AI summary pending", src: "PITCH_DECK" });
   } else {
-    evidence.push({ icon: "❌", text: "Pitch deck missing — market claims cannot be verified", src: "Document checklist" });
+    evidence.push({ icon: "fail", text: "Pitch deck missing — market claims cannot be verified", src: "Document checklist" });
   }
   if (hasBizPlan) {
-    evidence.push({ icon: hasTractionEvidence ? "✅" : "⚠️", text: hasTractionEvidence ? "Business plan references market metrics" : bizSummary ? "Business plan present — limited quantitative evidence" : "Business plan uploaded — AI summary pending", src: "BUSINESS_PLAN" });
+    evidence.push({ icon: hasTractionEvidence ? "pass" : "warn", text: hasTractionEvidence ? "Business plan references market metrics" : bizSummary ? "Business plan present — limited quantitative evidence" : "Business plan uploaded — AI summary pending", src: "BUSINESS_PLAN" });
   } else {
-    evidence.push({ icon: "⚠️", text: "Business plan missing", src: "Document checklist" });
+    evidence.push({ icon: "warn", text: "Business plan missing", src: "Document checklist" });
   }
-  if (hasCompetitiveAnalysis) evidence.push({ icon: "✅", text: "Competitive landscape addressed in documents", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No competitive analysis detected — investors expect competitors to be acknowledged", src: "AI summaries" });
-  if (hasTractionEvidence) evidence.push({ icon: "✅", text: "Specific traction metrics or revenue figures found", src: "AI summaries" });
+  if (hasCompetitiveAnalysis) evidence.push({ icon: "pass", text: "Competitive landscape addressed in documents", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No competitive analysis detected — investors expect competitors to be acknowledged", src: "AI summaries" });
+  if (hasTractionEvidence) evidence.push({ icon: "pass", text: "Specific traction metrics or revenue figures found", src: "AI summaries" });
 
   const flags: FactorFlag[] = [];
   if (!hasPitch && !hasBizPlan) flags.push({ severity: "red", label: "No market documents", detail: "Score is 0 without a pitch deck or business plan." });
@@ -1159,13 +1159,13 @@ function scoreUnitEconomics(
     else if (!hasDevCost && !hasGrantLeverage && !hasLicensing) pts = Math.min(pts, 3);
 
     const evidence: FactorEvidence[] = [];
-    if (hasDevCost) evidence.push({ icon: "✅", text: "Development cost per milestone or R&D cost structure documented", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No cost-per-milestone or R&D cost data found — investors need to know what it costs to reach key value inflection points", src: "AI summaries" });
-    if (hasGrantLeverage) evidence.push({ icon: "✅", text: "Non-dilutive funding (grants, SBIR, BARDA) referenced — strong capital efficiency signal", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No grant or non-dilutive funding leverage described", src: "AI summaries" });
-    if (hasLicensing) evidence.push({ icon: "✅", text: "Licensing or collaboration economics described", src: "AI summaries" });
-    if (hasPeakSales) evidence.push({ icon: "✅", text: "Peak sales or NPV projections referenced", src: "AI summaries" });
-    if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+    if (hasDevCost) evidence.push({ icon: "pass", text: "Development cost per milestone or R&D cost structure documented", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No cost-per-milestone or R&D cost data found — investors need to know what it costs to reach key value inflection points", src: "AI summaries" });
+    if (hasGrantLeverage) evidence.push({ icon: "pass", text: "Non-dilutive funding (grants, SBIR, BARDA) referenced — strong capital efficiency signal", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No grant or non-dilutive funding leverage described", src: "AI summaries" });
+    if (hasLicensing) evidence.push({ icon: "pass", text: "Licensing or collaboration economics described", src: "AI summaries" });
+    if (hasPeakSales) evidence.push({ icon: "pass", text: "Peak sales or NPV projections referenced", src: "AI summaries" });
+    if (hasFinancials) evidence.push({ icon: "pass", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
 
     const flags: FactorFlag[] = [];
     if (!hasDevCost) flags.push({ severity: "red", label: "No development cost breakdown", detail: "Life science investors need cost-per-milestone data — how much capital is required to reach IND filing, Phase I, Phase II, etc. Include this in your pitch or financials." });
@@ -1220,12 +1220,12 @@ function scoreUnitEconomics(
     else if (!hasBom && !hasScalePlan) pts = Math.min(pts, 3);
 
     const evidence: FactorEvidence[] = [];
-    if (hasBom) evidence.push({ icon: "✅", text: "BOM or unit manufacturing cost documented — strong hardware economics signal", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No BOM or unit cost data found — hardware investors need per-unit economics before committing capital", src: "AI summaries" });
-    if (hasScalePlan) evidence.push({ icon: "✅", text: "Cost reduction roadmap or volume pricing strategy referenced", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No cost reduction roadmap — show how unit cost improves at volume", src: "AI summaries" });
-    if (hasGrantFunding) evidence.push({ icon: "✅", text: "NRE or grant funding reduces capital risk — efficiency signal", src: "AI summaries" });
-    if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+    if (hasBom) evidence.push({ icon: "pass", text: "BOM or unit manufacturing cost documented — strong hardware economics signal", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No BOM or unit cost data found — hardware investors need per-unit economics before committing capital", src: "AI summaries" });
+    if (hasScalePlan) evidence.push({ icon: "pass", text: "Cost reduction roadmap or volume pricing strategy referenced", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No cost reduction roadmap — show how unit cost improves at volume", src: "AI summaries" });
+    if (hasGrantFunding) evidence.push({ icon: "pass", text: "NRE or grant funding reduces capital risk — efficiency signal", src: "AI summaries" });
+    if (hasFinancials) evidence.push({ icon: "pass", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
 
     const flags: FactorFlag[] = [];
     if (!hasBom) flags.push({ severity: "red", label: "No BOM or unit cost data", detail: "Hardware investors require bill of materials cost, target ASP (average selling price), and gross margin per unit at volume. Include current BOM cost and projected cost at 10k/100k units." });
@@ -1280,12 +1280,12 @@ function scoreUnitEconomics(
     else if (!hasLcoe && !hasScalePlan) pts = Math.min(pts, 3);
 
     const evidence: FactorEvidence[] = [];
-    if (hasLcoe) evidence.push({ icon: "✅", text: "LCOE, CapEx/MW, or project IRR documented — strong cleantech economics signal", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No project economics (LCOE, CapEx/MW, IRR) found — cleantech investors need these to evaluate the investment case", src: "AI summaries" });
-    if (hasScalePlan) evidence.push({ icon: "✅", text: "Cost reduction roadmap or path to grid parity referenced", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No cost reduction roadmap — show how economics improve as the technology scales", src: "AI summaries" });
-    if (hasIncentive) evidence.push({ icon: "✅", text: "Government incentives (IRA, ITC, PTC, grants) documented — improves project economics", src: "AI summaries" });
-    if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+    if (hasLcoe) evidence.push({ icon: "pass", text: "LCOE, CapEx/MW, or project IRR documented — strong cleantech economics signal", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No project economics (LCOE, CapEx/MW, IRR) found — cleantech investors need these to evaluate the investment case", src: "AI summaries" });
+    if (hasScalePlan) evidence.push({ icon: "pass", text: "Cost reduction roadmap or path to grid parity referenced", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No cost reduction roadmap — show how economics improve as the technology scales", src: "AI summaries" });
+    if (hasIncentive) evidence.push({ icon: "pass", text: "Government incentives (IRA, ITC, PTC, grants) documented — improves project economics", src: "AI summaries" });
+    if (hasFinancials) evidence.push({ icon: "pass", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
 
     const flags: FactorFlag[] = [];
     if (!hasLcoe) flags.push({ severity: "red", label: "No project economics documented", detail: "LCOE (levelized cost of energy), CapEx per MW, and project IRR are the cleantech equivalents of LTV/CAC. Include these in your pitch or financial model — they are the first metrics cleantech investors check." });
@@ -1332,17 +1332,17 @@ function scoreUnitEconomics(
   if (isPreRevenue && !hasUnitEcon) pts = Math.min(pts, 4);
 
   const evidence: FactorEvidence[] = [];
-  if (hasUnitEcon) evidence.push({ icon: "✅", text: "Unit economics (LTV, CAC, payback period) explicitly stated — strong investor signal", src: "AI summaries" });
-  else if (hasMargins) evidence.push({ icon: "⚠️", text: "Gross margin data found — unit economics (LTV/CAC) not explicitly stated", src: "AI summaries" });
-  else evidence.push({ icon: "❌", text: "No unit economics or margin data found — investors need to know the business model works at scale", src: "AI summaries" });
+  if (hasUnitEcon) evidence.push({ icon: "pass", text: "Unit economics (LTV, CAC, payback period) explicitly stated — strong investor signal", src: "AI summaries" });
+  else if (hasMargins) evidence.push({ icon: "warn", text: "Gross margin data found — unit economics (LTV/CAC) not explicitly stated", src: "AI summaries" });
+  else evidence.push({ icon: "fail", text: "No unit economics or margin data found — investors need to know the business model works at scale", src: "AI summaries" });
 
-  if (hasScaleEvidence) evidence.push({ icon: "✅", text: "Scalability or margin improvement trajectory described", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No scalability narrative found", src: "AI summaries" });
+  if (hasScaleEvidence) evidence.push({ icon: "pass", text: "Scalability or margin improvement trajectory described", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No scalability narrative found", src: "AI summaries" });
 
-  if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements with margin data reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
-  else evidence.push({ icon: "⚠️", text: "No financial statements — unit economics derived from projections only", src: "Document checklist" });
+  if (hasFinancials) evidence.push({ icon: "pass", text: financialSummary ? "Financial statements with margin data reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+  else evidence.push({ icon: "warn", text: "No financial statements — unit economics derived from projections only", src: "Document checklist" });
 
-  if (isPreRevenue) evidence.push({ icon: "⚠️", text: "Pre-revenue company — unit economics are projections, not actuals. Investors will discount accordingly.", src: "Risk assessment" });
+  if (isPreRevenue) evidence.push({ icon: "warn", text: "Pre-revenue company — unit economics are projections, not actuals. Investors will discount accordingly.", src: "Risk assessment" });
 
   const flags: FactorFlag[] = [];
   if (!hasUnitEcon && !hasMargins) flags.push({ severity: "red", label: "No unit economics", detail: "LTV:CAC ratio and gross margin are fundamental business model metrics. Include them in your pitch or business plan." });
@@ -1435,23 +1435,23 @@ function scoreIpMoat(
   const evidence: FactorEvidence[] = [];
   if (isSoftwareIndustry) {
     // Software-specific evidence messaging
-    if (hasFormalIp) evidence.push({ icon: "✅", text: "Formal IP (patents/trademarks) referenced — strong for a software company", src: "AI summaries" });
-    else if (hasSoftwareIp) evidence.push({ icon: "✅", text: "Proprietary technology or data assets referenced — appropriate for SaaS/software", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No proprietary technology or data assets mentioned — describe what makes the software defensible", src: "AI summaries" });
+    if (hasFormalIp) evidence.push({ icon: "pass", text: "Formal IP (patents/trademarks) referenced — strong for a software company", src: "AI summaries" });
+    else if (hasSoftwareIp) evidence.push({ icon: "pass", text: "Proprietary technology or data assets referenced — appropriate for SaaS/software", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No proprietary technology or data assets mentioned — describe what makes the software defensible", src: "AI summaries" });
   } else if (isPatentIndustry) {
-    if (hasFormalIp) evidence.push({ icon: "✅", text: "Patents or formal IP protection referenced — critical for this industry", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No patents or formal IP found — expected for hardware/biotech/medtech companies", src: "AI summaries" });
+    if (hasFormalIp) evidence.push({ icon: "pass", text: "Patents or formal IP protection referenced — critical for this industry", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No patents or formal IP found — expected for hardware/biotech/medtech companies", src: "AI summaries" });
   } else {
-    if (hasFormalIp) evidence.push({ icon: "✅", text: "Formal IP (patents, trademarks, trade secrets) referenced", src: "AI summaries" });
-    else if (hasSoftwareIp) evidence.push({ icon: "⚠️", text: "Proprietary technology mentioned — formal IP not confirmed", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No IP or proprietary assets referenced in documents", src: "AI summaries" });
+    if (hasFormalIp) evidence.push({ icon: "pass", text: "Formal IP (patents, trademarks, trade secrets) referenced", src: "AI summaries" });
+    else if (hasSoftwareIp) evidence.push({ icon: "warn", text: "Proprietary technology mentioned — formal IP not confirmed", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No IP or proprietary assets referenced in documents", src: "AI summaries" });
   }
 
-  if (hasMoat) evidence.push({ icon: "✅", text: "Competitive moat or defensibility strategy articulated", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No moat or defensibility strategy detected — investors will probe this", src: "AI summaries" });
+  if (hasMoat) evidence.push({ icon: "pass", text: "Competitive moat or defensibility strategy articulated", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No moat or defensibility strategy detected — investors will probe this", src: "AI summaries" });
 
-  if (formalPts) evidence.push({ icon: "✅", text: "IP ownership documented in legal/incorporation docs", src: "INCORPORATION_DOCS" });
-  if (!hasPitch && !hasBizPlan) evidence.push({ icon: "❌", text: "No documents uploaded to assess IP", src: "Document checklist" });
+  if (formalPts) evidence.push({ icon: "pass", text: "IP ownership documented in legal/incorporation docs", src: "INCORPORATION_DOCS" });
+  if (!hasPitch && !hasBizPlan) evidence.push({ icon: "fail", text: "No documents uploaded to assess IP", src: "Document checklist" });
 
   const flags: FactorFlag[] = [];
   if (isSoftwareIndustry) {
@@ -1545,19 +1545,19 @@ function scoreBurnRunway(
     const evidence: FactorEvidence[] = [];
     if (hasFinancials) {
       if (hasMilestoneData) {
-        evidence.push({ icon: "✅", text: "Milestone-linked funding tranches documented in financials", src: "FINANCIAL_STATEMENTS" });
+        evidence.push({ icon: "pass", text: "Milestone-linked funding tranches documented in financials", src: "FINANCIAL_STATEMENTS" });
       } else if (financialSummary) {
-        evidence.push({ icon: "⚠️", text: "Financial statements reviewed — no milestone-based runway structure identified", src: "FINANCIAL_STATEMENTS" });
+        evidence.push({ icon: "warn", text: "Financial statements reviewed — no milestone-based runway structure identified", src: "FINANCIAL_STATEMENTS" });
       } else {
-        evidence.push({ icon: "⚠️", text: "Financial statements uploaded — AI review pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
+        evidence.push({ icon: "warn", text: "Financial statements uploaded — AI review pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
       }
     } else {
-      evidence.push({ icon: "❌", text: "Financial statements missing — cash-to-next-milestone unknown. Score capped at 3/8.", src: "Document checklist" });
+      evidence.push({ icon: "fail", text: "Financial statements missing — cash-to-next-milestone unknown. Score capped at 3/8.", src: "Document checklist" });
     }
-    if (hasGrantRunway) evidence.push({ icon: "✅", text: "Non-dilutive funding extends runway — strong capital efficiency signal", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No grant runway documented — consider SBIR/STTR or NIH funding to extend runway non-dilutively", src: "AI summaries" });
-    if (hasClinicalCost) evidence.push({ icon: "✅", text: "Clinical trial cost breakdown or cash-to-milestone figure found", src: "AI summaries" });
-    if (hasBizPlan) evidence.push({ icon: hasRunwayData ? "✅" : "⚠️", text: hasRunwayData ? "Business plan includes milestone-based runway projection" : "Business plan present — no runway projections detected", src: "BUSINESS_PLAN" });
+    if (hasGrantRunway) evidence.push({ icon: "pass", text: "Non-dilutive funding extends runway — strong capital efficiency signal", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No grant runway documented — consider SBIR/STTR or NIH funding to extend runway non-dilutively", src: "AI summaries" });
+    if (hasClinicalCost) evidence.push({ icon: "pass", text: "Clinical trial cost breakdown or cash-to-milestone figure found", src: "AI summaries" });
+    if (hasBizPlan) evidence.push({ icon: hasRunwayData ? "pass" : "warn", text: hasRunwayData ? "Business plan includes milestone-based runway projection" : "Business plan present — no runway projections detected", src: "BUSINESS_PLAN" });
 
     const flags: FactorFlag[] = [];
     if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Life science investors need to see cash-to-next-milestone. Without financials, this factor is capped at 3/8." });
@@ -1623,12 +1623,12 @@ function scoreBurnRunway(
 
     const evidence: FactorEvidence[] = [];
     evidence.push(hasFinancials
-      ? { icon: "✅", text: financialSummary ? "Financial/cost documentation reviewed" : "Financial documents uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" }
-      : { icon: "❌", text: "Financial statements missing — development cost and runway unknown. Score capped at 3/8.", src: "Document checklist" });
-    if (hasMilestoneData) evidence.push({ icon: "✅", text: "Milestone-linked funding plan documented", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No milestone-based funding plan — hardware investors expect funding tied to TRL or development milestones", src: "AI summaries" });
-    if (hasGrantRunway) evidence.push({ icon: "✅", text: "NRE or government grant runway extension documented", src: "AI summaries" });
-    if (hasCapex) evidence.push({ icon: "✅", text: "CapEx or tooling cost breakdown referenced", src: "AI summaries" });
+      ? { icon: "pass", text: financialSummary ? "Financial/cost documentation reviewed" : "Financial documents uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "fail", text: "Financial statements missing — development cost and runway unknown. Score capped at 3/8.", src: "Document checklist" });
+    if (hasMilestoneData) evidence.push({ icon: "pass", text: "Milestone-linked funding plan documented", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No milestone-based funding plan — hardware investors expect funding tied to TRL or development milestones", src: "AI summaries" });
+    if (hasGrantRunway) evidence.push({ icon: "pass", text: "NRE or government grant runway extension documented", src: "AI summaries" });
+    if (hasCapex) evidence.push({ icon: "pass", text: "CapEx or tooling cost breakdown referenced", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Hardware investors need to see development cost, CapEx plan, and cash runway. Upload financials even for pre-revenue stage." });
@@ -1693,12 +1693,12 @@ function scoreBurnRunway(
 
     const evidence: FactorEvidence[] = [];
     evidence.push(hasFinancials
-      ? { icon: "✅", text: financialSummary ? "Financial/project cost documentation reviewed" : "Financial documents uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" }
-      : { icon: "❌", text: "Financial statements missing — project development cost and runway unknown. Score capped at 3/8.", src: "Document checklist" });
-    if (hasDevelopmentPlan) evidence.push({ icon: "✅", text: "Project development timeline and cost plan referenced", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No project development timeline or permitting/interconnection cost plan found", src: "AI summaries" });
-    if (hasIncentiveRunway) evidence.push({ icon: "✅", text: "Government incentives (IRA, ITC, PTC, grants) improve runway economics", src: "AI summaries" });
-    if (hasProjectFinance) evidence.push({ icon: "✅", text: "Project finance structure or construction financing referenced", src: "AI summaries" });
+      ? { icon: "pass", text: financialSummary ? "Financial/project cost documentation reviewed" : "Financial documents uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "fail", text: "Financial statements missing — project development cost and runway unknown. Score capped at 3/8.", src: "Document checklist" });
+    if (hasDevelopmentPlan) evidence.push({ icon: "pass", text: "Project development timeline and cost plan referenced", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No project development timeline or permitting/interconnection cost plan found", src: "AI summaries" });
+    if (hasIncentiveRunway) evidence.push({ icon: "pass", text: "Government incentives (IRA, ITC, PTC, grants) improve runway economics", src: "AI summaries" });
+    if (hasProjectFinance) evidence.push({ icon: "pass", text: "Project finance structure or construction financing referenced", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Cleantech investors need to see project development cost, permitting/interconnection timeline, and construction financing plan. Upload financials even in pre-operational stage." });
@@ -1757,23 +1757,23 @@ function scoreBurnRunway(
   const evidence: FactorEvidence[] = [];
   if (hasFinancials) {
     if (isPositiveCashflow) {
-      evidence.push({ icon: "✅", text: "Company appears cash flow positive or near break-even", src: "FINANCIAL_STATEMENTS" });
+      evidence.push({ icon: "pass", text: "Company appears cash flow positive or near break-even", src: "FINANCIAL_STATEMENTS" });
     } else if (hasBurnData) {
-      evidence.push({ icon: "✅", text: "Burn rate or runway data found in financial analysis", src: "FINANCIAL_STATEMENTS" });
+      evidence.push({ icon: "pass", text: "Burn rate or runway data found in financial analysis", src: "FINANCIAL_STATEMENTS" });
     } else if (financialSummary) {
-      evidence.push({ icon: "⚠️", text: "Financial statements reviewed — no explicit burn/runway figures identified", src: "FINANCIAL_STATEMENTS" });
+      evidence.push({ icon: "warn", text: "Financial statements reviewed — no explicit burn/runway figures identified", src: "FINANCIAL_STATEMENTS" });
     } else {
-      evidence.push({ icon: "⚠️", text: "Financial statements uploaded — AI review pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
+      evidence.push({ icon: "warn", text: "Financial statements uploaded — AI review pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
     }
   } else {
-    evidence.push({ icon: "❌", text: "Financial statements missing — burn rate and runway unknown. Score capped at 3/10.", src: "Document checklist" });
+    evidence.push({ icon: "fail", text: "Financial statements missing — burn rate and runway unknown. Score capped at 3/10.", src: "Document checklist" });
   }
   if (hasBizPlan) {
-    evidence.push({ icon: hasRunwayData ? "✅" : "⚠️", text: hasRunwayData ? "Business plan includes runway projections" : "Business plan present — no runway projections detected", src: "BUSINESS_PLAN" });
+    evidence.push({ icon: hasRunwayData ? "pass" : "warn", text: hasRunwayData ? "Business plan includes runway projections" : "Business plan present — no runway projections detected", src: "BUSINESS_PLAN" });
   } else {
-    evidence.push({ icon: "⚠️", text: "Business plan missing — runway projections unverifiable", src: "Document checklist" });
+    evidence.push({ icon: "warn", text: "Business plan missing — runway projections unverifiable", src: "Document checklist" });
   }
-  if (isPreRevenue && !hasFinancials) evidence.push({ icon: "❌", text: "Pre-revenue company with no financial statements — runway completely unknown", src: "Risk assessment" });
+  if (isPreRevenue && !hasFinancials) evidence.push({ icon: "fail", text: "Pre-revenue company with no financial statements — runway completely unknown", src: "Risk assessment" });
 
   const flags: FactorFlag[] = [];
   if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Burn rate and runway are critical investor questions. Without financials, this factor is capped at 3/10. This is a deal-breaker for most investors." });
@@ -1810,12 +1810,12 @@ function scorePitchQuality(
   const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 4);
 
   const evidence: FactorEvidence[] = [];
-  if (hasPitch) evidence.push({ icon: "✅", text: pitchSummary ? "Pitch deck uploaded and AI-reviewed" : "Pitch deck uploaded — AI review pending (partial credit)", src: "PITCH_DECK" });
-  else evidence.push({ icon: "❌", text: "Pitch deck not uploaded", src: "Document checklist" });
-  if (hasBizPlan) evidence.push({ icon: "✅", text: bizSummary ? "Business plan uploaded and AI-reviewed" : "Business plan uploaded — AI review pending (partial credit)", src: "BUSINESS_PLAN" });
-  else evidence.push({ icon: "❌", text: "Business plan not uploaded", src: "Document checklist" });
-  if (hasSummaries) evidence.push({ icon: "✅", text: "AI summaries available — full credit unlocked", src: "AI summaries" });
-  else if (hasPitch || hasBizPlan) evidence.push({ icon: "⚠️", text: "Documents uploaded but AI summaries not yet generated — score discounted", src: "AI summaries" });
+  if (hasPitch) evidence.push({ icon: "pass", text: pitchSummary ? "Pitch deck uploaded and AI-reviewed" : "Pitch deck uploaded — AI review pending (partial credit)", src: "PITCH_DECK" });
+  else evidence.push({ icon: "fail", text: "Pitch deck not uploaded", src: "Document checklist" });
+  if (hasBizPlan) evidence.push({ icon: "pass", text: bizSummary ? "Business plan uploaded and AI-reviewed" : "Business plan uploaded — AI review pending (partial credit)", src: "BUSINESS_PLAN" });
+  else evidence.push({ icon: "fail", text: "Business plan not uploaded", src: "Document checklist" });
+  if (hasSummaries) evidence.push({ icon: "pass", text: "AI summaries available — full credit unlocked", src: "AI summaries" });
+  else if (hasPitch || hasBizPlan) evidence.push({ icon: "warn", text: "Documents uploaded but AI summaries not yet generated — score discounted", src: "AI summaries" });
 
   const flags: FactorFlag[] = [];
   if (!hasPitch) flags.push({ severity: "red", label: "No pitch deck", detail: "A pitch deck is the core investor communication document." });
@@ -1891,12 +1891,12 @@ function scoreExitStrategy(
     else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
 
     const evidence: FactorEvidence[] = [];
-    if (hasSpecificExit) evidence.push({ icon: "✅", text: "Specific exit path stated (pharma acquisition, out-licensing, royalty deal, or IPO)", src: "AI summaries" });
-    else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific life science exit path stated", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No exit strategy found — life science investors need to see an acquisition or licensing path", src: "AI summaries" });
-    if (hasComparables) evidence.push({ icon: "✅", text: "Comparable precedent transactions or deal economics referenced", src: "AI summaries" });
-    else evidence.push({ icon: "⚠️", text: "No comparable deals cited — include precedent transactions to anchor return expectations", src: "AI summaries" });
-    if (hasBuyerStrategy) evidence.push({ icon: "✅", text: "Potential strategic buyers or licensing partners identified", src: "AI summaries" });
+    if (hasSpecificExit) evidence.push({ icon: "pass", text: "Specific exit path stated (pharma acquisition, out-licensing, royalty deal, or IPO)", src: "AI summaries" });
+    else if (hasGeneralExit) evidence.push({ icon: "warn", text: "Exit strategy mentioned but no specific life science exit path stated", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No exit strategy found — life science investors need to see an acquisition or licensing path", src: "AI summaries" });
+    if (hasComparables) evidence.push({ icon: "pass", text: "Comparable precedent transactions or deal economics referenced", src: "AI summaries" });
+    else evidence.push({ icon: "warn", text: "No comparable deals cited — include precedent transactions to anchor return expectations", src: "AI summaries" });
+    if (hasBuyerStrategy) evidence.push({ icon: "pass", text: "Potential strategic buyers or licensing partners identified", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasGeneralExit) flags.push({
@@ -1973,11 +1973,11 @@ function scoreExitStrategy(
     else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
 
     const evidence: FactorEvidence[] = [];
-    if (hasSpecificExit) evidence.push({ icon: "✅", text: "Specific hardware exit path stated (strategic acquisition, OEM deal, IP licensing, or IPO)", src: "AI summaries" });
-    else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific hardware exit path stated", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No exit strategy found — hardware investors need to see the strategic acquisition or licensing path", src: "AI summaries" });
-    if (hasComparables) evidence.push({ icon: "✅", text: "Comparable hardware acquisitions or deal multiples referenced", src: "AI summaries" });
-    if (hasBuyerStrategy) evidence.push({ icon: "✅", text: "Potential strategic buyers or OEM partners identified", src: "AI summaries" });
+    if (hasSpecificExit) evidence.push({ icon: "pass", text: "Specific hardware exit path stated (strategic acquisition, OEM deal, IP licensing, or IPO)", src: "AI summaries" });
+    else if (hasGeneralExit) evidence.push({ icon: "warn", text: "Exit strategy mentioned but no specific hardware exit path stated", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No exit strategy found — hardware investors need to see the strategic acquisition or licensing path", src: "AI summaries" });
+    if (hasComparables) evidence.push({ icon: "pass", text: "Comparable hardware acquisitions or deal multiples referenced", src: "AI summaries" });
+    if (hasBuyerStrategy) evidence.push({ icon: "pass", text: "Potential strategic buyers or OEM partners identified", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasGeneralExit) flags.push({ severity: "red", label: "No exit strategy", detail: "Hardware investors typically exit via strategic acquisition by OEMs or incumbent manufacturers, IP licensing, or IPO. Add a clear exit strategy identifying likely acquirers." });
@@ -2039,11 +2039,11 @@ function scoreExitStrategy(
     else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
 
     const evidence: FactorEvidence[] = [];
-    if (hasSpecificExit) evidence.push({ icon: "✅", text: "Specific cleantech exit path stated (project sale, asset acquisition, IPO, infrastructure fund)", src: "AI summaries" });
-    else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific cleantech exit path stated", src: "AI summaries" });
-    else evidence.push({ icon: "❌", text: "No exit strategy found — cleantech investors need to see an asset sale, acquisition, or project monetization path", src: "AI summaries" });
-    if (hasComparables) evidence.push({ icon: "✅", text: "Comparable clean energy project transactions or IRR projections referenced", src: "AI summaries" });
-    if (hasBuyerStrategy) evidence.push({ icon: "✅", text: "Infrastructure funds, utilities, or strategic buyers identified as exit counterparties", src: "AI summaries" });
+    if (hasSpecificExit) evidence.push({ icon: "pass", text: "Specific cleantech exit path stated (project sale, asset acquisition, IPO, infrastructure fund)", src: "AI summaries" });
+    else if (hasGeneralExit) evidence.push({ icon: "warn", text: "Exit strategy mentioned but no specific cleantech exit path stated", src: "AI summaries" });
+    else evidence.push({ icon: "fail", text: "No exit strategy found — cleantech investors need to see an asset sale, acquisition, or project monetization path", src: "AI summaries" });
+    if (hasComparables) evidence.push({ icon: "pass", text: "Comparable clean energy project transactions or IRR projections referenced", src: "AI summaries" });
+    if (hasBuyerStrategy) evidence.push({ icon: "pass", text: "Infrastructure funds, utilities, or strategic buyers identified as exit counterparties", src: "AI summaries" });
 
     const flags: FactorFlag[] = [];
     if (!hasGeneralExit) flags.push({ severity: "red", label: "No exit strategy", detail: "Cleantech investors typically exit via project/asset sale to infrastructure funds, utility acquisition, or IPO. Add a clear exit strategy with the likely buyer category." });
@@ -2089,12 +2089,12 @@ function scoreExitStrategy(
   else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
 
   const evidence: FactorEvidence[] = [];
-  if (hasSpecificExit) evidence.push({ icon: "✅", text: `Specific exit path stated (acquisition, IPO, or trade sale)`, src: "AI summaries" });
-  else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific exit type stated", src: "AI summaries" });
-  else evidence.push({ icon: "❌", text: "No exit strategy found — investors need to know how they get returns", src: "AI summaries" });
+  if (hasSpecificExit) evidence.push({ icon: "pass", text: `Specific exit path stated (acquisition, IPO, or trade sale)`, src: "AI summaries" });
+  else if (hasGeneralExit) evidence.push({ icon: "warn", text: "Exit strategy mentioned but no specific exit type stated", src: "AI summaries" });
+  else evidence.push({ icon: "fail", text: "No exit strategy found — investors need to know how they get returns", src: "AI summaries" });
 
-  if (hasReturnProjections) evidence.push({ icon: "✅", text: "Investor return projections or exit multiples referenced", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No return projections stated — include expected exit multiple or IRR", src: "AI summaries" });
+  if (hasReturnProjections) evidence.push({ icon: "pass", text: "Investor return projections or exit multiples referenced", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No return projections stated — include expected exit multiple or IRR", src: "AI summaries" });
 
   const flags: FactorFlag[] = [];
   if (!hasGeneralExit) flags.push({ severity: "red", label: "No exit strategy", detail: "Every investor needs to know how they get their money back. Add an exit strategy slide to your pitch deck." });
@@ -2136,12 +2136,12 @@ function scoreDealStructure(
   const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 3);
 
   const evidence: FactorEvidence[] = [];
-  if (fundingAmount) evidence.push({ icon: "✅", text: `Raise target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
-  else evidence.push({ icon: "⚠️", text: "Funding amount not declared", src: "Company profile" });
-  if (hasDealKeywords) evidence.push({ icon: "✅", text: "Deal structure terms referenced (equity, SAFE, valuation, etc.)", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No deal structure terms detected in documents", src: "AI summaries" });
-  if (hasUseOfFunds) evidence.push({ icon: "✅", text: "Use of funds breakdown found in documents", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No use of funds breakdown detected — investors expect specificity", src: "AI summaries" });
+  if (fundingAmount) evidence.push({ icon: "pass", text: `Raise target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+  else evidence.push({ icon: "warn", text: "Funding amount not declared", src: "Company profile" });
+  if (hasDealKeywords) evidence.push({ icon: "pass", text: "Deal structure terms referenced (equity, SAFE, valuation, etc.)", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No deal structure terms detected in documents", src: "AI summaries" });
+  if (hasUseOfFunds) evidence.push({ icon: "pass", text: "Use of funds breakdown found in documents", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No use of funds breakdown detected — investors expect specificity", src: "AI summaries" });
 
   const flags: FactorFlag[] = [];
   if (!fundingAmount) flags.push({ severity: "amber", label: "No funding target", detail: "Investors need to know the raise size and minimum investment to assess fit." });
@@ -2172,12 +2172,12 @@ function scoreIndustryAlignment(
 
   const evidence: FactorEvidence[] = [];
   if (industry) {
-    evidence.push({ icon: industryMatch ? "✅" : "⚠️", text: industryMatch ? `Industry: ${industry} — matches platform focus areas` : `Industry: ${industry} — outside platform focus (1/2 pts)`, src: "Company profile" });
+    evidence.push({ icon: industryMatch ? "pass" : "warn", text: industryMatch ? `Industry: ${industry} — matches platform focus areas` : `Industry: ${industry} — outside platform focus (1/2 pts)`, src: "Company profile" });
   } else {
-    evidence.push({ icon: "❌", text: "Industry not declared", src: "Company profile" });
+    evidence.push({ icon: "fail", text: "Industry not declared", src: "Company profile" });
   }
-  if (revenueStage) evidence.push({ icon: "✅", text: `Stage: ${revenueStage}`, src: "Company profile" });
-  else evidence.push({ icon: "⚠️", text: "Revenue stage not set", src: "Company profile" });
+  if (revenueStage) evidence.push({ icon: "pass", text: `Stage: ${revenueStage}`, src: "Company profile" });
+  else evidence.push({ icon: "warn", text: "Revenue stage not set", src: "Company profile" });
 
   const flags: FactorFlag[] = [];
   if (!industry) flags.push({ severity: "amber", label: "No industry set", detail: "Declare your industry to enable alignment scoring." });
@@ -2213,8 +2213,8 @@ function scoreImpactEsg(
   const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 3);
 
   const evidence: FactorEvidence[] = [];
-  if (hasEsgKeywords) evidence.push({ icon: "✅", text: "Impact or ESG references found in document summaries", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No ESG or impact keywords found", src: "AI summaries" });
+  if (hasEsgKeywords) evidence.push({ icon: "pass", text: "Impact or ESG references found in document summaries", src: "AI summaries" });
+  else evidence.push({ icon: "warn", text: "No ESG or impact keywords found", src: "AI summaries" });
 
   const flags: FactorFlag[] = [];
   if (!hasEsgKeywords) flags.push({ severity: "amber", label: "No ESG evidence", detail: "Consider adding an impact statement or ESG section. Increasingly important for impact-focused investors." });

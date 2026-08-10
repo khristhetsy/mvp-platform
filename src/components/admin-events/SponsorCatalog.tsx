@@ -116,7 +116,7 @@ function LogoUpload({
         {busy ? "Uploading…" : hasLogo ? "Replace logo" : "Upload logo"}
         <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={upload} disabled={busy} className="hidden" />
       </label>
-      {hasLogo && <span className="text-xs text-emerald-700">✓</span>}
+      {hasLogo && <span className="text-xs text-emerald-700"><i className="ti ti-check" aria-hidden="true" /></span>}
       {error && <span className="text-xs text-rose-600">{error}</span>}
     </div>
   );

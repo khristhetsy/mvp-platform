@@ -23,7 +23,7 @@ export function OnboardQueue({ rows }: { rows: OnboardRow[] }) {
         <div></div><div>Founder</div><div>Company</div><div>Progress</div><div>SLA</div><div></div>
       </div>
       {rows.length === 0 ? (
-        <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Every founder has completed onboarding. 🎉</p>
+        <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Every founder has completed onboarding. <i className="ti ti-circle-check" aria-hidden="true" /></p>
       ) : rows.map((r) => (
         <Fragment key={r.id}>
           <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: r.pastDue ? "#FEF6F6" : undefined }}>

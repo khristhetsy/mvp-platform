@@ -721,7 +721,8 @@ export function InvestorPortfolioPageClient() {
                 type="button"
                 onClick={() => setShowForm(false)}
                 className="text-lg leading-none text-slate-400 hover:text-slate-600"
-              >✕</button>
+                aria-label="Close"
+              ><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
 
             {formError && (

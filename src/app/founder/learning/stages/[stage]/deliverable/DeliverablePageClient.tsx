@@ -125,7 +125,7 @@ export function DeliverablePageClient({
         ) : (
           <div className="space-y-4">
             <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
-              <p className="text-sm font-semibold text-green-800">✓ Deliverable submitted</p>
+              <p className="text-sm font-semibold text-green-800"><i className="ti ti-check" aria-hidden="true" /> Deliverable submitted</p>
               {aiScore != null && (
                 <div className="mt-3 flex items-center gap-3">
                   <span className="text-3xl font-bold" style={{ color: meta.color }}>{aiScore}</span>

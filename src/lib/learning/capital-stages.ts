@@ -28,7 +28,7 @@ export const CAPITAL_STAGE_META: Record<
     color: "#2E78F5",
     bgColor: "#EEEDFE",
     borderColor: "#C7C4F0",
-    icon: "🏗️",
+    icon: "ti-tools",
     deliverable: {
       id: "executive-summary",
       title: "Executive summary (1-pager)",
@@ -42,7 +42,7 @@ export const CAPITAL_STAGE_META: Record<
     color: "#3B6D11",
     bgColor: "#EAF3DE",
     borderColor: "#BBE0A7",
-    icon: "🌱",
+    icon: "ti-plant-2",
     deliverable: {
       id: "pitch-deck",
       title: "Investor pitch deck (10–12 slides)",
@@ -56,7 +56,7 @@ export const CAPITAL_STAGE_META: Record<
     color: "#92400E",
     bgColor: "#FEF3C7",
     borderColor: "#FCD34D",
-    icon: "🚀",
+    icon: "ti-rocket",
     deliverable: {
       id: "series-a-data-room",
       title: "Series A data room (complete)",
@@ -70,7 +70,7 @@ export const CAPITAL_STAGE_META: Record<
     color: "#1E3A5F",
     bgColor: "#E8F0F8",
     borderColor: "#9DB3CC",
-    icon: "🏆",
+    icon: "ti-trophy",
     deliverable: {
       id: "exit-readiness-report",
       title: "Exit readiness report",

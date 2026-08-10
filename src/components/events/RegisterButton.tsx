@@ -27,7 +27,7 @@ export function RegisterButton({
   if (alreadyRegistered) {
     return (
       <span className="inline-flex items-center rounded-md bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-        ✓ You&apos;re registered
+        <i className="ti ti-check" aria-hidden="true" /> You&apos;re registered
       </span>
     );
   }

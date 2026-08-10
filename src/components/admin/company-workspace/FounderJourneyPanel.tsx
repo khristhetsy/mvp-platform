@@ -139,7 +139,7 @@ export function FounderJourneyPanel({
                         : "bg-slate-100 text-slate-400"
                   }`}
                 >
-                  {done ? "✓" : i + 1}
+                  {done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
                 </div>
                 <p className={`mt-1.5 text-[11px] font-semibold ${current ? "text-indigo-700" : done ? "text-slate-700" : "text-slate-400"}`}>
                   {STAGE_META[s].label}
@@ -193,7 +193,7 @@ export function FounderJourneyPanel({
               }`}
               aria-hidden
             >
-              {g.met ? "✓" : "✕"}
+              {g.met ? <i className="ti ti-check" aria-hidden="true" /> : <i className="ti ti-x" aria-hidden="true" />}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-medium text-slate-800">{g.label}</span>
@@ -243,7 +243,7 @@ export function FounderJourneyPanel({
                 onClick={() => setOpenKey(null)}
                 className="text-slate-400 hover:text-slate-700"
               >
-                ✕
+                <i className="ti ti-x" aria-hidden="true" />
               </button>
             </div>
             <h3 className="text-base font-semibold text-slate-900">{active.label}</h3>
@@ -256,7 +256,7 @@ export function FounderJourneyPanel({
               {active.points.map((p, i) => (
                 <li key={p} className="flex items-start gap-2 text-[13px] text-slate-800">
                   {active.met ? (
-                    <span className="mt-0.5 flex-none text-emerald-600">✓</span>
+                    <span className="mt-0.5 flex-none text-emerald-600"><i className="ti ti-check" aria-hidden="true" /></span>
                   ) : (
                     <span className="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border border-slate-300 bg-slate-50 text-[10px] text-slate-500">
                       {i + 1}

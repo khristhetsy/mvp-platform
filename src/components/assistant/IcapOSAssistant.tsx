@@ -379,7 +379,7 @@ export function IcapOSAssistant() {
                   onClick={() => void requestLiveAgent()}
                   className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-600 transition hover:border-slate-300 disabled:opacity-50"
                 >
-                  {agentRequested ? "✓ Agent requested" : agentLoading ? "Requesting…" : "Request a live agent"}
+                  {agentRequested ? (<><i className="ti ti-check" aria-hidden="true" /> Agent requested</>) : agentLoading ? "Requesting…" : "Request a live agent"}
                 </button>
               ) : null}
             </div>

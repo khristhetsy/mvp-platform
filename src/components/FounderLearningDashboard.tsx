@@ -104,7 +104,7 @@ export function FounderLearningDashboard({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-medium text-slate-900">
-                        {locked ? <span className="mr-1.5" aria-hidden>🔒</span> : null}
+                        {locked ? <span className="mr-1.5" aria-hidden><i className="ti ti-lock" aria-hidden="true" /></span> : null}
                         {program.title}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">{program.description}</p>

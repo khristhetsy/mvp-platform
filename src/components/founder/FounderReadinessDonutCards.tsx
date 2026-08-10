@@ -464,7 +464,7 @@ export function FounderReadinessDonutCards({
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50"
                     aria-label="Close drawer"
                   >
-                    ✕
+                    <i className="ti ti-x" aria-hidden="true" />
                   </button>
                 </div>
               </div>

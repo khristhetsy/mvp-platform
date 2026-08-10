@@ -138,7 +138,7 @@ function DayDrawerContent({
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
           aria-label="Close"
         >
-          ✕
+          <i className="ti ti-x" aria-hidden="true" />
         </button>
       </div>
 
@@ -514,7 +514,7 @@ export function LearningScheduleClient() {
                 disabled={isPending}
                 className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
               >
-                {isPending ? "Saving…" : saved ? "✓ Saved" : "Update schedule"}
+                {isPending ? "Saving…" : saved ? <><i className="ti ti-check" aria-hidden="true" /> Saved</> : "Update schedule"}
               </button>
             </div>
           </div>

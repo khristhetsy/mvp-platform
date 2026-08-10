@@ -196,7 +196,7 @@ export function TaskReminderToast() {
             borderRadius: 4,
           }}
         >
-          ✕
+          <i className="ti ti-x" aria-hidden="true" />
         </button>
       </div>
 

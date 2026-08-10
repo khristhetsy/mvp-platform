@@ -237,7 +237,7 @@ export function FounderSocialDraftsPanel({
         <ul className="mt-4 space-y-2">
           {socialReadiness.requirements.map((row) => (
             <li key={row.key} className="flex items-center gap-2 text-sm">
-              <span className={row.met ? "text-emerald-600" : "text-amber-600"}>{row.met ? "✓" : "○"}</span>
+              <span className={row.met ? "text-emerald-600" : "text-amber-600"}>{row.met ? <i className="ti ti-check" aria-hidden="true" /> : "○"}</span>
               <span>{row.label}</span>
             </li>
           ))}

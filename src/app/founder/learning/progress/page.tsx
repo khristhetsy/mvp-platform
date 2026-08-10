@@ -192,7 +192,7 @@ export default async function MyProgressPage() {
                           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-base"
                           style={{ background: unlocked ? meta.bgColor : "#F1F5F9" }}
                         >
-                          {unlocked ? meta.icon : "🔒"}
+                          {unlocked ? <i className={`ti ${meta.icon}`} aria-hidden="true" /> : <i className="ti ti-lock" aria-hidden="true" />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">

@@ -11,12 +11,12 @@ export type MilestoneKey =
   | "profile_complete";
 
 const MILESTONE_LABELS: Record<MilestoneKey, { title: string; subtitle: string; emoji: string }> = {
-  first_contact_added:     { emoji: "🎯", title: "First investor added!",       subtitle: "Your CRM is live. Keep building your list." },
-  first_document_uploaded: { emoji: "📄", title: "First document uploaded!",    subtitle: "Your data room is taking shape." },
-  readiness_80:            { emoji: "⭐", title: "80% completion!",              subtitle: "You're in the top tier of founders on the platform." },
-  deal_room_answer:        { emoji: "💬", title: "First deal room answer!",     subtitle: "Investors can see your responses. Keep going." },
-  outreach_sent:           { emoji: "🚀", title: "First outreach sent!",        subtitle: "You're officially in the market. Track responses carefully." },
-  profile_complete:        { emoji: "✅", title: "Company profile complete!",   subtitle: "Your listing is investor-ready." },
+  first_contact_added:     { emoji: "ti-target", title: "First investor added!",       subtitle: "Your CRM is live. Keep building your list." },
+  first_document_uploaded: { emoji: "ti-file-text", title: "First document uploaded!",    subtitle: "Your data room is taking shape." },
+  readiness_80:            { emoji: "ti-star", title: "80% completion!",              subtitle: "You're in the top tier of founders on the platform." },
+  deal_room_answer:        { emoji: "ti-message", title: "First deal room answer!",     subtitle: "Investors can see your responses. Keep going." },
+  outreach_sent:           { emoji: "ti-rocket", title: "First outreach sent!",        subtitle: "You're officially in the market. Track responses carefully." },
+  profile_complete:        { emoji: "ti-circle-check", title: "Company profile complete!",   subtitle: "Your listing is investor-ready." },
 };
 
 const STORAGE_KEY = "capitalos_milestones_shown";
@@ -115,7 +115,7 @@ export function MilestoneCelebration({ achieved }: Props) {
           ))}
         </div>
 
-        <span style={{ fontSize: 40, animation: "celebPop 0.6s ease both 0.2s", display: "block" }}>{emoji}</span>
+        <span style={{ fontSize: 40, animation: "celebPop 0.6s ease both 0.2s", display: "block" }}><i className={`ti ${emoji}`} aria-hidden="true" /></span>
         <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>{title}</p>
         <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>{subtitle}</p>
 
@@ -129,7 +129,7 @@ export function MilestoneCelebration({ achieved }: Props) {
             fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer",
           }}
         >
-          Keep going 🙌
+          Keep going
         </button>
       </div>
     </>

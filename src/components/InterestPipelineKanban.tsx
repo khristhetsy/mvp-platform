@@ -24,7 +24,7 @@ type PipelineCard = {
 const INTRO_STATUS_STYLES: Record<string, { badge: string; label: string }> = {
   requested:   { badge: "bg-blue-50 text-blue-700",    label: "Pending review" },
   reviewing:   { badge: "bg-indigo-50 text-indigo-700", label: "Under review" },
-  facilitated: { badge: "bg-emerald-50 text-emerald-800", label: "Facilitated ✓" },
+  facilitated: { badge: "bg-emerald-50 text-emerald-800", label: "Facilitated" },
   declined:    { badge: "bg-red-50 text-red-700",       label: "Not matched" },
 };
 

@@ -76,7 +76,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                 </p>
                 {r.note && (
                   <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">✍️ Founder&apos;s intro note</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500"><i className="ti ti-pencil" aria-hidden="true" /> Founder&apos;s intro note</p>
                     <p className="mt-1 whitespace-pre-wrap text-xs italic text-slate-700">&ldquo;{r.note}&rdquo;</p>
                   </div>
                 )}

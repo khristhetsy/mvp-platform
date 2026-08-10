@@ -70,7 +70,7 @@ export function EventPollWidget({ slug }: { slug: string }) {
                 <span className="absolute inset-y-0 left-0 -z-0" style={{ width: `${pct}%`, background: "var(--indigo-soft)" }} aria-hidden />
               )}
               <span className="relative z-10 flex justify-between">
-                <span className="text-[var(--navy)]">{o}{mine ? " ✓" : ""}</span>
+                <span className="text-[var(--navy)]">{o}{mine ? <> <i className="ti ti-check" aria-hidden="true" /></> : ""}</span>
                 {voted && <span className="text-xs text-[var(--text-muted)]">{pct}%</span>}
               </span>
             </button>

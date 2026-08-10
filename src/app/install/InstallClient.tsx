@@ -17,7 +17,7 @@ const CARDS: { id: CardId; label: string; icon: string; steps: React.ReactNode[]
     icon: "ti-device-mobile",
     steps: [
       <>Open <b>icapos.com</b> in <b>Safari</b>.</>,
-      <>Tap the <Ui>Share ⬆</Ui> icon at the bottom of the screen.</>,
+      <>Tap the <Ui>Share <i className="ti ti-share" aria-hidden="true" /></Ui> icon at the bottom of the screen.</>,
       <>Scroll down and tap <Ui>Add to Home Screen</Ui>, then <Ui>Add</Ui>. The iCapOS icon appears like any other app.</>,
     ],
   },
@@ -107,7 +107,7 @@ export function InstallClient() {
       <main style={{ maxWidth: 560, margin: "-36px auto 64px", padding: "0 20px" }}>
         {installed && (
           <div style={{ background: "#E7F8EF", border: "1px solid #A7E3C4", color: "#0F6E56", borderRadius: 12, padding: "12px 14px", marginBottom: 16, fontSize: ".92rem", fontWeight: 600 }}>
-            ✓ iCapOS is installed — look for the icon on your home screen.
+            <i className="ti ti-check" aria-hidden="true" /> iCapOS is installed — look for the icon on your home screen.
           </div>
         )}
 

@@ -267,7 +267,7 @@ export function FounderClassLessonExperience({
                         >
                           <span className="line-clamp-2">{item.title}</span>
                           <span className="text-[10px] text-slate-400">
-                            {item.durationMinutes}m{done ? " · ✓" : ""}
+                            {item.durationMinutes}m{done ? (<> · <i className="ti ti-check" aria-hidden="true" /></>) : ""}
                             {item.type === "quiz" ? " · Quiz" : ""}
                           </span>
                         </Link>

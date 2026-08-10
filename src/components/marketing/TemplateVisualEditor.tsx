@@ -970,7 +970,7 @@ export function TemplateVisualEditor({
                         !selected.highlight ? "border-[#2E78F5] ring-1 ring-[#2E78F5]" : "border-slate-200"
                       }`}
                     >
-                      ✕
+                      <i className="ti ti-x" aria-hidden="true" />
                     </button>
                     {HIGHLIGHT_COLOURS.map((c) => (
                       <button
@@ -1549,7 +1549,7 @@ export function TemplateVisualEditor({
                     onClick={() => fileInput.current?.click()}
                     className="w-full rounded-md border border-[#bcd3fb] bg-[#f2f7ff] px-2 py-1.5 text-[11.5px] font-semibold text-[#2E78F5] hover:bg-[#e6f0ff] disabled:opacity-60"
                   >
-                    {uploading ? "Uploading…" : "⬆ Upload image"}
+                    {uploading ? "Uploading…" : (<><i className="ti ti-arrow-up" aria-hidden="true" /> Upload image</>)}
                   </button>
                   {uploadError ? <p className="mt-1 text-[10.5px] text-rose-600">{uploadError}</p> : null}
                   <p className="mt-1 text-[10.5px] text-slate-400">JPG, PNG, WebP, or GIF · max 5MB</p>

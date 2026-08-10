@@ -22,19 +22,19 @@ function setDismissed() {
 
 const STEPS = [
   {
-    icon: "🧭",
+    icon: "ti-compass",
     title: "Complete your investor profile",
     description: "Add your investment preferences so opportunity matching personalizes to your thesis, and submit for approval to unlock the marketplace.",
     action: { label: "Complete profile", href: "/investor/onboarding" },
   },
   {
-    icon: "🔍",
+    icon: "ti-search",
     title: "Browse matched opportunities",
     description: "Explore companies ranked for your preferences in the Private Market. Filters help you focus on stage, sector, and geography.",
     action: { label: "View opportunities", href: "/investor/opportunities" },
   },
   {
-    icon: "⭐",
+    icon: "ti-star",
     title: "Save deals and express interest",
     description: "Add promising companies to your watchlist, express interest, and request introductions — founders are notified instantly.",
     action: { label: "Open watchlist", href: "/investor/watchlist" },
@@ -103,7 +103,7 @@ export function InvestorFirstRunModal({ isNew }: { isNew: boolean }) {
         </div>
 
         <div style={{ padding: "24px 28px 26px" }}>
-          <div style={{ fontSize: 34, lineHeight: 1, marginBottom: 12 }} aria-hidden>{currentStep.icon}</div>
+          <div style={{ fontSize: 34, lineHeight: 1, marginBottom: 12 }} aria-hidden><i className={`ti ${currentStep.icon}`} aria-hidden="true" /></div>
           <p style={{ fontSize: 12, fontWeight: 700, color: "#2E78F5", margin: "0 0 4px" }}>Step {activeStep + 1} of {STEPS.length}</p>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{currentStep.title}</h3>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: "#475569", margin: "0 0 20px" }}>{currentStep.description}</p>

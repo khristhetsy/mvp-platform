@@ -46,7 +46,7 @@ export function LessonSearch() {
             className="text-slate-400 hover:text-slate-600"
             aria-label="Clear search"
           >
-            ✕
+            <i className="ti ti-x" aria-hidden="true" />
           </button>
         ) : null}
       </div>

@@ -136,9 +136,9 @@ export function AdminLessonAssignmentPanel({ founderId, companyId, adminName, le
                 }`}
               >
                 {lesson.done ? (
-                  <span className="text-[8px] text-green-600">✓</span>
+                  <span className="text-[8px] text-green-600"><i className="ti ti-check" aria-hidden="true" /></span>
                 ) : isAssigned ? (
-                  <span className="text-[8px] text-white">✓</span>
+                  <span className="text-[8px] text-white"><i className="ti ti-check" aria-hidden="true" /></span>
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
@@ -178,7 +178,7 @@ export function AdminLessonAssignmentPanel({ founderId, companyId, adminName, le
           disabled={isPending}
           className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
         >
-          {isPending ? "Saving…" : saved ? "✓ Saved" : "Save lesson assignments"}
+          {isPending ? "Saving…" : saved ? <><i className="ti ti-check" aria-hidden="true" /> Saved</> : "Save lesson assignments"}
         </button>
       </div>
     </div>

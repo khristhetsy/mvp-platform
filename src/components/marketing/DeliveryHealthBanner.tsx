@@ -21,7 +21,7 @@ export function DeliveryHealthBanner() {
   return (
     <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
       <div style={{ fontSize: 12.5, fontWeight: 700, color: "#991B1B", marginBottom: 6 }}>
-        ⚠ Emails aren&rsquo;t being delivered — fix the following:
+        <i className="ti ti-alert-triangle" aria-hidden="true" /> Emails aren&rsquo;t being delivered — fix the following:
       </div>
       <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
         {issues.map((i) => (

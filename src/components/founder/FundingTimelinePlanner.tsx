@@ -348,14 +348,14 @@ export function FundingTimelinePlanner() {
       {/* Warnings */}
       {tooShort && weeksUntilClose > 0 ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] leading-relaxed text-red-800">
-          <span className="font-semibold">⚠️ Timeline too compressed. </span>
+          <span className="font-semibold"><i className="ti ti-alert-triangle" aria-hidden="true" /> Timeline too compressed. </span>
           A {ROUND_TYPE_LABELS[roundType]} typically needs {totalWeeks} weeks — you have {weeksUntilClose}. Either move your close date to{" "}
           <span className="font-semibold">{formatDate(addWeeks(today, totalWeeks))}</span> or accept that some phases will overlap.
         </div>
       ) : null}
       {isLate ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] leading-relaxed text-amber-800">
-          <span className="font-semibold">📅 You should already be in prep. </span>
+          <span className="font-semibold"><i className="ti ti-calendar" aria-hidden="true" /> You should already be in prep. </span>
           Based on your close date, prep started {Math.abs(weeksUntilStart)} week{Math.abs(weeksUntilStart) !== 1 ? "s" : ""} ago.
           You&apos;re in the <span className="font-semibold">{currentPhaseIndex >= 0 ? phases[currentPhaseIndex]?.label : "active"}</span> phase now.
         </div>

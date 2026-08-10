@@ -283,7 +283,7 @@ export function ReadinessWizard({
           </div>
           <p className="mt-1 text-[10px] text-slate-400">
             {simulatedScore >= targetScore
-              ? "✓ Target reached — complete the steps above to confirm"
+              ? <><i className="ti ti-check" aria-hidden="true" /> Target reached — complete the steps above to confirm</>
               : `${targetScore - simulatedScore} more points needed`}
           </p>
         </div>

@@ -155,7 +155,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
           disabled={notified}
           className="text-xs font-medium text-[var(--blue)] hover:underline disabled:text-[var(--text-muted)] disabled:no-underline"
         >
-          {notified ? "Team notified ✓" : "Need a human? Notify the info desk"}
+          {notified ? "Team notified" : "Need a human? Notify the info desk"}
         </button>
       </div>
 

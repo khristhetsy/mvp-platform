@@ -399,7 +399,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                                 <button type="button" onClick={customizeCover} className="text-xs font-semibold text-[var(--blue)]">Customize</button>
                               )
                             )}
-                            <span className="text-[10px] font-semibold text-[var(--text-muted)]">🔒 required</span>
+                            <span className="text-[10px] font-semibold text-[var(--text-muted)]"><i className="ti ti-lock" aria-hidden="true" /> required</span>
                           </span>
                         ) : (
                           <span className="flex items-center gap-1">
@@ -407,7 +407,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                             <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
                             <button type="button" onClick={() => move(i, 1)} disabled={i >= pages.length - 1} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↓</button>
                             {(isCustom || isFreeform) && <button type="button" onClick={() => duplicatePage(i)} className="text-xs text-[var(--text-muted)] hover:text-[var(--blue)]" title="Duplicate page">⧉</button>}
-                            {(isCustom || isFreeform) && <button type="button" onClick={() => { if (editingKey === p.key) setEditingKey(null); removePage(i); }} className="text-xs text-rose-500" title="Remove page">✕</button>}
+                            {(isCustom || isFreeform) && <button type="button" onClick={() => { if (editingKey === p.key) setEditingKey(null); removePage(i); }} className="text-xs text-rose-500" title="Remove page"><i className="ti ti-x" aria-hidden="true" /></button>}
                           </span>
                         )}
                       </div>

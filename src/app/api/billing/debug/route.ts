@@ -48,12 +48,12 @@ export async function GET(): Promise<NextResponse> {
     {
       summary:
         !env.apiKey_present
-          ? "❌ LEMONSQUEEZY_API_KEY is not set in this environment."
+          ? "FAIL — LEMONSQUEEZY_API_KEY is not set in this environment."
           : !stores.ok
-            ? `❌ API key cannot authenticate / find a store (HTTP ${stores.status}). The key is wrong or from the other mode.`
+            ? `FAIL — API key cannot authenticate / find a store (HTTP ${stores.status}). The key is wrong or from the other mode.`
             : (basic as { ok?: boolean }).ok && (pro as { ok?: boolean }).ok
-              ? "✅ Key works and both variant IDs exist for this key's mode. Checkout should work."
-              : "❌ Key works, but a variant ID is not found for this key's mode (test vs live mismatch, or wrong ID).",
+              ? "OK — Key works and both variant IDs exist for this key's mode. Checkout should work."
+              : "FAIL — Key works, but a variant ID is not found for this key's mode (test vs live mismatch, or wrong ID).",
       env,
       checks: { stores, basicVariant: basic, proVariant: pro },
     },

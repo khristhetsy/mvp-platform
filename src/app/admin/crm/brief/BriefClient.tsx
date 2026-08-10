@@ -64,7 +64,7 @@ export function BriefClient({ items }: { items: BriefItem[] }) {
             <div className="mt-3 flex items-center gap-3">
               <a href={item.href} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50">Open →</a>
               {added[item.id] ? (
-                <span className="text-xs font-medium text-emerald-700">✓ Added to tasks</span>
+                <span className="text-xs font-medium text-emerald-700"><i className="ti ti-check" aria-hidden="true" /> Added to tasks</span>
               ) : (
                 <button
                   type="button"

@@ -90,7 +90,7 @@ export function LessonPageClient({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
-          <p className="text-2xl">📚</p>
+          <p className="text-2xl"><i className="ti ti-book" aria-hidden="true" /></p>
           <p className="mt-2 text-sm text-slate-500">Lesson not found.</p>
           <Link href="/founder/learning" className="mt-4 inline-block text-sm text-indigo-600 hover:underline">
             ← Back to Learning Hub
@@ -128,9 +128,9 @@ export function LessonPageClient({
 
   const hasModules = dbModules.length > 0;
   const tabs = [
-    { key: "lesson" as const, label: "📖 Lesson" },
-    { key: "worksheet" as const, label: "✏️ Worksheet" },
-    ...(hasModules ? [{ key: "modules" as const, label: "🗂️ Modules" }] : []),
+    { key: "lesson" as const, label: "Lesson", icon: "ti-book" },
+    { key: "worksheet" as const, label: "Worksheet", icon: "ti-pencil" },
+    ...(hasModules ? [{ key: "modules" as const, label: "Modules", icon: "ti-folders" }] : []),
   ];
 
   return (
@@ -224,7 +224,7 @@ export function LessonPageClient({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              {tab.label}
+              <i className={`ti ${tab.icon}`} aria-hidden="true" /> {tab.label}
             </button>
           ))}
         </div>
@@ -333,7 +333,7 @@ export function LessonPageClient({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-slate-800">{dl.title}</p>
                           {dl.video_url && (
-                            <span className="text-[10px] text-indigo-500">📹 Video included</span>
+                            <span className="text-[10px] text-indigo-500"><i className="ti ti-video" aria-hidden="true" /> Video included</span>
                           )}
                         </div>
                         <span className="text-xs text-slate-400">{dl.estimated_time_minutes}m</span>
@@ -362,7 +362,7 @@ export function LessonPageClient({
           <div className="flex items-center gap-3">
             {done ? (
               <span className="flex items-center gap-2 rounded-xl bg-green-50 px-5 py-2.5 text-sm font-semibold text-green-700">
-                ✓ Completed
+                <i className="ti ti-check" aria-hidden="true" /> Completed
               </span>
             ) : (
               <button

@@ -76,7 +76,7 @@ export function FounderMatchQueue({ items }: Readonly<{ items: FounderMatchItem[
                 </div>
               ) : (
                 <p className="mt-1 rounded-lg bg-[#E6F7F0] px-3 py-2 text-[12px] font-semibold text-[#0B5C41]">
-                  ✓ Introduced — you can now connect with this investor.
+                  <i className="ti ti-check" aria-hidden="true" /> Introduced — you can now connect with this investor.
                 </p>
               )}
             </article>

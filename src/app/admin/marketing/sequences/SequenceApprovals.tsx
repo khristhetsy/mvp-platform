@@ -91,7 +91,7 @@ export function SequenceApprovals({ canApprove }: { canApprove: boolean }) {
               </button>
             ) : (
               <span style={{ fontSize: 11, color: "#78350F", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 13 }}>🔒</span> Ask an approver or super admin to release
+                <span style={{ fontSize: 13 }}><i className="ti ti-lock" aria-hidden="true" /></span> Ask an approver or super admin to release
               </span>
             )}
           </div>

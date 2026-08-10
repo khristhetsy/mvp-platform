@@ -48,14 +48,14 @@ export default async function FounderAnalyticsPage() {
         {!analytics ? (
           <WorkspacePanel title={t("no_company_linked")} subtitle={t("complete_setup_to_view_analytics")}>
             <FounderEmptyState
-              icon="📊"
+              icon="ti-chart-bar"
               title={t("analytics_start_after_onboarding")}
               description={t("complete_your_company_profile_and_add_at_least")}
               steps={[
-                { icon: "🏢", label: "Complete your company profile in Settings" },
-                { icon: "📄", label: "Upload your pitch deck or financial model" },
-                { icon: "🎯", label: "Add investors to your CRM and track outreach" },
-                { icon: "📊", label: "Analytics populate automatically from your activity" },
+                { icon: "ti-building", label: "Complete your company profile in Settings" },
+                { icon: "ti-file-text", label: "Upload your pitch deck or financial model" },
+                { icon: "ti-target", label: "Add investors to your CRM and track outreach" },
+                { icon: "ti-chart-bar", label: "Analytics populate automatically from your activity" },
               ]}
               action={{ label: "Continue onboarding", href: "/founder/onboarding" }}
               secondaryAction={{ label: "Upload documents", href: "/founder/documents" }}
@@ -80,7 +80,7 @@ export default async function FounderAnalyticsPage() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 20, flexShrink: 0,
               }}>
-                💡
+                <i className="ti ti-bulb" aria-hidden="true" />
               </div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 700, color: "#1A6CE4", margin: "0 0 4px" }}>
