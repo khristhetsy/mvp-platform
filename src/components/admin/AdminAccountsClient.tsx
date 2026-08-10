@@ -20,7 +20,7 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function AdminAccountsClient({ initialOrgs }: { initialOrgs: Organization[] }) {
+export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: Organization[]; canManage: boolean }) {
   const [orgs, setOrgs] = useState<Organization[]>(initialOrgs);
   const [typeFilter, setTypeFilter] = useState<"all" | OrgType>("all");
   const [showCreate, setShowCreate] = useState(false);
@@ -95,13 +95,17 @@ export function AdminAccountsClient({ initialOrgs }: { initialOrgs: Organization
           </button>
         ))}
         <div className="flex-1" />
-        <button
-          type="button"
-          onClick={() => setShowCreate((v) => !v)}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          {showCreate ? "Close" : "+ Create account"}
-        </button>
+        {canManage ? (
+          <button
+            type="button"
+            onClick={() => setShowCreate((v) => !v)}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            {showCreate ? "Close" : "+ Create account"}
+          </button>
+        ) : (
+          <span className="text-xs text-slate-400">View only — ask a super admin for the “Manage Accounts” permission to create accounts.</span>
+        )}
       </div>
 
       {error && <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -176,14 +180,18 @@ export function AdminAccountsClient({ initialOrgs }: { initialOrgs: Organization
             </span>
             <span className="text-[12px] text-slate-500">{fmtDate(o.created_at)}</span>
             <div className="sm:text-right">
-              <button
-                type="button"
-                onClick={() => toggleComped(o)}
-                disabled={busyId === o.id}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-              >
-                {busyId === o.id ? "…" : o.billing_status === "comped" ? "Un-comp" : "Comp"}
-              </button>
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={() => toggleComped(o)}
+                  disabled={busyId === o.id}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {busyId === o.id ? "…" : o.billing_status === "comped" ? "Un-comp" : "Comp"}
+                </button>
+              ) : (
+                <span className="text-[11px] text-slate-300">—</span>
+              )}
             </div>
           </div>
         ))}

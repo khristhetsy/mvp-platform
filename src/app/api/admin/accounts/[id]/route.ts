@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireApiProfile } from "@/lib/api/auth";
+import { requirePermissionApi } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ function loose(client: unknown): SupabaseClient {
 // PATCH — Entitlements: flip an org's billing between comped and active (spec §5).
 // Comping waives the charge only; it never affects email dispatch or visibility.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireApiProfile(["admin", "analyst"]);
+  const auth = await requirePermissionApi("manage_accounts");
   if ("error" in auth) return auth.error;
   const { id } = await params;
 
