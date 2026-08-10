@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PitchDeckWizardClient } from "@/components/founder/PitchDeckWizardClient";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pitch deck" };
@@ -15,6 +17,20 @@ export default async function FounderPitchDeckPage() {
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "business_plan")) notFound();
+
+  const { company } = await getActiveCompanyForUser(profile);
+  if (!company) {
+    return (
+      <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle="No active raise">
+        <PageHeader
+          eyebrow="Raise toolkit"
+          title="AI Pitch Deck"
+          description="Turn your business plan into an investor-ready deck. Slides are pre-filled from your plan — review, tweak, and approve. Download as PDF or PowerPoint, or share a read-only link."
+        />
+        <DealCompanyEmptyState />
+      </FounderAppShell>
+    );
+  }
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle="Pitch deck">

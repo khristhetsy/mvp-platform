@@ -6,6 +6,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { DealRoomQuestionsPanel, type DealRoomCompanySnapshot } from "@/components/deal-room/DealRoomQuestionsPanel";
 import { DealRoomDocRequestsPanel } from "@/components/deal-room/DealRoomDocRequestsPanel";
 import { DealRoomMilestonePanel } from "@/components/deal-room/DealRoomMilestonePanel";
@@ -20,6 +21,12 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { roomId } = await params;
+
+  // No deal rooms on a company-less account (e.g. Deal Company) — the room + its
+  // company snapshot are keyed to the founder, so 404 rather than leak them.
+  const { company: activeCompany } = await getActiveCompanyForUser(profile);
+  if (!activeCompany) notFound();
+
   const supabase = await createServerSupabaseClient();
 
   const [{ data: room }, { data: questions }, { data: docRequests }, { data: activity }, { data: company }, { data: documents }] = await Promise.all([
