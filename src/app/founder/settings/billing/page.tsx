@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { FounderSubscriptionSettingsCard } from "@/components/SubscriptionPanel";
 import { getRequestedPlanForProfile } from "@/lib/billing/requested-plan";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { SettingsSidebarNav } from "../SettingsSidebarNav";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function FounderSettingsBillingPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const subscription =
     (await getSubscriptionForProfile(profile.id)) ??
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));

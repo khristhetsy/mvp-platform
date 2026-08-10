@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     | { name?: string; investorType?: string | null; sectors?: string[]; checkSize?: string | null }
     | null;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 400 });
 
   const investorName = (body?.name ?? "").trim() || "there";

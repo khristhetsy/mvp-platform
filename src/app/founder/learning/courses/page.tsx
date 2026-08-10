@@ -5,7 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
 import { CAPITAL_STAGE_MODULES, CAPITAL_STAGE_META, type CapitalStage } from "@/lib/learning/capital-stages";
 
@@ -55,7 +55,7 @@ type PageProps = {
 export default async function BrowseCoursesPage({ searchParams }: PageProps) {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const { stage: stageFilter = "", difficulty: difficultyFilter = "" } = await searchParams;
 
   // DB courses

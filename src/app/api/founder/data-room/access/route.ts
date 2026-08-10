@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { grantDataRoomAccess, revokeDataRoomAccess, listDataRoomAccess } from "@/lib/data-room/access";
 import { writeAuditLog } from "@/lib/data/audit";
 
@@ -18,7 +18,7 @@ const revokeSchema = z.object({ investorId: z.string().uuid() });
 export async function GET() {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ grants: [] });
   return NextResponse.json({ grants: await listDataRoomAccess(company.id) });
 }
@@ -26,7 +26,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 400 });
 
   const parsed = grantSchema.safeParse(await request.json().catch(() => null));
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 400 });
 
   const parsed = revokeSchema.safeParse(await request.json().catch(() => null));

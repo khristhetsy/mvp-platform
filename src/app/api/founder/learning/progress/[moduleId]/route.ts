@@ -3,7 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { recordModuleView, updateLearningProgress } from "@/lib/learning/progress";
 import type { LearningProgressStatus } from "@/lib/learning/types";
 import { createNotification } from "@/lib/notifications/notifications";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 function parseStatus(value: unknown): LearningProgressStatus | null {
   if (value === "not_started" || value === "in_progress" || value === "completed") {
@@ -17,7 +17,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mo
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }

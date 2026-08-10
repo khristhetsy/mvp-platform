@@ -10,13 +10,13 @@ import {
 import { isHeyGenConfigured } from "@/lib/learning/video/providers/heygen";
 import { isRemotionConfigured } from "@/lib/learning/video/providers/remotion";
 import { VIDEO_LESSON_DISCLAIMER } from "@/lib/learning/video/video-types";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function PATCH(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }

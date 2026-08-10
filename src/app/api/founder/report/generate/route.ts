@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { writeAuditLog } from "@/lib/data/audit";
 import { generateAndSaveDiligenceReport } from "@/lib/reports/generate-and-save";
@@ -28,7 +28,7 @@ export async function POST(): Promise<NextResponse> {
     });
     if (burst) return burst as NextResponse;
 
-    const company = await ensureFounderCompanyForUser(profile);
+    const { company } = await getActiveCompanyForUser(profile);
     if (!company) {
       return NextResponse.json(
         { error: "Complete company onboarding before generating a report." },

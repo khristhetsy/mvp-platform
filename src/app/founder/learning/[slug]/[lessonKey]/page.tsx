@@ -23,7 +23,7 @@ import {
   listLearningProgressForCompany,
   listPublishedLearningModules,
 } from "@/lib/learning/progress";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function FounderLearningLessonPage({
 }: Readonly<{ params: Promise<{ slug: string; lessonKey: string }> }>) {
   const profile = await requireRole(["founder"]);
   const { slug: courseSlug, lessonKey: lessonSlug } = await params;
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   if (!company) {
     notFound();

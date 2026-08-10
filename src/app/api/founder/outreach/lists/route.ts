@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getContactLists, saveContactList } from "@/lib/outreach/contact-lists";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export async function GET() {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ lists: [] });
 
   return NextResponse.json({ lists: await getContactLists(company.id) });
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     : [];
   const id = typeof body?.id === "string" ? body.id : null;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
   const savedId = await saveContactList(company.id, auth.profile.id, { id, name, contactIds });

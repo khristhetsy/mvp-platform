@@ -9,7 +9,7 @@ import {
 import { computeCoursePercentComplete } from "@/lib/learning/course-progress";
 import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import {
   ASSISTANT_DISCLAIMER,
   ASSISTANT_SAFETY_NOTES,
@@ -163,7 +163,7 @@ async function runLearningMode(
   supabase: SupabaseClient<Database>,
   input: AssistantChatRequest,
 ): Promise<AssistantChatResponse> {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const progressRows = company ? await listLessonProgressForCompany(profile.id, company.id) : [];
   const founderName = profile.full_name ?? profile.email ?? "Founder";
   const companyName = company?.company_name ?? null;

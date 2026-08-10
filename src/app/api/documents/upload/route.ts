@@ -15,9 +15,9 @@ import {
 import { computeDataRoomState } from "@/lib/data-room/completeness";
 import { track } from "@/lib/analytics/posthog";
 import {
-  ensureFounderCompanyForUser,
   userHasCompanyAccess,
 } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { documentUploadSchema } from "@/lib/validation";
 
 const maxUploadBytes = 25 * 1024 * 1024;
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     return rateLimited;
   }
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
 
   const formData = await request.formData();
   const requestedCompanyId = formData.get("companyId");

@@ -6,7 +6,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import {
   CAPITAL_STAGE_MODULES,
@@ -35,7 +35,7 @@ const PRIORITY_CONFIG = {
 export default async function MyLearningPlanPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   const lessonProgress = company
     ? await listLessonProgressForCompany(profile.id, company.id)

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function GET(
   _: Request,
@@ -10,7 +10,7 @@ export async function GET(
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "Company not found." }, { status: 404 });
 
   const { moduleSlug, lessonId } = await params;
@@ -36,7 +36,7 @@ export async function PATCH(
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "Company not found." }, { status: 404 });
 
   const { moduleSlug, lessonId } = await params;

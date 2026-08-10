@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
@@ -68,7 +68,7 @@ export async function POST() {
   if ("error" in auth) return auth.error;
 
   const supabase = await createServerSupabaseClient();
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) {
     return NextResponse.json({ error: "No company linked." }, { status: 400 });
   }

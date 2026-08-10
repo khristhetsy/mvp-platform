@@ -1,4 +1,4 @@
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { isTemplateAllowedForRole } from "@/lib/email/templates";
 import type { EmailDraftRequest, EmailTemplateType } from "@/lib/email/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -58,7 +58,7 @@ export async function assertCanGenerateDraft(
   }
 
   if (role === "founder") {
-    const company = await ensureFounderCompanyForUser(profile);
+    const { company } = await getActiveCompanyForUser(profile);
     if (!company) return { ok: false, error: "Link your company before drafting emails." };
     ctx.companyId = company.id;
     ctx.companyName = company.company_name ?? "Your company";

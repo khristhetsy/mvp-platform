@@ -13,7 +13,7 @@ import { computeCoursePercentComplete } from "@/lib/learning/course-progress";
 import { computeReadinessMilestones, getNextMilestone } from "@/lib/learning/milestones";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { READINESS_SCORE_THRESHOLD } from "@/lib/remediation/rules";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { countUnreadNotifications } from "@/lib/notifications/notifications";
@@ -45,7 +45,7 @@ export async function loadFounderNbaContext(
   profile: Profile,
   supabase: SupabaseClient<Database>,
 ): Promise<FounderNbaContext> {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const empty: FounderNbaContext = {
     company: null,
     onboardingPercent: 0,

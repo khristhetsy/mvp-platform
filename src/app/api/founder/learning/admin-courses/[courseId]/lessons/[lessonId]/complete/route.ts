@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { getPublishedAdminCourse, getPublishedAdminLesson } from "@/lib/learning/admin-courses";
@@ -14,7 +14,7 @@ export async function POST(
   if ("error" in auth) return auth.error;
 
   const { courseId, lessonId } = await params;
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "Company not found." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));

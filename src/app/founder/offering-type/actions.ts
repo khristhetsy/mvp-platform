@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { track } from "@/lib/analytics/posthog";
 import { offeringTypeSchema, type OfferingTypeInput } from "@/lib/onboarding/offering-type-schema";
@@ -21,7 +21,7 @@ export async function saveOfferingType(input: OfferingTypeInput): Promise<{ erro
     return { error: parsed.error.issues[0]?.message ?? "Invalid selection." };
   }
 
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) return { error: "No company profile is linked to your account." };
 
   const admin = createServiceRoleClient() as unknown as SupabaseClient;

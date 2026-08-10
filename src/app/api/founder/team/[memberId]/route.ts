@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function DELETE(
   request: Request,
@@ -16,7 +16,7 @@ export async function DELETE(
   if ("error" in auth) return auth.error;
 
   const { memberId } = await params;
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
   const admin = createServiceRoleClient();

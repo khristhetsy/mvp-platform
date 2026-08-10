@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getFounderStudyStreak } from "@/lib/learning/progress";
 
 export async function GET() {
   try {
     const profile = await requireRole(["founder"]);
-    const company = await ensureFounderCompanyForUser(profile);
+    const { company } = await getActiveCompanyForUser(profile);
     if (!company) return NextResponse.json({ data: null, streak: 0 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const profile = await requireRole(["founder"]);
-    const company = await ensureFounderCompanyForUser(profile);
+    const { company } = await getActiveCompanyForUser(profile);
     if (!company) return NextResponse.json({ error: "No company" }, { status: 400 });
 
     const body = (await request.json()) as {

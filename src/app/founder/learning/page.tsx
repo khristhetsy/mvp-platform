@@ -6,7 +6,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import {
   CAPITAL_STAGE_META,
@@ -97,7 +97,7 @@ const STAGES: CapitalStage[] = ["stage_0", "stage_1", "stage_2", "stage_3"];
 export default async function FounderLearningPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const companyName = company?.company_name ?? "Your company";
 
   const lessonProgress = company

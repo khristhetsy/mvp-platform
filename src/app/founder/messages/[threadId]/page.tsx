@@ -8,7 +8,7 @@ import {
   listFounderMessageThreads,
   userCanAccessThread,
 } from "@/lib/messaging/threads";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { notFound } from "next/navigation";
@@ -21,7 +21,7 @@ export default async function FounderMessageThreadPage({ params }: PageProps) {
   const { threadId } = await params;
   const t = await getTranslations("appPages");
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
   if (!company) {

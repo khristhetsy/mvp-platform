@@ -1,6 +1,6 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { buildCompanyOnboardingSyncUpdate } from "@/lib/onboarding/sync-progress";
 import {
   computeFounderOnboardingProgress,
@@ -16,7 +16,7 @@ export type FounderOnboardingPageData = {
 };
 
 export async function loadFounderOnboardingPageData(profile: Profile): Promise<FounderOnboardingPageData | null> {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   if (!company) {
     return null;

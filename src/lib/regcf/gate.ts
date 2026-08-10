@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { checkFounderStageAccess } from "@/lib/founder-journey/stage-gate";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import type { Company } from "@/lib/supabase/types";
 
 /**
@@ -26,7 +26,7 @@ export async function gateRegCfFounderApi() {
   }
   let company: Company | null = null;
   try {
-    company = await ensureFounderCompanyForUser(auth.profile);
+    company = (await getActiveCompanyForUser(auth.profile)).company;
   } catch {
     // Listing still works without a company; generation will use [brackets].
   }

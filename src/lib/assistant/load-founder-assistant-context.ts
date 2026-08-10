@@ -10,7 +10,7 @@ import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { computeCoursePercentComplete } from "@/lib/learning/course-progress";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import type { SanitizedAssistantContext } from "@/lib/assistant/types";
 import {
@@ -30,7 +30,7 @@ export async function loadFounderAssistantContext(
     entityId?: string;
   },
 ): Promise<SanitizedAssistantContext> {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const currentPath = input.currentPath ?? null;
   const mode = inferAssistantMode({ role: "founder", currentPath, requestedMode: input.mode });
 

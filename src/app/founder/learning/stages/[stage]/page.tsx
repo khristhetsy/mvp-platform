@@ -7,7 +7,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import {
   CAPITAL_STAGE_META,
@@ -45,7 +45,7 @@ export default async function StageContentPage({
   const meta = CAPITAL_STAGE_META[stage];
 
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   const lessonProgress = company
     ? await listLessonProgressForCompany(profile.id, company.id)

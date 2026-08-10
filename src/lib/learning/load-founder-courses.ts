@@ -3,7 +3,7 @@ import { computeCoursePercentComplete, findContinueCourseLesson } from "@/lib/le
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { courseLessonHref, courseHref } from "@/lib/learning/course-keys";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import type { Profile } from "@/lib/supabase/types";
 import type { Course } from "@/lib/learning/course-types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -18,7 +18,7 @@ export type FounderCourseCatalogItem = Course & {
 };
 
 export async function loadFounderCourseCatalog(profile: Profile) {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   if (!company) {
     return {

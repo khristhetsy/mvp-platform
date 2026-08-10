@@ -23,7 +23,7 @@ import {
 } from "@/lib/learning/progress";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
 import type {
@@ -37,7 +37,7 @@ import type {
 export type { FounderLearningModuleView };
 
 export async function loadFounderLearningWorkspace(profile: Profile) {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   const modules = await listPublishedLearningModules();
 
   if (!company) {

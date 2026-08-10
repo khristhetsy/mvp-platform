@@ -5,13 +5,13 @@ import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
 import { generateLessonVideoScript } from "@/lib/learning/video/generate-script";
 import { getLessonVideoAsset, upsertLessonVideoScript } from "@/lib/learning/video/lesson-video-assets";
 import { VIDEO_LESSON_DISCLAIMER } from "@/lib/learning/video/video-types";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }

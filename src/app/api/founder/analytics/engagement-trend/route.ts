@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -67,7 +67,7 @@ export async function GET() {
 
   let company;
   try {
-    company = await ensureFounderCompanyForUser(profile);
+    company = (await getActiveCompanyForUser(profile)).company;
   } catch {
     return NextResponse.json({ weeks: [] } satisfies EngagementTrendResult);
   }

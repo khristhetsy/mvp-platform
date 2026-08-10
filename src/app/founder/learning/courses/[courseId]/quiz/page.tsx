@@ -5,7 +5,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { getPublishedAdminCourse, getPublishedCourseQuiz, listPublishedQuizQuestionsPublic } from "@/lib/learning/admin-courses";
 import { FounderAdminCourseQuizClient } from "@/components/founder/learning/FounderAdminCourseQuizClient";
@@ -20,7 +20,7 @@ export default async function FounderAdminCourseQuizPage({ params }: PageProps) 
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { courseId } = await params;
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) notFound();
 
   const course = await getPublishedAdminCourse(courseId);

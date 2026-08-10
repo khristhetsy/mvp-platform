@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { track } from "@/lib/analytics/posthog";
 import { listingInputSchema, validateListing, type ListingInput } from "@/lib/marketplace/validation";
@@ -21,7 +21,7 @@ export async function createListing(input: ListingInput): Promise<CreateListingR
   const parsed = listingInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid listing." };
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return { ok: false, error: "No company profile is linked to your account." };
 
   const admin = createServiceRoleClient() as unknown as SupabaseClient;

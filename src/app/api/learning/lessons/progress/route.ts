@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 
 export async function GET(request: Request) {
   try {
     const profile = await requireRole(["founder"]);
-    const company = await ensureFounderCompanyForUser(profile);
+    const { company } = await getActiveCompanyForUser(profile);
     if (!company) return NextResponse.json({ completed: false });
 
     const { searchParams } = new URL(request.url);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { renderDiligenceReportPdf, type DiligenceReportRow } from "@/lib/reports/diligence-report-pdf";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) {
     return NextResponse.json({ error: "No company profile is linked to your account." }, { status: 404 });
   }

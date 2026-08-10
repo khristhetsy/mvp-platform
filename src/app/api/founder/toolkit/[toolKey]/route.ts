@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 const VALID_TOOL_KEYS = new Set([
   "term-sheet",
@@ -31,7 +31,7 @@ export async function GET(
   }
 
   const admin = createServiceRoleClient();
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) return NextResponse.json({ data: null });
 
   // Cast required: raise_toolkit_sessions was added in a migration whose types haven't been regenerated
@@ -68,7 +68,7 @@ export async function POST(
   }
 
   const admin = createServiceRoleClient();
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }

@@ -1,5 +1,5 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { LearningScheduleClient } from "./LearningScheduleClient";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LearningSchedulePage() {
   const profile = await requireRole(["founder"]);
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
 
   return (
     <FounderAppShell

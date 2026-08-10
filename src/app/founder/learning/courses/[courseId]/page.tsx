@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { getPublishedAdminCourse, getPublishedCourseQuiz, listPublishedAdminCourseModules, listPublishedAdminLessonsForModule } from "@/lib/learning/admin-courses";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -18,7 +18,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { courseId } = await params;
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) notFound();
 
   const course = await getPublishedAdminCourse(courseId);

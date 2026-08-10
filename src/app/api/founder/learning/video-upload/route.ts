@@ -18,9 +18,9 @@ import {
   upsertManualLessonVideo,
 } from "@/lib/learning/video/lesson-video-assets";
 import {
-  ensureFounderCompanyForUser,
   userHasCompanyAccess,
 } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Profile } from "@/lib/supabase/types";
 
@@ -45,7 +45,7 @@ async function resolveCompanyId(
   companyIdParam: string | null,
 ) {
   if (profile.role === "founder") {
-    const company = await ensureFounderCompanyForUser(profile as Parameters<typeof ensureFounderCompanyForUser>[0]);
+    const { company } = await getActiveCompanyForUser(profile as Parameters<typeof getActiveCompanyForUser>[0]);
     if (!company) return { error: "Company not found.", status: 403 as const };
     return { companyId: company.id };
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function GET() {
     if ("error" in auth) return auth.error;
     const { supabase, profile } = auth;
 
-    const company = await ensureFounderCompanyForUser(profile);
+    const { company } = await getActiveCompanyForUser(profile);
     if (!company) {
       return NextResponse.json(
         { error: "No company profile found. Complete your company setup first.", code: "no_company" },

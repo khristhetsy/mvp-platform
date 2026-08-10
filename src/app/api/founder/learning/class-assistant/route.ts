@@ -14,7 +14,7 @@ import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { getAICoachRecommendations } from "@/lib/learning/recommendations";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       )
     : [];
 
-  const company = await ensureFounderCompanyForUser(auth.profile);
+  const { company } = await getActiveCompanyForUser(auth.profile);
   const [progressRows, gapBasedRecommendations] = company
     ? await Promise.all([
         listLessonProgressForCompany(auth.profile.id, company.id),

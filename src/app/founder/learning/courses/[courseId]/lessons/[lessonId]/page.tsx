@@ -6,7 +6,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FounderAdminLessonClient } from "@/components/founder/learning/FounderAdminLessonClient";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getPublishedAdminCourse, getPublishedAdminLesson } from "@/lib/learning/admin-courses";
 import { getLessonVideoAsset } from "@/lib/learning/video/lesson-video-assets";
 import {
@@ -25,7 +25,7 @@ export default async function FounderAdminLessonPage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { courseId, lessonId } = await params;
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) notFound();
 
   const [course, lesson] = await Promise.all([getPublishedAdminCourse(courseId), getPublishedAdminLesson(lessonId)]);

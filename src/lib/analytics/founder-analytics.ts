@@ -9,7 +9,7 @@ import {
 } from "@/lib/founder-crm/outreach";
 import { listSocialOutreachDrafts } from "@/lib/founder-crm/social-outreach-drafts";
 import { computeOverallLearningPercent, listLearningProgressForCompany, listPublishedLearningModules } from "@/lib/learning/progress";
-import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { summarizeRemediationTasks } from "@/lib/remediation/tasks";
@@ -54,7 +54,7 @@ function countByStatus<T extends { status: string }>(rows: T[]) {
 }
 
 export async function loadFounderAnalytics(profile: Profile): Promise<FounderAnalyticsSnapshot | null> {
-  const company = await ensureFounderCompanyForUser(profile);
+  const { company } = await getActiveCompanyForUser(profile);
   if (!company) {
     return null;
   }
