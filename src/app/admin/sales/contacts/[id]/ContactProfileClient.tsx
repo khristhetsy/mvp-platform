@@ -481,13 +481,13 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {contact.phone
-                ? <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+                ? <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-phone" aria-hidden="true" /> Call</span>}
               {contact.email
-                ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
+                ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
                 : <span title="No email on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-mail" aria-hidden="true" /> Email</span>}
               {contact.phone
-                ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
+                ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
               {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
             </div>
@@ -813,10 +813,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     <div style={{ paddingTop: 4 }}>
                       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                         {contact.email
-                          ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
+                          ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
                           : <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No email on file</span>}
                         {contact.phone
-                          ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>
+                          ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>
                           : null}
                       </div>
                       <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message on this record</div>
