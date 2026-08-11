@@ -113,16 +113,18 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     funding_stage: string | null; operating_stage: string | null;
   };
 
-  // Admin match/qualification rules (industry required, thresholds).
+  // Admin match/qualification thresholds.
   const config = await getInvestorMatchConfig();
 
-  // Load investor contacts (industry-filtered), then score each with the SAME
-  // additive engine the founder board uses, so who gets emailed matches what the
-  // founder sees.
+  // Load the full investor-contact network, then score each with the SAME additive
+  // engine the founder board uses, so who gets emailed matches what the founder
+  // sees. Industry is a scoring signal (via the engine), NOT a hard exclude — this
+  // must stay aligned with loadFounderInvestorBoard. See memory:
+  // automated-outreach-board-populated.
   const scored = await loadInvestorContacts({
     scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
     investorsOnly: true,
-    requireIndustryMatch: config.requiredFields.industry,
+    requireIndustryMatch: false,
     score: false,
     limit: 3000,
   });
