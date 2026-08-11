@@ -313,6 +313,47 @@ export function ValuationStudioClient({ profile, saved = [] }: { profile: Valuat
     }
   }
 
+  // Print — a clean, self-contained printable view stamped for founder-only use.
+  // (PDF/Share/Export stay gated pending securities-counsel review; a downloadable
+  // or shareable valuation could reach investors before sign-off.)
+  function handlePrint() {
+    const w = window.open("", "_blank", "width=820,height=1040");
+    if (!w) return;
+    const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] ?? c));
+    const name = inp.company || profile?.company || "Untitled valuation";
+    const rows = methods
+      .map((m) => `<tr><td class="c">${m.code}</td><td>${esc(m.name)}</td><td class="r">${money(m.low)} &ndash; ${money(m.high)}</td></tr>`)
+      .join("");
+    const basis = methods.map((m) => `<div><b>${m.code}</b> &middot; ${esc(m.basis)}</div>`).join("");
+    const levers = advice
+      ? advice.levers
+          .map((l, i) => `<div class="lv"><b>${i + 1}. ${esc(l.title)}</b> <span class="up">+${l.upliftLow}&ndash;${l.upliftHigh}% (modeled)</span><p>${esc(l.action)}</p></div>`)
+          .join("")
+      : "";
+    w.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>Valuation range — ${esc(name)}</title><style>` +
+      `body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#0F172A;max-width:720px;margin:32px auto;padding:0 24px;}` +
+      `.stamp{font-size:11px;letter-spacing:.12em;color:#854F0B;border:1px solid #F4D9A0;background:#FAEEDA;border-radius:6px;padding:6px 10px;display:inline-block;margin-bottom:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}` +
+      `h1{font-size:20px;margin:0 0 4px;}.sub{color:#64748B;font-size:13px;margin:0 0 12px;}` +
+      `.range{font-size:26px;font-weight:700;color:#1A6CE4;margin:12px 0;}` +
+      `table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 16px;}td{padding:6px 4px;border-bottom:1px solid #E3E8F2;}.c{font-family:monospace;color:#185FA5;width:44px;}.r{text-align:right;color:#64748B;font-family:monospace;}` +
+      `h3{font-size:13px;margin:18px 0 8px;}.basis div{font-size:12px;color:#64748B;margin:3px 0;}` +
+      `.lv{border:1px solid #E3E8F2;border-radius:8px;padding:10px 12px;margin:8px 0;}.lv b{font-size:13px;}.up{font-size:11px;color:#1A6CE4;}.lv p{font-size:12.5px;color:#334155;margin:6px 0 0;}` +
+      `footer{margin-top:24px;padding-top:12px;border-top:1px solid #E3E8F2;font-size:11px;color:#64748B;line-height:1.5;}` +
+      `</style></head><body>` +
+      `<div class="stamp">FOUNDER PREPARATION &mdash; NOT FOR DISTRIBUTION</div>` +
+      `<h1>${esc(name)} &mdash; indicative valuation range</h1>` +
+      `<p class="sub">${STAGE_LABEL[stage]} &middot; median across ${methods.length} method${methods.length === 1 ? "" : "s"}</p>` +
+      `<div class="range">${money(converged.low)} &ndash; ${money(converged.high)} <span style="font-size:13px;color:#64748B;font-weight:400;">pre-money</span></div>` +
+      `<table>${rows}</table><h3>Basis</h3><div class="basis">${basis}</div>` +
+      (advice ? `<h3>Improvement levers (modeled, not measured)</h3>${levers}` : "") +
+      `<footer>${VALUATION_DISCLAIMER}</footer></body></html>`,
+    );
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 250);
+  }
+
   const effortColor = (e: string) => (e === "Low" ? "#0F6E56" : e === "High" ? "#E0674A" : C.ice);
   const stale = (profile?.staleDays ?? 0) > 60;
 
@@ -537,12 +578,27 @@ export function ValuationStudioClient({ profile, saved = [] }: { profile: Valuat
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <button type="button" onClick={saveValuation} disabled={saving || !methods.length}
-                style={{ borderRadius: 6, padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", background: saving ? C.steel : C.blue, border: "none", cursor: saving ? "default" : "pointer", opacity: saving || !methods.length ? 0.6 : 1 }}>
-                {saving ? "Saving…" : savedId ? "Save again" : "Save valuation"}
-              </button>
-              {saveMsg && <span style={{ fontSize: 12, color: savedId ? "#0F6E56" : "#A32D2D" }}>{saveMsg}</span>}
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" onClick={saveValuation} disabled={saving || !methods.length}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", background: saving ? C.steel : C.blue, border: "none", cursor: saving ? "default" : "pointer", opacity: saving || !methods.length ? 0.6 : 1 }}>
+                  <i className="ti ti-device-floppy" aria-hidden="true" /> {saving ? "Saving…" : savedId ? "Save again" : "Save"}
+                </button>
+                <button type="button" onClick={handlePrint} disabled={!methods.length}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: C.text, background: "#fff", border: "1px solid #C7D2FE", cursor: "pointer", opacity: !methods.length ? 0.6 : 1 }}>
+                  <i className="ti ti-printer" aria-hidden="true" /> Print
+                </button>
+                {(["PDF", "Share link", "Export"] as const).map((label) => (
+                  <span key={label} title="Unlocks after securities-counsel review"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#94A3B8", background: "#F1F5F9", border: `1px solid ${C.panelEdge}`, cursor: "not-allowed" }}>
+                    <i className="ti ti-lock" aria-hidden="true" /> {label}
+                  </span>
+                ))}
+                {saveMsg && <span style={{ fontSize: 12, color: savedId ? "#0F6E56" : "#A32D2D" }}>{saveMsg}</span>}
+              </div>
+              <p style={{ fontSize: 11, color: C.mute, margin: "8px 0 0" }}>
+                PDF, Share link, and Export unlock after securities-counsel review — a downloadable or shareable valuation could reach investors before sign-off. Print is stamped for founder preparation only.
+              </p>
             </div>
           </Panel>
 
