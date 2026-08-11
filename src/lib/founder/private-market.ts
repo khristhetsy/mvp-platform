@@ -115,7 +115,11 @@ export async function loadFounderInvestorBoard(
   const candidates = await loadInvestorContacts({
     scoreAgainst,
     investorsOnly: true,
-    requireIndustryMatch: matchConfig.requiredFields.industry,
+    // Rank the full contact network by fit — industry contributes to the score
+    // below, but is NOT an all-or-nothing exclude, so a niche company industry
+    // no longer empties the board (restores the previous matching-from-contacts
+    // behaviour). See memory: automated-outreach-board-populated.
+    requireIndustryMatch: false,
     score: false,
     limit: 3000,
   });
