@@ -218,21 +218,20 @@ export function matchInvestorToCompany(
   const capitalType = scoreCapitalType(investor, company, weights.capitalType);
   const activeRating = scoreActiveRating(investor, weights.activeRating);
 
-  // Normalize over ONLY the factors we could actually evaluate. A blank field
-  // (no investor preference, or no company value) drops out of the denominator
-  // instead of costing points — missing data never penalizes the founder. A
-  // field that IS set but doesn't fit still counts as a real 0.
+  // Score against the FULL configured rubric: every factor's weight is always in
+  // the denominator, so a factor with no data (on either side) or no match simply
+  // earns 0 of its weight. This means matching a single dimension can NEVER read as
+  // a 100% fit — the score is the true "% of the weighted match rubric satisfied,"
+  // and 100% is reserved for an investor who fits every weighted criterion.
   const factors = [sector, stage, geography, checkSize, investorType, capitalType, activeRating];
   let earned = 0;
-  let possible = 0;
+  let totalWeight = 0;
   for (const f of factors) {
-    if (f.evaluated) {
-      earned += f.points;
-      possible += f.weight;
-    }
+    earned += f.points;
+    totalWeight += f.weight;
   }
 
-  const base = possible > 0 ? (earned / possible) * 100 : 0;
+  const base = totalWeight > 0 ? (earned / totalWeight) * 100 : 0;
   const matchScore = Math.max(0, Math.round(base));
 
   const matchReasons = factors
