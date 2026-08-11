@@ -304,6 +304,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
+          { href: "/founder/valuation", label: "Valuation Studio", minStage: "qualify" },
           // Hidden while crowdfunding is paused (private-placement only). Restore by uncommenting.
           // { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
         ],
@@ -435,6 +436,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
+          { href: "/founder/valuation", label: "Valuation Studio", minStage: "qualify" },
           { href: "/founder/report", label: "AI diligence report", minStage: "deploy" },
           { href: "/founder/readiness/diligence", label: "Diligence & review", minStage: "deploy" },
           { href: "/founder/pitch-practice", label: "Prep & practice", minStage: "qualify" },
