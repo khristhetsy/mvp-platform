@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { matchInvestorToCompany, type InvestorMatchProfile } from "@/lib/matching/investor-company-matching";
 import { loadAdminCompanyMatchProfiles } from "@/lib/matching/load-matching-data";
 import { notifyInvestorsOfNewMatches } from "@/lib/matching/notify";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 // Founder eligibility is keyed on readiness (from diligence_reports, via
 // loadAdminCompanyMatchProfiles) — NOT the prospect-only `lead_prescore` field.
@@ -48,10 +49,12 @@ export async function runMatchingPass(opts?: {
     return { companiesEligible: eligible.length, investorsConsidered: 0, suggestedWritten: 0 };
   }
 
+  const { engineWeights } = await getInvestorMatchConfig();
+
   const rows: Array<Record<string, unknown>> = [];
   for (const company of eligible) {
     for (const investor of investors) {
-      const result = matchInvestorToCompany(investor, company);
+      const result = matchInvestorToCompany(investor, company, engineWeights);
       if (result.matchScore < matchThreshold) continue;
       rows.push({
         company_id: company.id,

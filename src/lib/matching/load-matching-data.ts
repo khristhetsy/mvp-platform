@@ -7,6 +7,7 @@ import {
   type InvestorMatchProfile,
 } from "@/lib/matching/investor-company-matching";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import { splitProfileCsv } from "@/lib/profile/options";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company, Database } from "@/lib/supabase/types";
@@ -184,8 +185,11 @@ export async function loadFounderCompanyMatchContext(company: Company) {
   }
 
   const profile = companyToMatchProfile(company, { readinessScore });
-  const investors = await loadApprovedInvestorMatchProfiles();
-  const scored = investors.map((investor) => matchInvestorToCompany(investor, profile));
+  const [investors, cfg] = await Promise.all([
+    loadApprovedInvestorMatchProfiles(),
+    getInvestorMatchConfig(),
+  ]);
+  const scored = investors.map((investor) => matchInvestorToCompany(investor, profile, cfg.engineWeights));
 
   return {
     companyProfile: profile,

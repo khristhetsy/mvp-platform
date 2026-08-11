@@ -5,6 +5,7 @@ import {
   type CompanyMatchProfile,
 } from "@/lib/matching/investor-company-matching";
 import { loadAdminCompanyMatchProfiles, loadApprovedInvestorMatchProfiles } from "@/lib/matching/load-matching-data";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 export type CompanyMatchingSummary = {
   highMatchInvestorCount: number;
@@ -23,9 +24,10 @@ export async function getCompanyMatchingSummaries(companyIds: string[]) {
     return map;
   }
 
-  const [companies, investors] = await Promise.all([
+  const [companies, investors, cfg] = await Promise.all([
     loadAdminCompanyMatchProfiles(),
     loadApprovedInvestorMatchProfiles(),
+    getInvestorMatchConfig(),
   ]);
 
   const companyMap = new Map(companies.map((company) => [company.id, company]));
@@ -37,7 +39,7 @@ export async function getCompanyMatchingSummaries(companyIds: string[]) {
       continue;
     }
 
-    const ranked = rankInvestorsForCompany(company, investors, 50);
+    const ranked = rankInvestorsForCompany(company, investors, 50, cfg.engineWeights);
     const scores = ranked.map((row) => row.match);
 
     map.set(companyId, {
@@ -56,9 +58,10 @@ export async function getInvestorMatchingSummaries(profileIds: string[]) {
     return map;
   }
 
-  const [companies, investors] = await Promise.all([
+  const [companies, investors, cfg] = await Promise.all([
     loadAdminCompanyMatchProfiles(),
     loadApprovedInvestorMatchProfiles(),
+    getInvestorMatchConfig(),
   ]);
 
   const marketplaceCompanies = companies.filter(
@@ -76,7 +79,7 @@ export async function getInvestorMatchingSummaries(profileIds: string[]) {
       continue;
     }
 
-    const scores = marketplaceCompanies.map((company) => matchInvestorToCompany(investor, company));
+    const scores = marketplaceCompanies.map((company) => matchInvestorToCompany(investor, company, cfg.engineWeights));
 
     map.set(profileId, {
       highMatchCompanyCount: countHighMatches(scores, 70),

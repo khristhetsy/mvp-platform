@@ -5,6 +5,7 @@ import {
 } from "@/lib/matching/load-matching-data";
 import { notifyCompanyFounderIfNotRecent, notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 import { createDraftFromMatch } from "@/lib/outreach/investor-outreach";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 const STRONG_MATCH_THRESHOLD = 70;
 // One notification per company per week — avoids re-firing every cron pass.
@@ -18,9 +19,10 @@ const DEDUPE_HOURS = 168;
  * notification preferences (see createNotification → shouldDeliverInApp).
  */
 export async function runMatchNotificationPass(): Promise<{ companiesNotified: number }> {
-  const [companies, investors] = await Promise.all([
+  const [companies, investors, cfg] = await Promise.all([
     loadAdminCompanyMatchProfiles(),
     loadApprovedInvestorMatchProfiles(),
+    getInvestorMatchConfig(),
   ]);
 
   if (investors.length === 0) {
@@ -38,7 +40,7 @@ export async function runMatchNotificationPass(): Promise<{ companiesNotified: n
   let companiesNotified = 0;
 
   for (const company of marketplaceCompanies) {
-    const ranked = rankInvestorsForCompany(company, investors, 50);
+    const ranked = rankInvestorsForCompany(company, investors, 50, cfg.engineWeights);
     const strong = ranked.filter((row) => row.match.matchScore >= STRONG_MATCH_THRESHOLD);
     if (strong.length === 0) {
       continue;
