@@ -10,13 +10,16 @@ import {
   type Stage,
 } from "@/lib/valuation/methods";
 import { VALUATION_DISCLAIMER, MODELED_ESTIMATES_LINE, SAMPLE_BADGE } from "@/lib/valuation/compliance";
+import type { ValuationSummary } from "@/lib/valuation/store";
 
-/* Brand — the Valuation Studio is a self-contained dark surface (spec/mockup). */
+/* Brand — light theme matching the app. `navy` is now the white surface, `ice`
+ * the blue accent; chip backgrounds use CHIP_BG with blue text. */
 const C = {
-  navy: "#0A1A40", panel: "#0D2050", panelEdge: "#16306B",
-  blue: "#1A6CE4", hover: "#2E78F5", steel: "#185FA5", ice: "#4F94FF",
-  text: "#E8EEFB", mute: "#8FA6D4",
+  navy: "#FFFFFF", panel: "#F8FAFC", panelEdge: "#E3E8F2",
+  blue: "#1A6CE4", hover: "#2E78F5", steel: "#185FA5", ice: "#1A6CE4",
+  text: "#0F172A", mute: "#64748B",
 };
+const CHIP_BG = "#EEF2FF";
 const mono = "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 const display = "'Archivo', 'Helvetica Neue', Arial, sans-serif";
 
@@ -92,8 +95,8 @@ function SourceChip({ src }: { src: Provenance | null }) {
   return (
     <span style={{
       fontFamily: mono, fontSize: 9, letterSpacing: "0.06em", marginLeft: 8, padding: "1px 6px", borderRadius: 4,
-      color: fromProfile ? C.navy : C.mute, background: fromProfile ? C.ice : "transparent",
-      border: fromProfile ? "none" : `1px solid ${C.panelEdge}`,
+      color: fromProfile ? C.blue : C.mute, background: fromProfile ? CHIP_BG : "transparent",
+      border: fromProfile ? `1px solid ${C.panelEdge}` : `1px solid ${C.panelEdge}`,
     }}>
       {fromProfile ? "FROM PROFILE" : "ENTERED"}
     </span>
@@ -169,7 +172,7 @@ function FootballField({ methods, converged }: { methods: ReturnType<typeof comp
             <span style={{ fontSize: 12, color: C.text }}>{m.name}</span>
             <span style={{ fontSize: 12, marginLeft: "auto", fontFamily: mono, color: C.mute }}>{money(m.low)} – {money(m.high)}</span>
           </div>
-          <div style={{ height: 12, borderRadius: 3, position: "relative", background: "rgba(255,255,255,0.05)" }}>
+          <div style={{ height: 12, borderRadius: 3, position: "relative", background: "#EEF2FF" }}>
             <div style={{ position: "absolute", height: 12, borderRadius: 3, left: `${pct(m.low)}%`, width: `${Math.max(1.2, pct(m.high) - pct(m.low))}%`, background: `linear-gradient(90deg, ${C.steel}, ${C.hover})` }} />
           </div>
         </div>
@@ -183,7 +186,7 @@ function FootballField({ methods, converged }: { methods: ReturnType<typeof comp
 
 /* ------------------------------ app ------------------------------- */
 
-export function ValuationStudioClient({ profile }: { profile: ValuationProfile | null }) {
+export function ValuationStudioClient({ profile, saved = [] }: { profile: ValuationProfile | null; saved?: ValuationSummary[] }) {
   const [screen, setScreen] = useState<"intake" | "studio">("intake");
   const [stage, setStage] = useState<Stage>(profile?.stage ?? "seed");
   const [inp, setInp] = useState<ValuationInputs>(DEFAULT_INPUTS);
@@ -195,6 +198,10 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
+
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   const set = (k: keyof ValuationInputs) => (v: number) => {
     setSourced((s) => (s[k] ? { ...s, [k]: "manual" } : s));
@@ -231,6 +238,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sample,
+          valuationId: savedId ?? undefined,
           stage: STAGE_LABEL[stage],
           sector: inp.sector,
           convergedRange: [Math.round(converged.low), Math.round(converged.high)],
@@ -255,11 +263,61 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
     }
   }
 
-  const effortColor = (e: string) => (e === "Low" ? "#3FBF7F" : e === "High" ? "#E0674A" : C.ice);
+  async function saveValuation() {
+    setSaving(true); setSaveMsg(null);
+    try {
+      const res = await fetch("/api/valuations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: inp.company || profile?.company || "Untitled valuation",
+          sector: inp.sector,
+          stageProfile: stage,
+          source,
+          isScenario: source === "manual",
+          convergedLow: Math.round(converged.low),
+          convergedHigh: Math.round(converged.high),
+          inputs: inp,
+          inputProvenance: sourced,
+          methods,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+      if (!res.ok || !data.id) { setSaveMsg(data.error ?? "Could not save."); return; }
+      setSavedId(data.id);
+      setSaveMsg("Saved. This valuation can be reopened exactly as shown.");
+    } catch {
+      setSaveMsg("Could not save. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reopen(id: string) {
+    try {
+      const res = await fetch(`/api/valuations/${id}`);
+      const data = (await res.json().catch(() => ({}))) as {
+        valuation?: { inputs?: Partial<ValuationInputs>; stage_profile?: Stage; source?: "profile" | "manual"; input_provenance?: Record<string, Provenance> };
+      };
+      const v = data.valuation;
+      if (!v?.inputs) return;
+      setInp({ ...DEFAULT_INPUTS, ...v.inputs });
+      if (v.stage_profile) setStage(v.stage_profile);
+      setSource(v.source === "profile" ? "profile" : "manual");
+      setSourced(v.input_provenance ?? {});
+      setSavedId(id);
+      setAdvice(null);
+      setScreen("studio");
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  const effortColor = (e: string) => (e === "Low" ? "#0F6E56" : e === "High" ? "#E0674A" : C.ice);
   const stale = (profile?.staleDays ?? 0) > 60;
 
   const shell = (children: React.ReactNode) => (
-    <div style={{ background: C.navy, color: C.text, borderRadius: 16, padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ background: C.navy, color: C.text, border: `1px solid ${C.panelEdge}`, borderRadius: 16, padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {children}
       <footer style={{ marginTop: 20, paddingTop: 16, fontSize: 12, borderTop: `1px solid ${C.panelEdge}`, color: C.mute }}>
         {VALUATION_DISCLAIMER}
@@ -310,7 +368,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
               </div>
             )}
             {stale && (
-              <div style={{ marginTop: 12, borderRadius: 6, padding: "10px 14px", fontSize: 13, background: "rgba(224,103,74,0.12)", color: "#F0A08A", border: "1px solid rgba(224,103,74,0.3)" }}>
+              <div style={{ marginTop: 12, borderRadius: 6, padding: "10px 14px", fontSize: 13, background: "rgba(224,103,74,0.12)", color: "#A32D2D", border: "1px solid rgba(224,103,74,0.3)" }}>
                 <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.16em" }}>STALE DATA — </span>
                 Your profile financials are {profile.staleDays} days old. Re-confirm ARR and growth on the next screen before you rely on this range.
                 <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, color: C.text }}>
@@ -325,6 +383,21 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
             </button>
           </div>
         )}
+
+        {saved.length > 0 && (
+          <div style={{ marginTop: 20, borderRadius: 8, padding: 20, background: C.panel, border: `1px solid ${C.panelEdge}` }}>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.16em", color: C.steel, marginBottom: 10 }}>RECENT VALUATIONS</div>
+            {saved.map((v) => (
+              <button type="button" key={v.id} onClick={() => reopen(v.id)}
+                style={{ display: "flex", width: "100%", alignItems: "center", gap: 10, textAlign: "left", background: C.navy, border: `1px solid ${C.panelEdge}`, borderRadius: 6, padding: "10px 12px", marginBottom: 8, cursor: "pointer", color: C.text }}>
+                <span style={{ fontFamily: display, fontWeight: 700, fontSize: 14 }}>{v.company_name}</span>
+                <span style={{ fontFamily: mono, fontSize: 11, color: C.ice }}>{money(v.converged_low)} – {money(v.converged_high)}</span>
+                {v.is_scenario && <span style={{ fontFamily: mono, fontSize: 9, color: C.mute }}>SCENARIO</span>}
+                <span style={{ fontSize: 11, color: C.mute, marginLeft: "auto" }}>{new Date(v.created_at).toLocaleDateString()}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>,
     );
   }
@@ -336,7 +409,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17 }}>{inp.company || profile?.company || "Untitled valuation"}</span>
           <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", padding: "2px 8px", borderRadius: 4,
-            color: source === "profile" ? C.navy : C.mute, background: source === "profile" ? C.ice : "transparent", border: source === "profile" ? "none" : `1px solid ${C.panelEdge}` }}>
+            color: source === "profile" ? C.blue : C.mute, background: source === "profile" ? CHIP_BG : "transparent", border: `1px solid ${C.panelEdge}` }}>
             {source === "profile" ? "FROM COMPANY PROFILE" : "MANUAL ENTRY"}
           </span>
           <button type="button" onClick={() => setScreen("intake")} style={{ fontSize: 12, color: C.ice, textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>Change data source</button>
@@ -350,7 +423,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
           return (
             <button type="button" key={s.id} onClick={() => setStage(s.id)}
               style={{ textAlign: "left", borderRadius: 6, padding: "12px 16px", minWidth: 170, cursor: "pointer",
-                background: on ? C.blue : C.panel, border: `1px solid ${on ? C.hover : C.panelEdge}`, color: C.text }}>
+                background: on ? C.blue : C.panel, border: `1px solid ${on ? C.hover : C.panelEdge}`, color: on ? "#fff" : C.text }}>
               <div style={{ fontFamily: display, fontWeight: 700, fontSize: 15 }}>{s.label}</div>
               <div style={{ fontSize: 12, marginTop: 2, color: on ? "rgba(255,255,255,0.8)" : C.mute }}>{s.note}</div>
             </button>
@@ -464,6 +537,13 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
                 </div>
               ))}
             </div>
+            <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <button type="button" onClick={saveValuation} disabled={saving || !methods.length}
+                style={{ borderRadius: 6, padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", background: saving ? C.steel : C.blue, border: "none", cursor: saving ? "default" : "pointer", opacity: saving || !methods.length ? 0.6 : 1 }}>
+                {saving ? "Saving…" : savedId ? "Save again" : "Save valuation"}
+              </button>
+              {saveMsg && <span style={{ fontSize: 12, color: savedId ? "#0F6E56" : "#A32D2D" }}>{saveMsg}</span>}
+            </div>
           </Panel>
 
           <Panel eyebrow="Advisor" title="How to move this number">
@@ -479,7 +559,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
               Show sample plan
             </button>
 
-            {err && <div style={{ marginTop: 16, fontSize: 14, borderRadius: 6, padding: "10px 14px", background: "rgba(224,103,74,0.12)", color: "#F0A08A" }}>{err}</div>}
+            {err && <div style={{ marginTop: 16, fontSize: 14, borderRadius: 6, padding: "10px 14px", background: "rgba(224,103,74,0.12)", color: "#A32D2D" }}>{err}</div>}
 
             {advice && (
               <div ref={resultRef} style={{ marginTop: 24 }}>
@@ -487,7 +567,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.18em", color: C.steel }}>THE READ</span>
                     {advice.isSample && (
-                      <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.08em", padding: "2px 6px", borderRadius: 4, background: C.ice, color: C.navy }}>{SAMPLE_BADGE}</span>
+                      <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.08em", padding: "2px 6px", borderRadius: 4, background: CHIP_BG, color: C.blue }}>{SAMPLE_BADGE}</span>
                     )}
                   </div>
                   <p style={{ fontSize: 14, marginTop: 8, color: C.text }}>{advice.read}</p>
@@ -501,7 +581,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
                     <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
                       <span style={{ fontFamily: mono, fontSize: 11, color: C.ice }}>{String(i + 1).padStart(2, "0")}</span>
                       <span style={{ fontFamily: display, fontWeight: 700, fontSize: 16 }}>{l.title}</span>
-                      <span style={{ marginLeft: "auto", padding: "2px 8px", borderRadius: 4, fontFamily: mono, fontSize: 11, color: C.navy, background: C.ice }}>+{l.upliftLow}–{l.upliftHigh}% (modeled)</span>
+                      <span style={{ marginLeft: "auto", padding: "2px 8px", borderRadius: 4, fontFamily: mono, fontSize: 11, color: C.blue, background: CHIP_BG }}>+{l.upliftLow}–{l.upliftHigh}% (modeled)</span>
                     </div>
                     <p style={{ fontSize: 14, marginBottom: 8, color: C.mute }}>{l.diagnosis}</p>
                     <p style={{ fontSize: 14, color: C.text }}>{l.action}</p>
@@ -514,7 +594,7 @@ export function ValuationStudioClient({ profile }: { profile: ValuationProfile |
                 ))}
 
                 {advice.caution && (
-                  <div style={{ borderRadius: 6, padding: 16, fontSize: 14, background: "rgba(224,103,74,0.1)", color: "#F0A08A", border: "1px solid rgba(224,103,74,0.3)" }}>
+                  <div style={{ borderRadius: 6, padding: 16, fontSize: 14, background: "rgba(224,103,74,0.1)", color: "#A32D2D", border: "1px solid rgba(224,103,74,0.3)" }}>
                     <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.18em" }}>DILIGENCE RISK — </span>{advice.caution}
                   </div>
                 )}
