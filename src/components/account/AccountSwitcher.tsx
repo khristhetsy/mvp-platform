@@ -10,11 +10,11 @@ import { TYPE_LABEL, type Organization } from "@/lib/organizations/organizations
 export function AccountSwitcher({
   orgs,
   activeOrgId,
-  isProfessional,
+  canAddCompanies,
 }: {
   orgs: Organization[];
   activeOrgId: string | null;
-  isProfessional: boolean;
+  canAddCompanies: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -93,16 +93,15 @@ export function AccountSwitcher({
           <div className="my-1 border-t border-slate-100" />
 
           {/* Add-a-company card */}
-          {isProfessional ? (
+          {canAddCompanies ? (
             !showAdd ? (
               <button type="button" onClick={() => setShowAdd(true)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-indigo-50">
                 <span>＋ Add a company</span>
-                <span className="ml-auto text-[11px] font-normal text-slate-400">+$800/mo</span>
               </button>
             ) : (
               <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-2.5">
                 <p className="text-[13px] font-medium text-slate-900">Add a Deal Company</p>
-                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">+$800/mo, added on top of your $1,000/mo plan. Isolated data room, CRM, and audit log — excluded from matching, distribution, and events by design.</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">A separate account with its own data room, CRM, and audit log — excluded from matching, distribution, and events by design.</p>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Company name" className="mt-2 w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm" />
                 {error && <p className="mt-1 text-[11px] text-rose-600">{error}</p>}
                 <div className="mt-2 flex justify-end gap-2">
@@ -112,14 +111,13 @@ export function AccountSwitcher({
               </div>
             )
           ) : (
-            // Locked state (Basic) — non-interactive card + upgrade action.
+            // Locked — the entitlement is super-admin-granted, not self-serve.
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 opacity-90">
               <div className="flex items-center gap-1.5">
                 <span aria-hidden="true" className="text-slate-400"><i className="ti ti-lock" aria-hidden="true" /></span>
                 <p className="text-[13px] font-medium text-slate-600">Add a company</p>
               </div>
-              <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Professional plan required — adding a company isn&apos;t available on Basic.</p>
-              <a href="/founder/billing" className="mt-1.5 inline-block text-[11px] font-medium text-indigo-600 hover:underline">Upgrade to Professional →</a>
+              <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Not enabled for your account. Contact your iCapOS partner to enable adding companies.</p>
             </div>
           )}
         </div>

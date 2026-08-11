@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { userCanAddCompanies } from "@/lib/organizations/organizations";
 
 export const dynamic = "force-dynamic";
 
@@ -10,18 +10,19 @@ function loose(client: unknown): SupabaseClient {
   return client as SupabaseClient;
 }
 
-// POST — "Add a company" (Deal Company). Professional-only gate enforced HERE at
-// the API layer, not just in the UI (spec §3, §8): a Basic subscriber cannot
-// reach this by any route. Self-serve checkout is deferred, so this provisions
-// immediately (billing_status='active') — Admin comps internal vehicles after.
+// POST — "Add a company" (Deal Company). Super-admin controlled: enforced HERE at
+// the API layer, not just in the UI — a founder can only reach this if a super
+// admin has granted `can_add_companies` on their org (Admin → Accounts). Self-
+// serve checkout is deferred, so this provisions immediately.
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const plan = await getUserPlan(auth.profile.id);
-  if (plan !== "founder_professional") {
+  const admin = createServiceRoleClient();
+
+  if (!(await userCanAddCompanies(admin, auth.profile.id))) {
     return NextResponse.json(
-      { error: "Adding a company isn't available on Basic. Upgrade to Professional to add a Deal Company.", code: "professional_required" },
+      { error: "Adding a company isn't enabled for your account. Ask your iCapOS contact to enable it.", code: "not_entitled" },
       { status: 403 },
     );
   }
@@ -29,8 +30,6 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const name = body?.name?.trim();
   if (!name) return NextResponse.json({ error: "Company name is required." }, { status: 400 });
-
-  const admin = createServiceRoleClient();
   const { data: org, error } = await loose(admin)
     .from("organizations")
     .insert({

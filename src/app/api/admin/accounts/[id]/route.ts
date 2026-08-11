@@ -9,26 +9,39 @@ function loose(client: unknown): SupabaseClient {
   return client as SupabaseClient;
 }
 
-// PATCH — Entitlements: flip an org's billing between comped and active (spec §5).
-// Comping waives the charge only; it never affects email dispatch or visibility.
+// PATCH — Entitlements: flip an org's billing between comped and active, and/or
+// toggle the super-admin-controlled "can add companies" grant.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiProfile(["admin", "analyst"]);
   if ("error" in auth) return auth.error;
   const { id } = await params;
 
-  const body = (await request.json().catch(() => null)) as { billing_status?: string } | null;
-  const next = body?.billing_status;
-  if (next !== "comped" && next !== "active") {
-    return NextResponse.json({ error: "billing_status must be 'comped' or 'active'." }, { status: 400 });
+  const body = (await request.json().catch(() => null)) as
+    | { billing_status?: string; can_add_companies?: boolean }
+    | null;
+  const patch: Record<string, unknown> = {};
+
+  if (body?.billing_status !== undefined) {
+    if (body.billing_status !== "comped" && body.billing_status !== "active") {
+      return NextResponse.json({ error: "billing_status must be 'comped' or 'active'." }, { status: 400 });
+    }
+    patch.billing_status = body.billing_status;
+    // Comping clears the Stripe association (spec §4, internal/comped path).
+    if (body.billing_status === "comped") {
+      patch.stripe_customer_id = null;
+      patch.stripe_subscription_id = null;
+    }
+  }
+
+  if (typeof body?.can_add_companies === "boolean") {
+    patch.can_add_companies = body.can_add_companies;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   }
 
   const admin = createServiceRoleClient();
-  const patch: Record<string, unknown> = { billing_status: next };
-  // Comping clears the Stripe association (spec §4, internal/comped path).
-  if (next === "comped") {
-    patch.stripe_customer_id = null;
-    patch.stripe_subscription_id = null;
-  }
 
   const { data, error } = await loose(admin)
     .from("organizations")

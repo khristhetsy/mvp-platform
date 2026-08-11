@@ -20,6 +20,8 @@ export type Organization = {
   created_via: OrgCreatedVia;
   purpose: OrgPurpose;
   email_dispatch_enabled: boolean;
+  /** Super-admin-controlled entitlement: may the owner add another company? */
+  can_add_companies: boolean;
   created_by: string | null;
   created_at: string;
 };
@@ -48,7 +50,7 @@ function loose(client: unknown): SupabaseClient {
 }
 
 const ORG_COLUMNS =
-  "id,name,type,parent_org_id,billing_status,tier,created_via,purpose,email_dispatch_enabled,created_by,created_at";
+  "id,name,type,parent_org_id,billing_status,tier,created_via,purpose,email_dispatch_enabled,can_add_companies,created_by,created_at";
 
 /** The organizations the current user is a member of (their account switcher). */
 export async function listMyOrganizations(supabase: unknown, userId: string): Promise<Organization[]> {
@@ -118,4 +120,21 @@ export async function emailDispatchAllowedForUser(admin: unknown, userId: string
   const rows = (orgs ?? []) as Array<{ email_dispatch_enabled: boolean }>;
   if (!rows.length) return true;
   return rows.some((o) => o.email_dispatch_enabled);
+}
+
+/**
+ * Super-admin-controlled: may this founder add another company (a Deal Company)?
+ * True if any org they own has `can_add_companies` granted. Default is false, so
+ * a founder cannot add until a super admin grants it in Admin → Accounts.
+ */
+export async function userCanAddCompanies(admin: unknown, userId: string): Promise<boolean> {
+  const { data: mems } = await loose(admin).from("memberships").select("org_id").eq("user_id", userId);
+  const ids = (mems ?? []).map((m: { org_id: string }) => m.org_id);
+  if (!ids.length) return false;
+  const { data: orgs } = await loose(admin)
+    .from("organizations")
+    .select("can_add_companies")
+    .in("id", ids);
+  const rows = (orgs ?? []) as Array<{ can_add_companies: boolean }>;
+  return rows.some((o) => o.can_add_companies === true);
 }

@@ -59,6 +59,26 @@ export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: O
     }
   }
 
+  async function toggleCanAdd(org: Organization) {
+    setBusyId(org.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/accounts/${org.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ can_add_companies: !org.can_add_companies }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { organization?: Organization; error?: string };
+      if (res.ok && d.organization) {
+        setOrgs((prev) => prev.map((o) => (o.id === org.id ? d.organization! : o)));
+      } else {
+        setError(d.error ?? "Update failed.");
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function toggleComped(org: Organization) {
     const next = org.billing_status === "comped" ? "active" : "comped";
     setBusyId(org.id);
@@ -179,16 +199,29 @@ export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: O
               </span>
             </span>
             <span className="text-[12px] text-slate-500">{fmtDate(o.created_at)}</span>
-            <div className="sm:text-right">
+            <div className="flex flex-wrap gap-2 sm:justify-end">
               {canManage ? (
-                <button
-                  type="button"
-                  onClick={() => toggleComped(o)}
-                  disabled={busyId === o.id}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  {busyId === o.id ? "…" : o.billing_status === "comped" ? "Un-comp" : "Comp"}
-                </button>
+                <>
+                  {o.type === "founder" && (
+                    <button
+                      type="button"
+                      onClick={() => toggleCanAdd(o)}
+                      disabled={busyId === o.id}
+                      title="Allow this founder to add additional companies"
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${o.can_add_companies ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {busyId === o.id ? "…" : o.can_add_companies ? "Add: on" : "Allow add"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleComped(o)}
+                    disabled={busyId === o.id}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {busyId === o.id ? "…" : o.billing_status === "comped" ? "Un-comp" : "Comp"}
+                  </button>
+                </>
               ) : (
                 <span className="text-[11px] text-slate-300">—</span>
               )}
