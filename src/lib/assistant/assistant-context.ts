@@ -18,7 +18,7 @@ export function inferAssistantMode(input: {
   // Founder pages
   if (path.startsWith("/founder/learning")) return "learning";
   if (path.startsWith("/founder/readiness") || path.startsWith("/founder/report")) return "reports_guidance";
-  if (path.startsWith("/founder/capital-raise")) return "capital_raise";
+  if (path.startsWith("/founder/capital-raise") || path.startsWith("/founder/valuation")) return "capital_raise";
   if (path.startsWith("/founder/deal-room")) return "deal_room";
   if (path.startsWith("/founder/contacts") || path.startsWith("/admin/marketing/contacts")) return "crm";
   if (path.startsWith("/billing")) return "billing";
