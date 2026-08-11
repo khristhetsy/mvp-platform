@@ -136,6 +136,13 @@ const TOOLS = [
     icon: "sparkles",
     tag: "AI",
   },
+  {
+    href: "/founder/valuation",
+    label: "Valuation range and advisor",
+    description: "Run a stage-routed, multi-method valuation range — then get modeled levers to move it, method by method. An indicative range to prepare with, not a price.",
+    icon: "barchart",
+    tag: "AI",
+  },
 ] as const;
 
 const TAG_COLORS: Record<string, { bg: string; text: string }> = {

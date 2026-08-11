@@ -58,6 +58,7 @@ export const FEATURES: FeatureDef[] = [
   // ── Raise Toolkit ──────────────────────────────────────────────────────
   { key: "raise_toolkit_guides", label: "Raise Toolkit guides", group: "Raise Toolkit", hrefs: { founder: ["/founder/term-sheet", "/founder/pitch-practice", "/founder/email-sequence", "/founder/due-diligence", "/founder/investor-update", "/founder/funding-timeline", "/founder/board-prep", "/founder/kpi-glossary"] } },
   { key: "pitch_deck_analyzer", label: "Pitch deck analyzer", group: "Raise Toolkit", hrefs: { founder: ["/founder/pitch-deck-analyzer"] } },
+  { key: "valuation", label: "Valuation range and advisor", group: "Raise Toolkit", hrefs: { founder: ["/founder/valuation"] } },
   { key: "business_plan", label: "AI Business Plan", group: "Raise Toolkit", hrefs: { founder: ["/founder/business-plan"] } },
   { key: "financial_model", label: "Financial model", group: "Raise Toolkit", hrefs: { founder: ["/founder/financial-model"] } },
   { key: "cap_table", label: "Cap table", group: "Raise Toolkit", hrefs: { founder: ["/founder/cap-table"] } },
