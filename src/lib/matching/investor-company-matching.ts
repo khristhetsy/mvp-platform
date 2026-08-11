@@ -1,16 +1,18 @@
 /**
  * Investor–company match scoring (Phase 1, rules-based).
  *
- * Weights (max 100):
- * - Sector alignment: 30
- * - Stage alignment: 25
- * - Check size fit: 20
- * - Geography alignment: 15
- * - Readiness score bonus: 5 (readiness_score / 20, capped)
- * - Marketplace approved + published bonus: 5
+ * The score is PURE investor↔company fit — a percentage over only the factors
+ * that could be evaluated (both sides had data). Admin-tunable factors:
+ * - Sector alignment
+ * - Stage alignment
+ * - Check size fit (partial credit for a near-miss)
+ * - Geography alignment
+ * - Investor type / Capital type match (vs the founder's "seeking")
+ * - Active-investor signal
  *
- * Sector/stage/geography use case-insensitive token overlap.
- * Check size: company target raise within investor min–max, or partial overlap.
+ * No company-state bonuses (readiness score, marketplace listing) — those are not
+ * part of matching, so they never inflate the score. Sector/stage/geography use
+ * case-insensitive token overlap.
  */
 
 import type { InvestorProfileRecord } from "@/lib/investor/types";
@@ -78,9 +80,6 @@ export const DEFAULT_ENGINE_WEIGHTS: EngineWeights = {
   capitalType: 10,
   activeRating: 10,
 };
-
-const READINESS_BONUS = 5;
-const MARKETPLACE_BONUS = 5;
 
 function normalizeToken(value: string) {
   return value.trim().toLowerCase();
@@ -197,21 +196,6 @@ function scoreActiveRating(investor: InvestorMatchProfile, weight: number): Fact
   return { points: Math.round(weight * fit), weight, evaluated: true, reason: rating >= 4 ? "Highly active investor" : null, missing: null };
 }
 
-/** Readiness + marketplace are additive bonuses — they only ever add, and being
- *  absent never subtracts (so a founder is never penalized for them). */
-function scoreReadiness(company: CompanyMatchProfile): { points: number; reason: string | null } {
-  const score = company.readinessScore ?? 0;
-  if (score <= 0) return { points: 0, reason: null };
-  const points = Math.min(READINESS_BONUS, Math.round(score / 20));
-  return { points, reason: points > 0 ? "Readiness score bonus" : null };
-}
-
-function scoreMarketplace(company: CompanyMatchProfile): { points: number; reason: string | null } {
-  const listed =
-    company.reviewStatus === "approved" && company.isPublished && company.marketplaceVisible && Boolean(company.publishedAt);
-  return listed ? { points: MARKETPLACE_BONUS, reason: "Marketplace listed" } : { points: 0, reason: null };
-}
-
 export function matchInvestorToCompany(
   investor: InvestorMatchProfile,
   company: CompanyMatchProfile,
@@ -248,15 +232,11 @@ export function matchInvestorToCompany(
     }
   }
 
-  const readiness = scoreReadiness(company);
-  const marketplace = scoreMarketplace(company);
-
   const base = possible > 0 ? (earned / possible) * 100 : 0;
-  const matchScore = Math.min(100, Math.max(0, Math.round(base + readiness.points + marketplace.points)));
+  const matchScore = Math.max(0, Math.round(base));
 
   const matchReasons = factors
     .map((item) => item.reason)
-    .concat([readiness.reason, marketplace.reason])
     .filter((value): value is string => Boolean(value));
 
   const missingFitReasons = factors
