@@ -126,9 +126,10 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   async function patch(body: Record<string, unknown>) {
     setBusy(true);
     try {
-      await fetch(`/api/sales/opportunities/${o.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const res = await fetch(`/api/sales/opportunities/${o.id}`);
-      if (res.ok) setO((await res.json()).opportunity);
+      const res = await fetch(`/api/sales/opportunities/${o.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      // PATCH now returns the updated joined row — no second GET needed.
+      const data = (await res.json().catch(() => ({}))) as { opportunity?: Opp };
+      if (res.ok && data.opportunity) setO(data.opportunity);
     } finally { setBusy(false); }
   }
   async function saveEdit() {

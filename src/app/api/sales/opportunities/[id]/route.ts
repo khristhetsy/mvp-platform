@@ -39,7 +39,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   try {
     await updateOpportunity(id, parsed.data, profile.id);
-    return NextResponse.json({ ok: true });
+    // Return the fresh joined row so the client can update in place without a
+    // second round-trip (was: PATCH then a separate GET).
+    const opportunity = await getOpportunity(id);
+    return NextResponse.json({ ok: true, opportunity });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Update failed." }, { status: 500 });
   }

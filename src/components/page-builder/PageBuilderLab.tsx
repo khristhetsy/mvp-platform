@@ -429,6 +429,7 @@ export function PageBuilderLab() {
           <Link
             href={`/preview/${pageSlug}`}
             target="_blank"
+            rel="noopener noreferrer"
             className="cap-btn-secondary inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold"
           >
             <Eye className="mr-1 h-4 w-4" aria-hidden />
