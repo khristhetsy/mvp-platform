@@ -7,6 +7,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { listValuations } from "@/lib/valuation/store";
 import { ValuationStudioClient, type ValuationProfile } from "@/components/founder/ValuationStudioClient";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,8 @@ export default async function FounderValuationPage() {
   const plan = await getUserPlan(profile.id);
   const planEligible = plan === "founder_basic" || plan === "founder_professional";
 
-  const { company } = await getActiveCompanyForUser(profile);
+  const { company, org } = await getActiveCompanyForUser(profile);
+  const saved = planEligible && org ? await listValuations(supabase, org.id) : [];
 
   // Build the profile-intake object. A Deal Company (null company) has no profile
   // to load — the client falls back to the blank path (spec §6.2).
@@ -76,7 +78,7 @@ export default async function FounderValuationPage() {
           description="An indicative valuation range to prepare with, not a price. Runs the same methods used by investment bankers, venture funds, and angel investors, then shows where they disagree."
         />
         {planEligible ? (
-          <ValuationStudioClient profile={valuationProfile} />
+          <ValuationStudioClient profile={valuationProfile} saved={saved} />
         ) : (
           <div className="rounded-2xl border border-[#E3E8F2] bg-white p-8 text-center">
             <p className="text-sm text-[#5A6782]">
