@@ -107,6 +107,13 @@ export async function POST(request: Request) {
     // A banned term earns exactly one regeneration, then we fall back (§6, §2).
     if (!result.ok && result.reason === "banned-term") result = await generate();
     if (!result.ok) {
+      // Founder sees a plain message; the reason is logged for diagnosis (spec §7:
+      // never a stack trace to the founder). Reasons: not-json | missing-fields |
+      // lever-count | lever-shape | uplift-range | banned-term.
+      console.warn(
+        `[valuation/advise] validation failed: reason=${result.reason}` +
+          (result.reason === "banned-term" && result.bannedTerm ? ` term="${result.bannedTerm}"` : ""),
+      );
       return NextResponse.json(
         { error: "The advisor couldn't produce a usable plan. Adjust an input and run it again." },
         { status: 502 },
@@ -114,7 +121,8 @@ export async function POST(request: Request) {
     }
     await persist(result.advice, false, CLAUDE_SONNET);
     return NextResponse.json({ advice: result.advice, isSample: false });
-  } catch {
+  } catch (e) {
+    console.warn(`[valuation/advise] generation error: ${e instanceof Error ? e.message : "unknown"}`);
     return NextResponse.json(
       { error: "The advisor is unavailable right now. Try again in a moment." },
       { status: 502 },
