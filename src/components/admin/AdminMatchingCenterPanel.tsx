@@ -31,6 +31,7 @@ const defaultFilters: MatchingCenterFilters = {
   industry: "",
   investorType: "",
   geography: "",
+  sector: "",
   minScore: 0,
   maxScore: 100,
 };
@@ -40,6 +41,7 @@ function hasActiveFilters(filters: MatchingCenterFilters) {
     filters.industry ||
       filters.investorType ||
       filters.geography ||
+      filters.sector ||
       filters.minScore > 0 ||
       filters.maxScore < 100,
   );
@@ -122,6 +124,21 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
               >
                 <option value="">All industries</option>
                 {snapshot.filterOptions.industries.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              Investor sector
+              <select
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={filters.sector ?? ""}
+                onChange={(event) => setFilters((current) => ({ ...current, sector: event.target.value }))}
+              >
+                <option value="">All sectors</option>
+                {snapshot.filterOptions.sectors.map((value) => (
                   <option key={value} value={value}>
                     {value}
                   </option>

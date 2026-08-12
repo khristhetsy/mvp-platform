@@ -21,6 +21,7 @@ export type MatchingCenterPairRow = {
   investorName: string;
   investorType: string | null;
   investorGeographies: string[];
+  investorSectors: string[];
   checkSizeMin: number | null;
   checkSizeMax: number | null;
   companyId: string;
@@ -69,6 +70,7 @@ export type AdminMatchingCenterSnapshot = {
     industries: string[];
     investorTypes: string[];
     geographies: string[];
+    sectors: string[];
   };
 };
 
@@ -148,6 +150,7 @@ function buildPairRow(
     investorName,
     investorType: investor.investor_type ?? null,
     investorGeographies: investor.preferred_geographies ?? [],
+    investorSectors: investor.preferred_sectors ?? [],
     checkSizeMin: investor.check_size_min,
     checkSizeMax: investor.check_size_max,
     companyId: company.id,
@@ -288,6 +291,7 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
         ...marketplaceCompanies.map((company) => company.geography),
         ...investors.flatMap((investor) => investor.preferred_geographies ?? []),
       ]),
+      sectors: uniqueSorted(investors.flatMap((investor) => investor.preferred_sectors ?? [])),
     },
   };
 }
@@ -353,6 +357,9 @@ export type MatchingCenterFilters = {
   geography: string;
   minScore: number;
   maxScore: number;
+  /** Investor sector (from the contact pool). Optional so other panels that reuse
+   *  this filter type don't need to set it. */
+  sector?: string;
 };
 
 export function filterMatchingCenterPairs(
@@ -365,6 +372,12 @@ export function filterMatchingCenterPairs(
     }
     if (filters.investorType && row.investorType?.toLowerCase() !== filters.investorType.toLowerCase()) {
       return false;
+    }
+    if (filters.sector) {
+      const needle = filters.sector.toLowerCase();
+      if (!row.investorSectors.some((value) => value.toLowerCase() === needle)) {
+        return false;
+      }
     }
     if (filters.geography) {
       const geo = filters.geography.toLowerCase();
