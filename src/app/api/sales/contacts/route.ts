@@ -104,9 +104,13 @@ export async function POST(req: NextRequest): Promise<Response> {
   // is Lead-assign based, the creator is added to assignee_ids so they can see it.
   const scope = await getSalesScope(profile);
   const ownerId = scope.isManager && parsed.data.assigneeId ? parsed.data.assigneeId : profile.id;
+  // crm_contacts.external_id is NOT NULL (it keys Odoo-synced rows + annotations).
+  // Manual adds have no external system, so mint a unique id — prefer the email
+  // (natural dedupe key), else a generated one.
+  const externalId = parsed.data.email?.trim().toLowerCase() || `manual:${crypto.randomUUID()}`;
   const { data, error } = await db()
     .from("crm_contacts")
-    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
+    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
     .select("id, name, email, company, phone, source")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
