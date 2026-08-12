@@ -125,5 +125,7 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
     };
   });
 
-  return { cards, total: cards.length, strong: cards.filter((c) => c.matchScore >= 70).length };
+  // Show only genuine matches — keep those at/above the admin Minimum match score.
+  const qualifying = cards.filter((c) => c.matchScore >= cfg.minMatch);
+  return { cards: qualifying, total: qualifying.length, strong: qualifying.filter((c) => c.matchScore >= 70).length };
 }

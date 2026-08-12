@@ -40,11 +40,24 @@ function prospectClient(): SupabaseClient {
 
 export async function loadProspectInvestors(): Promise<ProspectInvestor[]> {
   try {
-    const { data } = await prospectClient()
-      .from("prospect_investors")
-      .select("*")
-      .order("created_at", { ascending: false });
-    return (data ?? []) as ProspectInvestor[];
+    const client = prospectClient();
+    // PostgREST caps a select at ~1000 rows by default, so page through the full
+    // table — otherwise the matching pool silently stops at the first 1000
+    // prospects no matter how many exist.
+    const pageSize = 1000;
+    const all: ProspectInvestor[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await client
+        .from("prospect_investors")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) break;
+      const rows = (data ?? []) as ProspectInvestor[];
+      all.push(...rows);
+      if (rows.length < pageSize) break;
+    }
+    return all;
   } catch {
     return [];
   }
