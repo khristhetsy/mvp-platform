@@ -105,18 +105,31 @@ function parseFundingTarget(value: string | null) {
 
 export async function loadApprovedInvestorMatchProfiles() {
   const admin = createServiceRoleClient();
-  const { data, error } = await admin
-    .from("investor_profiles")
-    .select(
-      "profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, approval_status",
-    )
-    .eq("approval_status", "approved");
+  // Page through the full table — PostgREST caps a select at ~1000 rows, so
+  // without this the matching pool silently stops at the first 1000 approved
+  // investors once the platform grows past that.
+  const pageSize = 1000;
+  const all: InvestorMatchProfile[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin
+      .from("investor_profiles")
+      .select(
+        "profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, approval_status",
+      )
+      .eq("approval_status", "approved")
+      .order("profile_id", { ascending: true })
+      .range(from, from + pageSize - 1);
 
-  if (error) {
-    throw new Error(`Failed to load investor profiles for matching: ${error.message}`);
+    if (error) {
+      throw new Error(`Failed to load investor profiles for matching: ${error.message}`);
+    }
+
+    const rows = (data ?? []) as InvestorMatchProfile[];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
   }
 
-  return (data ?? []) as InvestorMatchProfile[];
+  return all;
 }
 
 export async function loadAdminCompanyMatchProfiles() {

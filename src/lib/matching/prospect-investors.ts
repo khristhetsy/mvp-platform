@@ -130,13 +130,22 @@ export async function importInvestorContactsAsProspects(
   createdBy: string | null,
 ): Promise<{ total: number; imported: number; skipped: number }> {
   const client = prospectClient();
-  const { data, error } = await client
-    .from("crm_contacts")
-    .select("*")
-    .eq("module", "investor");
-
-  if (error) return { total: 0, imported: 0, skipped: 0 };
-  const rows = (data ?? []) as CrmContactRow[];
+  // Page through all investor contacts — PostgREST caps a select at ~1000 rows,
+  // so without this the import would only ever process the first 1000 contacts.
+  const pageSize = 1000;
+  const rows: CrmContactRow[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await client
+      .from("crm_contacts")
+      .select("*")
+      .eq("module", "investor")
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) return { total: 0, imported: 0, skipped: 0 };
+    const batch = (data ?? []) as CrmContactRow[];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
   if (rows.length === 0) return { total: 0, imported: 0, skipped: 0 };
 
   const records = rows.map((r) => {
