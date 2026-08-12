@@ -16,6 +16,7 @@
  */
 
 import type { InvestorProfileRecord } from "@/lib/investor/types";
+import { sectorsAlign } from "@/lib/matching/sector-synonyms";
 
 export type CompanyMatchProfile = {
   id: string;
@@ -108,11 +109,13 @@ function tokensOverlap(needles: string[], haystack: string | null) {
 type FactorResult = { points: number; weight: number; evaluated: boolean; reason: string | null; missing: string | null };
 
 function scoreSector(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
-  const sectors = tokenizeList(investor.preferred_sectors);
+  const sectors = investor.preferred_sectors ?? [];
   if (sectors.length === 0 || !company.industry?.trim()) {
     return { points: 0, weight, evaluated: false, reason: null, missing: sectors.length === 0 ? "Investor sector preferences not set" : null };
   }
-  if (tokensOverlap(sectors, company.industry)) {
+  // Match by synonym family (AI/ML ↔ Technology ↔ Software ↔ SaaS …), not literal
+  // text — so related sectors count instead of only exact string overlaps.
+  if (sectorsAlign(sectors, company.industry)) {
     return { points: weight, weight, evaluated: true, reason: "Sector alignment", missing: null };
   }
   return { points: 0, weight, evaluated: true, reason: null, missing: "Sector not in investor preferences" };

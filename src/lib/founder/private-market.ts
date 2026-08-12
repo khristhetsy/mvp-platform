@@ -131,11 +131,7 @@ export async function loadFounderInvestorBoard(
   const companyProfile = buildCompanyMatchProfile(company);
   const matchOf = new Map<string, InvestorCompanyMatchResult>();
   for (const s of candidates) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, matchConfig.engineWeights));
-  // Show only genuine matches: keep investors at/above the admin Minimum match
-  // score, then rank and take the top N. Weak matches (below the bar the admin
-  // set in Outreach Qualification) drop off instead of padding the board.
   const scored = [...candidates]
-    .filter((s) => (matchOf.get(s.id)?.matchScore ?? 0) >= matchConfig.minMatch)
     .sort((a, b) => (matchOf.get(b.id)?.matchScore ?? 0) - (matchOf.get(a.id)?.matchScore ?? 0))
     .slice(0, limit);
 
