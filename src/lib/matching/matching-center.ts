@@ -278,12 +278,15 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
     topInvestors,
     recentMatches,
     pairs,
+    // Options reflect the FULL data — every marketplace company industry and every
+    // investor type / geography across the whole pool — not just the capped detail
+    // sample, so the dropdowns mirror the contacts you actually have.
     filterOptions: {
-      industries: uniqueSorted(pairs.map((row) => row.industry)),
-      investorTypes: uniqueSorted(pairs.map((row) => row.investorType)),
+      industries: uniqueSorted(marketplaceCompanies.map((company) => company.industry)),
+      investorTypes: uniqueSorted(investors.map((investor) => investor.investor_type)),
       geographies: uniqueSorted([
-        ...pairs.map((row) => row.companyGeography),
-        ...pairs.flatMap((row) => row.investorGeographies),
+        ...marketplaceCompanies.map((company) => company.geography),
+        ...investors.flatMap((investor) => investor.preferred_geographies ?? []),
       ]),
     },
   };
