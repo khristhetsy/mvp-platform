@@ -1,7 +1,8 @@
 // Plan-gated "Present at event" tiers.
-// Basic (Founder Pro)  → Spotlight  (a curated showcase slot)
-// Professional (Premium) → Full presentation (a live stage slot + full video)
-// Trial → no presenting (must upgrade).
+// Basic        → Spotlight (event spotlight — a curated showcase slot)
+// Professional → Full presentation (monthly live stage slot + full video)
+// Managed IR   → Full presentation (done-for-you)
+// Free         → no presenting (must upgrade).
 import type { PlanType } from "@/lib/subscriptions/plans";
 
 export type PresentFeature = { id: string; label: string; optional?: boolean };
@@ -49,6 +50,6 @@ const FULL: PresentTier = {
 /** The presenting tier a plan unlocks, or null when the plan can't present yet. */
 export function presentTierForPlan(plan: PlanType): PresentTier | null {
   if (plan === "founder_basic") return SPOTLIGHT;
-  if (plan === "founder_professional") return FULL;
+  if (plan === "founder_professional" || plan === "founder_managed_ir" || plan === "admin_internal") return FULL;
   return null;
 }

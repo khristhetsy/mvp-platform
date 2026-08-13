@@ -9,6 +9,8 @@ import { resolveFounderOutreachConfig, loadOutreachGlobals, type EffectiveOutrea
 import { getDoNotContactList, matchesDoNotContact } from "@/lib/founder/deploy-preferences";
 import { buildCompanyMatchProfile, scoreContactAgainstCompany } from "@/lib/matching/contact-match";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
 function formatRaise(amount: number | null | undefined): string | null {
@@ -116,6 +118,13 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   // Admin match/qualification thresholds.
   const config = await getInvestorMatchConfig();
 
+  // Per-plan distribution cap: Basic reaches up to 25, Professional up to 100,
+  // Managed IR uncapped. Free (0) never enrolls anyone. Capped by MAX_AUDIENCE.
+  const founderId = (comp as { founder_id?: string | null }).founder_id ?? null;
+  const planCap = founderEntitlements(founderId ? await getUserPlan(founderId) : null).investorCap;
+  const audienceCap = planCap === null ? MAX_AUDIENCE : Math.min(planCap, MAX_AUDIENCE);
+  if (audienceCap === 0) return { created: false };
+
   // Load the full investor-contact network, then score each with the SAME additive
   // engine the founder board uses, so who gets emailed matches what the founder
   // sees. Industry is a scoring signal (via the engine), NOT a hard exclude — this
@@ -154,7 +163,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
       // the admin requires a rated score.
       return rated ? (ps!.score as number) >= config.minInvestorScore : !config.requireRated;
     })
-    .slice(0, MAX_AUDIENCE);
+    .slice(0, audienceCap);
   if (ranked.length === 0) return { created: false };
 
   const { data: campaign } = await db

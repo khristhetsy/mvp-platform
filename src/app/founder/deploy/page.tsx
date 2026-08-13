@@ -8,6 +8,8 @@ import { buildFounderInvestorCrmView } from "@/lib/data/investor-crm";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
@@ -118,6 +120,8 @@ export default async function FounderDeployPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
+  // Distribution entitlements: Free sees the board masked and never auto-enrolls.
+  const entitlements = founderEntitlements(await getUserPlan(profile.id));
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;
@@ -157,7 +161,7 @@ export default async function FounderDeployPage() {
     // ensure the company's outreach campaign exists and is approved. Runs BEFORE
     // the board load so queued recipients render immediately. Non-fatal; real
     // email dispatch is still gated by the automation toggle + published one-pager.
-    if (investableScore >= OUTREACH_THRESHOLD) {
+    if (entitlements.canDistribute && investableScore >= OUTREACH_THRESHOLD) {
       try {
         await ensureFounderAutomatedOutreach(company.id, profile.id);
       } catch {
@@ -166,6 +170,10 @@ export default async function FounderDeployPage() {
     }
 
     board = await loadFounderInvestorBoard(company);
+    // Free tier: matches are visible (count · sector · fit) but identities are not.
+    if (board && !entitlements.revealInvestorIdentities) {
+      board = { ...board, rows: board.rows.map((r) => ({ ...r, name: "Matched investor", company: null })) };
+    }
   }
 
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
