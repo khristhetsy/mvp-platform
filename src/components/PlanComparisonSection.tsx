@@ -91,15 +91,21 @@ export function PlanComparisonSection({
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("founder_plans")}</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{t("choose_the_right_founder_workspace")}</h2>
         </div>
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {FOUNDER_PRICING_PLANS.map((plan) => (
             <PlanCard
               key={plan.planType}
               plan={plan}
               currentPlan={currentPlan}
               highlight={plan.recommended}
-              ctaHref={currentPlan ? `/upgrade?plan=${plan.planType}` : founderCtaHref}
-              ctaLabel={currentPlan ? "View upgrade options" : founderCtaLabel}
+              ctaHref={
+                plan.contactSales
+                  ? `/auth/sign-up?plan=${plan.planType}`
+                  : currentPlan
+                    ? `/upgrade?plan=${plan.planType}`
+                    : founderCtaHref
+              }
+              ctaLabel={plan.contactSales ? "Talk to us" : currentPlan ? "View upgrade options" : founderCtaLabel}
             />
           ))}
         </div>
@@ -140,16 +146,16 @@ export function PlanComparisonSection({
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-6 py-3 font-medium">Feature</th>
-                  <th className="px-6 py-3 font-medium">Free Trial</th>
+                  <th className="px-6 py-3 font-medium">Free</th>
                   <th className="px-6 py-3 font-medium">Basic</th>
                   <th className="px-6 py-3 font-medium">Professional</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {FEATURE_COMPARISON.map((row) => (
-                  <tr key={row.featureKey}>
+                  <tr key={row.label}>
                     <td className="px-6 py-3 font-medium text-slate-800">{row.label}</td>
-                    <td className="px-6 py-3 text-slate-600">{row.trial ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
+                    <td className="px-6 py-3 text-slate-600">{row.free ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                     <td className="px-6 py-3 text-slate-600">{row.basic ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                     <td className="px-6 py-3 text-slate-600">{row.professional ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                   </tr>
@@ -158,8 +164,8 @@ export function PlanComparisonSection({
             </table>
           </div>
           <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">
-            Trial includes full Professional access for 3 days. After trial, premium features require{" "}
-            {PLAN_LABELS.founder_professional}.
+            Every tool is free. Paid tiers add distribution — reaching investors, limits, and brokered intros.{" "}
+            {PLAN_LABELS.founder_managed_ir} is done-for-you.
           </p>
         </section>
       ) : null}

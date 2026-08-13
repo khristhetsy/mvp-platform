@@ -2,18 +2,11 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isTrialExpired } from "@/lib/subscriptions/access";
 import {
   PLAN_PRICES,
-  TRIAL_DURATION_DAYS,
   type PlanType,
   type SubscriptionRecord,
   type SubscriptionStatus,
 } from "@/lib/subscriptions/plans";
 import type { UserRole } from "@/lib/supabase/types";
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
-}
 
 function defaultPlanForRole(role: UserRole, _requestedPlan?: PlanType | null): {
   plan_type: PlanType;
@@ -42,13 +35,13 @@ function defaultPlanForRole(role: UserRole, _requestedPlan?: PlanType | null): {
     };
   }
 
-  const now = new Date();
+  // New model: founders start on permanent Free (all tools; no trial countdown).
   return {
-    plan_type: "founder_trial",
-    subscription_status: "trialing",
-    monthly_price_cents: PLAN_PRICES.founder_trial,
-    trial_started_at: now.toISOString(),
-    trial_ends_at: addDays(now, TRIAL_DURATION_DAYS).toISOString(),
+    plan_type: "founder_free",
+    subscription_status: "free",
+    monthly_price_cents: PLAN_PRICES.founder_free,
+    trial_started_at: null,
+    trial_ends_at: null,
   };
 }
 

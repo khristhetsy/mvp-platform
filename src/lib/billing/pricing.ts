@@ -1,5 +1,5 @@
 import type { FeatureKey, PlanType } from "@/lib/subscriptions/plans";
-import { FOUNDER_BASIC_FEATURES, FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES } from "@/lib/subscriptions/plans";
+import { FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES } from "@/lib/subscriptions/plans";
 
 /** LemonSqueezy variant IDs — set in env. */
 export const LS_VARIANT_IDS = {
@@ -17,35 +17,38 @@ export type PricingPlanCard = {
   recommended?: boolean;
   features: string[];
   paidPlan: boolean;
+  /** Sales-led tier — shown with a "Talk to us" CTA instead of self-serve checkout. */
+  contactSales?: boolean;
 };
 
 export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
-    planType: "founder_trial",
-    title: "Free Trial",
+    planType: "founder_free",
+    title: "Free",
     priceLabel: "$0",
-    priceSubtext: "3-day trial",
-    monthlyPriceCents: PLAN_PRICES.founder_trial,
+    priceSubtext: "Readiness",
+    monthlyPriceCents: PLAN_PRICES.founder_free,
+    badge: "Start here",
     features: [
-      "Full Professional access for 3 days",
-      "No credit card required",
-      "AI Due Diligence & documents",
-      "Upgrade anytime",
+      "All tools: CRR, valuation, data room, e-learning",
+      "See that matches exist — count, sector, fit tier",
+      "Investor identities hidden · no distribution",
+      "Your qualification layer, prescored for you",
     ],
     paidPlan: false,
   },
   {
     planType: "founder_basic",
-    title: "Founder Basic",
+    title: "Basic",
     priceLabel: "$499",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_basic,
     features: [
-      "Dashboard & core founder tools",
-      "AI Due Diligence",
-      "Documents & readiness",
-      "No investor CRM access",
-      "No eLearning or premium analytics",
+      "Everything in Free",
+      "Up to 25 matched investors get your one-pager",
+      "Event spotlight",
+      "DIY outreach unlocked — you can now reach investors",
+      "Fully self-serve",
     ],
     paidPlan: true,
   },
@@ -55,15 +58,31 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$1,000",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_professional,
-    badge: "Recommended",
+    badge: "Most popular",
     recommended: true,
     features: [
       "Everything in Basic",
-      "Investor access & CRM",
-      "Capital raise tools",
-      "eLearning",
-      "Advanced analytics",
-      "Premium founder features",
+      "Up to 100 investors",
+      "Monthly presentation slot",
+      "Brokered intro requests",
+      "Additional company accounts $800/mo",
+      "Self-serve, with a call available",
+    ],
+    paidPlan: true,
+  },
+  {
+    planType: "founder_managed_ir",
+    title: "Managed IR",
+    priceLabel: "$3,500",
+    priceSubtext: "/month · 3-month min",
+    monthlyPriceCents: PLAN_PRICES.founder_managed_ir,
+    contactSales: true,
+    features: [
+      "Done-for-you investor relations",
+      "We curate the list and materials",
+      "You review and approve",
+      "Post-conference follow-up run for you",
+      "Capacity-capped — talk to us",
     ],
     paidPlan: true,
   },
@@ -85,23 +104,27 @@ export const INVESTOR_PRICING_PLAN: PricingPlanCard = {
 };
 
 export type FeatureComparisonRow = {
-  featureKey: FeatureKey;
   label: string;
-  trial: boolean;
+  free: boolean;
   basic: boolean;
   professional: boolean;
 };
 
+// New model: all TOOLS are free; paid tiers add DISTRIBUTION.
 export const FEATURE_COMPARISON: FeatureComparisonRow[] = [
-  { featureKey: "dashboard", label: "Founder dashboard", trial: true, basic: true, professional: true },
-  { featureKey: "ai_diligence", label: "AI Due Diligence", trial: true, basic: true, professional: true },
-  { featureKey: "documents", label: "Document room", trial: true, basic: true, professional: true },
-  { featureKey: "readiness", label: "Readiness tracking", trial: true, basic: true, professional: true },
-  { featureKey: "investor_access", label: "Investor CRM", trial: true, basic: false, professional: true },
-  { featureKey: "capital_raise", label: "Capital raise tools", trial: true, basic: false, professional: true },
-  { featureKey: "elearning", label: "eLearning", trial: true, basic: false, professional: true },
-  { featureKey: "analytics", label: "Advanced analytics", trial: true, basic: false, professional: true },
-  { featureKey: "premium_tools", label: "Premium tools", trial: true, basic: false, professional: true },
+  { label: "CRR / readiness", free: true, basic: true, professional: true },
+  { label: "Valuation studio", free: true, basic: true, professional: true },
+  { label: "Data room & documents", free: true, basic: true, professional: true },
+  { label: "e-Learning", free: true, basic: true, professional: true },
+  { label: "See matches exist (count · sector · fit tier)", free: true, basic: true, professional: true },
+  { label: "Investor identities revealed", free: false, basic: true, professional: true },
+  { label: "One-pager distributed to matches", free: false, basic: true, professional: true },
+  { label: "Event spotlight", free: false, basic: true, professional: true },
+  { label: "DIY outreach", free: false, basic: true, professional: true },
+  { label: "Matched investor cap", free: false, basic: true, professional: true },
+  { label: "Monthly presentation slot", free: false, basic: false, professional: true },
+  { label: "Brokered intro requests", free: false, basic: false, professional: true },
+  { label: "Additional company accounts ($800/mo)", free: false, basic: false, professional: true },
 ];
 
 export function formatMonthlyPrice(cents: number) {
@@ -112,19 +135,17 @@ export function formatMonthlyPrice(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
-export function planIncludesFeature(planType: PlanType, featureKey: FeatureKey, trialActive = true) {
-  if (planType === "founder_professional" || planType === "admin_internal") {
+export function planIncludesFeature(planType: PlanType, featureKey: FeatureKey) {
+  // New model: every founder tier gets all tools; distribution is gated separately.
+  if (
+    planType === "founder_free" ||
+    planType === "founder_basic" ||
+    planType === "founder_professional" ||
+    planType === "founder_managed_ir" ||
+    planType === "founder_trial" ||
+    planType === "admin_internal"
+  ) {
     return FOUNDER_PROFESSIONAL_FEATURES.includes(featureKey);
-  }
-
-  if (planType === "founder_basic") {
-    return FOUNDER_BASIC_FEATURES.includes(featureKey);
-  }
-
-  if (planType === "founder_trial") {
-    return trialActive
-      ? FOUNDER_PROFESSIONAL_FEATURES.includes(featureKey)
-      : FOUNDER_BASIC_FEATURES.includes(featureKey);
   }
 
   return featureKey === "investor_workspace" || featureKey === "settings";

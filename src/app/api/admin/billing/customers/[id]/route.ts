@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 const patchSchema = z.object({
-  plan_type: z.enum(["founder_trial", "founder_basic", "founder_professional", "investor_free", "investor_pro", "investor_premium", "admin_internal"]).optional(),
+  plan_type: z.enum(["founder_free", "founder_trial", "founder_basic", "founder_professional", "founder_managed_ir", "investor_free", "investor_pro", "investor_premium", "admin_internal"]).optional(),
   subscription_status: z.enum(["active", "trialing", "past_due", "cancelled", "expired", "paused"]).optional(),
   current_period_end: z.string().optional().nullable(),
 });

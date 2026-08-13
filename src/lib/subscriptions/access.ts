@@ -91,20 +91,25 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, n
     return new Set<FeatureKey>(["investor_workspace", "settings"]);
   }
 
-  if (planType === "founder_professional") {
+  // New pricing model: Free gives ALL tools (CRR, valuation, data room, e-learning).
+  // Paid tiers add distribution (investor identities, one-pager sends, limits,
+  // brokered intros) — that gating is enforced separately (Phase 2), not by the
+  // tool feature set here. Managed IR is done-for-you on top of Professional.
+  if (
+    planType === "founder_free" ||
+    planType === "founder_professional" ||
+    planType === "founder_managed_ir"
+  ) {
     return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
   if (planType === "founder_basic") {
-    return new Set<FeatureKey>(FOUNDER_BASIC_FEATURES);
+    return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
+  // Legacy 3-day trial rows are grandfathered into permanent Free (all tools).
   if (planType === "founder_trial") {
-    if (isTrialActive(subscription, now)) {
-      return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
-    }
-
-    return new Set<FeatureKey>(FOUNDER_BASIC_FEATURES);
+    return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
   return new Set<FeatureKey>(["settings"]);

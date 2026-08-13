@@ -1,7 +1,9 @@
 export type PlanType =
+  | "founder_free"
   | "founder_trial"
   | "founder_basic"
   | "founder_professional"
+  | "founder_managed_ir"
   | "investor_free"
   | "investor_pro"
   | "investor_premium"
@@ -56,9 +58,11 @@ export type SubscriptionRecord = {
 };
 
 export const PLAN_LABELS: Record<PlanType, string> = {
+  founder_free: "Free",
   founder_trial: "Free Trial",
-  founder_basic: "Founder Pro",
-  founder_professional: "Founder Premium",
+  founder_basic: "Basic",
+  founder_professional: "Professional",
+  founder_managed_ir: "Managed IR",
   investor_free: "Investor Free",
   investor_pro: "Investor Pro",
   investor_premium: "Investor Premium",
@@ -66,14 +70,21 @@ export const PLAN_LABELS: Record<PlanType, string> = {
 };
 
 export const PLAN_PRICES: Record<PlanType, number> = {
+  founder_free: 0,
   founder_trial: 0,
   founder_basic: 49900,
   founder_professional: 100000,
+  founder_managed_ir: 350000,
   investor_free: 0,
   investor_pro: 50000,
   investor_premium: 100000,
   admin_internal: 0,
 };
+
+/** Additional company accounts (Professional only). */
+export const ADDITIONAL_COMPANY_PRICE = 80000;
+/** Managed IR contract minimum. */
+export const MANAGED_IR_MIN_MONTHS = 3;
 
 export const FOUNDER_BASIC_FEATURES: FeatureKey[] = [
   "dashboard",
@@ -102,34 +113,36 @@ export type SignupPlanOption = {
   badge?: string;
   features: string[];
   paidPlan?: boolean;
+  /** Sales-led tier — shown with a "Talk to us" CTA instead of self-serve checkout. */
+  contactSales?: boolean;
 };
 
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
   {
-    planType: "founder_trial",
-    title: "Free Trial",
+    planType: "founder_free",
+    title: "Free",
     priceLabel: "$0",
-    priceSubtext: "3-day trial",
-    badge: "Recommended",
+    priceSubtext: "Readiness",
+    badge: "Start here",
     features: [
-      "Full Professional access for 3 days",
-      "No credit card required",
-      "Upgrade anytime",
+      "All tools: CRR, valuation, data room, e-learning",
+      "See that matches exist — count, sector, fit tier",
+      "Investor identities hidden · no distribution",
+      "Your qualification layer, prescored for you",
     ],
   },
   {
     planType: "founder_basic",
-    title: "Founder Basic",
+    title: "Basic",
     priceLabel: "$499",
     priceSubtext: "/month",
     paidPlan: true,
     features: [
-      "Dashboard & core tools",
-      "AI Due Diligence",
-      "Documents & readiness",
-      "No investor access",
-      "No eLearning",
-      "No premium analytics",
+      "Everything in Free",
+      "Up to 25 matched investors receive your one-pager",
+      "Event spotlight",
+      "DIY outreach unlocked — you can now reach investors",
+      "Fully self-serve",
     ],
   },
   {
@@ -137,14 +150,29 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     title: "Professional",
     priceLabel: "$1,000",
     priceSubtext: "/month",
+    badge: "Most popular",
     paidPlan: true,
     features: [
       "Everything in Basic",
-      "Investor access",
-      "Capital raise tools",
-      "eLearning",
-      "Advanced analytics",
-      "Premium features",
+      "Up to 100 investors",
+      "Monthly presentation slot",
+      "Brokered intro requests",
+      "Additional company accounts $800/mo",
+      "Self-serve, with a call available",
+    ],
+  },
+  {
+    planType: "founder_managed_ir",
+    title: "Managed IR",
+    priceLabel: "$3,500",
+    priceSubtext: "/month · 3-month minimum",
+    contactSales: true,
+    features: [
+      "Done-for-you investor relations",
+      "We curate the list and materials",
+      "You review and approve",
+      "Post-conference follow-up run for you",
+      "Capacity-capped — talk to us",
     ],
   },
 ];
@@ -165,7 +193,7 @@ export const SIGNUP_INVESTOR_PLAN: SignupPlanOption = {
 };
 
 const SIGNUP_PLAN_TYPES = new Set<PlanType>([
-  "founder_trial",
+  "founder_free",
   "founder_basic",
   "founder_professional",
   "investor_free",
@@ -188,5 +216,5 @@ export function isAutoGrantSignupPlan(role: "founder" | "investor", planType: Pl
     return planType === "investor_free";
   }
 
-  return planType === "founder_trial";
+  return planType === "founder_free";
 }
