@@ -8,7 +8,7 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
   description:
-    "Two plans, every tool in both. Founder Basic $499/mo (up to 25 matched investors, spotlight reel); Founder Professional $1,000/mo (up to 100, live conference slot). Investor accounts are free. No success fees.",
+    "Every tool is free. Free plan: readiness, valuation, data room, e-learning, and see your matches. Basic $499/mo (up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). Managed IR $3,500/mo done-for-you. Investor accounts free, no success fees.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -42,9 +42,9 @@ export default function PricingPage() {
             </p>
           ) : null}
         </div>
-        <div className="mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2">
+        <div className="mx-auto mt-10 grid max-w-6xl gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {p.tiers.map((t) => (
-            <div key={t.name} className={`relative rounded-2xl p-7 ${t.featured ? "order-first border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25 md:order-none" : "border border-white/12 bg-white/[0.03]"}`}>
+            <div key={t.name} className={`relative rounded-2xl p-6 ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : "border border-white/12 bg-white/[0.03]"}`}>
               {/* Professional primacy tag; Professional is order-first on mobile (brief Step 6). */}
               {t.featured ? (
                 <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
@@ -75,19 +75,19 @@ export default function PricingPage() {
           <div className="mt-8 overflow-hidden rounded-2xl border border-site-line">
             <table className="w-full text-left text-sm">
               <thead className="bg-site-paper font-site-mono text-[11px] uppercase tracking-wide text-site-muted">
-                <tr><th className="px-5 py-3"> </th><th className="px-5 py-3">{p.comparison.cols[0]}</th><th className="px-5 py-3">{p.comparison.cols[1]}</th></tr>
+                <tr><th className="px-5 py-3"> </th>{p.comparison.cols.map((c) => (<th key={c} className="px-5 py-3">{c}</th>))}</tr>
               </thead>
               <tbody>
                 {p.comparison.rows.map((r) => (
                   <tr key={r.k} className="border-t border-site-line">
                     <td className="px-5 py-3 text-site-ink">{r.k}</td>
-                    <td className="px-5 py-3 text-site-muted">{r.a}</td>
-                    <td className="px-5 py-3 text-site-muted">{r.b}</td>
+                    {r.vals.map((v, i) => (<td key={i} className="px-5 py-3 text-site-muted">{v}</td>))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="mt-4 text-sm text-site-muted">{p.comparison.note}</p>
         </div>
       </section>
 
