@@ -9,9 +9,11 @@ import { confirmDialog } from "@/components/ui/ConfirmDialog";
 const navy = "#0A1A40", blue = "#1A6CE4";
 
 const PLAN_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "founder_trial", label: "Founder Trial" },
-  { value: "founder_basic", label: "Founder Pro" },
-  { value: "founder_professional", label: "Founder Premium" },
+  { value: "founder_free", label: "Free" },
+  { value: "founder_basic", label: "Basic" },
+  { value: "founder_professional", label: "Professional" },
+  { value: "founder_managed_ir", label: "Managed IR" },
+  { value: "founder_trial", label: "Free Trial (legacy)" },
   { value: "investor_free", label: "Investor Free" },
   { value: "investor_pro", label: "Investor Pro" },
   { value: "investor_premium", label: "Investor Premium" },
@@ -218,8 +220,8 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
         <div style={{ fontSize: 13, fontWeight: 600, color: navy, marginBottom: 10 }}>Create checkout link</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
-            <option value="founder_basic">Founder Pro — $499/mo</option>
-            <option value="founder_professional">Founder Premium — $1,000/mo</option>
+            <option value="founder_basic">Basic — $499/mo</option>
+            <option value="founder_professional">Professional — $1,000/mo</option>
           </select>
           <button onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
           <button onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>

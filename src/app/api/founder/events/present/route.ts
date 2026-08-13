@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   const tier = presentTierForPlan(sub.plan_type);
   if (!tier) {
     return NextResponse.json(
-      { error: "Presenting at events is available on the Founder Pro and Premium plans.", upgrade: true },
+      { error: "Presenting at events is available on the Basic and Professional plans.", upgrade: true },
       { status: 403 },
     );
   }

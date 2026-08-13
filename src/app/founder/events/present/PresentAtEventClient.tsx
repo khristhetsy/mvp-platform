@@ -52,7 +52,7 @@ export function PresentAtEventClient({
         <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">Presenting is a paid feature</h3>
         <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-muted)]">
           You&rsquo;re on the <span className="font-medium text-[var(--text-primary)]">{planLabel}</span> plan. Upgrade to
-          Founder Pro for a <span className="font-medium">Spotlight</span> slot, or Founder Premium for a{" "}
+          Basic for a <span className="font-medium">Spotlight</span> slot, or Professional for a{" "}
           <span className="font-medium">Full presentation</span> on stage.
         </p>
         <Link
