@@ -3,6 +3,8 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import {
   getManualOutreach,
   getManualRecipients,
@@ -63,6 +65,17 @@ export async function POST(request: Request) {
 
   const { company, org } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
+
+  // DIY outreach unlocks on Basic. Free can draft but not send/enroll.
+  if (body.action === "start" && !founderEntitlements(await getUserPlan(auth.profile.id)).canDistribute) {
+    return NextResponse.json(
+      {
+        error: "Sending outreach unlocks on Basic — you can save a draft now and upgrade to reach investors.",
+        code: "upgrade_required",
+      },
+      { status: 403 },
+    );
+  }
 
   // API-layer guard (spec §3a): starting a sequence queues live email dispatch,
   // so a demo / email-disabled account is refused here — saving a draft is fine.
