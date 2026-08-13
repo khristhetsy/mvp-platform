@@ -9,13 +9,6 @@ import { MeetingRecapPanel } from "./MeetingRecapPanel";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 
-// Fixed Zoom Personal Meeting Room (join link only — host key is never stored here).
-// Override per-deployment with NEXT_PUBLIC_ZOOM_MEETING_URL.
-const ZOOM_MEETING_URL =
-  process.env.NEXT_PUBLIC_ZOOM_MEETING_URL ??
-  "https://us04web.zoom.us/j/2613180099?pwd=Y42Nx4kDZVv58TaK0LwxxMJSU4HEK4.1";
-const ZOOM_PMI = "261 318 0099";
-
 type EntryStatus = "not_started" | "draft" | "ready" | "presented" | "deferred";
 interface Section { id: string; position: number; title: string; department_id: string | null; section_kind: string; is_required: boolean; pinned: string | null }
 interface Entry { id: string; section_id: string; content: string; status: EntryStatus; locked?: boolean }
@@ -84,7 +77,7 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
           {board.session.started_at ? "Live" : "Scheduled"} · Readiness {ready}/{board.sections.length}
         </div>
         <MeetingScheduleControls sessionId={sessionId} date={board.session.session_date} time={board.session.start_time ?? null} />
-        <ZoomMeetingBar />
+        <GoogleMeetBar sessionId={sessionId} meetLink={board.session.meet_link} />
         <MeetingLifecycleControls sessionId={sessionId} status={board.session.status} startedAt={board.session.started_at} isAdmin={isAdmin} />
       </div>
 
@@ -347,16 +340,29 @@ function PlanAtRiskWidget() {
   );
 }
 
-function ZoomMeetingBar() {
-  const [copied, setCopied] = useState(false);
+function GoogleMeetBar({ sessionId, meetLink }: { sessionId: string; meetLink: string | null }) {
+  const [link, setLink] = useState(meetLink);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const push = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch(`/api/admin/meetings/${sessionId}/gcal`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) { setErr(typeof d.error === "string" ? d.error : "Failed to push to Google."); return; }
+      setLink(d.meetUrl ?? null);
+    } catch { setErr("Failed to push to Google."); }
+    finally { setBusy(false); }
+  };
   return (
     <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <a href={ZOOM_MEETING_URL} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#185FA5", borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>▷ Join Zoom meeting</a>
-      <span style={{ fontSize: 11.5, color: MUTED, border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px" }}>PMI {ZOOM_PMI}</span>
-      <button
-        onClick={() => { void navigator.clipboard?.writeText(ZOOM_MEETING_URL); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-        style={{ fontSize: 11.5, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}
-      >{copied ? "Copied" : "Copy link"}</button>
+      {link ? (
+        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#185FA5", borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>▷ Join Google Meet</a>
+      ) : (
+        <button onClick={() => void push()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Adding…" : "Add Google Meet"}</button>
+      )}
+      {link && <button onClick={() => void push()} disabled={busy} title="Re-sync to Google" style={{ fontSize: 11.5, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>↻ Sync</button>}
+      {err && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{err}</span>}
     </div>
   );
 }

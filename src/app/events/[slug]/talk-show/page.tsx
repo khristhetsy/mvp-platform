@@ -31,6 +31,12 @@ export const dynamic = "force-dynamic";
 
 const PRESENCE_ROOM = "Main Stage";
 
+// Talk Show runs on the host's fixed Zoom Personal Meeting Room (join link only —
+// host key is never stored). Override with NEXT_PUBLIC_ZOOM_TALKSHOW_URL.
+const ZOOM_TALKSHOW_URL =
+  process.env.NEXT_PUBLIC_ZOOM_TALKSHOW_URL ??
+  "https://us04web.zoom.us/j/2613180099?pwd=Y42Nx4kDZVv58TaK0LwxxMJSU4HEK4.1";
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   return { title: "Talk Show — iCFO Events", alternates: { canonical: `/events/${slug}/talk-show` }, robots: { index: false } };
@@ -80,8 +86,9 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
   );
   // Live via a non-embeddable meeting link (Google Meet / Zoom): keep the couch
   // and everything else, and surface a Join button above it.
+  // Talk Show always joins on the host's Zoom room (not the session's Meet link).
   const joinUrl =
-    isLive && stage?.videoProvider === "external" && stage.videoRef && !externalEmbed ? stage.videoRef : null;
+    isLive && stage?.videoProvider === "external" && stage.videoRef && !externalEmbed ? ZOOM_TALKSHOW_URL : null;
 
   const [questions, chat, queue] =
     profile && stage && isLive
@@ -181,7 +188,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                       eventId={event.id}
                       me={me}
                       isStaff={isStaffViewer}
-                      roomUrl={stage.videoRef}
+                      roomUrl={joinUrl ?? stage.videoRef}
                       initialQueue={queue}
                     />
                   ) : (
