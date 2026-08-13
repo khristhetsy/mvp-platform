@@ -6,6 +6,7 @@ import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,20 @@ export async function POST(request: Request) {
   // cap. Only genuinely NEW requests count (re-requesting the same investor is a
   // no-op and isn't charged).
   const [cfg, plan] = await Promise.all([getFounderConnectionConfig(), getUserPlan(founderId)]);
+
+  // Brokered introductions are a Professional (and Managed IR) capability. Free
+  // and Basic can't request them — Basic reaches investors via DIY outreach.
+  if (!founderEntitlements(plan).canBrokerIntros) {
+    return NextResponse.json(
+      {
+        error:
+          "Brokered introductions are a Professional feature. Upgrade to request intros, or use DIY outreach on Basic.",
+        code: "upgrade_required",
+      },
+      { status: 403 },
+    );
+  }
+
   const cap = plan === "founder_professional" ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
   const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
   async function overCap(): Promise<boolean> {

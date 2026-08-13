@@ -4,6 +4,8 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
 
 export const dynamic = "force-dynamic";
@@ -44,22 +46,28 @@ export default async function FounderMatchingPage() {
     );
   }
 
-  const data = await loadFounderMatchingCenter(company!);
+  const [data, plan] = await Promise.all([loadFounderMatchingCenter(company!), getUserPlan(profile.id)]);
+  // Free sees that matches exist (count · sector · fit tier) but NOT who — identities
+  // and distribution actions unlock on Basic and up.
+  const reveal = founderEntitlements(plan).revealInvestorIdentities;
 
   const cards: MatchCenterCard[] = data.cards.map((c) => {
     const label = c.investorType ? `${titleCase(c.investorType)}` : "Investor";
-    const subtitle = [c.firm, label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null;
+    const displayName = reveal ? c.name : "Matched investor";
+    const subtitle = reveal
+      ? [c.firm, label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null
+      : [label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null;
     return {
       matchScore: c.matchScore,
       tag: c.isProspect ? "Prospect" : "Member",
-      title: c.name,
+      title: displayName,
       subtitle,
       reasons: c.reasons,
-      introRef: c.ref,
-      connected: c.connected,
-      followUp: { name: c.name, firm: c.firm, investorType: c.investorType },
+      introRef: reveal ? c.ref : undefined,
+      connected: reveal ? c.connected : false,
+      followUp: reveal ? { name: c.name, firm: c.firm, investorType: c.investorType } : undefined,
       detail: {
-        name: c.name,
+        name: displayName,
         band: c.matchScore >= 70 ? "high" : c.matchScore >= 45 ? "mid" : "low",
         matchScore: c.matchScore,
         label,
@@ -102,6 +110,16 @@ export default async function FounderMatchingPage() {
             <span className="text-slate-500">strong (70%+)</span>
           </div>
         </div>
+        {!reveal && (
+          <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">Free plan:</span> you can see that matches exist — count,
+            sector, and fit tier — but investor identities and outreach unlock on{" "}
+            <a href="/billing" className="font-medium text-indigo-700 underline">
+              Basic
+            </a>
+            .
+          </div>
+        )}
         <div className="mt-6">
           <MatchingCenterList
             cards={cards}

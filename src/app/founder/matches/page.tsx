@@ -5,6 +5,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getFounderMatchQueue, countViewersForFounder } from "@/lib/matching/queue";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
@@ -43,21 +45,27 @@ export default async function FounderMatchesPage() {
   const companyIds = queue?.companyIds ?? [];
   const viewers = company ? await countViewersForFounder(companyIds) : 0;
   const data = company ? await loadFounderMatchingCenter(company) : { cards: [], total: 0, strong: 0 };
+  const plan = await getUserPlan(profile.id);
+  // Free sees matches (count · sector · fit tier) but not identities or actions.
+  const reveal = founderEntitlements(plan).revealInvestorIdentities;
 
   const cards: MatchCenterCard[] = data.cards.map((c) => {
     const label = c.investorType ? `${titleCase(c.investorType)}` : "Investor";
-    const subtitle = [c.firm, label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null;
+    const displayName = reveal ? c.name : "Matched investor";
+    const subtitle = reveal
+      ? [c.firm, label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null
+      : [label, c.checkBand ? `Check ${c.checkBand}` : null].filter(Boolean).join(" · ") || null;
     return {
       matchScore: c.matchScore,
       tag: c.isProspect ? "Prospect" : "Member",
-      title: c.name,
+      title: displayName,
       subtitle,
       reasons: c.reasons,
-      introRef: c.ref,
-      connected: c.connected,
-      followUp: { name: c.name, firm: c.firm, investorType: c.investorType },
+      introRef: reveal ? c.ref : undefined,
+      connected: reveal ? c.connected : false,
+      followUp: reveal ? { name: c.name, firm: c.firm, investorType: c.investorType } : undefined,
       detail: {
-        name: c.name,
+        name: displayName,
         band: c.matchScore >= 70 ? "high" : c.matchScore >= 45 ? "mid" : "low",
         matchScore: c.matchScore,
         label,
