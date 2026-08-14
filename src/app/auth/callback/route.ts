@@ -67,10 +67,12 @@ export async function GET(request: Request) {
     }
   }
 
-  const hash = requestUrl.hash;
-  if (hash.includes("type=recovery") || hash.includes("access_token")) {
-    return NextResponse.redirect(new URL(`/auth/reset-password${requestUrl.search}${requestUrl.hash}`, requestUrl.origin));
-  }
-
-  return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
+  // No `code` on the query string. That's either a plain visit, or Supabase used
+  // the implicit flow and put the session tokens in the URL *fragment* — which a
+  // server route can't read (browsers never send the #fragment upstream). Hand off
+  // to a client page that reads the hash, sets the session, and routes by role.
+  // The browser preserves the #fragment across this fragment-less redirect.
+  const completeUrl = new URL("/auth/callback/complete", requestUrl.origin);
+  if (next) completeUrl.searchParams.set("next", next);
+  return NextResponse.redirect(completeUrl);
 }
