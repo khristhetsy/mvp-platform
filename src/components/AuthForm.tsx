@@ -44,6 +44,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<UserRole>("founder");
   const [apiError, setApiError] = useState<string | null>(null);
@@ -196,13 +197,25 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
       </FormField>
 
       <FormField label={t("password")} error={getError("password")} required hint={mode === "sign-up" ? "Minimum 8 characters" : undefined}>
-        <input
-          className={`${BASE_INPUT} ${inputCls("password")}`}
-          placeholder="••••••••"
-          type="password"
-          value={password}
-          onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
-        />
+        <div className="relative">
+          <input
+            className={`${BASE_INPUT} ${inputCls("password")}`}
+            style={{ paddingRight: "2.75rem" }}
+            placeholder="••••••••"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-600"
+          >
+            <i className={`ti ${showPassword ? "ti-eye-off" : "ti-eye"}`} aria-hidden="true" />
+          </button>
+        </div>
       </FormField>
 
       {apiError ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{apiError}</p> : null}
