@@ -57,7 +57,6 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
         <div style={card}><div style={{ fontSize: 12, color: "#6B7690" }}>MRR</div><div style={{ fontSize: 22, fontWeight: 600, color: navy, marginTop: 2 }}>{money(stats.mrrCents)}</div></div>
         <div style={card}><div style={{ fontSize: 12, color: "#6B7690" }}>Active</div><div style={{ fontSize: 22, fontWeight: 600, color: navy, marginTop: 2 }}>{stats.activeCount}</div></div>
-        <div style={card}><div style={{ fontSize: 12, color: "#6B7690" }}>Trials</div><div style={{ fontSize: 22, fontWeight: 600, color: navy, marginTop: 2 }}>{stats.trialCount}</div></div>
         <div style={card}><div style={{ fontSize: 12, color: "#6B7690" }}>Pending upgrades</div><div style={{ fontSize: 22, fontWeight: 600, color: navy, marginTop: 2 }}>{stats.pendingUpgrades}</div></div>
       </div>
 

@@ -115,8 +115,6 @@ export function SubscriptionManager({ profileId }: Readonly<{ profileId: string 
     );
   }
 
-  const extendDays = view.extendDays ?? 15;
-
   return (
     <div className="space-y-4">
       {/* Current state */}
@@ -131,28 +129,10 @@ export function SubscriptionManager({ profileId }: Readonly<{ profileId: string 
             <span className="font-medium text-slate-800">{view.planType ?? "—"}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500">Trial ends</span>
-            <span className="font-medium text-slate-800">{fmtDate(view.trialEndsAt)}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
             <span className="text-slate-500">Access until</span>
             <span className="font-medium text-slate-800">{fmtDate(view.currentPeriodEnd)}</span>
           </div>
         </div>
-      </div>
-
-      {/* Extend trial — admin/analyst */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-900">Extend trial</h3>
-        <p className="mt-0.5 text-xs text-slate-500">Adds {extendDays} days of trial access. No payment required.</p>
-        <button
-          type="button"
-          onClick={() => act("extend")}
-          disabled={busy}
-          className="mt-3 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
-          Extend trial {extendDays} days
-        </button>
       </div>
 
       {/* Comp plan — super admin only */}
