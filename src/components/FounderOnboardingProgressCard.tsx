@@ -60,7 +60,7 @@ export function FounderOnboardingProgressCard({
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             {incompleteSteps.length > 0
-              ? `Next: ${incompleteSteps[0].title}. Trial includes Professional workspace access while you build readiness.`
+              ? `Next: ${incompleteSteps[0].title}. Every tool is free while you build readiness.`
               : "Finalize remaining checks to maximize marketplace readiness."}
           </p>
           <div className="mt-4">

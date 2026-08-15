@@ -13,7 +13,6 @@ const PLAN_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "founder_basic", label: "Basic" },
   { value: "founder_professional", label: "Professional" },
   { value: "founder_managed_ir", label: "Managed IR" },
-  { value: "founder_trial", label: "Free Trial (legacy)" },
   { value: "investor_free", label: "Investor Free" },
   { value: "investor_pro", label: "Investor Pro" },
   { value: "investor_premium", label: "Investor Premium" },
