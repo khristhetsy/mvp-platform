@@ -140,9 +140,9 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
   }
 
   const oauthBtn = "flex items-center justify-center gap-2.5 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60";
-  // Google/LinkedIn buttons only show once the providers are configured in
-  // Supabase and NEXT_PUBLIC_OAUTH_LOGIN=true — otherwise they'd error.
-  const oauthEnabled = process.env.NEXT_PUBLIC_OAUTH_LOGIN === "true";
+  // Google/LinkedIn buttons show by default; set NEXT_PUBLIC_OAUTH_LOGIN="false"
+  // to hide them. They only *work* once the provider is enabled in Supabase.
+  const oauthEnabled = process.env.NEXT_PUBLIC_OAUTH_LOGIN !== "false";
 
   return (
     <div className="mt-8">
