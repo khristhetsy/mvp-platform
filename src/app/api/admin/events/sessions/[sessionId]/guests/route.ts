@@ -11,6 +11,10 @@ const schema = z.object({
   eventId: z.string().uuid(),
   displayName: z.string().min(1).max(120),
   roleLabel: z.string().max(120).nullable().optional(),
+  // The linked platform user — its id is the Zoom user_identity, so the live
+  // stage can match this guest to their video tile. Optional (unlinked guests
+  // simply won't render on the embedded stage).
+  profileId: z.string().uuid().nullable().optional(),
 });
 
 /** Add a guest to a talk-show session roster (staff). */
@@ -34,6 +38,7 @@ export async function POST(
         event_id: parsed.data.eventId,
         display_name: parsed.data.displayName,
         role_label: parsed.data.roleLabel ?? null,
+        profile_id: parsed.data.profileId ?? null,
       })
       .select("*")
       .single();

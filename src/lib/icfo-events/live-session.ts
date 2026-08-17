@@ -79,6 +79,9 @@ export interface SessionGuest {
   displayName: string;
   roleLabel: string | null;
   status: GuestStatus;
+  /** The linked platform user. Its value equals the Zoom Video SDK user_identity
+   *  minted for that user, so the live stage can match this guest to their tile. */
+  profileId: string | null;
 }
 
 export function mapSessionGuest(r: Row): SessionGuest {
@@ -88,6 +91,7 @@ export function mapSessionGuest(r: Row): SessionGuest {
     displayName: String(r.display_name),
     roleLabel: (r.role_label as string | null) ?? null,
     status: r.status as GuestStatus,
+    profileId: (r.profile_id as string | null) ?? null,
   };
 }
 

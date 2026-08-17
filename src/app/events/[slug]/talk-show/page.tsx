@@ -123,7 +123,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                   {stage ? (
                     <>
                       {videoStageEnabled && isLive ? (
-                        <TalkShowVideoStage sessionName={`talkshow-${stage.id}`} />
+                        <TalkShowVideoStage sessionId={stage.id} sessionName={`talkshow-${stage.id}`} />
                       ) : (
                         <LiveStagePlayer
                           session={stage}

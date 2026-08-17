@@ -78,5 +78,8 @@ export async function POST(req: Request): Promise<Response> {
     sessionName: topic,
     userName: profile.full_name ?? profile.email ?? "Guest",
     roleType,
+    // The stage matches this against each onstage guest's profile_id to decide
+    // whether the local user broadcasts and which remote tiles to render.
+    userIdentity: profile.id,
   });
 }

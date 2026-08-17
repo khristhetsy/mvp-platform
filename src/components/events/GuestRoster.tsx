@@ -12,11 +12,17 @@ function raw(c: ReturnType<typeof createClient>): SupabaseClient {
   return c as unknown as SupabaseClient;
 }
 
-/** Admin roster for a talk-show session: add guests, swap on/off stage. */
+type UserHit = { id: string; name: string; email: string; role: string };
+
+/** Admin roster for a talk-show session: add guests, swap on/off stage. Guests
+ *  are linked to a platform user so the live stage can match them to their Zoom
+ *  video tile (session_guests.profile_id === Video SDK user_identity). */
 export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId: string }) {
   const t = useTranslations("eventsCmp");
   const [guests, setGuests] = useState<SessionGuest[]>([]);
-  const [name, setName] = useState("");
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<UserHit[]>([]);
+  const [picked, setPicked] = useState<UserHit | null>(null);
   const [role, setRole] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -44,15 +50,48 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
     };
   }, [sessionId]);
 
+  // Debounced platform-user search for the picker. A linked user is required so
+  // the live stage can match the guest to their Zoom video tile.
+  useEffect(() => {
+    if (picked) return; // already chosen; don't re-search
+    let active = true;
+    const q = query.trim();
+    const timer = setTimeout(async () => {
+      if (q.length < 1) {
+        if (active) setHits([]);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/admin/events/guests/search-users?q=${encodeURIComponent(q)}`);
+        if (!res.ok) return;
+        const { users } = (await res.json()) as { users: UserHit[] };
+        if (active) setHits(users);
+      } catch {
+        /* ignore autocomplete errors */
+      }
+    }, 200);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query, picked]);
+
   async function add() {
-    if (!name.trim()) return;
+    if (!picked) return;
     setBusy(true);
     await fetch(`/api/admin/events/sessions/${sessionId}/guests`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId, displayName: name, roleLabel: role || null }),
+      body: JSON.stringify({
+        eventId,
+        displayName: picked.name,
+        roleLabel: role || null,
+        profileId: picked.id,
+      }),
     });
-    setName("");
+    setPicked(null);
+    setQuery("");
+    setHits([]);
     setRole("");
     setBusy(false);
   }
@@ -83,12 +122,13 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
               </span>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setStatus(g.id, g.status === "onstage" ? "backstage" : "onstage")}
                   className="text-xs font-medium text-[var(--blue)] hover:underline"
                 >
                   {g.status === "onstage" ? "Send back" : "Bring on"}
                 </button>
-                <button onClick={() => remove(g.id)} className="text-xs text-rose-600 hover:underline">
+                <button type="button" onClick={() => remove(g.id)} className="text-xs text-rose-600 hover:underline">
                   Remove
                 </button>
               </div>
@@ -96,12 +136,51 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
           ))
         )}
       </div>
-      <div className="mt-2 flex gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("guest_name")} className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
-        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder={t("role_optional")} className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
-        <button onClick={add} disabled={busy || !name.trim()} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
-          Add
-        </button>
+      <div className="mt-2">
+        {picked ? (
+          <div className="flex items-center gap-2">
+            <span className="flex flex-1 items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-white px-2.5 py-1.5 text-sm text-[var(--navy)]">
+              {picked.name}
+              {picked.email && <span className="text-xs text-[var(--text-muted)]">· {picked.email}</span>}
+              <button type="button" onClick={() => setPicked(null)} className="ml-auto text-xs text-[var(--text-muted)] hover:text-rose-600">
+                ✕
+              </button>
+            </span>
+            <input value={role} onChange={(e) => setRole(e.target.value)} placeholder={t("role_optional")} className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
+            <button type="button" onClick={add} disabled={busy} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
+              Add
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("search_a_user_by_name_or_email")}
+              className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
+            />
+            {hits.length > 0 && (
+              <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-card)]">
+                {hits.map((u) => (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPicked(u);
+                        setHits([]);
+                      }}
+                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-[var(--surface-sunken)]"
+                    >
+                      <span className="text-[var(--navy)]">{u.name}</span>
+                      {u.email && <span className="text-xs text-[var(--text-muted)]">{u.email}</span>}
+                      {u.role && <span className="ml-auto text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{u.role}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
