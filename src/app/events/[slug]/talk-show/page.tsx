@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { ArrowLeft, Video } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -47,18 +47,6 @@ function fmtTime(iso: string | null): string {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-/** Label the join button by meeting host (Google Meet / Zoom can't be embedded). */
-function joinLabel(url: string): string {
-  try {
-    const h = new URL(url).hostname.replace(/^www\./, "");
-    if (h.includes("meet.google")) return "Join Google Meet";
-    if (h.includes("zoom")) return "Join Zoom";
-    return "Join the live session";
-  } catch {
-    return "Join the live session";
-  }
-}
-
 export default async function TalkShowPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const t = await getTranslations("appPages");
@@ -75,20 +63,12 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
   const stage = pickTalkShowSession(event.sessions);
   const isLive = stage?.status === "live";
 
-  // A live session with an EMBEDDABLE link (Vimeo/YouTube via external, or a
-  // Whereby room) is a "watch party": render the video player as the stage
-  // surface. Google Meet / Zoom can't be iframed, so those keep the couch (with
-  // all its features) and get a Join button instead.
+  // The stage renders in the shared Main-Stage player: an embeddable link
+  // (Vimeo/YouTube/Whereby) plays inline; otherwise the Talk Show joins on the
+  // host's fixed Zoom room. `joinUrl` also drives the call-in room below.
   const externalEmbed =
     stage?.videoProvider === "external" && stage.videoRef ? embeddableLiveUrl(stage.videoRef) : null;
-  const isWatchEmbed = Boolean(
-    isLive && stage?.videoRef && (stage.videoProvider === "whereby" || externalEmbed),
-  );
-  // Live via a non-embeddable meeting link (Google Meet / Zoom): keep the couch
-  // and everything else, and surface a Join button above it.
-  // Talk Show always joins on the host's Zoom room (not the session's Meet link).
-  const joinUrl =
-    isLive && stage?.videoProvider === "external" && stage.videoRef && !externalEmbed ? ZOOM_TALKSHOW_URL : null;
+  const joinUrl = isLive && !externalEmbed && stage?.videoProvider !== "whereby" ? ZOOM_TALKSHOW_URL : null;
 
   const [questions, chat, queue] =
     profile && stage && isLive
@@ -137,26 +117,16 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
               <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
                 <div>
                   {stage ? (
-                    isWatchEmbed ? (
+                    <>
                       <LiveStagePlayer
                         session={stage}
                         badge="ON AIR"
                         viewerSlot={<LiveViewerCount room={PRESENCE_ROOM} />}
+                        joinUrlOverride={joinUrl}
+                        joinLabel="Join Zoom"
                         caption={stage.abstract ? stage.abstract.slice(0, 90) : subtitle}
                       />
-                    ) : (
-                      <>
-                        {joinUrl && (
-                          <a
-                            href={joinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mb-3 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95"
-                            style={{ background: "#1D9E75" }}
-                          >
-                            <Video className="h-4 w-4" /> {joinLabel(joinUrl)} ↗
-                          </a>
-                        )}
+                      <div className="mt-4">
                         <TalkShowCouch
                           sessionId={stage.id}
                           presenceRoom={PRESENCE_ROOM}
@@ -165,8 +135,8 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                           runOfShow={runOfShow}
                           isLive={Boolean(isLive)}
                         />
-                      </>
-                    )
+                      </div>
+                    </>
                   ) : (
                     <div className="rounded-2xl px-6 py-12 text-center text-sm" style={{ background: "#0a1422", color: "#8e9bb0" }}>
                       No talk show has been scheduled for this event yet.

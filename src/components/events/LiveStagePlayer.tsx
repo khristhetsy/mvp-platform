@@ -3,19 +3,35 @@ import type { EventSession } from "@/lib/icfo-events/types";
 import { getVideoProvider } from "@/lib/icfo-events/video/provider";
 import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
 
+function fmtSchedule(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
 /** The large 16:9 "stage" surface shared by the Main Stage, Talk Show, and
- *  Tracks rooms. Renders the live embed when one is configured, a join link for
- *  non-embeddable hosts (Zoom/Meet), or an idle placeholder otherwise. */
+ *  Tracks rooms. Renders the live embed when one is configured, a join button for
+ *  non-embeddable hosts (Zoom/Meet), or a scheduled/idle placeholder otherwise.
+ *  `joinUrlOverride` forces a specific join link (e.g. the Talk Show's fixed Zoom
+ *  room) regardless of the session's own video link. */
 export function LiveStagePlayer({
   session,
   badge,
   viewerSlot,
   caption,
+  joinUrlOverride,
+  joinLabel,
 }: {
   session: EventSession | null;
   badge: string;
   viewerSlot?: ReactNode;
   caption?: string;
+  joinUrlOverride?: string | null;
+  joinLabel?: string;
 }) {
   const isLive = session?.status === "live";
   const wherebyEmbed =
@@ -26,10 +42,21 @@ export function LiveStagePlayer({
     isLive && session?.videoProvider === "external" && session.videoRef
       ? embeddableLiveUrl(session.videoRef)
       : null;
+  const embed = wherebyEmbed ?? externalEmbed;
+  // When live and not embeddable, show a join button. An explicit override (the
+  // Talk Show Zoom room) wins over the session's own external link.
   const joinLink =
-    isLive && session?.videoProvider === "external" && session.videoRef && !externalEmbed
-      ? session.videoRef
+    isLive && !embed
+      ? joinUrlOverride ??
+        (session?.videoProvider === "external" && session.videoRef ? session.videoRef : null)
       : null;
+  const idleText = isLive
+    ? "Live now"
+    : session?.startsAt
+      ? `Scheduled for ${fmtSchedule(session.startsAt)}`
+      : session
+        ? "Not live yet"
+        : "Nothing scheduled here yet";
 
   return (
     <div
@@ -51,10 +78,10 @@ export function LiveStagePlayer({
         </span>
       )}
 
-      {wherebyEmbed || externalEmbed ? (
+      {embed ? (
         <iframe
           title={session?.title ?? "Live session"}
-          src={(wherebyEmbed ?? externalEmbed) as string}
+          src={embed}
           allow="camera; microphone; autoplay; fullscreen; picture-in-picture; encrypted-media; display-capture"
           className="absolute inset-0 h-full w-full"
         />
@@ -69,11 +96,11 @@ export function LiveStagePlayer({
               className="rounded-lg px-4 py-2 text-sm font-medium text-white"
               style={{ background: "#1D9E75" }}
             >
-              Join the live session ↗
+              {joinLabel ?? "Join the live session"} ↗
             </a>
           ) : (
             <p className="text-sm" style={{ color: "#8e9bb0" }}>
-              {isLive ? "Live now" : session ? "Not live yet" : "Nothing scheduled here yet"}
+              {idleText}
             </p>
           )}
         </div>
