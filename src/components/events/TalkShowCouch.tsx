@@ -8,7 +8,6 @@ import { mapSessionGuest } from "@/lib/icfo-events/live-session";
 import type { SessionGuest } from "@/lib/icfo-events/live-session";
 import { mapSegment, liveSegmentLabel } from "@/lib/icfo-events/segments";
 import type { SessionSegment } from "@/lib/icfo-events/segments";
-import { LiveViewerCount } from "@/components/events/LiveViewerCount";
 
 type Row = Record<string, unknown>;
 function raw(c: ReturnType<typeof createClient>): SupabaseClient {
@@ -32,18 +31,14 @@ const MIN_SEATS = 4;
  *  them (driven by the same session_guests table as OnStageGuests). */
 export function TalkShowCouch({
   sessionId,
-  presenceRoom,
   segmentTitle,
   initialSegments = [],
   runOfShow,
-  isLive,
 }: {
   sessionId: string;
-  presenceRoom: string;
   segmentTitle: string;
   initialSegments?: SessionSegment[];
   runOfShow: string[];
-  isLive: boolean;
 }) {
   const t = useTranslations("eventsCmp");
   const [guests, setGuests] = useState<SessionGuest[]>([]);
@@ -96,16 +91,10 @@ export function TalkShowCouch({
 
   return (
     <div className="rounded-2xl p-5" style={{ background: "#0a1422" }}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         <span className="inline-block rounded-full px-3 py-1.5 text-xs" style={{ background: "#16294a", color: "#cdd6e4" }}>
           {liveLabel}
         </span>
-        {isLive && (
-          <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#E24B4A" }}>
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden /> ON AIR
-            <LiveViewerCount room={presenceRoom} noun="" className="ml-0.5" />
-          </span>
-        )}
       </div>
 
       <div className="my-6 flex flex-wrap items-start justify-around gap-4">

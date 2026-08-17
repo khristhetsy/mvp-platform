@@ -129,11 +129,9 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                       <div className="mt-4">
                         <TalkShowCouch
                           sessionId={stage.id}
-                          presenceRoom={PRESENCE_ROOM}
                           segmentTitle={stage.abstract ? stage.abstract.slice(0, 70) : isLive ? "On air now" : "Up next"}
                           initialSegments={segments}
                           runOfShow={runOfShow}
-                          isLive={Boolean(isLive)}
                         />
                       </div>
                     </>
