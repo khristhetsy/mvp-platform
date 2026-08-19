@@ -63,10 +63,9 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
 
   const stage = pickTalkShowSession(event.sessions);
   const isLive = stage?.status === "live";
-  // Embedded Zoom Meeting SDK stage (opt-in). Off by default → keeps the Join
-  // Zoom link; on → the live meeting renders in the card once the Meeting SDK
-  // app credentials + meeting number are configured.
-  const meetingStageEnabled = process.env.NEXT_PUBLIC_ZOOM_MEETING_SDK === "true";
+  // When live, we always try to embed the Zoom meeting in the card. If the
+  // Meeting SDK isn't configured yet (no Client Secret), the stage component
+  // falls back to the Join Zoom link below — no build-time flag needed.
 
   // The stage renders in the shared Main-Stage player: an embeddable link
   // (Vimeo/YouTube/Whereby) plays inline; otherwise the Talk Show joins on the
@@ -123,15 +122,24 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                 <div>
                   {stage ? (
                     <>
-                      {meetingStageEnabled && isLive ? (
-                        <TalkShowMeetingStage />
+                      {isLive ? (
+                        <TalkShowMeetingStage
+                          fallback={
+                            <LiveStagePlayer
+                              session={stage}
+                              badge="ON AIR"
+                              viewerSlot={<LiveViewerCount room={PRESENCE_ROOM} />}
+                              joinUrlOverride={joinUrl}
+                              joinLabel="Join Zoom"
+                              caption={stage.abstract ? stage.abstract.slice(0, 90) : subtitle}
+                            />
+                          }
+                        />
                       ) : (
                         <LiveStagePlayer
                           session={stage}
                           badge="ON AIR"
                           viewerSlot={<LiveViewerCount room={PRESENCE_ROOM} />}
-                          joinUrlOverride={joinUrl}
-                          joinLabel="Join Zoom"
                           caption={stage.abstract ? stage.abstract.slice(0, 90) : subtitle}
                         />
                       )}

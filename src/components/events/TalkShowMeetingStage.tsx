@@ -16,7 +16,7 @@
  * participants. Which meeting is joined is fixed server-side (env).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the CDN-loaded Meeting SDK
    is only available as a window global with no bundled types; behaviour can only
@@ -60,7 +60,7 @@ async function loadZoomEmbedded(): Promise<any> {
   return (window as any).ZoomMtgEmbedded;
 }
 
-export function TalkShowMeetingStage({ onUnconfigured }: { onUnconfigured?: () => void }) {
+export function TalkShowMeetingStage({ fallback }: { fallback?: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<any>(null);
   const [phase, setPhase] = useState<Phase>("connecting");
@@ -72,10 +72,7 @@ export function TalkShowMeetingStage({ onUnconfigured }: { onUnconfigured?: () =
     async function run() {
       const res = await fetch("/api/events/talk-show/meeting-signature", { method: "POST" });
       if (res.status === 503) {
-        if (!cancelled) {
-          setPhase("unconfigured");
-          onUnconfigured?.();
-        }
+        if (!cancelled) setPhase("unconfigured");
         return;
       }
       if (!res.ok) {
@@ -136,9 +133,10 @@ export function TalkShowMeetingStage({ onUnconfigured }: { onUnconfigured?: () =
         }
       })();
     };
-  }, [onUnconfigured]);
+  }, []);
 
-  if (phase === "unconfigured") return null;
+  // Not configured yet (no Client Secret) → show the Join Zoom fallback instead.
+  if (phase === "unconfigured") return <>{fallback ?? null}</>;
 
   return (
     <div

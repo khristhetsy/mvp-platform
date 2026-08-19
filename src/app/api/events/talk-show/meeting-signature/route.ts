@@ -34,20 +34,24 @@ function signMeetingSdkJwt(payload: Record<string, unknown>, secret: string): st
 }
 
 export async function POST(): Promise<Response> {
-  const clientId = process.env.ZOOM_MEETING_SDK_CLIENT_ID;
+  // Client ID (public — appears in the browser as the SDK key) and the meeting
+  // number default to the app's values, so the only thing that must be set in
+  // the environment is the secret. Any of these can be overridden via env.
+  const clientId = process.env.ZOOM_MEETING_SDK_CLIENT_ID ?? "tfzOcc6rTp2JdPGTTu2Rg";
   const clientSecret = process.env.ZOOM_MEETING_SDK_CLIENT_SECRET;
-  const meetingNumber = (process.env.ZOOM_TALKSHOW_MEETING_NUMBER ?? "").replace(/\D/g, "");
-  if (!clientId || !clientSecret || !meetingNumber) {
+  const meetingNumber = (process.env.ZOOM_TALKSHOW_MEETING_NUMBER ?? "2613180099").replace(/\D/g, "");
+  // The secret is the one irreducible thing: without it we can't sign a JWT, so
+  // the stage stays in fallback (Join Zoom) mode.
+  if (!clientSecret || !meetingNumber) {
     return NextResponse.json(
       { error: "Zoom Meeting SDK is not configured yet.", code: "not_configured" },
       { status: 503 },
     );
   }
 
+  // Viewers join anonymously (as "Guest") unless signed in — the Talk Show is a
+  // public stage, so we don't gate the embed behind login.
   const profile = await getCurrentUserProfile().catch(() => null);
-  if (!profile) {
-    return NextResponse.json({ error: "Sign in to join the stage." }, { status: 401 });
-  }
 
   // Everyone in the embed joins as a participant (role 0). Joining as host
   // (role 1) requires being the actual meeting host and would error otherwise;
@@ -74,6 +78,6 @@ export async function POST(): Promise<Response> {
     sdkKey: clientId,
     meetingNumber,
     password: process.env.ZOOM_TALKSHOW_MEETING_PASSCODE ?? "",
-    userName: profile.full_name ?? profile.email ?? "Guest",
+    userName: profile?.full_name ?? profile?.email ?? "Guest",
   });
 }
