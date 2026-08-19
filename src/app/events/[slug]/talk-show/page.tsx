@@ -124,6 +124,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                     <>
                       {isLive ? (
                         <TalkShowMeetingStage
+                          sessionId={stage.id}
                           fallback={
                             <LiveStagePlayer
                               session={stage}

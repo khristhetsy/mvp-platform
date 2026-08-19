@@ -60,7 +60,7 @@ async function loadZoomEmbedded(): Promise<any> {
   return (window as any).ZoomMtgEmbedded;
 }
 
-export function TalkShowMeetingStage({ fallback }: { fallback?: ReactNode }) {
+export function TalkShowMeetingStage({ sessionId, fallback }: { sessionId: string; fallback?: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<any>(null);
   const [phase, setPhase] = useState<Phase>("connecting");
@@ -70,7 +70,11 @@ export function TalkShowMeetingStage({ fallback }: { fallback?: ReactNode }) {
     let cancelled = false;
 
     async function run() {
-      const res = await fetch("/api/events/talk-show/meeting-signature", { method: "POST" });
+      const res = await fetch("/api/events/talk-show/meeting-signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
       if (res.status === 503) {
         if (!cancelled) setPhase("unconfigured");
         return;
@@ -133,7 +137,7 @@ export function TalkShowMeetingStage({ fallback }: { fallback?: ReactNode }) {
         }
       })();
     };
-  }, []);
+  }, [sessionId]);
 
   // Not configured yet (no Client Secret) → show the Join Zoom fallback instead.
   if (phase === "unconfigured") return <>{fallback ?? null}</>;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +17,31 @@ export const dynamic = "force-dynamic";
  * Client ID. Payload (HS256): appKey, sdkKey, mn, role, iat, exp, tokenExp.
  * See https://developers.zoom.us/docs/meeting-sdk/auth/.
  *
- * The meeting number + passcode come from server env (not the client), so a
- * viewer can only ever join the configured Talk Show meeting. Everyone joins as
- * a participant (role 0); the host starts the meeting from their Zoom client.
+ * Which meeting is joined comes from the session's admin-set Zoom link (the
+ * "Go live with a link" URL, stored as sessions.video_ref) — parsed server-side
+ * by sessionId so a viewer can only join the meeting an admin actually
+ * configured. If the session has no Zoom link, we fall back to the env meeting
+ * number. Everyone joins as a participant (role 0); the host runs the show and
+ * controls everything from their own Zoom client.
  */
 
 function b64url(input: string): string {
   return Buffer.from(input).toString("base64url");
+}
+
+/** Extract a Zoom meeting number + passcode from a join URL (…/j/<number>?pwd=…). */
+function parseZoomJoinUrl(raw: string | null | undefined): { meetingNumber: string; passcode: string } | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (!/(^|\.)zoom\.us$/i.test(u.hostname)) return null;
+    const m = u.pathname.match(/\/(?:j|wc|s)\/(\d{9,})/) ?? u.pathname.match(/\/(\d{9,})/);
+    const meetingNumber = (m ? m[1] : u.searchParams.get("confno") ?? "").replace(/\D/g, "");
+    if (!/^\d{9,}$/.test(meetingNumber)) return null;
+    return { meetingNumber, passcode: u.searchParams.get("pwd") ?? "" };
+  } catch {
+    return null;
+  }
 }
 
 function signMeetingSdkJwt(payload: Record<string, unknown>, secret: string): string {
@@ -33,18 +52,42 @@ function signMeetingSdkJwt(payload: Record<string, unknown>, secret: string): st
   return `${data}.${signature}`;
 }
 
-export async function POST(): Promise<Response> {
-  // Client ID (public — appears in the browser as the SDK key) and the meeting
-  // number default to the app's values, so the only thing that must be set in
-  // the environment is the secret. Any of these can be overridden via env.
+export async function POST(req: Request): Promise<Response> {
+  // Client ID (public — appears in the browser as the SDK key). The secret is the
+  // one irreducible thing: without it we can't sign a JWT, so the stage stays in
+  // fallback (Join Zoom) mode.
   const clientId = process.env.ZOOM_MEETING_SDK_CLIENT_ID ?? "tfzOcc6rTp2JdPGTTu2Rg";
   const clientSecret = process.env.ZOOM_MEETING_SDK_CLIENT_SECRET;
-  const meetingNumber = (process.env.ZOOM_TALKSHOW_MEETING_NUMBER ?? "2613180099").replace(/\D/g, "");
-  // The secret is the one irreducible thing: without it we can't sign a JWT, so
-  // the stage stays in fallback (Join Zoom) mode.
-  if (!clientSecret || !meetingNumber) {
+  if (!clientSecret) {
     return NextResponse.json(
       { error: "Zoom Meeting SDK is not configured yet.", code: "not_configured" },
+      { status: 503 },
+    );
+  }
+
+  // Meeting number + passcode: prefer the session's admin-set Zoom link (looked
+  // up server-side by id so the client can't forge a target); fall back to env.
+  let meetingNumber = (process.env.ZOOM_TALKSHOW_MEETING_NUMBER ?? "2613180099").replace(/\D/g, "");
+  let passcode = process.env.ZOOM_TALKSHOW_MEETING_PASSCODE ?? "";
+  const body = (await req.json().catch(() => null)) as { sessionId?: unknown } | null;
+  const sessionId = typeof body?.sessionId === "string" ? body.sessionId : null;
+  if (sessionId) {
+    try {
+      const db = createServiceRoleClient();
+      const { data } = await db.from("sessions").select("video_ref").eq("id", sessionId).maybeSingle();
+      const parsed = parseZoomJoinUrl((data as { video_ref?: string | null } | null)?.video_ref ?? null);
+      if (parsed) {
+        meetingNumber = parsed.meetingNumber;
+        if (!passcode && parsed.passcode) passcode = parsed.passcode;
+      }
+    } catch {
+      /* fall back to env meeting number */
+    }
+  }
+
+  if (!meetingNumber) {
+    return NextResponse.json(
+      { error: "No Zoom meeting is configured for this session.", code: "not_configured" },
       { status: 503 },
     );
   }
@@ -77,7 +120,7 @@ export async function POST(): Promise<Response> {
     signature,
     sdkKey: clientId,
     meetingNumber,
-    password: process.env.ZOOM_TALKSHOW_MEETING_PASSCODE ?? "",
+    password: passcode,
     userName: profile?.full_name ?? profile?.email ?? "Guest",
   });
 }
