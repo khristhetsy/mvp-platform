@@ -7,18 +7,58 @@
  * meeting view inside the stage card. Falls back (renders nothing → parent shows
  * the Join Zoom link) when the Meeting SDK app isn't configured yet.
  *
+ * The Zoom Web SDK is loaded from Zoom's CDN at runtime (not bundled) — its UMD
+ * build doesn't play well with the app bundler, and CDN loading is Zoom's own
+ * recommended path for Component View. We inject React/ReactDOM + the embedded
+ * bundle (in that order) and use the resulting `window.ZoomMtgEmbedded` global.
+ *
  * The host starts the meeting from their own Zoom client; viewers here join as
- * participants. Which meeting is joined is fixed server-side (env), so a viewer
- * can only ever land in the Talk Show meeting.
+ * participants. Which meeting is joined is fixed server-side (env).
  */
 
 import { useEffect, useRef, useState } from "react";
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the Meeting SDK embedded
-   client is exposed as a namespace type; strict typing adds no safety here since
-   the behaviour can only be verified live in a browser. */
+/* eslint-disable @typescript-eslint/no-explicit-any -- the CDN-loaded Meeting SDK
+   is only available as a window global with no bundled types; behaviour can only
+   be verified live in a browser. */
 
 type Phase = "connecting" | "live" | "unconfigured" | "error";
+
+const ZOOM_VERSION = "6.2.0";
+const CDN = `https://source.zoom.us/${ZOOM_VERSION}`;
+// Order matters: React + ReactDOM globals must exist before the embedded bundle.
+const SCRIPTS = [
+  `${CDN}/lib/vendor/react.min.js`,
+  `${CDN}/lib/vendor/react-dom.min.js`,
+  `${CDN}/zoom-meeting-embedded-${ZOOM_VERSION}.min.js`,
+];
+
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[data-zoomsdk="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "true") return resolve();
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)));
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = src;
+    s.async = false;
+    s.dataset.zoomsdk = src;
+    s.addEventListener("load", () => {
+      s.dataset.loaded = "true";
+      resolve();
+    });
+    s.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)));
+    document.head.appendChild(s);
+  });
+}
+
+async function loadZoomEmbedded(): Promise<any> {
+  for (const src of SCRIPTS) await loadScript(src); // sequential preserves order
+  return (window as any).ZoomMtgEmbedded;
+}
 
 export function TalkShowMeetingStage({ onUnconfigured }: { onUnconfigured?: () => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -54,8 +94,9 @@ export function TalkShowMeetingStage({ onUnconfigured }: { onUnconfigured?: () =
       };
       if (cancelled || !rootRef.current) return;
 
-      const mod = await import("@zoom/meetingsdk/embedded");
-      const ZoomMtgEmbedded = mod.default;
+      const ZoomMtgEmbedded = await loadZoomEmbedded();
+      if (cancelled || !rootRef.current || !ZoomMtgEmbedded) return;
+
       const client: any = ZoomMtgEmbedded.createClient();
       clientRef.current = client;
 
