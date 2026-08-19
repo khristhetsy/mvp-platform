@@ -17,7 +17,7 @@ import { loadSegments } from "@/lib/icfo-events/segments";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { TalkShowCouch } from "@/components/events/TalkShowCouch";
-import { TalkShowVideoStage } from "@/components/events/TalkShowVideoStage";
+import { TalkShowMeetingStage } from "@/components/events/TalkShowMeetingStage";
 import { LiveStagePlayer } from "@/components/events/LiveStagePlayer";
 import { LiveViewerCount } from "@/components/events/LiveViewerCount";
 import { SegmentRunOfShow } from "@/components/events/SegmentRunOfShow";
@@ -63,9 +63,10 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
 
   const stage = pickTalkShowSession(event.sessions);
   const isLive = stage?.status === "live";
-  // Embedded Zoom Video SDK stage (opt-in). Off by default → keeps the Join Zoom
-  // link; on → live video renders in the card once the SDK app is configured.
-  const videoStageEnabled = process.env.NEXT_PUBLIC_ZOOM_VIDEO_SDK === "true";
+  // Embedded Zoom Meeting SDK stage (opt-in). Off by default → keeps the Join
+  // Zoom link; on → the live meeting renders in the card once the Meeting SDK
+  // app credentials + meeting number are configured.
+  const meetingStageEnabled = process.env.NEXT_PUBLIC_ZOOM_MEETING_SDK === "true";
 
   // The stage renders in the shared Main-Stage player: an embeddable link
   // (Vimeo/YouTube/Whereby) plays inline; otherwise the Talk Show joins on the
@@ -122,8 +123,8 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                 <div>
                   {stage ? (
                     <>
-                      {videoStageEnabled && isLive ? (
-                        <TalkShowVideoStage sessionId={stage.id} sessionName={`talkshow-${stage.id}`} />
+                      {meetingStageEnabled && isLive ? (
+                        <TalkShowMeetingStage />
                       ) : (
                         <LiveStagePlayer
                           session={stage}
