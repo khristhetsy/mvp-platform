@@ -385,6 +385,7 @@ export function EventDetailManager({
   const [editType, setEditType] = useState<SessionType>("keynote");
   const [editSector, setEditSector] = useState<string>("");
   const [editAbstract, setEditAbstract] = useState("");
+  const [editVideoRef, setEditVideoRef] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
   function startEdit(s: EventSession) {
@@ -393,6 +394,7 @@ export function EventDetailManager({
     setEditType(s.type);
     setEditSector(s.sectorSlug ?? "");
     setEditAbstract(s.abstract ?? "");
+    setEditVideoRef(s.videoRef ?? "");
     setError(null);
   }
   async function saveEdit() {
@@ -408,6 +410,8 @@ export function EventDetailManager({
           type: editType,
           sectorSlug: editSector || null,
           abstract: editAbstract || null,
+          videoRef: editVideoRef.trim() || null,
+          videoProvider: editVideoRef.trim() ? "external" : null,
         }),
       });
       const json = await res.json();
@@ -866,6 +870,18 @@ export function EventDetailManager({
                       placeholder="Short description shown on the agenda (optional)"
                       className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
                     />
+                    <div>
+                      <input
+                        value={editVideoRef}
+                        onChange={(e) => setEditVideoRef(e.target.value)}
+                        placeholder="Live video link (e.g. Zoom, Vimeo, YouTube) — optional"
+                        className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+                      />
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Paste a Zoom link and it embeds on the Talk Show; it also becomes the host&apos;s
+                        &ldquo;Open live link&rdquo; to start the meeting. Vimeo/YouTube/Whereby links play inline.
+                      </p>
+                    </div>
                     <div className="flex justify-end gap-2">
                       <button type="button" onClick={() => setEditId(null)} disabled={savingEdit} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium disabled:opacity-50">
                         Cancel

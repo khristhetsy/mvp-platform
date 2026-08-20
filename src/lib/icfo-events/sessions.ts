@@ -74,6 +74,8 @@ export async function updateSession(
   if (input.endsAt !== undefined) patch.ends_at = input.endsAt;
   if (input.recordingPath !== undefined) patch.recording_path = input.recordingPath;
   if (input.hostSponsorId !== undefined) patch.host_sponsor_id = input.hostSponsorId;
+  if (input.videoProvider !== undefined) patch.video_provider = input.videoProvider;
+  if (input.videoRef !== undefined) patch.video_ref = input.videoRef;
   if (input.position !== undefined) patch.position = input.position;
   if (input.doorsOpen !== undefined) patch.doors_open = input.doorsOpen;
   if (input.chatEnabled !== undefined) patch.chat_enabled = input.chatEnabled;
