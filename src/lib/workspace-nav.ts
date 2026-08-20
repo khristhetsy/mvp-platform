@@ -86,31 +86,9 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/partner-scores", label: "Partner Scores",  requiredPermission: "manage_investors"  },
     ],
   },
-  {
-    title: "Marketing",
-    items: [
-      {
-        href: "/admin/marketing",
-        label: "Marketing Hub",
-        requiredPermission: "view_admin_dashboard",
-        // Keep in sync with the marketing hub top-bar (src/app/admin/marketing/layout.tsx).
-        children: [
-          { href: "/admin/marketing",                     label: "Dashboard"    },
-          { href: "/admin/marketing/console",             label: "Console"      },
-          { href: "/admin/marketing/plan",                label: "Plan"         },
-          { href: "/admin/marketing/contacts",            label: "Contacts"     },
-          { href: "/admin/marketing/lists",               label: "Lists"        },
-          { href: "/admin/marketing/campaigns",           label: "Campaigns"    },
-          { href: "/admin/marketing/sequences",           label: "Sequences"    },
-          { href: "/admin/marketing/templates",           label: "Templates"    },
-          { href: "/admin/marketing/analytics",           label: "Analytics"    },
-          { href: "/admin/marketing/aeo",                 label: "AEO"          },
-          { href: "/admin/marketing/suppressions",        label: "Suppressions" },
-          { href: "/admin/marketing/settings/notifications", label: "Settings"  },
-        ],
-      },
-    ],
-  },
+  // Marketing Hub is hidden from the sidebar — sequences and related tools are
+  // surfaced inside the Sales Hub instead. The /admin/marketing/* routes still
+  // exist (the Sales Hub Sequences tab reuses them), they're just not shown here.
   {
     title: "Events",
     items: [
