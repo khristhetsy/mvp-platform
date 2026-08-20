@@ -402,8 +402,8 @@ export function EventEmailWizard({
           {result ? (
             <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
               <p className="font-semibold">Campaign created ({result.status}).</p>
-              <p className="mt-1">It&apos;s in Marketing Hub with the rendered email, audience, and event linkage — ready to review and send.</p>
-              <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing Hub →</a>
+              <p className="mt-1">The rendered email, audience, and event linkage are ready to review and send.</p>
+              <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open to review and send →</a>
             </div>
           ) : (
             <div className="mt-4 space-y-4">
@@ -454,7 +454,7 @@ export function EventEmailWizard({
               <button type="button" onClick={createCampaign} disabled={creating || !subject.trim() || (audienceKind === "list" && !listId) || (audienceKind === "registrants" && regStatuses.length === 0) || (scheduleMode === "later" && !scheduleAt)} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
                 {creating ? "Creating…" : scheduleMode === "later" ? "Schedule campaign" : "Create draft campaign"}
               </button>
-              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. The campaign lands in Marketing Hub — final send happens there.</p>
+              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. The campaign is queued for review — final send happens on the campaign page.</p>
             </div>
           )}
         </div>

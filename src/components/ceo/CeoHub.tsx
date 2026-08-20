@@ -48,7 +48,8 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
   function changeTab(k: string) { setTab(k); try { window.history.replaceState(null, "", `?tab=${k}`); } catch { /* ignore */ } }
 
   const tabs: HubTab[] = [
-    { key: "dash", label: "Dashboard" }, { key: "sales", label: "Sales" }, { key: "marketing", label: "Marketing" },
+    { key: "dash", label: "Dashboard" }, { key: "sales", label: "Sales" },
+    // Marketing department tab hidden (kept in scoring/logic, just not shown).
     { key: "operations", label: "Investor Relations" }, { key: "planning", label: "Planning" }, { key: "calendar", label: "Calendar" }, { key: "log", label: "Meeting Log" }, { key: "settings", label: "Settings" },
   ];
 
