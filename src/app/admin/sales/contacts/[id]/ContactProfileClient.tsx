@@ -18,6 +18,11 @@ type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
+// Curated option lists for the structured contact fields (rendered as dropdowns).
+// Any existing/legacy value that isn't in a list is preserved and pinned on top.
+const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];
+const JOB_POSITION_OPTS = ["CEO", "CFO", "COO", "CTO", "Founder", "Co-founder", "President", "Managing partner", "Managing director", "Partner", "VP", "Director", "Investor", "Advisor", "Other"];
+const LEAD_SOURCE_OPTS = ["LinkedIn", "Referral", "Website", "Event", "Conference", "Cold outreach", "Email campaign", "Partner", "Inbound", "Webinar", "Other"];
 const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
   call: { icon: "ti-phone", color: "#0F6E56", bg: "#E1F5EE" },
@@ -538,12 +543,29 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 ["website", "Website", "example.com"], ["owner", "Owner", ""],
                 ["membership", "Membership", ""], ["job_position", "Job position", ""],
                 ["lead_source", "Lead source", ""], ["language", "Language", ""],
-              ] as const).map(([key, label, ph]) => (
-                <div key={key}>
-                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
-                  <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
-                </div>
-              ))}
+              ] as const).map(([key, label, ph]) => {
+                const opts =
+                  key === "owner" ? staff.map((s) => s.name)
+                  : key === "membership" ? MEMBERSHIP_OPTS
+                  : key === "job_position" ? JOB_POSITION_OPTS
+                  : key === "lead_source" ? LEAD_SOURCE_OPTS
+                  : null;
+                const cur = form[key];
+                const listed = opts && (cur && !opts.includes(cur) ? [cur, ...opts] : opts);
+                return (
+                  <div key={key}>
+                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
+                    {listed ? (
+                      <select value={cur} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
+                        <option value="">—</option>
+                        {listed.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    ) : (
+                      <input value={cur} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
