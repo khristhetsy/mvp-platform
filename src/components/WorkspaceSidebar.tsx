@@ -368,9 +368,13 @@ export function WorkspaceSidebar({
       if (!item.requiredPermission) return true;
       if (!adminNav) return false;
       if (adminNav.isSuperAdmin) return true;
+      // Department-scoped members: Feature Controls (deptAllows) is the single
+      // source of truth for what they see. Don't also require the per-item RBAC
+      // permission — a feature granted to their department is enough.
+      if (deptAccess && !deptAccess.unrestricted) return true;
       return adminNav.permissions.includes(item.requiredPermission);
     };
-  }, [adminNav, workspace, founderOfferingType]);
+  }, [adminNav, workspace, founderOfferingType, deptAccess]);
 
   // Department-path allow check (longest-prefix, additive to permissions).
   const deptAllows = useMemo(() => {
