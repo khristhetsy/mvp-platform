@@ -54,7 +54,7 @@ export function BrochureDistribute({ id, eventId }: { id: string; eventId: strin
       {done ? (
         <div className="text-xs text-emerald-700">
           <p className="font-semibold">Guest email created for {done.count} registrant{done.count === 1 ? "" : "s"}.</p>
-          <p className="mt-1 text-[var(--text-muted)]">Review and send it from the campaigns page.</p>
+          <p className="mt-1 text-[var(--text-muted)]">Review and send it in Marketing Hub.</p>
           <a href="/admin/marketing/campaigns" className="mt-1 inline-block font-semibold text-[var(--blue)] underline">Open campaigns →</a>
         </div>
       ) : (
