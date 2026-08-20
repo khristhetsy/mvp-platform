@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/sales/activity";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({ channel: z.enum(["call", "email", "message"]) });
-const LABEL: Record<string, string> = { call: "Call started", email: "Email opened", message: "Text message opened" };
+const LABEL: Record<string, string> = { call: "Call logged", email: "Email sent", message: "Text message sent" };
 
 // POST /api/sales/opportunities/[id]/touch — log a call/email/message from the opportunity.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {

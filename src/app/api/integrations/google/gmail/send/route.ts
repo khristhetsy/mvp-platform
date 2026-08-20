@@ -6,6 +6,7 @@ import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { logOutboundEmailActivity } from "@/lib/sales/activity";
 
 const attachmentSchema = z.object({
   name: z.string().max(200),
@@ -95,6 +96,10 @@ export async function POST(request: Request) {
   if ("error" in result) {
     return NextResponse.json({ error: result.error.message }, { status: 500 });
   }
+
+  // Record an "Email sent" activity on any recipient that matches a CRM contact
+  // (and its open opportunities), so the send shows on their Sales timeline.
+  await logOutboundEmailActivity([...toList, ...ccList, ...bccList], parsed.data.subject, user.id);
 
   return NextResponse.json({ success: true, messageId: result.messageId });
 }
