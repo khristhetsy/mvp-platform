@@ -5,7 +5,12 @@ import { updateStage, deleteStage } from "@/lib/sales/pipelines";
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ name: z.string().min(1).max(120).optional(), sortOrder: z.number().int().optional(), isWon: z.boolean().optional() });
+const schema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  sortOrder: z.number().int().optional(),
+  isWon: z.boolean().optional(),
+  sequenceId: z.string().uuid().nullable().optional(),
+});
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);

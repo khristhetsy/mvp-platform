@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
@@ -60,6 +60,37 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [taskDraft, setTaskDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [sequences, setSequences] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [enrollSeqId, setEnrollSeqId] = useState("");
+  const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/sales/sequences")
+      .then((r) => (r.ok ? r.json() : { sequences: [] }))
+      .then((d) => { if (active) setSequences(d.sequences ?? []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  async function enrollSequence() {
+    if (!enrollSeqId) return;
+    setBusy(true);
+    setEnrollMsg(null);
+    try {
+      const res = await fetch(`/api/sales/opportunities/${o.id}/enroll-sequence`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequenceId: enrollSeqId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setEnrollMsg(res.ok ? "Enrolled in sequence" : (d.error ?? "Could not enroll"));
+    } catch {
+      setEnrollMsg("Could not enroll");
+    } finally {
+      setBusy(false);
+    }
+  }
   // Company name (from the linked contact) shown under the opportunity title. Its
   // profile is the CRM contact record — there's no standalone company page.
   const companyName = founderContact?.company?.trim() || null;
@@ -184,6 +215,22 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
           {o.contact_phone && <a href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("call")} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
           {o.contact_email && <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(o.contact_email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>}
           {o.contact_phone && <a href={`sms:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>}
+          {o.contact_email && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <select
+                value={enrollSeqId}
+                onChange={(e) => { setEnrollSeqId(e.target.value); setEnrollMsg(null); }}
+                disabled={busy}
+                title="Enroll this opportunity's contact into a marketing sequence"
+                style={{ fontSize: 11.5, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 8px", maxWidth: 180, cursor: "pointer", background: "#fff" }}
+              >
+                <option value="">Enroll in sequence…</option>
+                {sequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.name}</option>)}
+              </select>
+              <button type="button" onClick={enrollSequence} disabled={busy || !enrollSeqId} style={{ fontSize: 12, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !enrollSeqId ? 0.5 : 1 }}>Enroll</button>
+              {enrollMsg && <span style={{ fontSize: 11, color: enrollMsg.startsWith("Enrolled") ? "#0F6E56" : "#A32D2D" }}>{enrollMsg}</span>}
+            </span>
+          )}
           <div style={{ flex: 1 }} />
           <button onClick={() => setEditing((v) => !v)} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>{editing ? "Close edit" : "Edit"}</button>
           {nextStage && o.status === "open" && <button onClick={() => patch({ stageId: nextStage.id })} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Advance →</button>}

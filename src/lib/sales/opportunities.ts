@@ -2,6 +2,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/sales/activity";
 import { listAssignableStaff } from "@/lib/sales/settings";
+import { enrollContact } from "@/lib/marketing/sequences";
 
 // sales_* tables aren't in the generated Supabase types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,8 +154,22 @@ export async function updateOpportunity(id: string, patch: UpdateOpportunityPatc
   else if (patch.status === "lost") await logActivity({ kind: "lost", summary: "Opportunity marked lost", actorId, opportunityId: id });
   else if (patch.status === "archived") await logActivity({ kind: "stage_changed", summary: "Opportunity archived", actorId, opportunityId: id });
   if (patch.stageId !== undefined && patch.status === undefined) {
-    const { data: st } = await db().from("sales_stages").select("name").eq("id", patch.stageId).maybeSingle();
+    const { data: st } = await db().from("sales_stages").select("name, sequence_id").eq("id", patch.stageId).maybeSingle();
     await logActivity({ kind: "stage_changed", summary: `Stage changed to ${st?.name ?? "—"}`, actorId, opportunityId: id });
+    // Stage-triggered sequencing: entering a stage with a mapped sequence
+    // auto-enrolls the opportunity's contact. Never let this block the move.
+    if (st?.sequence_id) {
+      try {
+        const { data: opp } = await db().from("sales_opportunities").select("contact_crm_id").eq("id", id).maybeSingle();
+        const contactId = (opp?.contact_crm_id as string | null) ?? null;
+        if (contactId) {
+          await enrollContact(st.sequence_id as string, contactId);
+          await logActivity({ kind: "stage_changed", summary: "Enrolled contact in stage sequence", actorId, opportunityId: id });
+        }
+      } catch {
+        /* sequencing failure must never break a stage change */
+      }
+    }
   }
   if (patch.notes !== undefined && patch.status === undefined && patch.stageId === undefined) {
     await logActivity({ kind: "opp_note", summary: "Note added to opportunity", actorId, opportunityId: id });
