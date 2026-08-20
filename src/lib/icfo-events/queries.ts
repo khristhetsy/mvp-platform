@@ -83,6 +83,7 @@ function mapSession(r: EventRow): EventSession {
     position: Number(r.position ?? 0),
     doorsOpen: Boolean(r.doors_open),
     chatEnabled: r.chat_enabled !== false,
+    callInEnabled: r.call_in_enabled !== false,
     isHeadline: Boolean(r.is_headline),
   };
 }

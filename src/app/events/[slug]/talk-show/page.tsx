@@ -63,6 +63,8 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
 
   const stage = pickTalkShowSession(event.sessions);
   const isLive = stage?.status === "live";
+  // Admin toggle: when off, hide the call-in column and let the video go full-width.
+  const showCallIn = stage?.callInEnabled !== false;
   // When live, we always try to embed the Zoom meeting in the card. If the
   // Meeting SDK isn't configured yet (no Client Secret), the stage component
   // falls back to the Join Zoom link below — no build-time flag needed.
@@ -118,7 +120,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                 )}
               </div>
 
-              <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+              <div className={`mt-4 grid gap-4 ${showCallIn ? "lg:grid-cols-[1.6fr_1fr]" : "grid-cols-1"}`}>
                 <div>
                   {stage ? (
                     <>
@@ -166,24 +168,26 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                   )}
                 </div>
 
-                <div>
-                  <h2 className="text-sm font-semibold text-[var(--navy)]">{t("call_in_queue")}</h2>
-                  {stage && isLive && profile && me ? (
-                    <CallInBar
-                      sessionId={stage.id}
-                      eventId={event.id}
-                      me={me}
-                      isStaff={isStaffViewer}
-                      roomUrl={joinUrl ?? stage.videoRef}
-                      initialQueue={queue}
-                    />
-                  ) : (
-                    <div className="mt-3 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
-                      {!isLive ? "The call-in line opens when the show goes on air." : "Sign in to raise your hand for a call-in."}
-                    </div>
-                  )}
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">{t("host_curates_the_couch_guests_are_admin_approv")}</p>
-                </div>
+                {showCallIn && (
+                  <div>
+                    <h2 className="text-sm font-semibold text-[var(--navy)]">{t("call_in_queue")}</h2>
+                    {stage && isLive && profile && me ? (
+                      <CallInBar
+                        sessionId={stage.id}
+                        eventId={event.id}
+                        me={me}
+                        isStaff={isStaffViewer}
+                        roomUrl={joinUrl ?? stage.videoRef}
+                        initialQueue={queue}
+                      />
+                    ) : (
+                      <div className="mt-3 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
+                        {!isLive ? "The call-in line opens when the show goes on air." : "Sign in to raise your hand for a call-in."}
+                      </div>
+                    )}
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">{t("host_curates_the_couch_guests_are_admin_approv")}</p>
+                  </div>
+                )}
               </div>
 
               {stage && isLive && profile && me && (

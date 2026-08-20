@@ -159,6 +159,24 @@ function SessionLiveControls({
       setBusy(false);
     }
   }
+  async function toggleCallIn() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callInEnabled: !session.callInEnabled }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't update call-in.");
+      onUpdated(json.session as EventSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update call-in.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="mt-2">
@@ -244,6 +262,20 @@ function SessionLiveControls({
           }`}
         >
           {session.chatEnabled ? "On" : "Off · Q&A only"}
+        </button>
+        <span className="mx-1 h-3 w-px bg-[var(--border-subtle)]" />
+        <span className="text-[var(--text-muted)]">Call-in queue</span>
+        <button
+          onClick={toggleCallIn}
+          disabled={busy}
+          role="switch"
+          aria-checked={session.callInEnabled}
+          title={session.callInEnabled ? "Call-in queue is shown — click to hide it and make the video full-width" : "Call-in queue is hidden (video is full-width) — click to show it"}
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold disabled:opacity-50 ${
+            session.callInEnabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {session.callInEnabled ? "On" : "Off · full-width video"}
         </button>
       </div>
     </div>

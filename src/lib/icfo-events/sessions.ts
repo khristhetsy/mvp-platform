@@ -29,6 +29,7 @@ function mapSession(r: Row): EventSession {
     position: Number(r.position ?? 0),
     doorsOpen: Boolean(r.doors_open),
     chatEnabled: r.chat_enabled !== false,
+    callInEnabled: r.call_in_enabled !== false,
     isHeadline: Boolean(r.is_headline),
   };
 }
@@ -79,6 +80,7 @@ export async function updateSession(
   if (input.position !== undefined) patch.position = input.position;
   if (input.doorsOpen !== undefined) patch.doors_open = input.doorsOpen;
   if (input.chatEnabled !== undefined) patch.chat_enabled = input.chatEnabled;
+  if (input.callInEnabled !== undefined) patch.call_in_enabled = input.callInEnabled;
   if (input.isHeadline !== undefined) patch.is_headline = input.isHeadline;
   const { data, error } = await raw(supabase)
     .from("sessions")
