@@ -31,6 +31,8 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "" });
   const [adding, setAdding] = useState(false);
+  const [view, setView] = useState<"cards" | "list">("cards");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: rows.length };
@@ -39,6 +41,23 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
   }, [rows]);
 
   const visible = filter === "all" ? rows : rows.filter((r) => r.attendeeType === filter);
+  const selectableEmails = useMemo(() => visible.filter((r) => r.contactEmail && selected.has(r.id)).map((r) => r.contactEmail as string), [visible, selected]);
+
+  function toggleSelect(id: string) {
+    setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+  function toggleAll() {
+    setSelected((s) => {
+      const allIds = visible.map((r) => r.id);
+      const allOn = allIds.every((id) => s.has(id));
+      return allOn ? new Set() : new Set(allIds);
+    });
+  }
+  function sendBulkEmail() {
+    const to = selectableEmails.join(",");
+    if (!to) return;
+    window.open(`/admin/inbox?compose=1&to=${encodeURIComponent(to)}`, "_blank", "noopener");
+  }
 
   function startEdit(r: EventRegistrationRow) {
     setEditId(r.id);
@@ -94,9 +113,15 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
           <h2 className="font-semibold text-[var(--navy)]">Registrations</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">Everyone who registered for this event, across all attendee types.</p>
         </div>
-        <button type="button" onClick={() => setAdding((v) => !v)} className="shrink-0 rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
-          <i className="ti ti-user-plus" aria-hidden="true" /> Register a guest
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="inline-flex overflow-hidden rounded-md border border-[var(--border-subtle)] text-xs">
+            <button type="button" onClick={() => setView("cards")} className={`px-2.5 py-1 ${view === "cards" ? "bg-[var(--indigo-soft)] font-medium text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}>Cards</button>
+            <button type="button" onClick={() => setView("list")} className={`px-2.5 py-1 ${view === "list" ? "bg-[var(--indigo-soft)] font-medium text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}>List</button>
+          </span>
+          <button type="button" onClick={() => setAdding((v) => !v)} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
+            <i className="ti ti-user-plus" aria-hidden="true" /> Register a guest
+          </button>
+        </div>
       </div>
 
       {adding && (
@@ -124,10 +149,41 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
         ))}
       </div>
 
+      {selected.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-[var(--indigo-soft)] px-3 py-2">
+          <span className="text-xs font-medium text-[var(--indigo)]">{selected.size} selected</span>
+          <button type="button" onClick={sendBulkEmail} disabled={selectableEmails.length === 0} className="ml-auto inline-flex items-center gap-1 rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+            <i className="ti ti-mail" aria-hidden="true" /> Send email ({selectableEmails.length})
+          </button>
+          <button type="button" onClick={() => setSelected(new Set())} className="text-xs text-[var(--text-secondary)] hover:underline">Clear</button>
+        </div>
+      )}
+
       {error && <p className="mt-3 text-xs text-rose-700">{error}</p>}
 
       {visible.length === 0 ? (
         <p className="mt-6 text-sm text-[var(--text-muted)]">No registrations in this view yet.</p>
+      ) : view === "list" ? (
+        <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border-subtle)]">
+          <div className="grid min-w-[640px] grid-cols-[28px_1.6fr_1fr_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">
+            <input type="checkbox" checked={visible.length > 0 && visible.every((r) => selected.has(r.id))} onChange={toggleAll} className="h-3.5 w-3.5" aria-label="Select all" />
+            <span>Name</span><span>Type</span><span>Email</span><span>Registered</span><span className="text-right">Actions</span>
+          </div>
+          {visible.map((r) => (
+            <div key={r.id} className="grid min-w-[640px] grid-cols-[28px_1.6fr_1fr_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-xs last:border-0">
+              <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="h-3.5 w-3.5" aria-label="Select registration" />
+              <span className="truncate font-medium text-[var(--navy)]">{r.contactName || r.company || "Unnamed"}</span>
+              <span className="text-[var(--text-secondary)]">{r.attendeeType ? (TYPE_LABEL[r.attendeeType] ?? r.attendeeType) : "—"}</span>
+              <span className="truncate text-[var(--text-muted)]">{r.contactEmail ?? "—"}</span>
+              <span className="text-[var(--text-muted)]">{fmtDate(r.createdAt)}</span>
+              <span className="flex items-center justify-end gap-2">
+                {r.contactEmail && <a href={`mailto:${r.contactEmail}`} title="Email" className="text-[var(--blue)]"><i className="ti ti-mail" aria-hidden="true" /></a>}
+                <button type="button" onClick={() => (editId === r.id ? setEditId(null) : startEdit(r))} title="Edit" className="text-[var(--text-secondary)]"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                <button type="button" onClick={() => removeRegistration(r.id)} disabled={busy === r.id} title="Delete" className="text-rose-600 disabled:opacity-50"><i className="ti ti-trash" aria-hidden="true" /></button>
+              </span>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="mt-4 space-y-3">
           {visible.map((r) => {
@@ -135,7 +191,9 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
             return (
               <div key={r.id} className="rounded-lg border border-[var(--border-subtle)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="mt-1 h-4 w-4" aria-label="Select registration" />
+                    <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-[var(--navy)]">{r.contactName || r.company || "Unnamed"}</span>
                       {r.attendeeType && (
@@ -149,6 +207,7 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
                       {r.contactEmail && <>{r.contactEmail}</>}
                       {r.contactPhone && <> · {r.contactPhone}</>} · Registered {fmtDate(r.createdAt)}
                     </p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {r.contactEmail && (
