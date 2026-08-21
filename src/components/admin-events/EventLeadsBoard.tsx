@@ -18,7 +18,7 @@ function fmtDate(iso: string): string {
 
 function answerEntries(answers: Record<string, unknown>): [string, string][] {
   return Object.entries(answers)
-    .filter(([k]) => k !== "company")
+    .filter(([k]) => !["company", "name", "email", "phone"].includes(k))
     .map(([k, v]) => [k.replace(/_/g, " "), Array.isArray(v) ? v.join(", ") : String(v ?? "")] as [string, string])
     .filter(([, v]) => v.trim() !== "");
 }
@@ -29,6 +29,8 @@ export function EventLeadsBoard({ eventId, initialLeads }: { eventId: string; in
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "" });
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length, open: 0, contacted: 0, won: 0, lost: 0 };
@@ -52,6 +54,35 @@ export function EventLeadsBoard({ eventId, initialLeads }: { eventId: string; in
       if (!res.ok) throw new Error("Update failed.");
     } catch (err) {
       setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, status: prev } : l)));
+      setError(err instanceof Error ? err.message : "Update failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function startEdit(l: EventLead) {
+    setEditId(l.id);
+    setEditForm({ name: l.contactName ?? "", email: l.contactEmail ?? "", phone: l.contactPhone ?? "" });
+    setError(null);
+  }
+  async function saveContact(leadId: string) {
+    setBusy(leadId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contactName: editForm.name.trim() || null,
+          contactEmail: editForm.email.trim() || null,
+          contactPhone: editForm.phone.trim() || null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Update failed.");
+      setLeads((ls) => ls.map((l) => (l.id === leadId ? (json.lead as EventLead) : l)));
+      setEditId(null);
+    } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed.");
     } finally {
       setBusy(null);
@@ -95,10 +126,20 @@ export function EventLeadsBoard({ eventId, initialLeads }: { eventId: string; in
                     </div>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                       {l.contactName ?? "—"}
-                      {l.contactEmail && <> · {l.contactEmail}</>} · {t("registered", { date: fmtDate(l.createdAt) })}
+                      {l.contactEmail && <> · {l.contactEmail}</>}
+                      {l.contactPhone && <> · {l.contactPhone}</>} · {t("registered", { date: fmtDate(l.createdAt) })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {l.contactEmail && (
+                      <a href={`mailto:${l.contactEmail}`} title="Email" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-mail" aria-hidden="true" /></a>
+                    )}
+                    {l.contactPhone && (
+                      <a href={`tel:${l.contactPhone.replace(/[^+\d]/g, "")}`} title="Call" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /></a>
+                    )}
+                    <button type="button" onClick={() => (editId === l.id ? setEditId(null) : startEdit(l))} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50">
+                      {editId === l.id ? "Close" : "Edit"}
+                    </button>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLS[l.status]}`}>
                       {t(l.status)}
                     </span>
@@ -115,6 +156,26 @@ export function EventLeadsBoard({ eventId, initialLeads }: { eventId: string; in
                     </select>
                   </div>
                 </div>
+                {editId === l.id && (
+                  <div className="mt-3 grid gap-2 rounded-md bg-slate-50 p-3 sm:grid-cols-3">
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Name</span>
+                      <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Email</span>
+                      <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Phone</span>
+                      <input type="tel" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
+                    </label>
+                    <div className="flex justify-end gap-2 sm:col-span-3">
+                      <button type="button" onClick={() => setEditId(null)} disabled={busy === l.id} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs disabled:opacity-50">Cancel</button>
+                      <button type="button" onClick={() => saveContact(l.id)} disabled={busy === l.id} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">{busy === l.id ? "Saving…" : "Save"}</button>
+                    </div>
+                  </div>
+                )}
                 {entries.length > 0 && (
                   <dl className="mt-3 grid gap-x-4 gap-y-1 sm:grid-cols-2">
                     {entries.map(([k, v]) => (
