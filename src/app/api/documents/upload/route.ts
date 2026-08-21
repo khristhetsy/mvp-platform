@@ -120,15 +120,29 @@ export async function POST(request: Request) {
     documentType: formData.get("documentType"),
   });
   const file = formData.get("file");
+  // Direct-to-storage uploads (large files) send a pre-uploaded storagePath +
+  // metadata instead of the file bytes, bypassing the serverless ~4.5 MB request
+  // body limit. Small uploads still send the file directly.
+  const providedPath = typeof formData.get("storagePath") === "string" ? (formData.get("storagePath") as string) : null;
 
-  if (!parsed.success || !(file instanceof File)) {
+  if (!parsed.success || (!(file instanceof File) && !providedPath)) {
     return NextResponse.json(
       { stage: "parse_request", clientUsed: "auth_client", error: "Invalid upload request." },
       { status: 400 },
     );
   }
 
+  const uploadName = file instanceof File ? file.name : ((formData.get("fileName") as string) || "document");
+  const uploadType = file instanceof File ? file.type : ((formData.get("contentType") as string) || "application/octet-stream");
+  const uploadSize = file instanceof File ? file.size : Number(formData.get("fileSize") ?? 0);
+
   const companyId = parsed.data.companyId;
+  if (providedPath && !providedPath.startsWith(`${companyId}/`)) {
+    return NextResponse.json(
+      { stage: "parse_request", clientUsed: "auth_client", error: "Invalid storage path." },
+      { status: 400 },
+    );
+  }
   const normalizedDocumentType = normalizeDocumentType(parsed.data.documentType);
   const {
     data: { user: authUser },
@@ -255,21 +269,21 @@ export async function POST(request: Request) {
     );
   }
 
-  if (file.size > maxUploadBytes) {
+  if (uploadSize > maxUploadBytes) {
     return NextResponse.json(
       { stage: "validate_file", clientUsed: "auth_client", error: "File exceeds the 25MB MVP upload limit." },
       { status: 400 },
     );
   }
 
-  if (!allowedMimeTypes.has(file.type)) {
+  if (!allowedMimeTypes.has(uploadType)) {
     return NextResponse.json(
       { stage: "validate_file", clientUsed: "auth_client", error: "Unsupported file type." },
       { status: 400 },
     );
   }
 
-  if (parsed.data.documentType === "PITCH_DECK" && file.type !== "application/pdf") {
+  if (parsed.data.documentType === "PITCH_DECK" && uploadType !== "application/pdf") {
     return NextResponse.json(
       { stage: "validate_file", clientUsed: "auth_client", error: "Pitch decks must be uploaded as a PDF." },
       { status: 400 },
@@ -297,10 +311,12 @@ export async function POST(request: Request) {
   }
 
   const bucket = getStorageBucket(normalizedDocumentType);
-  const filePath = buildStoragePath(normalizedDocumentType, companyId, authUserId, file.name);
+  // Path mode: the browser already uploaded the file straight to storage.
+  const filePath = providedPath ?? buildStoragePath(normalizedDocumentType, companyId, authUserId, uploadName);
 
-  const { error: uploadError } = await admin.storage.from(bucket).upload(filePath, file, {
-    contentType: file.type,
+  if (!providedPath) {
+  const { error: uploadError } = await admin.storage.from(bucket).upload(filePath, file as File, {
+    contentType: uploadType,
     upsert: false,
   });
 
@@ -337,6 +353,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  }
 
   // Replacement behavior:
   // - For PITCH_DECK: update the existing row to avoid the unique index on (company_id) where document_type = 'PITCH_DECK'.
@@ -350,11 +367,11 @@ export async function POST(request: Request) {
       .update({
         uploaded_by: authUserId,
         document_type: normalizedDocumentType,
-        file_name: file.name,
+        file_name: uploadName,
         file_path: filePath,
         file_url: null,
-        mime_type: file.type,
-        size_bytes: file.size,
+        mime_type: uploadType,
+        size_bytes: uploadSize,
         status: "uploaded",
       })
       .eq("id", existingDocument.id)
@@ -414,9 +431,9 @@ export async function POST(request: Request) {
       company_id: companyId,
       uploaded_by: authUserId,
       document_type: normalizedDocumentType,
-      file_name: file.name,
-      mime_type: file.type,
-      size_bytes: file.size,
+      file_name: uploadName,
+      mime_type: uploadType,
+      size_bytes: uploadSize,
       status: "uploaded",
     } as const;
 

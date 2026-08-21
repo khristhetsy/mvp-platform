@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   companyId: string;
@@ -132,56 +133,68 @@ export function DocumentUploadForm({
     setResult(null);
     setProgress(0);
 
+    // Step 1 — get a signed upload URL so the file goes straight to storage,
+    // bypassing the serverless ~4.5 MB request-body limit.
+    const signRes = await fetch("/api/documents/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyId, documentType, fileName: file.name, contentType: file.type, fileSize: file.size }),
+    });
+    const signBody = (await signRes.json().catch(() => ({}))) as { bucket?: string; path?: string; token?: string; error?: string };
+    if (!signRes.ok || !signBody.bucket || !signBody.path || !signBody.token) {
+      setIsUploading(false);
+      setProgress(null);
+      setLastDebug(null);
+      setResult({ ok: false, status: signRes.status, message: signBody.error ?? toMessage(signRes.status, signBody) });
+      return;
+    }
+
+    // Step 2 — upload the file bytes directly to Supabase Storage.
+    setProgress(40);
+    const supabase = createClient();
+    const { error: storageError } = await supabase.storage
+      .from(signBody.bucket)
+      .uploadToSignedUrl(signBody.path, signBody.token, file, { contentType: file.type });
+    if (storageError) {
+      setIsUploading(false);
+      setProgress(null);
+      setLastDebug(null);
+      setResult({ ok: false, status: 0, message: storageError.message || "Upload failed. Please try again." });
+      return;
+    }
+    setProgress(80);
+
+    // Step 3 — record the document (metadata only — a tiny request).
     const formData = new FormData();
     formData.set("companyId", companyId);
     formData.set("documentType", documentType);
-    formData.set("file", file);
+    formData.set("storagePath", signBody.path);
+    formData.set("fileName", file.name);
+    formData.set("contentType", file.type);
+    formData.set("fileSize", String(file.size));
 
-    const response = await new Promise<{ status: number; body: unknown }>((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", debugEnabled ? "/api/documents/upload?debug=1" : "/api/documents/upload");
-
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) return;
-        const pct = Math.round((event.loaded / event.total) * 100);
-        setProgress(Math.max(0, Math.min(100, pct)));
-      };
-
-      xhr.onload = () => {
-        let body: unknown = null;
-        try {
-          body = xhr.responseText ? JSON.parse(xhr.responseText) : null;
-        } catch {
-          body = xhr.responseText;
-        }
-        resolve({ status: xhr.status, body });
-      };
-
-      xhr.onerror = () => resolve({ status: 0, body: { error: "Network error. Please try again." } });
-      xhr.send(formData);
+    const recordRes = await fetch(debugEnabled ? "/api/documents/upload?debug=1" : "/api/documents/upload", {
+      method: "POST",
+      body: formData,
     });
+    const recordBody = (await recordRes.json().catch(() => null)) as Record<string, unknown> | null;
 
     setIsUploading(false);
     setProgress(null);
 
-    if (response.status >= 200 && response.status < 300) {
+    if (recordRes.ok) {
       setResult({ ok: true });
       setLastDebug(null);
       router.refresh();
       return;
     }
 
-    if (
-      debugEnabled &&
-      response.body &&
-      typeof response.body === "object" &&
-      "debug" in (response.body as Record<string, unknown>)
-    ) {
-      setLastDebug((response.body as { debug: unknown }).debug);
+    if (debugEnabled && recordBody && typeof recordBody === "object" && "debug" in recordBody) {
+      setLastDebug((recordBody as { debug: unknown }).debug);
     } else {
       setLastDebug(null);
     }
-    setResult({ ok: false, status: response.status, message: toMessage(response.status, response.body) });
+    setResult({ ok: false, status: recordRes.status, message: toMessage(recordRes.status, recordBody) });
   }
 
   async function uploadWithRetry() {
