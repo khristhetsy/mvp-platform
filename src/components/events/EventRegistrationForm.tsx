@@ -12,6 +12,7 @@ type Field = {
   label: string;
   kind: "text" | "select" | "chips" | "textarea" | "checkbox";
   options?: string[];
+  required?: boolean;
 };
 
 const SECTORS = EVENT_SECTORS.map((s) => s.label);
@@ -25,6 +26,8 @@ const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins }[] = [
 ];
 
 const COMMON: Field[] = [
+  { key: "email", label: "Email", kind: "text", required: true },
+  { key: "phone", label: "Phone number", kind: "text" },
   { key: "company", label: "Company / firm", kind: "text" },
   { key: "title", label: "Title", kind: "text" },
   { key: "country", label: "Country", kind: "select", options: COUNTRIES },
@@ -64,10 +67,14 @@ const BY_TYPE: Record<AttendeeType, Field[]> = {
   ],
 };
 
-export function EventRegistrationForm({ eventId, slug, defaultCompany }: { eventId: string; slug: string; defaultCompany?: string }) {
+export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEmail, defaultPhone }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string }) {
   const t = useTranslations("eventsCmp");
   const [role, setRole] = useState<AttendeeType | null>(null);
-  const [answers, setAnswers] = useState<Record<string, unknown>>(defaultCompany ? { company: defaultCompany } : {});
+  const [answers, setAnswers] = useState<Record<string, unknown>>({
+    ...(defaultCompany ? { company: defaultCompany } : {}),
+    ...(defaultEmail ? { email: defaultEmail } : {}),
+    ...(defaultPhone ? { phone: defaultPhone } : {}),
+  });
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -116,7 +123,9 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany }: { event
     }
     return (
       <label key={f.key} className="block">
-        <span className="mb-1 block text-xs text-[var(--text-secondary)]">{f.label}</span>
+        <span className="mb-1 block text-xs text-[var(--text-secondary)]">
+          {f.label}{f.required ? <span className="text-rose-500"> *</span> : null}
+        </span>
         {f.kind === "select" ? (
           <select value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
             <option value="">Select…</option>
@@ -125,7 +134,12 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany }: { event
         ) : f.kind === "textarea" ? (
           <textarea value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         ) : (
-          <input value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+          <input
+            type={f.key === "email" ? "email" : f.key === "phone" ? "tel" : "text"}
+            value={String(answers[f.key] ?? "")}
+            onChange={(e) => set(f.key, e.target.value)}
+            className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+          />
         )}
       </label>
     );
@@ -133,6 +147,11 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany }: { event
 
   async function submit() {
     if (!role || !consent) return;
+    const email = String(answers.email ?? "").trim();
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

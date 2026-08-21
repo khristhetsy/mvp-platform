@@ -32,7 +32,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
         <p className="mt-1 text-sm text-[var(--text-muted)]">{t("free_registration_a_few_quick_questions_so_we")}</p>
 
         <div className="mt-6">
-          <EventRegistrationForm eventId={event.id} slug={slug} />
+          <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile.email ?? undefined} />
         </div>
       </section>
       <MarketingFooter />
