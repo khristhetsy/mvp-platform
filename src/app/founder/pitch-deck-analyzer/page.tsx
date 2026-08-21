@@ -55,7 +55,10 @@ export default async function PitchDeckAnalyzerPage() {
         .maybeSingle()
     : { data: null };
 
-  const saved = company ? await getPitchDeckAnalysis(createServiceRoleClient(), company.id) : null;
+  const savedRaw = company ? await getPitchDeckAnalysis(createServiceRoleClient(), company.id) : null;
+  // A saved "fallback" analysis means AI never actually ran (key/API failure). Don't surface
+  // it as a real result — it looks like every section is "missing" which misleads the founder.
+  const saved = savedRaw?.analysis?.source === "fallback" ? null : savedRaw;
 
   return (
     <FounderAppShell
