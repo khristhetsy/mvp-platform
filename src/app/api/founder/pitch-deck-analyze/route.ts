@@ -35,19 +35,24 @@ const SECTIONS = [
   "The ask",
 ];
 
-function fallbackAnalysis(): PitchDeckAnalysis {
+function fallbackAnalysis(reason?: string): PitchDeckAnalysis {
+  const verdict = reason
+    ? `Analysis could not run — ${reason}`
+    : "Analysis unavailable — AI is not configured.";
   return {
     overallScore: 0,
-    overallVerdict: "Analysis unavailable — AI is not configured.",
+    overallVerdict: verdict,
     sections: SECTIONS.map((name) => ({
       name,
       score: 0,
       verdict: "missing",
-      feedback: "Unable to analyze without AI configuration.",
-      tip: "Configure the ANTHROPIC_API_KEY to enable AI analysis.",
+      feedback: reason
+        ? "The deck was not analyzed because the AI request failed — this is not a finding about your deck."
+        : "Unable to analyze without AI configuration.",
+      tip: reason ?? "Configure the ANTHROPIC_API_KEY to enable AI analysis.",
     })),
     topStrengths: [],
-    topGaps: ["AI analysis not available"],
+    topGaps: [reason ? `AI request failed: ${reason}` : "AI analysis not available"],
     investorReaction: "Unable to simulate investor reaction.",
     source: "fallback",
   };
@@ -177,7 +182,15 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
     });
 
     if (!res.ok) {
-      throw new Error(`Anthropic API ${res.status}`);
+      const detail = await res.text().catch(() => "");
+      let msg = `Anthropic API returned ${res.status}`;
+      try {
+        const parsed = JSON.parse(detail) as { error?: { message?: string } };
+        if (parsed?.error?.message) msg += ` — ${parsed.error.message}`;
+      } catch {
+        if (detail) msg += ` — ${detail.slice(0, 200)}`;
+      }
+      throw new Error(msg);
     }
 
     const data = await res.json() as {
@@ -187,13 +200,15 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
     const analysis = parseAnalysis(raw);
 
     if (!analysis) {
-      return NextResponse.json({ analysis: fallbackAnalysis() });
+      return NextResponse.json({ analysis: fallbackAnalysis("the AI returned an unreadable response — please retry") });
     }
 
     analysis.source = "ai";
     const savedAt = await savePitchDeckAnalysis(admin, company.id, analysis).catch(() => null);
     return NextResponse.json({ analysis, savedAt });
-  } catch {
-    return NextResponse.json({ analysis: fallbackAnalysis() });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "the AI request failed";
+    console.error("[pitch-deck-analyze] AI request failed:", reason);
+    return NextResponse.json({ analysis: fallbackAnalysis(reason) });
   }
 }
