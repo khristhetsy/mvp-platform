@@ -18,10 +18,11 @@ const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins }[] = [
   { key: "sponsor", label: "Sponsor", Icon: Store },
 ];
 
-export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEmail, defaultPhone }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string }) {
+export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEmail, defaultPhone, defaultName }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string }) {
   const t = useTranslations("eventsCmp");
   const [role, setRole] = useState<AttendeeType | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>({
+    ...(defaultName ? { name: defaultName } : {}),
     ...(defaultCompany ? { company: defaultCompany } : {}),
     ...(defaultEmail ? { email: defaultEmail } : {}),
     ...(defaultPhone ? { phone: defaultPhone } : {}),
@@ -98,11 +99,13 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
 
   async function submit() {
     if (!role || !consent) return;
+    if (!String(answers.name ?? "").trim()) { setError("Please enter your full name."); return; }
     const email = String(answers.email ?? "").trim();
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!String(answers.phone ?? "").trim()) { setError("Please enter a phone number."); return; }
     setBusy(true);
     setError(null);
     try {

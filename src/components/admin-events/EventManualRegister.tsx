@@ -10,16 +10,13 @@ import {
   REGISTRATION_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
 
-// Full name is admin-only (self-registration takes the name from the account).
-const NAME_FIELD: RegistrationField = { key: "name", label: "Full name", kind: "text", required: true };
-
 export function EventManualRegister({ eventId, onAdded, onClose }: { eventId: string; onAdded: (r: EventRegistrationRow) => void; onClose: () => void }) {
   const [role, setRole] = useState<AttendeeType>("investor");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fields: RegistrationField[] = [NAME_FIELD, ...REGISTRATION_COMMON, ...REGISTRATION_BY_TYPE[role]];
+  const fields: RegistrationField[] = [...REGISTRATION_COMMON, ...REGISTRATION_BY_TYPE[role]];
 
   function set(key: string, value: unknown) {
     setAnswers((a) => ({ ...a, [key]: value }));
@@ -35,6 +32,7 @@ export function EventManualRegister({ eventId, onAdded, onClose }: { eventId: st
     const email = String(answers.email ?? "").trim();
     if (!String(answers.name ?? "").trim()) { setError("Enter the guest's full name."); return; }
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setError("Enter a valid email address."); return; }
+    if (!String(answers.phone ?? "").trim()) { setError("Enter a phone number."); return; }
     setBusy(true);
     setError(null);
     try {

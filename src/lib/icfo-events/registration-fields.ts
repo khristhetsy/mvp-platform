@@ -24,11 +24,12 @@ export const REGISTRATION_ROLES: { key: AttendeeType; label: string }[] = [
 ];
 
 export const REGISTRATION_COMMON: RegistrationField[] = [
-  { key: "email", label: "Email", kind: "text", required: true },
-  { key: "phone", label: "Phone number", kind: "text" },
+  { key: "name", label: "Full name", kind: "text", required: true },
   { key: "company", label: "Company / firm", kind: "text" },
   { key: "title", label: "Title", kind: "text" },
   { key: "country", label: "Country", kind: "select", options: REGISTRATION_COUNTRIES },
+  { key: "email", label: "Email", kind: "text", required: true },
+  { key: "phone", label: "Phone number", kind: "text", required: true },
 ];
 
 export const REGISTRATION_BY_TYPE: Record<AttendeeType, RegistrationField[]> = {
