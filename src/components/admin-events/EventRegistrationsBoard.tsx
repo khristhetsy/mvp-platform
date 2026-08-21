@@ -69,6 +69,23 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
       setBusy(null);
     }
   }
+  async function removeRegistration(regId: string) {
+    if (!confirm("Remove this registration from the event? This can't be undone — the person's account is not affected.")) return;
+    setBusy(regId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/registrations/${regId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(typeof j.error === "string" ? j.error : "Delete failed.");
+      }
+      setRows((rs) => rs.filter((r) => r.id !== regId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
@@ -133,16 +150,18 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
                       {r.contactPhone && <> · {r.contactPhone}</>} · Registered {fmtDate(r.createdAt)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {r.contactEmail && (
-                      <a href={`mailto:${r.contactEmail}`} title="Email" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-mail" aria-hidden="true" /></a>
+                      <a href={`mailto:${r.contactEmail}`} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-mail" aria-hidden="true" /> Email</a>
                     )}
                     {r.contactPhone && (
-                      <a href={`tel:${r.contactPhone.replace(/[^+\d]/g, "")}`} title="Call" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /></a>
+                      <a href={`sms:${r.contactPhone.replace(/[^+\d]/g, "")}`} className="inline-flex items-center gap-1 rounded-md border border-[#F4D9A0] bg-[#FAEEDA] px-2 py-1 text-xs text-[#854F0B] hover:opacity-90"><i className="ti ti-message" aria-hidden="true" /> Message</a>
                     )}
-                    <button type="button" onClick={() => (editId === r.id ? setEditId(null) : startEdit(r))} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50">
-                      {editId === r.id ? "Close" : "Edit"}
-                    </button>
+                    {r.contactPhone && (
+                      <a href={`tel:${r.contactPhone.replace(/[^+\d]/g, "")}`} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[#0F6E56] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+                    )}
+                    <button type="button" onClick={() => (editId === r.id ? setEditId(null) : startEdit(r))} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50"><i className="ti ti-pencil" aria-hidden="true" /> {editId === r.id ? "Close" : "Edit"}</button>
+                    <button type="button" onClick={() => removeRegistration(r.id)} disabled={busy === r.id} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-50"><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
                   </div>
                 </div>
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { requirePermissionApi } from "@/lib/api/permissions";
-import { setRegistrationContact } from "@/lib/icfo-events/registrations";
+import { setRegistrationContact, deleteRegistration } from "@/lib/icfo-events/registrations";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +29,22 @@ export async function PATCH(
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Failed to update registration." }, { status: 500 });
+  }
+}
+
+/** Remove a registration from the event (staff). */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string; regId: string }> },
+): Promise<Response> {
+  const auth = await requirePermissionApi("manage_events");
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { regId } = await params;
+    await deleteRegistration(auth.supabase, regId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    Sentry.captureException(err);
+    return NextResponse.json({ error: "Failed to remove registration." }, { status: 500 });
   }
 }

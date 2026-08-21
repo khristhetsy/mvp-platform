@@ -166,6 +166,16 @@ export async function createManualRegistration(
   return mapReg(data as Record<string, unknown>);
 }
 
+/** Remove a registration from an event (staff). Deletes the event row only —
+ *  never the person's user account. */
+export async function deleteRegistration(
+  supabase: SupabaseClient<Database>,
+  registrationId: string,
+): Promise<void> {
+  const { error } = await raw(supabase).from("registrations").delete().eq("id", registrationId);
+  if (error) throw new Error(error.message);
+}
+
 /** Aggregate count only (the opt-in trust model forbids raw lists). */
 export async function countRegistrations(
   supabase: SupabaseClient<Database>,
