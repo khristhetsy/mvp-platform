@@ -667,6 +667,12 @@ export function EventDetailManager({
             </Link>
           )}
           <Link
+            href={`/admin/events/${event.id}/registrations`}
+            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+          >
+            Registrations
+          </Link>
+          <Link
             href={`/admin/events/${event.id}/leads`}
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
           >

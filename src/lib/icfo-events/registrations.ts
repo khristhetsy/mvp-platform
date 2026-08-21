@@ -63,6 +63,79 @@ export async function getRegistration(
   return data ? mapRow(data as Record<string, unknown>) : null;
 }
 
+// Staff-facing registration row (all attendee types) with contact details.
+// Editable contact fields are stored as overrides in `answers` so the
+// registrant's user profile is never modified; they fall back to the profile.
+export interface EventRegistrationRow {
+  id: string;
+  eventId: string;
+  attendeeType: string | null;
+  company: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  answers: Record<string, unknown>;
+  createdAt: string;
+}
+
+function mapReg(r: Record<string, unknown>): EventRegistrationRow {
+  const profile = r.profiles as { full_name?: string | null; email?: string | null } | null;
+  const answers = (r.answers as Record<string, unknown>) ?? {};
+  const ov = (k: string) => (typeof answers[k] === "string" && answers[k] ? (answers[k] as string) : null);
+  return {
+    id: String(r.id),
+    eventId: String(r.event_id),
+    attendeeType: (r.attendee_type as string | null) ?? null,
+    company: ov("company"),
+    contactName: ov("name") ?? profile?.full_name ?? null,
+    contactEmail: ov("email") ?? profile?.email ?? null,
+    contactPhone: ov("phone"),
+    answers,
+    createdAt: String(r.created_at),
+  };
+}
+
+/** All registrations for an event, newest first (staff only). */
+export async function listEventRegistrations(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+): Promise<EventRegistrationRow[]> {
+  const { data, error } = await raw(supabase)
+    .from("registrations")
+    .select("*, profiles:attendee_id(full_name, email)")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map(mapReg);
+}
+
+/** Edit a registrant's contact details (stored as overrides in answers). */
+export async function setRegistrationContact(
+  supabase: SupabaseClient<Database>,
+  registrationId: string,
+  patch: { contactName?: string | null; contactEmail?: string | null; contactPhone?: string | null; company?: string | null },
+): Promise<EventRegistrationRow> {
+  const { data: cur, error: readErr } = await raw(supabase)
+    .from("registrations")
+    .select("answers")
+    .eq("id", registrationId)
+    .single();
+  if (readErr) throw new Error(readErr.message);
+  const answers = { ...(((cur as Record<string, unknown>)?.answers as Record<string, unknown>) ?? {}) };
+  if (patch.contactName !== undefined) answers.name = patch.contactName ?? "";
+  if (patch.contactEmail !== undefined) answers.email = patch.contactEmail ?? "";
+  if (patch.contactPhone !== undefined) answers.phone = patch.contactPhone ?? "";
+  if (patch.company !== undefined) answers.company = patch.company ?? "";
+  const { data, error } = await raw(supabase)
+    .from("registrations")
+    .update({ answers })
+    .eq("id", registrationId)
+    .select("*, profiles:attendee_id(full_name, email)")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapReg(data as Record<string, unknown>);
+}
+
 /** Aggregate count only (the opt-in trust model forbids raw lists). */
 export async function countRegistrations(
   supabase: SupabaseClient<Database>,
