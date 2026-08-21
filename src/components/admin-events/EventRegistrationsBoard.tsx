@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { EventRegistrationRow } from "@/lib/icfo-events/registrations";
+import { EventManualRegister } from "./EventManualRegister";
 
 const TYPE_LABEL: Record<string, string> = {
   investor: "Investor",
@@ -29,6 +30,7 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
   const [error, setError] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "" });
+  const [adding, setAdding] = useState(false);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: rows.length };
@@ -70,8 +72,25 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
 
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-      <h2 className="font-semibold text-[var(--navy)]">Registrations</h2>
-      <p className="mt-1 text-sm text-[var(--text-muted)]">Everyone who registered for this event, across all attendee types.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-[var(--navy)]">Registrations</h2>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Everyone who registered for this event, across all attendee types.</p>
+        </div>
+        <button type="button" onClick={() => setAdding((v) => !v)} className="shrink-0 rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
+          <i className="ti ti-user-plus" aria-hidden="true" /> Register a guest
+        </button>
+      </div>
+
+      {adding && (
+        <div className="mt-4">
+          <EventManualRegister
+            eventId={eventId}
+            onClose={() => setAdding(false)}
+            onAdded={(r) => { setRows((rs) => [r, ...rs.filter((x) => x.id !== r.id)]); setAdding(false); }}
+          />
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {(["all", ...TYPE_KEYS] as const).map((k) => (

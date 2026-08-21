@@ -136,6 +136,36 @@ export async function setRegistrationContact(
   return mapReg(data as Record<string, unknown>);
 }
 
+/** Manually register a guest (staff). Links to an existing user if their email
+ *  matches a profile; otherwise registers as an account-less guest. */
+export async function createManualRegistration(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  input: { attendeeType: string; answers: Record<string, unknown> },
+): Promise<EventRegistrationRow> {
+  const db = raw(supabase);
+  const email = typeof input.answers.email === "string" ? (input.answers.email as string).trim() : "";
+  let attendeeId: string | null = null;
+  if (email) {
+    const { data: prof } = await db.from("profiles").select("id").ilike("email", email).maybeSingle();
+    attendeeId = ((prof as { id?: string } | null)?.id) ?? null;
+  }
+  const row = { event_id: eventId, attendee_type: input.attendeeType, answers: input.answers };
+  const { data, error } = attendeeId
+    ? await db
+        .from("registrations")
+        .upsert({ ...row, attendee_id: attendeeId }, { onConflict: "event_id,attendee_id" })
+        .select("*, profiles:attendee_id(full_name, email)")
+        .single()
+    : await db
+        .from("registrations")
+        .insert({ ...row, attendee_id: null })
+        .select("*, profiles:attendee_id(full_name, email)")
+        .single();
+  if (error) throw new Error(error.message);
+  return mapReg(data as Record<string, unknown>);
+}
+
 /** Aggregate count only (the opt-in trust model forbids raw lists). */
 export async function countRegistrations(
   supabase: SupabaseClient<Database>,
