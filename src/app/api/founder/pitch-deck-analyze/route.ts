@@ -10,6 +10,11 @@ import { checkUsage, recordUsage } from "@/lib/ai-usage/service";
 
 const USAGE_FEATURE = "pitch_deck_analyzer";
 
+// Analyzing a large, image-heavy deck with Sonnet can take well over the default
+// serverless timeout. Without this, big decks abort mid-call and the catch below
+// mislabels the timeout as "AI is not configured".
+export const maxDuration = 60;
+
 export type PitchDeckSection = {
   name: string;
   score: number;        // 0-100
