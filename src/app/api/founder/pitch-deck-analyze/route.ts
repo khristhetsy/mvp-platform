@@ -12,8 +12,13 @@ const USAGE_FEATURE = "pitch_deck_analyzer";
 
 // Analyzing a large, image-heavy deck with Sonnet can take well over the default
 // serverless timeout. Without this, big decks abort mid-call and the catch below
-// mislabels the timeout as "AI is not configured".
-export const maxDuration = 60;
+// mislabels the timeout as "AI is not configured". Maxed out so it doesn't recur;
+// Vercel clamps this to the project's plan ceiling if it's lower.
+export const maxDuration = 300;
+
+// Give the model almost the whole budget, then abort cleanly with a clear message
+// (rather than letting the platform hard-kill the function with a generic 504).
+const ANTHROPIC_TIMEOUT_MS = 280_000;
 
 export type PitchDeckSection = {
   name: string;
@@ -173,7 +178,10 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
     const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     if (!apiKey) throw new Error("No API key");
 
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), ANTHROPIC_TIMEOUT_MS);
     const res = await fetch("https://api.anthropic.com/v1/messages", {
+      signal: abort.signal,
       method: "POST",
       headers: {
         "x-api-key": apiKey,
@@ -205,7 +213,7 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
           },
         ],
       }),
-    });
+    }).finally(() => clearTimeout(timer));
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
@@ -235,7 +243,10 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
     await recordUsage({ profileId: auth.profile.id, feature: USAGE_FEATURE, admin });
     return NextResponse.json({ analysis, savedAt });
   } catch (err) {
-    const reason = err instanceof Error ? err.message : "the AI request failed";
+    const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
+    const reason = isAbort
+      ? "this deck took too long to analyze — try a lighter PDF (fewer pages/images) and retry"
+      : err instanceof Error ? err.message : "the AI request failed";
     console.error("[pitch-deck-analyze] AI request failed:", reason);
     return NextResponse.json({ analysis: fallbackAnalysis(reason) });
   }
