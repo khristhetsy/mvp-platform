@@ -10,6 +10,10 @@ export interface ComposePrefill {
   subject: string;
   body: string;
   mode: ComposeMode;
+  /** Optional — used when restoring a saved draft (not produced by buildPrefill). */
+  bcc?: string[];
+  /** Rich-text body to seed the editor with; falls back to `body` (plaintext). */
+  bodyHtml?: string;
 }
 
 const EMPTY: ComposePrefill = { to: [], cc: [], subject: "", body: "", mode: "new" };

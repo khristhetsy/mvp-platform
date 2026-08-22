@@ -20,6 +20,7 @@ import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, ComposePrefill } from "./types";
 import { useFocusTrap, useOnEscape } from "./a11y";
+import { useComposeAutosave, type AutosaveResult } from "./useComposeAutosave";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -67,6 +68,15 @@ export interface ComposeModalProps {
   uploadFiles?: (files: FileList) => Promise<EmailAttachment[]>;
   uploading?: boolean;
   initialAttachments?: EmailAttachment[];
+  /**
+   * When provided, the Gmail-style autosave engine runs: debounced 3s saves,
+   * immediate save on blur/close/minimize/tab-hide, a status chip, retry with
+   * backoff, and a localStorage crash buffer. `save` persists the draft.
+   */
+  autosaveSave?: (draft: ComposeDraft) => Promise<AutosaveResult>;
+  autosaveFallbackKey?: string;
+  /** Discard button handler (delete the draft). When omitted, Discard = close. */
+  onDiscard?: (draft: ComposeDraft) => void;
 }
 
 export function ComposeModal({
@@ -81,6 +91,9 @@ export function ComposeModal({
   uploadFiles,
   uploading = false,
   initialAttachments,
+  autosaveSave,
+  autosaveFallbackKey = "gmail-compose-fallback",
+  onDiscard,
 }: ComposeModalProps) {
   const t = useTranslations("sharedCmp");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -172,14 +185,15 @@ export function ComposeModal({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTo((prefill?.to ?? []).join(", "));
     setCc((prefill?.cc ?? []).join(", "));
-    setBcc("");
+    setBcc((prefill?.bcc ?? []).join(", "));
     setSubject(prefill?.subject ?? "");
-    setShowCc(Boolean(prefill?.cc && prefill.cc.length > 0));
+    setShowCc(Boolean((prefill?.cc && prefill.cc.length > 0) || (prefill?.bcc && prefill.bcc.length > 0)));
     setAttachments(initialAttachments ?? []);
     setMinimized(false);
     setDirty(false);
     if (editorRef.current) {
-      editorRef.current.innerHTML = prefill?.body ? textToHtml(prefill.body) : "";
+      // Prefer the rich-text body when restoring a draft; else plaintext → <br>.
+      editorRef.current.innerHTML = prefill?.bodyHtml ? prefill.bodyHtml : prefill?.body ? textToHtml(prefill.body) : "";
       ensureSignature();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,8 +211,31 @@ export function ComposeModal({
     return { to, cc, bcc, subject, body: text, html: html || undefined, attachments };
   };
 
+  // ── Autosave (Gmail drafts) ────────────────────────────────────────────────
+  const composeIsEmpty = useCallback((d: ComposeDraft): boolean => {
+    const has = (s?: string | null) => Boolean(s && s.trim());
+    return !has(d.to) && !has(d.cc) && !has(d.bcc) && !has(d.subject) && !has(d.body) && d.attachments.length === 0;
+  }, []);
+  const autosave = useComposeAutosave({
+    enabled: Boolean(autosaveSave) && open,
+    getDraft: draft,
+    save: autosaveSave ?? (async () => ({ ok: false }) as AutosaveResult),
+    isEmpty: composeIsEmpty,
+    fallbackKey: autosaveFallbackKey,
+  });
+  // Any edit both flags the modal dirty and pings the debounced autosave.
+  const markChanged = useCallback(() => {
+    setDirty(true);
+    autosave.notifyChange();
+  }, [autosave]);
+
   const requestClose = async () => {
     if (dirty) {
+      if (autosaveSave) {
+        await autosave.flushNow(); // Gmail autosave — persist immediately, never prompt
+        onClose();
+        return;
+      }
       if (onSaveDraft) {
         onSaveDraft(draft()); // never discard silently — persist first
         onClose();
@@ -217,7 +254,7 @@ export function ComposeModal({
   const cmd = (c: string, val?: string) => {
     editorRef.current?.focus();
     document.execCommand(c, false, val);
-    setDirty(true);
+    markChanged();
   };
   const addLink = () => {
     const url = window.prompt("Link URL (https://…)");
@@ -225,7 +262,7 @@ export function ComposeModal({
   };
   const toggleSignature = () => {
     setSignatureOn((v) => !v);
-    setDirty(true);
+    markChanged();
   };
 
   // ── AI writing assistant ──────────────────────────────────────────────────
@@ -315,15 +352,15 @@ export function ComposeModal({
   const onField =
     <T,>(setter: (v: T) => void) =>
     (v: T) => {
-      setDirty(true);
+      markChanged();
       setter(v);
     };
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0 || !uploadFiles) return;
     const added = await uploadFiles(files);
-    setDirty(true);
     setAttachments((prev) => [...prev, ...added]);
+    markChanged();
   };
 
   // Minimized: a slim restorable bar pinned bottom-right.
@@ -363,7 +400,7 @@ export function ComposeModal({
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
           <div className="flex items-center gap-1">
-            <button type="button" onClick={() => setMinimized(true)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100" aria-label="Minimize"><Minus className="h-4 w-4" /></button>
+            <button type="button" onClick={() => { autosave.flushNow(); setMinimized(true); }} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100" aria-label="Minimize"><Minus className="h-4 w-4" /></button>
             <button type="button" onClick={requestClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100" aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
         </div>
@@ -384,7 +421,7 @@ export function ComposeModal({
                   else if (e.key === "Enter") { e.preventDefault(); pickRecipient(toSug[toActive].email); }
                   else if (e.key === "Escape") { setToMenuOpen(false); }
                 }}
-                onBlur={() => setTimeout(() => setToMenuOpen(false), 120)}
+                onBlur={() => { setTimeout(() => setToMenuOpen(false), 120); autosave.flushNow(); }}
                 placeholder={t("to")}
                 aria-label="To"
                 autoComplete="off"
@@ -417,12 +454,12 @@ export function ComposeModal({
 
           {showCc ? (
             <>
-              <input value={cc} onChange={(e) => onField(setCc)(e.target.value)} placeholder={t("cc")} aria-label="Cc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
-              <input value={bcc} onChange={(e) => onField(setBcc)(e.target.value)} placeholder={t("bcc")} aria-label="Bcc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+              <input value={cc} onChange={(e) => onField(setCc)(e.target.value)} onBlur={autosave.flushNow} placeholder={t("cc")} aria-label="Cc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+              <input value={bcc} onChange={(e) => onField(setBcc)(e.target.value)} onBlur={autosave.flushNow} placeholder={t("bcc")} aria-label="Bcc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             </>
           ) : null}
 
-          <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} placeholder={t("subject")} aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+          <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} onBlur={autosave.flushNow} placeholder={t("subject")} aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
 
           {/* Rich-text body */}
           <div
@@ -432,7 +469,8 @@ export function ComposeModal({
             role="textbox"
             aria-label="Message body"
             aria-multiline="true"
-            onInput={() => setDirty(true)}
+            onInput={markChanged}
+            onBlur={autosave.flushNow}
             data-placeholder="Write your message…"
             className="min-h-[280px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm leading-relaxed text-slate-800 focus:border-[var(--blue)] focus:outline-none [&_a]:text-[#185FA5] [&_a]:underline [&_img]:my-1 [&_img]:inline-block empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]"
           />
@@ -589,7 +627,18 @@ export function ComposeModal({
 
         {/* Footer */}
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-          <button type="button" onClick={requestClose} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{t("discard")}</button>
+          <button type="button" onClick={() => (onDiscard ? onDiscard(draft()) : void requestClose())} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{t("discard")}</button>
+          {autosaveSave ? (
+            <span className="mr-1 inline-flex items-center gap-1.5 text-xs" aria-live="polite">
+              {autosave.status === "saving" ? (
+                <><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400" /><span className="text-slate-500">Saving…</span></>
+              ) : autosave.status === "error" ? (
+                <><span className="h-1.5 w-1.5 rounded-full bg-amber-500" /><span className="text-amber-600">Not saved — retrying</span></>
+              ) : autosave.status === "saved" && autosave.savedAt ? (
+                <><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /><span className="text-slate-500">Draft saved · {new Date(autosave.savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span></>
+              ) : null}
+            </span>
+          ) : null}
           {onSaveDraft ? (
             <button type="button" onClick={() => onSaveDraft(draft())} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileText className="h-4 w-4" /> Save draft</button>
           ) : null}

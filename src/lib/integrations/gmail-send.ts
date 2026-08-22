@@ -46,8 +46,11 @@ function bodyMime(body: string, html?: string | null): string {
   ].join("\r\n");
 }
 
-/** Encode an email (optionally with html + attachments) as base64url RFC 2822 for the Gmail API. */
-function encodeRawEmail(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = [], cc?: string | null, bcc?: string | null): string {
+/**
+ * Encode an email (optionally with html + attachments) as base64url RFC 2822 for
+ * the Gmail API. Exported so the drafts lib builds identical MIME to what we send.
+ */
+export function buildRawMessage(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = [], cc?: string | null, bcc?: string | null): string {
   // Bcc-only sends (blast to a list) are valid — when there's no To, use the standard
   // "undisclosed-recipients:;" placeholder so the header is well-formed.
   const recipientHeaders = [`To: ${to.trim() || "undisclosed-recipients:;"}`];
@@ -113,7 +116,7 @@ export async function sendViaGmail(input: {
     return { error: tokenResult.error ?? new Error("No Gmail access token available.") };
   }
 
-  const raw = encodeRawEmail(input.to, input.subject, input.body, input.html, input.attachments ?? [], input.cc, input.bcc);
+  const raw = buildRawMessage(input.to, input.subject, input.body, input.html, input.attachments ?? [], input.cc, input.bcc);
 
   const response = await fetch(GMAIL_SEND_URL, {
     method: "POST",

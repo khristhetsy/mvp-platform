@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
-import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip, MailOpen, Users } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip, MailOpen, Users, Check, X as XIcon } from "lucide-react";
 import { SalesContactsClient } from "@/app/admin/sales/contacts/SalesContactsClient";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
+import type { AutosaveResult } from "./useComposeAutosave";
 import { SenderHeader } from "./SenderHeader";
 import { ListRowsSkeleton } from "@/components/ui/Skeleton";
 import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
@@ -20,6 +22,12 @@ type GmailAttachmentRef = { attachmentId: string; messageId: string; filename: s
 type GmailMessage = { id: string; from: string; to: string; date: string; subject: string; text: string | null; html: string | null; snippet: string; attachments?: GmailAttachmentRef[] };
 type GmailThread = { id: string; subject: string; messages: GmailMessage[] };
 type ComposeContext = { mode: ComposeMode; threadId: string | null };
+type DraftSummary = { draftId: string; messageId: string; to: string; subject: string; snippet: string; lastSaved: string };
+
+const COMPOSE_FALLBACK_KEY = "gmail-compose-fallback";
+function clearComposeFallback() {
+  try { localStorage.removeItem(COMPOSE_FALLBACK_KEY); } catch { /* ignore */ }
+}
 
 const TLS_SECURITY = "Standard encryption (TLS)";
 
@@ -76,6 +84,11 @@ export function GmailInbox() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composePrefill, setComposePrefill] = useState<ComposePrefill | undefined>(undefined);
   const [composeContext, setComposeContext] = useState<ComposeContext>({ mode: "new", threadId: null });
+  const [composeSession, setComposeSession] = useState(0);
+  const [composeAttachments, setComposeAttachments] = useState<EmailAttachment[]>([]);
+  const [draftItems, setDraftItems] = useState<DraftSummary[]>([]);
+  const [leaveToast, setLeaveToast] = useState<{ draftId: string } | null>(null);
+  const draftIdRef = useRef<string | null>(null);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -125,6 +138,23 @@ export function GmailInbox() {
     setLoading(true);
     setError(null);
     void loadCounts();
+
+    // Drafts are their own Gmail entity (need the draft id to edit), so they load
+    // from the drafts endpoint rather than the thread list.
+    if (folder === "drafts") {
+      try {
+        const res = await fetch("/api/integrations/google/gmail/drafts");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to load drafts.");
+        setDraftItems(data.drafts ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load drafts.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       const qs = gmailQuery ? `&q=${encodeURIComponent(gmailQuery)}` : "";
       const res = await fetch(`/api/integrations/google/gmail/threads?folder=${folder}${qs}`);
@@ -148,6 +178,13 @@ export function GmailInbox() {
     const id = setInterval(() => { void loadCounts(); }, 60000);
     return () => clearInterval(id);
   }, [loadCounts]);
+
+  // Leave-mid-compose toast auto-dismisses after 6s.
+  useEffect(() => {
+    if (!leaveToast) return;
+    const id = setTimeout(() => setLeaveToast(null), 6000);
+    return () => clearTimeout(id);
+  }, [leaveToast]);
 
   const selectFolder = useCallback((f: GmailFolder) => {
     setFolder(f); setThread(null); setSearch(""); setOpenCardId(null);
@@ -217,11 +254,101 @@ export function GmailInbox() {
   const openCompose = useCallback((prefill?: ComposePrefill, ctx?: ComposeContext) => {
     setError(null);
     setNotice(null);
+    setLeaveToast(null);
+    draftIdRef.current = null;        // a fresh compose starts a new draft
+    setComposeAttachments([]);
+    clearComposeFallback();
     setComposeContext(ctx ?? { mode: prefill?.mode ?? "new", threadId: null });
     setComposePrefill(prefill ?? buildPrefill({ mode: "new" }));
+    setComposeSession((n) => n + 1);  // remount the modal fresh (clears status chip)
     setComposeOpen(true);
   }, []);
   const closeCompose = useCallback(() => { setComposeOpen(false); setComposePrefill(undefined); }, []);
+
+  // ── Gmail draft autosave / restore / cleanup ───────────────────────────────
+  // Replies route in-thread on send, so we don't autosave them as standalone drafts.
+  const draftAutosaveEnabled = composeContext.mode !== "reply" && composeContext.mode !== "replyAll";
+
+  const saveDraftNow = useCallback(async (d: ComposeDraft): Promise<AutosaveResult> => {
+    try {
+      const res = await fetch("/api/integrations/google/gmail/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: draftIdRef.current ?? undefined,
+          to: d.to, cc: d.cc, bcc: d.bcc, subject: d.subject, body: d.body, html: d.html, attachments: d.attachments,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.id) return { ok: false };
+      draftIdRef.current = data.id as string;
+      void loadCounts();
+      return { ok: true, savedAt: data.savedAt as string };
+    } catch {
+      return { ok: false };
+    }
+  }, [loadCounts]);
+
+  const deleteDraftById = useCallback(async (draftId: string) => {
+    try {
+      await fetch(`/api/integrations/google/gmail/drafts?id=${encodeURIComponent(draftId)}`, { method: "DELETE" });
+    } catch { /* best-effort */ }
+    setDraftItems((prev) => prev.filter((x) => x.draftId !== draftId));
+    void loadCounts();
+  }, [loadCounts]);
+
+  const openDraft = useCallback(async (draftId: string) => {
+    setError(null);
+    setNotice(null);
+    setLeaveToast(null);
+    try {
+      const res = await fetch(`/api/integrations/google/gmail/drafts?id=${encodeURIComponent(draftId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't open the draft.");
+      const dr = data.draft as { id: string; to: string; cc: string; bcc: string; subject: string; body: string; html: string | null; attachments: EmailAttachment[] };
+      draftIdRef.current = dr.id;
+      clearComposeFallback();
+      setComposeAttachments(dr.attachments ?? []);
+      setComposeContext({ mode: "new", threadId: null });
+      setComposePrefill({
+        mode: "new",
+        to: dr.to ? [dr.to] : [],
+        cc: dr.cc ? [dr.cc] : [],
+        bcc: dr.bcc ? [dr.bcc] : [],
+        subject: dr.subject ?? "",
+        body: dr.body ?? "",
+        bodyHtml: dr.html ?? undefined,
+      });
+      setComposeSession((n) => n + 1);
+      setComposeOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't open the draft.");
+    }
+  }, []);
+
+  // Closing the compose (X / minimize→navigate) with saved content: leave-toast.
+  const handleComposeClose = useCallback(() => {
+    const savedDraftId = draftIdRef.current;
+    closeCompose();
+    if (savedDraftId) {
+      setLeaveToast({ draftId: savedDraftId });
+      void loadCounts();
+      if (folder === "drafts") void load();
+    }
+  }, [closeCompose, loadCounts, folder, load]);
+
+  // Discard button: delete the draft (with confirm) when there's content.
+  const discardCompose = useCallback(async (d: ComposeDraft) => {
+    const hasContent = Boolean(d.to.trim() || d.cc?.trim() || d.bcc?.trim() || d.subject.trim() || d.body.trim() || d.attachments.length);
+    if (hasContent) {
+      if (!(await confirmDialog({ message: "Delete draft?", danger: true, confirmLabel: "Delete" }))) return;
+      if (draftIdRef.current) await deleteDraftById(draftIdRef.current);
+    }
+    draftIdRef.current = null;
+    clearComposeFallback();
+    closeCompose();
+    if (folder === "drafts") void load();
+  }, [deleteDraftById, closeCompose, folder, load]);
 
   // Deep-link entry point: "Email" buttons across the app navigate to
   // /admin/inbox?compose=1&to=<email> to open the Gmail compose in-platform.
@@ -267,14 +394,18 @@ export function GmailInbox() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Send failed.");
+      // Sent successfully — remove the draft from Gmail + our fallback buffer.
+      if (draftIdRef.current) { void deleteDraftById(draftIdRef.current); draftIdRef.current = null; }
+      clearComposeFallback();
+      setLeaveToast(null);
       closeCompose();
-      if (folder === "sent") void load();
+      if (folder === "sent" || folder === "drafts") void load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Send failed.");
     } finally {
       setSending(false);
     }
-  }, [composeContext, folder, load, openThread, closeCompose]);
+  }, [composeContext, folder, load, openThread, closeCompose, deleteDraftById]);
 
   // Reply / Reply all / Forward → wide modal (replies route in-thread).
   const recipientsOf = useCallback((): string[] => {
@@ -432,6 +563,31 @@ export function GmailInbox() {
                 </div>
               </div>
             </div>
+          ) : folder === "drafts" ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+              {loading ? (
+                <ListRowsSkeleton />
+              ) : draftItems.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-slate-400">No drafts yet. Start composing and it saves here automatically.</p>
+              ) : (
+                <ul>
+                  {draftItems.map((d) => (
+                    <li key={d.draftId} role="button" tabIndex={0} onClick={() => void openDraft(d.draftId)} onKeyDown={(e) => { if (e.key === "Enter") void openDraft(d.draftId); }}
+                      className="group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 hover:bg-slate-50">
+                      <span className="w-44 shrink-0 truncate text-sm text-slate-600">{d.to.trim() || "(no recipient)"}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        <span className="text-slate-700">{d.subject.trim() || "(no subject)"}</span>
+                        {d.snippet ? <span className="text-slate-400"> — {d.snippet}</span> : null}
+                      </span>
+                      <span className="hidden shrink-0 items-center gap-1 group-hover:flex">
+                        <button type="button" title="Delete draft" onClick={(e) => { e.stopPropagation(); void deleteDraftById(d.draftId); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                      </span>
+                      <span className="w-16 shrink-0 text-right text-xs text-slate-400 group-hover:hidden">{when(d.lastSaved)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ) : (
             <>
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2">
@@ -489,18 +645,34 @@ export function GmailInbox() {
         </div>
       </div>
 
-      {/* F3 wide compose modal (Gmail) */}
+      {/* F3 wide compose modal (Gmail) — key remounts fresh per compose session */}
       <ComposeModal
+        key={composeSession}
         open={composeOpen}
         prefill={composePrefill}
         title={composeContext.mode === "forward" ? "Forward · Gmail" : composeContext.mode === "reply" || composeContext.mode === "replyAll" ? "Reply · Gmail" : "New message · Gmail"}
         sending={sending}
         error={composeOpen ? error : null}
         onSend={(d) => void onSend(d)}
-        onClose={closeCompose}
+        onClose={handleComposeClose}
+        onDiscard={draftAutosaveEnabled ? (d) => void discardCompose(d) : undefined}
+        autosaveSave={draftAutosaveEnabled ? saveDraftNow : undefined}
+        autosaveFallbackKey={COMPOSE_FALLBACK_KEY}
+        initialAttachments={composeAttachments}
         uploadFiles={uploadComposeFiles}
         uploading={uploading}
       />
+
+      {/* Leave-mid-compose toast (bottom-left, 6s) */}
+      {leaveToast ? (
+        <div className="fixed bottom-4 left-4 z-50 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+          <Check className="h-4 w-4 text-emerald-600" />
+          <span className="text-sm text-slate-800">Draft saved to Drafts</span>
+          <button type="button" onClick={() => { const id = leaveToast.draftId; setLeaveToast(null); void openDraft(id); }} className="rounded-lg px-2 py-1 text-sm font-medium text-[#185FA5] hover:bg-slate-50">Resume</button>
+          <button type="button" onClick={() => { const id = leaveToast.draftId; setLeaveToast(null); void deleteDraftById(id); }} className="rounded-lg px-2 py-1 text-sm font-medium text-[#A32D2D] hover:bg-slate-50">Delete draft</button>
+          <button type="button" onClick={() => setLeaveToast(null)} aria-label="Dismiss" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><XIcon className="h-3.5 w-3.5" /></button>
+        </div>
+      ) : null}
     </div>
   );
 }
