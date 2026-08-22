@@ -230,9 +230,10 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
       },
       body: JSON.stringify({
         model: CLAUDE_SONNET,
-        // 8 sections × (feedback + tip) + strengths/gaps/reaction easily exceeds 2000
-        // tokens; truncated JSON is unparseable, so give the reply room to finish.
-        max_tokens: 4096,
+        // Maxed to Sonnet's output ceiling so the reply can never be truncated
+        // (truncated JSON is unparseable). You're only billed for tokens actually
+        // used — the real analysis is ~3k — so the headroom costs nothing.
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [
           {
