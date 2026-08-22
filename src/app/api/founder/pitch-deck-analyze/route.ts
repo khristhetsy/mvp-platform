@@ -100,11 +100,23 @@ function fallbackAnalysis(reason?: string): PitchDeckAnalysis {
 }
 
 function parseAnalysis(raw: string): PitchDeckAnalysis | null {
-  // Strip markdown code fences
-  const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+  // Strip markdown code fences anywhere in the text.
+  const noFences = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+  // 1) Try the whole thing.
   try {
-    return JSON.parse(cleaned) as PitchDeckAnalysis;
+    return JSON.parse(noFences) as PitchDeckAnalysis;
   } catch {
+    // 2) The model sometimes adds prose around the JSON — extract the outermost
+    //    object (first "{" to last "}") and parse that.
+    const start = noFences.indexOf("{");
+    const end = noFences.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(noFences.slice(start, end + 1)) as PitchDeckAnalysis;
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
@@ -218,7 +230,9 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
       },
       body: JSON.stringify({
         model: CLAUDE_SONNET,
-        max_tokens: 2000,
+        // 8 sections × (feedback + tip) + strengths/gaps/reaction easily exceeds 2000
+        // tokens; truncated JSON is unparseable, so give the reply room to finish.
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [
           {
@@ -250,12 +264,20 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
 
     const data = await res.json() as {
       content: Array<{ type: string; text: string }>;
+      stop_reason?: string;
     };
     const raw = data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
     const analysis = parseAnalysis(raw);
 
     if (!analysis) {
-      return NextResponse.json({ analysis: fallbackAnalysis("the AI returned an unreadable response — please retry") });
+      console.error(
+        `[pitch-deck-analyze] Unparseable reply (stop_reason=${data.stop_reason ?? "?"}, len=${raw.length}):`,
+        raw.slice(0, 800),
+      );
+      const reason = data.stop_reason === "max_length" || data.stop_reason === "max_tokens"
+        ? "the analysis was too long to finish in one pass — please retry"
+        : "the AI returned a response we couldn't read — please retry";
+      return NextResponse.json({ analysis: fallbackAnalysis(reason) });
     }
 
     analysis.source = "ai";
