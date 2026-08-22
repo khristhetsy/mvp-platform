@@ -49,9 +49,36 @@ const SECTIONS = [
   "The ask",
 ];
 
+/**
+ * Turn a raw failure (HTTP status + body, or a thrown error) into a clear,
+ * founder-facing sentence that names the real problem — never "not configured"
+ * unless the key is genuinely absent. Technical detail stays in the server logs.
+ */
+function describeFailure(input: { status?: number; detail?: string; err?: unknown }): string {
+  const { status, detail, err } = input;
+  if (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"))) {
+    return "this deck took too long to analyze — try a lighter PDF (fewer pages or images) and run it again";
+  }
+  if (status === 401 || status === 403) {
+    return "the AI service rejected our credentials — an admin needs to check the ANTHROPIC_API_KEY";
+  }
+  if (status === 429) {
+    return "the AI service is rate-limited right now — wait a moment and try again";
+  }
+  if (status === 413 || status === 400) {
+    return "this deck couldn't be processed — it may be too large or complex; try a lighter PDF";
+  }
+  if (status === 500 || status === 503 || status === 529) {
+    return "the AI service is temporarily overloaded — please try again in a minute";
+  }
+  if (status) return `the AI service returned an error (${status}) — please try again`;
+  const raw = (detail ?? (err instanceof Error ? err.message : "")).trim();
+  return raw ? `the AI request failed — ${raw.slice(0, 160)}` : "the AI request failed — please try again";
+}
+
 function fallbackAnalysis(reason?: string): PitchDeckAnalysis {
   const verdict = reason
-    ? `Analysis could not run — ${reason}`
+    ? `Analysis could not run — ${reason}.`
     : "Analysis unavailable — AI is not configured.";
   return {
     overallScore: 0,
@@ -61,12 +88,12 @@ function fallbackAnalysis(reason?: string): PitchDeckAnalysis {
       score: 0,
       verdict: "missing",
       feedback: reason
-        ? "The deck was not analyzed because the AI request failed — this is not a finding about your deck."
+        ? "The deck wasn't analyzed because the AI run didn't complete — this is not a finding about your deck."
         : "Unable to analyze without AI configuration.",
-      tip: reason ?? "Configure the ANTHROPIC_API_KEY to enable AI analysis.",
+      tip: reason ? "Run the analysis again once the issue above clears." : "Configure the ANTHROPIC_API_KEY to enable AI analysis.",
     })),
     topStrengths: [],
-    topGaps: [reason ? `AI request failed: ${reason}` : "AI analysis not available"],
+    topGaps: [reason ? `Couldn't analyze: ${reason}.` : "AI analysis not available"],
     investorReaction: "Unable to simulate investor reaction.",
     source: "fallback",
   };
@@ -217,14 +244,8 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      let msg = `Anthropic API returned ${res.status}`;
-      try {
-        const parsed = JSON.parse(detail) as { error?: { message?: string } };
-        if (parsed?.error?.message) msg += ` — ${parsed.error.message}`;
-      } catch {
-        if (detail) msg += ` — ${detail.slice(0, 200)}`;
-      }
-      throw new Error(msg);
+      console.error(`[pitch-deck-analyze] Anthropic API ${res.status}:`, detail.slice(0, 500));
+      return NextResponse.json({ analysis: fallbackAnalysis(describeFailure({ status: res.status, detail })) });
     }
 
     const data = await res.json() as {
@@ -243,11 +264,7 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
     await recordUsage({ profileId: auth.profile.id, feature: USAGE_FEATURE, admin });
     return NextResponse.json({ analysis, savedAt });
   } catch (err) {
-    const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
-    const reason = isAbort
-      ? "this deck took too long to analyze — try a lighter PDF (fewer pages/images) and retry"
-      : err instanceof Error ? err.message : "the AI request failed";
-    console.error("[pitch-deck-analyze] AI request failed:", reason);
-    return NextResponse.json({ analysis: fallbackAnalysis(reason) });
+    console.error("[pitch-deck-analyze] AI request failed:", err instanceof Error ? err.message : err);
+    return NextResponse.json({ analysis: fallbackAnalysis(describeFailure({ err })) });
   }
 }
