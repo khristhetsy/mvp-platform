@@ -15,6 +15,51 @@ function db(): SupabaseClient {
 
 const AUTOMATION_KEY = "investor_outreach_automation";
 const FOUNDER_STAGE_MENU_KEY = "founder_stage_menu";
+const UPLOAD_LIMITS_KEY = "upload_limits";
+
+/** Founder document-upload limits (admin-editable). Applies to all founder uploads. */
+export type UploadLimits = { maxMb: number; maxPages: number };
+export const DEFAULT_UPLOAD_LIMITS: UploadLimits = { maxMb: 20, maxPages: 30 };
+// Hard ceilings we never let an admin exceed (Anthropic's PDF caps).
+export const UPLOAD_LIMIT_CEILING: UploadLimits = { maxMb: 32, maxPages: 100 };
+
+function clampLimits(v: Partial<UploadLimits> | null | undefined): UploadLimits {
+  const mb = Number(v?.maxMb);
+  const pages = Number(v?.maxPages);
+  return {
+    maxMb: Number.isFinite(mb) ? Math.min(UPLOAD_LIMIT_CEILING.maxMb, Math.max(1, Math.round(mb))) : DEFAULT_UPLOAD_LIMITS.maxMb,
+    maxPages: Number.isFinite(pages) ? Math.min(UPLOAD_LIMIT_CEILING.maxPages, Math.max(1, Math.round(pages))) : DEFAULT_UPLOAD_LIMITS.maxPages,
+  };
+}
+
+export async function getUploadLimits(): Promise<UploadLimits> {
+  try {
+    const { data } = await db()
+      .from("platform_settings")
+      .select("value")
+      .eq("key", UPLOAD_LIMITS_KEY)
+      .maybeSingle();
+    const value = (data as { value?: Partial<UploadLimits> } | null)?.value;
+    return value ? clampLimits(value) : { ...DEFAULT_UPLOAD_LIMITS };
+  } catch {
+    return { ...DEFAULT_UPLOAD_LIMITS };
+  }
+}
+
+export async function setUploadLimits(limits: Partial<UploadLimits>, updatedBy: string | null): Promise<UploadLimits | null> {
+  const clean = clampLimits(limits);
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert(
+        { key: UPLOAD_LIMITS_KEY, value: clean, updated_by: updatedBy, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+    return error ? null : clean;
+  } catch {
+    return null;
+  }
+}
 
 /** Founder-nav menu hrefs hidden per the admin stage-menu editor (global). */
 export async function getFounderStageMenuHidden(): Promise<string[]> {

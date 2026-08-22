@@ -19,8 +19,7 @@ import {
 } from "@/lib/onboarding/ensure-founder-setup";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { documentUploadSchema } from "@/lib/validation";
-
-const maxUploadBytes = 25 * 1024 * 1024;
+import { getUploadLimits } from "@/lib/settings/platform-settings";
 const allowedMimeTypes = new Set([
   "application/pdf",
   "application/msword",
@@ -269,9 +268,10 @@ export async function POST(request: Request) {
     );
   }
 
-  if (uploadSize > maxUploadBytes) {
+  const { maxMb } = await getUploadLimits();
+  if (uploadSize > maxMb * 1024 * 1024) {
     return NextResponse.json(
-      { stage: "validate_file", clientUsed: "auth_client", error: "File exceeds the 25MB MVP upload limit." },
+      { stage: "validate_file", clientUsed: "auth_client", error: `File exceeds the ${maxMb} MB upload limit.` },
       { status: 400 },
     );
   }

@@ -13,6 +13,8 @@ type Props = {
   /** Canonical document-type codes currently flagged "Not applicable". */
   notApplicableTypes?: string[];
   maxUploadBytes: number;
+  /** Max PDF page count allowed (0 = no page limit). */
+  maxPages?: number;
 };
 
 // Types a founder may flag "Not applicable" (must match the API allow-list).
@@ -46,7 +48,7 @@ function allowedAccept(documentType: string) {
 
 function validateClientSide(file: File, documentType: string, maxUploadBytes: number): string | null {
   if (file.size > maxUploadBytes) {
-    return `File is too large. Max size is ${formatBytes(maxUploadBytes)}.`;
+    return `File is too large (${formatBytes(file.size)}). Max size is ${formatBytes(maxUploadBytes)}.`;
   }
 
   if (isPitchDeck(documentType) && file.type !== "application/pdf") {
@@ -54,6 +56,19 @@ function validateClientSide(file: File, documentType: string, maxUploadBytes: nu
   }
 
   return null;
+}
+
+/** Count pages of a PDF in-browser. Returns null if it can't be read (non-PDF, corrupt). */
+async function countPdfPages(file: File): Promise<number | null> {
+  if (file.type !== "application/pdf") return null;
+  try {
+    const { PDFDocument } = await import("pdf-lib");
+    const buf = await file.arrayBuffer();
+    const doc = await PDFDocument.load(buf, { updateMetadata: false });
+    return doc.getPageCount();
+  } catch {
+    return null;
+  }
 }
 
 function toMessage(status: number, body: unknown) {
@@ -71,6 +86,7 @@ export function DocumentUploadForm({
   existingByType = {},
   notApplicableTypes = [],
   maxUploadBytes,
+  maxPages = 0,
 }: Props) {
   const t = useTranslations("sharedCmp");
   const router = useRouter();
@@ -127,6 +143,15 @@ export function DocumentUploadForm({
     if (validationError) {
       setResult({ ok: false, status: 0, message: validationError });
       return;
+    }
+
+    // Page-count cap for PDFs (keeps decks light enough to analyze reliably).
+    if (maxPages > 0 && file.type === "application/pdf") {
+      const pages = await countPdfPages(file);
+      if (pages !== null && pages > maxPages) {
+        setResult({ ok: false, status: 0, message: `This PDF has ${pages} pages. Please upload ${maxPages} pages or fewer.` });
+        return;
+      }
     }
 
     setIsUploading(true);
@@ -332,7 +357,9 @@ export function DocumentUploadForm({
         ) : null}
       </div>
 
-      <p className="text-xs text-slate-500">Max upload size: {formatBytes(maxUploadBytes)}.</p>
+      <p className="text-xs text-slate-500">
+        Max upload size: {formatBytes(maxUploadBytes)}{maxPages > 0 ? ` · PDFs up to ${maxPages} pages` : ""}.
+      </p>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { buildStoragePath, getStorageBucket } from "@/lib/data/documents";
 import { userHasCompanyAccess } from "@/lib/onboarding/ensure-founder-setup";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { getUploadLimits } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,6 @@ export const dynamic = "force-dynamic";
 // limit. The file bytes never pass through this function. The follow-up call to
 // /api/documents/upload (with storagePath) records the document and runs the
 // authoritative ownership check before persisting.
-const MAX_BYTES = 25 * 1024 * 1024;
 
 function normalizeDocumentType(input: string) {
   const value = input.toUpperCase().trim();
@@ -42,7 +42,11 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Invalid document type." }, { status: 400 });
   }
   if (!fileName) return NextResponse.json({ error: "A file name is required." }, { status: 400 });
-  if (fileSize > MAX_BYTES) return NextResponse.json({ error: "File exceeds the 25 MB limit." }, { status: 400 });
+  const limits = await getUploadLimits();
+  const maxBytes = limits.maxMb * 1024 * 1024;
+  if (fileSize > maxBytes) {
+    return NextResponse.json({ error: `File exceeds the ${limits.maxMb} MB limit.` }, { status: 400 });
+  }
 
   const { company } = await getActiveCompanyForUser(auth.profile);
   const companyId = (typeof body?.companyId === "string" && body.companyId) || company?.id;

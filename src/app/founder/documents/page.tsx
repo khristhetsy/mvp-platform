@@ -14,6 +14,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { getUploadLimits } from "@/lib/settings/platform-settings";
 
 // Human-readable label lookup — covers canonical codes + upload-API aliases
 const DOC_TYPE_LABEL_MAP: Record<string, string> = {};
@@ -52,7 +53,8 @@ export default async function DocumentUploadPage() {
   const notApplicableTypes = company
     ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
     : [];
-  const maxUploadBytes = 25 * 1024 * 1024;
+  const uploadLimits = await getUploadLimits();
+  const maxUploadBytes = uploadLimits.maxMb * 1024 * 1024;
 
   const existingByType: Record<string, { fileName?: string | null } | undefined> = {};
   for (const type of FOUNDER_DOCUMENT_TYPES) {
@@ -144,6 +146,7 @@ export default async function DocumentUploadPage() {
               existingByType={existingByType}
               notApplicableTypes={notApplicableTypes}
               maxUploadBytes={maxUploadBytes}
+              maxPages={uploadLimits.maxPages}
             />
           )}
 
