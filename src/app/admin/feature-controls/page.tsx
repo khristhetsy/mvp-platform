@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { OutreachAutomationToggle } from "@/components/admin/OutreachAutomationToggle";
 import { StageMenuEditor } from "@/components/admin/StageMenuEditor";
+import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function AdminFeatureControlsPage() {
     >
       <OutreachAutomationToggle />
       <DepartmentsControls />
+      <AiUsageLimitsControls />
       <StageMenuEditor />
     </AppShell>
   );

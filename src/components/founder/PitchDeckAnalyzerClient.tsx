@@ -166,6 +166,7 @@ export function PitchDeckAnalyzerClient({
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<PitchDeckAnalysis | null>(initialAnalysis);
   const [error, setError] = useState<string | null>(null);
+  const [limitInfo, setLimitInfo] = useState<{ limit: number | null; period: string; resetAt: string | null } | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(initialSavedAt);
   const [saving, setSaving] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -173,14 +174,20 @@ export function PitchDeckAnalyzerClient({
   function fmtTime(iso: string) {
     return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   }
+  function fmtResetDate(iso: string) {
+    return new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
 
   async function run() {
     setLoading(true);
     setError(null);
+    setLimitInfo(null);
     try {
       const res = await fetch("/api/founder/pitch-deck-analyze", { method: "POST" });
-      const json = await res.json() as { analysis?: PitchDeckAnalysis; savedAt?: string | null; error?: string };
-      if (!res.ok || json.error) {
+      const json = await res.json() as { analysis?: PitchDeckAnalysis; savedAt?: string | null; error?: string; limit?: number | null; period?: string; resetAt?: string | null };
+      if (res.status === 429 && json.error === "usage_limit_reached") {
+        setLimitInfo({ limit: json.limit ?? null, period: json.period ?? "week", resetAt: json.resetAt ?? null });
+      } else if (!res.ok || json.error) {
         setError(json.error ?? "Analysis failed.");
       } else if (json.analysis) {
         setAnalysis(json.analysis);
@@ -326,6 +333,24 @@ export function PitchDeckAnalyzerClient({
           <p style={{ marginTop: 12, fontSize: 12, color: "#991b1b", background: "#fee2e2", borderRadius: 8, padding: "8px 12px" }}>
             {error}
           </p>
+        )}
+
+        {limitInfo && (
+          <div style={{ marginTop: 12, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 1, flexShrink: 0 }} aria-hidden="true">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a8a", margin: 0 }}>
+                You&rsquo;ve used your {limitInfo.limit === 1 ? "" : `${limitInfo.limit} `}analysis{limitInfo.limit === 1 ? "" : "es"} for this {limitInfo.period}
+              </p>
+              <p style={{ fontSize: 12, color: "#1e40af", margin: "3px 0 0", lineHeight: 1.5 }}>
+                {limitInfo.resetAt ? `Your next run unlocks ${fmtResetDate(limitInfo.resetAt)}. ` : ""}
+                Your saved report stays available to view, print, and export.{" "}
+                <Link href="/founder/settings/billing" style={{ color: "#1d4ed8", fontWeight: 700, textDecoration: "underline" }}>Upgrade for more runs</Link>
+              </p>
+            </div>
+          </div>
         )}
       </div>
 

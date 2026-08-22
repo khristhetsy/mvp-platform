@@ -5,6 +5,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
 import { savePitchDeckAnalysis } from "@/lib/pitch-deck/analysis-store";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { checkUsage, recordUsage } from "@/lib/ai-usage/service";
+
+const USAGE_FEATURE = "pitch_deck_analyzer";
 
 export type PitchDeckSection = {
   name: string;
@@ -99,8 +103,25 @@ export async function POST() {
     return NextResponse.json({ analysis: fallbackAnalysis() });
   }
 
-  // Download file from Supabase Storage
+  // Usage cap — this is a paid Anthropic call, so enforce the per-plan limit before
+  // spending. Checking does not consume a run; we only record after a successful analysis.
   const admin = createServiceRoleClient();
+  const plan = await getUserPlan(auth.profile.id).catch(() => null);
+  const usage = await checkUsage({ profileId: auth.profile.id, plan, feature: USAGE_FEATURE, admin });
+  if (!usage.allowed) {
+    return NextResponse.json(
+      {
+        error: "usage_limit_reached",
+        limit: usage.maxRuns,
+        period: usage.period,
+        used: usage.used,
+        resetAt: usage.resetAt,
+      },
+      { status: 429 },
+    );
+  }
+
+  // Download file from Supabase Storage
   const { data: fileData, error: dlError } = await admin
     .storage
     .from("company-documents")
@@ -205,6 +226,8 @@ If a section is not present in the deck, set score to 0 and verdict to "missing"
 
     analysis.source = "ai";
     const savedAt = await savePitchDeckAnalysis(admin, company.id, analysis).catch(() => null);
+    // Count this run only now that a real analysis succeeded (never on fallback/failure).
+    await recordUsage({ profileId: auth.profile.id, feature: USAGE_FEATURE, admin });
     return NextResponse.json({ analysis, savedAt });
   } catch (err) {
     const reason = err instanceof Error ? err.message : "the AI request failed";
