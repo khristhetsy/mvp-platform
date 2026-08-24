@@ -48,10 +48,12 @@ export async function materializeRegistrantList(
 ): Promise<{ listId: string; count: number }> {
   const admin = createServiceRoleClient() as unknown as SupabaseClient;
 
-  // 1) registrant profiles (email + name), status-filtered
+  // 1) registrants (email + name), status-filtered. Contact info lives in the
+  // answers JSON for guests AND self-registrations; the linked profile (when the
+  // registrant has an account) is only a fallback.
   let q = raw(admin as unknown as SupabaseClient<Database>)
     .from("registrations")
-    .select("status, profiles:attendee_id(email, full_name)")
+    .select("status, answers, profiles:attendee_id(email, full_name)")
     .eq("event_id", eventId);
   if (statuses.length) q = q.in("status", statuses);
   const { data } = await q;
@@ -59,7 +61,10 @@ export async function materializeRegistrantList(
   const people = ((data ?? []) as Row[])
     .map((r) => {
       const p = (Array.isArray(r.profiles) ? r.profiles[0] : r.profiles) as { email?: string | null; full_name?: string | null } | null;
-      return { email: (p?.email ?? "").trim().toLowerCase(), name: p?.full_name ?? "" };
+      const ans = (r.answers ?? {}) as { email?: unknown; name?: unknown };
+      const email = (typeof ans.email === "string" && ans.email.trim() ? ans.email : p?.email ?? "").trim().toLowerCase();
+      const name = (typeof ans.name === "string" && ans.name.trim() ? ans.name : p?.full_name ?? "") as string;
+      return { email, name };
     })
     .filter((x) => x.email);
 
