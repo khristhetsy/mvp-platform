@@ -95,7 +95,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ campaignId: campaign.id, status: campaign.status, registrantCount });
   } catch (err) {
     Sentry.captureException(err);
-    const detail = err instanceof Error ? err.message : String(err);
+    // Supabase/PostgREST errors are plain objects ({message, code, details, hint}),
+    // not Error instances — String(err) would collapse to "[object Object]".
+    const detail =
+      err instanceof Error ? err.message
+      : err && typeof err === "object" && "message" in err ? String((err as { message?: unknown }).message ?? "")
+      : String(err);
     // Most likely cause pre-migration: unknown column event_id/event_email_type/merge_snapshot.
     return NextResponse.json({ error: `Couldn't create the campaign. ${detail.slice(0, 200)}` }, { status: 500 });
   }
