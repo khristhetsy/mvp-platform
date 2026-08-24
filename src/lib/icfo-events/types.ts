@@ -155,6 +155,8 @@ export interface Sponsor {
   videoRef: string | null;
   /** Show the opt-in "Request contact" button on the booth. */
   allowContactRequest: boolean;
+  /** Google Meet link for the booth "Join meeting" button. */
+  meetingUrl: string | null;
 }
 
 export interface SponsorLead {

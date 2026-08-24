@@ -64,6 +64,7 @@ function mapSponsor(r: Row): Sponsor {
     videoProvider: (r.video_provider as string | null) ?? null,
     videoRef: (r.video_ref as string | null) ?? null,
     allowContactRequest: r.allow_contact_request === undefined ? true : Boolean(r.allow_contact_request),
+    meetingUrl: (r.meeting_url as string | null) ?? null,
   };
 }
 
@@ -308,6 +309,7 @@ export async function updateSponsorBooth(
     videoProvider?: string | null;
     videoRef?: string | null;
     allowContactRequest?: boolean;
+    meetingUrl?: string | null;
   },
 ): Promise<Sponsor> {
   const patch: Record<string, unknown> = {};
@@ -317,6 +319,7 @@ export async function updateSponsorBooth(
   if (fields.videoProvider !== undefined) patch.video_provider = fields.videoProvider;
   if (fields.videoRef !== undefined) patch.video_ref = fields.videoRef;
   if (fields.allowContactRequest !== undefined) patch.allow_contact_request = fields.allowContactRequest;
+  if (fields.meetingUrl !== undefined) patch.meeting_url = fields.meetingUrl;
   const { data, error } = await raw(supabase)
     .from("sponsors")
     .update(patch)

@@ -12,6 +12,7 @@ export function SponsorPortalClient({
   initialVideoProvider = null,
   initialVideoRef = null,
   initialAllowContact = true,
+  initialMeetingUrl = null,
   leads,
 }: {
   sponsorId: string;
@@ -21,6 +22,7 @@ export function SponsorPortalClient({
   initialVideoProvider?: string | null;
   initialVideoRef?: string | null;
   initialAllowContact?: boolean;
+  initialMeetingUrl?: string | null;
   leads: SponsorLead[];
 }) {
   const t = useTranslations("eventsCmp");
@@ -33,9 +35,27 @@ export function SponsorPortalClient({
   const [hasUpload, setHasUpload] = useState(initialVideoProvider === "recorded");
   const [uploading, setUploading] = useState(false);
   const [allowContact, setAllowContact] = useState(initialAllowContact);
+  const [meetingUrl, setMeetingUrl] = useState(initialMeetingUrl ?? "");
+  const [creatingMeet, setCreatingMeet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function createMeet() {
+    setCreatingMeet(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/sponsor/${sponsorId}/meet`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not create meeting.");
+      setMeetingUrl(json.meetingUrl as string);
+      setSaved(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create meeting.");
+    } finally {
+      setCreatingMeet(false);
+    }
+  }
 
   async function uploadVideo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -82,6 +102,7 @@ export function SponsorPortalClient({
       website: website || null,
       downloads: cleanDownloads,
       allowContactRequest: allowContact,
+      meetingUrl: meetingUrl.trim() || "",
     };
     // A typed link wins; an empty link with no upload clears the video.
     if (videoLink.trim()) { body.videoProvider = "external"; body.videoRef = videoLink.trim(); }
@@ -143,6 +164,22 @@ export function SponsorPortalClient({
             {videoProvider === "external" && videoLink.trim() && <span className="text-xs text-emerald-700">Link set ✓</span>}
           </div>
           <p className="mt-1 text-xs text-[var(--text-muted)]">A link takes priority. Uploads are streamed on your booth (mp4/webm/mov, up to 500 MB).</p>
+        </div>
+
+        <div className="mt-4">
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Booth meeting (Google Meet)</span>
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              value={meetingUrl}
+              onChange={(e) => { setMeetingUrl(e.target.value); setSaved(false); }}
+              placeholder="https://meet.google.com/…"
+              className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            />
+            <button type="button" onClick={createMeet} disabled={creatingMeet} className="whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 py-2 text-xs font-medium text-[var(--blue)] disabled:opacity-50">
+              {creatingMeet ? "Creating…" : "Create Meet"}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">Adds a “Join meeting” button to your booth. Create one from your connected Google account, or paste a link.</p>
         </div>
 
         <label className="mt-4 flex items-center gap-2 text-sm text-[var(--text-secondary)]">

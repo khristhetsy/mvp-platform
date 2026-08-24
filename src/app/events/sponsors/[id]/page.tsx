@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Video } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
@@ -130,11 +130,21 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
           <BoothPresenceIndicator sponsorId={booth.id} />
         </div>
 
-        {booth.allowContactRequest && (
-          <div className="mt-6">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          {booth.meetingUrl && (
+            <a
+              href={booth.meetingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white hover:brightness-95"
+            >
+              <Video className="h-4 w-4" /> Join meeting
+            </a>
+          )}
+          {booth.allowContactRequest && (
             <SponsorIntroButton sponsorId={booth.id} sponsorName={booth.name} isAuthenticated={Boolean(profile)} />
-          </div>
-        )}
+          )}
+        </div>
 
         {booth.downloads.length > 0 && (
           <div className="mt-8">

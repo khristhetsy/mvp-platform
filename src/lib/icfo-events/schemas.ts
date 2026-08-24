@@ -110,6 +110,7 @@ export const sponsorBoothSchema = z.object({
   videoProvider: z.enum(["external", "recorded"]).nullable().optional(),
   videoRef: z.string().max(2000).nullable().optional(),
   allowContactRequest: z.boolean().optional(),
+  meetingUrl: z.string().url().max(2000).nullable().optional().or(z.literal("")),
 });
 export type SponsorBoothInput = z.infer<typeof sponsorBoothSchema>;
 

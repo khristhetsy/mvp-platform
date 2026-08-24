@@ -17,6 +17,7 @@ const schema = z.object({
   videoProvider: z.enum(["external", "recorded"]).nullable().optional(),
   videoRef: z.string().max(2000).nullable().optional(),
   allowContactRequest: z.boolean().optional(),
+  meetingUrl: z.string().url().max(2000).nullable().optional().or(z.literal("")),
 });
 
 /** Sponsor owner edits their own booth fields. */
@@ -36,7 +37,8 @@ export async function PATCH(
     const owned = await getOwnedSponsor(supabase, id, profile.id);
     if (!owned) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-    const sponsor = await updateSponsorBooth(supabase, id, parsed.data);
+    const meetingUrl = parsed.data.meetingUrl === "" ? null : parsed.data.meetingUrl;
+    const sponsor = await updateSponsorBooth(supabase, id, { ...parsed.data, meetingUrl });
     return NextResponse.json({ sponsor });
   } catch (err) {
     Sentry.captureException(err);

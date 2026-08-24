@@ -63,6 +63,7 @@ export default async function SponsorPortalPage({ params }: { params: Promise<{ 
           initialVideoProvider={sponsor.videoProvider}
           initialVideoRef={sponsor.videoRef}
           initialAllowContact={sponsor.allowContactRequest}
+          initialMeetingUrl={sponsor.meetingUrl}
           leads={leads}
         />
       </section>

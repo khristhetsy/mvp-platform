@@ -21,7 +21,8 @@ export async function PATCH(
       return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
     const website = parsed.data.website === "" ? null : parsed.data.website;
-    const sponsor = await updateSponsorBooth(auth.supabase, id, { ...parsed.data, website });
+    const meetingUrl = parsed.data.meetingUrl === "" ? null : parsed.data.meetingUrl;
+    const sponsor = await updateSponsorBooth(auth.supabase, id, { ...parsed.data, website, meetingUrl });
     return NextResponse.json({ sponsor });
   } catch (err) {
     Sentry.captureException(err);

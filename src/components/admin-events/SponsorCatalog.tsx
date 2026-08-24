@@ -188,6 +188,42 @@ function VideoManage({ sponsor, onUpdated }: { sponsor: Sponsor; onUpdated: (s: 
     }
   }
 
+  async function createMeet() {
+    setBusy("save");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sponsors/${sponsor.id}/meet`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not create meeting.");
+      onUpdated(json.sponsor as Sponsor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create meeting.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function setMeetLink() {
+    const url = window.prompt("Google Meet link (https://meet.google.com/…). Leave blank to remove.", sponsor.meetingUrl ?? "");
+    if (url === null) return;
+    setBusy("save");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sponsors/${sponsor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meetingUrl: url.trim() || "" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Save failed.");
+      onUpdated(json.sponsor as Sponsor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
@@ -198,6 +234,13 @@ function VideoManage({ sponsor, onUpdated }: { sponsor: Sponsor; onUpdated: (s: 
           <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload} disabled={busy !== null} className="hidden" />
         </label>
         {hasVideo && <span className="text-xs text-emerald-700" title={isLink ? "Link" : "Uploaded"}><i className="ti ti-video" aria-hidden="true" /></span>}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-[var(--text-muted)]">Meeting:</span>
+        <button type="button" onClick={createMeet} disabled={busy !== null} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">Create Meet</button>
+        <span className="text-[var(--border-subtle)]">·</span>
+        <button type="button" onClick={setMeetLink} disabled={busy !== null} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">{sponsor.meetingUrl ? "Edit link" : "Add link"}</button>
+        {sponsor.meetingUrl && <span className="text-xs text-emerald-700" title="Meeting link set"><i className="ti ti-video" aria-hidden="true" /></span>}
       </div>
       <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
         <input type="checkbox" checked={sponsor.allowContactRequest} onChange={toggleContact} disabled={busy !== null} />
