@@ -39,6 +39,7 @@ import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { loadMarketing } from "@/lib/icfo-events/marketing";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { googleCalUrl, formatSlot } from "@/lib/icfo-events/calendar-links";
+import { CompanySummary } from "@/components/events/CompanySummary";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -172,12 +173,7 @@ async function Presenters({ presenters }: { presenters: EventPresenter[] }) {
             </div>
             {p.headline && <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">{p.headline}</p>}
             {p.bio && <p className="mt-1 text-sm text-[var(--text-muted)]">{p.bio}</p>}
-            {p.companySummary && (
-              <div className="mt-2 rounded-md bg-[var(--indigo-soft)]/40 border border-[var(--border-subtle)] px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Company</p>
-                <p className="mt-0.5 text-sm text-[var(--text-secondary)]">{p.companySummary}</p>
-              </div>
-            )}
+            {p.companySummary && <CompanySummary text={p.companySummary} />}
             {p.startsAt && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="text-xs text-[var(--text-muted)]">🕐 {formatSlot(p.startsAt, p.timezone)}</span>
