@@ -46,7 +46,7 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
   const lobbyPrimary = dayOf || Boolean(options.includeLobby);
   const showBanner = options.includeBanner !== false && Boolean(merge.bannerUrl);
   const logo = options.logoUrl || "https://icapos.com/logo-email.png";
-  const bookletUrl = options.bookletUrl || merge.registerUrl;
+  const bookletUrl = options.bookletUrl || merge.bookletUrl || merge.registerUrl;
 
   const bottomCta =
     options.type === "reminder"

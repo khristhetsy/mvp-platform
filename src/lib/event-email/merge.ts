@@ -10,6 +10,7 @@ import { getEventById } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
+import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
 
 export const ORGANIZER_LINE = "iCFO Capital Global, Inc. · (619) 956-9114 · info@myicfos.com";
 export const EVENT_BADGE = "iCFO Capital · Ecosystem Showcase";
@@ -36,6 +37,8 @@ export const eventMergeSchema = z.object({
   bannerUrl: z.string().nullable(),
   registerUrl: z.string(),
   lobbyUrl: z.string(),
+  /** The event's live published booklet URL, when one exists. */
+  bookletUrl: z.string().nullable().default(null),
   sessions: z.array(
     z.object({ type: z.string(), title: z.string(), abstract: z.string(), accent: z.string() }),
   ),
@@ -84,6 +87,7 @@ export function buildEventMergeData(
     presentingSponsors?: string[];
     presenters?: EventMergeData["presenters"];
     sponsorTiers?: EventMergeData["sponsorTiers"];
+    bookletUrl?: string | null;
   },
 ): EventMergeData {
   const { baseUrl, campaignId = "preview", bannerUrl, presentingSponsors = [] } = extras;
@@ -116,6 +120,7 @@ export function buildEventMergeData(
     bannerUrl,
     registerUrl: `${baseUrl}/events/${event.slug}?${utm}`,
     lobbyUrl: `${baseUrl}/events/${event.slug}/lobby?${utm}`,
+    bookletUrl: extras.bookletUrl ?? null,
     sessions,
     sponsorLockup: presentingSponsors.length ? `Presented with ${presentingSponsors.join(", ")}` : null,
     organizerLine: ORGANIZER_LINE,
@@ -137,6 +142,7 @@ export async function loadEventMergeData(
     listEventSponsors(supabase, eventId).catch(() => []),
     listEventPresenters(supabase, eventId).catch(() => []),
   ]);
+  const bookletUrl = await publishedBookletUrl(supabase, eventId, opts.baseUrl).catch(() => null);
   const presentingSponsors = sponsors.filter((s) => s.placement === "presenting").map((s) => s.name);
   const tierOf = (p: string) => (p === "presenting" ? "presenting" : p === "track" ? "track" : "community");
   const sponsorTiers: EventMergeData["sponsorTiers"] = { presenting: [], track: [], community: [] };
@@ -152,5 +158,5 @@ export async function loadEventMergeData(
       bio: p.bio ?? "",
       companySummary: p.companySummary ?? "",
     }));
-  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers });
+  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers, bookletUrl });
 }
