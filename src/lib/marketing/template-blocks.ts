@@ -532,7 +532,17 @@ function extractStructures(html: string, out: Map<string, TemplateBlock>): strin
 export function parseHtmlToBlocks(html: string): TemplateBlock[] {
   let cleaned = html
     .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, "");
+    .replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, "")
+    // Drop hidden email preheader/spacer containers (display:none / max-height:0 /
+    // mso-hide) so their invisible padding text doesn't surface as a visible
+    // block when an existing email is re-parsed for editing.
+    .replace(
+      /<(div|span|p|td|table)\b[^>]*style\s*=\s*("|')[^"']*(display\s*:\s*none|max-height\s*:\s*0|mso-hide\s*:\s*all)[^"']*\2[^>]*>[\s\S]*?<\/\1>/gi,
+      "",
+    )
+    // Strip zero-width padding characters and their entities (preheader spacers).
+    .replace(/&zwnj;|&#8204;|&#x200c;|&zwsp;|&#8203;|&#x200b;/gi, "")
+    .replace(/[\u200B\u200C\u200D\u00AD\uFEFF]/g, "");
 
   // Pull out structures the flat scanner below can't represent, replacing each
   // with a placeholder token so its position in the document is preserved.
