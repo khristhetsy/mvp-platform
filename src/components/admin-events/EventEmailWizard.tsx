@@ -66,10 +66,10 @@ export function EventEmailWizard({
   const [audienceKind, setAudienceKind] = useState<"list" | "registrants">("list");
   const [regStatuses, setRegStatuses] = useState<string[]>(["registered"]);
   const [subject, setSubject] = useState("");
-  const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
+  const [scheduleMode, setScheduleMode] = useState<"draft" | "send" | "later">("draft");
   const [scheduleAt, setScheduleAt] = useState("");
   const [creating, setCreating] = useState(false);
-  const [result, setResult] = useState<{ campaignId: string; status: string } | null>(null);
+  const [result, setResult] = useState<{ campaignId: string; status: string; sent?: number; failed?: number } | null>(null);
 
   const lobbyForced = type === "day_of";
 
@@ -88,6 +88,12 @@ export function EventEmailWizard({
   async function createCampaign() {
     if (!eventId || !subject.trim()) return;
     if (audienceKind === "list" && !listId) return;
+    if (scheduleMode === "send") {
+      const audience = audienceKind === "registrants"
+        ? `${registrants?.registered ?? "the selected"} registrant(s)`
+        : "the selected list";
+      if (!window.confirm(`Send this email now to ${audience}? This can't be undone.`)) return;
+    }
     setCreating(true);
     setError(null);
     try {
@@ -99,12 +105,13 @@ export function EventEmailWizard({
           bookletEditionId,
           bodyHtml: editedHtml ?? undefined,
           audienceKind, listId, registrantStatuses: regStatuses, subject: subject.trim(),
+          sendNow: scheduleMode === "send",
           scheduleAt: scheduleMode === "later" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Couldn't create the campaign.");
-      setResult({ campaignId: json.campaignId, status: json.status });
+      setResult({ campaignId: json.campaignId, status: json.status, sent: json.sent, failed: json.failed });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't create the campaign.");
     } finally {
@@ -401,8 +408,17 @@ export function EventEmailWizard({
           <button type="button" onClick={() => setStep(2)} className="text-xs font-semibold text-[var(--blue)] hover:underline">← Back to content</button>
           {result ? (
             <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
-              <p className="font-semibold">Campaign created ({result.status}).</p>
-              <p className="mt-1">It&apos;s in Marketing Hub with the rendered email, audience, and event linkage — ready to review and send.</p>
+              {result.status === "sent" ? (
+                <>
+                  <p className="font-semibold">Email sent{typeof result.sent === "number" ? ` — ${result.sent} delivered${result.failed ? `, ${result.failed} failed` : ""}` : ""}.</p>
+                  <p className="mt-1">The send ran through the Marketing Hub pipeline. Open it to see per-recipient delivery.</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">Campaign created ({result.status}).</p>
+                  <p className="mt-1">It&apos;s in Marketing Hub with the rendered email, audience, and event linkage — ready to review and send.</p>
+                </>
+              )}
               <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing Hub →</a>
             </div>
           ) : (
@@ -444,17 +460,18 @@ export function EventEmailWizard({
               <div>
                 <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Schedule</label>
                 <div className="mt-1 flex flex-wrap items-center gap-4 text-sm">
-                  <label className="flex items-center gap-1.5"><input type="radio" checked={scheduleMode === "now"} onChange={() => setScheduleMode("now")} /> Save as draft</label>
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={scheduleMode === "send"} onChange={() => setScheduleMode("send")} /> Send now</label>
                   <label className="flex items-center gap-1.5"><input type="radio" checked={scheduleMode === "later"} onChange={() => setScheduleMode("later")} /> Schedule for later</label>
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={scheduleMode === "draft"} onChange={() => setScheduleMode("draft")} /> Save as draft</label>
                 </div>
                 {scheduleMode === "later" && (
                   <input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="mt-2 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
                 )}
               </div>
               <button type="button" onClick={createCampaign} disabled={creating || !subject.trim() || (audienceKind === "list" && !listId) || (audienceKind === "registrants" && regStatuses.length === 0) || (scheduleMode === "later" && !scheduleAt)} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
-                {creating ? "Creating…" : scheduleMode === "later" ? "Schedule campaign" : "Create draft campaign"}
+                {creating ? (scheduleMode === "send" ? "Sending…" : "Creating…") : scheduleMode === "send" ? "Send now" : scheduleMode === "later" ? "Schedule campaign" : "Create draft campaign"}
               </button>
-              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. The campaign lands in Marketing Hub — final send happens there.</p>
+              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. Sending happens through the Marketing Hub pipeline; you can also save a draft and send it there.</p>
             </div>
           )}
         </div>

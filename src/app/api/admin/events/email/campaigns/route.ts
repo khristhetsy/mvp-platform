@@ -5,7 +5,7 @@ import { loadEventMergeData, type EventEmailType } from "@/lib/event-email/merge
 import { renderEventEmail } from "@/lib/event-email/render";
 import { materializeRegistrantList, type RegistrantStatus } from "@/lib/event-email/segments";
 import { getEventById } from "@/lib/icfo-events/queries";
-import { createCampaign } from "@/lib/marketing/campaigns";
+import { createCampaign, sendCampaign } from "@/lib/marketing/campaigns";
 import type { MarketingCampaign } from "@/lib/marketing/types";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       audienceKind?: "list" | "registrants";
       registrantStatuses?: RegistrantStatus[];
       subject?: string;
+      sendNow?: boolean;
       scheduleAt?: string | null;
       bookletUrl?: string;
       bookletEditionId?: string;
@@ -92,6 +93,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     } as unknown as Partial<MarketingCampaign>;
 
     const campaign = await createCampaign(input, auth.userId);
+
+    // Send now: fire the existing Marketing Hub send pipeline immediately.
+    // sendCampaign enforces its own guards (MARKETING_SEND_LIVE, provider key,
+    // status gate) and throws a clear message if sending isn't permitted.
+    if (body.sendNow && !body.scheduleAt) {
+      const send = await sendCampaign(campaign.id);
+      return NextResponse.json({ campaignId: campaign.id, status: "sent", registrantCount, sent: send.sent, failed: send.failed, skipped: send.skipped });
+    }
+
     return NextResponse.json({ campaignId: campaign.id, status: campaign.status, registrantCount });
   } catch (err) {
     Sentry.captureException(err);
