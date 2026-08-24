@@ -179,12 +179,38 @@ export function renderBrochurePdf(
         const presHeading = ov("presenters", "heading", "Presenters");
         heading(presHeading);
         if (overrides?.presenters?.intro) { doc.font("Helvetica").fontSize(11).fillColor(INK).text(overrides.presenters.intro, ox + MARGIN, doc.y, { width: contentW }); doc.moveDown(0.6); }
+        const detailed = merge.presenters.some((p) => p.bio || p.companySummary);
+
+        if (detailed) {
+          // Full-detail stacked entries (avatar + name/meta, bio, company summary).
+          for (const pr of merge.presenters) {
+            if (doc.y + 130 > oy + th - 40) { footer(); newPage(); cropMarks(); heading(`${presHeading} (cont.)`); }
+            const ay = doc.y;
+            doc.circle(ox + MARGIN + 18, ay + 18, 18).fill(primary);
+            doc.fillColor("#fff").font("Helvetica-Bold").fontSize(13).text(pr.initials, ox + MARGIN, ay + 11, { width: 36, align: "center" });
+            doc.fillColor(primary).font("Helvetica-Bold").fontSize(13).text(pr.name, ox + MARGIN + 48, ay + 2, { width: contentW - 48 });
+            const meta = [pr.role, pr.company].filter(Boolean).join(" · ");
+            if (meta) doc.fillColor(MUTED).font("Helvetica").fontSize(10).text(meta, ox + MARGIN + 48, doc.y, { width: contentW - 48 });
+            doc.y = Math.max(doc.y, ay + 42);
+            if (pr.bio) doc.fillColor(INK).font("Helvetica").fontSize(11).text(pr.bio, ox + MARGIN, doc.y + 4, { width: contentW });
+            if (pr.companySummary) {
+              doc.moveDown(0.4);
+              doc.fillColor(MUTED).font("Helvetica-Bold").fontSize(8.5).text("COMPANY", ox + MARGIN, doc.y, { width: contentW, characterSpacing: 0.5 });
+              doc.fillColor(INK).font("Helvetica").fontSize(10.5).text(pr.companySummary, ox + MARGIN, doc.y + 1, { width: contentW });
+            }
+            doc.moveDown(0.7);
+            doc.moveTo(ox + MARGIN, doc.y).lineTo(ox + tw - MARGIN, doc.y).lineWidth(0.5).strokeColor("#e2e8f2").stroke();
+            doc.moveDown(0.4);
+          }
+          footer();
+          break;
+        }
+
         const colW = (contentW - 24) / 2;
         let col = 0;
         let rowY = doc.y;
         for (const pr of merge.presenters) {
           const x = ox + MARGIN + col * (colW + 24);
-          // avatar circle
           doc.circle(x + 20, rowY + 20, 20).fill(primary);
           doc.fillColor("#fff").font("Helvetica-Bold").fontSize(13).text(pr.initials, x, rowY + 13, { width: 40, align: "center" });
           doc.fillColor(primary).font("Helvetica-Bold").fontSize(12).text(pr.name, x + 48, rowY + 6, { width: colW - 48 });

@@ -87,16 +87,39 @@ function presentersPages(m: EventMergeData, o: Record<string, Record<string, str
   if (!m.presenters.length) return "";
   const heading = ov(o, "presenters", "heading", "Presenters");
   const intro = o?.presenters?.intro ? paras(o.presenters.intro) : "";
+  // Full-detail layout (bio + company) when any presenter carries a write-up;
+  // otherwise the compact initials grid for a bare roster.
+  const detailed = m.presenters.some((p) => p.bio || p.companySummary);
+
+  if (!detailed) {
+    const pages: string[] = [];
+    for (let i = 0; i < m.presenters.length; i += 6) {
+      const cards = m.presenters.slice(i, i + 6).map((p) => `<div class="bk-pres">
+        <div class="bk-pres-av">${p.headshotUrl ? `<img src="${esc(p.headshotUrl)}" alt="">` : esc(p.initials)}</div>
+        <div class="bk-pres-nm">${esc(p.name)}</div>
+        ${p.role ? `<div class="bk-pres-rl">${esc(p.role)}</div>` : ""}
+        ${p.company ? `<div class="bk-pres-co">${esc(p.company)}</div>` : ""}
+      </div>`).join("");
+      pages.push(`<div class="bk-body"><h2 class="bk-h2">${esc(heading)}${i > 0 ? " (cont.)" : ""}</h2>${i === 0 ? intro : ""}<div class="bk-pres-grid">${cards}</div></div>`);
+    }
+    return pages.join("|||");
+  }
+
+  // Detailed: 3 stacked entries per page.
   const pages: string[] = [];
-  for (let i = 0; i < m.presenters.length; i += 6) {
-    const chunk = m.presenters.slice(i, i + 6);
-    const cards = chunk.map((p) => `<div class="bk-pres">
-      <div class="bk-pres-av">${p.headshotUrl ? `<img src="${esc(p.headshotUrl)}" alt="">` : esc(p.initials)}</div>
-      <div class="bk-pres-nm">${esc(p.name)}</div>
-      ${p.role ? `<div class="bk-pres-rl">${esc(p.role)}</div>` : ""}
-      ${p.company ? `<div class="bk-pres-co">${esc(p.company)}</div>` : ""}
-    </div>`).join("");
-    pages.push(`<div class="bk-body"><h2 class="bk-h2">${esc(heading)}${i > 0 ? " (cont.)" : ""}</h2>${i === 0 ? intro : ""}<div class="bk-pres-grid">${cards}</div></div>`);
+  for (let i = 0; i < m.presenters.length; i += 3) {
+    const entries = m.presenters.slice(i, i + 3).map((p) => {
+      const meta = [p.role, p.company].filter(Boolean).map(esc).join(" · ");
+      return `<div class="bk-pres-full">
+        <div class="bk-pres-full-h">
+          <div class="bk-pres-av bk-pres-av-sm">${p.headshotUrl ? `<img src="${esc(p.headshotUrl)}" alt="">` : esc(p.initials)}</div>
+          <div><div class="bk-pres-nm">${esc(p.name)}</div>${meta ? `<div class="bk-pres-rl">${meta}</div>` : ""}</div>
+        </div>
+        ${p.bio ? `<p class="bk-pres-bio">${esc(p.bio)}</p>` : ""}
+        ${p.companySummary ? `<div class="bk-pres-cobox"><span class="bk-pres-colabel">Company</span> ${esc(p.companySummary)}</div>` : ""}
+      </div>`;
+    }).join("");
+    pages.push(`<div class="bk-body"><h2 class="bk-h2">${esc(heading)}${i > 0 ? " (cont.)" : ""}</h2>${i === 0 ? intro : ""}${entries}</div>`);
   }
   return pages.join("|||");
 }
@@ -221,6 +244,13 @@ export function renderBookletHTML(
     .bk-pres-nm { font-size: 14px; font-weight: bold; color: ${primary}; }
     .bk-pres-rl { font-size: 12px; color: #4a5568; }
     .bk-pres-co { font-size: 11.5px; color: #6a7690; }
+    .bk-pres-full { padding: 12px 0; border-bottom: 1px solid #e2e8f2; }
+    .bk-pres-full:last-child { border-bottom: 0; }
+    .bk-pres-full-h { display: flex; align-items: center; gap: 12px; }
+    .bk-pres-av-sm { width: 46px; height: 46px; font-size: 15px; margin: 0; }
+    .bk-pres-bio { font-size: 12.5px; line-height: 1.55; color: #33414f; margin: 8px 0 0; }
+    .bk-pres-cobox { font-size: 12px; line-height: 1.5; color: #33414f; margin-top: 8px; background: #f2f6fc; border-radius: 6px; padding: 9px 12px; }
+    .bk-pres-colabel { font-family: Arial, sans-serif; font-size: 9px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; display: block; margin-bottom: 2px; }
     .bk-spon-tier { margin-bottom: 14px; }
     .bk-spon-tier-h { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; margin-bottom: 6px; }
     .bk-spon-row { display: flex; flex-wrap: wrap; gap: 8px; }

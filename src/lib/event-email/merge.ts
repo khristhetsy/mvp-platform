@@ -49,6 +49,8 @@ export const eventMergeSchema = z.object({
       company: z.string(),
       headshotUrl: z.string().nullable(),
       initials: z.string(),
+      bio: z.string().default(""),
+      companySummary: z.string().default(""),
     }),
   ),
   sponsorTiers: z.object({
@@ -147,6 +149,8 @@ export async function loadEventMergeData(
       company: p.headline ?? "",
       headshotUrl: null as string | null,
       initials: initialsOf(p.displayName),
+      bio: p.bio ?? "",
+      companySummary: p.companySummary ?? "",
     }));
   return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers });
 }
