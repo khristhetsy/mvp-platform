@@ -49,7 +49,7 @@ create table if not exists public.formd_filings (
   derived_investor_type text,
 
   filing_url            text,
-  promoted_contact_id   uuid,
+  promoted_contact_id   uuid references public.crm_contacts(id) on delete set null,
   promoted_at           timestamptz,
   held_for_review       boolean default false,
 
@@ -92,7 +92,7 @@ create policy formd_related_staff_read on public.formd_related_persons
 -- (No insert/update/delete policies → only the service role can write.)
 
 -- ── §3.3 Contacts additions — dedupe key + provenance for Form D contacts ──
--- Adjust the table name if the app's contacts table isn't public.contacts.
-alter table public.contacts add column if not exists formd_cik text;
-alter table public.contacts add column if not exists formd_accession_no text;
-create index if not exists contacts_formd_cik_idx on public.contacts (formd_cik);
+-- The app's CRM contacts table is public.crm_contacts (there is no public.contacts).
+alter table public.crm_contacts add column if not exists formd_cik text;
+alter table public.crm_contacts add column if not exists formd_accession_no text;
+create index if not exists crm_contacts_formd_cik_idx on public.crm_contacts (formd_cik);
