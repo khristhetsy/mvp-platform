@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -7,7 +7,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { isBanned } from "@/lib/icfo-events/engagement";
 import { buildSectorTracks } from "@/lib/icfo-events/rooms";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
@@ -69,6 +69,10 @@ export default async function TracksPage({ params }: { params: Promise<{ slug: s
     };
   });
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+  // No sector tracks — don't strand a direct link on an empty room.
+  if (!navFlags.hasTracks) redirect(`/events/${slug}/lobby`);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -78,7 +82,7 @@ export default async function TracksPage({ params }: { params: Promise<{ slug: s
 
         <EventPresenceProvider eventId={event.id} slug={slug} room="On-Demand" me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="ondemand" tracksHref={`/events/${slug}/tracks`} />
+            <EventVenueHeader slug={slug} current="ondemand" tracksHref={`/events/${slug}/tracks`} flags={navFlags} />
             <SectorTracksRoom tracks={tracks} />
           </div>
           <p className="mt-3 text-center text-xs text-[var(--text-muted)]">{t("parallel_sector_rooms_each_with_its_own_now_pl")}</p>

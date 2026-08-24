@@ -7,7 +7,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { isBanned } from "@/lib/icfo-events/engagement";
 import { pickTalkShowSession } from "@/lib/icfo-events/rooms";
 import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
@@ -97,6 +97,8 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
     ? `Talk show${stage.sectorSlug ? ` · ${sectorLabel(stage.sectorSlug)} track` : ""}`
     : "No talk show scheduled yet";
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -106,7 +108,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
 
         <EventPresenceProvider eventId={event.id} slug={slug} room={PRESENCE_ROOM} me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="talkshow" tracksHref={`/events/${slug}/tracks`} />
+            <EventVenueHeader slug={slug} current="talkshow" tracksHref={`/events/${slug}/tracks`} flags={navFlags} />
             <div className="bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>

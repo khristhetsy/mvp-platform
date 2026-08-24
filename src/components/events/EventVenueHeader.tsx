@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Home, Presentation, Users, Tv, Store, Calendar, Trophy } from "lucide-react";
-import { venueZones, type VenueZone } from "@/lib/icfo-events/venue";
+import { venueZones, type VenueZone, type VenueNavFlags } from "@/lib/icfo-events/venue";
 import { useEventPresence } from "@/components/events/EventPresenceProvider";
 
 const ICONS: Record<VenueZone["icon"], typeof Home> = {
@@ -21,13 +21,15 @@ export function EventVenueHeader({
   slug,
   current,
   tracksHref,
+  flags,
 }: {
   slug: string;
   current: string;
   tracksHref?: string;
+  flags?: VenueNavFlags;
 }) {
   const { total } = useEventPresence();
-  const zones = venueZones(slug, tracksHref);
+  const zones = venueZones(slug, tracksHref, flags);
 
   return (
     <nav

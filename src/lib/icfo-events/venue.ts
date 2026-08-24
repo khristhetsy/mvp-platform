@@ -15,13 +15,23 @@ export type VenueZone = {
   href: string;
 };
 
+/**
+ * Which optional rooms an event actually has content for. Undefined = show
+ * (backward compatible). A false flag hides that tab so nobody lands on an
+ * empty room (e.g. Tracks when the event has no sector tracks).
+ */
+export type VenueNavFlags = {
+  hasTracks?: boolean;
+  hasTalkShow?: boolean;
+  hasSponsors?: boolean;
+};
+
 /** Build the destination nav for an event. `tracksHref` handles the
- *  sector-tracks deep link the lobby already computes. The `sessions` and
- *  `ondemand` keys are kept (the Lobby doorways resolve hrefs by these keys)
- *  but now point at the live Main Stage and Sector Tracks rooms. */
-export function venueZones(slug: string, tracksHref?: string): VenueZone[] {
+ *  sector-tracks deep link the lobby already computes. Optional rooms with no
+ *  content are dropped per `flags`. */
+export function venueZones(slug: string, tracksHref?: string, flags?: VenueNavFlags): VenueZone[] {
   const base = `/events/${slug}`;
-  return [
+  const zones: VenueZone[] = [
     { key: "lobby", room: "Lobby", label: "Lobby", icon: "home", href: `${base}/lobby` },
     { key: "sessions", room: "Main Stage", label: "Main Stage", icon: "stage", href: `${base}/stage` },
     { key: "talkshow", room: "Main Stage", label: "Talk Show", icon: "tv", href: `${base}/talk-show` },
@@ -30,4 +40,10 @@ export function venueZones(slug: string, tracksHref?: string): VenueZone[] {
     { key: "sponsors", room: "Sponsor Hall", label: "Sponsor Hall", icon: "store", href: `${base}/expo` },
     { key: "leaderboard", label: "Leaderboard", icon: "trophy", href: `${base}/leaderboard` },
   ];
+  return zones.filter((z) => {
+    if (z.key === "ondemand" && flags?.hasTracks === false) return false;
+    if (z.key === "talkshow" && flags?.hasTalkShow === false) return false;
+    if (z.key === "sponsors" && flags?.hasSponsors === false) return false;
+    return true;
+  });
 }

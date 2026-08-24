@@ -6,7 +6,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
@@ -65,6 +65,8 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
     : undefined;
   const viewerRole = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : null;
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -79,7 +81,7 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
 
         <EventPresenceProvider eventId={event.id} slug={slug} room="Lobby" me={me}>
           <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="lobby" tracksHref={tracksHref} />
+            <EventVenueHeader slug={slug} current="lobby" tracksHref={tracksHref} flags={navFlags} />
             <LobbyHall
               slug={slug}
               eventTitle={event.title}

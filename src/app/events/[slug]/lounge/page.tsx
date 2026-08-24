@@ -13,7 +13,7 @@ import { IncomingCallBanner } from "@/components/events/IncomingCallBanner";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { loadLoungeTables } from "@/lib/icfo-events/lounge";
 import { listSuggestions, listConnections } from "@/lib/icfo-events/networking";
 import { isBanned } from "@/lib/icfo-events/engagement";
@@ -41,6 +41,8 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
 
   const tracksHref = `/events/${slug}/tracks`;
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -50,7 +52,7 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
 
         <EventPresenceProvider eventId={event.id} slug={slug} room="Networking" me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="networking" tracksHref={tracksHref} />
+            <EventVenueHeader slug={slug} current="networking" tracksHref={tracksHref} flags={navFlags} />
             <div className="p-4 sm:p-5">
               <h1 className="text-xl font-semibold text-[var(--navy)]">{t("networking_lounge")}</h1>
               <p className="mt-1 text-sm text-[var(--text-muted)]">

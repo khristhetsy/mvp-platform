@@ -5,7 +5,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { getLeaderboard, getMemberStats } from "@/lib/icfo-events/gamification";
 import { getMissionProgress } from "@/lib/icfo-events/missions";
 import { isBanned } from "@/lib/icfo-events/engagement";
@@ -39,6 +39,8 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ sl
 
   const tracksHref = `/events/${slug}/tracks`;
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -48,7 +50,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ sl
 
         <EventPresenceProvider eventId={event.id} slug={slug} room="Lobby" me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="leaderboard" tracksHref={tracksHref} />
+            <EventVenueHeader slug={slug} current="leaderboard" tracksHref={tracksHref} flags={navFlags} />
             <GamificationDashboard stats={stats} rank={rank} missions={missions} leaderboard={leaderboard.slice(0, 10)} meId={profile.id} />
           </div>
           <LiveAnnouncementPopup />

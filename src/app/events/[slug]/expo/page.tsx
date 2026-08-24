@@ -6,7 +6,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { isBanned } from "@/lib/icfo-events/engagement";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
@@ -36,6 +36,8 @@ export default async function ExpoPage({ params }: { params: Promise<{ slug: str
 
   const tracksHref = `/events/${slug}/tracks`;
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -45,7 +47,7 @@ export default async function ExpoPage({ params }: { params: Promise<{ slug: str
 
         <EventPresenceProvider eventId={event.id} slug={slug} room="Sponsor Hall" me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="sponsors" tracksHref={tracksHref} />
+            <EventVenueHeader slug={slug} current="sponsors" tracksHref={tracksHref} flags={navFlags} />
             <SponsorHall sponsors={sponsors} />
           </div>
           <LiveAnnouncementPopup />

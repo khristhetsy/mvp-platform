@@ -165,6 +165,15 @@ export async function countSponsorEventLinks(supabase: SupabaseClient<Database>,
   return count ?? 0;
 }
 
+/** How many sponsors are attached to an event (drives the Sponsor Hall nav tab). */
+export async function countEventSponsors(supabase: SupabaseClient<Database>, eventId: string): Promise<number> {
+  const { count } = await raw(supabase)
+    .from("event_sponsors")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId);
+  return count ?? 0;
+}
+
 /** Hard-delete a sponsor (caller must ensure it isn't attached to any events). */
 export async function deleteSponsor(supabase: SupabaseClient<Database>, id: string): Promise<void> {
   const { error } = await raw(supabase).from("sponsors").delete().eq("id", id);

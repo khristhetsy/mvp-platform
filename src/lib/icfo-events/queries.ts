@@ -10,6 +10,8 @@ import type {
 } from "./schemas";
 import { slugify } from "./schemas";
 import { sanitizeBannerHtml, normalizeBannerBg } from "./sanitize-html";
+import { countEventSponsors } from "./sponsors";
+import type { VenueNavFlags } from "./venue";
 import type {
   EventRecord,
   EventSectorTrack,
@@ -172,6 +174,17 @@ export async function getEventBySlug(
     loadSessions(supabase, event.id),
   ]);
   return { ...event, sectors, sessions };
+}
+
+/** Which optional venue rooms have content, so empty tabs are hidden from the nav. */
+export async function getVenueNavFlags(
+  supabase: SupabaseClient<Database>,
+  event: EventWithDetail,
+): Promise<VenueNavFlags> {
+  const hasTracks = (event.sectors?.length ?? 0) > 0;
+  const hasTalkShow = (event.sessions ?? []).some((s) => s.type === "talk_show" && s.status !== "draft");
+  const sponsorCount = await countEventSponsors(supabase, event.id).catch(() => 0);
+  return { hasTracks, hasTalkShow, hasSponsors: sponsorCount > 0 };
 }
 
 export async function getEventById(

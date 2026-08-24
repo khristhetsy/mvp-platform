@@ -7,7 +7,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
-import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getEventBySlug, getVenueNavFlags } from "@/lib/icfo-events/queries";
 import { isBanned } from "@/lib/icfo-events/engagement";
 import { pickMainStageSession } from "@/lib/icfo-events/rooms";
 import { loadSessionQuestions, loadSessionChat } from "@/lib/icfo-events/live-session";
@@ -63,6 +63,8 @@ export default async function MainStagePage({ params }: { params: Promise<{ slug
 
   const tracksHref = `/events/${slug}/tracks`;
 
+  const navFlags = await getVenueNavFlags(supabase, event);
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -72,7 +74,7 @@ export default async function MainStagePage({ params }: { params: Promise<{ slug
 
         <EventPresenceProvider eventId={event.id} slug={slug} room="Main Stage" me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
-            <EventVenueHeader slug={slug} current="sessions" tracksHref={tracksHref} />
+            <EventVenueHeader slug={slug} current="sessions" tracksHref={tracksHref} flags={navFlags} />
             <div className="bg-white p-4">
               <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
                 <div>
