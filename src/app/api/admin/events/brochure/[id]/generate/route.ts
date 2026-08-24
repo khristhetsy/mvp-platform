@@ -36,9 +36,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     let pdfWarning: string | null = null;
     try {
       const qr = await brochureQrPng(BASE_URL, id).catch(() => undefined);
+      // Fetch the event banner so the cover renders the photo, not a flat navy.
+      const coverImage = merge.bannerUrl
+        ? await fetch(merge.bannerUrl).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => (b ? Buffer.from(b) : undefined)).catch(() => undefined)
+        : undefined;
       const [printBuf, digitalBuf] = await Promise.all([
-        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: true, qr, theme: edition.theme }),
-        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: false, qr, theme: edition.theme }),
+        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: true, qr, theme: edition.theme, coverImage }),
+        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: false, qr, theme: edition.theme, coverImage }),
       ]);
       printPath = await uploadBrochurePdf(auth.supabase, id, "print", printBuf);
       digitalPath = await uploadBrochurePdf(auth.supabase, id, "digital", digitalBuf);

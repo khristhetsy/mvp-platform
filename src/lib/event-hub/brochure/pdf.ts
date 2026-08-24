@@ -35,7 +35,7 @@ export function renderBrochurePdf(
   pages: BrochurePage[],
   overrides: Record<string, Record<string, string>>,
   size: BrochureSize,
-  opts: { bleed?: boolean; qr?: Buffer; theme?: BrochureTheme } = {},
+  opts: { bleed?: boolean; qr?: Buffer; theme?: BrochureTheme; coverImage?: Buffer } = {},
 ): Promise<Buffer> {
   const theme = THEMES[opts.theme ?? "navy"];
   const primary = theme.primary;
@@ -120,7 +120,15 @@ export function renderBrochurePdf(
     switch (p.type) {
       case "cover": {
         if (p.blocks?.length) { drawBlocks(p.blocks); break; } // customized layout, no footer
-        doc.rect(ox, oy, tw, th).fill(primary);
+        // Banner photo full-bleed with a navy wash for legibility; solid navy if none.
+        if (opts.coverImage) {
+          try {
+            doc.image(opts.coverImage, 0, 0, { cover: [pw, ph], align: "center", valign: "center" });
+            doc.save(); doc.fillOpacity(0.72).rect(0, 0, pw, ph).fill(primary); doc.restore();
+          } catch { doc.rect(ox, oy, tw, th).fill(primary); }
+        } else {
+          doc.rect(ox, oy, tw, th).fill(primary);
+        }
         doc.fillColor(theme.coverBadge).font("Helvetica-Bold").fontSize(11).text(merge.badge.toUpperCase(), ox + MARGIN, oy + th - 220, { width: contentW, characterSpacing: 1.5 });
         doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text(ov("cover", "title", merge.title), ox + MARGIN, doc.y + 6, { width: contentW });
         if (merge.tagline) doc.fillColor("#d7e4f5").font("Helvetica").fontSize(14).text(ov("cover", "tagline", merge.tagline), ox + MARGIN, doc.y + 8, { width: contentW });
