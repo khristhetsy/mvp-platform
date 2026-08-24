@@ -9,21 +9,55 @@ export function SponsorPortalClient({
   initialBlurb,
   initialWebsite,
   initialDownloads,
+  initialVideoProvider = null,
+  initialVideoRef = null,
+  initialAllowContact = true,
   leads,
 }: {
   sponsorId: string;
   initialBlurb: string | null;
   initialWebsite: string | null;
   initialDownloads: SponsorDownload[];
+  initialVideoProvider?: string | null;
+  initialVideoRef?: string | null;
+  initialAllowContact?: boolean;
   leads: SponsorLead[];
 }) {
   const t = useTranslations("eventsCmp");
   const [blurb, setBlurb] = useState(initialBlurb ?? "");
   const [website, setWebsite] = useState(initialWebsite ?? "");
   const [downloads, setDownloads] = useState<SponsorDownload[]>(initialDownloads);
+  // Booth video: keep the provider + a link field; uploads set provider="recorded".
+  const [videoProvider, setVideoProvider] = useState<string | null>(initialVideoProvider);
+  const [videoLink, setVideoLink] = useState(initialVideoProvider === "external" ? (initialVideoRef ?? "") : "");
+  const [hasUpload, setHasUpload] = useState(initialVideoProvider === "recorded");
+  const [uploading, setUploading] = useState(false);
+  const [allowContact, setAllowContact] = useState(initialAllowContact);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function uploadVideo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/sponsor/${sponsorId}/video`, { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Upload failed.");
+      setVideoProvider("recorded");
+      setHasUpload(true);
+      setVideoLink("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   function updateDownload(i: number, field: "label" | "url", value: string) {
     setDownloads((prev) => prev.map((d, idx) => (idx === i ? { ...d, [field]: value } : d)));
@@ -43,11 +77,20 @@ export function SponsorPortalClient({
     setError(null);
     setSaved(false);
     const cleanDownloads = downloads.filter((d) => d.label.trim() && d.url.trim());
+    const body: Record<string, unknown> = {
+      blurb: blurb || null,
+      website: website || null,
+      downloads: cleanDownloads,
+      allowContactRequest: allowContact,
+    };
+    // A typed link wins; an empty link with no upload clears the video.
+    if (videoLink.trim()) { body.videoProvider = "external"; body.videoRef = videoLink.trim(); }
+    else if (!hasUpload) { body.videoProvider = null; body.videoRef = null; }
     try {
       const res = await fetch(`/api/sponsor/${sponsorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blurb: blurb || null, website: website || null, downloads: cleanDownloads }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not save.");
@@ -83,6 +126,30 @@ export function SponsorPortalClient({
             placeholder="https://…"
           />
         </label>
+        <div className="mt-4">
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Booth video</span>
+          <input
+            value={videoLink}
+            onChange={(e) => { setVideoLink(e.target.value); setVideoProvider(e.target.value.trim() ? "external" : null); setSaved(false); }}
+            placeholder="Paste a link — YouTube, Vimeo, Loom…"
+            className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+          />
+          <div className="mt-2 flex items-center gap-3">
+            <label className="cursor-pointer text-xs font-medium text-[var(--blue)] hover:underline">
+              {uploading ? "Uploading…" : hasUpload ? "Replace uploaded video" : "Or upload a video file"}
+              <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={uploadVideo} disabled={uploading} className="hidden" />
+            </label>
+            {videoProvider === "recorded" && hasUpload && <span className="text-xs text-emerald-700">Video uploaded ✓</span>}
+            {videoProvider === "external" && videoLink.trim() && <span className="text-xs text-emerald-700">Link set ✓</span>}
+          </div>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">A link takes priority. Uploads are streamed on your booth (mp4/webm/mov, up to 500 MB).</p>
+        </div>
+
+        <label className="mt-4 flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <input type="checkbox" checked={allowContact} onChange={(e) => { setAllowContact(e.target.checked); setSaved(false); }} />
+          Allow contact requests (show a “Request contact” button on your booth)
+        </label>
+
         <div className="mt-4">
           <span className="text-sm font-medium text-[var(--text-secondary)]">{t("resources_downloads")}</span>
           <div className="mt-2 space-y-2">

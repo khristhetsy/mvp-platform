@@ -13,6 +13,7 @@ import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { track } from "@/lib/analytics/posthog";
 import { getSponsorBooth } from "@/lib/icfo-events/sponsors";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
+import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
 import type { SponsorBooth } from "@/lib/icfo-events/sponsors";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,9 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
   const profile = await getCurrentUserProfile();
   track("event_sponsor_viewed", { sponsorId: id, userId: profile?.id ?? null });
 
+  // A pasted link renders as an iframe when the host allows embedding; otherwise a link.
+  const embedUrl = booth.videoProvider === "external" && booth.videoRef ? embeddableLiveUrl(booth.videoRef) : null;
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-3xl px-4 py-14">
@@ -84,6 +88,33 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
 
         {booth.blurb && <p className="mt-5 max-w-2xl text-[var(--text-secondary)]">{booth.blurb}</p>}
 
+        {booth.videoUrl && (
+          <div className="mt-6">
+            {booth.videoProvider === "recorded" ? (
+              <video controls preload="metadata" src={booth.videoUrl} className="aspect-video w-full rounded-xl border border-[var(--border-subtle)] bg-black" />
+            ) : embedUrl ? (
+              <div className="aspect-video w-full overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-black">
+                <iframe
+                  src={embedUrl}
+                  title={`${booth.name} video`}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              </div>
+            ) : (
+              <a
+                href={booth.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm font-medium text-[var(--blue)] hover:border-[var(--indigo)]"
+              >
+                Watch video <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+        )}
+
         {booth.website && (
           <a
             href={booth.website}
@@ -99,9 +130,11 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
           <BoothPresenceIndicator sponsorId={booth.id} />
         </div>
 
-        <div className="mt-6">
-          <SponsorIntroButton sponsorId={booth.id} sponsorName={booth.name} isAuthenticated={Boolean(profile)} />
-        </div>
+        {booth.allowContactRequest && (
+          <div className="mt-6">
+            <SponsorIntroButton sponsorId={booth.id} sponsorName={booth.name} isAuthenticated={Boolean(profile)} />
+          </div>
+        )}
 
         {booth.downloads.length > 0 && (
           <div className="mt-8">

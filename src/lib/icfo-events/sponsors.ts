@@ -8,6 +8,39 @@ import type { SponsorInput } from "./schemas";
 import type { EventSponsor, Sponsor, SponsorLead } from "./types";
 
 export const SPONSOR_LOGO_BUCKET = "event-sponsor-logos";
+export const SPONSOR_VIDEO_BUCKET = "event-sponsor-videos";
+export const SPONSOR_VIDEO_MAX_BYTES = 500 * 1024 * 1024; // 500 MB
+export const SPONSOR_VIDEO_MIME = ["video/mp4", "video/webm", "video/quicktime"];
+
+/** Object path for an uploaded booth video: <sponsorId>/<timestamp>-<sanitized name>. */
+export function buildSponsorVideoPath(sponsorId: string, fileName: string): string {
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${sponsorId}/${Date.now()}-${safe}`;
+}
+
+export async function uploadSponsorVideo(
+  supabase: SupabaseClient<Database>,
+  path: string,
+  bytes: ArrayBuffer | Buffer | Uint8Array,
+  contentType: string,
+): Promise<void> {
+  const { error } = await raw(supabase).storage
+    .from(SPONSOR_VIDEO_BUCKET)
+    .upload(path, bytes, { contentType, upsert: true });
+  if (error) throw new Error(`Video upload failed: ${error.message}`);
+}
+
+/** Short-lived signed playback URL for an uploaded booth video. */
+export async function sponsorVideoSignedUrl(path: string | null, expiresIn = 3600): Promise<string | null> {
+  if (!path) return null;
+  try {
+    const admin = createServiceRoleClient();
+    const { data, error } = await admin.storage.from(SPONSOR_VIDEO_BUCKET).createSignedUrl(path, expiresIn);
+    return error ? null : data?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
@@ -28,6 +61,9 @@ function mapSponsor(r: Row): Sponsor {
     categoryExclusive: Boolean(r.category_exclusive),
     ownerId: (r.owner_id as string | null) ?? null,
     downloads: Array.isArray(r.downloads) ? (r.downloads as Sponsor["downloads"]) : [],
+    videoProvider: (r.video_provider as string | null) ?? null,
+    videoRef: (r.video_ref as string | null) ?? null,
+    allowContactRequest: r.allow_contact_request === undefined ? true : Boolean(r.allow_contact_request),
   };
 }
 
@@ -46,6 +82,9 @@ export async function createSponsor(
       category: input.category,
       sector_slug: input.sectorSlug ?? null,
       category_exclusive: input.categoryExclusive,
+      video_provider: input.videoProvider ?? null,
+      video_ref: input.videoRef ?? null,
+      ...(input.allowContactRequest === undefined ? {} : { allow_contact_request: input.allowContactRequest }),
     })
     .select("*")
     .single();
@@ -159,6 +198,8 @@ export interface SponsorHostedSession {
 
 export interface SponsorBooth extends Sponsor {
   logoUrl: string | null;
+  /** Ready-to-render video: a signed URL (uploaded) or the pasted link (external). */
+  videoUrl: string | null;
   events: SponsorBoothEvent[];
   hostedSessions: SponsorHostedSession[];
 }
@@ -212,7 +253,11 @@ export async function getSponsorBooth(
     })
     .filter((x): x is SponsorHostedSession => x !== null);
 
-  return { ...sponsor, logoUrl: await signedLogoUrl(sponsor.logoPath), events, hostedSessions };
+  const videoUrl = sponsor.videoProvider === "recorded"
+    ? await sponsorVideoSignedUrl(sponsor.videoRef)
+    : (sponsor.videoRef || null); // external link used as-is
+
+  return { ...sponsor, logoUrl: await signedLogoUrl(sponsor.logoPath), videoUrl, events, hostedSessions };
 }
 
 // ── sponsor self-service (owner) ──────────────────────────────────────────────
@@ -256,12 +301,22 @@ export async function getOwnedSponsor(
 export async function updateSponsorBooth(
   supabase: SupabaseClient<Database>,
   sponsorId: string,
-  fields: { blurb?: string | null; website?: string | null; downloads?: { label: string; url: string }[] },
+  fields: {
+    blurb?: string | null;
+    website?: string | null;
+    downloads?: { label: string; url: string }[];
+    videoProvider?: string | null;
+    videoRef?: string | null;
+    allowContactRequest?: boolean;
+  },
 ): Promise<Sponsor> {
   const patch: Record<string, unknown> = {};
   if (fields.blurb !== undefined) patch.blurb = fields.blurb;
   if (fields.website !== undefined) patch.website = fields.website;
   if (fields.downloads !== undefined) patch.downloads = fields.downloads;
+  if (fields.videoProvider !== undefined) patch.video_provider = fields.videoProvider;
+  if (fields.videoRef !== undefined) patch.video_ref = fields.videoRef;
+  if (fields.allowContactRequest !== undefined) patch.allow_contact_request = fields.allowContactRequest;
   const { data, error } = await raw(supabase)
     .from("sponsors")
     .update(patch)

@@ -122,6 +122,92 @@ function LogoUpload({
   );
 }
 
+function VideoManage({ sponsor, onUpdated }: { sponsor: Sponsor; onUpdated: (s: Sponsor) => void }) {
+  const [busy, setBusy] = useState<null | "upload" | "save">(null);
+  const [error, setError] = useState<string | null>(null);
+  const hasVideo = Boolean(sponsor.videoRef);
+  const isLink = sponsor.videoProvider === "external";
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy("upload");
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/events/sponsors/${sponsor.id}/video`, { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Upload failed.");
+      onUpdated(json.sponsor as Sponsor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(null);
+      e.target.value = "";
+    }
+  }
+
+  async function setLink() {
+    const url = window.prompt("Booth video link (YouTube, Vimeo, Loom…). Leave blank to remove.", isLink ? (sponsor.videoRef ?? "") : "");
+    if (url === null) return;
+    setBusy("save");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sponsors/${sponsor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(url.trim() ? { videoProvider: "external", videoRef: url.trim() } : { videoProvider: null, videoRef: null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Save failed.");
+      onUpdated(json.sponsor as Sponsor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function toggleContact() {
+    setBusy("save");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sponsors/${sponsor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allowContactRequest: !sponsor.allowContactRequest }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Save failed.");
+      onUpdated(json.sponsor as Sponsor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={setLink} disabled={busy !== null} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">{isLink && hasVideo ? "Edit link" : "Add link"}</button>
+        <span className="text-[var(--border-subtle)]">·</span>
+        <label className="cursor-pointer text-xs font-medium text-[var(--blue)] hover:underline">
+          {busy === "upload" ? "Uploading…" : sponsor.videoProvider === "recorded" ? "Replace" : "Upload"}
+          <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload} disabled={busy !== null} className="hidden" />
+        </label>
+        {hasVideo && <span className="text-xs text-emerald-700" title={isLink ? "Link" : "Uploaded"}><i className="ti ti-video" aria-hidden="true" /></span>}
+      </div>
+      <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+        <input type="checkbox" checked={sponsor.allowContactRequest} onChange={toggleContact} disabled={busy !== null} />
+        Contact requests
+      </label>
+      {error && <span className="text-xs text-rose-600">{error}</span>}
+    </div>
+  );
+}
+
 export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[] }) {
   const t = useTranslations("adminCmp");
   const [sponsors, setSponsors] = useState<Sponsor[]>(initialSponsors);
@@ -132,10 +218,12 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
   const [category, setCategory] = useState<SponsorCategory>("other");
   const [sectorSlug, setSectorSlug] = useState<string>("");
   const [categoryExclusive, setCategoryExclusive] = useState(false);
+  const [videoRef, setVideoRef] = useState("");
+  const [allowContact, setAllowContact] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function onLogoUploaded(updated: Sponsor) {
+  function onSponsorUpdated(updated: Sponsor) {
     setSponsors((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }
 
@@ -155,6 +243,9 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
           category,
           sectorSlug: sectorSlug || null,
           categoryExclusive,
+          videoProvider: videoRef.trim() ? "external" : null,
+          videoRef: videoRef.trim() || null,
+          allowContactRequest: allowContact,
         }),
       });
       const json = await res.json();
@@ -164,6 +255,8 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
       setWebsite("");
       setBlurb("");
       setCategoryExclusive(false);
+      setVideoRef("");
+      setAllowContact(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create sponsor.");
     } finally {
@@ -201,9 +294,14 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
             {EVENT_SECTORS.map((s) => <option key={s.slug} value={s.slug}>{s.label}</option>)}
           </select>
         </div>
+        <input value={videoRef} onChange={(e) => setVideoRef(e.target.value)} placeholder="Booth video link — YouTube/Vimeo/Loom (optional; or upload one after creating)" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <input type="checkbox" checked={categoryExclusive} onChange={(e) => setCategoryExclusive(e.target.checked)} />
           Category-exclusive (one anchor per category per event)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <input type="checkbox" checked={allowContact} onChange={(e) => setAllowContact(e.target.checked)} />
+          Allow contact requests (show a “Request contact” button on the booth)
         </label>
         <div className="flex justify-end">
           <button type="submit" disabled={busy || !name.trim()} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
@@ -223,6 +321,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
                 <th className="px-4 py-3 font-semibold">Tier</th>
                 <th className="px-4 py-3 font-semibold">Category</th>
                 <th className="px-4 py-3 font-semibold">Logo</th>
+                <th className="px-4 py-3 font-semibold">Booth video</th>
                 <th className="px-4 py-3 font-semibold">Owner</th>
               </tr>
             </thead>
@@ -233,7 +332,10 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.tier}</td>
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.category}</td>
                   <td className="px-4 py-3">
-                    <LogoUpload sponsorId={s.id} hasLogo={Boolean(s.logoPath)} onUploaded={onLogoUploaded} />
+                    <LogoUpload sponsorId={s.id} hasLogo={Boolean(s.logoPath)} onUploaded={onSponsorUpdated} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <VideoManage sponsor={s} onUpdated={onSponsorUpdated} />
                   </td>
                   <td className="px-4 py-3">
                     <AssignOwner sponsorId={s.id} hasOwner={Boolean(s.ownerId)} />

@@ -96,8 +96,22 @@ export const sponsorInput = z.object({
   category: z.enum(["legal", "consulting", "banking", "other"]).default("other"),
   sectorSlug: sectorSlug.nullable().optional(),
   categoryExclusive: z.boolean().default(false),
+  videoProvider: z.enum(["external", "recorded"]).nullable().optional(),
+  videoRef: z.string().max(2000).nullable().optional(),
+  allowContactRequest: z.boolean().optional(),
 });
 export type SponsorInput = z.infer<typeof sponsorInput>;
+
+/** Sponsor-owner / staff booth edits (self-service portal + admin). */
+export const sponsorBoothSchema = z.object({
+  blurb: z.string().max(1000).nullable().optional(),
+  website: z.string().url().nullable().optional().or(z.literal("")),
+  downloads: z.array(z.object({ label: z.string().max(120), url: z.string().url() })).max(12).optional(),
+  videoProvider: z.enum(["external", "recorded"]).nullable().optional(),
+  videoRef: z.string().max(2000).nullable().optional(),
+  allowContactRequest: z.boolean().optional(),
+});
+export type SponsorBoothInput = z.infer<typeof sponsorBoothSchema>;
 
 export const linkSponsorSchema = z.object({
   sponsorId: z.string().uuid(),

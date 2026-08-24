@@ -14,6 +14,9 @@ const schema = z.object({
     .array(z.object({ label: z.string().min(1).max(80), url: z.string().url() }))
     .max(8)
     .optional(),
+  videoProvider: z.enum(["external", "recorded"]).nullable().optional(),
+  videoRef: z.string().max(2000).nullable().optional(),
+  allowContactRequest: z.boolean().optional(),
 });
 
 /** Sponsor owner edits their own booth fields. */

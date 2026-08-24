@@ -150,6 +150,11 @@ export interface Sponsor {
   categoryExclusive: boolean;
   ownerId: string | null;
   downloads: SponsorDownload[];
+  /** Booth video: "external" (link in videoRef) or "recorded" (storage path in videoRef). */
+  videoProvider: string | null;
+  videoRef: string | null;
+  /** Show the opt-in "Request contact" button on the booth. */
+  allowContactRequest: boolean;
 }
 
 export interface SponsorLead {
