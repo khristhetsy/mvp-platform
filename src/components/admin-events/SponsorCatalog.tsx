@@ -401,13 +401,13 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
 
       {rowError && <div className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{rowError}</div>}
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
+      <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-white">
         {visible.length === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-[var(--text-muted)]">
             {filter === "archived" ? "No archived sponsors." : t("no_sponsors_yet")}
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-[var(--border-subtle)] text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
                 <th className="px-4 py-3 font-semibold">Name</th>
@@ -422,15 +422,15 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
             <tbody>
               {visible.map((s) => (
                 <Fragment key={s.id}>
-                  <tr className="border-b border-[var(--border-subtle)] last:border-0">
+                  <tr className="border-b border-[var(--border-subtle)] align-top last:border-0">
                     <td className="px-4 py-3 font-medium text-[var(--navy)]">{s.name}</td>
                     <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.tier}</td>
                     <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.category}</td>
                     <td className="px-4 py-3"><LogoUpload sponsorId={s.id} hasLogo={Boolean(s.logoPath)} onUploaded={onSponsorUpdated} /></td>
-                    <td className="px-4 py-3"><VideoManage sponsor={s} onUpdated={onSponsorUpdated} /></td>
+                    <td className="min-w-[210px] px-4 py-3"><VideoManage sponsor={s} onUpdated={onSponsorUpdated} /></td>
                     <td className="px-4 py-3"><AssignOwner sponsorId={s.id} hasOwner={Boolean(s.ownerId)} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2 text-xs">
+                      <div className="flex items-center justify-end gap-2 whitespace-nowrap text-xs">
                         {s.archivedAt ? (
                           <button type="button" onClick={() => void setArchived(s.id, false)} className="font-medium text-[var(--blue)] hover:underline">Restore</button>
                         ) : (
