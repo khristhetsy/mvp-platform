@@ -131,6 +131,14 @@ export interface EventPresenter {
   bio: string | null;
   links: string[];
   position: number;
+  companySummary: string | null;
+  meetingUrl: string | null;
+  startsAt: string | null;
+  timezone: string | null;
+  email: string | null;
+  /** Joined from events, for the cross-event presenter manager. */
+  eventTitle?: string | null;
+  eventSlug?: string | null;
 }
 
 export interface SponsorDownload {

@@ -40,6 +40,7 @@ function mapApplication(r: Row): SpeakerApplication {
 }
 
 function mapPresenter(r: Row): EventPresenter {
+  const event = r.events as { title?: string | null; slug?: string | null } | null | undefined;
   return {
     id: String(r.id),
     eventId: String(r.event_id),
@@ -53,8 +54,28 @@ function mapPresenter(r: Row): EventPresenter {
     bio: (r.bio as string | null) ?? null,
     links: Array.isArray(r.links) ? (r.links as string[]) : [],
     position: Number(r.position ?? 0),
+    companySummary: (r.company_summary as string | null) ?? null,
+    meetingUrl: (r.meeting_url as string | null) ?? null,
+    startsAt: (r.starts_at as string | null) ?? null,
+    timezone: (r.timezone as string | null) ?? null,
+    email: (r.email as string | null) ?? null,
+    eventTitle: event?.title ?? null,
+    eventSlug: event?.slug ?? null,
   };
 }
+
+export type PresenterFields = {
+  displayName?: string;
+  roleLabel?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  companySummary?: string | null;
+  links?: string[];
+  email?: string | null;
+  meetingUrl?: string | null;
+  startsAt?: string | null;
+  timezone?: string | null;
+};
 
 // ── applications ────────────────────────────────────────────────────────────
 
@@ -148,7 +169,12 @@ export async function createPresenter(
     roleLabel?: string | null;
     headline?: string | null;
     bio?: string | null;
+    companySummary?: string | null;
     links?: string[];
+    email?: string | null;
+    meetingUrl?: string | null;
+    startsAt?: string | null;
+    timezone?: string | null;
   },
 ): Promise<EventPresenter> {
   const { data, error } = await raw(supabase)
@@ -162,12 +188,62 @@ export async function createPresenter(
       role_label: input.roleLabel ?? null,
       headline: input.headline ?? null,
       bio: input.bio ?? null,
+      company_summary: input.companySummary ?? null,
       links: input.links ?? [],
+      email: input.email ?? null,
+      meeting_url: input.meetingUrl ?? null,
+      starts_at: input.startsAt ?? null,
+      timezone: input.timezone ?? null,
     })
-    .select("*")
+    .select("*, events:event_id(title, slug)")
     .single();
   if (error) throw new Error(error.message);
   return mapPresenter(data as Row);
+}
+
+/** Update presenter fields (staff). */
+export async function updatePresenter(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  fields: PresenterFields,
+): Promise<EventPresenter> {
+  const patch: Record<string, unknown> = {};
+  if (fields.displayName !== undefined) patch.display_name = fields.displayName;
+  if (fields.roleLabel !== undefined) patch.role_label = fields.roleLabel;
+  if (fields.headline !== undefined) patch.headline = fields.headline;
+  if (fields.bio !== undefined) patch.bio = fields.bio;
+  if (fields.companySummary !== undefined) patch.company_summary = fields.companySummary;
+  if (fields.links !== undefined) patch.links = fields.links;
+  if (fields.email !== undefined) patch.email = fields.email;
+  if (fields.meetingUrl !== undefined) patch.meeting_url = fields.meetingUrl;
+  if (fields.startsAt !== undefined) patch.starts_at = fields.startsAt;
+  if (fields.timezone !== undefined) patch.timezone = fields.timezone;
+  const { data, error } = await raw(supabase)
+    .from("event_presenters")
+    .update(patch)
+    .eq("id", id)
+    .select("*, events:event_id(title, slug)")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapPresenter(data as Row);
+}
+
+export async function getPresenterById(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<EventPresenter | null> {
+  const { data, error } = await raw(supabase)
+    .from("event_presenters")
+    .select("*, events:event_id(title, slug)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? mapPresenter(data as Row) : null;
+}
+
+export async function deletePresenter(supabase: SupabaseClient<Database>, id: string): Promise<void> {
+  const { error } = await raw(supabase).from("event_presenters").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export async function listEventPresenters(
@@ -179,6 +255,16 @@ export async function listEventPresenters(
     .select("*")
     .eq("event_id", eventId)
     .order("position", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapPresenter);
+}
+
+/** All presenters across events (cross-event manager on the applications page). */
+export async function listAllPresenters(supabase: SupabaseClient<Database>): Promise<EventPresenter[]> {
+  const { data, error } = await raw(supabase)
+    .from("event_presenters")
+    .select("*, events:event_id(title, slug)")
+    .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map(mapPresenter);
 }
