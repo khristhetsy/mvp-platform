@@ -199,7 +199,7 @@ export async function promoteFiling(
   const row = {
     source: "formd",
     external_id: `formd:${f.cik}`,
-    contact_type: "founder", // Sales Hub Contacts groups on this column (Entrepreneur → Founders).
+    // contact_type is a GENERATED column (CASE on module → 'founder'); never write it.
     module: "founder",
     side: "founder",
     name: fullName,
