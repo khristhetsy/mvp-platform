@@ -77,7 +77,7 @@ describe("ingestDay", () => {
     expect(r.upserted).toBe(2);
     expect(upsert).toHaveBeenCalledTimes(2);
     // scored payload flows through
-    const call = upsert.mock.calls[0][0] as unknown as { formdScore: number; accessionNo: string };
+    const call = (upsert.mock.calls[0] as unknown[])[0] as { formdScore: number; accessionNo: string };
     expect(typeof call.formdScore).toBe("number");
     expect(call.accessionNo).toBe("0001234567-25-000001");
   });
