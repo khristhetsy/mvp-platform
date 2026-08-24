@@ -7,6 +7,7 @@ import { createNotification } from "@/lib/notifications/notifications";
 import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
+import { upsertOptin } from "@/lib/icfo-events/networking";
 import { awardPoints } from "@/lib/icfo-events/gamification";
 import { applyRegistrationIntake, ATTENDEE_TYPES, type AttendeeType } from "@/lib/icfo-events/registration-intake";
 
@@ -28,13 +29,24 @@ export async function POST(
       return NextResponse.json({ error: "Event not available for registration." }, { status: 404 });
     }
 
-    const body = (await req.json().catch(() => null)) as { attendeeType?: string; answers?: Record<string, unknown> } | null;
+    const body = (await req.json().catch(() => null)) as { attendeeType?: string; answers?: Record<string, unknown>; interests?: unknown } | null;
     const attendeeType =
       body?.attendeeType && (ATTENDEE_TYPES as readonly string[]).includes(body.attendeeType)
         ? (body.attendeeType as AttendeeType)
         : null;
 
+    // Networking is part of registration now: at least one interest is required.
+    const interests = Array.isArray(body?.interests)
+      ? (body.interests as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 24)
+      : [];
+    if (interests.length === 0) {
+      return NextResponse.json({ error: "Pick at least one networking interest." }, { status: 400 });
+    }
+
     const { registration, created } = await registerForEvent(supabase, id, profile.id);
+
+    // Everyone who registers is in networking (opted in) with their chosen interests.
+    await upsertOptin(supabase, event.id, profile.id, true, interests).catch(() => null);
 
     if (attendeeType) {
       await applyRegistrationIntake({

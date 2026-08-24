@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Coins, Rocket, Briefcase, Store } from "lucide-react";
 import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
+import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
 import {
   type RegistrationField as Field,
   REGISTRATION_COMMON as COMMON,
@@ -28,9 +29,14 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
     ...(defaultPhone ? { phone: defaultPhone } : {}),
   });
   const [consent, setConsent] = useState(false);
+  const [interests, setInterests] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleInterest(slug: string) {
+    setInterests((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+  }
 
   function set(key: string, value: unknown) {
     setAnswers((a) => ({ ...a, [key]: value }));
@@ -106,13 +112,14 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
       return;
     }
     if (!String(answers.phone ?? "").trim()) { setError("Please enter a phone number."); return; }
+    if (interests.length === 0) { setError("Please pick at least one networking interest."); return; }
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/events/${eventId}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendeeType: role, answers }),
+        body: JSON.stringify({ attendeeType: role, answers, interests }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not register.");
@@ -169,12 +176,39 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
           <p className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-muted)]">{t("pick_a_role_above_to_continue")}</p>
         )}
 
+        <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
+          <p className="text-sm font-medium text-[var(--navy)]">
+            Networking interests <span className="text-rose-500">*</span>
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Pick at least one so we can match you with the right founders and investors. Names only — no contact details shared until both sides accept.
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {EVENT_SECTORS.map((s) => {
+              const on = interests.includes(s.slug);
+              return (
+                <button
+                  key={s.slug}
+                  type="button"
+                  onClick={() => toggleInterest(s.slug)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    on ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <label className="mt-4 flex items-start gap-2 text-[11px] text-[var(--text-secondary)]">
           <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span>I understand this is an educational community event and not an offer of securities, and I agree to the privacy policy.</span>
         </label>
 
         <button
+          type="button"
           onClick={submit}
           disabled={!role || !consent || busy}
           className="mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"

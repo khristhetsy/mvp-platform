@@ -4,17 +4,19 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
 
+/**
+ * Networking is chosen at registration (required). This panel lets an attendee
+ * review and update their interests later — there is no opt-in toggle; everyone
+ * who registered is matched by shared interests (names only).
+ */
 export function NetworkingOptIn({
   eventId,
-  initialOptedIn,
   initialInterests,
 }: {
   eventId: string;
-  initialOptedIn: boolean;
   initialInterests: string[];
 }) {
   const t = useTranslations("eventsCmp");
-  const [optedIn, setOptedIn] = useState(initialOptedIn);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -25,14 +27,15 @@ export function NetworkingOptIn({
     setSaved(false);
   }
 
-  async function save(nextOptedIn: boolean, nextInterests: string[]) {
+  async function save() {
+    if (interests.length === 0) { setError("Pick at least one interest."); return; }
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/events/networking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, optedIn: nextOptedIn, interests: nextInterests }),
+        body: JSON.stringify({ eventId, optedIn: true, interests }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not save.");
@@ -46,62 +49,43 @@ export function NetworkingOptIn({
 
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-[var(--navy)]">{t("networking")}</h3>
-          <p className="text-sm text-[var(--text-muted)]">
-            Opt in to be matched with other attendees by shared interests. Off by default; names only, no
-            contact details shared.
-          </p>
+      <h3 className="font-semibold text-[var(--navy)]">{t("networking")}</h3>
+      <p className="text-sm text-[var(--text-muted)]">
+        You&rsquo;re matched with attendees by shared interests. Names only — no contact details shared until both
+        sides accept. Update your interests any time.
+      </p>
+
+      <div className="mt-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{t("your_interests")}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {EVENT_SECTORS.map((s) => {
+            const on = interests.includes(s.slug);
+            return (
+              <button
+                key={s.slug}
+                type="button"
+                onClick={() => toggleInterest(s.slug)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  on
+                    ? "border-[var(--indigo)] bg-[var(--indigo-soft)] text-[var(--indigo)]"
+                    : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
         </div>
         <button
-          onClick={() => {
-            const next = !optedIn;
-            setOptedIn(next);
-            save(next, interests);
-          }}
+          type="button"
+          onClick={save}
           disabled={busy}
-          className={`relative inline-flex h-6 w-11 flex-none items-center rounded-full transition disabled:opacity-50 ${
-            optedIn ? "bg-[var(--indigo)]" : "bg-slate-300"
-          }`}
-          aria-pressed={optedIn}
-          aria-label="Toggle networking opt-in"
+          className="mt-3 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50"
         >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${optedIn ? "translate-x-5" : "translate-x-0.5"}`} />
+          {busy ? "Saving…" : "Save interests"}
         </button>
+        {saved && <span className="ml-2 text-xs text-emerald-700">{t("saved")}</span>}
       </div>
-
-      {optedIn && (
-        <div className="mt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{t("your_interests")}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {EVENT_SECTORS.map((s) => {
-              const on = interests.includes(s.slug);
-              return (
-                <button
-                  key={s.slug}
-                  onClick={() => toggleInterest(s.slug)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                    on
-                      ? "border-[var(--indigo)] bg-[var(--indigo-soft)] text-[var(--indigo)]"
-                      : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={() => save(true, interests)}
-            disabled={busy}
-            className="mt-3 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50"
-          >
-            {busy ? "Saving…" : "Save interests"}
-          </button>
-          {saved && <span className="ml-2 text-xs text-emerald-700">{t("saved")}</span>}
-        </div>
-      )}
 
       {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
     </div>

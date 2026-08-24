@@ -524,7 +524,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           <div id="networking" className="mt-10 scroll-mt-24">
             <NetworkingOptIn
               eventId={event.id}
-              initialOptedIn={Boolean(optin?.optedIn)}
               initialInterests={optin?.interests ?? []}
             />
 
