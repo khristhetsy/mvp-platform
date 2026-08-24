@@ -65,6 +65,7 @@ function mapSponsor(r: Row): Sponsor {
     videoRef: (r.video_ref as string | null) ?? null,
     allowContactRequest: r.allow_contact_request === undefined ? true : Boolean(r.allow_contact_request),
     meetingUrl: (r.meeting_url as string | null) ?? null,
+    archivedAt: (r.archived_at as string | null) ?? null,
   };
 }
 
@@ -101,10 +102,73 @@ export async function getSponsorById(
   return data ? mapSponsor(data as Row) : null;
 }
 
-export async function listSponsors(supabase: SupabaseClient<Database>): Promise<Sponsor[]> {
-  const { data, error } = await raw(supabase).from("sponsors").select("*").order("name");
+export async function listSponsors(
+  supabase: SupabaseClient<Database>,
+  opts?: { includeArchived?: boolean },
+): Promise<Sponsor[]> {
+  let q = raw(supabase).from("sponsors").select("*").order("name");
+  if (!opts?.includeArchived) q = q.is("archived_at", null); // active only for attach pickers
+  const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []).map(mapSponsor);
+}
+
+/** Edit a sponsor's core catalog fields (staff). */
+export async function updateSponsorDetails(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  fields: {
+    name?: string;
+    website?: string | null;
+    blurb?: string | null;
+    tier?: Sponsor["tier"];
+    category?: Sponsor["category"];
+    sectorSlug?: string | null;
+    categoryExclusive?: boolean;
+  },
+): Promise<Sponsor> {
+  const patch: Record<string, unknown> = {};
+  if (fields.name !== undefined) patch.name = fields.name;
+  if (fields.website !== undefined) patch.website = fields.website;
+  if (fields.blurb !== undefined) patch.blurb = fields.blurb;
+  if (fields.tier !== undefined) patch.tier = fields.tier;
+  if (fields.category !== undefined) patch.category = fields.category;
+  if (fields.sectorSlug !== undefined) patch.sector_slug = fields.sectorSlug;
+  if (fields.categoryExclusive !== undefined) patch.category_exclusive = fields.categoryExclusive;
+  const { data, error } = await raw(supabase).from("sponsors").update(patch).eq("id", id).select("*").single();
+  if (error) throw new Error(error.message);
+  return mapSponsor(data as Row);
+}
+
+/** Soft-archive or restore a sponsor. */
+export async function setSponsorArchived(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  archived: boolean,
+): Promise<Sponsor> {
+  const { data, error } = await raw(supabase)
+    .from("sponsors")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSponsor(data as Row);
+}
+
+/** How many events a sponsor is attached to (blocks delete). */
+export async function countSponsorEventLinks(supabase: SupabaseClient<Database>, id: string): Promise<number> {
+  const { count } = await raw(supabase)
+    .from("event_sponsors")
+    .select("id", { count: "exact", head: true })
+    .eq("sponsor_id", id);
+  return count ?? 0;
+}
+
+/** Hard-delete a sponsor (caller must ensure it isn't attached to any events). */
+export async function deleteSponsor(supabase: SupabaseClient<Database>, id: string): Promise<void> {
+  const { error } = await raw(supabase).from("sponsors").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 /** Object path for a sponsor logo: <sponsorId>/<timestamp>-<sanitized name>. */

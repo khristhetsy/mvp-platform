@@ -12,7 +12,7 @@ export default async function AdminSponsorsPage() {
   const t = await getTranslations("adminPages");
   const { profile } = await requirePermissionPage("manage_events");
   const admin = createServiceRoleClient();
-  const sponsors = await listSponsors(admin).catch(() => []);
+  const sponsors = await listSponsors(admin, { includeArchived: true }).catch(() => []);
 
   return (
     <AppShell

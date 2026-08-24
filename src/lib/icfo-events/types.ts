@@ -157,6 +157,8 @@ export interface Sponsor {
   allowContactRequest: boolean;
   /** Google Meet link for the booth "Join meeting" button. */
   meetingUrl: string | null;
+  /** Soft-archive timestamp; null = active. */
+  archivedAt: string | null;
 }
 
 export interface SponsorLead {
