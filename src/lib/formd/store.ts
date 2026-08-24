@@ -138,12 +138,29 @@ export type PromoteResult =
 function buildProfileExtra(filing: any, mgmtTeam: string): Record<string, string> {
   const out: Record<string, string> = {};
   const put = (label: string, val: string | null) => { if (val) out[label] = val; };
-  put("Entrepreneur type(s) of business entity?", filing.entity_type);
-  put("Entrepreneur seeking amount of capital?", usd(filing.total_remaining));
-  put("Entrepreneur annual revenue size?", filing.revenue_range);
-  put("Entrepreneur management team experience?", mgmtTeam || null);
-  put("Entrepreneur funding stage?", filing.derived_funding_stage);
+
+  // The full raise picture from the Form D offering data (§8): target, raised,
+  // remaining. "Amount of capital" is the single Seeking slot, so pack it there.
+  const offering = filing.total_offering as number | null;
+  const sold = filing.total_sold as number | null;
+  const remaining = filing.total_remaining as number | null;
+  const pct = filing.pct_sold as number | null;
+  let amount: string | null = null;
+  if (offering != null) {
+    const parts = [`${usd(offering)} target`];
+    if (sold != null) parts.push(`${usd(sold)} raised${pct != null ? ` (${pct}% sold)` : ""}`);
+    if (remaining != null) parts.push(`${usd(remaining)} remaining`);
+    amount = parts.join(" · ");
+  } else if (remaining != null) {
+    amount = `${usd(remaining)} remaining`;
+  }
+
+  put("Entrepreneur seeking amount of capital?", amount);
   put("Entrepreneur seeking type of investor(s)?", filing.derived_investor_type);
+  put("Entrepreneur type(s) of business entity?", filing.entity_type);
+  put("Entrepreneur funding stage?", filing.derived_funding_stage);
+  put("Entrepreneur annual revenue size?", filing.revenue_range || "Not disclosed on Form D");
+  put("Entrepreneur management team experience?", mgmtTeam || null);
   return out;
 }
 
