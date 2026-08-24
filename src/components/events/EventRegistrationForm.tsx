@@ -105,13 +105,19 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
 
   async function submit() {
     if (!role || !consent) return;
-    if (!String(answers.name ?? "").trim()) { setError("Please enter your full name."); return; }
+    // Every required field must be filled (selects/text/textarea non-empty, chips ≥1).
+    const fields: Field[] = [...COMMON, ...BY_TYPE[role]];
+    for (const f of fields) {
+      if (!f.required) continue;
+      const v = answers[f.key];
+      const filled = f.kind === "chips" ? Array.isArray(v) && v.length > 0 : String(v ?? "").trim().length > 0;
+      if (!filled) { setError(`Please complete “${f.label}”.`); return; }
+    }
     const email = String(answers.email ?? "").trim();
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
-    if (!String(answers.phone ?? "").trim()) { setError("Please enter a phone number."); return; }
     if (interests.length === 0) { setError("Please pick at least one networking interest."); return; }
     setBusy(true);
     setError(null);
