@@ -132,16 +132,19 @@ export type PromoteResult =
   | { action: "created" | "updated" | "linked"; contactId: string }
   | { action: "possible_match"; contactId: string; contactName: string };
 
-function buildProfileExtra(filing: any, mgmtTeam: string): Array<{ label: string; values: string[] }> {
-  const put = (label: string, val: string | null) => (val ? { label, values: [val] } : null);
-  return [
-    put("Entrepreneur type(s) of business entity?", filing.entity_type),
-    put("Entrepreneur seeking amount of capital?", usd(filing.total_remaining)),
-    put("Entrepreneur annual revenue size?", filing.revenue_range),
-    put("Entrepreneur management team experience?", mgmtTeam || null),
-    put("Entrepreneur funding stage?", filing.derived_funding_stage),
-    put("Entrepreneur seeking type of investor(s)?", filing.derived_investor_type),
-  ].filter((x): x is { label: string; values: string[] } => x !== null);
+// raw.__profile.extra is an OBJECT keyed by label (each value a string); the
+// Sales Hub flattens it via Object.entries and matches labels to the Founder
+// profile schema. Returning an array here renders as "[object Object]".
+function buildProfileExtra(filing: any, mgmtTeam: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const put = (label: string, val: string | null) => { if (val) out[label] = val; };
+  put("Entrepreneur type(s) of business entity?", filing.entity_type);
+  put("Entrepreneur seeking amount of capital?", usd(filing.total_remaining));
+  put("Entrepreneur annual revenue size?", filing.revenue_range);
+  put("Entrepreneur management team experience?", mgmtTeam || null);
+  put("Entrepreneur funding stage?", filing.derived_funding_stage);
+  put("Entrepreneur seeking type of investor(s)?", filing.derived_investor_type);
+  return out;
 }
 
 /**
