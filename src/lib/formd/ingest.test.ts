@@ -26,6 +26,24 @@ describe("parseDailyIndex", () => {
     });
     expect(rows[1].formType).toBe("D/A");
   });
+
+  it("parses the real EDGAR YYYYMMDD Date Filed column", () => {
+    // The live daily form.idx uses 20260821, not 2026-08-21, and unpadded CIKs.
+    const real = `Form Type   Company Name                                                  CIK        Date Filed  File Name
+-----------------------------------------------------------------------------------------------------------
+1-A/A            Star Gold Corp.                                               1401835     20260821    edgar/data/1401835/0001437749-26-028724.txt
+D                Acme Ventures LLC                                             1990001     20260821    edgar/data/1990001/0001990001-26-000045.txt
+`;
+    const rows = parseDailyIndex(real);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      formType: "D",
+      companyName: "Acme Ventures LLC",
+      cik: "1990001",
+      dateFiled: "2026-08-21",
+      accessionNo: "0001990001-26-000045",
+    });
+  });
 });
 
 describe("urls", () => {

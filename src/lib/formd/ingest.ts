@@ -40,17 +40,21 @@ export function dailyIndexUrl(date: Date): string {
  */
 export function parseDailyIndex(text: string): IndexRow[] {
   const rows: IndexRow[] = [];
-  const re = /^(D|D\/A)\s+(.+?)\s+(\d+)\s+(\d{4}-\d{2}-\d{2})\s+(edgar\/data\/\d+\/([\d-]+)\.txt)\s*$/;
+  // The real EDGAR daily form.idx uses a YYYYMMDD "Date Filed" column (e.g.
+  // 20260821); older/test fixtures use YYYY-MM-DD. Accept both, normalise below.
+  const re = /^(D|D\/A)\s+(.+?)\s+(\d+)\s+(\d{4}-?\d{2}-?\d{2})\s+(edgar\/data\/\d+\/([\d-]+)\.txt)\s*$/;
   for (const line of text.split(/\r?\n/)) {
     const m = line.match(re);
     if (!m) continue;
     const cik = m[3].replace(/^0+/, "") || m[3];
     const accessionNo = m[6];
+    const d = m[4].replace(/-/g, ""); // YYYYMMDD
+    const dateFiled = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
     rows.push({
       formType: m[1],
       companyName: m[2].trim(),
       cik,
-      dateFiled: m[4],
+      dateFiled,
       accessionNo,
       primaryDocUrl: primaryDocUrl(cik, accessionNo),
     });
