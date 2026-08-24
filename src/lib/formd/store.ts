@@ -220,7 +220,7 @@ export async function promoteFiling(
     },
     formd_cik: f.cik,
     formd_accession_no: accessionNo,
-    created_on: new Date().toISOString(),
+    // created_on is a DB-generated column — never insert a value (§ promote fix).
   };
   const { data: inserted, error } = await client.from("crm_contacts").upsert(row, { onConflict: "source,external_id" }).select("id").single();
   if (error) throw new Error(error.message);
