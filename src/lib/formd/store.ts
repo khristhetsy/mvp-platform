@@ -6,6 +6,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { normalizeName, normalizePhone } from "./dedupe";
+import { amountBand, revenueBand, fundingStageOption, investorTypeOptions, businessEntityStatus } from "./profile-map";
 
 function db(): SupabaseClient {
   return serviceRoleClientUntyped() as unknown as SupabaseClient;
@@ -132,36 +133,34 @@ export type PromoteResult =
   | { action: "created" | "updated" | "linked"; contactId: string }
   | { action: "possible_match"; contactId: string; contactName: string };
 
-// raw.__profile.extra is an OBJECT keyed by label (each value a string); the
-// Sales Hub flattens it via Object.entries and matches labels to the Founder
-// profile schema. Returning an array here renders as "[object Object]".
-function buildProfileExtra(filing: any, mgmtTeam: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  const put = (label: string, val: string | null) => { if (val) out[label] = val; };
+// raw.__profile.extra is an OBJECT keyed by label; each value mirrors the Odoo
+// shape (selection/many2many fields are stored as string arrays). Every value
+// below is snapped onto an option that ALREADY exists in the CRM vocabulary via
+// profile-map — we never invent a new category. Unmappable values are omitted.
+function buildProfileExtra(filing: any, mgmtTeam: string): Record<string, string | string[]> {
+  const out: Record<string, string | string[]> = {};
+  const putArr = (label: string, vals: string[]) => { if (vals.length) out[label] = vals; };
+  const putOne = (label: string, val: string | null) => { if (val) out[label] = [val]; };
 
-  // The full raise picture from the Form D offering data (§8): target, raised,
-  // remaining. "Amount of capital" is the single Seeking slot, so pack it there.
-  const offering = filing.total_offering as number | null;
-  const sold = filing.total_sold as number | null;
-  const remaining = filing.total_remaining as number | null;
-  const pct = filing.pct_sold as number | null;
-  let amount: string | null = null;
-  if (offering != null) {
-    const parts = [`${usd(offering)} target`];
-    if (sold != null) parts.push(`${usd(sold)} raised${pct != null ? ` (${pct}% sold)` : ""}`);
-    if (remaining != null) parts.push(`${usd(remaining)} remaining`);
-    amount = parts.join(" · ");
-  } else if (remaining != null) {
-    amount = `${usd(remaining)} remaining`;
-  }
-
-  put("Entrepreneur seeking amount of capital?", amount);
-  put("Entrepreneur seeking type of investor(s)?", filing.derived_investor_type);
-  put("Entrepreneur type(s) of business entity?", filing.entity_type);
-  put("Entrepreneur funding stage?", filing.derived_funding_stage);
-  put("Entrepreneur annual revenue size?", filing.revenue_range || "Not disclosed on Form D");
-  put("Entrepreneur management team experience?", mgmtTeam || null);
+  // Raise size → the band it falls in (target amount; else remaining). Exact
+  // figures are preserved in the contact note, not the dropdown.
+  putOne("Entrepreneur seeking amount of capital?", amountBand(filing.total_offering ?? filing.total_remaining));
+  putArr("Entrepreneur seeking type of investor(s)?", investorTypeOptions(filing.derived_investor_type));
+  putOne("Entrepreneur type(s) of business entity?", businessEntityStatus());
+  putOne("Entrepreneur funding stage?", fundingStageOption(filing.derived_funding_stage));
+  putOne("Entrepreneur annual revenue size?", revenueBand(filing.revenue_range));
+  // Management team is free text (no controlled options), so keep it as a string.
+  if (mgmtTeam) out["Entrepreneur management team experience?"] = mgmtTeam;
   return out;
+}
+
+/** Human-readable raise line for the contact note (exact figures, not banded). */
+function raiseDetail(filing: any): string {
+  const parts: string[] = [];
+  if (filing.total_offering != null) parts.push(`${usd(filing.total_offering)} target`);
+  if (filing.total_sold != null) parts.push(`${usd(filing.total_sold)} raised${filing.pct_sold != null ? ` (${filing.pct_sold}% sold)` : ""}`);
+  if (filing.total_remaining != null) parts.push(`${usd(filing.total_remaining)} remaining`);
+  return parts.join(" · ");
 }
 
 /**
@@ -182,7 +181,8 @@ export async function promoteFiling(
 
   const fullName = f.signer_name || persons[0]?.full_name || f.company_name;
   const mgmtTeam = persons.map((p: any) => `${p.full_name}${p.relationships ? ` (${p.relationships})` : ""}`).join("; ");
-  const noteText = `SEC Form D lead · score ${f.formd_score ?? "—"} · ${f.days_since_first_sale ?? "?"}d since first sale · agent: ${f.has_placement_agent ? "yes" : "no"} · ${f.filing_url ?? ""}`;
+  const raise = raiseDetail(f);
+  const noteText = `SEC Form D lead · score ${f.formd_score ?? "—"} · ${f.days_since_first_sale ?? "?"}d since first sale · agent: ${f.has_placement_agent ? "yes" : "no"}${raise ? ` · raise: ${raise}` : ""} · ${f.filing_url ?? ""}`;
 
   // 1) already promoted by CIK → update the still-to-raise figure + note.
   const { data: byCik } = await client.from("crm_contacts").select("id, raw").eq("formd_cik", f.cik).maybeSingle();
