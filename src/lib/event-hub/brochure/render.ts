@@ -48,34 +48,45 @@ function coverPage(m: EventMergeData, o: Record<string, Record<string, string>>,
   </div>`;
 }
 
-function disclaimersPage(): string {
-  return `<div class="bk-body"><h2 class="bk-h2">Disclaimers &amp; Important Notices</h2>
-    ${DISCLAIMERS.map((d) => `<p class="bk-disc">${esc(d)}</p>`).join("")}</div>`;
+const DEFAULT_TEAM_BODY = "Hosted and produced by the iCFO Capital Global events team. Master of ceremonies and coordinators are introduced on stage.";
+
+/** Split an override body (blank-line separated) into <p> paragraphs. */
+function paras(text: string, cls = "bk-p"): string {
+  return text.split(/\n{1,}/).map((s) => s.trim()).filter(Boolean).map((s) => `<p class="${cls}">${esc(s)}</p>`).join("");
 }
 
-function contentsPage(items: { n: number; label: string }[]): string {
-  return `<div class="bk-body"><h2 class="bk-h2">Contents</h2>
+function disclaimersPage(o: Record<string, Record<string, string>>): string {
+  const heading = ov(o, "disclaimers", "heading", "Disclaimers & Important Notices");
+  const body = o?.disclaimers?.body;
+  const list = body ? paras(body, "bk-disc") : DISCLAIMERS.map((d) => `<p class="bk-disc">${esc(d)}</p>`).join("");
+  return `<div class="bk-body"><h2 class="bk-h2">${esc(heading)}</h2>${list}</div>`;
+}
+
+function contentsPage(o: Record<string, Record<string, string>>, items: { n: number; label: string }[]): string {
+  return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "contents", "heading", "Contents"))}</h2>
     ${items.map((i) => `<div class="bk-toc"><span>${esc(i.label)}</span><span class="bk-dots"></span><span>${i.n}</span></div>`).join("")}</div>`;
 }
 
 function introPage(m: EventMergeData, o: Record<string, Record<string, string>>): string {
   const body = ov(o, "introduction", "body", m.tagline || "Welcome to the iCFO event.");
-  return `<div class="bk-body"><h2 class="bk-h2">Introduction</h2>
+  return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "introduction", "heading", "Introduction"))}</h2>
     <p class="bk-p">${esc(body)}</p>
     <p class="bk-p">${esc(ov(o, "introduction", "audience", "Attendees include accredited investors, family offices, venture capitalists, and investment professionals across multiple industries."))}</p></div>`;
 }
 
-function agendaPage(m: EventMergeData): string {
+function agendaPage(m: EventMergeData, o: Record<string, Record<string, string>>): string {
+  const intro = o?.agenda?.intro ? paras(o.agenda.intro) : "";
   const rows = m.sessions.length
     ? m.sessions.map((s) => `<div class="bk-agenda"><span class="bk-agenda-type" style="color:${s.accent}">${esc(s.type.replace(/_/g, " "))}</span>
         <div><div class="bk-agenda-title">${esc(s.title)}</div>${s.abstract ? `<div class="bk-agenda-abs">${esc(s.abstract)}</div>` : ""}</div></div>`).join("")
     : `<p class="bk-p">Agenda to be announced.</p>`;
-  return `<div class="bk-body"><h2 class="bk-h2">Agenda</h2><div class="bk-agenda-date">${esc(m.dateLabel)}${m.timeRange ? ` · ${esc(m.timeRange)}` : ""}</div>${rows}</div>`;
+  return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "agenda", "heading", "Agenda"))}</h2><div class="bk-agenda-date">${esc(m.dateLabel)}${m.timeRange ? ` · ${esc(m.timeRange)}` : ""}</div>${intro}${rows}</div>`;
 }
 
-function presentersPages(m: EventMergeData): string {
+function presentersPages(m: EventMergeData, o: Record<string, Record<string, string>>): string {
   if (!m.presenters.length) return "";
-  // 6 per page
+  const heading = ov(o, "presenters", "heading", "Presenters");
+  const intro = o?.presenters?.intro ? paras(o.presenters.intro) : "";
   const pages: string[] = [];
   for (let i = 0; i < m.presenters.length; i += 6) {
     const chunk = m.presenters.slice(i, i + 6);
@@ -85,29 +96,30 @@ function presentersPages(m: EventMergeData): string {
       ${p.role ? `<div class="bk-pres-rl">${esc(p.role)}</div>` : ""}
       ${p.company ? `<div class="bk-pres-co">${esc(p.company)}</div>` : ""}
     </div>`).join("");
-    pages.push(`<div class="bk-body"><h2 class="bk-h2">Presenters${i > 0 ? " (cont.)" : ""}</h2><div class="bk-pres-grid">${cards}</div></div>`);
+    pages.push(`<div class="bk-body"><h2 class="bk-h2">${esc(heading)}${i > 0 ? " (cont.)" : ""}</h2>${i === 0 ? intro : ""}<div class="bk-pres-grid">${cards}</div></div>`);
   }
   return pages.join("|||");
 }
 
-function teamPage(): string {
-  return `<div class="bk-body"><h2 class="bk-h2">MC &amp; Event Team</h2>
-    <p class="bk-p">Hosted and produced by the iCFO Capital Global events team. Master of ceremonies and coordinators are introduced on stage.</p></div>`;
+function teamPage(o: Record<string, Record<string, string>>): string {
+  return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "team", "heading", "MC & Event Team"))}</h2>
+    ${paras(ov(o, "team", "body", DEFAULT_TEAM_BODY))}</div>`;
 }
 
-function sponsorsContactPage(m: EventMergeData, qrDataUrl?: string): string {
+function sponsorsContactPage(m: EventMergeData, o: Record<string, Record<string, string>>, qrDataUrl?: string): string {
   const tier = (label: string, list: { name: string; logoUrl: string | null }[]) =>
     list.length ? `<div class="bk-spon-tier"><div class="bk-spon-tier-h">${esc(label)}</div><div class="bk-spon-row">${list.map((s) => `<span class="bk-spon">${esc(s.name)}</span>`).join("")}</div></div>` : "";
   const qr = qrDataUrl
     ? `<div class="bk-qr"><img src="${esc(qrDataUrl)}" alt="Scan for the digital booklet" width="104" height="104"><div class="bk-qr-cap">Scan for the digital booklet</div></div>`
     : "";
-  return `<div class="bk-body"><h2 class="bk-h2">Sponsors</h2>
+  const intro = o?.sponsors_contact?.intro ? paras(o.sponsors_contact.intro) : "";
+  return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "sponsors_contact", "heading", "Sponsors"))}</h2>${intro}
     ${tier("Presenting partners", m.sponsorTiers.presenting)}
     ${tier("Track sponsors", m.sponsorTiers.track)}
     ${tier("Community", m.sponsorTiers.community)}
     ${!m.sponsorTiers.presenting.length && !m.sponsorTiers.track.length && !m.sponsorTiers.community.length ? `<p class="bk-p">Sponsor lineup to be announced.</p>` : ""}
-    <h2 class="bk-h2" style="margin-top:24px">Contact</h2>
-    <p class="bk-p">${esc(m.organizerLine)}</p>${qr}</div>`;
+    <h2 class="bk-h2" style="margin-top:24px">${esc(ov(o, "sponsors_contact", "contactHeading", "Contact"))}</h2>
+    ${paras(ov(o, "sponsors_contact", "contactBody", m.organizerLine))}${qr}</div>`;
 }
 
 function freeformPage(page: BrochurePage): string {
@@ -160,7 +172,7 @@ export function renderBookletHTML(
   const tocItems: { n: number; label: string }[] = [];
   included.forEach((p, i) => {
     if (p.type === "cover" || p.type === "disclaimers" || p.type === "contents") return;
-    tocItems.push({ n: i + 1, label: labelFor(p) });
+    tocItems.push({ n: i + 1, label: labelFor(p, overrides) });
   });
 
   const sections: string[] = [];
@@ -222,14 +234,15 @@ export function renderBookletHTML(
   </style></head><body>${sections.join("")}</body></html>`;
 }
 
-function labelFor(p: BrochurePage): string {
+function labelFor(p: BrochurePage, o?: Record<string, Record<string, string>>): string {
   if (p.type === "custom") return p.custom?.heading || "Custom page";
   if (p.type === "freeform") return "Design page";
   const map: Record<string, string> = {
     contents: "Contents", introduction: "Introduction", agenda: "Agenda",
     presenters: "Presenters", team: "MC & Team", sponsors_contact: "Sponsors & Contact",
   };
-  return map[p.type] ?? p.type;
+  // A page's TOC label follows its edited heading (falls back to the default).
+  return o?.[p.type]?.heading || map[p.type] || p.type;
 }
 
 function renderOne(
@@ -242,13 +255,13 @@ function renderOne(
 ): string {
   switch (p.type) {
     case "cover": return p.blocks?.length ? freeformPage(p) : coverPage(m, o, primary);
-    case "disclaimers": return disclaimersPage();
-    case "contents": return contentsPage(toc);
+    case "disclaimers": return disclaimersPage(o);
+    case "contents": return contentsPage(o, toc);
     case "introduction": return introPage(m, o);
-    case "agenda": return agendaPage(m);
-    case "presenters": return presentersPages(m) || `<div class="bk-body"><h2 class="bk-h2">Presenters</h2><p class="bk-p">Presenter lineup to be announced.</p></div>`;
-    case "team": return teamPage();
-    case "sponsors_contact": return sponsorsContactPage(m, qrDataUrl);
+    case "agenda": return agendaPage(m, o);
+    case "presenters": return presentersPages(m, o) || `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "presenters", "heading", "Presenters"))}</h2><p class="bk-p">Presenter lineup to be announced.</p></div>`;
+    case "team": return teamPage(o);
+    case "sponsors_contact": return sponsorsContactPage(m, o, qrDataUrl);
     case "custom": return customPage(p);
     case "freeform": return freeformPage(p);
     default: return `<div class="bk-body"></div>`;

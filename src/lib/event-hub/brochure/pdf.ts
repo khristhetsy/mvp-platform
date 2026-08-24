@@ -19,6 +19,8 @@ const TRIM: Record<BrochureSize, [number, number]> = {
   square: [576, 576],
 };
 
+const DEFAULT_TEAM_BODY = "Hosted and produced by the iCFO Capital Global events team. Master of ceremonies and coordinators are introduced on stage.";
+
 const DISCLAIMERS = [
   "This booklet is provided for education and community purposes only.",
   "Nothing in this booklet is an offer to sell or a solicitation of an offer to buy any security, nor a recommendation of any security or investment strategy.",
@@ -59,7 +61,7 @@ export function renderBrochurePdf(
   const toc: { n: number; label: string }[] = [];
   included.forEach((p, i) => {
     if (["cover", "disclaimers", "contents"].includes(p.type)) return;
-    toc.push({ n: i + 1, label: pageLabel(p) });
+    toc.push({ n: i + 1, label: pageLabel(p, overrides) });
   });
 
   let first = true;
@@ -126,14 +128,16 @@ export function renderBrochurePdf(
         break; // no footer on cover
       }
       case "disclaimers": {
-        heading("Disclaimers & Important Notices");
+        heading(ov("disclaimers", "heading", "Disclaimers & Important Notices"));
         doc.font("Helvetica").fontSize(10.5).fillColor("#4a5568");
-        DISCLAIMERS.forEach((d) => { doc.text(d, ox + MARGIN, doc.y, { width: contentW }); doc.moveDown(0.6); });
+        const dbody = overrides?.disclaimers?.body;
+        if (dbody) { doc.text(dbody, ox + MARGIN, doc.y, { width: contentW }); }
+        else { DISCLAIMERS.forEach((d) => { doc.text(d, ox + MARGIN, doc.y, { width: contentW }); doc.moveDown(0.6); }); }
         footer();
         break;
       }
       case "contents": {
-        heading("Contents");
+        heading(ov("contents", "heading", "Contents"));
         doc.font("Helvetica").fontSize(12).fillColor(INK);
         toc.forEach((i) => {
           const y = doc.y;
@@ -145,7 +149,7 @@ export function renderBrochurePdf(
         break;
       }
       case "introduction": {
-        heading("Introduction");
+        heading(ov("introduction", "heading", "Introduction"));
         doc.font("Helvetica").fontSize(12).fillColor(INK);
         doc.text(ov("introduction", "body", merge.tagline || "Welcome to the iCFO event."), ox + MARGIN, doc.y, { width: contentW });
         doc.moveDown(0.6);
@@ -154,9 +158,10 @@ export function renderBrochurePdf(
         break;
       }
       case "agenda": {
-        heading("Agenda");
+        heading(ov("agenda", "heading", "Agenda"));
         doc.font("Helvetica").fontSize(10).fillColor(MUTED).text(`${merge.dateLabel}${merge.timeRange ? ` · ${merge.timeRange}` : ""}`, { width: contentW });
         doc.moveDown(0.6);
+        if (overrides?.agenda?.intro) { doc.font("Helvetica").fontSize(11).fillColor(INK).text(overrides.agenda.intro, ox + MARGIN, doc.y, { width: contentW }); doc.moveDown(0.6); }
         if (merge.sessions.length) {
           merge.sessions.forEach((s) => {
             doc.font("Helvetica-Bold").fontSize(9).fillColor(s.accent).text(s.type.replace(/_/g, " ").toUpperCase(), ox + MARGIN, doc.y, { width: contentW });
@@ -171,7 +176,9 @@ export function renderBrochurePdf(
         break;
       }
       case "presenters": {
-        heading("Presenters");
+        const presHeading = ov("presenters", "heading", "Presenters");
+        heading(presHeading);
+        if (overrides?.presenters?.intro) { doc.font("Helvetica").fontSize(11).fillColor(INK).text(overrides.presenters.intro, ox + MARGIN, doc.y, { width: contentW }); doc.moveDown(0.6); }
         const colW = (contentW - 24) / 2;
         let col = 0;
         let rowY = doc.y;
@@ -185,19 +192,20 @@ export function renderBrochurePdf(
           if (pr.company) doc.fillColor(MUTED).font("Helvetica").fontSize(9.5).text(pr.company, x + 48, doc.y, { width: colW - 48 });
           col += 1;
           if (col === 2) { col = 0; rowY += 64; }
-          if (rowY > oy + th - 90) { footer(); newPage(); cropMarks(); heading("Presenters (cont.)"); rowY = doc.y; }
+          if (rowY > oy + th - 90) { footer(); newPage(); cropMarks(); heading(`${presHeading} (cont.)`); rowY = doc.y; }
         }
         footer();
         break;
       }
       case "team": {
-        heading("MC & Event Team");
-        doc.font("Helvetica").fontSize(12).fillColor(INK).text("Hosted and produced by the iCFO Capital Global events team. Master of ceremonies and coordinators are introduced on stage.", ox + MARGIN, doc.y, { width: contentW });
+        heading(ov("team", "heading", "MC & Event Team"));
+        doc.font("Helvetica").fontSize(12).fillColor(INK).text(ov("team", "body", DEFAULT_TEAM_BODY), ox + MARGIN, doc.y, { width: contentW });
         footer();
         break;
       }
       case "sponsors_contact": {
-        heading("Sponsors");
+        heading(ov("sponsors_contact", "heading", "Sponsors"));
+        if (overrides?.sponsors_contact?.intro) { doc.font("Helvetica").fontSize(11).fillColor(INK).text(overrides.sponsors_contact.intro, ox + MARGIN, doc.y, { width: contentW }); doc.moveDown(0.6); }
         const tier = (label: string, list: { name: string }[]) => {
           if (!list.length) return;
           doc.font("Helvetica-Bold").fontSize(11).fillColor(MUTED).text(label.toUpperCase(), ox + MARGIN, doc.y, { width: contentW, characterSpacing: 0.5 });
@@ -211,9 +219,9 @@ export function renderBrochurePdf(
           doc.font("Helvetica").fontSize(12).fillColor(INK).text("Sponsor lineup to be announced.", { width: contentW });
         }
         doc.moveDown(1);
-        doc.font("Helvetica-Bold").fontSize(20).fillColor(primary).text("Contact", ox + MARGIN, doc.y, { width: contentW });
+        doc.font("Helvetica-Bold").fontSize(20).fillColor(primary).text(ov("sponsors_contact", "contactHeading", "Contact"), ox + MARGIN, doc.y, { width: contentW });
         doc.moveDown(0.4);
-        doc.font("Helvetica").fontSize(12).fillColor(INK).text(merge.organizerLine, { width: contentW });
+        doc.font("Helvetica").fontSize(12).fillColor(INK).text(ov("sponsors_contact", "contactBody", merge.organizerLine), { width: contentW });
         if (opts.qr) {
           const qs = 96;
           const qx = ox + tw - MARGIN - qs;
@@ -243,11 +251,11 @@ export function renderBrochurePdf(
   return done;
 }
 
-function pageLabel(p: BrochurePage): string {
+function pageLabel(p: BrochurePage, o?: Record<string, Record<string, string>>): string {
   if (p.type === "custom") return p.custom?.heading || "Custom page";
   const map: Record<string, string> = {
     introduction: "Introduction", agenda: "Agenda", presenters: "Presenters",
     team: "MC & Team", sponsors_contact: "Sponsors & Contact",
   };
-  return map[p.type] ?? p.type;
+  return o?.[p.type]?.heading || map[p.type] || p.type;
 }

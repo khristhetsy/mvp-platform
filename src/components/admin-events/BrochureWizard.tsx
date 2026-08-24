@@ -15,6 +15,39 @@ const PAGE_PX: Record<BrochureSize, [number, number]> = {
   square: [768, 768],
 };
 
+// Editable copy fields per standard page (dynamic lists still pull from the event).
+type CopyField = { field: string; label: string; kind: "input" | "textarea"; placeholder: string };
+const COPY_FIELDS: Record<string, CopyField[]> = {
+  introduction: [
+    { field: "heading", label: "Heading", kind: "input", placeholder: "Introduction" },
+    { field: "body", label: "Body", kind: "textarea", placeholder: "Welcome copy — leave blank for the default." },
+    { field: "audience", label: "Audience line", kind: "textarea", placeholder: "Who attends — leave blank for the default." },
+  ],
+  contents: [{ field: "heading", label: "Heading", kind: "input", placeholder: "Contents" }],
+  agenda: [
+    { field: "heading", label: "Heading", kind: "input", placeholder: "Agenda" },
+    { field: "intro", label: "Intro", kind: "textarea", placeholder: "Optional blurb above the session list." },
+  ],
+  presenters: [
+    { field: "heading", label: "Heading", kind: "input", placeholder: "Presenters" },
+    { field: "intro", label: "Intro", kind: "textarea", placeholder: "Optional blurb above the speaker grid." },
+  ],
+  team: [
+    { field: "heading", label: "Heading", kind: "input", placeholder: "MC & Event Team" },
+    { field: "body", label: "Body", kind: "textarea", placeholder: "Leave blank for the default." },
+  ],
+  sponsors_contact: [
+    { field: "heading", label: "Heading", kind: "input", placeholder: "Sponsors" },
+    { field: "intro", label: "Intro", kind: "textarea", placeholder: "Optional blurb above the sponsor tiers." },
+    { field: "contactHeading", label: "Contact heading", kind: "input", placeholder: "Contact" },
+    { field: "contactBody", label: "Contact details", kind: "textarea", placeholder: "Leave blank to use the event organizer line." },
+  ],
+  disclaimers: [
+    { field: "heading", label: "Heading", kind: "input", placeholder: "Disclaimers & Important Notices" },
+    { field: "body", label: "Body (compliance — edit with care)", kind: "textarea", placeholder: "Leave blank to keep the standard compliance notices." },
+  ],
+};
+
 export function BrochureWizard({ initialEventId, baseEditionId }: { initialEventId?: string; baseEditionId?: string }) {
   const [step, setStep] = useState(1);
   const [events, setEvents] = useState<PickerEvent[]>([]);
@@ -33,6 +66,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [panelOpen, setPanelOpen] = useState(true);
   const [generated, setGenerated] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [copyEditKey, setCopyEditKey] = useState<string | null>(null);
   const [pdfWarning, setPdfWarning] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -338,9 +372,9 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
               </div>
             </div>
 
-            {/* copy & overrides (§6) */}
+            {/* cover copy (other pages edit inline in the list below) */}
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Copy</p>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Cover</p>
               <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-white p-3">
                 <div>
                   <div className="flex items-center justify-between">
@@ -359,14 +393,6 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                 <div>
                   <label className="text-[11px] font-semibold text-[var(--navy)]">Cover tagline</label>
                   <input value={ovVal("cover", "tagline")} onChange={(e) => setOverride("cover", "tagline", e.target.value)} placeholder={source?.tagline || "Optional tagline"} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-[var(--navy)]">Introduction</label>
-                  <textarea value={ovVal("introduction", "body")} onChange={(e) => setOverride("introduction", "body", e.target.value)} placeholder="Welcome copy — leave blank for the default." rows={3} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-[var(--navy)]">Audience line</label>
-                  <textarea value={ovVal("introduction", "audience")} onChange={(e) => setOverride("introduction", "audience", e.target.value)} placeholder="Who attends — leave blank for the default." rows={2} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
                 </div>
               </div>
             </div>
@@ -399,10 +425,14 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                                 <button type="button" onClick={customizeCover} className="text-xs font-semibold text-[var(--blue)]">Customize</button>
                               )
                             )}
+                            {COPY_FIELDS[p.type] && (
+                              <button type="button" onClick={() => setCopyEditKey(copyEditKey === p.key ? null : p.key)} className="text-xs font-semibold text-[var(--blue)]">{copyEditKey === p.key ? "Done" : "Edit"}</button>
+                            )}
                             <span className="text-[10px] font-semibold text-[var(--text-muted)]"><i className="ti ti-lock" aria-hidden="true" /> required</span>
                           </span>
                         ) : (
                           <span className="flex items-center gap-1">
+                            {COPY_FIELDS[p.type] && p.included && <button type="button" onClick={() => setCopyEditKey(copyEditKey === p.key ? null : p.key)} className="mr-1 text-xs font-semibold text-[var(--blue)]">{copyEditKey === p.key ? "Done" : "Edit"}</button>}
                             {isFreeform && <button type="button" onClick={() => setEditingKey(editingKey === p.key ? null : p.key)} className="mr-1 text-xs font-semibold text-[var(--blue)]">{editingKey === p.key ? "Done" : "Design"}</button>}
                             <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
                             <button type="button" onClick={() => move(i, 1)} disabled={i >= pages.length - 1} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↓</button>
@@ -415,6 +445,21 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                         <div className="mt-2 space-y-1.5">
                           <input value={p.custom?.heading ?? ""} onChange={(e) => editCustom(i, { heading: e.target.value })} placeholder="Page heading" className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
                           <textarea value={p.custom?.body ?? ""} onChange={(e) => editCustom(i, { body: e.target.value })} placeholder="Body text" rows={3} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                        </div>
+                      )}
+                      {COPY_FIELDS[p.type] && copyEditKey === p.key && (
+                        <div className="mt-2 space-y-2 border-t border-[var(--border-subtle)] pt-2">
+                          {COPY_FIELDS[p.type].map((f) => (
+                            <div key={f.field}>
+                              <label className="text-[11px] font-semibold text-[var(--navy)]">{f.label}</label>
+                              {f.kind === "textarea" ? (
+                                <textarea value={ovVal(p.type, f.field)} onChange={(e) => setOverride(p.type, f.field, e.target.value)} placeholder={f.placeholder} rows={3} className="mt-0.5 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                              ) : (
+                                <input value={ovVal(p.type, f.field)} onChange={(e) => setOverride(p.type, f.field, e.target.value)} placeholder={f.placeholder} className="mt-0.5 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                              )}
+                            </div>
+                          ))}
+                          <p className="text-[10px] text-[var(--text-muted)]">Blank uses the default. Session/presenter/sponsor lists are pulled from the event.</p>
                         </div>
                       )}
                     </li>
