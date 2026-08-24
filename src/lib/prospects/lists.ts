@@ -25,7 +25,10 @@ type FB = any;
 function applyFilters(q: FB, f: ProspectFilters, opts?: { skipSegment?: boolean; skipStatus?: boolean }): FB {
   let out = q.eq("suppressed", false).not("email", "is", null);
   if (f.ids && f.ids.length > 0) out = out.in("id", f.ids);
-  if (f.side) out = out.eq("side", f.side);
+  // Advisors are identified by contact_type (there is no side='advisor');
+  // founders/investors filter on the side column as before.
+  if (f.side === "advisor") out = out.eq("contact_type", "advisor");
+  else if (f.side) out = out.eq("side", f.side);
   if (f.segment && !opts?.skipSegment) out = out.eq("segment", f.segment);
   if (f.status && !opts?.skipStatus) out = out.eq("email_status", f.status);
   if (f.leadStatus) out = out.eq("lead_status", f.leadStatus);
