@@ -2,18 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { requirePermissionApi } from "@/lib/api/permissions";
-import { setRegistrationContact, deleteRegistration } from "@/lib/icfo-events/registrations";
+import { setRegistrationContact, updateRegistrationAnswers, deleteRegistration } from "@/lib/icfo-events/registrations";
 
 export const dynamic = "force-dynamic";
 
+const answerValue = z.union([z.string(), z.boolean(), z.array(z.string()), z.null()]);
 const schema = z.object({
   contactName: z.string().max(200).nullable().optional(),
   contactEmail: z.string().max(200).nullable().optional(),
   contactPhone: z.string().max(60).nullable().optional(),
   company: z.string().max(200).nullable().optional(),
+  // Full answers patch — edit every registration field.
+  answers: z.record(z.string(), answerValue).optional(),
 });
 
-/** Edit a registrant's contact details (staff). */
+/** Edit a registrant's contact details and/or any answer field (staff). */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; regId: string }> },
@@ -24,7 +27,9 @@ export async function PATCH(
     const { regId } = await params;
     const parsed = schema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
-    const registration = await setRegistrationContact(auth.supabase, regId, parsed.data);
+    const registration = parsed.data.answers
+      ? await updateRegistrationAnswers(auth.supabase, regId, parsed.data.answers)
+      : await setRegistrationContact(auth.supabase, regId, parsed.data);
     return NextResponse.json({ registration });
   } catch (err) {
     Sentry.captureException(err);

@@ -136,6 +136,29 @@ export async function setRegistrationContact(
   return mapReg(data as Record<string, unknown>);
 }
 
+/** Merge a full answers patch into a registration (edit every field, staff). */
+export async function updateRegistrationAnswers(
+  supabase: SupabaseClient<Database>,
+  registrationId: string,
+  patch: Record<string, unknown>,
+): Promise<EventRegistrationRow> {
+  const { data: cur, error: readErr } = await raw(supabase)
+    .from("registrations")
+    .select("answers")
+    .eq("id", registrationId)
+    .single();
+  if (readErr) throw new Error(readErr.message);
+  const answers = { ...(((cur as Record<string, unknown>)?.answers as Record<string, unknown>) ?? {}), ...patch };
+  const { data, error } = await raw(supabase)
+    .from("registrations")
+    .update({ answers })
+    .eq("id", registrationId)
+    .select("*, profiles:attendee_id(full_name, email)")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapReg(data as Record<string, unknown>);
+}
+
 /** Manually register a guest (staff). Links to an existing user if their email
  *  matches a profile; otherwise registers as an account-less guest. */
 export async function createManualRegistration(

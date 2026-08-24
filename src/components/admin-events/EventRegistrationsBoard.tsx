@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { EventRegistrationRow } from "@/lib/icfo-events/registrations";
+import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
+import {
+  type RegistrationField,
+  REGISTRATION_COMMON,
+  REGISTRATION_BY_TYPE,
+} from "@/lib/icfo-events/registration-fields";
 import { EventManualRegister } from "./EventManualRegister";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -29,7 +35,6 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", company: "" });
   const [adding, setAdding] = useState(false);
   const [view, setView] = useState<"cards" | "list">("cards");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -61,32 +66,11 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
 
   function startEdit(r: EventRegistrationRow) {
     setEditId(r.id);
-    setEditForm({ name: r.contactName ?? "", email: r.contactEmail ?? "", phone: r.contactPhone ?? "", company: r.company ?? "" });
     setError(null);
   }
-  async function saveContact(regId: string) {
-    setBusy(regId);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}/registrations/${regId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactName: editForm.name.trim() || null,
-          contactEmail: editForm.email.trim() || null,
-          contactPhone: editForm.phone.trim() || null,
-          company: editForm.company.trim() || null,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Update failed.");
-      setRows((rs) => rs.map((r) => (r.id === regId ? (json.registration as EventRegistrationRow) : r)));
-      setEditId(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed.");
-    } finally {
-      setBusy(null);
-    }
+  function onSavedRow(updated: EventRegistrationRow) {
+    setRows((rs) => rs.map((r) => (r.id === updated.id ? updated : r)));
+    setEditId(null);
   }
   async function removeRegistration(regId: string) {
     if (!confirm("Remove this registration from the event? This can't be undone — the person's account is not affected.")) return;
@@ -170,17 +154,24 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
             <span>Name</span><span>Type</span><span>Email</span><span>Registered</span><span className="text-right">Actions</span>
           </div>
           {visible.map((r) => (
-            <div key={r.id} className="grid min-w-[640px] grid-cols-[28px_1.6fr_1fr_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-xs last:border-0">
-              <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="h-3.5 w-3.5" aria-label="Select registration" />
-              <span className="truncate font-medium text-[var(--navy)]">{r.contactName || r.company || "Unnamed"}</span>
-              <span className="text-[var(--text-secondary)]">{r.attendeeType ? (TYPE_LABEL[r.attendeeType] ?? r.attendeeType) : "—"}</span>
-              <span className="truncate text-[var(--text-muted)]">{r.contactEmail ?? "—"}</span>
-              <span className="text-[var(--text-muted)]">{fmtDate(r.createdAt)}</span>
-              <span className="flex items-center justify-end gap-2">
-                {r.contactEmail && <a href={`mailto:${r.contactEmail}`} title="Email" className="text-[var(--blue)]"><i className="ti ti-mail" aria-hidden="true" /></a>}
-                <button type="button" onClick={() => (editId === r.id ? setEditId(null) : startEdit(r))} title="Edit" className="text-[var(--text-secondary)]"><i className="ti ti-pencil" aria-hidden="true" /></button>
-                <button type="button" onClick={() => removeRegistration(r.id)} disabled={busy === r.id} title="Delete" className="text-rose-600 disabled:opacity-50"><i className="ti ti-trash" aria-hidden="true" /></button>
-              </span>
+            <div key={r.id}>
+              <div className="grid min-w-[640px] grid-cols-[28px_1.6fr_1fr_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-xs">
+                <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="h-3.5 w-3.5" aria-label="Select registration" />
+                <span className="truncate font-medium text-[var(--navy)]">{r.contactName || r.company || "Unnamed"}</span>
+                <span className="text-[var(--text-secondary)]">{r.attendeeType ? (TYPE_LABEL[r.attendeeType] ?? r.attendeeType) : "—"}</span>
+                <span className="truncate text-[var(--text-muted)]">{r.contactEmail ?? "—"}</span>
+                <span className="text-[var(--text-muted)]">{fmtDate(r.createdAt)}</span>
+                <span className="flex items-center justify-end gap-2">
+                  {r.contactEmail && <a href={`mailto:${r.contactEmail}`} title="Email" className="text-[var(--blue)]"><i className="ti ti-mail" aria-hidden="true" /></a>}
+                  <button type="button" onClick={() => (editId === r.id ? setEditId(null) : startEdit(r))} title="Edit" className="text-[var(--text-secondary)]"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                  <button type="button" onClick={() => removeRegistration(r.id)} disabled={busy === r.id} title="Delete" className="text-rose-600 disabled:opacity-50"><i className="ti ti-trash" aria-hidden="true" /></button>
+                </span>
+              </div>
+              {editId === r.id && (
+                <div className="border-b border-[var(--border-subtle)] px-3 py-3">
+                  <RegistrationEditForm eventId={eventId} row={r} onSaved={onSavedRow} onCancel={() => setEditId(null)} />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -225,31 +216,10 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
                 </div>
 
                 {editId === r.id && (
-                  <div className="mt-3 grid gap-2 rounded-md bg-slate-50 p-3 sm:grid-cols-4">
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Name</span>
-                      <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Email</span>
-                      <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Phone</span>
-                      <input type="tel" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">Company</span>
-                      <input value={editForm.company} onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
-                    </label>
-                    <div className="flex justify-end gap-2 sm:col-span-4">
-                      <button type="button" onClick={() => setEditId(null)} disabled={busy === r.id} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs disabled:opacity-50">Cancel</button>
-                      <button type="button" onClick={() => saveContact(r.id)} disabled={busy === r.id} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">{busy === r.id ? "Saving…" : "Save"}</button>
-                    </div>
-                  </div>
+                  <RegistrationEditForm eventId={eventId} row={r} onSaved={onSavedRow} onCancel={() => setEditId(null)} />
                 )}
 
-                {entries.length > 0 && (
+                {editId !== r.id && entries.length > 0 && (
                   <dl className="mt-3 grid gap-x-4 gap-y-1 sm:grid-cols-2">
                     {entries.map(([k, v]) => (
                       <div key={k} className="text-xs">
@@ -265,5 +235,118 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
         </div>
       )}
     </section>
+  );
+}
+
+/** Edit every field of a registration — contact + all type-specific answers. */
+function RegistrationEditForm({
+  eventId,
+  row,
+  onSaved,
+  onCancel,
+}: {
+  eventId: string;
+  row: EventRegistrationRow;
+  onSaved: (r: EventRegistrationRow) => void;
+  onCancel: () => void;
+}) {
+  const type = (row.attendeeType as AttendeeType | null) ?? null;
+  const fields: RegistrationField[] = [...REGISTRATION_COMMON, ...(type ? REGISTRATION_BY_TYPE[type] : [])];
+  const configKeys = new Set(fields.map((f) => f.key));
+  // Legacy answer keys not in the current config (e.g. openToIntros) stay editable.
+  const extraKeys = Object.keys(row.answers).filter((k) => !configKeys.has(k) && row.answers[k] != null && row.answers[k] !== "");
+
+  const [answers, setAnswers] = useState<Record<string, unknown>>({ ...row.answers });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function set(key: string, value: unknown) {
+    setAnswers((a) => ({ ...a, [key]: value }));
+  }
+  function toggleChip(key: string, opt: string) {
+    setAnswers((a) => {
+      const cur = Array.isArray(a[key]) ? (a[key] as string[]) : [];
+      return { ...a, [key]: cur.includes(opt) ? cur.filter((x) => x !== opt) : [...cur, opt] };
+    });
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/registrations/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Update failed.");
+      onSaved(json.registration as EventRegistrationRow);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Update failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function renderField(f: RegistrationField) {
+    const label = (
+      <span className="mb-1 block text-[11px] text-[var(--text-secondary)]">{f.label}</span>
+    );
+    if (f.kind === "checkbox") {
+      return (
+        <label key={f.key} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] sm:col-span-2">
+          <input type="checkbox" checked={Boolean(answers[f.key])} onChange={(e) => set(f.key, e.target.checked)} />
+          {f.label}
+        </label>
+      );
+    }
+    if (f.kind === "chips") {
+      const cur = Array.isArray(answers[f.key]) ? (answers[f.key] as string[]) : [];
+      return (
+        <div key={f.key} className="sm:col-span-2">
+          <p className="mb-1.5 text-[11px] text-[var(--text-secondary)]">{f.label}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {f.options!.map((o) => (
+              <button key={o} type="button" onClick={() => toggleChip(f.key, o)} className={`rounded-full border px-2.5 py-1 text-xs ${cur.includes(o) ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{o}</button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <label key={f.key} className={`block ${f.kind === "textarea" ? "sm:col-span-2" : ""}`}>
+        {label}
+        {f.kind === "select" ? (
+          <select value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs">
+            <option value="">Select…</option>
+            {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ) : f.kind === "textarea" ? (
+          <textarea value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
+        ) : (
+          <input type={f.key === "email" ? "email" : f.key === "phone" ? "tel" : "text"} value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
+        )}
+      </label>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-md bg-slate-50 p-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {fields.map(renderField)}
+        {extraKeys.map((k) => (
+          <label key={k} className="block">
+            <span className="mb-1 block text-[11px] capitalize text-[var(--text-secondary)]">{k.replace(/_/g, " ")}</span>
+            <input value={String(answers[k] ?? "")} onChange={(e) => set(k, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />
+          </label>
+        ))}
+      </div>
+      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
+      <div className="mt-3 flex justify-end gap-2">
+        <button type="button" onClick={onCancel} disabled={busy} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs disabled:opacity-50">Cancel</button>
+        <button type="button" onClick={save} disabled={busy} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">{busy ? "Saving…" : "Save"}</button>
+      </div>
+    </div>
   );
 }
