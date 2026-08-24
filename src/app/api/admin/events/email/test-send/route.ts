@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { loadEventMergeData, type EventEmailType } from "@/lib/event-email/merge";
 import { renderEventEmail } from "@/lib/event-email/render";
+import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
 import { getMarketingSettings } from "@/lib/marketing/settings";
 import { emailConfigured, makeUnsubscribeToken, sendMarketingEmail } from "@/lib/marketing/send";
 
@@ -39,9 +40,14 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!merge) return NextResponse.json({ error: "Couldn't build merge data." }, { status: 500 });
 
     const type = body.type ?? "invite";
+    // Booklet emails must link to the real booklet, not fall back to the event page.
+    let bookletUrl = body.bookletUrl;
+    if (type === "booklet" && !bookletUrl) {
+      bookletUrl = (await publishedBookletUrl(auth.supabase, body.eventId, BASE_URL)) ?? undefined;
+    }
     const html = body.bodyHtml?.trim()
       ? body.bodyHtml
-      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, bookletUrl: body.bookletUrl });
+      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, bookletUrl });
 
     const settings = await getMarketingSettings();
     const result = await sendMarketingEmail({

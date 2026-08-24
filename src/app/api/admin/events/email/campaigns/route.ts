@@ -5,6 +5,7 @@ import { loadEventMergeData, type EventEmailType } from "@/lib/event-email/merge
 import { renderEventEmail } from "@/lib/event-email/render";
 import { materializeRegistrantList, type RegistrantStatus } from "@/lib/event-email/segments";
 import { getEventById } from "@/lib/icfo-events/queries";
+import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
 import { createCampaign, sendCampaign } from "@/lib/marketing/campaigns";
 import type { MarketingCampaign } from "@/lib/marketing/types";
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const { eventId, type = "invite", subject } = body;
     // Recipient-facing booklet link: prefer an explicit URL, else the public
     // digital-view route for the chosen edition (stable, no signed-URL expiry).
-    const bookletUrl =
+    let bookletUrl =
       body.bookletUrl ||
       (body.bookletEditionId ? `${BASE_URL}/events/brochure/${body.bookletEditionId}` : undefined);
     const audienceKind = body.audienceKind ?? "list";
@@ -47,6 +48,16 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const event = await getEventById(auth.supabase, eventId).catch(() => null);
     if (!event) return NextResponse.json({ error: "Event not found." }, { status: 404 });
+
+    // A booklet email must link to the actual booklet, never fall back to the
+    // event page. If no edition was passed, resolve the event's live published
+    // booklet; if there still isn't one, refuse rather than send a broken link.
+    if (type === "booklet" && !bookletUrl) {
+      bookletUrl = (await publishedBookletUrl(auth.supabase, eventId, BASE_URL)) ?? undefined;
+      if (!bookletUrl) {
+        return NextResponse.json({ error: "No published booklet for this event yet — generate and publish a brochure first." }, { status: 400 });
+      }
+    }
 
     // Resolve the audience to a list_id. Registrants are materialized into a
     // per-event marketing list (suppression honored) so the send pipeline can use it.
