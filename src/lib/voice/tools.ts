@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { bookVoiceDemo } from "@/lib/voice/booking";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -20,7 +21,7 @@ export const AGENT_TOOLS = [
   },
   {
     name: "schedule_demo",
-    description: "Log that the contact wants to book a demo with the iCFO team. Provide the caller's preferred time in words if given.",
+    description: "Book a demo with the iCFO team. Creates a calendar hold with a video link and invites the contact; the team confirms the exact time. Provide the caller's preferred time in words if given.",
     input_schema: {
       type: "object",
       properties: { preferred_time: { type: "string", description: "Caller's preferred time in their words, e.g. 'Tuesday afternoon'." } },
@@ -89,8 +90,14 @@ async function logTouch(contactId: string, summary: string) {
 }
 
 async function scheduleDemo(ctx: ToolContext, input: { preferred_time?: string }) {
-  await logTouch(ctx.contactId, `Demo requested${input.preferred_time ? ` — preferred: ${input.preferred_time}` : ""}`);
-  return { ok: true, message: "Noted — the iCFO team will confirm a demo time by email.", preferredTime: input.preferred_time ?? null };
+  const c = await loadContact(ctx.contactId);
+  const timezone = (c?.raw.call_timezone as string) || (c?.profile.extra?.["call_timezone"] as string) || null;
+  const result = await bookVoiceDemo(
+    ctx.contactId,
+    { name: c?.name ?? null, email: c?.email ?? null, timezone },
+    input.preferred_time ?? null,
+  );
+  return { ok: true, booked: result.booked, message: result.message, meetUrl: result.meetUrl ?? null, preferredTime: input.preferred_time ?? null };
 }
 
 async function requestHumanTransfer(ctx: ToolContext, input: { reason: string }) {
