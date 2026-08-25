@@ -93,18 +93,20 @@ Until these run, those two surfaces degrade gracefully (blank / "—").
 
 ---
 
-## Remaining integration work (not env — code)
+## Vapi payload adapters — built ✓
 
-The env/keys/secret above are plug-and-play. Two payload-shape adapters still
-need building before a real Vapi call round-trips cleanly, because Vapi's wire
-format differs from the simplified shapes the routes accept today:
+The wire-format gap is now handled in code, so the endpoints above are
+plug-and-play:
 
-- **Custom-LLM protocol:** Vapi's Custom LLM expects an OpenAI
-  `chat/completions`-compatible (streaming) endpoint. `/api/voice/agent` today
-  returns a simplified `{reply, toolCalls}` shape. Needs an OpenAI-compatible
-  wrapper (or reshape the route).
-- **Server-message envelope:** Vapi posts `{ message: { type, call, ... } }`.
-  `/api/voice/call-end` and `/api/voice/call-status` currently expect flat
-  bodies. Needs a thin adapter to unwrap `message.*` and map fields.
+- **Custom-LLM protocol:** `/api/voice/agent/chat/completions` is an
+  OpenAI-compatible endpoint (streaming + non-streaming). Set the assistant's
+  Custom-LLM **URL** to `https://icapos.com/api/voice/agent` — Vapi appends
+  `/chat/completions`. It pulls `contactId` / `campaignId` / `variantId` /
+  `opener` from the call metadata + variableValues and runs the guardrailed agent.
+- **Server-message envelope:** `/api/voice/call-end` and `/api/voice/call-status`
+  now accept Vapi's `{ message: { type, call, artifact, ... } }` shape (via
+  `vapi-adapter.ts`) as well as a flat body, mapping `endedReason` → disposition
+  and Vapi status → the live-monitor status.
 
-These are the last mile to a live round-trip — ask and I'll build both adapters.
+So a real call round-trips once the env vars are set and the assistant points at
+these URLs with the shared secret.

@@ -5,6 +5,7 @@ import { voiceOutboundEnabled } from "@/lib/voice/gate";
 import { voiceWebhookAuthorized } from "@/lib/voice/webhook-auth";
 import { recordCallOutcome } from "@/lib/voice/outcomes";
 import { finalizeLiveCall } from "@/lib/voice/live-calls";
+import { unwrapVapiCallEnd } from "@/lib/voice/vapi-adapter";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
+  const rawBody = await req.json().catch(() => ({}));
+  // Accept Vapi's { message: { type: "end-of-call-report", ... } } envelope or a flat body.
+  const body = (rawBody as { message?: unknown })?.message ? unwrapVapiCallEnd(rawBody) ?? {} : rawBody;
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
   try {

@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { voiceOutboundEnabled } from "@/lib/voice/gate";
 import { voiceWebhookAuthorized } from "@/lib/voice/webhook-auth";
 import { upsertLiveCall } from "@/lib/voice/live-calls";
+import { unwrapVapiStatus } from "@/lib/voice/vapi-adapter";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
+  const rawBody = await req.json().catch(() => ({}));
+  // Vapi posts { message: { type: "status-update", ... } }; unwrap or take a flat body.
+  const isVapi = Boolean((rawBody as { message?: unknown })?.message);
+  const body = isVapi ? unwrapVapiStatus(rawBody) : rawBody;
+  if (isVapi && !body) return NextResponse.json({ ok: true }); // 'ended'/unknown status — nothing to upsert
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
   try {
