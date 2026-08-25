@@ -192,7 +192,7 @@ function AudiencePicker({ campaign, canWrite, busy, onSave }: {
       <div className="mb-3 flex items-center gap-2">
         <Users className="h-4 w-4 text-slate-400" />
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Audience</h3>
-        <span className="ml-auto text-[11px] text-slate-500">{summary}{cfg && cfg.source !== "all" && savedCount !== null ? ` · ${savedCount} in scope` : ""}</span>
+        <span className="ml-auto text-[11px] text-slate-500">{summary}{cfg && cfg.source !== "all" && savedCount !== null ? ` · ${savedCount.toLocaleString()} unique contact${savedCount === 1 ? "" : "s"} to dial` : ""}</span>
       </div>
 
       {!canWrite ? (
@@ -276,6 +276,11 @@ function CadenceEditor({ campaign, canWrite, busy, onSave, onEnroll }: {
   const setStep = (i: number, patch: Partial<Step>) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const addStep = () => setSteps((prev) => [...prev, { channel: prev.length === 0 ? "voice" : "sms", delayHours: prev.length === 0 ? 0 : 48, body: "" }]);
   const removeStep = (i: number) => setSteps((prev) => prev.filter((_, j) => j !== i));
+  const useRecommended = () => setSteps([
+    { channel: "voice", delayHours: 0, body: "" },
+    { channel: "sms", delayHours: 48, body: "" },
+    { channel: "whatsapp", delayHours: 72, body: "" },
+  ]);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
@@ -284,7 +289,16 @@ function CadenceEditor({ campaign, canWrite, busy, onSave, onEnroll }: {
         <span className="ml-auto text-[11px] text-slate-400">Voice / SMS / WhatsApp / Email over time · each step still passes its gate</span>
       </div>
 
-      {steps.length === 0 && <p className="mb-3 text-sm text-slate-400">No steps yet. Add a first touch (usually a voice call at 0h).</p>}
+      {steps.length === 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <p className="text-sm text-slate-400">No steps yet. Add a first touch (usually a voice call at 0h).</p>
+          {canWrite && (
+            <button type="button" onClick={useRecommended} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+              Use recommended · Voice 0h → SMS 48h → WhatsApp 72h
+            </button>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         {steps.map((s, i) => (
           <div key={i} className="rounded-lg border border-slate-100 p-3">

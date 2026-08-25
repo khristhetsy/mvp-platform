@@ -29,7 +29,10 @@ async function listExternalIds(listId: string): Promise<string[]> {
   if (emails.size === 0) return [];
 
   // Page odoo contacts and intersect by lowercased email (column isn't lowercased).
-  const ids: string[] = [];
+  // De-dupe to ONE dial key per email: a marketing contact can map to several
+  // crm_contacts rows sharing an email (duplicates), and dialing each would call
+  // the same person more than once. Keep the first external_id seen per email.
+  const byEmail = new Map<string, string>();
   const PAGE = 1000;
   for (let from = 0; from < 40000; from += PAGE) {
     const { data, error } = await supabase
@@ -40,11 +43,12 @@ async function listExternalIds(listId: string): Promise<string[]> {
       .range(from, from + PAGE - 1);
     if (error || !data || data.length === 0) break;
     for (const r of data as { external_id: string; email: string | null }[]) {
-      if (r.email && emails.has(r.email.trim().toLowerCase())) ids.push(r.external_id);
+      const key = r.email?.trim().toLowerCase();
+      if (key && emails.has(key) && !byEmail.has(key)) byEmail.set(key, r.external_id);
     }
     if (data.length < PAGE) break;
   }
-  return [...new Set(ids)];
+  return [...byEmail.values()];
 }
 
 /**
