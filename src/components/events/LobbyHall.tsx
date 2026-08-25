@@ -35,9 +35,9 @@ const DOORS: DoorDef[] = [
   { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 37, top: 40, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
   { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 63, top: 40, meta: (n) => `${n} here · tables open` },
   { key: "help", label: "HELP DESK", Icon: LifeBuoy, left: 89, top: 40, meta: () => "Ask for help", desk: true },
-  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 24, top: 68, meta: (n) => `${n} browsing` },
+  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 25, top: 68, meta: (n) => `${n} browsing` },
   { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, left: 50, top: 68, meta: (n) => `${n} at booths` },
-  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 76, top: 68, meta: () => "See standings" },
+  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 75, top: 68, meta: () => "See standings" },
 ];
 
 const NAV_ICONS: Record<VenueZone["icon"], LucideIcon> = {
@@ -198,13 +198,9 @@ export function LobbyHall({
             </Link>
           ))}
 
-          {/* help & info desk → opens the AI assistant */}
-          <button type="button" className={styles.desk} onClick={openDesk}>
-            <span className={styles.deskBox}><i className="ti ti-headset" aria-hidden="true" /></span>
-            <span className={styles.deskNm}>{t("help_info_desk")}</span>
-            <br />
-            <span className={styles.deskHint}><i className="ti ti-sparkles" aria-hidden="true" /> Ask AI</span>
-          </button>
+          {/* The AI assistant is reached via the HELP DESK tile and the corner
+              Info Desk pill; the center desk booth was removed to avoid a
+              duplicate help entry. */}
 
           <span className={styles.plant} style={{ left: "16%", top: "33%" }} aria-hidden><i className="ti ti-plant-2" aria-hidden="true" /></span>
           <span className={styles.plant} style={{ left: "82%", top: "33%" }} aria-hidden><i className="ti ti-plant" aria-hidden="true" /></span>
