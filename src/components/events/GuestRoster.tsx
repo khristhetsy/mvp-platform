@@ -25,6 +25,10 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
   const [picked, setPicked] = useState<UserHit | null>(null);
   const [role, setRole] = useState("");
   const [busy, setBusy] = useState(false);
+  // Inline edit of an existing roster entry (name + role).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -76,23 +80,42 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
     };
   }, [query, picked]);
 
-  async function add() {
-    if (!picked) return;
+  async function postGuest(displayName: string, profileId: string | null) {
     setBusy(true);
     await fetch(`/api/admin/events/sessions/${sessionId}/guests`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        eventId,
-        displayName: picked.name,
-        roleLabel: role || null,
-        profileId: picked.id,
-      }),
+      body: JSON.stringify({ eventId, displayName, roleLabel: role || null, profileId }),
     });
     setPicked(null);
     setQuery("");
     setHits([]);
     setRole("");
+    setBusy(false);
+  }
+  async function add() {
+    if (picked) await postGuest(picked.name, picked.id);
+  }
+  // Add a guest who has no platform account (unlinked — won't map to a video tile).
+  async function addTyped() {
+    const name = query.trim();
+    if (name) await postGuest(name, null);
+  }
+  function startEdit(g: SessionGuest) {
+    setEditingId(g.id);
+    setEditName(g.displayName);
+    setEditRole(g.roleLabel ?? "");
+  }
+  async function saveEdit(id: string) {
+    const name = editName.trim();
+    if (!name) return;
+    setBusy(true);
+    await fetch(`/api/admin/events/guests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: name, roleLabel: editRole.trim() || null }),
+    });
+    setEditingId(null);
     setBusy(false);
   }
   async function setStatus(id: string, status: "onstage" | "backstage") {
@@ -113,27 +136,39 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
         {guests.length === 0 ? (
           <p className="text-xs text-[var(--text-muted)]">{t("no_guests_yet")}</p>
         ) : (
-          guests.map((g) => (
-            <div key={g.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5">
-              <span className="text-sm text-[var(--navy)]">
-                {g.displayName}
-                {g.roleLabel && <span className="ml-1 text-xs text-[var(--text-muted)]">· {g.roleLabel}</span>}
-                {g.status === "onstage" && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">{t("on_stage")}</span>}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStatus(g.id, g.status === "onstage" ? "backstage" : "onstage")}
-                  className="text-xs font-medium text-[var(--blue)] hover:underline"
-                >
-                  {g.status === "onstage" ? "Send back" : "Bring on"}
-                </button>
-                <button type="button" onClick={() => remove(g.id)} className="text-xs text-rose-600 hover:underline">
-                  Remove
-                </button>
+          guests.map((g) =>
+            editingId === g.id ? (
+              <div key={g.id} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5">
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-sm" />
+                <input value={editRole} onChange={(e) => setEditRole(e.target.value)} placeholder={t("role_optional")} className="w-28 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-sm" />
+                <button type="button" onClick={() => saveEdit(g.id)} disabled={busy || !editName.trim()} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">Save</button>
+                <button type="button" onClick={() => setEditingId(null)} className="text-xs text-[var(--text-muted)] hover:underline">Cancel</button>
               </div>
-            </div>
-          ))
+            ) : (
+              <div key={g.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5">
+                <span className="text-sm text-[var(--navy)]">
+                  {g.displayName}
+                  {g.roleLabel && <span className="ml-1 text-xs text-[var(--text-muted)]">· {g.roleLabel}</span>}
+                  {g.status === "onstage" && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">{t("on_stage")}</span>}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStatus(g.id, g.status === "onstage" ? "backstage" : "onstage")}
+                    className="text-xs font-medium text-[var(--blue)] hover:underline"
+                  >
+                    {g.status === "onstage" ? "Send back" : "Bring on"}
+                  </button>
+                  <button type="button" onClick={() => startEdit(g)} className="text-xs font-medium text-[var(--text-secondary)] hover:underline">
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => remove(g.id)} className="text-xs text-rose-600 hover:underline">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ),
+          )
         )}
       </div>
       <div className="mt-2">
@@ -178,6 +213,14 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
                   </li>
                 ))}
               </ul>
+            )}
+            {query.trim() && (
+              <div className="mt-1.5 flex items-center gap-2">
+                <input value={role} onChange={(e) => setRole(e.target.value)} placeholder={t("role_optional")} className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
+                <button type="button" onClick={addTyped} disabled={busy} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
+                  Add “{query.trim()}” as guest
+                </button>
+              </div>
             )}
           </div>
         )}

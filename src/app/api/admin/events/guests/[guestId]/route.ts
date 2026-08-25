@@ -6,9 +6,17 @@ import { requirePermissionApi } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ status: z.enum(["backstage", "onstage"]) });
+const schema = z
+  .object({
+    status: z.enum(["backstage", "onstage"]).optional(),
+    displayName: z.string().min(1).max(120).optional(),
+    roleLabel: z.string().max(120).nullable().optional(),
+  })
+  .refine((d) => d.status !== undefined || d.displayName !== undefined || d.roleLabel !== undefined, {
+    message: "Nothing to update.",
+  });
 
-/** Swap a guest on/off stage (staff). */
+/** Update a guest: swap on/off stage and/or edit their name and role (staff). */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ guestId: string }> },
@@ -21,8 +29,12 @@ export async function PATCH(
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
+    const patch: Record<string, unknown> = {};
+    if (parsed.data.status !== undefined) patch.status = parsed.data.status;
+    if (parsed.data.displayName !== undefined) patch.display_name = parsed.data.displayName;
+    if (parsed.data.roleLabel !== undefined) patch.role_label = parsed.data.roleLabel;
     const db = auth.supabase as unknown as SupabaseClient;
-    const { error } = await db.from("session_guests").update({ status: parsed.data.status }).eq("id", guestId);
+    const { error } = await db.from("session_guests").update(patch).eq("id", guestId);
     if (error) throw new Error(error.message);
     return NextResponse.json({ ok: true });
   } catch (err) {
