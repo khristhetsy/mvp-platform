@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { updateCampaign, createVariant } from "@/lib/voice/campaigns";
+import { buildAudienceConfig } from "@/lib/voice/audience";
+import { audienceConfigSchema } from "@/app/api/admin/voice/campaigns/route";
+import type { AudienceConfig } from "@/lib/voice/types";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +12,7 @@ const patchSchema = z.object({
   action: z.literal("update"),
   name: z.string().min(1).max(160).optional(),
   status: z.enum(["draft", "active", "paused", "archived"]).optional(),
+  audienceConfig: audienceConfigSchema,
 });
 const variantSchema = z.object({
   action: z.literal("addVariant"),
@@ -27,7 +31,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     if (parsed.data.action === "update") {
-      await updateCampaign(id, { name: parsed.data.name, status: parsed.data.status });
+      const audienceConfig = parsed.data.audienceConfig !== undefined
+        ? await buildAudienceConfig((parsed.data.audienceConfig as AudienceConfig | null) ?? null)
+        : undefined;
+      await updateCampaign(id, { name: parsed.data.name, status: parsed.data.status, audienceConfig });
       return NextResponse.json({ ok: true });
     }
     const variant = await createVariant(id, {

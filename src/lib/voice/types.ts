@@ -70,12 +70,27 @@ export interface CampaignVariant {
   createdAt: string;
 }
 
+/** Who a campaign calls. Narrows the eligible pool; never bypasses the gate. */
+export type AudienceSource = "all" | "list" | "segment" | "contacts";
+export interface AudienceConfig {
+  source: AudienceSource;
+  /** source=list → marketing_lists.id */
+  listId?: string | null;
+  listName?: string | null;
+  /** source=segment */
+  segmentKind?: "module" | "status" | null;
+  segmentValue?: string | null;
+  /** source=contacts → crm_contacts.external_id[] */
+  contactIds?: string[] | null;
+}
+
 export interface VoiceCampaign {
   id: string;
   name: string;
   audience: CampaignAudience;
   status: CampaignStatus;
   guardrailPromptVersion: string | null;
+  audienceConfig: AudienceConfig | null;
   createdAt: string;
   updatedAt: string;
   variants: CampaignVariant[];

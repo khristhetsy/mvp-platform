@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { findForbiddenTerms } from "@/lib/crm/lexicon";
 import { GUARDRAIL_VERSION } from "@/lib/voice/guardrail";
-import type { VoiceCampaign, CampaignVariant, CampaignAudience, CampaignStatus } from "@/lib/voice/types";
+import type { VoiceCampaign, CampaignVariant, CampaignAudience, CampaignStatus, AudienceConfig } from "@/lib/voice/types";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -32,6 +32,7 @@ function mapCampaign(r: Record<string, unknown>, variants: CampaignVariant[]): V
     audience: r.audience as CampaignAudience,
     status: r.status as CampaignStatus,
     guardrailPromptVersion: (r.guardrail_prompt_version as string) ?? null,
+    audienceConfig: (r.audience_config as VoiceCampaign["audienceConfig"]) ?? null,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
     variants,
@@ -54,22 +55,23 @@ export async function listCampaigns(): Promise<VoiceCampaign[]> {
   return ((camps ?? []) as Record<string, unknown>[]).map((c) => mapCampaign(c, byCampaign.get(String(c.id)) ?? []));
 }
 
-export async function createCampaign(input: { name: string; audience: CampaignAudience }): Promise<VoiceCampaign> {
+export async function createCampaign(input: { name: string; audience: CampaignAudience; audienceConfig?: AudienceConfig | null }): Promise<VoiceCampaign> {
   const supabase = raw(createServiceRoleClient());
   const { data, error } = await supabase
     .from("voice_campaigns")
-    .insert({ name: input.name, audience: input.audience, status: "draft", guardrail_prompt_version: GUARDRAIL_VERSION })
+    .insert({ name: input.name, audience: input.audience, status: "draft", guardrail_prompt_version: GUARDRAIL_VERSION, audience_config: input.audienceConfig ?? null })
     .select("*")
     .single();
   if (error) throw new Error(error.message);
   return mapCampaign(data as Record<string, unknown>, []);
 }
 
-export async function updateCampaign(id: string, patch: { name?: string; status?: CampaignStatus }): Promise<void> {
+export async function updateCampaign(id: string, patch: { name?: string; status?: CampaignStatus; audienceConfig?: AudienceConfig | null }): Promise<void> {
   const supabase = raw(createServiceRoleClient());
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.status !== undefined) update.status = patch.status;
+  if (patch.audienceConfig !== undefined) update.audience_config = patch.audienceConfig;
   const { error } = await supabase.from("voice_campaigns").update(update).eq("id", id);
   if (error) throw new Error(error.message);
 }

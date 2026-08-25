@@ -9,6 +9,8 @@ import type { ConsentType } from "@/lib/voice/types";
 import { preDialGate } from "@/lib/voice/gate";
 import { placeVapiCall } from "@/lib/voice/vapi";
 import { pickVariant } from "@/lib/voice/campaigns";
+import { dialRestriction } from "@/lib/voice/audience";
+import type { AudienceConfig } from "@/lib/voice/types";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -44,7 +46,7 @@ export async function loadCallListSegments(): Promise<CallListSegment[]> {
 }
 
 /** Contact external_ids in a segment. */
-async function segmentContactIds(kind: string, value: string): Promise<string[]> {
+export async function segmentContactIds(kind: string, value: string): Promise<string[]> {
   const supabase = raw(createServiceRoleClient());
   if (kind === "status") {
     const { data } = await supabase.from("crm_contact_annotations").select("external_id").eq("source", "odoo").eq("status", value);
@@ -113,10 +115,19 @@ export async function dialBatch(
 ): Promise<{ dialed: { contactId: string; name: string | null; ok: boolean; variantId?: string | null; error?: string }[]; remaining: number }> {
   const supabase = raw(createServiceRoleClient());
   const excludeSet = new Set(exclude);
-  const { data } = await supabase
-    .from("v_call_queue")
-    .select("contact_id, name, phone")
-    .limit(max + exclude.length + 5);
+
+  // Scope the queue to the campaign's audience (list / segment / contacts). Null
+  // = the whole eligible pool. An empty scope means nobody is in this campaign.
+  let restrictIds: string[] | null = null;
+  if (campaignId) {
+    const { data: camp } = await supabase.from("voice_campaigns").select("audience_config").eq("id", campaignId).maybeSingle();
+    restrictIds = dialRestriction((camp as { audience_config?: AudienceConfig | null } | null)?.audience_config ?? null);
+    if (restrictIds && restrictIds.length === 0) return { dialed: [], remaining: 0 };
+  }
+
+  let q = supabase.from("v_call_queue").select("contact_id, name, phone");
+  if (restrictIds) q = q.in("contact_id", restrictIds.slice(0, 1000));
+  const { data } = await q.limit(max + exclude.length + 5);
   const rows = ((data ?? []) as { contact_id: string; name: string | null; phone: string | null }[])
     .filter((r) => !excludeSet.has(r.contact_id))
     .slice(0, max);

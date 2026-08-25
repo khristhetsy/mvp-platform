@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Plus, Trash2, Megaphone, ShieldCheck } from "lucide-react";
-import type { VoiceCampaign, CampaignStatus } from "@/lib/voice/types";
+import { useEffect, useState } from "react";
+import { Loader2, Plus, Trash2, Megaphone, ShieldCheck, Users, X } from "lucide-react";
+import type { VoiceCampaign, CampaignStatus, AudienceConfig, AudienceSource } from "@/lib/voice/types";
 
 const BLUE = "#2E78F5";
 const NAVY = "#0A1A40";
@@ -82,6 +82,10 @@ export function CampaignsManager({ initial, canWrite, guardrailVersion }: { init
               </p>
             </div>
 
+            <AudiencePicker campaign={selected} canWrite={canWrite} busy={busy}
+              onSave={(cfg) => call(`/api/admin/voice/campaigns/${selected.id}`, { method: "POST", body: JSON.stringify({ action: "update", audienceConfig: cfg }) })}
+            />
+
             <VariantEditor campaign={selected} canWrite={canWrite} busy={busy}
               onAdd={(label, script, weight) => call(`/api/admin/voice/campaigns/${selected.id}`, { method: "POST", body: JSON.stringify({ action: "addVariant", label, openerScript: script, trafficWeight: weight }) })}
               onSave={(vid, patch) => call(`/api/admin/voice/variants/${vid}`, { method: "PATCH", body: JSON.stringify(patch) })}
@@ -117,6 +121,137 @@ function NewCampaign({ onCreate, busy }: { onCreate: (name: string, audience: st
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         </button>
       </div>
+    </div>
+  );
+}
+
+type ListOpt = { id: string; name: string; count: number };
+type SegOpt = { kind: "module" | "status"; value: string; label: string; count: number };
+type ContactHit = { externalId: string; name: string; email: string | null; company: string | null };
+
+function AudiencePicker({ campaign, canWrite, busy, onSave }: {
+  campaign: VoiceCampaign; canWrite: boolean; busy: boolean;
+  onSave: (cfg: AudienceConfig) => Promise<boolean> | void;
+}) {
+  const cfg = campaign.audienceConfig;
+  const [source, setSource] = useState<AudienceSource>(cfg?.source ?? "all");
+  const [listId, setListId] = useState(cfg?.listId ?? "");
+  const [segment, setSegment] = useState(cfg?.segmentKind && cfg?.segmentValue ? `${cfg.segmentKind}:${cfg.segmentValue}` : "");
+  const [picked, setPicked] = useState<ContactHit[]>([]);
+  const [lists, setLists] = useState<ListOpt[]>([]);
+  const [segs, setSegs] = useState<SegOpt[]>([]);
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<ContactHit[]>([]);
+
+  // Reset local state when switching campaigns.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync form to the selected campaign
+    setSource(campaign.audienceConfig?.source ?? "all");
+    setListId(campaign.audienceConfig?.listId ?? "");
+    setSegment(campaign.audienceConfig?.segmentKind && campaign.audienceConfig?.segmentValue ? `${campaign.audienceConfig.segmentKind}:${campaign.audienceConfig.segmentValue}` : "");
+    setPicked([]);
+  }, [campaign.id, campaign.audienceConfig]);
+
+  useEffect(() => {
+    if (source === "list" && lists.length === 0) {
+      void fetch("/api/marketing/lists").then((r) => r.json()).then((d) => setLists((Array.isArray(d) ? d : []).map((l: { id: string; name: string; contact_count?: number }) => ({ id: l.id, name: l.name, count: l.contact_count ?? 0 })))).catch(() => {});
+    }
+    if (source === "segment" && segs.length === 0) {
+      void fetch("/api/admin/voice/segments").then((r) => r.json()).then((d) => setSegs(d.segments ?? [])).catch(() => {});
+    }
+  }, [source, lists.length, segs.length]);
+
+  useEffect(() => {
+    if (source !== "contacts") return;
+    const q = query.trim();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results when query empties
+    if (q.length < 1) { setHits([]); return; }
+    const t = setTimeout(() => {
+      void fetch(`/api/admin/voice/contacts/search?q=${encodeURIComponent(q)}`).then((r) => r.json()).then((d) => setHits(d.contacts ?? [])).catch(() => {});
+    }, 220);
+    return () => clearTimeout(t);
+  }, [query, source]);
+
+  function buildConfig(): AudienceConfig {
+    if (source === "all") return { source: "all" };
+    if (source === "list") { const l = lists.find((x) => x.id === listId); return { source: "list", listId: listId || null, listName: l?.name ?? null }; }
+    if (source === "segment") { const [kind, ...rest] = segment.split(":"); return { source: "segment", segmentKind: kind === "status" ? "status" : "module", segmentValue: rest.join(":") }; }
+    return { source: "contacts", contactIds: picked.map((p) => p.externalId) };
+  }
+
+  const summary = cfg?.source === "list" ? `Marketing list: ${cfg.listName ?? cfg.listId}` : cfg?.source === "segment" ? `Segment: ${cfg.segmentValue}` : cfg?.source === "contacts" ? `${cfg.contactIds?.length ?? 0} selected contacts` : "All eligible contacts";
+  const savedCount = cfg?.contactIds?.length ?? null;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Users className="h-4 w-4 text-slate-400" />
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Audience</h3>
+        <span className="ml-auto text-[11px] text-slate-500">{summary}{cfg && cfg.source !== "all" && savedCount !== null ? ` · ${savedCount} in scope` : ""}</span>
+      </div>
+
+      {!canWrite ? (
+        <p className="text-sm text-slate-500">{summary}</p>
+      ) : (
+        <>
+          <div className="mb-3 grid grid-cols-4 gap-1.5">
+            {(["all", "list", "segment", "contacts"] as AudienceSource[]).map((s) => (
+              <button key={s} type="button" onClick={() => setSource(s)} className={`rounded-lg border px-2 py-1.5 text-[12px] font-medium capitalize ${source === s ? "border-transparent text-white" : "border-slate-200 text-slate-600"}`} style={source === s ? { background: NAVY } : undefined}>
+                {s === "all" ? "All eligible" : s === "list" ? "Marketing list" : s === "segment" ? "CRM segment" : "Contacts"}
+              </button>
+            ))}
+          </div>
+
+          {source === "list" && (
+            <select value={listId} onChange={(e) => setListId(e.target.value)} className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none">
+              <option value="">Select a Marketing Hub list…</option>
+              {lists.map((l) => <option key={l.id} value={l.id}>{l.name} · {l.count.toLocaleString()} contacts</option>)}
+            </select>
+          )}
+          {source === "segment" && (
+            <select value={segment} onChange={(e) => setSegment(e.target.value)} className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none">
+              <option value="">Select a segment…</option>
+              {segs.map((s) => <option key={`${s.kind}:${s.value}`} value={`${s.kind}:${s.value}`}>{s.label} · {s.count.toLocaleString()}</option>)}
+            </select>
+          )}
+          {source === "contacts" && (
+            <div className="mb-3">
+              {picked.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {picked.map((p) => (
+                    <span key={p.externalId} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">
+                      {p.name}
+                      <button type="button" onClick={() => setPicked((prev) => prev.filter((x) => x.externalId !== p.externalId))} aria-label="Remove"><X className="h-3 w-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="relative">
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search contacts by name, email, company…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none" />
+                {hits.length > 0 && (
+                  <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                    {hits.filter((h) => !picked.some((p) => p.externalId === h.externalId)).map((h) => (
+                      <li key={h.externalId}>
+                        <button type="button" onClick={() => { setPicked((prev) => [...prev, h]); setQuery(""); setHits([]); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-50">
+                          <span className="text-slate-800">{h.name}</span>
+                          {h.company && <span className="text-xs text-slate-400">{h.company}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => void onSave(buildConfig())} disabled={busy || (source === "list" && !listId) || (source === "segment" && !segment) || (source === "contacts" && picked.length === 0)} className="rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+              {busy ? "Saving…" : "Save audience"}
+            </button>
+            <span className="text-[11px] text-slate-400">Every contact still clears the pre-dial gate — this only narrows who is in scope.</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
