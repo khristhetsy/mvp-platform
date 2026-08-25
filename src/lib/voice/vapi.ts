@@ -41,3 +41,24 @@ export async function placeVapiCall(toNumber: string, opts: PlaceCallOptions = {
   if (!res.ok) throw new Error(json.message || json.error || `Vapi returned ${res.status}`);
   return { callId: String(json.id ?? "") };
 }
+
+/** The human rep number a live call hot-transfers to. */
+export const VOICE_TRANSFER_NUMBER = process.env.VOICE_TRANSFER_NUMBER?.trim() || null;
+
+/**
+ * Hot-transfer an in-progress call to a human (Vapi live call-control). Confirm
+ * the control payload against Vapi's call-control docs when wiring the live
+ * assistant; env-gated + guarded so it's inert until Vapi is configured.
+ */
+export async function transferVapiCall(callId: string, toNumber: string): Promise<void> {
+  if (!VAPI_API_KEY) throw new Error("Vapi is not configured.");
+  const res = await fetch(`https://api.vapi.ai/call/${encodeURIComponent(callId)}/control`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${VAPI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "transfer", destination: { type: "number", number: toNumber } }),
+  });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    throw new Error(json.message || json.error || `Vapi transfer returned ${res.status}`);
+  }
+}

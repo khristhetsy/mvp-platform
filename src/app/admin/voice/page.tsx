@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadCommandCenter } from "@/lib/voice/command-center";
+import { LiveCallsPanel } from "@/components/voice/LiveCallsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -105,11 +106,8 @@ export default async function VoiceCommandCenterPage() {
             ))}
           </section>
 
-          {/* Live now — placeholder (P4) */}
-          <section className="rounded-2xl border border-slate-200 p-4">
-            <div className="mb-3 flex items-center"><span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-400">Live now</span><span className="ml-auto rounded bg-orange-50 px-2 py-0.5 text-[9.5px] font-bold text-orange-700">COMING SOON</span></div>
-            <p className="py-6 text-center text-sm text-slate-400">Live call monitoring — transcript stream, take-over, and hot-transfer — lands in the next build phase.</p>
-          </section>
+          {/* Live now — real-time monitor (polls in-progress calls) */}
+          <LiveCallsPanel canControl={profile.role === "admin"} />
 
           {/* Consent funnel */}
           <section className="rounded-2xl border border-slate-200 p-4">

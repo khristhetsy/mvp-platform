@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as Sentry from "@sentry/nextjs";
 import { voiceOutboundEnabled } from "@/lib/voice/gate";
 import { recordCallOutcome } from "@/lib/voice/outcomes";
+import { finalizeLiveCall } from "@/lib/voice/live-calls";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   contactId: z.string().min(1),
+  callId: z.string().nullish(),
   campaignId: z.string().uuid().nullish(),
   variantId: z.string().uuid().nullish(),
   disposition: z.string().min(1).max(60),
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   try {
     const result = await recordCallOutcome(parsed.data);
+    if (parsed.data.callId) await finalizeLiveCall(parsed.data.callId); // clear from the live monitor
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     Sentry.captureException(err);
