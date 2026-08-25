@@ -131,6 +131,23 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
+    title: "Voice",
+    items: [
+      {
+        href: "/admin/voice",
+        label: "Voice Hub",
+        requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/voice",                label: "Command Center" },
+          { href: "/admin/voice/campaigns",      label: "Campaigns"      },
+          { href: "/admin/voice/calls",          label: "Call Review"    },
+          { href: "/admin/voice/consent-ledger", label: "Consent Ledger" },
+          { href: "/admin/voice/performance",    label: "Performance"    },
+        ],
+      },
+    ],
+  },
+  {
     title: "Operations",
     items: [
       { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
@@ -173,10 +190,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         children: [
           { href: "/admin/compliance",             label: "Compliance"          },
           { href: "/admin/audit",                  label: "Audit"               },
-          { href: "/admin/voice/consent-ledger",   label: "Voice Consent Ledger" },
-          { href: "/admin/voice/campaigns",        label: "Voice Campaigns"      },
-          { href: "/admin/voice/performance",      label: "Voice Performance"    },
-          { href: "/admin/voice/calls",            label: "Voice Call Review"    },
         ],
       },
       { href: "/admin/diligence",         label: "Diligence Review", requiredPermission: "manage_diligence"     },
