@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requireRole } from "@/lib/supabase/auth";
 import { voiceOutboundEnabled, preDialGate } from "@/lib/voice/gate";
 import { placeVapiCall, vapiConfigured, VAPI_TEST_NUMBER } from "@/lib/voice/vapi";
+import { pickVariant } from "@/lib/voice/campaigns";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("test") }),
-  z.object({ mode: z.literal("contact"), contactId: z.string().min(1) }),
+  z.object({ mode: z.literal("contact"), contactId: z.string().min(1), campaignId: z.string().uuid().nullish() }),
 ]);
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -38,8 +39,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!gate.eligible || !gate.phone) {
       return NextResponse.json({ error: `Blocked by gate: ${gate.reason}` }, { status: 409 });
     }
-    const { callId } = await placeVapiCall(gate.phone);
-    return NextResponse.json({ ok: true, callId, dialed: gate.phone });
+    const variant = parsed.data.campaignId ? await pickVariant(parsed.data.campaignId) : null;
+    const { callId } = await placeVapiCall(gate.phone, {
+      metadata: { contactId: parsed.data.contactId, campaignId: parsed.data.campaignId ?? null, variantId: variant?.id ?? null },
+      opener: variant?.openerScript ?? null,
+    });
+    return NextResponse.json({ ok: true, callId, dialed: gate.phone, variantId: variant?.id ?? null });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: err instanceof Error ? err.message : "Call failed." }, { status: 500 });

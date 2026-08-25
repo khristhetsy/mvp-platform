@@ -123,3 +123,29 @@ export async function deleteVariant(id: string): Promise<void> {
   const { error } = await supabase.from("campaign_variants").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Pick one A/B variant for a campaign, weighted by traffic_weight. This is what
+ * makes the A/B framework actually run: every dial draws a variant here and
+ * carries its id + opener onto the call. Returns null when the campaign has no
+ * variants (the agent then falls back to its default opener).
+ */
+export async function pickVariant(campaignId: string): Promise<CampaignVariant | null> {
+  const supabase = raw(createServiceRoleClient());
+  const { data } = await supabase
+    .from("campaign_variants")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("created_at", { ascending: true });
+  const variants = ((data ?? []) as Record<string, unknown>[]).map(mapVariant).filter((v) => v.trafficWeight > 0);
+  if (variants.length === 0) return null;
+  if (variants.length === 1) return variants[0];
+
+  const total = variants.reduce((sum, v) => sum + v.trafficWeight, 0);
+  let roll = Math.random() * total;
+  for (const v of variants) {
+    roll -= v.trafficWeight;
+    if (roll <= 0) return v;
+  }
+  return variants[variants.length - 1];
+}

@@ -13,6 +13,8 @@ export interface AgentTurnInput {
   audience: "founder" | "investor";
   contactName?: string | null;
   weakestDimension?: string | null;
+  /** A/B variant opener (carried on the call metadata as `opener`). */
+  openerScript?: string | null;
   phone?: string | null;
   messages: { role: "user" | "assistant"; content: string }[];
 }
@@ -36,6 +38,7 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnResu
     audience: input.audience,
     contactName: input.contactName,
     weakestDimension: input.weakestDimension,
+    openerScript: input.openerScript,
   });
 
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();

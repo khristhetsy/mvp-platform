@@ -15,6 +15,7 @@ const bodySchema = z.object({
   audience: z.enum(["founder", "investor"]),
   contactName: z.string().nullish(),
   weakestDimension: z.string().nullish(),
+  openerScript: z.string().max(2000).nullish(),
   phone: z.string().nullish(),
   messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).min(1),
 });

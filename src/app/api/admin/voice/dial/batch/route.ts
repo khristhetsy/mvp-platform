@@ -21,6 +21,7 @@ export async function GET(): Promise<Response> {
 const bodySchema = z.object({
   waveSize: z.number().int().min(1).max(15).default(5),
   exclude: z.array(z.string()).max(20000).default([]),
+  campaignId: z.string().uuid().nullish(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
   try {
-    const result = await dialBatch(parsed.data.waveSize, parsed.data.exclude);
+    const result = await dialBatch(parsed.data.waveSize, parsed.data.exclude, parsed.data.campaignId);
     return NextResponse.json(result);
   } catch (err) {
     Sentry.captureException(err);

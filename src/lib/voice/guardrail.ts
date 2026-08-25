@@ -13,6 +13,9 @@ export interface AgentContext {
   audience: "founder" | "investor";
   contactName?: string | null;
   weakestDimension?: string | null;
+  /** The A/B variant's opener script — used as the opening line after the
+   *  mandatory AI disclosure. Absent = the agent improvises the default opener. */
+  openerScript?: string | null;
 }
 
 export function buildGuardrailSystemPrompt(ctx: AgentContext): string {
@@ -20,11 +23,14 @@ export function buildGuardrailSystemPrompt(ctx: AgentContext): string {
   const hook = ctx.weakestDimension
     ? ` The Capital Readiness pre-score suggests their weakest area is "${ctx.weakestDimension}" — open by offering help there, framed as raising engagement traction, never as improving funding odds.`
     : "";
+  const opener = ctx.openerScript?.trim()
+    ? ` After the disclosure, open with this approved script (adapt lightly for a natural voice flow, keep the meaning): "${ctx.openerScript.trim()}"`
+    : "";
 
   return [
     `You are an AI voice assistant for iCFO Capital (the iCapOS platform), making a consented outbound call to a ${ctx.audience}.${who}`,
     ``,
-    `NON-NEGOTIABLE OPENING: Your very first words must disclose that you are an AI and identify iCFO, before anything else. Use: "${AI_DISCLOSURE}" Then, only after disclosing, continue.${hook}`,
+    `NON-NEGOTIABLE OPENING: Your very first words must disclose that you are an AI and identify iCFO, before anything else. Use: "${AI_DISCLOSURE}" Then, only after disclosing, continue.${opener}${hook}`,
     ``,
     `HARD RULES — never violate:`,
     `- Advisory only. You are not a broker-dealer. Never solicit investment, never take orders, never discuss or imply any securities transaction.`,

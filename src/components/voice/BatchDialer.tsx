@@ -7,6 +7,7 @@ const BLUE = "#2E78F5";
 const WAVE = 5;
 
 type Dialed = { contactId: string; name: string | null; ok: boolean; error?: string };
+type CampaignOpt = { id: string; name: string; variantCount: number };
 
 export function BatchDialer() {
   const [dialable, setDialable] = useState<number | null>(null);
@@ -14,6 +15,8 @@ export function BatchDialer() {
   const [launched, setLaunched] = useState(0);
   const [feed, setFeed] = useState<Dialed[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<CampaignOpt[]>([]);
+  const [campaignId, setCampaignId] = useState("");
   const stopRef = useRef(false);
 
   async function refreshCount() {
@@ -25,6 +28,13 @@ export function BatchDialer() {
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial dialable count */
     void refreshCount();
+    void (async () => {
+      const res = await fetch("/api/admin/voice/campaigns");
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(json.campaigns)) {
+        setCampaigns(json.campaigns.map((c: { id: string; name: string; variants?: unknown[] }) => ({ id: c.id, name: c.name, variantCount: c.variants?.length ?? 0 })));
+      }
+    })();
   }, []);
 
   async function start() {
@@ -36,7 +46,7 @@ export function BatchDialer() {
         if (stopRef.current) break;
         const res = await fetch("/api/admin/voice/dial/batch", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ waveSize: WAVE, exclude: excluded }),
+          body: JSON.stringify({ waveSize: WAVE, exclude: excluded, campaignId: campaignId || null }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Dial failed.");
@@ -67,15 +77,31 @@ export function BatchDialer() {
             {dialable === null ? "Checking eligibility…" : <><strong className="text-slate-800">{dialable.toLocaleString()}</strong> contact{dialable === 1 ? "" : "s"} eligible to dial now · dials in waves of {WAVE}</>}
           </p>
         </div>
-        {running ? (
-          <button onClick={stop} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50">
-            <Square className="h-4 w-4" /> Stop
-          </button>
-        ) : (
-          <button onClick={start} disabled={dialable === 0} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
-            <PhoneOutgoing className="h-4 w-4" /> Call all dialable now
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {campaigns.length > 0 && (
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              disabled={running}
+              className="rounded-lg border border-slate-200 px-2.5 py-2 text-sm text-slate-700 disabled:opacity-50"
+              aria-label="Campaign (A/B variants)"
+            >
+              <option value="">Default opener (no A/B)</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.variantCount > 0 ? ` · ${c.variantCount} variant${c.variantCount === 1 ? "" : "s"}` : ""}</option>
+              ))}
+            </select>
+          )}
+          {running ? (
+            <button type="button" onClick={stop} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50">
+              <Square className="h-4 w-4" /> Stop
+            </button>
+          ) : (
+            <button type="button" onClick={start} disabled={dialable === 0} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+              <PhoneOutgoing className="h-4 w-4" /> Call all dialable now
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}

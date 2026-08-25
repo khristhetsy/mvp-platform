@@ -8,6 +8,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { ConsentType } from "@/lib/voice/types";
 import { preDialGate } from "@/lib/voice/gate";
 import { placeVapiCall } from "@/lib/voice/vapi";
+import { pickVariant } from "@/lib/voice/campaigns";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -102,11 +103,14 @@ export async function dialableCount(): Promise<number> {
   return count ?? 0;
 }
 
-/** Dial one wave of eligible contacts. `exclude` = contact_ids already dialed this run. */
+/** Dial one wave of eligible contacts. `exclude` = contact_ids already dialed
+ *  this run. When `campaignId` is given, each dial draws an A/B variant (weighted
+ *  by traffic_weight) and carries its id + opener onto the call. */
 export async function dialBatch(
   max: number,
   exclude: string[],
-): Promise<{ dialed: { contactId: string; name: string | null; ok: boolean; error?: string }[]; remaining: number }> {
+  campaignId?: string | null,
+): Promise<{ dialed: { contactId: string; name: string | null; ok: boolean; variantId?: string | null; error?: string }[]; remaining: number }> {
   const supabase = raw(createServiceRoleClient());
   const excludeSet = new Set(exclude);
   const { data } = await supabase
@@ -117,16 +121,21 @@ export async function dialBatch(
     .filter((r) => !excludeSet.has(r.contact_id))
     .slice(0, max);
 
-  const dialed: { contactId: string; name: string | null; ok: boolean; error?: string }[] = [];
+  const dialed: { contactId: string; name: string | null; ok: boolean; variantId?: string | null; error?: string }[] = [];
   for (const r of rows) {
     const gate = await preDialGate(r.contact_id);
     if (!gate.eligible || !gate.phone) {
       dialed.push({ contactId: r.contact_id, name: r.name, ok: false, error: gate.reason });
       continue;
     }
+    // Draw the A/B variant per contact so weights hold across the wave.
+    const variant = campaignId ? await pickVariant(campaignId) : null;
     try {
-      await placeVapiCall(gate.phone);
-      dialed.push({ contactId: r.contact_id, name: r.name, ok: true });
+      await placeVapiCall(gate.phone, {
+        metadata: { contactId: r.contact_id, campaignId: campaignId ?? null, variantId: variant?.id ?? null },
+        opener: variant?.openerScript ?? null,
+      });
+      dialed.push({ contactId: r.contact_id, name: r.name, ok: true, variantId: variant?.id ?? null });
     } catch (err) {
       dialed.push({ contactId: r.contact_id, name: r.name, ok: false, error: err instanceof Error ? err.message : "dial failed" });
     }
