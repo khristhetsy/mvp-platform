@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
-  Presentation, Users, Tv, Store, Mic, Trophy, Home, Calendar,
+  Presentation, Users, Tv, Store, Mic, Trophy, Home, Calendar, LifeBuoy,
   User as UserIcon, CalendarDays, MessageSquare, Bell,
   type LucideIcon,
 } from "lucide-react";
@@ -24,16 +24,20 @@ type DoorDef = {
   left: number; // % across the floor
   top: number;
   meta: (n: number) => string;
+  /** Opens the Help & Info Desk instead of navigating to a zone. */
+  desk?: boolean;
 };
 
-// Two rows spread across the floor; the Help Desk sits centered between them.
+// Evenly spread so every zone has its own spot clear of the booths: four across
+// the top (Help Desk gets its own tile), three across the bottom.
 const DOORS: DoorDef[] = [
-  { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, left: 16, top: 40, meta: (n) => `${n} watching` },
-  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 50, top: 40, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
-  { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 84, top: 40, meta: (n) => `${n} here · tables open` },
-  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 16, top: 68, meta: (n) => `${n} browsing` },
+  { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, left: 11, top: 40, meta: (n) => `${n} watching` },
+  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 37, top: 40, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
+  { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 63, top: 40, meta: (n) => `${n} here · tables open` },
+  { key: "help", label: "HELP DESK", Icon: LifeBuoy, left: 89, top: 40, meta: () => "Ask for help", desk: true },
+  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 24, top: 68, meta: (n) => `${n} browsing` },
   { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, left: 50, top: 68, meta: (n) => `${n} at booths` },
-  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 84, top: 68, meta: () => "See standings" },
+  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 76, top: 68, meta: () => "See standings" },
 ];
 
 const NAV_ICONS: Record<VenueZone["icon"], LucideIcon> = {
@@ -49,10 +53,11 @@ const FIG_POS = [
   { l: 70, t: 56 }, { l: 30, t: 66 }, { l: 52, t: 60 }, { l: 43, t: 48 }, { l: 66, t: 64 },
 ];
 
-const SIGNS: { text: string; key: "sessions" | "sponsors" | "help"; left: number; top: number }[] = [
-  { text: "◄ SESSIONS", key: "sessions", left: 30, top: 54 },
-  { text: "EXPO HALL ►", key: "sponsors", left: 70, top: 54 },
-  { text: "HELP DESK ►", key: "help", left: 63, top: 55 },
+// Wayfinding arrows, spaced apart. Help Desk is now its own labeled tile, so it
+// no longer needs a crowded sign next to Expo Hall.
+const SIGNS: { text: string; key: "sessions" | "sponsors"; left: number; top: number }[] = [
+  { text: "◄ SESSIONS", key: "sessions", left: 26, top: 54 },
+  { text: "EXPO HALL ►", key: "sponsors", left: 74, top: 54 },
 ];
 
 export type QuickLink = { label: string; href: string; icon: keyof typeof QL_ICONS };
@@ -161,38 +166,37 @@ export function LobbyHall({
           {DOORS.map((d) => {
             const n = d.room ? byRoom[d.room] ?? 0 : 0;
             const live = Boolean(d.room && n > 0);
-            return (
-              <Link
-                key={d.key}
-                href={hrefFor(d.key)}
-                className={styles.tile}
-                style={{ left: `${d.left}%`, top: `${d.top}%` }}
-                aria-label={`${cap(d.label)} — ${d.meta(n)}`}
-                onMouseEnter={() => walkTo(d.left, d.top)}
-                onFocus={() => walkTo(d.left, d.top)}
-              >
+            const inner = (
+              <>
                 <span className={styles.tip}>{cap(d.label)} · {d.meta(n)}</span>
                 <span className={styles.tileBox}>
                   <d.Icon style={{ width: 26, height: 26 }} aria-hidden />
                   {live && <span className={styles.tileHot}>● LIVE</span>}
                 </span>
                 <span className={styles.tileNm}>{d.label}</span>
-              </Link>
+              </>
+            );
+            const common = {
+              className: styles.tile,
+              style: { left: `${d.left}%`, top: `${d.top}%` },
+              "aria-label": `${cap(d.label)} — ${d.meta(n)}`,
+              onMouseEnter: () => walkTo(d.left, d.top),
+              onFocus: () => walkTo(d.left, d.top),
+            };
+            // The Help Desk tile opens the info desk instead of navigating.
+            return d.desk ? (
+              <button key={d.key} type="button" onClick={openDesk} {...common}>{inner}</button>
+            ) : (
+              <Link key={d.key} href={hrefFor(d.key)} {...common}>{inner}</Link>
             );
           })}
 
           {/* floating wayfinding signs */}
-          {SIGNS.map((s) =>
-            s.key === "help" ? (
-              <button key={s.text} type="button" className={styles.sign} style={{ left: `${s.left}%`, top: `${s.top}%` }} onClick={openDesk} aria-label="Open the Help & Info Desk">
-                {s.text}<span className={styles.signStem} aria-hidden />
-              </button>
-            ) : (
-              <Link key={s.text} href={hrefFor(s.key)} className={styles.sign} style={{ left: `${s.left}%`, top: `${s.top}%` }}>
-                {s.text}<span className={styles.signStem} aria-hidden />
-              </Link>
-            ),
-          )}
+          {SIGNS.map((s) => (
+            <Link key={s.text} href={hrefFor(s.key)} className={styles.sign} style={{ left: `${s.left}%`, top: `${s.top}%` }}>
+              {s.text}<span className={styles.signStem} aria-hidden />
+            </Link>
+          ))}
 
           {/* help & info desk → opens the AI assistant */}
           <button type="button" className={styles.desk} onClick={openDesk}>
