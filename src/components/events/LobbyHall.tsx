@@ -166,12 +166,25 @@ export function LobbyHall({
           {DOORS.map((d) => {
             const n = d.room ? byRoom[d.room] ?? 0 : 0;
             const live = Boolean(d.room && n > 0);
+            // Attendees currently inside this zone — shown as stacked figures
+            // beside the booth (up to 3, then a +N chip).
+            const inRoom = d.room ? members.filter((m) => m.room === d.room && m.id !== me.id) : [];
+            const shownPeople = inRoom.slice(0, 3);
+            const extraPeople = inRoom.length - shownPeople.length;
             const inner = (
               <>
                 <span className={styles.tip}>{cap(d.label)} · {d.meta(n)}</span>
                 <span className={styles.tileBox}>
                   <d.Icon style={{ width: 26, height: 26 }} aria-hidden />
                   {live && <span className={styles.tileHot}>● LIVE</span>}
+                  {inRoom.length > 0 && (
+                    <span className={styles.pplStack}>
+                      {shownPeople.map((m, j) => (
+                        <span key={m.id} className={styles.ppl} style={{ background: FIGS[j % FIGS.length] }} title={m.name} />
+                      ))}
+                      {extraPeople > 0 && <span className={styles.pplMore}>+{extraPeople}</span>}
+                    </span>
+                  )}
                 </span>
                 <span className={styles.tileNm}>{d.label}</span>
               </>
