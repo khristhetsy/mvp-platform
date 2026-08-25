@@ -200,7 +200,7 @@ export function LobbyHall({
 
           {/* help & info desk → opens the AI assistant */}
           <button type="button" className={styles.desk} onClick={openDesk}>
-            <span className={styles.deskBox}><i className="ti ti-message" aria-hidden="true" /></span>
+            <span className={styles.deskBox}><i className="ti ti-headset" aria-hidden="true" /></span>
             <span className={styles.deskNm}>{t("help_info_desk")}</span>
             <br />
             <span className={styles.deskHint}><i className="ti ti-sparkles" aria-hidden="true" /> Ask AI</span>
