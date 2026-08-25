@@ -136,8 +136,9 @@ export default async function VoiceCommandCenterPage() {
             ) : data.variants.slice(0, 4).map((v) => (
               <div key={v.variantId ?? "none"} className="flex items-center gap-3 py-1.5 text-[12px]">
                 <span className="flex-1 truncate font-medium text-slate-700">{v.label}</span>
-                <span className="h-1.5 w-20 overflow-hidden rounded bg-slate-100"><span className="block h-full rounded" style={{ width: `${Math.min(100, v.bookedRate)}%`, background: "#12B981" }} /></span>
+                <span className="h-1.5 w-20 overflow-hidden rounded bg-slate-100"><span className="block h-full rounded" style={{ width: `${Math.min(100, v.bookedRate)}%`, background: v.isSignificantLeader ? "#12B981" : "#F5A524" }} /></span>
                 <span className="w-10 text-right font-bold text-slate-800">{v.bookedRate}%</span>
+                {v.isSignificantLeader && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">{v.confidence}% ✓</span>}
               </div>
             ))}
           </section>

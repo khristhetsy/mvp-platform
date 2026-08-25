@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { variantSignificance } from "@/lib/voice/significance";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -26,6 +27,10 @@ export interface VariantPerformance {
   calls: number;
   booked: number;
   bookedRate: number;
+  /** True for the significantly-winning variant (two-proportion z-test). */
+  isSignificantLeader?: boolean;
+  /** Confidence (%) the leader beats the rest — set on the leader only. */
+  confidence?: number | null;
 }
 
 export async function loadPerformance(): Promise<{ summary: PerformanceSummary; variants: VariantPerformance[] }> {
@@ -62,6 +67,16 @@ export async function loadPerformance(): Promise<{ summary: PerformanceSummary; 
     booked: agg.booked,
     bookedRate: agg.calls ? Math.round((agg.booked / agg.calls) * 1000) / 10 : 0,
   }));
+
+  // A/B significance: only real (assigned) variants compete; mark the winner.
+  const sig = variantSignificance(variants.filter((v) => v.variantId !== null));
+  if (sig.leaderId) {
+    const leader = variants.find((v) => v.variantId === sig.leaderId);
+    if (leader) {
+      leader.isSignificantLeader = sig.significant;
+      leader.confidence = sig.confidence;
+    }
+  }
 
   return {
     summary: { totalCalls: total, booked, bookedRate: pct(booked), optOuts, optOutRate: pct(optOuts), transfers, avgDuration },

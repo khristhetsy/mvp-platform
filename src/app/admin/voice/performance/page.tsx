@@ -8,7 +8,7 @@ export default async function VoicePerformancePage() {
   const profile = await requireRole(["admin", "analyst"]);
   const { summary, variants } = await loadPerformance().catch(() => ({
     summary: { totalCalls: 0, booked: 0, bookedRate: 0, optOuts: 0, optOutRate: 0, transfers: 0, avgDuration: 0 },
-    variants: [] as { variantId: string | null; label: string; calls: number; booked: number; bookedRate: number }[],
+    variants: [] as { variantId: string | null; label: string; calls: number; booked: number; bookedRate: number; isSignificantLeader?: boolean; confidence?: number | null }[],
   }));
 
   const cards = [
@@ -54,15 +54,17 @@ export default async function VoicePerformancePage() {
                   <th className="px-4 py-2 font-semibold">Calls</th>
                   <th className="px-4 py-2 font-semibold">Booked</th>
                   <th className="px-4 py-2 font-semibold">Booked rate</th>
+                  <th className="px-4 py-2 font-semibold">Significance</th>
                 </tr>
               </thead>
               <tbody>
                 {variants.map((v) => (
                   <tr key={v.variantId ?? "none"} className="border-b border-slate-50 last:border-0">
-                    <td className="px-4 py-2 font-medium text-slate-800">{v.label}</td>
+                    <td className="px-4 py-2 font-medium text-slate-800">{v.label}{v.isSignificantLeader && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">WINNER</span>}</td>
                     <td className="px-4 py-2 text-slate-600">{v.calls}</td>
                     <td className="px-4 py-2 text-slate-600">{v.booked}</td>
                     <td className="px-4 py-2 font-semibold text-slate-800">{v.bookedRate}%</td>
+                    <td className="px-4 py-2 text-slate-600">{v.isSignificantLeader ? `${v.confidence}% confidence ✓` : typeof v.confidence === "number" ? `${v.confidence}% (not yet)` : "—"}</td>
                   </tr>
                 ))}
               </tbody>
