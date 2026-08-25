@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { findForbiddenTerms } from "@/lib/crm/lexicon";
 import { GUARDRAIL_VERSION } from "@/lib/voice/guardrail";
-import type { VoiceCampaign, CampaignVariant, CampaignAudience, CampaignStatus, AudienceConfig } from "@/lib/voice/types";
+import type { VoiceCampaign, CampaignVariant, CampaignAudience, CampaignStatus, AudienceConfig, CadenceStep } from "@/lib/voice/types";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -33,6 +33,7 @@ function mapCampaign(r: Record<string, unknown>, variants: CampaignVariant[]): V
     status: r.status as CampaignStatus,
     guardrailPromptVersion: (r.guardrail_prompt_version as string) ?? null,
     audienceConfig: (r.audience_config as VoiceCampaign["audienceConfig"]) ?? null,
+    cadenceSteps: (r.cadence_steps as VoiceCampaign["cadenceSteps"]) ?? null,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
     variants,
@@ -66,12 +67,13 @@ export async function createCampaign(input: { name: string; audience: CampaignAu
   return mapCampaign(data as Record<string, unknown>, []);
 }
 
-export async function updateCampaign(id: string, patch: { name?: string; status?: CampaignStatus; audienceConfig?: AudienceConfig | null }): Promise<void> {
+export async function updateCampaign(id: string, patch: { name?: string; status?: CampaignStatus; audienceConfig?: AudienceConfig | null; cadenceSteps?: CadenceStep[] | null }): Promise<void> {
   const supabase = raw(createServiceRoleClient());
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.status !== undefined) update.status = patch.status;
   if (patch.audienceConfig !== undefined) update.audience_config = patch.audienceConfig;
+  if (patch.cadenceSteps !== undefined) update.cadence_steps = patch.cadenceSteps;
   const { error } = await supabase.from("voice_campaigns").update(update).eq("id", id);
   if (error) throw new Error(error.message);
 }

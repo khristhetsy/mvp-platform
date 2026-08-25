@@ -84,6 +84,14 @@ export interface AudienceConfig {
   contactIds?: string[] | null;
 }
 
+/** One touch in a multichannel cadence. delayHours = wait before firing it. */
+export type CadenceChannel = "voice" | "sms" | "whatsapp" | "email";
+export interface CadenceStep {
+  channel: CadenceChannel;
+  delayHours: number;
+  body?: string | null;
+}
+
 export interface VoiceCampaign {
   id: string;
   name: string;
@@ -91,6 +99,7 @@ export interface VoiceCampaign {
   status: CampaignStatus;
   guardrailPromptVersion: string | null;
   audienceConfig: AudienceConfig | null;
+  cadenceSteps: CadenceStep[] | null;
   createdAt: string;
   updatedAt: string;
   variants: CampaignVariant[];

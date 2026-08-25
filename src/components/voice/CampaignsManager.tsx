@@ -86,6 +86,11 @@ export function CampaignsManager({ initial, canWrite, guardrailVersion }: { init
               onSave={(cfg) => call(`/api/admin/voice/campaigns/${selected.id}`, { method: "POST", body: JSON.stringify({ action: "update", audienceConfig: cfg }) })}
             />
 
+            <CadenceEditor campaign={selected} canWrite={canWrite} busy={busy}
+              onSave={(steps) => call(`/api/admin/voice/campaigns/${selected.id}`, { method: "POST", body: JSON.stringify({ action: "update", cadenceSteps: steps }) })}
+              onEnroll={() => call(`/api/admin/voice/campaigns/${selected.id}`, { method: "POST", body: JSON.stringify({ action: "enrollCadence" }) })}
+            />
+
             <VariantEditor campaign={selected} canWrite={canWrite} busy={busy}
               onAdd={(label, script, weight) => call(`/api/admin/voice/campaigns/${selected.id}`, { method: "POST", body: JSON.stringify({ action: "addVariant", label, openerScript: script, trafficWeight: weight }) })}
               onSave={(vid, patch) => call(`/api/admin/voice/variants/${vid}`, { method: "PATCH", body: JSON.stringify(patch) })}
@@ -251,6 +256,66 @@ function AudiencePicker({ campaign, canWrite, busy, onSave }: {
             <span className="text-[11px] text-slate-400">Every contact still clears the pre-dial gate — this only narrows who is in scope.</span>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+type Step = { channel: "voice" | "sms" | "whatsapp" | "email"; delayHours: number; body?: string | null };
+const CH_LABEL: Record<Step["channel"], string> = { voice: "Voice call", sms: "SMS", whatsapp: "WhatsApp", email: "Email" };
+
+function CadenceEditor({ campaign, canWrite, busy, onSave, onEnroll }: {
+  campaign: VoiceCampaign; canWrite: boolean; busy: boolean;
+  onSave: (steps: Step[]) => Promise<boolean> | void;
+  onEnroll: () => Promise<boolean> | void;
+}) {
+  const [steps, setSteps] = useState<Step[]>((campaign.cadenceSteps as Step[]) ?? []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync editor to the selected campaign
+  useEffect(() => { setSteps((campaign.cadenceSteps as Step[]) ?? []); }, [campaign.id, campaign.cadenceSteps]);
+
+  const setStep = (i: number, patch: Partial<Step>) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  const addStep = () => setSteps((prev) => [...prev, { channel: prev.length === 0 ? "voice" : "sms", delayHours: prev.length === 0 ? 0 : 48, body: "" }]);
+  const removeStep = (i: number) => setSteps((prev) => prev.filter((_, j) => j !== i));
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-3 flex items-center">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Cadence</h3>
+        <span className="ml-auto text-[11px] text-slate-400">Voice / SMS / WhatsApp / Email over time · each step still passes its gate</span>
+      </div>
+
+      {steps.length === 0 && <p className="mb-3 text-sm text-slate-400">No steps yet. Add a first touch (usually a voice call at 0h).</p>}
+      <div className="space-y-2">
+        {steps.map((s, i) => (
+          <div key={i} className="rounded-lg border border-slate-100 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">Step {i + 1}</span>
+              {canWrite ? (
+                <>
+                  <select value={s.channel} onChange={(e) => setStep(i, { channel: e.target.value as Step["channel"] })} className="rounded-lg border border-slate-200 px-2 py-1 text-sm">
+                    {(["voice", "sms", "whatsapp", "email"] as Step["channel"][]).map((c) => <option key={c} value={c}>{CH_LABEL[c]}</option>)}
+                  </select>
+                  <label className="flex items-center gap-1 text-xs text-slate-500">wait <input type="number" min={0} value={s.delayHours} onChange={(e) => setStep(i, { delayHours: Math.max(0, Number(e.target.value) || 0) })} className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm" /> h</label>
+                  <button type="button" onClick={() => removeStep(i)} aria-label="Remove step" className="ml-auto text-slate-400 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                </>
+              ) : (
+                <span className="text-sm text-slate-600">{CH_LABEL[s.channel]} · wait {s.delayHours}h</span>
+              )}
+            </div>
+            {canWrite && (s.channel === "sms" || s.channel === "whatsapp") && (
+              <input value={s.body ?? ""} onChange={(e) => setStep(i, { body: e.target.value })} placeholder="Message text (STOP opt-out appended by carrier)…" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {canWrite && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={addStep} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" /> Add step</button>
+          <button type="button" onClick={() => void onSave(steps)} disabled={busy} className="rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>{busy ? "Saving…" : "Save cadence"}</button>
+          <button type="button" onClick={() => void onEnroll()} disabled={busy || steps.length === 0} className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">Enroll audience</button>
+          <span className="text-[11px] text-slate-400">Enrolling starts the sequence for the campaign&rsquo;s audience.</span>
+        </div>
       )}
     </div>
   );
