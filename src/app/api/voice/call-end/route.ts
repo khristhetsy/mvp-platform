@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import * as Sentry from "@sentry/nextjs";
 import { voiceOutboundEnabled } from "@/lib/voice/gate";
+import { voiceWebhookAuthorized } from "@/lib/voice/webhook-auth";
 import { recordCallOutcome } from "@/lib/voice/outcomes";
 import { finalizeLiveCall } from "@/lib/voice/live-calls";
 
@@ -29,8 +30,7 @@ const bodySchema = z.object({
 export async function POST(req: NextRequest): Promise<Response> {
   if (!voiceOutboundEnabled()) return NextResponse.json({ error: "Voice outbound is disabled." }, { status: 503 });
 
-  const secret = process.env.VOICE_AGENT_SECRET?.trim();
-  if (!secret || req.headers.get("x-voice-secret") !== secret) {
+  if (!voiceWebhookAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
