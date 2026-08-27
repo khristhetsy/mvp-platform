@@ -49,6 +49,24 @@ export function aggregateExactLabels(rows: Array<{ extra?: unknown }>): Map<stri
 }
 
 /**
+ * Curated synonym → canonical merges for option values. Keyed by the trimmed,
+ * lowercased variant; the value is the exact display spelling to keep. Applied
+ * before case-dedupe, so aliases and casing collapse together. Stored contact
+ * values are not rewritten — this only unifies the picker's option list.
+ */
+const VALUE_ALIASES: Record<string, string> = {
+  "accredited individuals": "Angel Investor",
+  "accredited individual": "Angel Investor",
+  angels: "Angel Investor",
+  angel: "Angel Investor",
+};
+
+/** Map a value through the alias table (case-insensitive), else return it unchanged. */
+function canonicalizeValue(v: string): string {
+  return VALUE_ALIASES[v.trim().toLowerCase()] ?? v;
+}
+
+/**
  * Pick the best spelling among case-only variants of the same option value
  * (e.g. "pre-series A" vs "Pre-Series A"): prefer an uppercase first letter,
  * then more uppercase letters overall, then alphabetical order for stability.
@@ -65,7 +83,8 @@ function preferredSpelling(a: string, b: string): string {
  *  canonical spelling, then return sorted. Stored contact values are unaffected. */
 function dedupeCanonical(set: Set<string>): string[] {
   const canonical = new Map<string, string>();
-  for (const v of set) {
+  for (const raw of set) {
+    const v = canonicalizeValue(raw);
     const key = v.trim().toLowerCase();
     const existing = canonical.get(key);
     canonical.set(key, existing ? preferredSpelling(existing, v) : v);

@@ -15,6 +15,19 @@ describe("buildFieldOptions — case-only dedupe", () => {
     expect(list).toContain("Lender");
   });
 
+  it("merges investor-type synonyms into Angel Investor", () => {
+    const rows = [
+      { extra: { "Entrepreneur seeking type of investor(s)?": ["Accredited individuals", "Venture Capital"] } },
+      { extra: { "Entrepreneur seeking type of investor(s)?": ["angels", "Angel Investor"] } },
+    ];
+    const opts = buildFieldOptions(aggregateExactLabels(rows));
+    const list = opts["Entrepreneur seeking type of investor(s)?"];
+    expect(list.filter((v) => v === "Angel Investor")).toEqual(["Angel Investor"]);
+    expect(list).not.toContain("Accredited individuals");
+    expect(list).not.toContain("angels");
+    expect(list).toContain("Venture Capital");
+  });
+
   it("keeps genuinely distinct options separate", () => {
     const rows = [{ extra: { "Entrepreneur funding stage?": ["Seed", "Series A"] } }];
     const opts = buildFieldOptions(aggregateExactLabels(rows));
