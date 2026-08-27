@@ -21,6 +21,7 @@ export function PipelineClient() {
   const [view, setView] = useState<"board" | "stages">("board");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [sequences, setSequences] = useState<SeqOption[]>([]);
   // Delete-stage modal: choose where the stage's deals go, surface guard errors.
   const [delTarget, setDelTarget] = useState<Stage | null>(null);
@@ -54,9 +55,14 @@ export function PipelineClient() {
   const pipeline = pipelines.find((p) => p.id === selId) ?? null;
 
   async function call(url: string, method: string, body?: unknown) {
-    setBusy(true);
-    try { await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined }); await load(); }
-    finally { setBusy(false); }
+    setBusy(true); setErr(null);
+    try {
+      const res = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || "That action couldn’t be completed.");
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "That action couldn’t be completed.");
+    } finally { setBusy(false); }
   }
 
   async function newPipeline() {
@@ -108,6 +114,13 @@ export function PipelineClient() {
 
   return (
     <div>
+      {err && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 12.5, color: "#A32D2D", background: "#FCEBEB", border: "0.5px solid #F3C6C6", borderRadius: 8, padding: "8px 12px" }}>
+          <i className="ti ti-alert-triangle" aria-hidden="true" />
+          <span style={{ flex: 1 }}>{err}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setErr(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D" }}><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <select value={selId} onChange={(e) => setSelId(e.target.value)} style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4" }}>
           {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>)}

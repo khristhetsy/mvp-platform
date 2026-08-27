@@ -54,6 +54,17 @@ export async function createStage(pipelineId: string, name: string): Promise<voi
 }
 
 export async function updateStage(id: string, patch: { name?: string; sortOrder?: number; isWon?: boolean; sequenceId?: string | null }): Promise<void> {
+  // Guard: don't let the last remaining Won stage be flipped off — mirrors the
+  // same invariant deleteStage enforces (a pipeline needs a way to close deals).
+  if (patch.isWon === false) {
+    const { data: stage } = await db().from("sales_stages").select("pipeline_id, is_won").eq("id", id).single();
+    if (stage?.is_won) {
+      const { data: sib } = await db().from("sales_stages").select("id, is_won").eq("pipeline_id", stage.pipeline_id);
+      if (((sib ?? []) as Array<{ is_won: boolean }>).filter((s) => s.is_won).length <= 1) {
+        throw new Error("Keep at least one Won stage so deals can still be marked won.");
+      }
+    }
+  }
   const update: Record<string, unknown> = {};
   if (patch.name !== undefined) update.name = patch.name.trim();
   if (patch.sortOrder !== undefined) update.sort_order = patch.sortOrder;
