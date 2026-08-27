@@ -22,6 +22,11 @@ export function PipelineClient() {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [sequences, setSequences] = useState<SeqOption[]>([]);
+  // Delete-stage modal: choose where the stage's deals go, surface guard errors.
+  const [delTarget, setDelTarget] = useState<Stage | null>(null);
+  const [reassignTo, setReassignTo] = useState<string>("");
+  const [delErr, setDelErr] = useState<string | null>(null);
+  const [delBusy, setDelBusy] = useState(false);
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
 
@@ -85,6 +90,19 @@ export function PipelineClient() {
     await load();
   }
   async function moveOpp(oppId: string, stageId: string) { await call(`/api/sales/opportunities/${oppId}`, "PATCH", { stageId }); }
+  async function confirmDeleteStage() {
+    if (!delTarget) return;
+    setDelBusy(true); setDelErr(null);
+    try {
+      const qs = reassignTo ? `?reassignTo=${encodeURIComponent(reassignTo)}` : "";
+      const res = await fetch(`/api/sales/stages/${delTarget.id}${qs}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || "Delete failed.");
+      setDelTarget(null); setReassignTo("");
+      await load();
+    } catch (e) {
+      setDelErr(e instanceof Error ? e.message : "Delete failed.");
+    } finally { setDelBusy(false); }
+  }
 
   const stages = (pipeline?.stages ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
 
@@ -173,9 +191,37 @@ export function PipelineClient() {
               <button onClick={() => moveStage(s, -1)} disabled={busy || i === 0} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === 0 ? 0.3 : 1 }}>↑</button>
               <button onClick={() => moveStage(s, 1)} disabled={busy || i === stages.length - 1} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === stages.length - 1 ? 0.3 : 1 }}>↓</button>
               <button onClick={() => renameStage(s)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-pencil" aria-hidden="true" /></button>
-              <button onClick={() => { if (confirm(`Delete stage "${s.name}"? Opportunities in it become unstaged.`)) void call(`/api/sales/stages/${s.id}`, "DELETE"); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}><i className="ti ti-trash" aria-hidden="true" /></button>
+              {(() => {
+                const wonCount = stages.filter((x) => x.is_won).length;
+                const reason = stages.length <= 1 ? "A pipeline needs at least one stage" : (s.is_won && wonCount <= 1 ? "Keep at least one Won stage" : null);
+                return (
+                  <button onClick={() => { setDelErr(null); setReassignTo(""); setDelTarget(s); }} disabled={busy || reason !== null} title={reason ?? "Delete stage"} style={{ background: "none", border: "none", cursor: reason ? "not-allowed" : "pointer", color: "#A32D2D", fontSize: 12, opacity: reason ? 0.3 : 1 }}><i className="ti ti-trash" aria-hidden="true" /></button>
+                );
+              })()}
             </div>
           ))}
+        </div>
+      )}
+
+      {delTarget && (
+        <div onClick={() => { if (!delBusy) setDelTarget(null); }} style={{ position: "fixed", inset: 0, background: "rgba(10,20,40,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, width: 430, maxWidth: "92vw", padding: "18px 20px", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <i className="ti ti-trash" aria-hidden="true" style={{ color: "#A32D2D", fontSize: 16 }} />
+              <span style={{ fontSize: 14, fontWeight: 600 }}>Delete stage “{delTarget.name}”?</span>
+            </div>
+            <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: "0 0 12px", lineHeight: 1.5 }}>Choose where its opportunities go. They aren’t deleted.</p>
+            <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Move deals to</label>
+            <select value={reassignTo} onChange={(e) => setReassignTo(e.target.value)} disabled={delBusy} style={{ width: "100%", marginTop: 4, fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff", color: "var(--foreground)" }}>
+              <option value="">Leave unstaged (drop off the board)</option>
+              {stages.filter((x) => x.id !== delTarget.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+            {delErr && <p style={{ fontSize: 12, color: "#A32D2D", margin: "10px 0 0" }}>{delErr}</p>}
+            <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+              <button onClick={() => setDelTarget(null)} disabled={delBusy} style={{ fontSize: 12, padding: "7px 14px", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, background: "#fff", color: "var(--foreground)", cursor: "pointer" }}>Cancel</button>
+              <button onClick={confirmDeleteStage} disabled={delBusy} style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", border: "none", borderRadius: 8, background: "#A32D2D", color: "#fff", cursor: "pointer", opacity: delBusy ? 0.6 : 1 }}>{delBusy ? "Deleting…" : "Delete stage"}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

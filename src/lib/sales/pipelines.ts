@@ -63,7 +63,36 @@ export async function updateStage(id: string, patch: { name?: string; sortOrder?
   if (error) throw new Error(error.message);
 }
 
-export async function deleteStage(id: string): Promise<void> {
-  const { error } = await db().from("sales_stages").delete().eq("id", id);
+/**
+ * Delete a stage, with guardrails:
+ *  - a pipeline must keep at least one stage;
+ *  - a pipeline must keep at least one "Won" stage (so deals can still close).
+ * Opportunities in the deleted stage are moved to `reassignToStageId` when given
+ * (must be a sibling in the same pipeline), otherwise left unstaged.
+ */
+export async function deleteStage(id: string, reassignToStageId?: string | null): Promise<void> {
+  const client = db();
+  const { data: stage, error: sErr } = await client
+    .from("sales_stages").select("id, pipeline_id, is_won").eq("id", id).single();
+  if (sErr || !stage) throw new Error("Stage not found.");
+
+  const { data: siblings, error: liErr } = await client
+    .from("sales_stages").select("id, is_won").eq("pipeline_id", stage.pipeline_id);
+  if (liErr) throw new Error(liErr.message);
+  const all = (siblings ?? []) as Array<{ id: string; is_won: boolean }>;
+  if (all.length <= 1) throw new Error("A pipeline needs at least one stage.");
+  if (stage.is_won && all.filter((s) => s.is_won).length <= 1) {
+    throw new Error("Keep at least one Won stage so deals can still be marked won.");
+  }
+
+  if (reassignToStageId) {
+    if (reassignToStageId === id) throw new Error("Choose a different stage to move deals to.");
+    if (!all.some((s) => s.id === reassignToStageId)) throw new Error("Move deals to a stage in the same pipeline.");
+    const { error: mErr } = await client
+      .from("sales_opportunities").update({ stage_id: reassignToStageId }).eq("stage_id", id);
+    if (mErr) throw new Error(mErr.message);
+  }
+
+  const { error } = await client.from("sales_stages").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }

@@ -26,14 +26,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const { id } = await params;
+  const reassignTo = new URL(req.url).searchParams.get("reassignTo");
   try {
-    await deleteStage(id);
+    await deleteStage(id, reassignTo);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Delete failed." }, { status: 500 });
+    // Guard violations (last stage, only Won stage, bad target) are user-facing 400s.
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Delete failed." }, { status: 400 });
   }
 }
