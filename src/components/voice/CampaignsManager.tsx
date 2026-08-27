@@ -262,7 +262,10 @@ function AudiencePicker({ campaign, canWrite, busy, onSave }: {
 }
 
 type Step = { channel: "voice" | "sms" | "whatsapp" | "email"; delayHours: number; body?: string | null };
-const CH_LABEL: Record<Step["channel"], string> = { voice: "Voice call", sms: "SMS", whatsapp: "WhatsApp", email: "Email" };
+const CH_LABEL: Record<Step["channel"], string> = { voice: "Voice call", sms: "SMS", whatsapp: "WhatsApp", email: "Email (Marketing Hub)" };
+// Channels the cadence engine actually sends. Email is intentionally excluded:
+// it's handled by the Marketing Hub, so a cadence "email" step sends nothing here.
+const CADENCE_CHANNELS: Step["channel"][] = ["voice", "sms", "whatsapp"];
 
 function CadenceEditor({ campaign, canWrite, busy, onSave, onEnroll }: {
   campaign: VoiceCampaign; canWrite: boolean; busy: boolean;
@@ -307,7 +310,8 @@ function CadenceEditor({ campaign, canWrite, busy, onSave, onEnroll }: {
               {canWrite ? (
                 <>
                   <select value={s.channel} onChange={(e) => setStep(i, { channel: e.target.value as Step["channel"] })} className="rounded-lg border border-slate-200 px-2 py-1 text-sm">
-                    {(["voice", "sms", "whatsapp", "email"] as Step["channel"][]).map((c) => <option key={c} value={c}>{CH_LABEL[c]}</option>)}
+                    {CADENCE_CHANNELS.map((c) => <option key={c} value={c}>{CH_LABEL[c]}</option>)}
+                    {s.channel === "email" && <option value="email">{CH_LABEL.email}</option>}
                   </select>
                   <label className="flex items-center gap-1 text-xs text-slate-500">wait <input type="number" min={0} value={s.delayHours} onChange={(e) => setStep(i, { delayHours: Math.max(0, Number(e.target.value) || 0) })} className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm" /> h</label>
                   <button type="button" onClick={() => removeStep(i)} aria-label="Remove step" className="ml-auto text-slate-400 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>

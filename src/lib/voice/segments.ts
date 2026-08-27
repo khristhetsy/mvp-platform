@@ -125,12 +125,25 @@ export async function dialBatch(
     if (restrictIds && restrictIds.length === 0) return { dialed: [], remaining: 0 };
   }
 
-  let q = supabase.from("v_call_queue").select("contact_id, name, phone");
-  if (restrictIds) q = q.in("contact_id", restrictIds.slice(0, 1000));
-  const { data } = await q.limit(max + exclude.length + 5);
-  const rows = ((data ?? []) as { contact_id: string; name: string | null; phone: string | null }[])
-    .filter((r) => !excludeSet.has(r.contact_id))
-    .slice(0, max);
+  // Pull candidates from the queue. A restricted audience can be far larger than
+  // Postgres/PostgREST can take in one `.in(...)`, so page the restrict set in
+  // chunks of 1000 and stop once we have enough eligible candidates — this covers
+  // the WHOLE audience across waves rather than only its first 1000 contacts.
+  const need = max + exclude.length + 5;
+  const candidates: { contact_id: string; name: string | null; phone: string | null }[] = [];
+  if (restrictIds) {
+    for (let i = 0; i < restrictIds.length && candidates.length < need; i += 1000) {
+      const chunk = restrictIds.slice(i, i + 1000);
+      const { data } = await supabase
+        .from("v_call_queue").select("contact_id, name, phone")
+        .in("contact_id", chunk).limit(need - candidates.length);
+      candidates.push(...((data ?? []) as { contact_id: string; name: string | null; phone: string | null }[]));
+    }
+  } else {
+    const { data } = await supabase.from("v_call_queue").select("contact_id, name, phone").limit(need);
+    candidates.push(...((data ?? []) as { contact_id: string; name: string | null; phone: string | null }[]));
+  }
+  const rows = candidates.filter((r) => !excludeSet.has(r.contact_id)).slice(0, max);
 
   const dialed: { contactId: string; name: string | null; ok: boolean; variantId?: string | null; error?: string }[] = [];
   for (const r of rows) {

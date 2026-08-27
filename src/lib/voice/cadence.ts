@@ -18,7 +18,10 @@ function raw(c: SupabaseClient<Database>): SupabaseClient {
 }
 
 export type StepOutcome = "sent" | "retry" | "skip" | "stop";
-type EnrollmentRow = { id: string; campaign_id: string; contact_id: string; current_step: number };
+type EnrollmentRow = { id: string; campaign_id: string; contact_id: string; current_step: number; retry_count: number };
+
+/** Give up on a step after this many failed retries and advance the contact. */
+const MAX_RETRIES = 3;
 
 /**
  * Pure advancement: given the outcome of the current step, compute the next
@@ -42,8 +45,8 @@ export function advance(
 function outcomeFromGate(reason: string | undefined): StepOutcome {
   const r = reason ?? "";
   if (r === "dnc" || r === "no_consent" || r === "jurisdiction_blocked" || r === "attempt_cap" || r === "system_disabled") return "stop";
-  if (r === "outside_hours" || r === "no_timezone") return "retry";
-  return "skip"; // no_phone etc. — move on
+  if (r === "outside_hours") return "retry"; // resolves once the local window opens
+  return "skip"; // no_phone, no_timezone (never self-resolves), etc. — move on
 }
 
 /** Execute one cadence step for a contact. Returns how to advance. */
@@ -108,7 +111,7 @@ export async function runCadenceTick(limit = 100): Promise<{ processed: number; 
   const nowIso = new Date().toISOString();
   const { data: due } = await supabase
     .from("voice_cadence_enrollments")
-    .select("id, campaign_id, contact_id, current_step")
+    .select("id, campaign_id, contact_id, current_step, retry_count")
     .eq("status", "active")
     .lte("next_run_at", nowIso)
     .order("next_run_at", { ascending: true })
@@ -138,6 +141,14 @@ export async function runCadenceTick(limit = 100): Promise<{ processed: number; 
         outcome = "retry";
       }
     }
+    // Bound retries: after MAX_RETRIES on the same step, give up and advance
+    // instead of rescheduling +1h forever. Any non-retry outcome resets the count.
+    const priorRetries = enr.retry_count ?? 0;
+    let retryCount = 0;
+    if (outcome === "retry") {
+      if (priorRetries + 1 >= MAX_RETRIES) outcome = "skip"; // exhausted → move on
+      else retryCount = priorRetries + 1;
+    }
     const next = advance(enr.current_step, steps.length ? steps : [{ channel: "voice", delayHours: 0 }], outcome);
     if (outcome === "sent") sent += 1;
     if (next.status === "completed") completed += 1;
@@ -146,6 +157,7 @@ export async function runCadenceTick(limit = 100): Promise<{ processed: number; 
       status: next.status,
       current_step: next.currentStep,
       next_run_at: next.nextRunAt,
+      retry_count: retryCount,
       updated_at: nowIso,
     }).eq("id", enr.id);
   }
