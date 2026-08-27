@@ -34,8 +34,8 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
     a: "No. iCapOS is a technology and diligence platform — not a broker-dealer, placement agent, or investment adviser. Investor actions on the platform are non-binding indications of interest, not commitments or transactions.",
   },
   {
-    q: "How does the founder trial work?",
-    a: "Founders start with a 3-day trial that includes full Professional access and requires no credit card. After the trial, you can upgrade to Basic or Professional at any time.",
+    q: "How much does iCapOS cost for founders?",
+    a: "The founder account is free, forever — every tool, including the Capital Readiness Rating, valuation, data room, and e-learning, is included at no cost with no credit card. You only pay when you're ready to reach investors: paid plans (Basic, Professional, Managed IR) add distribution — revealing your matches and sending your one-pager.",
   },
   {
     q: "What do investors get?",

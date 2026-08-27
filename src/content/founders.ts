@@ -19,7 +19,7 @@ export const founders = {
       { h: "A matched investor list", p: "Your company profile is scored against investor mandates — sector, stage, check size, geography — and ranked by Investor Fit Score. You see every name and the reason it matched." },
       { h: "Distribution, done for you", p: "We send your one-pager or investor newsletter to the matched list on your behalf. Responses go directly to your inbox — iCapOS never sits between you and an interested investor." },
       { h: "The conference stage", p: "Professional-plan founders get a live presentation slot at the monthly iCFO Investment Conference. Basic-plan founders are spotlighted in the 60-second pitch reel broadcast to the network." },
-      { h: "The full toolset", p: "Readiness rating and re-scoring, investor CRM, data room, materials builder, campaign tracking and the AI assistant — all included on both plans. Nothing is held back for the higher tier." },
+      { h: "The full toolset", p: "Readiness rating and re-scoring, investor CRM, data room, materials builder, campaign tracking and the AI assistant — free for everyone, forever. Paid plans only add distribution to investors; nothing is held back from the free tier." },
     ],
   },
 

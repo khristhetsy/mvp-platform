@@ -85,10 +85,12 @@ export default async function BillingPage() {
             <dt className="font-medium text-slate-900">Signup plan selection</dt>
             <dd className="mt-1">{requestedPlan ? PLAN_LABELS[requestedPlan] : "—"}</dd>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <dt className="font-medium text-slate-900">Trial ends</dt>
-            <dd className="mt-1">{formatDate(subscription.trial_ends_at)}</dd>
-          </div>
+          {subscription.plan_type === "founder_trial" ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <dt className="font-medium text-slate-900">Full access ends</dt>
+              <dd className="mt-1">{formatDate(subscription.trial_ends_at)}</dd>
+            </div>
+          ) : null}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <dt className="font-medium text-slate-900">Payments</dt>
             <dd className="mt-1">{isPaymentsEnabled() ? "Enabled" : "Not connected yet"}</dd>
@@ -104,8 +106,8 @@ export default async function BillingPage() {
             }`}
           >
             {daysLeft > 0
-              ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} remaining in your founder trial.`
-              : "Your founder trial has expired. Premium features are locked until you upgrade."}
+              ? `You have full access — including investor distribution — for ${daysLeft} more day${daysLeft === 1 ? "" : "s"}. After that every tool stays free; a plan only adds distribution.`
+              : "Every founder tool stays free. Choose a plan when you're ready to reach investors."}
           </p>
         ) : null}
 

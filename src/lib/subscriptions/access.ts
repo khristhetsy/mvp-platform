@@ -148,14 +148,14 @@ export function canAccessFeature(
   if (subscription.plan_type === "founder_trial" && isTrialExpired(subscription, now)) {
     return {
       allowed: false,
-      reason: "Your free trial has expired. Upgrade to Professional to continue using premium founder features.",
+      reason: "Every founder tool stays free. This feature reaches investors — add a distribution plan to turn it on.",
     };
   }
 
   if (subscription.plan_type === "founder_basic") {
     return {
       allowed: false,
-      reason: "Upgrade to Professional to access investor tools, capital raise, eLearning, and analytics.",
+      reason: "Upgrade to Professional for more distribution — up to 100 matched investors, brokered intros, and a monthly presentation slot.",
     };
   }
 

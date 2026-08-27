@@ -5,7 +5,7 @@ import { StartForm } from "@/components/marketing-site/StartForm";
 export const metadata: Metadata = {
   title: "Get started — iCapOS",
   description:
-    "Create your iCapOS account. The Capital Readiness Rating is free and needs no card — you only choose a plan when you're ready to start distribution.",
+    "Create your free iCapOS account. Every tool is free, forever — no card, no trial. You only choose a plan when you're ready to reach investors.",
   alternates: { canonical: "/start" },
 };
 

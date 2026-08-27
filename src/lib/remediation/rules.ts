@@ -280,7 +280,7 @@ export function buildRemediationTaskDrafts(input: {
       source_key: "readiness:incomplete_onboarding",
       category: "readiness",
       title: "Complete founder onboarding",
-      description: `Onboarding is ${input.onboardingPercent}% complete. Finishing onboarding improves investor visibility during your trial.`,
+      description: `Onboarding is ${input.onboardingPercent}% complete. Finishing onboarding improves your investor visibility.`,
       priority: "medium",
       recommended_action: "Continue onboarding to strengthen your investor-ready profile.",
       related_feature: "/founder/onboarding",

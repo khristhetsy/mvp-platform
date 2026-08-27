@@ -25,9 +25,9 @@ export async function maybeNotifyTrialStatus(profileId: string, subscription: Su
       await createNotification({
         recipientUserId: profileId,
         type: "trial_expired",
-        title: "Free trial expired",
+        title: "Full-access period ended",
         message:
-          "Your founder trial has ended. Upgrade to Professional to restore premium workspace features.",
+          "Your founder tools stay free, forever. Add a plan whenever you're ready to reach investors — reveal your matches and send your one-pager.",
         entityType: "subscription",
         entityId: subscription.id,
       });
@@ -56,11 +56,11 @@ export async function maybeNotifyTrialStatus(profileId: string, subscription: Su
     await createNotification({
       recipientUserId: profileId,
       type: "trial_ending_soon",
-      title: "Trial ending soon",
+      title: "Full access ending soon",
       message:
         daysLeft <= 0
-          ? "Your founder trial ends today. Upgrade to keep access to premium features."
-          : `Your founder trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Upgrade to keep premium features.`,
+          ? "Your full-access period ends today. Your tools stay free — add a plan to keep reaching investors."
+          : `Your full-access period ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Your tools stay free — add a plan to keep reaching investors.`,
       entityType: "subscription",
       entityId: subscription.id,
     });

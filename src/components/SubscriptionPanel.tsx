@@ -50,13 +50,13 @@ export function SubscriptionLockedPanel({
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{t("plan_upgrade_required")}</p>
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-        {trialExpired ? "Your free trial has expired" : "This feature is locked on your current plan"}
+        {trialExpired ? "Your full-access period has ended" : "This feature needs a distribution plan"}
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
         {reason ??
           (trialExpired
-            ? "Upgrade to continue using premium founder features. Core tools and settings remain available."
-            : "Upgrade your plan to access this founder workspace feature.")}
+            ? "Every founder tool stays free — nothing is locked. This feature reaches investors, so it needs a distribution plan."
+            : "Every founder tool is free. This feature reaches investors — choose a plan to turn distribution on.")}
       </p>
       <div className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 md:grid-cols-2">
         <p>
@@ -113,7 +113,7 @@ export function SubscriptionPlanBadge({
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
       <p className="font-semibold text-slate-900">{PLAN_LABELS[subscription.plan_type]}</p>
       <p className="mt-0.5">{subscriptionStatusLabel(subscription.subscription_status)}</p>
-      {daysLeft != null ? <p className="mt-0.5 text-slate-500">{daysLeft} day trial left</p> : null}
+      {daysLeft != null ? <p className="mt-0.5 text-slate-500">{daysLeft} day{daysLeft === 1 ? "" : "s"} full access left</p> : null}
       <Link href="/upgrade" className="mt-1 inline-block text-indigo-600 hover:text-indigo-500">
         Upgrade
       </Link>
@@ -172,10 +172,12 @@ export function FounderSubscriptionSettingsCard({
           <dt className="font-medium text-slate-900">Signup plan selection</dt>
           <dd>{requestedPlan ? PLAN_LABELS[requestedPlan] : "—"}</dd>
         </div>
-        <div>
-          <dt className="font-medium text-slate-900">Trial ends</dt>
-          <dd>{formatDate(subscription.trial_ends_at)}</dd>
-        </div>
+        {subscription.plan_type === "founder_trial" ? (
+          <div>
+            <dt className="font-medium text-slate-900">Full access ends</dt>
+            <dd>{formatDate(subscription.trial_ends_at)}</dd>
+          </div>
+        ) : null}
         <div>
           <dt className="font-medium text-slate-900">Current period</dt>
           <dd>
@@ -186,8 +188,8 @@ export function FounderSubscriptionSettingsCard({
       {daysLeft != null ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {daysLeft > 0
-            ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} remaining in your founder trial.`
-            : "Your founder trial has expired. Premium features are locked until you upgrade."}
+            ? `You have full access — including investor distribution — for ${daysLeft} more day${daysLeft === 1 ? "" : "s"}. After that every tool stays free; a plan only adds distribution.`
+            : "Every founder tool stays free. Choose a plan when you're ready to reach investors."}
         </p>
       ) : null}
       <p className="mt-4 text-xs text-slate-500">

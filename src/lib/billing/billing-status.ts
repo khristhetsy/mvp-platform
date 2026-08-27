@@ -62,9 +62,9 @@ export function getBillingLifecycleStatus(
 export function getBillingLifecycleLabel(status: BillingLifecycleStatus) {
   switch (status) {
     case "trial_active":
-      return "Trial active";
+      return "Full access";
     case "trial_expired":
-      return "Trial expired";
+      return "Distribution off";
     case "paid_active":
       return "Paid subscription active";
     case "paid_pending_activation":
@@ -87,9 +87,9 @@ export function getBillingStatusMessage(
 ) {
   switch (lifecycle) {
     case "trial_active":
-      return "Your founder trial includes full Professional access. Billing is not connected yet.";
+      return "You have full access right now, including investor distribution. Every founder tool is free forever; billing isn't connected yet.";
     case "trial_expired":
-      return "Your trial has ended. Core founder tools remain available; premium features require an upgrade.";
+      return "Every founder tool stays free. To reach investors — reveal your matches and send your one-pager — choose a distribution plan.";
     case "paid_pending_activation":
       return requestedPlan
         ? `You selected ${PLAN_LABELS[requestedPlan]}. Our team will activate billing when checkout goes live.`
@@ -101,7 +101,7 @@ export function getBillingStatusMessage(
     case "internal":
       return "Internal iCapOS access — no billing restrictions.";
     case "subscription_inactive":
-      return "Your subscription is inactive. Request an upgrade to restore premium access.";
+      return "Every founder tool stays free. Choose a plan when you want to turn investor distribution back on.";
     default:
       return "Billing status available in your account settings.";
   }

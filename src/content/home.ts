@@ -114,7 +114,7 @@ export const home = {
       points: [
         "Up to 25 or up to 100 matched investors per month",
         "Spotlight or a live slot at the iCFO Investment Conference",
-        "Every iCapOS tool included on both plans",
+        "Every iCapOS tool free, forever — plans only add distribution",
       ],
       cta: { label: "For founders", href: "/founders" },
     },

@@ -71,7 +71,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
     if (progress.percent >= 60) {
       return "You are close to institutional readiness. Complete remaining steps to improve investor visibility.";
     }
-    return "Complete your profile to unlock stronger investor visibility and improve readiness during your trial.";
+    return "Complete your profile to unlock stronger investor visibility and improve your readiness.";
   }, [progress.isComplete, progress.percent]);
 
   async function saveStep(step: OnboardingStepId, advance = true) {
@@ -372,8 +372,8 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               Review status: <strong>{company.review_status ?? company.status ?? "draft"}</strong>
             </p>
             <p className="text-sm text-slate-600">
-              Complete your profile to unlock stronger investor visibility. iCapOS preserves your onboarding data
-              even after trial expiration.
+              Complete your profile to unlock stronger investor visibility. Your onboarding data is always yours —
+              your account and tools are free, with no expiry.
             </p>
           </div>
         ) : null}
