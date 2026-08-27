@@ -173,33 +173,33 @@ export function PipelineClient() {
             <span style={{ fontSize: 12.5, fontWeight: 600 }}>Stages · {pipeline?.name}</span>
             <button onClick={addStage} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>+ Add stage</button>
           </div>
-          {stages.map((s, i) => (
-            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)", width: 18 }}>{i + 1}</span>
-              <span style={{ flex: 1, fontWeight: 500 }}>{s.name}</span>
-              <select
-                value={s.sequence_id ?? ""}
-                onChange={(e) => call(`/api/sales/stages/${s.id}`, "PATCH", { sequenceId: e.target.value || null })}
-                disabled={busy}
-                title="Auto-enroll a deal's contact into this sequence when it enters this stage"
-                style={{ fontSize: 11, border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 6px", maxWidth: 160, color: s.sequence_id ? "#1A6CE4" : "var(--muted-foreground)", background: "#fff", cursor: "pointer" }}
-              >
-                <option value="">No sequence</option>
-                {sequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.name}</option>)}
-              </select>
-              <button onClick={() => call(`/api/sales/stages/${s.id}`, "PATCH", { isWon: !s.is_won })} disabled={busy} style={{ fontSize: 10.5, fontWeight: 600, color: s.is_won ? "#0F6E56" : "var(--muted-foreground)", background: s.is_won ? "#E1F5EE" : "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Won stage</button>
-              <button onClick={() => moveStage(s, -1)} disabled={busy || i === 0} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-              <button onClick={() => moveStage(s, 1)} disabled={busy || i === stages.length - 1} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === stages.length - 1 ? 0.3 : 1 }}>↓</button>
-              <button onClick={() => renameStage(s)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-pencil" aria-hidden="true" /></button>
-              {(() => {
-                const wonCount = stages.filter((x) => x.is_won).length;
-                const reason = stages.length <= 1 ? "A pipeline needs at least one stage" : (s.is_won && wonCount <= 1 ? "Keep at least one Won stage" : null);
-                return (
-                  <button onClick={() => { setDelErr(null); setReassignTo(""); setDelTarget(s); }} disabled={busy || reason !== null} title={reason ?? "Delete stage"} style={{ background: "none", border: "none", cursor: reason ? "not-allowed" : "pointer", color: "#A32D2D", fontSize: 12, opacity: reason ? 0.3 : 1 }}><i className="ti ti-trash" aria-hidden="true" /></button>
-                );
-              })()}
+          {stages.map((s, i) => {
+            const wonCount = stages.filter((x) => x.is_won).length;
+            const reason = stages.length <= 1 ? "A pipeline needs at least one stage" : (s.is_won && wonCount <= 1 ? "Keep at least one Won stage" : null);
+            return (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, rowGap: 8, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }}>{i + 1}</span>
+              <span style={{ flex: "1 1 120px", minWidth: 0, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={s.name}>{s.name}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+                <select
+                  value={s.sequence_id ?? ""}
+                  onChange={(e) => call(`/api/sales/stages/${s.id}`, "PATCH", { sequenceId: e.target.value || null })}
+                  disabled={busy}
+                  title="Auto-enroll a deal's contact into this sequence when it enters this stage"
+                  style={{ fontSize: 11, border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 6px", maxWidth: 150, color: s.sequence_id ? "#1A6CE4" : "var(--muted-foreground)", background: "#fff", cursor: "pointer" }}
+                >
+                  <option value="">No sequence</option>
+                  {sequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.name}</option>)}
+                </select>
+                <button type="button" onClick={() => call(`/api/sales/stages/${s.id}`, "PATCH", { isWon: !s.is_won })} disabled={busy} style={{ fontSize: 10.5, fontWeight: 600, color: s.is_won ? "#0F6E56" : "var(--muted-foreground)", background: s.is_won ? "#E1F5EE" : "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Won stage</button>
+                <button type="button" aria-label="Move up" onClick={() => moveStage(s, -1)} disabled={busy || i === 0} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === 0 ? 0.3 : 1 }}>↑</button>
+                <button type="button" aria-label="Move down" onClick={() => moveStage(s, 1)} disabled={busy || i === stages.length - 1} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", opacity: i === stages.length - 1 ? 0.3 : 1 }}>↓</button>
+                <button type="button" aria-label="Rename stage" title="Rename stage" onClick={() => renameStage(s)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 13 }}><i className="ti ti-pencil" aria-hidden="true" /></button>
+                <button type="button" aria-label="Delete stage" onClick={() => { setDelErr(null); setReassignTo(""); setDelTarget(s); }} disabled={busy || reason !== null} title={reason ?? "Delete stage"} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, background: reason ? "none" : "#FCEBEB", border: reason ? "none" : "0.5px solid #F3C6C6", borderRadius: 6, cursor: reason ? "not-allowed" : "pointer", color: "#A32D2D", fontSize: 13, opacity: reason ? 0.3 : 1 }}><i className="ti ti-trash" aria-hidden="true" /></button>
+              </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
