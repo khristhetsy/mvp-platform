@@ -48,10 +48,35 @@ export function aggregateExactLabels(rows: Array<{ extra?: unknown }>): Map<stri
   return byLabel;
 }
 
+/**
+ * Pick the best spelling among case-only variants of the same option value
+ * (e.g. "pre-series A" vs "Pre-Series A"): prefer an uppercase first letter,
+ * then more uppercase letters overall, then alphabetical order for stability.
+ */
+function preferredSpelling(a: string, b: string): string {
+  const upperFirst = (s: string) => /^[A-Z]/.test(s.trim());
+  if (upperFirst(a) !== upperFirst(b)) return upperFirst(a) ? a : b;
+  const uppers = (s: string) => (s.match(/[A-Z]/g) ?? []).length;
+  if (uppers(a) !== uppers(b)) return uppers(a) > uppers(b) ? a : b;
+  return a.localeCompare(b) <= 0 ? a : b;
+}
+
+/** Collapse case-only duplicates (keyed by trimmed+lowercased value) to one
+ *  canonical spelling, then return sorted. Stored contact values are unaffected. */
+function dedupeCanonical(set: Set<string>): string[] {
+  const canonical = new Map<string, string>();
+  for (const v of set) {
+    const key = v.trim().toLowerCase();
+    const existing = canonical.get(key);
+    canonical.set(key, existing ? preferredSpelling(existing, v) : v);
+  }
+  return Array.from(canonical.values()).sort((a, b) => a.localeCompare(b));
+}
+
 /** Build the final option map: exact labels + canonical Odoo labels (keyword-matched). */
 export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptions {
   const out: FieldOptions = {};
-  const sort = (set: Set<string>) => Array.from(set).sort((a, b) => a.localeCompare(b));
+  const sort = (set: Set<string>) => dedupeCanonical(set);
 
   // 1) Exact synced labels resolve directly.
   for (const [label, set] of byLabel) out[label] = sort(set);
