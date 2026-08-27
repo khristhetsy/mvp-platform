@@ -18,6 +18,10 @@ type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
+// Profile fields that must always be a plain text box, never a select dropdown —
+// even when Odoo reports selection options for them. These are free-form by
+// nature (a written note, a referral name, a management-team description).
+const FREE_TEXT_FIELD_LABELS = new Set(["Management team", "Note", "Request", "Pitch frame to use", "If other, referred you"]);
 // Curated option lists for the structured contact fields (rendered as dropdowns).
 // Any existing/legacy value that isn't in a list is preserved and pinned on top.
 const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];
@@ -738,7 +742,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               key={f.saveKey}
                               label={f.label}
                               rating={rating}
-                              options={fieldOptions[f.saveKey] ?? []}
+                              options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
                               editing={editingKey === f.saveKey}
