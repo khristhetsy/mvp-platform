@@ -44,12 +44,8 @@ function groupByLocalDay(slots: string[]): { day: string; items: { iso: string; 
   return Array.from(map.entries()).map(([day, items]) => ({ day, items }));
 }
 
-type DemoMode = "demo" | "managed_ir";
-
 export function DemoDialog() {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<DemoMode>("demo");
-  const [host, setHost] = useState<string | null>(null);
   const [role, setRole] = useState<Role>("founder");
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -60,14 +56,7 @@ export function DemoDialog() {
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const openHandler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { mode?: string; host?: string } | undefined;
-      const m: DemoMode = detail?.mode === "managed_ir" ? "managed_ir" : "demo";
-      setMode(m);
-      setHost(detail?.host ?? null);
-      if (m === "managed_ir") setRole("founder"); // Managed IR is founder-facing
-      setOpen(true); setDone(null); setError(null); setSelected(null);
-    };
+    const openHandler = () => { setOpen(true); setDone(null); setError(null); setSelected(null); };
     window.addEventListener("icapos:open-demo", openHandler);
     return () => window.removeEventListener("icapos:open-demo", openHandler);
   }, []);
@@ -149,7 +138,7 @@ export function DemoDialog() {
       <div className="absolute inset-0 bg-site-navy/60 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden="true" />
       <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-site-line bg-white shadow-2xl">
         <div className="flex items-center justify-between bg-site-navy px-5 py-4 text-white">
-          <h2 id="demo-title" className="font-site-display text-base font-bold">{mode === "managed_ir" ? `Schedule a meeting${host ? ` with ${host}` : ""}` : "Book a 30-minute walkthrough"}</h2>
+          <h2 id="demo-title" className="font-site-display text-base font-bold">Book a 30-minute walkthrough</h2>
           <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-white/70 hover:text-white"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
 
@@ -162,33 +151,18 @@ export function DemoDialog() {
           </div>
         ) : (
           <form onSubmit={submit} className="flex-1 space-y-4 overflow-y-auto p-5">
-            {mode === "managed_ir" ? (
-              <div className="rounded-xl border border-site-line bg-site-paper p-4">
-                <div className="font-site-mono text-[11px] uppercase tracking-wide text-site-muted">Managed IR — what we&apos;ll cover</div>
-                <ul className="mt-2 space-y-1.5">
-                  {[
-                    "Your curated investor list and how we build it",
-                    "How we run distribution of your materials for you",
-                    "Post-event follow-up, timeline, and the 3-month minimum",
-                  ].map((p) => (<li key={p} className="flex gap-2 text-[13px] leading-5 text-site-ink"><span className="text-site-blue">•</span>{p}</li>))}
-                </ul>
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2" role="radiogroup" aria-label="I am a">
-                  {(["founder", "investor"] as Role[]).map((r) => (
-                    <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => setRole(r)} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium capitalize transition-colors ${role === r ? "border-site-blue bg-site-blue-pale text-site-blue" : "border-site-line text-site-ink hover:border-site-blue-hi"}`}>{r}</button>
-                  ))}
-                </div>
+            <div className="flex gap-2" role="radiogroup" aria-label="I am a">
+              {(["founder", "investor"] as Role[]).map((r) => (
+                <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => setRole(r)} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium capitalize transition-colors ${role === r ? "border-site-blue bg-site-blue-pale text-site-blue" : "border-site-line text-site-ink hover:border-site-blue-hi"}`}>{r}</button>
+              ))}
+            </div>
 
-                <div className="rounded-xl border border-site-line bg-site-paper p-4">
-                  <div className="font-site-mono text-[11px] uppercase tracking-wide text-site-muted">{AGENDAS[role].title} — what we&apos;ll cover</div>
-                  <ul className="mt-2 space-y-1.5">
-                    {AGENDAS[role].points.map((p) => (<li key={p} className="flex gap-2 text-[13px] leading-5 text-site-ink"><span className="text-site-blue">•</span>{p}</li>))}
-                  </ul>
-                </div>
-              </>
-            )}
+            <div className="rounded-xl border border-site-line bg-site-paper p-4">
+              <div className="font-site-mono text-[11px] uppercase tracking-wide text-site-muted">{AGENDAS[role].title} — what we&apos;ll cover</div>
+              <ul className="mt-2 space-y-1.5">
+                {AGENDAS[role].points.map((p) => (<li key={p} className="flex gap-2 text-[13px] leading-5 text-site-ink"><span className="text-site-blue">•</span>{p}</li>))}
+              </ul>
+            </div>
 
             <div>
               <div className="text-[13px] font-medium text-site-navy">Pick a time <span className="font-site-mono text-site-muted">(your local timezone)</span></div>
@@ -216,11 +190,11 @@ export function DemoDialog() {
             <Field name="email" label="Work email" type="email" required />
             <Field name="company" label="Company (optional)" />
             <label className="block text-[13px] text-site-muted">What would you like to cover? (optional)
-              <textarea key={mode} name="topic" rows={2} maxLength={500} defaultValue={mode === "managed_ir" ? "Managed IR — done-for-you investor relations" : ""} className="mt-1 w-full rounded-lg border border-site-line bg-white px-3 py-2 text-sm text-site-ink outline-none focus:border-site-blue-hi" />
+              <textarea name="topic" rows={2} maxLength={500} className="mt-1 w-full rounded-lg border border-site-line bg-white px-3 py-2 text-sm text-site-ink outline-none focus:border-site-blue-hi" />
             </label>
 
             {error ? <p className="rounded-lg bg-site-amber/10 px-3 py-2 text-[13px] text-site-amber" role="status">{error}</p> : null}
-            <button type="submit" disabled={busy} className="w-full rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi disabled:opacity-60">{busy ? "Requesting…" : mode === "managed_ir" ? "Request meeting" : "Request walkthrough"}</button>
+            <button type="submit" disabled={busy} className="w-full rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi disabled:opacity-60">{busy ? "Requesting…" : "Request walkthrough"}</button>
             <p className="font-site-mono text-[10px] leading-4 text-site-muted/70">The walkthrough is optional — everything on iCapOS is self-serve without one. We&apos;ll confirm by email.</p>
           </form>
         )}

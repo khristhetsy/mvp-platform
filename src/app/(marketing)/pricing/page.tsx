@@ -3,7 +3,6 @@ import Link from "next/link";
 import { pricing } from "@/content/pricing";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
-import { TalkToUsButton } from "@/components/marketing-site/TalkToUsButton";
 import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 
 export const metadata: Metadata = {
@@ -59,11 +58,7 @@ export default function PricingPage() {
               <ul className="mt-5 space-y-2.5">
                 {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
               </ul>
-              {"contactSales" in t && t.contactSales ? (
-                <TalkToUsButton label={t.cta.label} className={`mt-6 block w-full rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`} />
-              ) : (
-                <Link href={t.cta.href} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
-              )}
+              <Link href={t.cta.href} {...("contactSales" in t && t.contactSales ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
             </div>
           ))}
         </div>

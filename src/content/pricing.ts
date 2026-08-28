@@ -67,7 +67,7 @@ export const pricing = {
         "Post-conference follow-up run for you",
         "Capacity-capped — talk to us",
       ],
-      cta: { label: "Talk to us", href: "/start?plan=managed_ir" },
+      cta: { label: "Talk to us", href: "/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" },
       featured: false,
       contactSales: true,
     },
