@@ -7,10 +7,10 @@
  */
 export const home = {
   hero: {
-    eyebrow: "Investor relations, run as software",
-    title: "Get your company in front of investors whose mandate fits.",
-    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. You don't need a polished deck to start.",
-    primaryCta: { label: "Run your free Readiness Rating", href: "/readiness" },
+    eyebrow: "Investor relations from iCFO Capital",
+    title: "Get in front of matched investors from a network built over 16 years.",
+    sub: "iCapOS is investor relations from iCFO Capital. We put your company in front of matched investors from a 6,000+ network built over 16 years — matched on sector, stage, check size and geography. Every company is rated first; that's why the network opens. Run the outreach yourself, or we run it for you.",
+    primaryCta: { label: "See your score band", href: "/assessment" },
     secondaryCta: { label: "See plans", href: "/pricing" },
     compliance:
       "iCapOS is a software platform. It is not a broker-dealer, funding portal, investment adviser, or placement agent, and it does not raise capital or guarantee funding.",
@@ -37,9 +37,9 @@ export const home = {
   howItWorks: {
     eyebrow: "How it works",
     title: "Three steps, and we run two of them.",
-    sub: "The sequence matters: we rate you first, so you find the weak spots before an investor does.",
+    sub: "The sequence matters: every company is rated first. The network takes our calls because nothing unrated goes out.",
     steps: [
-      { n: "01", h: "We rate your readiness", p: "The Capital Readiness Rating scores your company across the dimensions investors screen on, and tells you exactly what to fix. Free, and you can re-run it whenever something changes." },
+      { n: "01", h: "We rate your company", p: "The Capital Readiness Rating is investor-facing quality control — it's the reason the door opens. It scores your company across the dimensions investors screen on and shows what to sharpen before anything goes out." },
       { n: "02", h: "We build your investor list", p: "Your profile is matched against investor mandates in the iCFO network. Every match carries an Investor Fit Score, so you can see why each name is on the list." },
       { n: "03", h: "We send on your behalf", p: "Your one-pager or investor newsletter goes out to the matched list, on a cadence each investor has agreed to accept. Replies come straight back to you." },
     ],
@@ -84,7 +84,7 @@ export const home = {
       "Most platforms want you arriving with a finished deck, a clean cap table and a three-statement model. If you had those, you wouldn't need much help.",
       "Readiness is what iCapOS produces, not what it requires. Run the rating with whatever you have today — a rough deck, a spreadsheet, an idea of the raise — and you'll get back a specific, ordered list of what to fix before investors see it.",
     ],
-    cta: { label: "Run the free rating", href: "/readiness" },
+    cta: { label: "See your score band", href: "/assessment" },
     cardTitle: "Capital Readiness Rating",
     cardScore: "0",
     cardBand: "Developing",
@@ -110,11 +110,11 @@ export const home = {
     title: "Built for both ends of the table.",
     founders: {
       h: "Founders",
-      p: "Get rated, get matched, get your materials in front of investors whose mandate actually fits. Two self-serve plans, no sales call, cancel any time.",
+      p: "Get rated, get matched, get in front of investors whose mandate actually fits. Paid plans from $499/mo — run the outreach yourself, or we run it for you.",
       points: [
         "Up to 25 or up to 100 matched investors per month",
         "Spotlight or a live slot at the iCFO Investment Conference",
-        "Every iCapOS tool free, forever — plans only add distribution",
+        "All tools included — CRR, valuation, data room, e-learning, AI DD",
       ],
       cta: { label: "For founders", href: "/founders" },
     },
@@ -169,8 +169,8 @@ export const home = {
 
   closing: {
     pre: "How iCFO has run the investor side for sixteen years",
-    title: "See where you stand before you spend a dollar.",
-    sub: "The Capital Readiness Rating is free. No call, no card.",
-    cta: { label: "Run your free rating", href: "/readiness" },
+    title: "See your score band, then get in front of matched investors.",
+    sub: "The assessment shows your score band in minutes — no account needed. Paid plans from $499/mo put you in front of matched investors in the iCFO network.",
+    cta: { label: "See your score band", href: "/assessment" },
   },
 } as const;

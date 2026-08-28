@@ -8,7 +8,7 @@ export const about = {
     eyebrow: "About us",
     title: "Sixteen years of investor relations, now running as software.",
     sub: "iCFO Capital Global has spent sixteen years doing investor relations the manual way — building an investor network, running conferences, and getting companies in front of the right people. iCapOS is that same work, systematized.",
-    primaryCta: { label: "Run your free rating", href: "/readiness" },
+    primaryCta: { label: "See your score band", href: "/assessment" },
     secondaryCta: { label: "See our events", href: "/events" },
   },
   statBand: {

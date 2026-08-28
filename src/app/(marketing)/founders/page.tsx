@@ -7,7 +7,7 @@ import { OnePagerDrafter } from "@/components/marketing-site/OnePagerDrafter";
 export const metadata: Metadata = {
   title: "For founders — iCapOS",
   description:
-    "The investor legwork, run for you. iCapOS rates your readiness, builds your matched investor list, distributes your materials, and gets you on the conference agenda. Self-serve, no sales call. Start free.",
+    "Investor relations from iCFO Capital. Get in front of matched investors from a 6,000+ network built over 16 years. Every company is rated first — that's why the network opens. Run the outreach yourself, or we run it for you. Paid plans from $499/mo.",
   alternates: { canonical: "/founders" },
 };
 

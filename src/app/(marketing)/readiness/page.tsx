@@ -7,7 +7,7 @@ import { ReadinessAnalyzer } from "@/components/marketing-site/ReadinessAnalyzer
 export const metadata: Metadata = {
   title: "Capital Readiness Rating — iCapOS",
   description:
-    "A free, structured readiness score across five dimensions investors screen on, with an ordered list of what to fix. Run it with whatever you have today — readiness is what iCapOS produces, not what it requires.",
+    "The Capital Readiness Rating is investor-facing quality control — every company is rated first, which is why the iCFO network opens. A structured score across five dimensions investors screen on, with an ordered list of what to sharpen. See your score band first — no account needed.",
   alternates: { canonical: "/readiness" },
 };
 

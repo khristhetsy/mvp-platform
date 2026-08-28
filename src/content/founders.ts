@@ -6,9 +6,9 @@
 export const founders = {
   hero: {
     eyebrow: "For founders",
-    title: "The investor legwork, run for you.",
-    sub: "You keep running the company. iCapOS rates your readiness, builds your matched investor list, sends your materials, and gets you onto the conference agenda. Both plans are fully self-serve — nothing requires a sales call. A demo is available if you want one.",
-    primaryCta: { label: "Start with the free rating", href: "/readiness" },
+    title: "Get in front of matched investors — run it yourself, or we run it for you.",
+    sub: "iCapOS is investor relations from iCFO Capital. We put your company in front of matched investors from a 6,000+ network built over 16 years. Every company is rated first — that's why the network opens. Run the outreach yourself, or we run it for you.",
+    primaryCta: { label: "See your score band", href: "/assessment" },
     secondaryCta: { label: "Compare plans", href: "/pricing" },
   },
 
@@ -19,7 +19,7 @@ export const founders = {
       { h: "A matched investor list", p: "Your company profile is scored against investor mandates — sector, stage, check size, geography — and ranked by Investor Fit Score. You see every name and the reason it matched." },
       { h: "Distribution, done for you", p: "We send your one-pager or investor newsletter to the matched list on your behalf. Responses go directly to your inbox — iCapOS never sits between you and an interested investor." },
       { h: "The conference stage", p: "Professional-plan founders get a live presentation slot at the monthly iCFO Investment Conference. Basic-plan founders are spotlighted in the 60-second pitch reel broadcast to the network." },
-      { h: "The full toolset", p: "Readiness rating and re-scoring, investor CRM, data room, materials builder, campaign tracking and the AI assistant — free for everyone, forever. Paid plans only add distribution to investors; nothing is held back from the free tier." },
+      { h: "The full toolset", p: "Readiness rating and re-scoring, investor CRM, data room, materials builder, campaign tracking and the AI assistant — all included in every plan. Plans differ by how many matched investors you reach and who runs the outreach, not by which tools you get." },
     ],
   },
 
@@ -46,7 +46,7 @@ export const founders = {
       "Take the conversations that come back",
     ],
     note: "That's the whole ask. No list-building, no mail-merge, no chasing, no working out who to contact in what order — and no calls with us to make any of it happen.",
-    cta: { label: "Start free", href: "/start" },
+    cta: { label: "See your score band", href: "/assessment" },
   },
 
   nothing: {
@@ -56,7 +56,7 @@ export const founders = {
       "Every other platform hands you a checklist before it will help. That's backwards — if you already had a polished deck, a three-statement model and a clean cap table, you wouldn't need much from us.",
       "Readiness is what iCapOS produces. Turn up with a half-finished deck, a spreadsheet, or just a clear head about what you're building, and we take it from there.",
     ],
-    cta: { label: "Start with nothing — it's free", href: "/readiness" },
+    cta: { label: "See your score band", href: "/assessment" },
     items: [
       { h: "A pitch deck", p: "Not required. Tell us what the business does and the platform drafts an investor-ready summary you edit, not a blank page you stare at." },
       { h: "A financial model", p: "Not required. The rating shows you exactly which assumptions investors will push on, and the templates are built into the platform." },
@@ -107,8 +107,8 @@ export const founders = {
 
   closing: {
     title: "More meetings, faster, with fewer diligence deaths.",
-    sub: "That's the claim. Not “you'll raise” — nobody can promise that. Start with the free rating and see what's in your way.",
-    primaryCta: { label: "Run your free rating", href: "/readiness" },
+    sub: "That's the claim. Not “you'll raise” — nobody can promise that. See your score band and where you stand with matched investors.",
+    primaryCta: { label: "See your score band", href: "/assessment" },
     secondaryCta: { label: "See pricing", href: "/pricing" },
     // Required cross-link (§3): Founders → Events, in the closing CTA.
     eventsCta: { label: "See the iCFO events", href: "/events" },

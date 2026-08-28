@@ -46,7 +46,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
   founders: {
     label: "founders",
     title: "What do you want to sort out for your raise?",
-    sub: "Ask how readiness, matching, and distribution work — then start free. No polished deck required, and nothing here offers or sells securities.",
+    sub: "Ask how rating, matching, and distribution get you in front of matched investors. Every company is rated first — that's why the network opens. Nothing here offers or sells securities.",
     placeholder: "Ask about getting investor-ready…",
     openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my CRR scored?", "How do I get started?"],
   },
@@ -60,14 +60,14 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
   pricing: {
     label: "pricing",
     title: "Which plan fits your raise?",
-    sub: "Ask what's included or how self-serve works. The readiness rating is free — you only choose a plan when you're ready to distribute.",
+    sub: "Ask what's included or how self-serve works. Paid plans start at $499/mo — see your score band free first, no account needed.",
     placeholder: "Ask about plans and what's included…",
     openers: ["What's the difference between the plans?", "Is it really self-serve?", "Can I book a demo?", "How do I get started?"],
   },
   readiness: {
     label: "readiness",
     title: "Want to know where you stand?",
-    sub: "Ask what the rating measures and how to run it. It's free, and it's what iCapOS produces — not what it requires.",
+    sub: "Ask what the rating measures and how it works. It's investor-facing quality control — the reason the network opens. See your score band free first, no account needed.",
     placeholder: "Ask about the readiness rating…",
     openers: ["What does the rating measure?", "How is it scored?", "How long does it take?", "How do I get started?"],
   },
@@ -81,8 +81,8 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
 };
 
 const CARD_META: Record<Exclude<Card, "none">, { title: string; body: string; href?: string; cta: string; demo?: boolean }> = {
-  readiness: { title: "Capital Readiness Rating", body: "Free, structured, and scored across five dimensions investors screen on.", href: "/readiness", cta: "Open the rating" },
-  pricing: { title: "Plans & pricing", body: "Two self-serve plans. The readiness rating is free with no card.", href: "/pricing", cta: "See pricing" },
+  readiness: { title: "Capital Readiness Rating", body: "Investor-facing quality control, scored across five dimensions investors screen on — the reason the network opens.", href: "/readiness", cta: "Open the rating" },
+  pricing: { title: "Plans & pricing", body: "Paid plans from $499/mo for access to matched investors. See your score band free first — no account needed.", href: "/pricing", cta: "See pricing" },
   demo: { title: "Book a 30-minute demo", body: "Optional walkthrough — everything is self-serve without one.", cta: "Book a demo", demo: true },
   events: { title: "iCFO events", body: "Expos and conferences where matched founders meet investors in person.", href: "/events", cta: "See events" },
   match: { title: "How matching works", body: "Mandate-based fit scoring over rated companies — set yours and watch the list rebuild.", href: "/investors", cta: "Explore matching" },

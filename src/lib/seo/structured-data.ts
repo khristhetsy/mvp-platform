@@ -35,7 +35,7 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "How much does iCapOS cost for founders?",
-    a: "The founder account is free, forever — every tool, including the Capital Readiness Rating, valuation, data room, and e-learning, is included at no cost with no credit card. You only pay when you're ready to reach investors: paid plans (Basic, Professional, Managed IR) add distribution — revealing your matches and sending your one-pager.",
+    a: "iCapOS is investor relations from iCFO Capital — access to matched investors from a 6,000+ network built over 16 years. Paid plans start at $499/mo (Basic), $1,000/mo (Professional), and $3,500/mo (Managed IR), with all tools included at every rung. There is no free tier and no free trial. You can take a free assessment first to see your score band — no account needed.",
   },
   {
     q: "What do investors get?",
