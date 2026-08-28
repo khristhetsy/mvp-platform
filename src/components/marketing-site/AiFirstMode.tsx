@@ -60,7 +60,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
   pricing: {
     label: "pricing",
     title: "Which plan fits your raise?",
-    sub: "Ask what's included or how self-serve works. The readiness rating is free — you only choose a plan when you're ready to distribute.",
+    sub: "Ask what's included or how self-serve works. Every tool is free — you upgrade a plan when you're ready to raise capital.",
     placeholder: "Ask about plans and what's included…",
     openers: ["What's the difference between the plans?", "Is it really self-serve?", "Can I book a demo?", "How do I get started?"],
   },
