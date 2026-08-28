@@ -17,6 +17,7 @@ import {
   notifyFounderOutreachBlocked,
 } from "@/lib/notifications/founder-outreach-events";
 import { outreachCampaignSchema } from "@/lib/validation";
+import { recordFunnelEventOnce } from "@/lib/analytics/funnel";
 
 export async function GET() {
   const auth = await requireFounderInvestorCrmApi();
@@ -102,6 +103,14 @@ export async function POST(request: Request) {
     const message = campaignResult.error.message ?? "Unable to create campaign.";
     return NextResponse.json({ error: message, readiness }, { status: 400 });
   }
+
+  // Funnel (§8): the founder's first distribution action — once per company.
+  void recordFunnelEventOnce({
+    sessionId: `dist_${auth.company.id}`,
+    eventName: "first_distribution_sent",
+    organizationId: auth.company.id,
+    properties: { campaignId: campaignResult.data!.id },
+  });
 
   let contactIds = [...(parsed.data.contactIds ?? [])];
 

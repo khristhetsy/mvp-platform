@@ -49,3 +49,19 @@ export async function recordFunnelEvent(input: FunnelEventInput): Promise<void> 
     /* swallow */
   }
 }
+
+/** Record an event at most once per organization (e.g. first_distribution_sent). */
+export async function recordFunnelEventOnce(input: FunnelEventInput & { organizationId: string }): Promise<void> {
+  try {
+    const db = serviceRoleClientUntyped();
+    const { count } = await db
+      .from("funnel_events")
+      .select("id", { count: "exact", head: true })
+      .eq("event_name", input.eventName)
+      .eq("organization_id", input.organizationId);
+    if ((count ?? 0) > 0) return;
+  } catch {
+    /* if the existence check fails, fall through and record once */
+  }
+  await recordFunnelEvent(input);
+}

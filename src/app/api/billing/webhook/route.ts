@@ -4,6 +4,15 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
 import { PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { reportServerFailure } from "@/lib/monitoring/operational-events";
+import { recordFunnelEvent } from "@/lib/analytics/funnel";
+
+// Map a LemonSqueezy event to a funnel step (§8). New paid subscription →
+// checkout_complete; a recurring payment → renewal. Others aren't funnel steps.
+function funnelStepFor(eventName: string): "checkout_complete" | "renewal" | null {
+  if (eventName === "subscription_created" || eventName === "order_created") return "checkout_complete";
+  if (eventName === "subscription_payment_success" || eventName === "subscription_payment_recovered") return "renewal";
+  return null;
+}
 
 /**
  * LemonSqueezy subscription webhook.
@@ -105,6 +114,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
+    const step = funnelStepFor(event_name);
+    if (step && mapped.status === "active") {
+      await recordFunnelEvent({ sessionId: `webhook_${existing.profile_id}`, eventName: step, properties: { plan, event: event_name } });
+    }
     return NextResponse.json({ received: true, updated: existing.id });
   }
 
@@ -145,6 +158,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         plan,
       });
       return NextResponse.json({ error: "Create failed" }, { status: 500 });
+    }
+    const step = funnelStepFor(event_name);
+    if (step && mapped.status === "active") {
+      await recordFunnelEvent({ sessionId: `webhook_${profileId}`, eventName: step, properties: { plan, event: event_name } });
     }
     return NextResponse.json({ received: true, created: profileId });
   }

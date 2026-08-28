@@ -8,6 +8,7 @@ import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
+import { recordFunnelEvent } from "@/lib/analytics/funnel";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!existingProspect && (await overCap())) return capError();
     await createProspectIntroRequest({ companyId: company.id, founderId, investorRef: ref, note });
+    await recordFunnelEvent({ sessionId: `intro_${founderId}`, eventName: "intro_requested", organizationId: org?.id ?? null, properties: { brokered: true } });
     return NextResponse.json({ ok: true, brokered: true });
   }
 
@@ -103,6 +105,7 @@ export async function POST(request: Request) {
       message: note || "Founder requested an introduction via the Matching Center.",
     } as never);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await recordFunnelEvent({ sessionId: `intro_${founderId}`, eventName: "intro_requested", organizationId: org?.id ?? null, properties: { brokered: false } });
   } else if (note) {
     // Intro already open — refresh its message with the founder's latest note.
     await admin.from("intro_requests").update({ message: note } as never).eq("id", (existing as { id: string }).id);
