@@ -8,7 +8,7 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
   description:
-    "Every tool is free. Free plan: readiness, valuation, data room, e-learning, and see your matches. Basic $499/mo (up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). Managed IR $3,500/mo done-for-you. Investor accounts free, no success fees.",
+    "Investor relations from iCFO Capital. Access to matched investors from a 6,000+ network. No free tier, no free trial. Basic $499/mo (up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). Managed IR $3,500/mo done-for-you. Investor accounts free, no success fees.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -35,6 +35,7 @@ export default function PricingPage() {
           <p className="font-site-mono text-xs font-semibold uppercase tracking-[0.16em] text-site-blue-lt">{p.eyebrow}</p>
           <h1 className="mt-3 font-site-display text-4xl font-extrabold tracking-tight sm:text-5xl">{p.title}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-white/70">{p.sub}</p>
+          <p className="mx-auto mt-5 inline-flex max-w-2xl items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 font-site-mono text-[12px] leading-5 text-white/70"><i className="ti ti-info-circle" aria-hidden="true" />{p.noTrialNote}</p>
           {/* Price anchor — the alternative cost of outreach (brief Step 5). Figures from data/price-anchor.json; omitted until populated; no competitor names. */}
           {anchor ? (
             <p className="mx-auto mt-6 max-w-2xl text-[13px] leading-6 text-white/55">

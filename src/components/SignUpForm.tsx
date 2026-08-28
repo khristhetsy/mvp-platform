@@ -22,7 +22,8 @@ function signUpDestinationByRole(role: SignupRole, privateBetaMode: boolean) {
 }
 
 function defaultPlanForRole(role: SignupRole): PlanType {
-  return role === "founder" ? "founder_trial" : "investor_free";
+  // Founders must pick a paid plan — pre-select Professional (recommended).
+  return role === "founder" ? "founder_professional" : "investor_free";
 }
 
 function PlanCard({

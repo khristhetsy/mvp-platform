@@ -58,7 +58,7 @@ export type SubscriptionRecord = {
 };
 
 export const PLAN_LABELS: Record<PlanType, string> = {
-  founder_free: "Free",
+  founder_free: "Free (legacy)",
   founder_trial: "Free (legacy)",
   founder_basic: "Basic",
   founder_professional: "Professional",
@@ -119,29 +119,16 @@ export type SignupPlanOption = {
 
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
   {
-    planType: "founder_free",
-    title: "Free",
-    priceLabel: "$0",
-    priceSubtext: "Readiness",
-    badge: "Start here",
-    features: [
-      "All tools: CRR, valuation, data room, e-learning",
-      "See that matches exist — count, sector, fit tier",
-      "Investor identities hidden · no distribution",
-      "Your qualification layer, prescored for you",
-    ],
-  },
-  {
     planType: "founder_basic",
     title: "Basic",
     priceLabel: "$499",
     priceSubtext: "/month",
     paidPlan: true,
     features: [
-      "Everything in Free",
       "Up to 25 matched investors receive your one-pager",
       "Event spotlight",
-      "DIY outreach unlocked — you can now reach investors",
+      "DIY outreach — you reach investors directly",
+      "All tools included: CRR, valuation, data room, e-learning, AI DD",
       "Fully self-serve",
     ],
   },
@@ -150,14 +137,13 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     title: "Professional",
     priceLabel: "$1,000",
     priceSubtext: "/month",
-    badge: "Most popular",
+    badge: "Most founders start here",
     paidPlan: true,
     features: [
-      "Everything in Basic",
-      "Up to 100 investors",
-      "Monthly presentation slot",
+      "Up to 100 matched investors receive your one-pager",
+      "Monthly live presentation slot",
       "Brokered intro requests",
-      "Additional company accounts $800/mo",
+      "All tools included",
       "Self-serve, with a call available",
     ],
   },
@@ -171,7 +157,7 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
       "Done-for-you investor relations",
       "We curate the list and materials",
       "You review and approve",
-      "Post-conference follow-up run for you",
+      "Post-event follow-up run for you",
       "Capacity-capped — talk to us",
     ],
   },
@@ -193,9 +179,9 @@ export const SIGNUP_INVESTOR_PLAN: SignupPlanOption = {
 };
 
 const SIGNUP_PLAN_TYPES = new Set<PlanType>([
-  "founder_free",
   "founder_basic",
   "founder_professional",
+  "founder_managed_ir",
   "investor_free",
 ]);
 
@@ -216,5 +202,7 @@ export function isAutoGrantSignupPlan(role: "founder" | "investor", planType: Pl
     return planType === "investor_free";
   }
 
-  return planType === "founder_free";
+  // Founders no longer have a free tier — every founder plan requires checkout,
+  // so nothing is auto-granted on the founder side.
+  return false;
 }
