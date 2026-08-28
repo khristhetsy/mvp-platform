@@ -3,6 +3,7 @@ import Link from "next/link";
 import { pricing } from "@/content/pricing";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
+import { FunnelBeacon } from "@/components/marketing-site/FunnelBeacon";
 import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function PricingPage() {
   const anchor = loadPriceAnchor();
   return (
     <>
+      <FunnelBeacon event="pricing_view" />
       <JsonLd data={faqJsonLd} />
 
       {/* Hero + tiers */}

@@ -5,6 +5,7 @@ import { LS_VARIANT_IDS } from "@/lib/billing/pricing";
 import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
 import { BUY_LINKS } from "@/lib/billing/buy-links";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import type { PlanType } from "@/lib/subscriptions/plans";
 
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
@@ -33,6 +34,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!refundPolicyAcceptedAt) {
       return NextResponse.json({ error: "Please accept the billing terms to continue." }, { status: 400 });
     }
+
+    // Funnel: a checkout was initiated (§8). Session keyed to the profile.
+    await recordFunnelEvent({ sessionId: `checkout_${profile.id}`, eventName: "checkout_start", properties: { plan: planType } });
 
     // Record the acknowledgment (audit trail for chargeback/dispute defense).
     // Best-effort: never block checkout if the write fails.

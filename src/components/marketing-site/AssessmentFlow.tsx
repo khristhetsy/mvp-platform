@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ASSESSMENT_QUESTIONS } from "@/lib/assessment/questions";
 import { assessment } from "@/content/assessment";
+import { getSessionId } from "@/lib/analytics/session-id";
 
 type Band = "foundation" | "emerging" | "ready";
 type Result = {
@@ -16,17 +17,9 @@ type Result = {
 const BAND_LABEL: Record<Band, string> = { foundation: "Foundation", emerging: "Emerging", ready: "Ready" };
 const BAND_COLOR: Record<Band, string> = { foundation: "#BA7517", emerging: "#2E78F5", ready: "#0F6E56" };
 
-function newSessionId() {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  }
-}
-
 export function AssessmentFlow() {
   const questions = ASSESSMENT_QUESTIONS;
-  const [sessionId] = useState(newSessionId);
+  const [sessionId] = useState(getSessionId);
   const [step, setStep] = useState(0); // 0..N-1 questions, N = email, N+1 = result
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [email, setEmail] = useState("");
