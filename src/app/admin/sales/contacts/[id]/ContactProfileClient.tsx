@@ -242,6 +242,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [note, setNote] = useState("");
   const [noteMsg, setNoteMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Surfaced when a save/edit/task action fails, so buttons don't silently no-op.
+  const [actionErr, setActionErr] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null }[]>([]);
@@ -323,6 +325,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
   async function saveEdit() {
     setBusy(true);
+    setActionErr(null);
     try {
       const body = {
         name: form.name.trim() || contact.name,
@@ -338,11 +341,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       };
       const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
+      else setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t save the contact. Please try again.");
+    } catch {
+      setActionErr("Network error — couldn’t save the contact.");
     } finally { setBusy(false); }
   }
 
   async function savePreferences() {
     setPrefBusy(true);
+    setActionErr(null);
     try {
       const preferences: Record<string, string[]> = {};
       for (const [label, csv] of Object.entries(prefEdits)) {
@@ -360,7 +367,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         setContact({ ...contact, extra: newExtra });
         setPrefOrig({ ...prefEdits });
         setEditingKey(null);
+      } else {
+        setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t save your changes. Please try again.");
       }
+    } catch {
+      setActionErr("Network error — couldn’t save your changes.");
     } finally {
       setPrefBusy(false);
     }
@@ -371,6 +382,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   // editor baseline. This is what makes a single click-to-edit actually persist.
   async function saveField(key: string) {
     setPrefBusy(true);
+    setActionErr(null);
     try {
       const values = (prefEdits[key] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       const res = await fetch(`/api/sales/contacts/${contact.id}`, {
@@ -378,7 +390,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferences: { [key]: values } }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t save that field. Please try again.");
+        return;
+      }
       const fresh = await fetch(`/api/sales/contacts/${contact.id}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
       if (fresh?.contact) {
         setContact(fresh.contact);
@@ -421,12 +436,13 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   }
   async function createTask() {
     if (!task.title.trim()) return;
-    setBusy(true);
+    setBusy(true); setActionErr(null);
     try {
-      await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
+      const res = await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
+      if (!res.ok) { setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t create the task."); return; }
       setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
       await loadContactTasks();
-    } finally { setBusy(false); }
+    } catch { setActionErr("Network error — couldn’t create the task."); } finally { setBusy(false); }
   }
   async function loadContactTasks() {
     try {
@@ -437,14 +453,20 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     setTasksLoaded(true);
   }
   async function taskDone(id: string) {
-    setBusy(true);
-    try { await fetch(`/api/sales/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) }); await loadContactTasks(); }
-    finally { setBusy(false); }
+    setBusy(true); setActionErr(null);
+    try {
+      const res = await fetch(`/api/sales/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) });
+      if (!res.ok) { setActionErr("Couldn’t mark the task done."); return; }
+      await loadContactTasks();
+    } catch { setActionErr("Network error — couldn’t update the task."); } finally { setBusy(false); }
   }
   async function taskDelete(id: string) {
-    setBusy(true);
-    try { await fetch(`/api/sales/tasks/${id}`, { method: "DELETE" }); setConfirmTaskId(null); await loadContactTasks(); }
-    finally { setBusy(false); }
+    setBusy(true); setActionErr(null);
+    try {
+      const res = await fetch(`/api/sales/tasks/${id}`, { method: "DELETE" });
+      if (!res.ok) { setActionErr("Couldn’t delete the task."); return; }
+      setConfirmTaskId(null); await loadContactTasks();
+    } catch { setActionErr("Network error — couldn’t delete the task."); } finally { setBusy(false); }
   }
   function openTasksTab() {
     setProfileSub("tasks");
@@ -475,6 +497,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         <Link href={basePath} style={{ color: "var(--muted-foreground)", textDecoration: "none" }}>← Contacts</Link>
         <span>/</span><span style={{ color: "var(--foreground)" }}>{contact.name}</span>
       </div>
+
+      {actionErr ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 12.5, color: "#A32D2D", background: "#FCEBEB", border: "0.5px solid #F3C6C6", borderRadius: 8, padding: "8px 12px" }}>
+          <i className="ti ti-alert-triangle" aria-hidden="true" />
+          <span style={{ flex: 1 }}>{actionErr}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setActionErr(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D" }}><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+      ) : null}
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         {/* Redesigned header: identity + status + owner, actions, stat chips */}

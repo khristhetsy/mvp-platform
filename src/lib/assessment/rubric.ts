@@ -7,9 +7,11 @@ import { ASSESSMENT_QUESTIONS, ASSESSMENT_MAX_POINTS } from "@/lib/assessment/qu
 export type ScoreBand = "foundation" | "emerging" | "ready";
 export type AssessmentAnswers = Record<string, string>;
 
-export const BAND_ROUTING: Record<ScoreBand, { plan: "basic" | "managed_ir"; href: string; ctaLabel: string; viaLearning: boolean }> = {
-  foundation: { plan: "basic", href: "/pricing", ctaLabel: "See how Basic works", viaLearning: true },
-  emerging: { plan: "basic", href: "/start?plan=basic", ctaLabel: "Start on Basic", viaLearning: false },
+// Every tool is free, so the lower bands route to a free account (start with the
+// tools); Ready — the founder positioned to raise now — gets the done-for-you upsell.
+export const BAND_ROUTING: Record<ScoreBand, { plan: "free" | "basic" | "managed_ir"; href: string; ctaLabel: string; viaLearning: boolean }> = {
+  foundation: { plan: "free", href: "/start?plan=free", ctaLabel: "Create your free account", viaLearning: true },
+  emerging: { plan: "free", href: "/start?plan=free", ctaLabel: "Create your free account", viaLearning: false },
   ready: { plan: "managed_ir", href: "/start?plan=managed_ir", ctaLabel: "Talk to us about Managed IR", viaLearning: false },
 };
 
