@@ -23,16 +23,31 @@ export type PricingPlanCard = {
 
 export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
+    planType: "founder_free",
+    title: "Free",
+    priceLabel: "$0",
+    priceSubtext: "Readiness",
+    monthlyPriceCents: PLAN_PRICES.founder_free,
+    badge: "Start here",
+    features: [
+      "All tools: CRR, valuation, data room, e-learning",
+      "See that matches exist — count, sector, fit tier",
+      "Investor identities hidden · no distribution",
+      "Your qualification layer, prescored for you",
+    ],
+    paidPlan: false,
+  },
+  {
     planType: "founder_basic",
     title: "Basic",
     priceLabel: "$499",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_basic,
     features: [
+      "Everything in Free",
       "Up to 25 matched investors get your one-pager",
       "Event spotlight",
-      "DIY outreach — you reach investors directly",
-      "All tools included: CRR, valuation, data room, e-learning, AI DD",
+      "DIY outreach unlocked — you can now reach investors",
       "Fully self-serve",
     ],
     paidPlan: true,
@@ -43,13 +58,14 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$1,000",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_professional,
-    badge: "Most founders start here",
+    badge: "Most popular",
     recommended: true,
     features: [
-      "Up to 100 matched investors",
+      "Everything in Basic",
+      "Up to 100 investors",
       "Monthly presentation slot",
       "Brokered intro requests",
-      "All tools included",
+      "Additional company accounts $800/mo",
       "Self-serve, with a call available",
     ],
     paidPlan: true,
@@ -65,7 +81,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
       "Done-for-you investor relations",
       "We curate the list and materials",
       "You review and approve",
-      "Post-event follow-up run for you",
+      "Post-conference follow-up run for you",
       "Capacity-capped — talk to us",
     ],
     paidPlan: true,
@@ -108,6 +124,7 @@ export const FEATURE_COMPARISON: FeatureComparisonRow[] = [
   { label: "Matched investor cap", free: false, basic: true, professional: true },
   { label: "Monthly presentation slot", free: false, basic: false, professional: true },
   { label: "Brokered intro requests", free: false, basic: false, professional: true },
+  { label: "Additional company accounts ($800/mo)", free: false, basic: false, professional: true },
 ];
 
 export function formatMonthlyPrice(cents: number) {

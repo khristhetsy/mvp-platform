@@ -4,8 +4,8 @@
  */
 export const start = {
   eyebrow: "Get started",
-  title: "Create your account.",
-  sub: "iCapOS is investor relations from iCFO Capital — access to matched investors from a 6,000+ network built over 16 years. Choose a plan from $499/mo to get in front of them. Not ready to subscribe? See your score band first — no account needed.",
+  title: "Create your free account.",
+  sub: "Every iCapOS tool is free, forever — no card, no trial. You only choose a plan when you're ready to reach investors.",
   fields: {
     stage: {
       label: "Stage",
@@ -25,14 +25,14 @@ export const start = {
       ],
     },
     startWith: {
-      label: "Your plan",
+      label: "Your account",
       options: [
-        { value: "rating_only", label: "Basic — $499/mo", sub: "Reach up to 25 matched investors. All tools included, DIY outreach." },
-        { value: "rating_plus_plan", label: "Professional — $1,000/mo", sub: "Reach up to 100 matched investors, plus the live conference stage." },
+        { value: "rating_only", label: "Free — $0 forever", sub: "Every tool, no card. Add distribution later." },
+        { value: "rating_plus_plan", label: "Free + a distribution plan", sub: "Add Basic or Professional to reach investors." },
       ],
     },
   },
-  submit: "Create your account",
+  submit: "Create your free account",
   signinPrompt: "Already have an account?",
   signinCta: { label: "Sign in", href: "/auth/sign-in" },
   terms: "By creating an account you agree to our Terms of Service and Privacy Policy. Creating an account does not constitute an offer to sell securities, and does not obligate you to any plan.",
@@ -42,7 +42,7 @@ export const start = {
     steps: [
       { n: "1", p: "You answer the readiness questions and upload whatever materials you have. Rough is fine." },
       { n: "2", p: "Your rating comes back with a per-dimension breakdown and an ordered fix list." },
-      { n: "3", p: "Choose a plan — Basic or Professional — and your matched investor list is built against the iCFO network, ranked by fit." },
+      { n: "3", p: "Stay free as long as you like. When you want to reach investors, add a distribution plan and your matched list is built against the network." },
       { n: "4", p: "Distribution goes out — done for you, or sent by you from your own domain." },
     ],
   },

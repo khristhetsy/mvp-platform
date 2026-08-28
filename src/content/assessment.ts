@@ -5,7 +5,7 @@
 export const assessment = {
   eyebrow: "Free assessment",
   title: "See your score band.",
-  sub: "Ten quick questions. You'll get the band your company lands in and what it means for reaching investors — no account, no card. The full Capital Readiness Rating comes with a paid plan.",
+  sub: "Ten quick questions. You'll get the band your company lands in and what it means for reaching investors — no account, no card. Create a free account any time for the full per-dimension rating.",
   emailStep: {
     title: "Where should we send your band?",
     sub: "One email, no spam. We'll show your result right here.",
@@ -19,7 +19,7 @@ export const assessment = {
   },
   result: {
     scoreLabel: "Your band",
-    bandNote: "This is a directional band from your answers — the full per-dimension rating comes with a paid plan.",
+    bandNote: "This is a directional band from your answers — the full per-dimension rating is in your free account.",
     ctaFallback: "See plans",
     ctaFallbackHref: "/pricing",
     learningNote: "New to the raise? Start with the fundamentals, then step up to Basic when you're ready.",

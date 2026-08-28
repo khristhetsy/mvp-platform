@@ -16,7 +16,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: { absolute: "iCapOS — Get your company in front of investors whose mandate fits" },
   description:
-    "iCapOS is investor relations from iCFO Capital. Get in front of matched investors from a 6,000+ network built over 16 years. Every company is rated first — that's why the network opens. Run the outreach yourself, or we run it for you. Paid plans from $499/mo.",
+    "iCapOS does the heavy lifting on investor outreach: it rates your readiness, matches your profile to investor mandates in the iCFO network, and distributes your materials to the ones that fit. Start free.",
   alternates: { canonical: "/" },
   openGraph: { url: "/" },
 };

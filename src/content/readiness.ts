@@ -11,9 +11,9 @@ const W = PROFILES[CANONICAL_INSTITUTIONAL];
 export const readiness = {
   hero: {
     eyebrow: "Capital Readiness Rating",
-    title: "Rated first — that's why the network opens.",
-    sub: "A structured score across the five dimensions investors screen on, with an ordered list of what to sharpen. The rating is investor-facing quality control: nothing unrated goes out, which is why the network takes our calls.",
-    cta: { label: "See your score band", href: "/assessment" },
+    title: "Find the gaps before an investor does.",
+    sub: "A structured score across five dimensions investors commonly screen on, with an ordered list of what to fix. Free, and you can re-run it as often as you like.",
+    cta: { label: "Start the rating", href: "/start" },
     compliance: "The rating is an assessment tool. It is not investment advice, a valuation, a credit opinion, or any indication that capital will be raised.",
   },
   sample: {
@@ -52,7 +52,7 @@ export const readiness = {
     estimated: 58,
     band: "Developing",
     workOn: "Work on these first",
-    cta: { label: "Get your real rating", href: "/start" },
+    cta: { label: "Get your real rating — free", href: "/start" },
     disclaimer: "Estimator only. Not a valuation, credit opinion, or prediction of any funding outcome.",
   },
   measures: {
@@ -78,12 +78,12 @@ export const readiness = {
     ],
     // Required §3 cross-links: Readiness → Founders and Pricing, after the fix-list.
     founderCta: { label: "See what founders get", href: "/founders" },
-    pricingCta: { label: "Compare the plans", href: "/pricing" },
+    pricingCta: { label: "Compare the two plans", href: "/pricing" },
     privacy: "Your rating is private. It is visible to you and to iCapOS. It is never published, and it is never shared with an investor unless you choose to share it.",
   },
   closing: {
     title: "Rough deck? Start anyway.",
     sub: "The rating is built to be run early. That's the point of it.",
-    cta: { label: "See your score band", href: "/assessment" },
+    cta: { label: "Run your free rating", href: "/start" },
   },
 } as const;
