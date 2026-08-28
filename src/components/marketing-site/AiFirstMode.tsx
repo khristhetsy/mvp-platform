@@ -238,7 +238,11 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-gradient-to-b from-site-navy via-site-navy-2 to-site-navy-3 text-white" role="dialog" aria-modal="true" aria-label="AI-first mode">
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-6 py-4">
-        <div className="font-site-display text-lg font-extrabold tracking-tight">iCap<span className="text-site-blue-lt">OS</span> <span className="ml-2 align-middle font-site-mono text-[11px] font-medium uppercase tracking-wider text-white/50">AI mode{cfg.label ? ` · ${cfg.label}` : ""}</span></div>
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icapos-logo-white.png" alt="iCapOS" className="h-7 w-auto" />
+          <span className="align-middle font-site-mono text-[11px] font-medium uppercase tracking-wider text-white/50">AI mode{cfg.label ? ` · ${cfg.label}` : ""}</span>
+        </div>
         <div className="flex items-center gap-2">
           {/* Persistent signup CTA — visible in every context, all session (goal: signup). */}
           <Link href={SIGNUP} className="rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">Get started</Link>
