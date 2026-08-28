@@ -50,13 +50,11 @@ export function SubscriptionLockedPanel({
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{t("plan_upgrade_required")}</p>
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-        {trialExpired ? "Your full-access period has ended" : "This feature needs a distribution plan"}
+        {trialExpired ? "Your tools are still free" : "Upgrade when you're ready to raise capital"}
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
         {reason ??
-          (trialExpired
-            ? "Every founder tool stays free — nothing is locked. This feature reaches investors, so it needs a distribution plan."
-            : "Every founder tool is free. This feature reaches investors — choose a plan to turn distribution on.")}
+          "Your tools are always free. Upgrade your plan when you're ready to raise capital — that's when we reveal your matched investors and put your materials in front of them."}
       </p>
       <div className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 md:grid-cols-2">
         <p>

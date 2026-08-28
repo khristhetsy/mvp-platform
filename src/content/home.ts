@@ -9,7 +9,7 @@ export const home = {
   hero: {
     eyebrow: "Investor relations, run as software",
     title: "Get your company in front of investors whose mandate fits.",
-    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. You don't need a polished deck to start.",
+    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. Every tool is always free; upgrade your plan when you're ready to raise capital.",
     primaryCta: { label: "Run your free Readiness Rating", href: "/readiness" },
     secondaryCta: { label: "See plans", href: "/pricing" },
     compliance:

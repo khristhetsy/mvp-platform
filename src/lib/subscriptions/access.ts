@@ -148,7 +148,7 @@ export function canAccessFeature(
   if (subscription.plan_type === "founder_trial" && isTrialExpired(subscription, now)) {
     return {
       allowed: false,
-      reason: "Every founder tool stays free. This feature reaches investors — add a distribution plan to turn it on.",
+      reason: "Your tools are always free. Upgrade your plan when you're ready to raise capital — that reveals your matched investors and puts your materials in front of them.",
     };
   }
 

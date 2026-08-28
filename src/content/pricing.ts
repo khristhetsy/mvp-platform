@@ -6,8 +6,8 @@
  */
 export const pricing = {
   eyebrow: "Pricing",
-  title: "Every tool is free. Pay to reach investors.",
-  sub: "Readiness, valuation, the data room, and e-learning are free for everyone. Paid plans add distribution — revealing your matches, sending your one-pager, and the conference stage. No success fees, no carry, no commission after an introduction.",
+  title: "Your tools are always free. Upgrade when you're ready to raise capital.",
+  sub: "Readiness, valuation, the data room, and e-learning are free for everyone, forever. Upgrade your plan when you're ready to raise — that's when we reveal your matched investors and put your materials in front of them. No success fees, no carry, no commission after an introduction.",
   tiers: [
     {
       name: "Free",
