@@ -171,6 +171,40 @@ export async function resolveSupportRequest(
   return error ? { error: error.message } : { ok: true };
 }
 
+/**
+ * Auto-assign a new request to the least-loaded eligible staff member
+ * (round-robin by open assignment count) — the default rule. Pass a service-role
+ * client. Returns the chosen assignee id, or null when no staff are available.
+ * The rule is intentionally simple and lives here so a settings-driven chooser
+ * (pool / round-robin / company owner) can wrap it later.
+ */
+export async function autoAssignSupportRequest(
+  supabase: SupabaseClient<Database>,
+  requestId: string,
+): Promise<string | null> {
+  const { data: staff } = await db(supabase).from("profiles").select("id").in("role", ["admin", "analyst"]).limit(50);
+  const ids = ((staff ?? []) as { id: string }[]).map((s) => s.id);
+  if (ids.length === 0) return null;
+
+  const { data: openRows } = await db(supabase)
+    .from("support_requests")
+    .select("assigned_to")
+    .in("status", ["open", "pending_founder"])
+    .not("assigned_to", "is", null);
+  const load = new Map<string, number>(ids.map((id) => [id, 0]));
+  for (const row of (openRows ?? []) as { assigned_to: string | null }[]) {
+    if (row.assigned_to && load.has(row.assigned_to)) load.set(row.assigned_to, (load.get(row.assigned_to) ?? 0) + 1);
+  }
+  // Lowest open load wins (ties break by first — good enough for round-robin).
+  const assignee = ids.reduce((best, id) => ((load.get(id) ?? 0) < (load.get(best) ?? 0) ? id : best), ids[0]);
+
+  const { error } = await db(supabase)
+    .from("support_requests")
+    .update({ assigned_to: assignee, updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+  return error ? null : assignee;
+}
+
 /** Founder rates a resolved request: 1 (thumbs up) or -1 (thumbs down). RLS
  *  restricts this to the founder's own rows. */
 export async function setSupportCsat(

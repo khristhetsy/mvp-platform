@@ -3,8 +3,11 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
-import { createSupportRequest, listFounderRequests, SUPPORT_SOURCES } from "@/lib/support/support";
+import { createSupportRequest, listFounderRequests, autoAssignSupportRequest, SUPPORT_SOURCES } from "@/lib/support/support";
 import { createNotification, listStaffProfileIds, hasRecentNotification } from "@/lib/notifications/notifications";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -45,20 +48,34 @@ export async function POST(req: NextRequest): Promise<Response> {
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
-  // Notify the staff pool (in-app), deduped per staff so a burst doesn't spam.
+  // Auto-assign (round-robin by load) via service role, then notify: the assignee
+  // if one was picked, otherwise the staff pool as a fallback.
   try {
-    const staff = await listStaffProfileIds();
-    for (const staffId of staff.slice(0, 5)) {
-      const dupe = await hasRecentNotification({ recipientUserId: staffId, type: "support_request_new", withinHours: 1 });
-      if (dupe) continue;
+    const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
+    const assignee = await autoAssignSupportRequest(admin, result.id);
+    if (assignee) {
       await createNotification({
-        recipientUserId: staffId,
+        recipientUserId: assignee,
         type: "support_request_new",
-        title: "New founder support request",
+        title: "New support request assigned to you",
         message: `${company.company_name ?? "A founder"}: ${parsed.data.subject}`,
         entityType: "company",
         entityId: company.id,
       });
+    } else {
+      const staff = await listStaffProfileIds();
+      for (const staffId of staff.slice(0, 5)) {
+        const dupe = await hasRecentNotification({ recipientUserId: staffId, type: "support_request_new", withinHours: 1 });
+        if (dupe) continue;
+        await createNotification({
+          recipientUserId: staffId,
+          type: "support_request_new",
+          title: "New founder support request",
+          message: `${company.company_name ?? "A founder"}: ${parsed.data.subject}`,
+          entityType: "company",
+          entityId: company.id,
+        });
+      }
     }
   } catch {
     /* best-effort */
