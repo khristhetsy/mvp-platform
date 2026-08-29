@@ -1,6 +1,7 @@
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { getStageMirror, stageLabel, type MirrorItemStatus } from "@/lib/admin/stage-menu-mirror";
 import { OpenFounderItem } from "@/components/admin/company-workspace/OpenFounderItem";
+import { ReachOutPanel } from "@/components/admin/company-workspace/ReachOutPanel";
 
 const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon: string; iconColor: string }> = {
   done: { label: "Done", chip: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", iconColor: "text-emerald-600" },
@@ -20,15 +21,36 @@ export function StageMenuMirror({
   stage,
   founderId = null,
   canActOnBehalf = false,
-}: Readonly<{ journey: FounderJourneyState; stage: JourneyStage; founderId?: string | null; canActOnBehalf?: boolean }>) {
+  companyId = null,
+  founderName = "the founder",
+  founderEmail = null,
+}: Readonly<{
+  journey: FounderJourneyState;
+  stage: JourneyStage;
+  founderId?: string | null;
+  canActOnBehalf?: boolean;
+  companyId?: string | null;
+  founderName?: string;
+  founderEmail?: string | null;
+}>) {
   const mirror = getStageMirror(journey, stage);
+  const pendingItems = mirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
 
   return (
     <div className="space-y-3">
       {/* Recommendation strip */}
       <div className="flex items-start gap-2.5 rounded-lg bg-indigo-50 px-3 py-2.5">
         <i className="ti ti-sparkles mt-0.5 text-indigo-600" aria-hidden="true" />
-        <p className="text-[12.5px] leading-relaxed text-indigo-900">{mirror.recommendation}</p>
+        <p className="flex-1 text-[12.5px] leading-relaxed text-indigo-900">{mirror.recommendation}</p>
+        {companyId && pendingItems.length > 0 ? (
+          <ReachOutPanel
+            companyId={companyId}
+            founderName={founderName}
+            founderEmail={founderEmail}
+            stageLabel={stageLabel(stage)}
+            pendingItems={pendingItems}
+          />
+        ) : null}
       </div>
 
       {/* Founder-menu mirror */}

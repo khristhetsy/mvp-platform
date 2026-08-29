@@ -66,6 +66,9 @@ export function AdminCompanyWorkspace({
   canActOnBehalf?: boolean;
 }>) {
   const founderId = data.founder?.id ?? null;
+  const founderName = data.founder?.full_name ?? data.founder?.email ?? "the founder";
+  const founderEmail = data.founder?.email ?? null;
+  const companyId = data.company.id;
   const t = useTranslations("adminCmp");
   const [tab, setTab] = useState<TabKey>("initialize");
 
@@ -183,7 +186,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- INITIALIZE ---------- */}
       {tab === "initialize" ? (
         <div className="space-y-6">
-          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} />
+          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <CompanyWorkspaceMetrics data={data} />
 
@@ -224,7 +227,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- QUALIFY ---------- */}
       {tab === "qualify" ? (
         <div className="space-y-6">
-          <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} />
+          <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
             <PageSection title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
@@ -254,7 +257,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- DEPLOY ---------- */}
       {tab === "deploy" ? (
         <div className="space-y-6">
-          <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} />
+          <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {reviewMarketplace}
           {investablePanel}
@@ -269,7 +272,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- OPTIMIZE ---------- */}
       {tab === "optimize" ? (
         <div className="space-y-6">
-          <StageMenuMirror journey={data.journey} stage="optimize" founderId={founderId} canActOnBehalf={canActOnBehalf} />
+          <StageMenuMirror journey={data.journey} stage="optimize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investorActivity}
           {spvOperations}
