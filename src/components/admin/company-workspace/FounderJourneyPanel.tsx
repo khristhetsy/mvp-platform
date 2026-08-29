@@ -52,7 +52,7 @@ function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
       points: c.onboardingComplete
         ? ["Company profile complete", "Funding info provided", "Pitch deck uploaded"]
         : ["Ask the founder to finish their onboarding steps", "Company profile, funding info, and pitch deck are required"],
-      action: c.onboardingComplete ? undefined : { label: "Review company", href: `/admin/companies?company=${companyId}` },
+      action: c.onboardingComplete ? undefined : { label: "Review company", href: `/admin/companies/${companyId}` },
     },
     {
       key: "readiness",
@@ -78,7 +78,7 @@ function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
       points: c.requiredDocsUploaded
         ? ["Core documents present", "Pitch deck present"]
         : ["Identify the missing document categories", "Request them from the founder", "Confirm uploads in the data room"],
-      action: c.requiredDocsUploaded ? undefined : { label: "Open company", href: `/admin/companies?company=${companyId}` },
+      action: c.requiredDocsUploaded ? undefined : { label: "Open documents", href: `/admin/companies/${companyId}#qualify` },
     },
     {
       key: "dealroom",
