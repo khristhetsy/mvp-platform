@@ -40,6 +40,48 @@ const STAGE_NAMES: Record<StageSlug, string> = {
   closing: "Closing",
 };
 
+export type JourneyStageSummary = {
+  slug: StageSlug;
+  stageNumber: number;
+  name: string;
+  relation: "complete" | "current" | "locked";
+  line: string;
+};
+export type JourneyOverview = {
+  stages: JourneyStageSummary[];
+  currentSlug: StageSlug | null;
+};
+
+/** Compact four-stage summary for the dashboard — one evaluate call, one line
+ *  of status per stage. Same source of truth as the per-guide gate panel. */
+export async function getJourneyOverview(
+  supabase: SupabaseClient<Database>,
+  profileId: string,
+): Promise<JourneyOverview> {
+  const state = await evaluateFounderJourney(supabase, profileId);
+  const founderIdx = state.stageIndex;
+  const c = state.conditions;
+
+  const stages: JourneyStageSummary[] = STAGE_SLUGS.map((slug, idx) => {
+    const relation: JourneyStageSummary["relation"] = idx < founderIdx ? "complete" : idx === founderIdx ? "current" : "locked";
+    let line = "";
+    if (relation === "complete") line = "Complete";
+    else if (relation === "locked") line = idx === founderIdx + 1 ? "Up next" : "Locked";
+    else if (slug === "onboarding") line = c.onboardingComplete ? "Finishing up" : "Finish onboarding";
+    else if (slug === "preparation") {
+      if (state.approvalStatus === "pending") line = "Under review — we'll email you";
+      else if (state.approvalStatus === "rejected") line = "Changes requested — resubmit";
+      else if (!c.requiredDocsUploaded) line = "Upload your 3 core documents";
+      else if (!c.readinessQualified) line = `Readiness ${Math.round(c.readinessScore ?? 0)}/75 — a little more`;
+      else line = "Ready — submitting for review";
+    } else if (slug === "marketing") line = c.hasDealRoom || c.hasInvestorInterest ? "In market" : "Open a data room to advance";
+    else line = "Closing your round";
+    return { slug, stageNumber: idx + 1, name: STAGE_NAMES[slug], relation, line };
+  });
+
+  return { stages, currentSlug: STAGE_SLUGS[founderIdx] ?? null };
+}
+
 const CORE_DOCS = new Set(["pitch deck", "financial model", "cap table"]);
 
 /** The first non-core required document the founder hasn't uploaded (a concrete

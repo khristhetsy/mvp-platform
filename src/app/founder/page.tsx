@@ -27,6 +27,8 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
+import { JourneyOverviewCard } from "@/components/founder/JourneyOverviewCard";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
@@ -163,6 +165,7 @@ export default async function FounderDashboardPage() {
     (investorActivity?.introRequests.length ?? 0) +
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
+  const journeyOverview = company ? await getJourneyOverview(supabase, profile.id).catch(() => null) : null;
 
   // Milestones achievable from dashboard data
   const achievedMilestones: MilestoneKey[] = [];
@@ -198,6 +201,12 @@ export default async function FounderDashboardPage() {
         />
 
         <StageUnlockBanner />
+
+        {journeyOverview ? (
+          <div className="mb-8">
+            <JourneyOverviewCard overview={journeyOverview} />
+          </div>
+        ) : null}
 
         <TipOfTheDay profileId={profile.id} audience="founder" />
 
