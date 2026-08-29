@@ -170,3 +170,17 @@ export async function resolveSupportRequest(
     .eq("id", requestId);
   return error ? { error: error.message } : { ok: true };
 }
+
+/** Founder rates a resolved request: 1 (thumbs up) or -1 (thumbs down). RLS
+ *  restricts this to the founder's own rows. */
+export async function setSupportCsat(
+  supabase: SupabaseClient<Database>,
+  requestId: string,
+  csat: 1 | -1,
+): Promise<{ ok: true } | { error: string }> {
+  const { error } = await db(supabase)
+    .from("support_requests")
+    .update({ csat, updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+  return error ? { error: error.message } : { ok: true };
+}

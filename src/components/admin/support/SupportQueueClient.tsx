@@ -16,6 +16,7 @@ export type QueueRow = {
   founderName: string;
   assignedTo: string | null;
   assigneeName: string | null;
+  csat: number | null;
   createdAt: string;
 };
 
@@ -133,6 +134,7 @@ export function SupportQueueClient({
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">At risk</span>
                     ) : null;
                   })()}
+                  {r.csat ? <span className="text-[11px]" title="Founder rating">{r.csat === 1 ? "👍" : "👎"}</span> : null}
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[r.status] ?? "bg-slate-100 text-slate-600"}`}>
                     {STATUS_LABEL[r.status] ?? r.status}
                   </span>

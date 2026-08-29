@@ -43,6 +43,7 @@ export default async function AdminSupportPage() {
     founderName: personName.get(q.founder_id) ?? "Founder",
     assignedTo: q.assigned_to,
     assigneeName: q.assigned_to ? personName.get(q.assigned_to) ?? "—" : null,
+    csat: q.csat,
     createdAt: q.created_at,
   }));
 
