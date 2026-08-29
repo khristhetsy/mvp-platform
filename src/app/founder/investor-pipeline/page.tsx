@@ -9,6 +9,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { InvestorPipelineClient } from "./InvestorPipelineClient";
+import { ManualInvestorsPanel } from "@/components/founder/ManualInvestorsPanel";
+import { listManualInvestors } from "@/lib/founder/manual-investors";
 
 // pipeline_investors is not yet in generated types — cast to untyped client.
 function untyped(client: unknown): SupabaseClient {
@@ -53,6 +55,8 @@ export default async function InvestorPipelinePage() {
     ? pipelineQuery.eq("org_id", org.id)
     : pipelineQuery.eq("founder_id", profile.id));
 
+  const manualInvestors = await listManualInvestors(supabase, company.id);
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -66,6 +70,7 @@ export default async function InvestorPipelinePage() {
             description={t("track_and_manage_your_investor_relationships_p")}
           />
           <InvestorPipelineClient initialData={initialInvestors ?? []} />
+          <ManualInvestorsPanel investors={manualInvestors} />
         </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>

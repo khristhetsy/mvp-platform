@@ -10,6 +10,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { DealRoomActivityFeed, type ActivityEvent } from "@/components/founder/DealRoomActivityFeed";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
+import { ManualInvestorsPanel } from "@/components/founder/ManualInvestorsPanel";
+import { listManualInvestors } from "@/lib/founder/manual-investors";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,8 @@ export default async function FounderDealRoomIndexPage() {
             .limit(20),
         ])
       : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+
+  const manualInvestors = company ? await listManualInvestors(supabase, company.id) : [];
 
   // Build room title lookup
   const roomTitles: Record<string, string> = {};
@@ -176,6 +180,9 @@ export default async function FounderDealRoomIndexPage() {
               </div>
             )}
           </WorkspacePanel>
+
+          {/* Investors the founder is tracking (sourced off-platform) */}
+          <ManualInvestorsPanel investors={manualInvestors} />
 
           {/* Activity feed */}
           <WorkspacePanel
