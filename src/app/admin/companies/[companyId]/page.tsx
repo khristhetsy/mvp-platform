@@ -9,6 +9,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
 import { formatError } from "@/lib/errors/format-error";
 import { requireRole } from "@/lib/supabase/auth";
+import { canUser } from "@/lib/rbac/effective-permissions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { resolveCompanyDependencies } from "@/lib/automation/dependencies";
@@ -28,6 +29,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
   const supabase = await createServerSupabaseClient();
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const canActOnBehalf = await canUser(supabase, profile.id, "act_on_behalf").catch(() => false);
 
   let loadError: string | null = null;
   let workspace = null;
@@ -110,6 +112,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 adminRole={adminRole}
                 riskSignals={companyRiskSignals}
                 founderContactId={founderContactId}
+                canActOnBehalf={canActOnBehalf}
               />
               {workspace.founder?.id ? (
                 <>

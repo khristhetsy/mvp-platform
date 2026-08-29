@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { getStageMirror, stageLabel, type MirrorItemStatus } from "@/lib/admin/stage-menu-mirror";
+import { OpenFounderItem } from "@/components/admin/company-workspace/OpenFounderItem";
 
 const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon: string; iconColor: string }> = {
   done: { label: "Done", chip: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", iconColor: "text-emerald-600" },
@@ -18,7 +18,9 @@ const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon:
 export function StageMenuMirror({
   journey,
   stage,
-}: Readonly<{ journey: FounderJourneyState; stage: JourneyStage }>) {
+  founderId = null,
+  canActOnBehalf = false,
+}: Readonly<{ journey: FounderJourneyState; stage: JourneyStage; founderId?: string | null; canActOnBehalf?: boolean }>) {
   const mirror = getStageMirror(journey, stage);
 
   return (
@@ -47,14 +49,7 @@ export function StageMenuMirror({
                 <i className={`ti ${meta.icon} ${meta.iconColor} text-[17px]`} aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{item.label}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>{meta.label}</span>
-                <Link
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg border border-slate-200 px-2.5 py-1 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  Open
-                </Link>
+                <OpenFounderItem href={item.href} founderId={founderId} canActOnBehalf={canActOnBehalf} />
               </li>
             );
           })}

@@ -39,6 +39,8 @@ export const INTERNAL_PERMISSIONS = [
   "manage_users",
   "assign_roles",
   "manage_settings",
+  // Elevated — act as a founder (edit on their behalf) + service support
+  "act_on_behalf",
 ] as const;
 
 export type InternalPermission = (typeof INTERNAL_PERMISSIONS)[number];
@@ -75,6 +77,7 @@ export const INTERNAL_PERMISSION_LABELS: Record<InternalPermission, string> = {
   manage_users: "Manage Users",
   assign_roles: "Assign Roles",
   manage_settings: "Manage Settings",
+  act_on_behalf: "Act on Behalf of a Founder",
 };
 
 export const INTERNAL_ROLE_LABELS: Record<InternalRoleSlug, string> = {
@@ -91,9 +94,11 @@ export const INTERNAL_ROLE_RANK: Record<InternalRoleSlug, number> = {
   super_admin: 40,
 };
 
-/** Permissions granted to legacy staff (admin/analyst) without an RBAC row. */
+/** Permissions granted to legacy staff (admin/analyst) without an RBAC row.
+ *  `act_on_behalf` is intentionally NOT auto-granted — it writes into a founder's
+ *  own records, so it must be granted explicitly (or held by a super admin). */
 export const LEGACY_STAFF_PERMISSIONS: InternalPermission[] = INTERNAL_PERMISSIONS.filter(
-  (p) => p !== "manage_users" && p !== "assign_roles",
+  (p) => p !== "manage_users" && p !== "assign_roles" && p !== "act_on_behalf",
 );
 
 export const SUPER_ADMIN_ONLY_PERMISSIONS: InternalPermission[] = [
