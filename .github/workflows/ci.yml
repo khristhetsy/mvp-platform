@@ -41,6 +41,11 @@ jobs:
       - name: Test
         run: npm test
 
+      # Blocking gate: every internal link / router.push / redirect must resolve
+      # to a real route in src/app. Stops dead or misrouted buttons from merging.
+      - name: Link audit (static)
+        run: npm run audit:links
+
       # Whole-repo lint is informational only — there's an existing backlog we
       # don't want blocking every build.
       - name: Lint (full, informational)

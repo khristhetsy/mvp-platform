@@ -1,0 +1,50 @@
+name: Link crawl (runtime)
+
+# Manual, opt-in runtime crawl: loads every static route in a real signed-in
+# browser and reports 404/500s, sign-in bounces (guard/role bugs), console
+# errors, and dead in-page links. Kept out of the per-PR CI because it needs a
+# running deploy + an authenticated session; run it against a preview/staging URL.
+#
+# Requires two repo secrets:
+#   CRAWL_BASE_URL       e.g. https://staging.icapos.com
+#   CRAWL_STORAGE_STATE  contents of a Playwright storageState JSON for a
+#                        signed-in staff/founder session (base64 or raw JSON)
+# and optionally a CRAWL_SAMPLE_ID variable for [id] routes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Base URL to crawl (overrides CRAWL_BASE_URL secret)"
+        required: false
+      sample_id:
+        description: "A real id to substitute into [param] routes"
+        required: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright + Chromium
+        run: npm i -D playwright && npx playwright install --with-deps chromium
+
+      - name: Write auth storage state
+        if: ${{ secrets.CRAWL_STORAGE_STATE != '' }}
+        run: printf '%s' "${{ secrets.CRAWL_STORAGE_STATE }}" > auth-state.json
+
+      - name: Crawl
+        run: npm run audit:crawl
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || secrets.CRAWL_BASE_URL }}
+          STORAGE_STATE: auth-state.json
+          SAMPLE_ID: ${{ github.event.inputs.sample_id || vars.CRAWL_SAMPLE_ID }}
