@@ -34,6 +34,14 @@ const STATUS_LABEL: Record<string, string> = {
   resolved: "Resolved",
 };
 
+// Time-open + at-risk (open and unanswered past ~24h). No SLA table — derived
+// from created_at so the queue surfaces what's aging.
+function slaLabel(createdAt: string, status: string): { text: string; atRisk: boolean } {
+  const hours = Math.floor((Date.now() - new Date(createdAt).getTime()) / (60 * 60 * 1000));
+  const text = hours < 1 ? "just now" : hours < 24 ? `${hours}h open` : `${Math.floor(hours / 24)}d open`;
+  return { text, atRisk: status === "open" && hours >= 24 };
+}
+
 export function SupportQueueClient({
   rows,
   staff,
@@ -44,6 +52,23 @@ export function SupportQueueClient({
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+
+  async function draftWithAi() {
+    if (!selected) return;
+    setDrafting(true);
+    try {
+      const res = await fetch(`/api/admin/support/${selected.id}/draft`, { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (json.unavailable) {
+        alert("AI drafting isn't available right now — write your reply directly.");
+      } else if (json.draft) {
+        setReply(json.draft);
+      }
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   async function open(row: QueueRow) {
     setSelected(row);
@@ -102,6 +127,12 @@ export function SupportQueueClient({
               >
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{r.subject}</span>
+                  {(() => {
+                    const sla = slaLabel(r.createdAt, r.status);
+                    return sla.atRisk ? (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">At risk</span>
+                    ) : null;
+                  })()}
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[r.status] ?? "bg-slate-100 text-slate-600"}`}>
                     {STATUS_LABEL[r.status] ?? r.status}
                   </span>
@@ -109,7 +140,7 @@ export function SupportQueueClient({
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {r.companyName} · {r.founderName}
                   {r.contextItem ? ` · ${r.contextItem}` : ""}
-                  {r.assigneeName ? ` · ${r.assigneeName}` : " · unassigned"}
+                  {r.assigneeName ? ` · ${r.assigneeName}` : " · unassigned"} · {slaLabel(r.createdAt, r.status).text}
                 </p>
               </button>
             </li>
@@ -176,7 +207,15 @@ export function SupportQueueClient({
                 placeholder="Write a reply to the founder…"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
               />
-              <div className="mt-2 flex justify-end">
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={drafting}
+                  onClick={draftWithAi}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
+                >
+                  <i className="ti ti-sparkles" aria-hidden="true" /> {drafting ? "Drafting…" : "Draft with AI"}
+                </button>
                 <button
                   type="button"
                   disabled={busy || !reply.trim()}
