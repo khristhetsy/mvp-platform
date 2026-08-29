@@ -19,7 +19,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { canUser } from "@/lib/rbac/effective-permissions";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Profile } from "@/lib/supabase/types";
+import type { Company, Database, Profile } from "@/lib/supabase/types";
 
 const COOKIE = "icapos_act_as";
 const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -165,4 +165,40 @@ export async function startActOnBehalf(founderId: string): Promise<StartResult> 
 export async function stopActOnBehalf(): Promise<void> {
   const store = await cookies();
   store.delete(COOKIE);
+}
+
+export type ActingFounderScope = {
+  profile: Profile;
+  /** Service-role client scoped to the founder's data. RLS is bypassed here BY
+   *  DESIGN — the guarded context above already proved the actor is permissioned
+   *  staff acting as this founder. Callers must attribute writes to the staff id. */
+  supabase: SupabaseClient<Database>;
+  company: Company;
+  actingStaffId: string;
+};
+
+/**
+ * The single resolver a founder page/API opts into to render as the acting
+ * founder. Returns null when there's no valid acting session — callers then fall
+ * through to their normal founder-session logic. Resolves the founder's PRIMARY
+ * company (act-on-behalf targets the founder's own raise).
+ */
+export async function resolveActingFounderScope(): Promise<ActingFounderScope | null> {
+  const ctx = await getActingContext();
+  if (!ctx) return null;
+  const founder = await getActingFounderProfile();
+  if (!founder) return null;
+
+  const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
+  const { data } = await admin
+    .from("companies")
+    .select("*")
+    .eq("founder_id", founder.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const company = data as Company | null;
+  if (!company) return null;
+
+  return { profile: founder, supabase: admin, company, actingStaffId: ctx.staffId };
 }

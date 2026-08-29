@@ -8,6 +8,7 @@ import { renderFinancialModelWorkbook } from "@/lib/financial-model/workbook";
 import { getStorageBucket, buildStoragePath, createDocumentRecord } from "@/lib/data/documents";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { createNotification } from "@/lib/notifications/notifications";
 import type { ProjectionAssumptions } from "@/lib/business-plan/projections";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,26 @@ export async function POST(req: Request): Promise<Response> {
       entityId: g.company.id,
       metadata: { documentId: docRow?.id ?? null, source: body.source ?? "fresh" },
     });
+
+    // Act-on-behalf: attribute to the acting staff member and notify the founder
+    // that staff changed their records (no silent edits).
+    if (g.actingStaffId) {
+      await writeAuditLog(g.supabase, {
+        userId: g.actingStaffId,
+        action: "financial_model_generated_on_behalf",
+        entityType: "company",
+        entityId: g.company.id,
+        metadata: { founderId: g.profile.id, documentId: docRow?.id ?? null },
+      }).catch(() => {});
+      await createNotification({
+        recipientUserId: g.profile.id,
+        type: "staff_action_on_behalf",
+        title: "Our team updated your financial model",
+        message: "A member of the iCapOS team generated your financial model on your behalf.",
+        entityType: "company",
+        entityId: g.company.id,
+      }).catch(() => {});
+    }
 
     return NextResponse.json({
       ok: true,

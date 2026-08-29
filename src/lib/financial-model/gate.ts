@@ -3,16 +3,24 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { checkFounderStageAccess } from "@/lib/founder-journey/stage-gate";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { Company, Profile } from "@/lib/supabase/types";
 
 export type FinancialModelGate =
   | { error: NextResponse }
-  | { profile: Profile; supabase: SupabaseClient<Database>; company: Company };
+  | { profile: Profile; supabase: SupabaseClient<Database>; company: Company; actingStaffId?: string };
 
 /** Founder + Stage 2 (qualify) + resolved company. Shared by financial-model routes. */
 export async function gateFinancialModelApi(): Promise<FinancialModelGate> {
+  // Act-on-behalf: a permissioned staff member operating this founder's screen.
+  // The guarded resolver has already proven the actor + target; render as founder.
+  const acting = await resolveActingFounderScope();
+  if (acting) {
+    return { profile: acting.profile, supabase: acting.supabase, company: acting.company, actingStaffId: acting.actingStaffId };
+  }
+
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) {
     return { error: auth.error ?? NextResponse.json({ error: "Authentication required." }, { status: 401 }) };
