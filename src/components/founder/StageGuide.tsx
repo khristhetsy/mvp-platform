@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import type { StageGuide } from "@/lib/founder/stage-guides";
 import type { StageProgress, StepProgress } from "@/lib/founder/stage-progress";
+import type { StageGate } from "@/lib/founder/stage-gate-status";
+import { StageGatePanel } from "@/components/founder/StageGatePanel";
 
 function askAssistant(prompt: string) {
   window.dispatchEvent(new CustomEvent("icapos-assistant:ask", { detail: { prompt } }));
@@ -15,19 +17,29 @@ function pctLabel(p: StepProgress | undefined): string | null {
   return `${p.percent}%`;
 }
 
-export function StageGuideView({ guide, progress }: { guide: StageGuide; progress?: StageProgress }) {
+export function StageGuideView({ guide, progress, gate }: { guide: StageGuide; progress?: StageProgress; gate?: StageGate }) {
   return (
     <div className="max-w-2xl">
       <p className="text-xs font-medium uppercase tracking-wide text-[var(--brand-indigo,#2E78F5)]">{guide.stageLabel}</p>
       <h1 className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">{guide.title}</h1>
       <p className="mt-2 text-sm text-[var(--text-muted)]">{guide.intro}</p>
 
+      {/* The real gate: what actually unlocks the next stage (source of truth). */}
+      {gate && (
+        <div className="mt-4">
+          <StageGatePanel gate={gate} />
+        </div>
+      )}
+
       {progress && progress.overall !== null && (
-        <div className="mt-4 flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-[var(--brand-indigo,#2E78F5)]" style={{ width: `${progress.overall}%` }} />
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between text-xs text-[var(--text-muted)]">
+            <span>Materials progress <span className="text-slate-400">· helps your rating</span></span>
+            <span>{progress.overall}%</span>
           </div>
-          <span className="flex-none text-sm font-semibold text-[var(--text-primary)]">{progress.overall}% complete</span>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress.overall}%` }} />
+          </div>
         </div>
       )}
 

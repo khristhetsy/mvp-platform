@@ -6,8 +6,9 @@ import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyStat
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
-import { getStageGuide } from "@/lib/founder/stage-guides";
+import { getStageGuide, type StageSlug } from "@/lib/founder/stage-guides";
 import { computeStageProgress } from "@/lib/founder/stage-progress";
+import { getStageGateStatus } from "@/lib/founder/stage-gate-status";
 import { StageGuideView } from "@/components/founder/StageGuide";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,10 @@ export default async function FounderStageGuidePage({
   }
 
   const supabase = await createServerSupabaseClient();
-  const progress = await computeStageProgress(supabase, company, stage, profile.id);
+  const [progress, gate] = await Promise.all([
+    computeStageProgress(supabase, company, stage, profile.id),
+    getStageGateStatus(supabase, profile.id, guide.slug as StageSlug).catch(() => undefined),
+  ]);
 
   return (
     <FounderAppShell
@@ -52,7 +56,7 @@ export default async function FounderStageGuidePage({
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <WorkspacePageContainer>
-        <StageGuideView guide={guide} progress={progress} />
+        <StageGuideView guide={guide} progress={progress} gate={gate} />
       </WorkspacePageContainer>
     </FounderAppShell>
   );
