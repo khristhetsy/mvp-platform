@@ -47,16 +47,29 @@ export type JourneyStageSummary = {
   relation: "complete" | "current" | "locked";
   line: string;
 };
+/** The single next action for the founder — rule-based and gate/entitlement-aware,
+ *  so its CTA never sends a founder to a page they can't open. */
+export type FounderNextAction = {
+  title: string;
+  description?: string;
+  cta: GateCta;
+  secondaryCta?: GateCta;
+};
+
 export type JourneyOverview = {
   stages: JourneyStageSummary[];
   currentSlug: StageSlug | null;
+  nextAction: FounderNextAction | null;
 };
 
 /** Compact four-stage summary for the dashboard — one evaluate call, one line
- *  of status per stage. Same source of truth as the per-guide gate panel. */
+ *  of status per stage, plus the gate-aware next action. Same source of truth as
+ *  the per-guide gate panel. `outreachReady` gates the Marketing action so a
+ *  founder is only pointed at distribution once they're actually eligible. */
 export async function getJourneyOverview(
   supabase: SupabaseClient<Database>,
   profileId: string,
+  opts?: { outreachReady?: boolean },
 ): Promise<JourneyOverview> {
   const state = await evaluateFounderJourney(supabase, profileId);
   const founderIdx = state.stageIndex;
@@ -79,7 +92,31 @@ export async function getJourneyOverview(
     return { slug, stageNumber: idx + 1, name: STAGE_NAMES[slug], relation, line };
   });
 
-  return { stages, currentSlug: STAGE_SLUGS[founderIdx] ?? null };
+  const cur = STAGE_SLUGS[founderIdx] ?? null;
+  let nextAction: FounderNextAction | null = null;
+  if (cur === "onboarding") {
+    nextAction = c.onboardingComplete
+      ? null
+      : { title: "Finish onboarding", description: "Complete your profile to unlock your rating and matches.", cta: { label: "Continue onboarding", href: "/founder/onboarding" } };
+  } else if (cur === "preparation") {
+    if (state.approvalStatus === "pending") {
+      nextAction = { title: "You're under review", description: "We'll email you when Marketing opens — typically within ~2 business days.", cta: { label: "View your Preparation status", href: "/founder/stages/preparation" } };
+    } else if (!c.requiredDocsUploaded) {
+      nextAction = { title: "Upload your 3 core documents", description: "Pitch deck, financials, and cap table — the last requirements before investor matching.", cta: { label: "Upload documents", href: "/founder/qualify" }, secondaryCta: { label: "See what's left", href: "/founder/stages/preparation" } };
+    } else if (!c.readinessQualified) {
+      nextAction = { title: `Reach a readiness of 75 — you're at ${Math.round(c.readinessScore ?? 0)}`, description: "A little more strengthens your materials and opens investor matching.", cta: { label: "Improve your readiness", href: "/founder/readiness" } };
+    } else {
+      nextAction = { title: "You're ready — submitting for review", description: "We'll email you the moment Marketing opens.", cta: { label: "See your Preparation status", href: "/founder/stages/preparation" } };
+    }
+  } else if (cur === "marketing") {
+    nextAction = opts?.outreachReady
+      ? { title: "Send your one-pager to your matched investors", description: "You're outreach-ready — reaching out now is the highest-impact move this week.", cta: { label: "Open outreach", href: "/founder/deploy" }, secondaryCta: { label: "Review matches", href: "/founder/matches" } }
+      : { title: "Open a data room to move toward Closing", description: "A ready data room is what investors ask for next.", cta: { label: "Open your data room", href: "/founder/deal-room" } };
+  } else if (cur === "closing") {
+    nextAction = { title: "Close your round", description: "Track commitments and coordinate closing.", cta: { label: "Open your deal room", href: "/founder/deal-room" } };
+  }
+
+  return { stages, currentSlug: cur, nextAction };
 }
 
 const CORE_DOCS = new Set(["pitch deck", "financial model", "cap table"]);

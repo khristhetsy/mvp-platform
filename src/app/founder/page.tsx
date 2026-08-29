@@ -28,7 +28,9 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
-import { JourneyOverviewCard } from "@/components/founder/JourneyOverviewCard";
+import { FounderNextActionHero } from "@/components/founder/FounderNextActionHero";
+import { FounderJourneyStrip } from "@/components/founder/FounderJourneyStrip";
+import { FounderRaiseAtAGlance, type GlanceTile } from "@/components/founder/FounderRaiseAtAGlance";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
@@ -165,7 +167,18 @@ export default async function FounderDashboardPage() {
     (investorActivity?.introRequests.length ?? 0) +
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
-  const journeyOverview = company ? await getJourneyOverview(supabase, profile.id).catch(() => null) : null;
+  const journeyOverview = company
+    ? await getJourneyOverview(supabase, profile.id, { outreachReady: crrResult.outreachReady }).catch(() => null)
+    : null;
+  const matchedInvestorCount = investorFit?.approvedInvestorCount ?? investorFit?.strongMatchCount ?? 0;
+  const glanceTiles: GlanceTile[] = company
+    ? [
+        { label: "Readiness", value: String(readinessScore), valueClass: crrResult.outreachReady ? "text-emerald-600" : undefined, sub: crrResult.outreachReady ? "Outreach ready" : "Keep building", href: "/founder/readiness" },
+        { label: "Matched investors", value: String(matchedInvestorCount), sub: "View pipeline →", href: "/founder/matches" },
+        { label: "Pledged", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency), sub: company?.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined, href: "/founder/deal-room" },
+        { label: "Investor activity", value: String(investorActivityTotal), sub: "Signals & intros", href: "/founder/matches" },
+      ]
+    : [];
 
   // Milestones achievable from dashboard data
   const achievedMilestones: MilestoneKey[] = [];
@@ -202,44 +215,18 @@ export default async function FounderDashboardPage() {
 
         <StageUnlockBanner />
 
+        {/* Focused top: next action → journey → raise at a glance. */}
         {journeyOverview ? (
-          <div className="mb-8">
-            <JourneyOverviewCard overview={journeyOverview} />
+          <div className="mb-8 space-y-4">
+            {journeyOverview.nextAction ? <FounderNextActionHero action={journeyOverview.nextAction} /> : null}
+            <FounderJourneyStrip overview={journeyOverview} />
+            {glanceTiles.length ? <FounderRaiseAtAGlance tiles={glanceTiles} /> : null}
           </div>
         ) : null}
 
-        <TipOfTheDay profileId={profile.id} audience="founder" />
-
-        <PointsSummaryCard profileId={profile.id} />
-
         {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 
-        {/* 1. Capital readiness */}
-        <div className="mb-8">
-          <CapitalReadinessSection
-            readinessScore={readinessScore}
-            readinessDetail={readinessDetail}
-            investableScore={crrResult.crr}
-            crrSubtitle={crrSubtitle}
-            crrParts={crrParts}
-            outreachReady={crrResult.outreachReady}
-            outreachThreshold={OUTREACH_THRESHOLD}
-            raiseProgress={raiseProgress}
-            companyStatus={company?.status ?? null}
-            companyFundingAmount={company?.funding_amount ? Number(company.funding_amount) : null}
-            pledgeSummary={pledgeSummary}
-            investorActivityTotal={investorActivityTotal}
-            investorActivity={investorActivity}
-            documents={documents ?? []}
-          />
-        </div>
-
-        {/* 2. Round close tracker — live thermometer + pipeline stage breakdown */}
-        <div className="mb-8">
-          <RoundCloseTracker />
-        </div>
-
-        {/* 3. Weekly raise digest */}
+        {/* Weekly raise digest */}
         <div className="mb-8">
           <FounderWeeklyDigest
             rooms={activeRooms ?? []}
@@ -260,6 +247,35 @@ export default async function FounderDashboardPage() {
 
         {/* ── Secondary panels — hidden by default ── */}
         <DashboardExpandableSection showLabel="Show more insights" hideLabel="Show less">
+
+          {/* Capital readiness detail (moved below the focused top) */}
+          <div className="mb-8">
+            <CapitalReadinessSection
+              readinessScore={readinessScore}
+              readinessDetail={readinessDetail}
+              investableScore={crrResult.crr}
+              crrSubtitle={crrSubtitle}
+              crrParts={crrParts}
+              outreachReady={crrResult.outreachReady}
+              outreachThreshold={OUTREACH_THRESHOLD}
+              raiseProgress={raiseProgress}
+              companyStatus={company?.status ?? null}
+              companyFundingAmount={company?.funding_amount ? Number(company.funding_amount) : null}
+              pledgeSummary={pledgeSummary}
+              investorActivityTotal={investorActivityTotal}
+              investorActivity={investorActivity}
+              documents={documents ?? []}
+            />
+          </div>
+
+          {/* Round close tracker */}
+          <div className="mb-8">
+            <RoundCloseTracker />
+          </div>
+
+          <TipOfTheDay profileId={profile.id} audience="founder" />
+
+          <PointsSummaryCard profileId={profile.id} />
 
           {/* Fundraising milestone tracker */}
           <div className="mb-8">
