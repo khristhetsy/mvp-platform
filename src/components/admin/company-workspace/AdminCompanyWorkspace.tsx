@@ -28,6 +28,7 @@ import { RiskSignalsPanel } from "@/components/predictive-intelligence/RiskSigna
 import { AdminCompanyAIAssessment } from "@/components/admin/AdminCompanyAIAssessment";
 import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
 import { FounderJourneyPanel } from "@/components/admin/company-workspace/FounderJourneyPanel";
+import { StageMenuMirror } from "@/components/admin/company-workspace/StageMenuMirror";
 import { NotificationSettings } from "@/components/admin/company-workspace/NotificationSettings";
 import { SubscriptionManager } from "@/components/admin/company-workspace/SubscriptionManager";
 import { CompanyBasicsEditor } from "@/components/admin/company-workspace/CompanyBasicsEditor";
@@ -179,6 +180,8 @@ export function AdminCompanyWorkspace({
       {/* ---------- INITIALIZE ---------- */}
       {tab === "initialize" ? (
         <div className="space-y-6">
+          <StageMenuMirror journey={data.journey} stage="initialize" />
+
           <CompanyWorkspaceMetrics data={data} />
 
           <PageSection title="Founder Progress" subtitle="Current stage, gates, and what's pending to advance">
@@ -218,6 +221,8 @@ export function AdminCompanyWorkspace({
       {/* ---------- QUALIFY ---------- */}
       {tab === "qualify" ? (
         <div className="space-y-6">
+          <StageMenuMirror journey={data.journey} stage="qualify" />
+
           <div className="grid gap-6 xl:grid-cols-2">
             <PageSection title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
               <CompanyReadinessPanel readiness={data.readiness} companyId={data.company.id} />
@@ -246,6 +251,8 @@ export function AdminCompanyWorkspace({
       {/* ---------- DEPLOY ---------- */}
       {tab === "deploy" ? (
         <div className="space-y-6">
+          <StageMenuMirror journey={data.journey} stage="deploy" />
+
           {reviewMarketplace}
           {investablePanel}
           {investorActivity}
@@ -259,6 +266,8 @@ export function AdminCompanyWorkspace({
       {/* ---------- OPTIMIZE ---------- */}
       {tab === "optimize" ? (
         <div className="space-y-6">
+          <StageMenuMirror journey={data.journey} stage="optimize" />
+
           {investorActivity}
           {spvOperations}
         </div>
