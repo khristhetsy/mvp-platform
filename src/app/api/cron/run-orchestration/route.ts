@@ -9,7 +9,8 @@ import { runCronOrchestrationPass } from "@/lib/notifications/orchestration/run-
 import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
 import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { refreshPartnerScoreSnapshots } from "@/lib/investor-rating/snapshot";
-import { nudgeStalledPreparationFounders } from "@/lib/notifications/founder-nudges";
+import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges";
+import { digestStalledFoundersForStaff } from "@/lib/notifications/staff-journey-digest";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -66,8 +67,9 @@ async function handleCron(request: Request) {
     const dataRoomReminders = await runDataRoomRemindersSafely();
     // Leave ~15s of headroom under the 60s function limit for the partner-score refresh.
     const partnerScores = await refreshPartnerScoresSafely(startedAt + 45_000);
-    const prepNudges = await nudgeStalledPreparationFounders().catch(() => ({ nudged: 0 }));
-    return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores, prepNudges }, { status: result.success ? 200 : 207 });
+    const journeyNudges = await nudgeStalledJourneyFounders().catch(() => ({ nudged: 0 }));
+    const journeyDigest = await digestStalledFoundersForStaff().catch(() => ({ staffNotified: 0, stalled: 0 }));
+    return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores, journeyNudges, journeyDigest }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(
