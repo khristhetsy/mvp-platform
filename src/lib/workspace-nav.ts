@@ -26,8 +26,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       // Universal Contacts — one shared list for every department; each member sees the
       // contacts Lead-assigned to them (admins see all). No permission gate on purpose.
       { href: "/admin/sales/contacts", label: "Contacts" },
-      // Founder support triage — help requests + questions. Visible to all staff.
-      { href: "/admin/support", label: "Support queue" },
     ],
   },
   {
@@ -61,6 +59,15 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
+    // Founder-facing service functions grouped together, before Investor Relations.
+    title: "Customer Support",
+    items: [
+      { href: "/admin/support",        label: "Support queue",   requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/founders-stuck", label: "Stuck founders",  requiredPermission: "manage_companies"     },
+      { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"     },
+    ],
+  },
+  {
     title: "Investor Relations",
     items: [
       { href: "/admin/playbook", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard" },
@@ -79,7 +86,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/crm/investors",    label: "Investor CRM",    requiredPermission: "manage_crm"         },
       { href: "/admin/crm/unclassified", label: "Unclassified",    requiredPermission: "manage_crm"         },
       { href: "/admin/intro-requests", label: "Intro Requests",  requiredPermission: "manage_matching"    },
-      { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"   },
       { href: "/admin/marketplace",    label: "Marketplace Review", requiredPermission: "manage_companies" },
       { href: "/admin/deal-rooms",     label: "Deal Rooms",      requiredPermission: "manage_deal_rooms" },
       { href: "/admin/spvs",           label: "SPVs",            requiredPermission: "manage_spvs"       },
@@ -157,7 +163,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/tasks",            label: "Tasks",           requiredPermission: "view_admin_dashboard" },
       { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
-      { href: "/admin/founders-stuck",   label: "Stuck founders",  requiredPermission: "manage_companies"    },
       { href: "/admin/data-room",         label: "Diligence Tracker",requiredPermission: "manage_companies"   },
       {
         href: "/admin/learning",
