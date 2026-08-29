@@ -118,7 +118,19 @@ export function ReachOutPanel({
             </div>
 
             {notice ? (
-              <p className={`mt-3 text-xs font-medium ${notice.kind === "ok" ? "text-emerald-600" : "text-red-600"}`}>{notice.text}</p>
+              <div className="mt-3 text-xs font-medium">
+                <p className={notice.kind === "ok" ? "text-emerald-600" : "text-red-600"}>{notice.text}</p>
+                {notice.kind === "err" && /connect/i.test(notice.text) ? (
+                  <a
+                    href={`/api/integrations/google/connect?returnTo=${encodeURIComponent(
+                      typeof window !== "undefined" ? window.location.pathname + window.location.hash : "/admin",
+                    )}`}
+                    className="mt-1 inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-indigo-700 hover:bg-indigo-100"
+                  >
+                    <i className="ti ti-brand-google" aria-hidden="true" /> Connect Google (with Gmail)
+                  </a>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="mt-4 flex items-center gap-2">
