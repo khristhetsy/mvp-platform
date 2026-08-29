@@ -3,6 +3,10 @@ export const SLA_RULES = {
   criticalComplianceHours: 24,
   investorDocumentReviewHours: 48,
   companyReviewHours: 72,
+  /** Founder stage approval: re-nudge reviewers after this long pending. */
+  stageApprovalReviewHours: 48,
+  /** Founder stage approval: escalate to a manager after this long pending. */
+  stageApprovalEscalateHours: 96,
   founderRemediationDays: 7,
   investorSpvRequirementDays: 7,
   onboardingInactivityDays: 14,

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { actionCenterBasePath } from "@/lib/actions/filters";
-import { INACTIVITY_SCAN_LIMIT, RECENT_ACTIVITY_WINDOW_DAYS, SLA_RULES_MS } from "@/lib/notifications/orchestration/rules";
+import { INACTIVITY_SCAN_LIMIT, RECENT_ACTIVITY_WINDOW_DAYS, SLA_RULES, SLA_RULES_MS } from "@/lib/notifications/orchestration/rules";
 import type { OrchestrationFinding } from "@/lib/notifications/orchestration/types";
 import { listStaffProfileIds } from "@/lib/notifications/notifications";
 import type { Database } from "@/lib/supabase/types";
@@ -152,6 +152,58 @@ export async function detectWorkflowInactivity(
   }
 
   void recentSince;
+  return findings;
+}
+
+/**
+ * The real Ready→Match bottleneck: founders whose Preparation approval sits
+ * pending too long. Mirrors the investor-approval escalation — re-nudges the
+ * reviewers after the review SLA, and escalates (high severity) after the
+ * escalate SLA, so no qualified founder waits in the black hole. The approval
+ * columns aren't in the generated types, so this query runs untyped (as elsewhere).
+ */
+export async function detectStalledStageApprovals(
+  supabase: SupabaseClient<Database>,
+): Promise<OrchestrationFinding[]> {
+  const findings: OrchestrationFinding[] = [];
+  const staffIds = await listStaffProfileIds();
+  if (staffIds.length === 0) return findings;
+
+  const nudgeCutoff = new Date(Date.now() - SLA_RULES.stageApprovalReviewHours * 60 * 60 * 1000).toISOString();
+  const escalateCutoff = new Date(Date.now() - SLA_RULES.stageApprovalEscalateHours * 60 * 60 * 1000).toISOString();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as unknown as import("@supabase/supabase-js").SupabaseClient<any>;
+  const { data } = await db
+    .from("profiles")
+    .select("id, full_name, stage_approval_requested_at")
+    .eq("stage_approval_status", "pending")
+    .lt("stage_approval_requested_at", nudgeCutoff)
+    .order("stage_approval_requested_at", { ascending: true })
+    .limit(INACTIVITY_SCAN_LIMIT);
+
+  const pending = (data ?? []) as { id: string; full_name: string | null; stage_approval_requested_at: string | null }[];
+  for (const p of pending) {
+    const overdue = Boolean(p.stage_approval_requested_at && p.stage_approval_requested_at < escalateCutoff);
+    for (const staffId of staffIds.slice(0, 5)) {
+      findings.push({
+        trigger: "founder_stage_approval_stalled",
+        orchestrationType: overdue ? "escalation" : "admin_attention",
+        severity: overdue ? "high" : "medium",
+        title: overdue ? "Founder approval overdue" : "Founder awaiting stage approval",
+        message: `${p.full_name ?? "A founder"} has been waiting on Preparation review beyond the ${overdue ? "escalation" : "review"} SLA — approve or request changes.`,
+        recipientUserId: staffId,
+        role: "admin",
+        entityType: "profile",
+        entityId: p.id,
+        deepLink: "/admin/founders-stuck",
+        dedupeKey: `orch:stage_approval:${overdue ? "escalate" : "nudge"}:${p.id}:${staffId}`,
+        escalationTarget: "admin",
+        inactivityReason: "Founder stage approval pending beyond SLA.",
+        suggestedAction: "Review and approve or request changes in the stuck-founders queue.",
+      });
+    }
+  }
   return findings;
 }
 

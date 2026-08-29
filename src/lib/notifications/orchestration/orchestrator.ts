@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { routeEscalationVisibility } from "@/lib/notifications/orchestration/escalation";
-import { detectDormantOpportunities, detectWorkflowInactivity } from "@/lib/notifications/orchestration/inactivity";
+import { detectDormantOpportunities, detectStalledStageApprovals, detectWorkflowInactivity } from "@/lib/notifications/orchestration/inactivity";
 import { deliverOrchestrationFinding } from "@/lib/notifications/orchestration/delivery";
 import { ORCHESTRATION_SCAN_LIMIT } from "@/lib/notifications/orchestration/rules";
 import { evaluateActionTriggers } from "@/lib/notifications/orchestration/triggers";
@@ -102,7 +102,8 @@ export async function runNotificationOrchestration(
   if (options?.includeInactivity !== false && !options?.userId) {
     const inactivity = await detectWorkflowInactivity(supabase);
     const dormant = await detectDormantOpportunities(supabase);
-    allFindings.push(...inactivity, ...dormant);
+    const stageApprovals = await detectStalledStageApprovals(supabase);
+    allFindings.push(...inactivity, ...dormant, ...stageApprovals);
   }
 
   const result = await processFindings(allFindings);

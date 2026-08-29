@@ -19,6 +19,7 @@ export const ORCHESTRATION_TRIGGER_KINDS = [
   "action_escalated",
   "critical_compliance_action",
   "founder_onboarding_stalled",
+  "founder_stage_approval_stalled",
   "investor_approval_stalled",
   "spv_blocked",
   "investor_requirements_overdue",
