@@ -9,6 +9,7 @@ import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 import { ActingAsBanner } from "@/components/admin/ActingAsBanner";
+import { RequestHelpButton } from "@/components/founder/RequestHelpButton";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -58,6 +59,7 @@ export default async function FounderFinancialModelPage() {
             description={t("a_driver_based_3_year_model_investors_can_open")}
           />
           <FinancialModelClient />
+          <RequestHelpButton contextItem="Financial model" contextStage="qualify" />
         </FounderJourneyGate>
       )}
     </FounderAppShell>

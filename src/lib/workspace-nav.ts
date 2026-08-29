@@ -26,6 +26,8 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       // Universal Contacts — one shared list for every department; each member sees the
       // contacts Lead-assigned to them (admins see all). No permission gate on purpose.
       { href: "/admin/sales/contacts", label: "Contacts" },
+      // Founder support triage — help requests + questions. Visible to all staff.
+      { href: "/admin/support", label: "Support queue" },
     ],
   },
   {
