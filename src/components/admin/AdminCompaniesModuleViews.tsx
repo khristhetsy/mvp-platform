@@ -10,7 +10,8 @@ import { PageSection } from "@/components/ui/workspace-layout";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
 
-type ViewMode = "kanban" | "grid" | "list";
+type ViewMode = "kanban" | "grid" | "list" | "journey";
+type UserType = "" | "founders" | "investors";
 type T = (key: string, values?: Record<string, string | number>) => string;
 
 const STAGE_ORDER = ["initialize", "qualify", "deploy", "optimize"];
@@ -32,6 +33,15 @@ function scoreClass(n: number | null | undefined) {
   if (n >= 70) return "text-emerald-700 font-semibold";
   if (n >= 50) return "text-amber-700 font-semibold";
   return "text-red-600 font-semibold";
+}
+
+// Journey-view status chip derived from the approval + review signals already on
+// the card (no new query). Mirrors the Journey-view mock.
+function journeyStatus(c: AdminCompanyCardData): { label: string; cls: string } {
+  if (c.stage_approval_status === "pending") return { label: "Awaiting approval", cls: "bg-indigo-50 text-indigo-700" };
+  if (c.stage_approval_status === "rejected" || c.review_status === "rejected") return { label: "Rejected", cls: "bg-red-50 text-red-700" };
+  if (c.review_status === "approved") return { label: "On track", cls: "bg-emerald-50 text-emerald-700" };
+  return { label: "In progress", cls: "bg-slate-100 text-slate-600" };
 }
 
 function reviewStatusLabel(t: T, status: string | null) {
@@ -63,6 +73,7 @@ function AdminCompaniesModuleViewsInner({
   const t = useTranslations("billingCompaniesAdmin");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("list");
+  const [userType, setUserType] = useState<UserType>("");
   const { filters } = useAdminQueryFilters("companies");
   const companyFilters = filters as CompanyQueryFilters;
 
@@ -126,6 +137,16 @@ function AdminCompaniesModuleViewsInner({
           className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <select
+          value={userType}
+          onChange={(e) => setUserType(e.target.value as UserType)}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          aria-label="Filter by user type"
+        >
+          <option value="">All users</option>
+          <option value="founders">Founders</option>
+          <option value="investors">Investors</option>
+        </select>
+        <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -139,7 +160,7 @@ function AdminCompaniesModuleViewsInner({
           <option value="pending">⏳ Awaiting my approval</option>
         </select>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(["kanban", "grid", "list"] as const).map((v) => (
+          {(["kanban", "grid", "list", "journey"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -150,7 +171,7 @@ function AdminCompaniesModuleViewsInner({
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {v === "kanban" ? t("companies.kanban") : v === "grid" ? t("companies.grid") : t("companies.list")}
+              {v === "kanban" ? t("companies.kanban") : v === "grid" ? t("companies.grid") : v === "list" ? t("companies.list") : "Journey"}
             </button>
           ))}
         </div>
@@ -168,8 +189,55 @@ function AdminCompaniesModuleViewsInner({
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
             {t("companies.zeroRecords")}
           </div>
+        ) : userType === "investors" ? (
+          <ModuleEmptyState
+            title="Investor accounts live in the Investors directory"
+            description="This list is company-centric. Open Directory → Investors to browse and filter investor accounts."
+          />
         ) : filtered.length === 0 ? (
           <ModuleEmptyState title={t("companies.noMatching")} description={t("companies.noMatchingDesc")} />
+        ) : view === "journey" ? (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <ul className="divide-y divide-slate-100">
+              {listRows.map((company) => {
+                const idx = company.journey_stage ? STAGE_ORDER.indexOf(company.journey_stage) : -1;
+                const status = journeyStatus(company);
+                return (
+                  <li
+                    key={company.id}
+                    className="grid cursor-pointer grid-cols-[1.5fr_1.6fr_0.8fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50"
+                    onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-900">{company.company_name}</p>
+                      <p className="truncate text-xs text-slate-500">{company.founder_name}</p>
+                    </div>
+                    <div>
+                      <div className="mb-1 flex items-center gap-1">
+                        {STAGE_ORDER.map((s, i) => (
+                          <div
+                            key={s}
+                            title={STAGE_LABEL[s]}
+                            className={`h-1.5 flex-1 rounded ${i <= idx ? "bg-indigo-500" : "bg-slate-200"}`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        {idx >= 0 ? `Stage ${idx + 1} · ${STAGE_LABEL[STAGE_ORDER[idx]]}` : "Not started"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.cls}`}>{status.label}</span>
+                      <p className={`mt-0.5 text-[11px] ${scoreClass(company.readiness_score)}`}>
+                        {company.readiness_score != null ? `${company.readiness_score}% ready` : "—"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-medium text-indigo-600">Open →</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ) : view === "kanban" ? (
           <PipelineBoard columns={pipelineColumns} density="comfortable" />
         ) : view === "grid" ? (
