@@ -7,10 +7,10 @@ import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 import { buildCompanyFilteredHref } from "@/lib/admin/company-workspace-types";
 
 const STAGE_META: Record<JourneyStage, { label: string; blurb: string }> = {
-  initialize: { label: "Initialize", blurb: "Company profile & onboarding" },
-  qualify: { label: "Qualify", blurb: "Readiness, documents & stage approval" },
-  deploy: { label: "Deploy", blurb: "Go-to-market & deal room" },
-  optimize: { label: "Optimize", blurb: "Investor engagement & close" },
+  initialize: { label: "Onboarding", blurb: "Company profile & onboarding" },
+  qualify: { label: "Preparation", blurb: "Readiness, documents & stage approval" },
+  deploy: { label: "Marketing", blurb: "Go-to-market & deal room" },
+  optimize: { label: "Closing", blurb: "Investor engagement & close" },
 };
 
 type Gate = {

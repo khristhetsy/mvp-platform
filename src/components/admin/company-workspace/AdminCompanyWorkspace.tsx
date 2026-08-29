@@ -32,12 +32,15 @@ import { NotificationSettings } from "@/components/admin/company-workspace/Notif
 import { SubscriptionManager } from "@/components/admin/company-workspace/SubscriptionManager";
 import { CompanyBasicsEditor } from "@/components/admin/company-workspace/CompanyBasicsEditor";
 
+// Display labels mirror the founder's Stage 1–4 vocabulary; the underlying keys
+// (initialize/qualify/deploy/optimize) are the engine slugs and stay unchanged.
+// Review is kept but moved after the four stages so they read 1–2–3–4 in order.
 const TABS = [
-  { key: "initialize", label: "Initialize" },
-  { key: "qualify", label: "Qualify" },
-  { key: "deploy", label: "Deploy" },
+  { key: "initialize", label: "Onboarding" },
+  { key: "qualify", label: "Preparation" },
+  { key: "deploy", label: "Marketing" },
+  { key: "optimize", label: "Closing" },
   { key: "review", label: "Review" },
-  { key: "optimize", label: "Optimize" },
   { key: "tools", label: "Analytics & Tools" },
   { key: "settings", label: "Settings" },
 ] as const;

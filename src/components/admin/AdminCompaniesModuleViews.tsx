@@ -20,6 +20,13 @@ const STAGE_STYLE: Record<string, string> = {
   deploy: "bg-indigo-50 text-indigo-800",
   optimize: "bg-emerald-50 text-emerald-800",
 };
+// Display the founder's Stage 1–4 vocabulary; engine slugs stay the filter values.
+const STAGE_LABEL: Record<string, string> = {
+  initialize: "Onboarding",
+  qualify: "Preparation",
+  deploy: "Marketing",
+  optimize: "Closing",
+};
 function scoreClass(n: number | null | undefined) {
   if (n == null) return "text-slate-400";
   if (n >= 70) return "text-emerald-700 font-semibold";
@@ -125,10 +132,10 @@ function AdminCompaniesModuleViewsInner({
           aria-label="Filter by journey stage"
         >
           <option value="">All stages</option>
-          <option value="initialize">Initialize</option>
-          <option value="qualify">Qualify</option>
-          <option value="deploy">Deploy</option>
-          <option value="optimize">Optimize</option>
+          <option value="initialize">Onboarding</option>
+          <option value="qualify">Preparation</option>
+          <option value="deploy">Marketing</option>
+          <option value="optimize">Closing</option>
           <option value="pending">⏳ Awaiting my approval</option>
         </select>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -212,7 +219,7 @@ function AdminCompaniesModuleViewsInner({
                       {company.journey_stage ? (
                         <span className="inline-flex items-center gap-1">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STAGE_STYLE[company.journey_stage] ?? "bg-slate-100 text-slate-600"}`}>
-                            {company.journey_stage}
+                            {STAGE_LABEL[company.journey_stage] ?? company.journey_stage}
                           </span>
                           {company.stage_approval_status === "pending" && <span className="text-[10px] text-amber-700" title="Awaiting your approval">⏳</span>}
                         </span>

@@ -1,12 +1,10 @@
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MetricGrid } from "@/components/ui/workspace-layout";
 import {
   buildCompanyFilteredHref,
-  buildCompanyReportHref,
   type AdminCompanyWorkspaceData,
 } from "@/lib/admin/company-workspace-types";
 
@@ -54,46 +52,6 @@ export function CompanyWorkspaceHeader({
           data.queueItems.length > 0 ? (
             <StatusBadge label={`${data.queueItems.length} queue item${data.queueItems.length === 1 ? "" : "s"}`} status="warning" dot />
           ) : null
-        }
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/admin/companies?company=${companyId}`}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Review company
-            </Link>
-            <Link
-              href={buildCompanyReportHref(companyId, "due_diligence")}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Open reports
-            </Link>
-            <Link
-              href={buildCompanyFilteredHref("/admin/spvs", companyId)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              View SPVs
-            </Link>
-            <Link
-              href={buildCompanyFilteredHref("/admin/crm", companyId)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Open CRM
-            </Link>
-            <Link
-              href={`/admin/audit?company=${companyId}`}
-              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-900 hover:bg-indigo-100"
-            >
-              Audit trail
-            </Link>
-            <Link
-              href={buildCompanyFilteredHref("/admin/compliance", companyId)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Open compliance
-            </Link>
-          </div>
         }
       />
 
