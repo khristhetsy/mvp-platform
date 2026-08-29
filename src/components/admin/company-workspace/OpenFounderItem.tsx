@@ -3,28 +3,40 @@
 import { useState } from "react";
 
 /**
- * Open control for a founder-menu item. With the act_on_behalf permission it
- * starts an acting-as session for this founder, then opens the founder screen in
- * a new tab (the guarded cookie applies there). Without it, a plain read-only
- * link. Authorization is enforced server-side regardless of this flag.
+ * Open control for a founder-menu item. "Open as founder" starts a guarded
+ * acting-as session and opens the founder screen — but only for items whose page
+ * has adopted the resolver (`actable`); otherwise opening would just redirect
+ * staff, so we show a disabled "Soon" marker instead of a misleading button.
+ * Authorization is always enforced server-side.
  */
 export function OpenFounderItem({
   href,
   founderId,
   canActOnBehalf,
-}: Readonly<{ href: string; founderId: string | null; canActOnBehalf: boolean }>) {
+  actable,
+}: Readonly<{ href: string; founderId: string | null; canActOnBehalf: boolean; actable: boolean }>) {
   const [busy, setBusy] = useState(false);
+
+  // Page not yet wired for act-on-behalf → don't offer a dead-ending Open.
+  if (!actable) {
+    return (
+      <span
+        title="Opening as the founder isn't available for this screen yet."
+        className="cursor-not-allowed rounded-lg border border-slate-200 px-2.5 py-1 text-[12px] font-medium text-slate-300"
+      >
+        Soon
+      </span>
+    );
+  }
 
   if (!canActOnBehalf || !founderId) {
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="rounded-lg border border-slate-200 px-2.5 py-1 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+      <span
+        title="Requires the act-on-behalf permission."
+        className="cursor-not-allowed rounded-lg border border-slate-200 px-2.5 py-1 text-[12px] font-medium text-slate-300"
       >
         Open
-      </a>
+      </span>
     );
   }
 

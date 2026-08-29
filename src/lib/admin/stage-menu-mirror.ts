@@ -8,11 +8,19 @@ import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 
 export type MirrorItemStatus = "done" | "attention" | "missing" | "todo" | "locked";
 
+// Founder routes that have adopted the act-on-behalf resolver end-to-end, so
+// "Open as founder" actually renders as the founder. Others would just redirect
+// staff, so their Open control is shown as not-yet-available. Grow this set as
+// pages adopt resolveActingFounderScope.
+const ACT_ON_BEHALF_WIRED = new Set<string>(["/founder/financial-model"]);
+
 export type MirrorItem = {
   label: string;
-  /** Founder route this item lives at (Phase 3 upgrades Open to act-on-behalf). */
+  /** Founder route this item lives at. */
   href: string;
   status: MirrorItemStatus;
+  /** True when the founder page honors act-on-behalf (Open renders as founder). */
+  actable: boolean;
 };
 
 export type StageMirror = {
@@ -90,12 +98,13 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
   const defs = STAGE_MENU[stage] ?? [];
 
   const items: MirrorItem[] = defs.map((d) => {
-    if (!reached) return { label: d.label, href: d.href, status: "locked" };
+    const actable = ACT_ON_BEHALF_WIRED.has(d.href);
+    if (!reached) return { label: d.label, href: d.href, status: "locked", actable };
     if (d.condition) {
-      return { label: d.label, href: d.href, status: conditionMet(journey, d.condition) ? "done" : "attention" };
+      return { label: d.label, href: d.href, status: conditionMet(journey, d.condition) ? "done" : "attention", actable };
     }
     // Past stage without a signal: treat as done; current stage: neutral to-do.
-    return { label: d.label, href: d.href, status: isCurrent ? "todo" : "done" };
+    return { label: d.label, href: d.href, status: isCurrent ? "todo" : "done", actable };
   });
 
   const doneCount = items.filter((i) => i.status === "done").length;

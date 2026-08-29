@@ -49,7 +49,7 @@ export function StageMenuMirror({
                 <i className={`ti ${meta.icon} ${meta.iconColor} text-[17px]`} aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{item.label}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>{meta.label}</span>
-                <OpenFounderItem href={item.href} founderId={founderId} canActOnBehalf={canActOnBehalf} />
+                <OpenFounderItem href={item.href} founderId={founderId} canActOnBehalf={canActOnBehalf} actable={item.actable} />
               </li>
             );
           })}
