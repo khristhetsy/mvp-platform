@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { mirrorInvestorToContacts } from "@/lib/formd/mirror-investor-contact";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (action === "matched") matched++;
     else if (action === "review") review++;
     else created++;
+    // Mirror into crm_contacts (Investors group) unless only held for review.
+    if (action !== "review") await mirrorInvestorToContacts(firmId, profile.id).catch(() => {});
   }
 
   // Name the OFAC-blocked firms so the desk can show which were skipped.

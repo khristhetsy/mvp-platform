@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { mirrorInvestorToContacts } from "@/lib/formd/mirror-investor-contact";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     // OFAC hard-stop and other guards surface here as a Postgres exception.
     const blocked = /ofac/i.test(error.message);
     return NextResponse.json({ error: error.message }, { status: blocked ? 409 : 400 });
+  }
+
+  // Mirror into crm_contacts (Investors group) unless it was only held for review.
+  const action = (data as { action?: string } | null)?.action;
+  if (action && action !== "review") {
+    await mirrorInvestorToContacts(parsed.data.firmId, profile.id).catch(() => {});
   }
   return NextResponse.json(data ?? { ok: true });
 }
