@@ -241,6 +241,10 @@ export async function promoteFiling(
     },
     formd_cik: f.cik,
     formd_accession_no: accessionNo,
+    // Assign to whoever promoted it, so it's visible in the owner-scoped Sales Hub
+    // Contacts list (unassigned contacts only show in a see-all view). Mirrors the
+    // manual "Add contact" path.
+    assignee_ids: [actorId],
     // created_on is a DB-generated column — never insert a value (§ promote fix).
   };
   const { data: inserted, error } = await client.from("crm_contacts").upsert(row, { onConflict: "source,external_id" }).select("id").single();
