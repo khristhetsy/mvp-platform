@@ -20,6 +20,7 @@ type Firm = {
   sectors_observed: string[] | null;
   activity_band: "observed" | "single" | "registry";
   formd_rank: number | null;
+  ofac: "clear" | "hit" | "review" | "unavailable" | null;
 };
 
 const fmtUsd = (n: number | null) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
@@ -127,6 +128,8 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
                       <p className="truncate text-sm font-semibold text-slate-900">{f.display_name}</p>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.cls}`}>{meta.label}</span>
                       {f.needs_review ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Review</span> : null}
+                      {f.ofac === "hit" ? <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">OFAC hit</span> : null}
+                      {f.ofac === "review" ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">OFAC review</span> : null}
                       {f.promoted_at ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">Promoted</span> : null}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-slate-500">
@@ -151,14 +154,20 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
                     <div className="text-right text-[11px] text-slate-400">Verified,<br />not rated</div>
                   )}
                   {canPromote && !f.promoted_at ? (
-                    <button
-                      type="button"
-                      disabled={busyId === f.id}
-                      onClick={() => promote(f)}
-                      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
-                    >
-                      {busyId === f.id ? "…" : "Promote"}
-                    </button>
+                    f.ofac === "hit" ? (
+                      <span title="OFAC hit — promote blocked" className="cursor-not-allowed rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-400">
+                        Blocked
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busyId === f.id}
+                        onClick={() => promote(f)}
+                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                      >
+                        {busyId === f.id ? "…" : "Promote"}
+                      </button>
+                    )
                   ) : null}
                 </li>
               );

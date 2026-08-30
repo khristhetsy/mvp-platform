@@ -32,10 +32,30 @@ export async function GET(req: NextRequest): Promise<Response> {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  const list = (data ?? []) as Record<string, unknown>[];
+
+  // Attach the latest firm-level OFAC result so the Desk can flag hits/reviews.
+  const ids = list.map((f) => String(f.id));
+  const ofac = new Map<string, string>();
+  if (ids.length) {
+    const { data: screen } = await admin
+      .from("formd_screening")
+      .select("subject_id, result, checked_at")
+      .eq("subject_type", "firm")
+      .eq("check_type", "ofac_sdn")
+      .in("subject_id", ids)
+      .order("checked_at", { ascending: false });
+    for (const s of (screen ?? []) as Record<string, unknown>[]) {
+      const key = String(s.subject_id);
+      if (!ofac.has(key)) ofac.set(key, String(s.result)); // first = latest
+    }
+  }
+  for (const f of list) f.ofac = ofac.get(String(f.id)) ?? null;
+
   // Present order: observed → single → registry (activity first).
   const rank: Record<string, number> = { observed: 0, single: 1, registry: 2 };
-  const firms = (data ?? []).sort(
-    (a: Record<string, unknown>, b: Record<string, unknown>) =>
+  const firms = list.sort(
+    (a, b) =>
       (rank[String(a.activity_band)] ?? 3) - (rank[String(b.activity_band)] ?? 3) ||
       Number(b.vehicle_count ?? 0) - Number(a.vehicle_count ?? 0),
   );
