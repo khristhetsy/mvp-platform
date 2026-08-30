@@ -29,11 +29,15 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [match, setMatch] = useState<{ accessionNo: string; contactId: string; contactName: string } | null>(null);
   const [minScore, setMinScore] = useState(70);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setSelected(new Set());
+    setSelectAllMatching(false);
     try {
       const res = await fetch(`/api/admin/crm/connectors/formd/filings?view=${view}&minScore=${view === "all" || view === "agent_watch" ? 0 : minScore}`);
       const j = await res.json();
@@ -60,8 +64,11 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
   }, []);
 
   function toggle(id: string) {
+    setSelectAllMatching(false);
     setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
+
+  const clearSelection = () => { setSelected(new Set()); setSelectAllMatching(false); };
 
   async function promote(accessionNo: string, resolve?: "create" | "link", contactId?: string) {
     setBusy(accessionNo);
@@ -98,12 +105,38 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
   }
 
   async function bulkPromote() {
-    const ids = rows.filter((r) => selected.has(r.accessionNo) && !r.promotedContactId).map((r) => r.accessionNo);
-    for (const id of ids) await promote(id);
-    setSelected(new Set());
+    const explicit = rows.filter((r) => selected.has(r.accessionNo) && !r.promotedContactId).map((r) => r.accessionNo);
+    if (!selectAllMatching && explicit.length === 0) return;
+    setBulkBusy(true);
+    setMsg(null);
+    setMatch(null);
+    try {
+      const body = selectAllMatching
+        ? { all: true, view, minScore: view === "all" || view === "agent_watch" ? 0 : minScore }
+        : { accessionNos: explicit };
+      const res = await fetch("/api/admin/crm/connectors/formd/promote/bulk", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(typeof j.error === "string" ? j.error : "Bulk promote failed."); return; }
+      const parts: string[] = [];
+      if (j.created) parts.push(`${j.created} created`);
+      if (j.updated) parts.push(`${j.updated} updated`);
+      if (j.linked) parts.push(`${j.linked} linked`);
+      if (j.failed) parts.push(`${j.failed} failed`);
+      setMsg(`Promoted ${j.total}${parts.length ? ` — ${parts.join(", ")}` : ""}.`);
+      clearSelection();
+      void load();
+      void refreshCounts();
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   const selectable = useMemo(() => rows.filter((r) => !r.promotedContactId), [rows]);
+  const allVisibleSelected = selectable.length > 0 && selectable.every((r) => selected.has(r.accessionNo));
+  const selectionCount = selectAllMatching ? count : selected.size;
 
   return (
     <div>
@@ -123,11 +156,16 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
 
       {msg && <p className="mt-2 text-xs text-slate-600">{msg}</p>}
 
-      {canPromote && selected.size > 0 && (
-        <div className="mt-3 flex items-center gap-3 rounded-md bg-[#EAF1FB] px-3 py-2">
-          <span className="text-xs font-medium text-[#185FA5]">{selected.size} selected</span>
-          <button type="button" onClick={bulkPromote} className="ml-auto rounded-md px-3 py-1.5 text-xs font-medium text-white" style={{ background: "#1A6CE4" }}>Promote selected</button>
-          <button type="button" onClick={() => setSelected(new Set())} className="text-xs text-slate-500 hover:underline">Clear</button>
+      {canPromote && selectionCount > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-[#EAF1FB] px-3 py-2">
+          <span className="text-xs font-medium text-[#185FA5]">{selectionCount.toLocaleString()} selected</span>
+          {!selectAllMatching && allVisibleSelected && count > selectable.length && (
+            <button type="button" onClick={() => setSelectAllMatching(true)} className="text-xs font-medium text-[#1A6CE4] underline">
+              Select all {count.toLocaleString()} in this view
+            </button>
+          )}
+          <button type="button" disabled={bulkBusy} onClick={bulkPromote} className="ml-auto rounded-md px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60" style={{ background: "#1A6CE4" }}>{bulkBusy ? "Promoting…" : `Promote ${selectionCount.toLocaleString()} to contacts`}</button>
+          <button type="button" onClick={clearSelection} className="text-xs text-slate-500 hover:underline">Clear</button>
         </div>
       )}
 
@@ -135,7 +173,7 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
         <table className="w-full min-w-[880px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
-              {canPromote && <th className="w-8 px-3 py-2"><input type="checkbox" checked={selectable.length > 0 && selectable.every((r) => selected.has(r.accessionNo))} onChange={() => setSelected((s) => (selectable.every((r) => s.has(r.accessionNo)) ? new Set() : new Set(selectable.map((r) => r.accessionNo))))} /></th>}
+              {canPromote && <th className="w-8 px-3 py-2"><input type="checkbox" checked={allVisibleSelected} onChange={() => { setSelectAllMatching(false); setSelected((s) => (selectable.every((r) => s.has(r.accessionNo)) ? new Set() : new Set(selectable.map((r) => r.accessionNo)))); }} /></th>}
               <th className="px-3 py-2">Score</th><th className="px-3 py-2">Company</th><th className="px-3 py-2">Remaining</th>
               <th className="px-3 py-2">Days</th><th className="px-3 py-2">Stage</th><th className="px-3 py-2">Flags</th><th className="px-3 py-2 text-right">Action</th>
             </tr>
@@ -147,7 +185,7 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
               <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-400">No filings in this view.</td></tr>
             ) : rows.map((r) => (
               <tr key={r.accessionNo} className="border-b border-slate-100 align-top last:border-0">
-                {canPromote && <td className="px-3 py-2">{!r.promotedContactId && <input type="checkbox" checked={selected.has(r.accessionNo)} onChange={() => toggle(r.accessionNo)} />}</td>}
+                {canPromote && <td className="px-3 py-2">{!r.promotedContactId && <input type="checkbox" checked={selectAllMatching || selected.has(r.accessionNo)} onChange={() => toggle(r.accessionNo)} />}</td>}
                 <td className="px-3 py-2"><span className="inline-flex h-7 w-9 items-center justify-center rounded-md text-xs font-semibold text-white" style={{ background: (r.formdScore ?? 0) >= 80 ? "#0F6E56" : (r.formdScore ?? 0) >= 70 ? "#1A6CE4" : "#94a3b8" }}>{r.formdScore ?? "—"}</span></td>
                 <td className="px-3 py-2">
                   <div className="font-medium text-slate-900">{r.companyName}</div>
