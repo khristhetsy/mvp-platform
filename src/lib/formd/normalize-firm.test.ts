@@ -56,4 +56,8 @@ describe("normalizeFirm (§5)", () => {
   it("strips trailing alphanumeric code fragments", () => {
     expect(normalizeFirm("Horizon 706 LP").firmStem).toBe("horizon");
   });
+
+  it("cleans 'Series LLC - Series NN' vehicle naming to the family stem", () => {
+    expect(normalizeFirm("AQR Flex 1 Series LLC - Series C11").firmStem).toBe("aqr flex");
+  });
 });

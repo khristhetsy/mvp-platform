@@ -14,7 +14,7 @@ const FUND_ROLE = new Set(["fund", "partners", "management", "advisors", "holdin
 const FUND_ROLE_PHRASES = ["capital partners"];
 const VEHICLE_WORDS = new Set([
   "annex", "overage", "parallel", "feeder", "master", "offshore", "onshore", "qp", "ai", "co-invest", "spv",
-  "international", "domestic", "intermediate", "aggregator", "blocker", "trust",
+  "international", "domestic", "intermediate", "aggregator", "blocker", "trust", "series", "class",
 ]);
 const ROMAN = new Set([
   "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
@@ -71,7 +71,7 @@ export function normalizeFirm(entityName: string): NormalizedFirm {
     const isCode = /^\d{4}$/.test(last ?? "") || /^[a-z]{0,3}-?\d[\d-]*$/.test(last ?? "");
     if (
       last &&
-      (ENTITY_SUFFIX.has(last) || FUND_ROLE.has(last) || VEHICLE_WORDS.has(last) || ROMAN.has(last) || ORDINALS.has(last) || isCode)
+      (last === "-" || ENTITY_SUFFIX.has(last) || FUND_ROLE.has(last) || VEHICLE_WORDS.has(last) || ROMAN.has(last) || ORDINALS.has(last) || isCode)
     ) {
       tokens.pop();
       work = tokens.join(" ").trim();
