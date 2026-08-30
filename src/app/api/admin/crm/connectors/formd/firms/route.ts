@@ -13,20 +13,40 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
 
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
-  const band = req.nextUrl.searchParams.get("band"); // observed | single | registry | null
+  const band = req.nextUrl.searchParams.get("band"); // observed | single | registry | review | null
+  const minRank = Number(req.nextUrl.searchParams.get("minRank") ?? "0") || 0;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
+
+  // Header chip counts (cheap count queries).
+  const countBand = async (b?: string) => {
+    let c = admin.from("formd_firms").select("*", { count: "exact", head: true });
+    if (b) c = c.eq("activity_band", b);
+    const { count } = await c;
+    return count ?? 0;
+  };
+  const { count: reviewCount } = await admin.from("formd_firms").select("*", { count: "exact", head: true }).eq("needs_review", true);
+  const counts = {
+    observed: await countBand("observed"),
+    single: await countBand("single"),
+    registry: await countBand("registry"),
+    review: reviewCount ?? 0,
+    total: await countBand(),
+  };
+
   let query = admin
     .from("formd_firms")
     .select(
       "id, display_name, city, state_or_country, phone, domain, vehicle_count, regd_footprint, fund_types, needs_review, promoted_at, last_investment_at, last_investment_issuer, last_investment_round_size, last_investment_confidence, est_check_size, investments_24mo, sectors_observed, activity_band, formd_rank",
     )
-    .order("activity_band", { ascending: true }) // observed < registry < single alphabetically — re-sort below
+    .order("activity_band", { ascending: true })
     .order("vehicle_count", { ascending: false })
     .limit(200);
 
-  if (band) query = query.eq("activity_band", band);
+  if (band === "review") query = query.eq("needs_review", true);
+  else if (band) query = query.eq("activity_band", band);
+  if (minRank > 0) query = query.gte("formd_rank", minRank); // rated firms only when a floor is set
   if (q) query = query.ilike("display_name", `%${q}%`);
 
   const { data, error } = await query;
@@ -67,5 +87,5 @@ export async function GET(req: NextRequest): Promise<Response> {
       Number(b.vehicle_count ?? 0) - Number(a.vehicle_count ?? 0),
   );
 
-  return NextResponse.json({ firms });
+  return NextResponse.json({ firms, counts });
 }
