@@ -79,11 +79,12 @@ function loadLS<T>(key: string, fallback: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>): string {
+function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>, sourceFormD: boolean): string {
   const sp = new URLSearchParams();
   if (q.trim()) sp.set("q", q.trim());
   (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
   if (countries.length) sp.set("country", countries.join(","));
+  if (sourceFormD) sp.set("source", "formd");
   if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
   for (const [key, vals] of Object.entries(facetSel)) for (const v of vals) if (v) sp.append(key, v);
   return sp.toString();
@@ -93,6 +94,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
+  const [sourceFormD, setSourceFormD] = useState(false); // "SEC Form D only" quick filter
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
   // v3 key: bumped when the "Last message" column was added so a stale saved set
   // (from before that column existed) doesn't hide it. Resets column prefs once.
@@ -131,7 +133,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
+  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel, sourceFormD), [q, textFilters, countries, sort, facetSel, sourceFormD]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canBulkAssign ? `34px ${gridCols}` : gridCols;
@@ -300,6 +302,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
+        <button type="button" onClick={() => setSourceFormD((v) => !v)} style={{ fontSize: 12, fontWeight: 500, color: sourceFormD ? "#fff" : "var(--foreground)", background: sourceFormD ? "#2E78F5" : "transparent", border: sourceFormD ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>SEC Form D</button>
         {activeFilters > 0 && (
           <button onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); }} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}

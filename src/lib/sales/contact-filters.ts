@@ -27,6 +27,8 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
   }
   const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
   if (countries && countries.length) query = query.in("country", countries);
+  const sources = p.get("source")?.split(",").map((s) => s.trim()).filter(Boolean);
+  if (sources && sources.length) query = query.in("source", sources);
   query = applyFacetFilters(query, p);
   return query;
 }
