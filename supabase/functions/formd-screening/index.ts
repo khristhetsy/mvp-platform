@@ -101,10 +101,64 @@ Deno.serve(async () => {
     else reviews++;
   }
 
+  // 3) SEC enforcement — match firm + principal names against a configured names
+  //    source (litigation releases / admin proceedings). A hit sets needs_review
+  //    on the firm and surfaces on the Desk (§10). Config-driven; 'unavailable'
+  //    without a source rather than a fake 'clear'.
+  let secReviews = 0;
+  const secUrl = env.SEC_ENFORCEMENT_URL;
+  if (secUrl) {
+    const secRes = await fetch(secUrl).catch(() => null);
+    if (secRes?.ok) {
+      const secBuckets = new Map<string, Sdn[]>();
+      for (const line of (await secRes.text()).split(/\r?\n/)) {
+        const name = csvFields(line)[0]?.trim() || line.trim();
+        if (!name) continue;
+        const k = bucketKey(name);
+        (secBuckets.get(k) ?? secBuckets.set(k, []).get(k)!).push({ name, type: "", grams: trigrams(name) });
+      }
+      const secMatch = (name: string) => {
+        const grams = trigrams(name);
+        let best = 0, bn = "";
+        for (const c of secBuckets.get(bucketKey(name)) ?? []) { const s = jaccard(grams, c.grams); if (s > best) { best = s; bn = c.name; } }
+        return best >= REVIEW ? { result: best >= HIT ? "hit" : "review", sdn: bn, score: best } as const : null;
+      };
+      for (const f of (firms ?? []) as Record<string, unknown>[]) {
+        const m = secMatch(String(f.display_name));
+        if (!m) continue;
+        rows.push({ subject_type: "firm", subject_id: f.id, check_type: "sec_enforcement", result: m.result, detail: { match: m.sdn, score: Number(m.score.toFixed(2)) } });
+        await supabase.from("formd_firms").update({ needs_review: true }).eq("id", f.id);
+        secReviews++;
+      }
+    }
+  }
+
+  // 4) IAPD — a firm managing outside capital that is neither a registered nor an
+  //    exempt reporting adviser is a flag worth showing, not a disqualifier (§10).
+  //    IAPD_FIRMS_URL is the set of registered/ERA firm names; absence → 'review'.
+  let iapdReviews = 0;
+  const iapdUrl = env.IAPD_FIRMS_URL;
+  if (iapdUrl) {
+    const iaRes = await fetch(iapdUrl).catch(() => null);
+    if (iaRes?.ok) {
+      const registered = new Set<string>();
+      for (const line of (await iaRes.text()).split(/\r?\n/)) {
+        const nm = norm(csvFields(line)[0] ?? line);
+        if (nm) registered.add(nm);
+      }
+      for (const f of (firms ?? []) as Record<string, unknown>[]) {
+        const known = registered.has(norm(String(f.display_name)));
+        rows.push({ subject_type: "firm", subject_id: f.id, check_type: "iapd_status", result: known ? "clear" : "review", detail: { registered: known } });
+        if (!known) iapdReviews++;
+      }
+    }
+  }
+
   if (rows.length) await supabase.from("formd_screening").insert(rows);
   if (events.length) await supabase.from("operational_activity_events").insert(events); // §11 immediate signal
 
-  return new Response(JSON.stringify({ ok: true, sdn_names: text.split(/\r?\n/).length, hits, reviews, ran_at: new Date().toISOString() }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ ok: true, sdn_names: text.split(/\r?\n/).length, ofac_hits: hits, ofac_reviews: reviews, sec_reviews: secReviews, iapd_reviews: iapdReviews, ran_at: new Date().toISOString() }),
+    { headers: { "Content-Type": "application/json" } },
+  );
 });

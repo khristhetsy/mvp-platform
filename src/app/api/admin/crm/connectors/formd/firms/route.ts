@@ -34,23 +34,30 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const list = (data ?? []) as Record<string, unknown>[];
 
-  // Attach the latest firm-level OFAC result so the Desk can flag hits/reviews.
+  // Attach the latest firm-level screening results (OFAC / SEC / IAPD) so the Desk
+  // can flag hits and reviews.
   const ids = list.map((f) => String(f.id));
-  const ofac = new Map<string, string>();
+  const byCheck: Record<string, Map<string, string>> = { ofac_sdn: new Map(), sec_enforcement: new Map(), iapd_status: new Map() };
   if (ids.length) {
     const { data: screen } = await admin
       .from("formd_screening")
-      .select("subject_id, result, checked_at")
+      .select("subject_id, check_type, result, checked_at")
       .eq("subject_type", "firm")
-      .eq("check_type", "ofac_sdn")
       .in("subject_id", ids)
       .order("checked_at", { ascending: false });
     for (const s of (screen ?? []) as Record<string, unknown>[]) {
+      const m = byCheck[String(s.check_type)];
+      if (!m) continue;
       const key = String(s.subject_id);
-      if (!ofac.has(key)) ofac.set(key, String(s.result)); // first = latest
+      if (!m.has(key)) m.set(key, String(s.result)); // first = latest
     }
   }
-  for (const f of list) f.ofac = ofac.get(String(f.id)) ?? null;
+  for (const f of list) {
+    const id = String(f.id);
+    f.ofac = byCheck.ofac_sdn.get(id) ?? null;
+    f.sec = byCheck.sec_enforcement.get(id) ?? null;
+    f.iapd = byCheck.iapd_status.get(id) ?? null;
+  }
 
   // Present order: observed → single → registry (activity first).
   const rank: Record<string, number> = { observed: 0, single: 1, registry: 2 };

@@ -21,6 +21,8 @@ type Firm = {
   activity_band: "observed" | "single" | "registry";
   formd_rank: number | null;
   ofac: "clear" | "hit" | "review" | "unavailable" | null;
+  sec: "clear" | "hit" | "review" | "unavailable" | null;
+  iapd: "clear" | "hit" | "review" | "unavailable" | null;
 };
 
 const fmtUsd = (n: number | null) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
@@ -130,6 +132,8 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
                       {f.needs_review ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Review</span> : null}
                       {f.ofac === "hit" ? <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">OFAC hit</span> : null}
                       {f.ofac === "review" ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">OFAC review</span> : null}
+                      {f.sec === "hit" || f.sec === "review" ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">SEC action</span> : null}
+                      {f.iapd === "review" ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Not IA-registered</span> : null}
                       {f.promoted_at ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">Promoted</span> : null}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-slate-500">
