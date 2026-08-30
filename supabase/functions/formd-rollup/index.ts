@@ -12,7 +12,7 @@
 
 // deno-lint-ignore-file
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { normalizeFirm, principalIdentityHash, dealEventConfidence, DEAL_DISPLAY_THRESHOLD, activityBand, median } from "../_shared/formd/investor.ts";
+import { normalizeFirm, principalIdentityHash, dealEventConfidence, DEAL_DISPLAY_THRESHOLD, activityBand, median, scoreWithProfile, bandShowsRank, SCORE_PROFILES } from "../_shared/formd/investor.ts";
 
 type Row = Record<string, unknown>;
 const s = (v: unknown) => (v == null ? null : String(v));
@@ -144,11 +144,32 @@ Deno.serve(async () => {
       const in24 = displayableEvents.filter((e) => e.date && new Date(e.date) >= cutoff24).length;
       const band = activityBand(in24);
       const est = band === "observed" ? median(displayableEvents.map((e) => e.check ?? NaN).filter((x) => Number.isFinite(x))) : null;
+
+      // ── §8.1 investor rank — only for banded (observed/single) firms; registry
+      //    stays null (bandShowsRank). Signals derived from what the rollup holds:
+      //    recency = days since the latest deploy; volume = 24-mo deal frequency;
+      //    reach = Reg D footprint; type = fund type known; position = strongest
+      //    deal confidence; fit = neutral (no founder target at rollup time).
+      let formdRank: number | null = null;
+      if (bandShowsRank(band)) {
+        const latestDate = latest.date ? new Date(latest.date) : null;
+        const recencyDays = latestDate ? Math.max(0, Math.floor((now.getTime() - latestDate.getTime()) / 86400000)) : 730;
+        const maxConf = Math.max(...displayableEvents.map((e) => e.conf));
+        formdRank = scoreWithProfile({
+          recencyDays,
+          volume: Math.min(in24 / 6, 1),
+          fit: 0.5,
+          type: agg.fundTypes.size > 0 ? 1 : 0.5,
+          position: Math.max(0, Math.min((maxConf - 0.5) / 0.45, 1)),
+          reach: Math.min((agg.footprint || 0) / 50_000_000, 1),
+        }, SCORE_PROFILES.investor);
+      }
+
       await supabase.from("formd_firms").update({
         last_investment_at: latest.date, last_investment_issuer: latest.issuer, last_investment_round_size: latest.round,
         last_investment_confidence: latest.conf, est_check_size: est, investments_24mo: in24,
         sectors_observed: [...new Set(displayableEvents.map((e) => e.industry).filter(Boolean))],
-        activity_band: band, updated_at: new Date().toISOString(),
+        activity_band: band, formd_rank: formdRank, updated_at: new Date().toISOString(),
       }).eq("id", firmId);
     }
   }

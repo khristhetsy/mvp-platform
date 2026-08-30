@@ -75,3 +75,43 @@ export function median(nums: number[]): number | null {
   const mid = Math.floor(xs.length / 2);
   return xs.length % 2 ? xs[mid] : Math.round((xs[mid - 1] + xs[mid]) / 2);
 }
+
+// ── §8.1 Rating (one engine, two profiles) — mirrors src/lib/formd/score-profiles.ts.
+// Recency INVERTS between profiles (issuer: older-better = stalled raise; investor:
+// newer-better = actively deploying). Registry firms never get a number (§8.2).
+export type RecencyDirection = "older-better" | "newer-better";
+export type ScoreProfile = {
+  recencyWeight: number; recencyDirection: RecencyDirection; volumeWeight: number;
+  fitWeight: number; typeWeight: number; positionWeight: number; reachWeight: number;
+};
+export const SCORE_PROFILES: Record<"issuer" | "investor", ScoreProfile> = {
+  issuer: { recencyWeight: 0.25, recencyDirection: "older-better", volumeWeight: 0.25, fitWeight: 0.15, typeWeight: 0.15, positionWeight: 0.1, reachWeight: 0.1 },
+  investor: { recencyWeight: 0.25, recencyDirection: "newer-better", volumeWeight: 0.2, fitWeight: 0.2, typeWeight: 0.15, positionWeight: 0.1, reachWeight: 0.1 },
+};
+
+export function recencySignal(days: number, direction: RecencyDirection, horizonDays = 730): number {
+  const clamped = Math.max(0, Math.min(days, horizonDays));
+  const fresh = 1 - clamped / horizonDays;
+  return direction === "newer-better" ? fresh : 1 - fresh;
+}
+
+export type ScoreSignals = { recencyDays: number; volume: number; fit: number; type: number; position: number; reach: number };
+
+/** Weighted 0..100 score for a profile; caller pre-normalizes signals to 0..1. */
+export function scoreWithProfile(signals: ScoreSignals, profile: ScoreProfile): number {
+  const recency = recencySignal(signals.recencyDays, profile.recencyDirection);
+  const raw =
+    recency * profile.recencyWeight +
+    signals.volume * profile.volumeWeight +
+    signals.fit * profile.fitWeight +
+    signals.type * profile.typeWeight +
+    signals.position * profile.positionWeight +
+    signals.reach * profile.reachWeight;
+  return Math.round(raw * 100);
+}
+
+/** Registry band never shows a rank (§8.2) — 75% of the register scored on type +
+ *  geography alone can't order a queue. */
+export function bandShowsRank(band: "observed" | "single" | "registry"): boolean {
+  return band !== "registry";
+}
