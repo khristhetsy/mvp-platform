@@ -5,7 +5,7 @@ import { getContactFilterFacets, FACET_KEYS, type ContactFacets } from "@/lib/sa
 
 export const dynamic = "force-dynamic";
 
-const EMPTY = { industries: [], capital: [], fundingStages: [], investorTypes: [], operatingStages: [] };
+const EMPTY = { industries: [], capital: [], fundingStages: [], investorTypes: [], operatingStages: [], leadSource: [] };
 const TTL_MS = 24 * 60 * 60 * 1000; // self-refresh the cached options once a day
 
 function hasValues(f: ContactFacets | null | undefined): boolean {

@@ -27,6 +27,12 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
   }
   const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
   if (countries && countries.length) query = query.in("country", countries);
+  // Lead source is a scalar in overrides.lead_source (Form D + edits) or the Odoo
+  // profile (raw.__profile.leadSource). Match either. OR'd across selected values.
+  const leadSources = p.getAll("leadSource").map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"') && !v.includes("("));
+  if (leadSources.length) {
+    query = query.or(leadSources.flatMap((v) => [`overrides->>lead_source.eq.${v}`, `raw->__profile->>leadSource.eq.${v}`]).join(","));
+  }
   query = applyFacetFilters(query, p);
   return query;
 }

@@ -17,18 +17,21 @@ export type ContactFacets = {
   fundingStages: string[];
   investorTypes: string[];
   operatingStages: string[];
+  leadSource: string[];
 };
 
 export const FACET_KEYS = ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"] as const;
 export type FacetKey = (typeof FACET_KEYS)[number];
 
-const EMPTY: ContactFacets = { industries: [], capital: [], fundingStages: [], investorTypes: [], operatingStages: [] };
+const EMPTY: ContactFacets = { industries: [], capital: [], fundingStages: [], investorTypes: [], operatingStages: [], leadSource: [] };
 
 /** Pure: fold rows of {facetKey: string[] | null} into sorted distinct value lists. Unit-tested. */
 export function aggregateFacetRows(rows: Array<Record<string, unknown>>): ContactFacets {
   const sets: Record<FacetKey, Set<string>> = {
     industries: new Set(), capital: new Set(), fundingStages: new Set(), investorTypes: new Set(), operatingStages: new Set(),
   };
+  const leadSources = new Set<string>();
+  const addScalar = (v: unknown) => { const s = typeof v === "string" ? v.trim() : ""; if (s) leadSources.add(s); };
   for (const row of rows) {
     for (const key of FACET_KEYS) {
       const v = row[key];
@@ -38,9 +41,13 @@ export function aggregateFacetRows(rows: Array<Record<string, unknown>>): Contac
         if (s) sets[key].add(s);
       }
     }
+    // Lead source is a scalar, from the override or the Odoo profile.
+    addScalar(row.ls_ov);
+    addScalar(row.ls_pr);
   }
   const out = { ...EMPTY };
   for (const key of FACET_KEYS) out[key] = Array.from(sets[key]).sort((a, b) => a.localeCompare(b));
+  out.leadSource = Array.from(leadSources).sort((a, b) => a.localeCompare(b));
   return out;
 }
 
@@ -50,7 +57,7 @@ function isNonEmpty(f: ContactFacets | null | undefined): f is ContactFacets {
 
 const PAGE = 1000;
 const MAX_PAGES = 60; // safety cap (~60k rows)
-const SELECT = FACET_KEYS.map((k) => `${k}:raw->__profile->${k}`).join(", ");
+const SELECT = FACET_KEYS.map((k) => `${k}:raw->__profile->${k}`).join(", ") + ", ls_ov:overrides->>lead_source, ls_pr:raw->__profile->>leadSource";
 
 // Module-level cache — facet options change rarely (only when Odoo data re-syncs).
 let cache: { at: number; data: ContactFacets } | null = null;
@@ -75,8 +82,11 @@ export async function getContactFilterFacets(db: any, force = false): Promise<Co
         fundingStages: Array.isArray(data.fundingStages) ? data.fundingStages : [],
         investorTypes: Array.isArray(data.investorTypes) ? data.investorTypes : [],
         operatingStages: Array.isArray(data.operatingStages) ? data.operatingStages : [],
+        leadSource: Array.isArray(data.leadSource) ? data.leadSource : [],
       };
-      if (isNonEmpty(f)) { cache = { at: Date.now(), data: f }; return f; }
+      // Require leadSource too — the SQL function predates it, so this falls through
+      // to the direct scan that computes lead sources (keeps the new facet populated).
+      if (isNonEmpty(f) && f.leadSource.length) { cache = { at: Date.now(), data: f }; return f; }
     }
   } catch { /* fall through to direct computation */ }
 

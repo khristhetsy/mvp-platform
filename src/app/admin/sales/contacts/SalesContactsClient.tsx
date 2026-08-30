@@ -59,8 +59,9 @@ function relTime(at: string): string {
   return new Date(at).toISOString().slice(0, 10);
 }
 
-type FacetKey = "industries" | "capital" | "fundingStages" | "investorTypes" | "operatingStages";
+type FacetKey = "leadSource" | "industries" | "capital" | "fundingStages" | "investorTypes" | "operatingStages";
 const FACET_LABEL: Record<FacetKey, string> = {
+  leadSource: "Lead source",
   industries: "Type of industries",
   capital: "Amount / type of capital",
   fundingStages: "Funding stage",
@@ -68,10 +69,10 @@ const FACET_LABEL: Record<FacetKey, string> = {
   operatingStages: "Operating stage",
 };
 const FACETS_BY_ROLE: Record<string, FacetKey[]> = {
-  founder: ["industries", "capital", "fundingStages", "operatingStages"],
-  investor: ["investorTypes", "industries", "capital", "fundingStages", "operatingStages"],
-  advisor: ["industries"],
-  any: ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"],
+  founder: ["leadSource", "industries", "capital", "fundingStages", "operatingStages"],
+  investor: ["leadSource", "investorTypes", "industries", "capital", "fundingStages", "operatingStages"],
+  advisor: ["leadSource", "industries"],
+  any: ["leadSource", "industries", "capital", "fundingStages", "investorTypes", "operatingStages"],
 };
 
 function loadLS<T>(key: string, fallback: T): T {

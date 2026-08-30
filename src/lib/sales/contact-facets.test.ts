@@ -29,9 +29,14 @@ describe("aggregateFacetRows", () => {
     expect(f.capital).toEqual(["3", "5"]);
   });
 
-  it("returns all five facet keys even when empty", () => {
+  it("returns all facet keys even when empty", () => {
     const f = aggregateFacetRows([]);
-    expect(Object.keys(f).sort()).toEqual(["capital", "fundingStages", "industries", "investorTypes", "operatingStages"]);
+    expect(Object.keys(f).sort()).toEqual(["capital", "fundingStages", "industries", "investorTypes", "leadSource", "operatingStages"]);
     expect(f.operatingStages).toEqual([]);
+  });
+
+  it("collects lead source from override and profile scalars", () => {
+    const f = aggregateFacetRows([{ ls_ov: "SEC Form D" }, { ls_pr: "Website" }, { ls_ov: "SEC Form D" }]);
+    expect(f.leadSource).toEqual(["SEC Form D", "Website"]);
   });
 });
