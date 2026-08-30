@@ -77,7 +77,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         requiredPermission: "manage_crm",
         children: [
           { href: "/admin/crm",           label: "Activity"  },
-          { href: "/admin/crm/contacts",  label: "Contacts"  },
           { href: "/admin/crm/pipeline",  label: "Pipeline"  },
           { href: "/admin/crm/messages",  label: "Messages"  },
           { href: "/admin/crm/outreach",  label: "Outreach"  },
