@@ -68,6 +68,7 @@ export type FilingFilters = {
   daysMax?: number;
   pipeline?: "unpromoted" | "promoted" | "held" | "all";
   limit?: number;
+  offset?: number;
 };
 
 /** Apply a saved view + ad-hoc filters at query time. Returns rows + count. */
@@ -94,7 +95,9 @@ export async function listFilings(filters: FilingFilters = {}): Promise<{ rows: 
   else if (filters.pipeline === "promoted") q = q.not("promoted_contact_id", "is", null);
   else if (filters.pipeline === "held") q = q.eq("held_for_review", true);
 
-  q = q.limit(filters.limit ?? 200);
+  const limit = filters.limit ?? 200;
+  const offset = filters.offset ?? 0;
+  q = q.range(offset, offset + limit - 1); // count stays the full filtered total
   const { data, count, error } = await q;
   if (error) throw new Error(error.message);
   return { rows: (data ?? []).map(mapRow), count: count ?? 0 };

@@ -25,6 +25,9 @@ const fmtUsd = (n: number | null) => (n == null ? "—" : `$${(n / 1_000_000).to
 export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean }>) {
   const [firms, setFirms] = useState<Firm[]>([]);
   const [counts, setCounts] = useState<Counts>({ observed: 0, single: 0, registry: 0, review: 0, total: 0 });
+  const [total, setTotal] = useState(0); // filtered total for the current search/filter
+  const [page, setPage] = useState(0);
+  const [perPage, setPerPage] = useState(100);
   const [q, setQ] = useState("");
   const [reviewOnly, setReviewOnly] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,14 +48,17 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
       const p = new URLSearchParams();
       if (q) p.set("q", q);
       if (reviewOnly) p.set("band", "review");
+      p.set("limit", String(perPage));
+      p.set("offset", String(page * perPage));
       const res = await fetch(`/api/admin/crm/connectors/formd/firms?${p}`);
       const json = await res.json().catch(() => ({}));
       setFirms(json.firms ?? []);
       if (json.counts) setCounts(json.counts);
+      setTotal(json.total ?? 0);
     } finally {
       setLoading(false);
     }
-  }, [q, reviewOnly]);
+  }, [q, reviewOnly, page, perPage]);
 
   useEffect(() => {
     const t = setTimeout(load, 250);
@@ -62,7 +68,10 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
   const canSelect = (f: Firm) => !f.promoted_at && f.ofac !== "hit";
   const selectableFirms = firms.filter(canSelect);
   const allVisibleSelected = selectableFirms.length > 0 && selectableFirms.every((f) => selected.has(f.id));
-  const matchingCount = reviewOnly ? counts.review : counts.total;
+  const matchingCount = total;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const rangeStart = total === 0 ? 0 : page * perPage + 1;
+  const rangeEnd = Math.min(total, (page + 1) * perPage);
   const selectionCount = selectAllMatching ? matchingCount : selected.size;
 
   const toggleRow = (id: string) => {
@@ -141,10 +150,10 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search firms" className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+        <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Search firms" className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
         <button
           type="button"
-          onClick={() => setReviewOnly((v) => !v)}
+          onClick={() => { setReviewOnly((v) => !v); setPage(0); }}
           className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${reviewOnly ? "bg-amber-50 text-amber-700" : "bg-slate-50 text-slate-500 hover:text-slate-700"}`}
         >
           Needs review · {counts.review.toLocaleString()}
@@ -250,6 +259,26 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
           </tbody>
         </table>
       </div>
+
+      {total > 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <span>Showing {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} of {total.toLocaleString()}</span>
+          <span className="flex-1" />
+          <label className="flex items-center gap-1.5">
+            Per page
+            <select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(0); }} className="rounded-md border border-slate-200 px-2 py-1 text-xs">
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </label>
+          <div className="flex items-center gap-1">
+            <button type="button" disabled={page === 0 || loading} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Back</button>
+            <span className="px-2">Page {page + 1} of {totalPages.toLocaleString()}</span>
+            <button type="button" disabled={page + 1 >= totalPages || loading} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Next</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

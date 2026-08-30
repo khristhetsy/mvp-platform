@@ -33,20 +33,22 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [match, setMatch] = useState<{ accessionNo: string; contactId: string; contactName: string } | null>(null);
   const [minScore, setMinScore] = useState(70);
+  const [page, setPage] = useState(0);
+  const [perPage, setPerPage] = useState(100);
 
   const load = useCallback(async () => {
     setLoading(true);
     setSelected(new Set());
     setSelectAllMatching(false);
     try {
-      const res = await fetch(`/api/admin/crm/connectors/formd/filings?view=${view}&minScore=${view === "all" || view === "agent_watch" ? 0 : minScore}`);
+      const res = await fetch(`/api/admin/crm/connectors/formd/filings?view=${view}&minScore=${view === "all" || view === "agent_watch" ? 0 : minScore}&limit=${perPage}&offset=${page * perPage}`);
       const j = await res.json();
       setRows(j.rows ?? []);
       setCount(j.count ?? 0);
     } finally {
       setLoading(false);
     }
-  }, [view, minScore]);
+  }, [view, minScore, page, perPage]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on view/filter change
   useEffect(() => { void load(); }, [load]);
@@ -142,14 +144,14 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
     <div>
       <div className="flex flex-wrap items-center gap-2">
         {VIEWS.map((v) => (
-          <button key={v.key} type="button" onClick={() => setView(v.key)} className={`rounded-full px-3 py-1.5 text-xs font-medium ${view === v.key ? "text-white" : "border border-slate-200 text-slate-600"}`} style={view === v.key ? { background: "#0A1A40" } : undefined}>
+          <button key={v.key} type="button" onClick={() => { setView(v.key); setPage(0); }} className={`rounded-full px-3 py-1.5 text-xs font-medium ${view === v.key ? "text-white" : "border border-slate-200 text-slate-600"}`} style={view === v.key ? { background: "#0A1A40" } : undefined}>
             {v.label}{counts[v.key] != null ? ` · ${counts[v.key]}` : ""}
           </button>
         ))}
         {view !== "all" && view !== "agent_watch" && (
           <label className="ml-auto flex items-center gap-1.5 text-xs text-slate-600">
             Min score
-            <input type="number" value={minScore} min={0} max={100} onChange={(e) => setMinScore(Math.max(0, Math.min(100, Number(e.target.value) || 0)))} className="w-16 rounded-md border border-slate-200 px-2 py-1 text-xs" />
+            <input type="number" value={minScore} min={0} max={100} onChange={(e) => { setMinScore(Math.max(0, Math.min(100, Number(e.target.value) || 0))); setPage(0); }} className="w-16 rounded-md border border-slate-200 px-2 py-1 text-xs" />
           </label>
         )}
       </div>
@@ -223,7 +225,23 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500">{count} in this view. Filters run at query time — widening a filter never re-fetches EDGAR.</p>
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+        <span>Showing {count === 0 ? 0 : (page * perPage + 1).toLocaleString()}–{Math.min(count, (page + 1) * perPage).toLocaleString()} of {count.toLocaleString()} in this view</span>
+        <span className="flex-1" />
+        <label className="flex items-center gap-1.5">
+          Per page
+          <select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(0); }} className="rounded-md border border-slate-200 px-2 py-1 text-[11px]">
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={200}>200</option>
+          </select>
+        </label>
+        <div className="flex items-center gap-1">
+          <button type="button" disabled={page === 0 || loading} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Back</button>
+          <span className="px-2">Page {page + 1} of {Math.max(1, Math.ceil(count / perPage)).toLocaleString()}</span>
+          <button type="button" disabled={(page + 1) >= Math.ceil(count / perPage) || loading} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Next</button>
+        </div>
+      </div>
     </div>
   );
 }

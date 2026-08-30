@@ -26,6 +26,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     daysMax: num("daysMax"),
     pipeline: (sp.get("pipeline") as FilingFilters["pipeline"]) ?? undefined,
     limit: num("limit"),
+    offset: num("offset"),
   };
   try {
     const { rows, count } = await listFilings(filters);

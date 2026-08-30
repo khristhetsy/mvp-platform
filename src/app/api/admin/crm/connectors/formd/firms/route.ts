@@ -15,6 +15,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
   const band = req.nextUrl.searchParams.get("band"); // observed | single | registry | review | null
   const minRank = Number(req.nextUrl.searchParams.get("minRank") ?? "0") || 0;
+  const limit = Math.min(500, Math.max(1, Number(req.nextUrl.searchParams.get("limit") ?? "100") || 100));
+  const offset = Math.max(0, Number(req.nextUrl.searchParams.get("offset") ?? "0") || 0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
@@ -39,17 +41,18 @@ export async function GET(req: NextRequest): Promise<Response> {
     .from("formd_firms")
     .select(
       "id, display_name, city, state_or_country, phone, domain, vehicle_count, regd_footprint, fund_types, needs_review, promoted_at, last_investment_at, last_investment_issuer, last_investment_round_size, last_investment_confidence, est_check_size, investments_24mo, sectors_observed, activity_band, formd_rank",
+      { count: "exact" },
     )
     .order("activity_band", { ascending: true })
     .order("vehicle_count", { ascending: false })
-    .limit(200);
+    .range(offset, offset + limit - 1);
 
   if (band === "review") query = query.eq("needs_review", true);
   else if (band) query = query.eq("activity_band", band);
   if (minRank > 0) query = query.gte("formd_rank", minRank); // rated firms only when a floor is set
   if (q) query = query.ilike("display_name", `%${q}%`);
 
-  const { data, error } = await query;
+  const { data, count: filteredTotal, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const list = (data ?? []) as Record<string, unknown>[];
@@ -87,5 +90,5 @@ export async function GET(req: NextRequest): Promise<Response> {
       Number(b.vehicle_count ?? 0) - Number(a.vehicle_count ?? 0),
   );
 
-  return NextResponse.json({ firms, counts });
+  return NextResponse.json({ firms, counts, total: filteredTotal ?? 0, limit, offset });
 }
