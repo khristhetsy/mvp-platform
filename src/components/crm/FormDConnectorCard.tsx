@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type Stats = { mirrored: number; operating: number; funds: number; unpromoted: number; promoted: number };
+type Stats = {
+  mirrored: number; operating: number; funds: number; unpromoted: number; promoted: number;
+  founders?: { mirrored: number; promoted: number; toReview: number };
+  investors?: { firms: number; promoted: number; toReview: number };
+};
 type Health = { name: string; value: string; severity: "ok" | "warn" | "page" };
 
 const SEV: Record<Health["severity"], string> = { ok: "text-emerald-700", warn: "text-amber-700", page: "text-rose-700" };
@@ -81,6 +85,33 @@ export function FormDConnectorCard({ canPromote }: { canPromote: boolean }) {
             <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 px-3 py-2">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <i className="ti ti-rocket text-[13px] text-indigo-600" aria-hidden="true" />
+            <span className="text-xs font-medium text-indigo-700">Founders</span>
+            <span className="text-[10px] text-slate-400">issuer filings</span>
+          </div>
+          <div className="flex gap-4">
+            <div><div className="text-base font-semibold text-slate-900">{loading ? "—" : (stats?.founders?.mirrored ?? 0).toLocaleString()}</div><div className="text-[10px] text-slate-500">mirrored</div></div>
+            <div><div className="text-base font-semibold text-slate-900">{loading ? "—" : (stats?.founders?.promoted ?? 0).toLocaleString()}</div><div className="text-[10px] text-slate-500">promoted</div></div>
+            <div><div className="text-base font-semibold text-slate-900">{loading ? "—" : (stats?.founders?.toReview ?? 0).toLocaleString()}</div><div className="text-[10px] text-slate-500">to review</div></div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 px-3 py-2">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <i className="ti ti-building-bank text-[13px] text-blue-600" aria-hidden="true" />
+            <span className="text-xs font-medium text-blue-700">Investors</span>
+            <span className="text-[10px] text-slate-400">funds &amp; firms</span>
+          </div>
+          <div className="flex gap-4">
+            <div><div className="text-base font-semibold text-slate-900">{loading ? "—" : (stats?.investors?.firms ?? 0).toLocaleString()}</div><div className="text-[10px] text-slate-500">firms</div></div>
+            <div><div className="text-base font-semibold text-slate-900">{loading ? "—" : (stats?.investors?.promoted ?? 0).toLocaleString()}</div><div className="text-[10px] text-slate-500">promoted</div></div>
+            <div><div className="text-base font-semibold text-slate-900">{loading ? "—" : (stats?.investors?.toReview ?? 0).toLocaleString()}</div><div className="text-[10px] text-slate-500">to review</div></div>
+          </div>
+        </div>
       </div>
 
       {health.length > 0 && (

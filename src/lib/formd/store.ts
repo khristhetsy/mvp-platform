@@ -103,7 +103,12 @@ export async function listFilings(filters: FilingFilters = {}): Promise<{ rows: 
   return { rows: (data ?? []).map(mapRow), count: count ?? 0 };
 }
 
-export type FormDStats = { mirrored: number; operating: number; funds: number; unpromoted: number; promoted: number };
+export type FormDStats = {
+  mirrored: number; operating: number; funds: number; unpromoted: number; promoted: number;
+  // Split by desk: Founders = issuer filings; Investors = rolled-up firms.
+  founders: { mirrored: number; promoted: number; toReview: number };
+  investors: { firms: number; promoted: number; toReview: number };
+};
 
 export async function getFormDStats(): Promise<FormDStats> {
   const client = db();
@@ -111,13 +116,25 @@ export async function getFormDStats(): Promise<FormDStats> {
     const { count } = await build(client.from("formd_filings").select("accession_no", { count: "exact", head: true }));
     return count ?? 0;
   };
-  const [mirrored, funds, promoted, unpromoted] = await Promise.all([
+  const firmHead = async (build: (q: any) => any): Promise<number> => {
+    const { count } = await build(client.from("formd_firms").select("id", { count: "exact", head: true }));
+    return count ?? 0;
+  };
+  const [mirrored, funds, promoted, unpromoted, foundersMirrored, foundersPromoted, investorFirms, investorsPromoted] = await Promise.all([
     head((q) => q),
     head((q) => q.eq("is_fund", true)),
     head((q) => q.not("promoted_contact_id", "is", null)),
     head((q) => q.is("promoted_contact_id", null)),
+    head((q) => q.eq("lead_type", "issuer")),
+    head((q) => q.eq("lead_type", "issuer").not("promoted_contact_id", "is", null)),
+    firmHead((q) => q),
+    firmHead((q) => q.not("promoted_at", "is", null)),
   ]);
-  return { mirrored, operating: mirrored - funds, funds, unpromoted, promoted };
+  return {
+    mirrored, operating: mirrored - funds, funds, unpromoted, promoted,
+    founders: { mirrored: foundersMirrored, promoted: foundersPromoted, toReview: foundersMirrored - foundersPromoted },
+    investors: { firms: investorFirms, promoted: investorsPromoted, toReview: investorFirms - investorsPromoted },
+  };
 }
 
 export async function getFilingDetail(accessionNo: string): Promise<{ filing: any; relatedPersons: any[] } | null> {
