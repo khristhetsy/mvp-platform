@@ -46,7 +46,9 @@ Deno.serve(async () => {
   const firms = new Map<string, FirmAgg>();
   for (const f of investors) {
     const norm = normalizeFirm(String(f.company_name ?? ""));
-    const state = s(f.state);
+    // Normalize "" → null so the upsert identity key (firm_stem, state_or_country)
+    // is consistent across runs (a firm never flips between "" and null).
+    const state = s(f.state) || null;
     const key = `${norm.firmStem}|${state ?? ""}`;
     let agg = firms.get(key);
     if (!agg) {
@@ -63,8 +65,16 @@ Deno.serve(async () => {
     agg.filings.push(f);
   }
 
-  // Full recompute: clear firms (cascades to vehicles/principals/deal_events), reinsert.
-  await supabase.from("formd_firms").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  // Recompute, but keep firm identities stable: firms are UPSERTed on
+  // (firm_stem, state_or_country) below so their ids — and promoted_at /
+  // promoted_investor_id — survive the run. The derived children carry no external
+  // references, so they're fully cleared and rebuilt. Order respects the FKs
+  // (deal_events → principals → vehicles). Ingest is cumulative, so every firm
+  // reappears each run and gets its children back.
+  const NIL = "00000000-0000-0000-0000-000000000000";
+  await supabase.from("formd_deal_events").delete().neq("firm_id", NIL);
+  await supabase.from("formd_principals").delete().neq("firm_id", NIL);
+  await supabase.from("formd_firm_vehicles").delete().neq("firm_id", NIL);
 
   // Index issuer signals for the deal-event join.
   const issuerByPerson = new Map<string, Row[]>(); // "last|first" -> issuer filings
@@ -78,11 +88,17 @@ Deno.serve(async () => {
   let firmCount = 0, principalCount = 0, dealCount = 0;
 
   for (const agg of firms.values()) {
-    const { data: firmRow } = await supabase.from("formd_firms").insert({
+    // Upsert on the firm identity so the id (and promoted_at / promoted_investor_id,
+    // which are deliberately absent from this payload) persist across runs. Activity
+    // fields are reset here; firms with displayable events get them set again below.
+    const { data: firmRow } = await supabase.from("formd_firms").upsert({
       firm_stem: agg.stem, display_name: agg.display, city: agg.city, state_or_country: agg.state, phone: agg.phone,
       first_seen_at: agg.first, last_filing_at: agg.last, vehicle_count: agg.vehicles.length,
       regd_footprint: Math.round(agg.footprint) || null, fund_types: [...agg.fundTypes], needs_review: agg.needsReview,
-    }).select("id").single();
+      activity_band: "registry", formd_rank: null, last_investment_at: null, last_investment_issuer: null,
+      last_investment_round_size: null, last_investment_confidence: null, est_check_size: null,
+      investments_24mo: 0, sectors_observed: [], updated_at: new Date().toISOString(),
+    }, { onConflict: "firm_stem,state_or_country" }).select("id").single();
     if (!firmRow) continue;
     const firmId = String(firmRow.id);
     firmCount++;
