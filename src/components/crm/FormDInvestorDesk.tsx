@@ -22,6 +22,10 @@ type Counts = { observed: number; single: number; registry: number; review: numb
 
 const fmtUsd = (n: number | null) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
 
+// Recorded on every promoted record for GDPR (§15). Promote is one-click like the
+// Founders desk — the basis defaults silently rather than prompting each time.
+const DEFAULT_LAWFUL_BASIS = "legitimate_interest";
+
 export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean }>) {
   const [firms, setFirms] = useState<Firm[]>([]);
   const [counts, setCounts] = useState<Counts>({ observed: 0, single: 0, registry: 0, review: 0, total: 0 });
@@ -88,15 +92,13 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
   };
 
   async function promote(f: Firm) {
-    const basis = window.prompt(`Promote "${f.display_name}" into the investor list.\nGDPR lawful basis (recorded per record):`, "legitimate_interest");
-    if (!basis) return;
     setBusyId(f.id);
     setNote(null);
     try {
       const res = await fetch("/api/admin/crm/connectors/formd/promote-investor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firmId: f.id, lawfulBasis: basis }),
+        body: JSON.stringify({ firmId: f.id, lawfulBasis: DEFAULT_LAWFUL_BASIS }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) setNote(res.status === 409 ? `Blocked: ${j.error}` : j.error ?? "Promote failed.");
@@ -109,14 +111,12 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
 
   async function bulkPromote() {
     if (selectionCount === 0) return;
-    const basis = window.prompt(`Promote ${selectionCount.toLocaleString()} firm${selectionCount === 1 ? "" : "s"} into the investor list.\nGDPR lawful basis (recorded for every record):`, "legitimate_interest");
-    if (!basis) return;
     setBulkBusy(true);
     setNote(null);
     try {
       const body = selectAllMatching
-        ? { lawfulBasis: basis, all: true, q: q || undefined, band: reviewOnly ? "review" : undefined }
-        : { lawfulBasis: basis, firmIds: [...selected] };
+        ? { lawfulBasis: DEFAULT_LAWFUL_BASIS, all: true, q: q || undefined, band: reviewOnly ? "review" : undefined }
+        : { lawfulBasis: DEFAULT_LAWFUL_BASIS, firmIds: [...selected] };
       const res = await fetch("/api/admin/crm/connectors/formd/promote-investor/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
