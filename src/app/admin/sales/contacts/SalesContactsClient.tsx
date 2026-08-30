@@ -79,12 +79,11 @@ function loadLS<T>(key: string, fallback: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>, sourceFormD: boolean): string {
+function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>): string {
   const sp = new URLSearchParams();
   if (q.trim()) sp.set("q", q.trim());
   (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
   if (countries.length) sp.set("country", countries.join(","));
-  if (sourceFormD) sp.set("source", "formd");
   if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
   for (const [key, vals] of Object.entries(facetSel)) for (const v of vals) if (v) sp.append(key, v);
   return sp.toString();
@@ -94,7 +93,6 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
-  const [sourceFormD, setSourceFormD] = useState(false); // "SEC Form D only" quick filter
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
   // v3 key: bumped when the "Last message" column was added so a stale saved set
   // (from before that column existed) doesn't hide it. Resets column prefs once.
@@ -133,7 +131,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel, sourceFormD), [q, textFilters, countries, sort, facetSel, sourceFormD]);
+  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canBulkAssign ? `34px ${gridCols}` : gridCols;
@@ -232,7 +230,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
       return copy;
     });
   }
-  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); setSourceFormD(false); }
+  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
 
   // ── Mass Lead assign helpers ──────────────────────────────────────────────
   const allLoadedIds = useMemo(() => GROUP_DEFS.flatMap((g) => (groups[g.id]?.rows ?? []).map((r) => r.id)), [groups]);
@@ -259,7 +257,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   }
 
   const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
-  const filterBadge = (role ? 1 : 0) + facetCount + (sourceFormD ? 1 : 0);
+  const filterBadge = (role ? 1 : 0) + facetCount;
   const roleFacets = FACETS_BY_ROLE[role || "any"];
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
@@ -313,13 +311,6 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           </button>
           {filtersOpen && (
             <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 300, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", overflow: "hidden" }}>
-              <div style={{ padding: "10px 12px", borderBottom: "0.5px solid #eef1f5" }}>
-                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Source</div>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, cursor: "pointer", color: "var(--foreground)" }}>
-                  <input type="checkbox" checked={sourceFormD} onChange={() => setSourceFormD((v) => !v)} style={{ width: 14, height: 14 }} />
-                  SEC Form D
-                </label>
-              </div>
               <div style={{ padding: "10px 12px", borderBottom: "0.5px solid #eef1f5" }}>
                 <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Role</div>
                 <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
