@@ -232,7 +232,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
       return copy;
     });
   }
-  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
+  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); setSourceFormD(false); }
 
   // ── Mass Lead assign helpers ──────────────────────────────────────────────
   const allLoadedIds = useMemo(() => GROUP_DEFS.flatMap((g) => (groups[g.id]?.rows ?? []).map((r) => r.id)), [groups]);
@@ -259,7 +259,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   }
 
   const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
-  const filterBadge = (role ? 1 : 0) + facetCount;
+  const filterBadge = (role ? 1 : 0) + facetCount + (sourceFormD ? 1 : 0);
   const roleFacets = FACETS_BY_ROLE[role || "any"];
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
@@ -302,7 +302,6 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
-        <button type="button" onClick={() => setSourceFormD((v) => !v)} style={{ fontSize: 12, fontWeight: 500, color: sourceFormD ? "#fff" : "var(--foreground)", background: sourceFormD ? "#2E78F5" : "transparent", border: sourceFormD ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>SEC Form D</button>
         {activeFilters > 0 && (
           <button onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); }} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}
@@ -314,6 +313,13 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           </button>
           {filtersOpen && (
             <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 300, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", overflow: "hidden" }}>
+              <div style={{ padding: "10px 12px", borderBottom: "0.5px solid #eef1f5" }}>
+                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Source</div>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, cursor: "pointer", color: "var(--foreground)" }}>
+                  <input type="checkbox" checked={sourceFormD} onChange={() => setSourceFormD((v) => !v)} style={{ width: 14, height: 14 }} />
+                  SEC Form D
+                </label>
+              </div>
               <div style={{ padding: "10px 12px", borderBottom: "0.5px solid #eef1f5" }}>
                 <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Role</div>
                 <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
