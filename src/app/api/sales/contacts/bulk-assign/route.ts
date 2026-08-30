@@ -47,7 +47,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const PAGE = 1000;
     for (let from = 0; from < MAX_TARGET; from += PAGE) {
       let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
-      if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.eq("contact_type", parsed.data.group);
+      if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
       q = applyContactFilters(q, p);
       const { data, error } = await q;
       if (error || !data || data.length === 0) break;

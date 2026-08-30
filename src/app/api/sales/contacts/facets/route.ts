@@ -20,7 +20,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   const contactsOwner = effectiveContactsOwner(scope);
 
   const countOne = async (group: string): Promise<number> => {
-    let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).eq("contact_type", group);
+    // Match contact_type OR module so Form D promotions (keyed by module) are counted.
+    let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).or(`contact_type.eq.${group},module.eq.${group}`);
     if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
     q = applyContactFilters(q, p);
     const { count } = await q;

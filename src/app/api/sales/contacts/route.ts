@@ -47,7 +47,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
   const contactsOwner = effectiveContactsOwner(scope);
   if (contactsOwner) query = query.contains("assignee_ids", [contactsOwner]);
-  if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
+  // Match by contact_type OR module so promoted Form D contacts (which are keyed by
+  // module, like the Founder/Investor CRM pages) always land in the right group.
+  if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
   query = applyContactFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
