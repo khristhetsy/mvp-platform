@@ -43,4 +43,17 @@ describe("normalizeFirm (§5)", () => {
   it("empty name is flagged for review", () => {
     expect(normalizeFirm("").needsReview).toBe(true);
   });
+
+  it("collapses 'a Series of' vehicles to the master fund", () => {
+    expect(normalizeFirm("Equitybee 22-41600, a Series of Equitybee cFund Master LLC").firmStem).toBe("equitybee cfund");
+    expect(normalizeFirm("AR-0708 Fund I, a series of MV Funds, LP").firmStem).toBe("mv funds");
+  });
+
+  it("strips trailing regional/vehicle words like International + Master", () => {
+    expect(normalizeFirm("Bridge Debt Strategies Fund VI International Master LP").firmStem).toBe("bridge debt strategies");
+  });
+
+  it("strips trailing alphanumeric code fragments", () => {
+    expect(normalizeFirm("Horizon 706 LP").firmStem).toBe("horizon");
+  });
 });

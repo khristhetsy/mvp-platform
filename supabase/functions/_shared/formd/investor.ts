@@ -8,7 +8,7 @@ import { createHmac } from "node:crypto";
 const ENTITY_SUFFIX = new Set(["lp", "llc", "ltd", "inc", "corp", "company", "co"]);
 const FUND_ROLE = new Set(["fund", "partners", "management", "advisors", "holdings", "ventures"]);
 const FUND_ROLE_PHRASES = ["capital partners"];
-const VEHICLE_WORDS = new Set(["annex", "overage", "parallel", "feeder", "master", "offshore", "onshore", "qp", "ai", "co-invest", "spv"]);
+const VEHICLE_WORDS = new Set(["annex", "overage", "parallel", "feeder", "master", "offshore", "onshore", "qp", "ai", "co-invest", "spv", "international", "domestic", "intermediate", "aggregator", "blocker", "trust"]);
 const ROMAN = new Set(["i","ii","iii","iv","v","vi","vii","viii","ix","x","xi","xii","xiii","xiv","xv","xvi","xvii","xviii","xix","xx"]);
 const ORDINALS = new Set(["1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth"]);
 
@@ -21,7 +21,9 @@ function cleanStem(s: string): string {
 export function normalizeFirm(entityName: string): { firmStem: string; needsReview: boolean } {
   const raw = (entityName ?? "").trim();
   if (!raw) return { firmStem: "", needsReview: true };
-  let work = dedot(raw).toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
+  const series = raw.match(/\ba series of\s+(.+)$/i);
+  const source = series ? series[1] : raw;
+  let work = dedot(source).toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
   let changed = true;
   while (changed) {
     changed = false;
@@ -30,7 +32,8 @@ export function normalizeFirm(entityName: string): { firmStem: string; needsRevi
     }
     const tokens = work.split(" ");
     const last = tokens[tokens.length - 1];
-    if (last && (ENTITY_SUFFIX.has(last) || FUND_ROLE.has(last) || VEHICLE_WORDS.has(last) || ROMAN.has(last) || ORDINALS.has(last) || /^\d{4}$/.test(last))) {
+    const isCode = /^\d{4}$/.test(last ?? "") || /^[a-z]{0,3}-?\d[\d-]*$/.test(last ?? "");
+    if (last && (ENTITY_SUFFIX.has(last) || FUND_ROLE.has(last) || VEHICLE_WORDS.has(last) || ROMAN.has(last) || ORDINALS.has(last) || isCode)) {
       tokens.pop(); work = tokens.join(" ").trim(); changed = true;
     }
   }

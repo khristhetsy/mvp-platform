@@ -14,6 +14,7 @@ const FUND_ROLE = new Set(["fund", "partners", "management", "advisors", "holdin
 const FUND_ROLE_PHRASES = ["capital partners"];
 const VEHICLE_WORDS = new Set([
   "annex", "overage", "parallel", "feeder", "master", "offshore", "onshore", "qp", "ai", "co-invest", "spv",
+  "international", "domestic", "intermediate", "aggregator", "blocker", "trust",
 ]);
 const ROMAN = new Set([
   "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
@@ -44,7 +45,12 @@ export function normalizeFirm(entityName: string): NormalizedFirm {
   const raw = (entityName ?? "").trim();
   if (!raw) return { firmStem: "", needsReview: true };
 
-  let work = dedot(raw).toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
+  // "X, a Series of Y" / "X, a series of Y" — the firm is the master (Y), so all
+  // series of one fund family roll up together. Take the text after "series of".
+  const series = raw.match(/\ba series of\s+(.+)$/i);
+  const source = series ? series[1] : raw;
+
+  let work = dedot(source).toLowerCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
 
   // Iteratively strip trailing tokens/phrases until nothing more matches.
   let changed = true;
@@ -60,9 +66,12 @@ export function normalizeFirm(entityName: string): NormalizedFirm {
 
     const tokens = work.split(" ");
     const last = tokens[tokens.length - 1];
+    // Trailing code/number fragments: years, and alphanumeric codes like
+    // "22-41600" or "ar-0708" (≤3 leading letters, then digits/hyphens).
+    const isCode = /^\d{4}$/.test(last ?? "") || /^[a-z]{0,3}-?\d[\d-]*$/.test(last ?? "");
     if (
       last &&
-      (ENTITY_SUFFIX.has(last) || FUND_ROLE.has(last) || VEHICLE_WORDS.has(last) || ROMAN.has(last) || ORDINALS.has(last) || /^\d{4}$/.test(last))
+      (ENTITY_SUFFIX.has(last) || FUND_ROLE.has(last) || VEHICLE_WORDS.has(last) || ROMAN.has(last) || ORDINALS.has(last) || isCode)
     ) {
       tokens.pop();
       work = tokens.join(" ").trim();
