@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
-import { FormDReviewClient } from "@/components/crm/FormDReviewClient";
+import { FormDDeskTabs } from "@/components/crm/FormDDeskTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +17,10 @@ export default async function FormDReviewPage() {
     >
       <div className="mx-auto max-w-6xl px-4 py-6">
         <Link href="/admin/crm/connectors" className="text-xs font-medium text-slate-500 hover:text-slate-800">← Connectors</Link>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-950">Form D — filings review</h1>
-        <p className="mt-1 max-w-2xl text-sm text-slate-600">Scored Form D filings. Promote workable ones into Contacts with Entrepreneur Information pre-filled.</p>
+        <h1 className="mt-2 text-2xl font-semibold text-slate-950">Form D Desk</h1>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600">One build, two modes. Founders: scored issuer filings to promote into Contacts. Investors: funds and principals visibly deploying capital, rolled up from the same filings.</p>
         <div className="mt-4">
-          <FormDReviewClient canPromote={profile.role === "admin"} />
+          <FormDDeskTabs canPromote={profile.role === "admin"} />
         </div>
       </div>
     </AppShell>
