@@ -88,7 +88,10 @@ export function tierFromScore(score: number): PartnerTier {
  * Pure Partner Score computation. Returns "new" with facts (but no composite)
  * until the investor has engaged enough founders to be meaningfully rated.
  */
-export function computePartnerScore(input: PartnerScoreInputs): PartnerScore {
+export function computePartnerScore(
+  input: PartnerScoreInputs,
+  weights: typeof PILLAR_WEIGHTS = PILLAR_WEIGHTS,
+): PartnerScore {
   const pillars = computePillars(input);
 
   const facts = {
@@ -115,11 +118,11 @@ export function computePartnerScore(input: PartnerScoreInputs): PartnerScore {
   }
 
   const score = Math.round(
-    PILLAR_WEIGHTS.followThrough * pillars.followThrough +
-      PILLAR_WEIGHTS.responsiveness * pillars.responsiveness +
-      PILLAR_WEIGHTS.credibility * pillars.credibility +
-      PILLAR_WEIGHTS.portfolioReadiness * pillars.portfolioReadiness +
-      PILLAR_WEIGHTS.trackRecord * pillars.trackRecord,
+    weights.followThrough * pillars.followThrough +
+      weights.responsiveness * pillars.responsiveness +
+      weights.credibility * pillars.credibility +
+      weights.portfolioReadiness * pillars.portfolioReadiness +
+      weights.trackRecord * pillars.trackRecord,
   );
 
   return {

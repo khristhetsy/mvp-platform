@@ -52,7 +52,7 @@ export async function loadPartnerScoresBatch(
  */
 export async function refreshPartnerScoreSnapshots(
   admin: SupabaseClient<Database>,
-  opts: { now?: number; deadlineMs?: number } = {},
+  opts: { now?: number; deadlineMs?: number; weights?: typeof import("./types").PILLAR_WEIGHTS } = {},
 ): Promise<{ refreshed: number; remaining: number }> {
   const now = opts.now ?? Date.now();
   const deadlineMs = opts.deadlineMs ?? Number.POSITIVE_INFINITY;
@@ -95,7 +95,7 @@ export async function refreshPartnerScoreSnapshots(
     const chunk = ids.slice(i, i + CHUNK);
     const chunkRows = await Promise.all(
       chunk.map(async (investorId): Promise<SnapshotRow> => {
-        const score = await loadPartnerScore(admin, investorId, now);
+        const score = await loadPartnerScore(admin, investorId, now, opts.weights);
         return {
           investor_id: investorId,
           score: score.score,

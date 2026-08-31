@@ -29,6 +29,7 @@ export async function loadPartnerScore(
   supabase: SupabaseClient<Database>,
   investorId: string,
   now: number = Date.now(),
+  weights?: typeof import("./types").PILLAR_WEIGHTS,
 ): Promise<PartnerScore> {
   // ── Phase 1: five independent reads keyed on investorId, in parallel ──
   // These were previously awaited one-by-one (a ~5-hop serial waterfall). None of
@@ -211,5 +212,5 @@ export async function loadPartnerScore(
     tenureMonths: monthsBetween(profile?.created_at ?? null, now),
   };
 
-  return computePartnerScore(inputs);
+  return computePartnerScore(inputs, weights);
 }

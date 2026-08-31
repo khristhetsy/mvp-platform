@@ -23,13 +23,21 @@ export const TIER_LABELS: Record<PartnerTier, string> = {
 /** Minimum distinct founders engaged before a composite score is shown. */
 export const COLD_START_MIN_SAMPLE = 3;
 
-export const PILLAR_WEIGHTS = {
+export type PillarWeights = {
+  followThrough: number;
+  responsiveness: number;
+  credibility: number;
+  portfolioReadiness: number;
+  trackRecord: number;
+};
+
+export const PILLAR_WEIGHTS: PillarWeights = {
   followThrough: 0.35,
   responsiveness: 0.25,
   credibility: 0.2,
   portfolioReadiness: 0.1,
   trackRecord: 0.1,
-} as const;
+};
 
 /** Raw signals fed to the pure scoring function (computed by the loader). */
 export type PartnerScoreInputs = {
