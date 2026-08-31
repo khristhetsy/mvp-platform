@@ -11,6 +11,9 @@ import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
+import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +52,16 @@ export default async function FounderMatchesPage() {
   // Free sees matches (count · sector · fit tier) but not identities or actions.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;
 
+  // Investor Rating = the Partner Score, keyed on the member investor's profile id
+  // (c.ref). Prospects (Form D / imported) aren't platform members, so they have
+  // no partner score and stay "New".
+  const memberRefs = data.cards.filter((c) => !c.isProspect && c.ref).map((c) => c.ref as string);
+  const partnerScores: Map<string, PartnerScore> = memberRefs.length
+    ? await loadPartnerScoresBatch(createServiceRoleClient(), memberRefs)
+    : new Map<string, PartnerScore>();
+
   const cards: MatchCenterCard[] = data.cards.map((c) => {
+    const ps = !c.isProspect && c.ref ? partnerScores.get(c.ref) : undefined;
     const label = c.investorType ? `${titleCase(c.investorType)}` : "Investor";
     const displayName = reveal ? c.name : "Matched investor";
     const subtitle = reveal
@@ -80,9 +92,9 @@ export default async function FounderMatchesPage() {
         checkSize: c.checkBand ?? "—",
         pledgeCount: 0,
         indicated: 0,
-        investorScore: null,
-        scoreTier: null,
-        scoreRated: false,
+        investorScore: ps?.score ?? null,
+        scoreTier: ps ? TIER_LABELS[ps.tier] : null,
+        scoreRated: ps?.status === "rated",
       },
     };
   });
