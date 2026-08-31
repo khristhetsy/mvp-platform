@@ -24,6 +24,16 @@ function rawPhone(raw: unknown): string {
   return v || "";
 }
 
+// Human-readable lead source: the override wins (Form D promotions set it to
+// "SEC Form D"), else the Odoo profile's leadSource.
+function leadSourceOf(overrides: unknown, raw: unknown): string {
+  const ov = (overrides as Record<string, unknown> | null)?.lead_source;
+  if (typeof ov === "string" && ov.trim()) return ov.trim();
+  const prof = (raw as { __profile?: { leadSource?: unknown } } | null)?.__profile;
+  const ls = prof?.leadSource;
+  return typeof ls === "string" && ls.trim() ? ls.trim() : "";
+}
+
 // GET /api/sales/contacts — grouped, filtered, paginated contact list.
 //   ?group=founder|investor|advisor|other &offset=0&limit=50
 //   filters: q, name, company, email, phone, country (csv)
@@ -41,7 +51,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const scope = await getSalesScope(profile, p.get("viewAs"));
 
-  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, assignee_ids, raw";
+  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, overrides, assignee_ids, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
   // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
@@ -54,7 +64,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
-  const raw = (data ?? []) as Array<Row & { raw?: unknown; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
+  const raw = (data ?? []) as Array<Row & { raw?: unknown; overrides?: unknown; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
 
   // Resolve assignee names for the Lead assign column in one lookup.
   const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
@@ -84,6 +94,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     // Fall back to the promote/insert date (synced_at) when there's no Odoo
     // create_date — e.g. SEC Form D promotions, which have no raw.create_date.
     createdOn: r.created_on ?? (r.synced_at ? String(r.synced_at).slice(0, 10) : ""),
+    // Lead source: the override (Form D + edits) or the Odoo profile value.
+    leadSource: leadSourceOf(r.overrides, r.raw),
     assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
     lastMessage: lastMsg.get(r.id) ?? null,
   }));

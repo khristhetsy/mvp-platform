@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; assignees?: string[]; lastMessage?: LastMessage | null };
+export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null };
 type GroupState = { rows: SalesContact[]; total: number; loading: boolean };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
@@ -30,6 +30,7 @@ const ALL_COLUMNS: ColMeta[] = [
   { key: "email", label: "Email", width: "1.4fr", kind: "text", sortable: true },
   { key: "last_message", label: "Last message", width: "1.7fr", kind: "none", sortable: false },
   { key: "lead_assign", label: "Lead assign", width: "1.1fr", kind: "none", sortable: false },
+  { key: "lead_source", label: "Lead source", width: "120px", kind: "none", sortable: false },
   { key: "country", label: "Country", width: "100px", kind: "country", sortable: true },
   { key: "created_on", label: "Created on", width: "104px", kind: "none", sortable: true },
 ];
@@ -95,9 +96,9 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
-  // v3 key: bumped when the "Last message" column was added so a stale saved set
+  // v4 key: bumped when the "Lead source" column was added so a stale saved set
   // (from before that column existed) doesn't hide it. Resets column prefs once.
-  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v3", ALL_COLUMNS.map((c) => c.key)));
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v4", ALL_COLUMNS.map((c) => c.key)));
 
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
@@ -137,7 +138,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canBulkAssign ? `34px ${gridCols}` : gridCols;
 
-  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v3", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v4", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
   const loadAll = useCallback(async (params: string, roleFilter: string) => {
@@ -290,6 +291,9 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           {c.assignees.slice(0, 2).map((n) => <span key={n} style={{ fontSize: 10, background: "#E6F1FB", color: "#185FA5", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}>{n}</span>)}
           {c.assignees.length > 2 && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{c.assignees.length - 2}</span>}
         </div>
+      ) : <div style={{ color: "var(--muted-foreground)" }}>—</div>;
+      case "lead_source": return c.leadSource ? (
+        <span style={{ fontSize: 10, background: "#E6F1FB", color: "#185FA5", borderRadius: 10, padding: "1px 8px", whiteSpace: "nowrap" }}>{c.leadSource}</span>
       ) : <div style={{ color: "var(--muted-foreground)" }}>—</div>;
       case "country": return <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.country || "—"}</div>;
       case "created_on": return <div style={{ color: "var(--muted-foreground)", fontSize: 11.5, whiteSpace: "nowrap" }}>{c.createdOn ? c.createdOn.slice(0, 10) : "—"}</div>;
