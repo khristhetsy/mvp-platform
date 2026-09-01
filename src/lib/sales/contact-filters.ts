@@ -103,12 +103,32 @@ async function emailsForProfiles(db: any, ids: string[]): Promise<string[]> {
   return [...out];
 }
 
-// Constrain a contacts query to those that HAVE the role's derived score. Returns the
-// query unchanged when no score filter is requested. An empty allowlist forces no rows
-// (a ticked filter with zero matches shows nothing, never everything).
+export const CONTACT_GROUPS = ["founder", "investor", "advisor", "other"] as const;
+
+// THE single way every contacts endpoint (list, facets/count, bulk-assign) builds its
+// query. Applies the group predicate, all standard filters, AND the role-scoped score
+// filter — group-guarded — so the three consumers can never drift out of sync.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function applyScorePresenceFilter(query: any, p: URLSearchParams, db: any): Promise<any> {
+export async function applyContactQuery(query: any, p: URLSearchParams, db: any, group?: string | null): Promise<any> {
+  // Match by contact_type OR module so promoted Form D contacts (keyed by module) land
+  // in the right group.
+  if (group && (CONTACT_GROUPS as readonly string[]).includes(group)) {
+    query = query.or(`contact_type.eq.${group},module.eq.${group}`);
+  }
+  query = applyContactFilters(query, p);
+  query = await applyScorePresenceFilter(query, p, db, group);
+  return query;
+}
+
+// Constrain a contacts query to those that HAVE the role's derived score. Role-scoped:
+// crr → founders only, investor → investors only. Returns the query unchanged when no
+// score filter applies to this group. An empty allowlist forces no rows.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function applyScorePresenceFilter(query: any, p: URLSearchParams, db: any, group?: string | null): Promise<any> {
   const hasScore = p.get("hasScore");
+  // Only apply the score filter to the group it belongs to.
+  if (hasScore === "crr" && group !== "founder") return query;
+  if (hasScore === "investor" && group !== "investor") return query;
   if (hasScore !== "crr" && hasScore !== "investor") return query;
 
   if (hasScore === "crr") {

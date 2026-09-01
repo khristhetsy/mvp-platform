@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactFilters, applyScorePresenceFilter } from "@/lib/sales/contact-filters";
+import { applyContactQuery } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -20,16 +20,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   const contactsOwner = effectiveContactsOwner(scope);
 
   const countOne = async (group: string): Promise<number> => {
-    // Match contact_type OR module so Form D promotions (keyed by module) are counted.
-    let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).or(`contact_type.eq.${group},module.eq.${group}`);
+    let q = db().from("crm_contacts").select("id", { count: "exact", head: true });
     if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
-    q = applyContactFilters(q, p);
-    // The Score filter is role-scoped: crr → founders only, investor → investors only.
-    // Only constrain the group it belongs to; leave the other tab counts untouched.
-    const hasScore = p.get("hasScore");
-    if ((hasScore === "crr" && group === "founder") || (hasScore === "investor" && group === "investor")) {
-      q = await applyScorePresenceFilter(q, p, db());
-    }
+    q = await applyContactQuery(q, p, db(), group);
     const { count } = await q;
     return count ?? 0;
   };

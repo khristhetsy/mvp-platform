@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactFilters, applyScorePresenceFilter } from "@/lib/sales/contact-filters";
+import { applyContactQuery } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,6 @@ const SORTABLE = new Set(["name", "company", "email", "country", "created_on"]);
 // crm_contacts has columns not all in the generated types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
-
-const GROUPS = ["founder", "investor", "advisor", "other"] as const;
 
 function rawPhone(raw: unknown): string {
   const r = raw as Record<string, unknown> | null;
@@ -57,18 +55,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
   const contactsOwner = effectiveContactsOwner(scope);
   if (contactsOwner) query = query.contains("assignee_ids", [contactsOwner]);
-  // Match by contact_type OR module so promoted Form D contacts (which are keyed by
-  // module, like the Founder/Investor CRM pages) always land in the right group.
-  if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
-  query = applyContactFilters(query, p);
-  // The Score presence filter is role-scoped: crr → founders, investor → investors.
-  // Apply it only to the group it belongs to, exactly like the facets/count endpoint,
-  // so the list and the group count can never diverge (a founder-group list must not
-  // be constrained by an investor-score filter, or the count would say 1 and list 0).
-  const hasScore = p.get("hasScore");
-  if ((hasScore === "crr" && group === "founder") || (hasScore === "investor" && group === "investor")) {
-    query = await applyScorePresenceFilter(query, p, db());
-  }
+  query = await applyContactQuery(query, p, db(), group);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;

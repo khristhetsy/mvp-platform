@@ -4,11 +4,10 @@ import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { listLeadAssignableStaff } from "@/lib/sales/settings";
-import { applyContactFilters, applyScorePresenceFilter } from "@/lib/sales/contact-filters";
+import { applyContactQuery } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
-const GROUPS = ["founder", "investor", "advisor", "other"];
 const MAX_TARGET = 25000; // safety cap on how many contacts one action can touch
 
 const schema = z.object({
@@ -47,14 +46,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const PAGE = 1000;
     for (let from = 0; from < MAX_TARGET; from += PAGE) {
       let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
-      if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
-      q = applyContactFilters(q, p);
-      // Score presence filter is role-scoped — apply only to its own group so
-      // select-all-matching targets exactly the rows the list shows.
-      const hasScore = p.get("hasScore");
-      if ((hasScore === "crr" && parsed.data.group === "founder") || (hasScore === "investor" && parsed.data.group === "investor")) {
-        q = await applyScorePresenceFilter(q, p, db);
-      }
+      q = await applyContactQuery(q, p, db, parsed.data.group);
       const { data, error } = await q;
       if (error || !data || data.length === 0) break;
       ids.push(...(data as Array<{ id: string }>).map((r) => r.id));
