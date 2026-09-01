@@ -49,7 +49,12 @@ export async function POST(req: NextRequest): Promise<Response> {
       let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
       if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
       q = applyContactFilters(q, p);
-      q = await applyScorePresenceFilter(q, p, db);
+      // Score presence filter is role-scoped — apply only to its own group so
+      // select-all-matching targets exactly the rows the list shows.
+      const hasScore = p.get("hasScore");
+      if ((hasScore === "crr" && parsed.data.group === "founder") || (hasScore === "investor" && parsed.data.group === "investor")) {
+        q = await applyScorePresenceFilter(q, p, db);
+      }
       const { data, error } = await q;
       if (error || !data || data.length === 0) break;
       ids.push(...(data as Array<{ id: string }>).map((r) => r.id));

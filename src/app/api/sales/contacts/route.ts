@@ -61,7 +61,14 @@ export async function GET(req: NextRequest): Promise<Response> {
   // module, like the Founder/Investor CRM pages) always land in the right group.
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
   query = applyContactFilters(query, p);
-  query = await applyScorePresenceFilter(query, p, db());
+  // The Score presence filter is role-scoped: crr → founders, investor → investors.
+  // Apply it only to the group it belongs to, exactly like the facets/count endpoint,
+  // so the list and the group count can never diverge (a founder-group list must not
+  // be constrained by an investor-score filter, or the count would say 1 and list 0).
+  const hasScore = p.get("hasScore");
+  if ((hasScore === "crr" && group === "founder") || (hasScore === "investor" && group === "investor")) {
+    query = await applyScorePresenceFilter(query, p, db());
+  }
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
