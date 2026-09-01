@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { listLeadAssignableStaff } from "@/lib/sales/settings";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { applyContactFilters, applyScorePresenceFilter } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
       if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
       q = applyContactFilters(q, p);
+      q = await applyScorePresenceFilter(q, p, db);
       const { data, error } = await q;
       if (error || !data || data.length === 0) break;
       ids.push(...(data as Array<{ id: string }>).map((r) => r.id));

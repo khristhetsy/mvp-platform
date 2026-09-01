@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { applyContactFilters, applyScorePresenceFilter } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +61,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   // module, like the Founder/Investor CRM pages) always land in the right group.
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
   query = applyContactFilters(query, p);
+  query = await applyScorePresenceFilter(query, p, db());
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
