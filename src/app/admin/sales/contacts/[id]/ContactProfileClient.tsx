@@ -238,7 +238,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
 type FormdFirmSummary = { regd_footprint: number | null; vehicle_count: number | null; fund_types: string[] | null; last_investment_at: string | null; last_investment_issuer: string | null; last_investment_round_size: number | null; activity_band: string | null; state_or_country: string | null; investments_24mo: number | null };
 const fmtUsdM = (n: number | null | undefined) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, formdFirm = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; basePath?: string }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, formdFirm = null, crr = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -540,6 +540,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <Chip label="Open opps" value={openOpps} onClick={goToOpps} />
             <Chip label="Last activity" value={lastActLabel} onClick={goToActivity} />
             {investorRating ? <Chip label="Investor rating" value={investorRating.score != null ? `${investorRating.score} · ${investorRating.tier}` : "New"} /> : null}
+            {crr ? <Chip label="CRR" value={`${crr.score} · ${crr.tier}`} /> : null}
           </div>
         </div>
 

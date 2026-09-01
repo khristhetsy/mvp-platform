@@ -31,6 +31,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
 
   let onePager: { slug: string | null; published: boolean; companyName: string | null } | null = null;
   let linkedCompany: LinkedCompany | null = null;
+  let crr: { score: number; tier: string } | null = null;
   if (data.contact.email) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
@@ -38,11 +39,15 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     if (prof?.id) {
       const { data: comp } = await admin
         .from("companies")
-        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds")
+        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds, readiness_score")
         .eq("founder_id", prof.id)
         .maybeSingle();
       if (comp) {
         onePager = { slug: comp.slug ?? null, published: Boolean(comp.is_published), companyName: comp.company_name ?? null };
+        if (comp.readiness_score != null) {
+          const s = comp.readiness_score as number;
+          crr = { score: s, tier: s >= 80 ? "Raise-ready" : s >= 60 ? "Building" : s >= 40 ? "Emerging" : "Early" };
+        }
         linkedCompany = {
           id: comp.id,
           companyName: comp.company_name ?? null,
@@ -107,6 +112,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     odooMessages,
     investorRating,
     formdFirm,
+    crr,
   };
 }
 
