@@ -518,6 +518,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
       },
       { href: "/founder/events", label: "Events", minStage: "qualify" },
       { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
+      { href: "/founder/help", label: "How it works" },
       { href: "/founder/support", label: "Support" },
     ],
   },

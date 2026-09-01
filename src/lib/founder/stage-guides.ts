@@ -191,3 +191,8 @@ const GUIDES: Record<StageSlug, StageGuide> = {
 export function getStageGuide(slug: string): StageGuide | null {
   return (GUIDES as Record<string, StageGuide>)[slug] ?? null;
 }
+
+// All four stage guides in raise order. Powers the Help center ("How iCapOS works").
+export function getAllStageGuides(): StageGuide[] {
+  return STAGE_SLUGS.map((s) => GUIDES[s]);
+}

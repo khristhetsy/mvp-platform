@@ -6,6 +6,7 @@ import { maybeNotifyTrialStatus } from "@/lib/notifications/trial-alerts";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { OfferingTypePrompt } from "@/components/founder/OfferingTypePrompt";
+import { FounderTour } from "@/components/founder/FounderTour";
 import { AccountSwitcherServer } from "@/components/account/AccountSwitcherServer";
 
 type FounderAppShellProps = Readonly<{
@@ -56,6 +57,7 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       accountSwitcher={<AccountSwitcherServer />}
     >
       {needsClassification ? <OfferingTypePrompt needsClassification /> : null}
+      {profile?.role === "founder" ? <FounderTour /> : null}
       {children}
     </AppShell>
   );
