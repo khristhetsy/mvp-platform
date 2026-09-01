@@ -14,6 +14,8 @@ import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyStat
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
+import { getRatingConfig } from "@/lib/investor-rating/weights";
+import { tierFromScore } from "@/lib/investor-rating/scoring";
 
 export const dynamic = "force-dynamic";
 
@@ -60,8 +62,27 @@ export default async function FounderMatchesPage() {
     ? await loadPartnerScoresBatch(createServiceRoleClient(), memberRefs)
     : new Map<string, PartnerScore>();
 
+  // SEC Form D verified bonus: which prospect matches came from Form D.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createServiceRoleClient() as any;
+  const { secFormDBonus } = await getRatingConfig(admin);
+  const prospectIds = data.cards.filter((c) => c.isProspect && c.ref).map((c) => (c.ref as string).replace(/^prospect:/, ""));
+  const formdRefs = new Set<string>();
+  if (prospectIds.length) {
+    const { data: pis } = await admin.from("prospect_investors").select("id").in("id", prospectIds).eq("source", "SEC Form D");
+    for (const p of (pis ?? []) as Array<{ id: string }>) formdRefs.add(`prospect:${p.id}`);
+  }
+
   const cards: MatchCenterCard[] = data.cards.map((c) => {
     const ps = !c.isProspect && c.ref ? partnerScores.get(c.ref) : undefined;
+    let investorScore: number | null = ps?.score ?? null;
+    let scoreTier: string | null = ps ? TIER_LABELS[ps.tier] : null;
+    let scoreRated = ps?.status === "rated";
+    if (c.ref && formdRefs.has(c.ref) && secFormDBonus > 0) {
+      investorScore = Math.min(100, (investorScore ?? 0) + secFormDBonus);
+      scoreTier = TIER_LABELS[tierFromScore(investorScore)];
+      scoreRated = true;
+    }
     const label = c.investorType ? `${titleCase(c.investorType)}` : "Investor";
     const displayName = reveal ? c.name : "Matched investor";
     const subtitle = reveal
@@ -92,9 +113,9 @@ export default async function FounderMatchesPage() {
         checkSize: c.checkBand ?? "—",
         pledgeCount: 0,
         indicated: 0,
-        investorScore: ps?.score ?? null,
-        scoreTier: ps ? TIER_LABELS[ps.tier] : null,
-        scoreRated: ps?.status === "rated",
+        investorScore,
+        scoreTier,
+        scoreRated,
       },
     };
   });
