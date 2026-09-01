@@ -79,6 +79,22 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
 
   const investorRating = await getContactInvestorRating(data.contact).catch(() => null);
 
+  // SEC Form D filing data for a promoted Form D investor (external_id = formd-firm:<id>).
+  let formdFirm: FormdFirmSummary | null = null;
+  const ext = data.contact.external_id;
+  if (ext && ext.startsWith("formd-firm:")) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const admin = createServiceRoleClient() as any;
+      const { data: firm } = await admin
+        .from("formd_firms")
+        .select("regd_footprint, vehicle_count, fund_types, last_investment_at, last_investment_issuer, last_investment_round_size, activity_band, state_or_country, investments_24mo")
+        .eq("id", ext.slice("formd-firm:".length))
+        .maybeSingle();
+      if (firm) formdFirm = firm as FormdFirmSummary;
+    } catch { /* ignore */ }
+  }
+
   return {
     contact: data.contact,
     opportunities: data.opportunities,
@@ -90,5 +106,18 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     company: linkedCompany,
     odooMessages,
     investorRating,
+    formdFirm,
   };
 }
+
+export type FormdFirmSummary = {
+  regd_footprint: number | null;
+  vehicle_count: number | null;
+  fund_types: string[] | null;
+  last_investment_at: string | null;
+  last_investment_issuer: string | null;
+  last_investment_round_size: number | null;
+  activity_band: string | null;
+  state_or_country: string | null;
+  investments_24mo: number | null;
+};

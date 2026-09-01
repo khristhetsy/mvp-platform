@@ -235,7 +235,10 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; basePath?: string }) {
+type FormdFirmSummary = { regd_footprint: number | null; vehicle_count: number | null; fund_types: string[] | null; last_investment_at: string | null; last_investment_issuer: string | null; last_investment_round_size: number | null; activity_band: string | null; state_or_country: string | null; investments_24mo: number | null };
+const fmtUsdM = (n: number | null | undefined) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
+
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, formdFirm = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -731,6 +734,20 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
                     </span>
                   </div>
+                  {formdFirm && (
+                    <div style={{ marginTop: 14 }}>
+                      <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                        <RoRow label="Capital raised (Reg D)">{fmtUsdM(formdFirm.regd_footprint)}</RoRow>
+                        <RoRow label="Vehicles / funds">{formdFirm.vehicle_count != null ? String(formdFirm.vehicle_count) : null}</RoRow>
+                        <RoRow label="Fund types">{formdFirm.fund_types && formdFirm.fund_types.length ? formdFirm.fund_types.join(", ") : null}</RoRow>
+                        <RoRow label="Activity band">{formdFirm.activity_band || null}</RoRow>
+                        <RoRow label="Filings (24mo)">{formdFirm.investments_24mo != null ? String(formdFirm.investments_24mo) : null}</RoRow>
+                        <RoRow label="Most recent raise">{formdFirm.last_investment_issuer || null}</RoRow>
+                      </div>
+                      <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "5px 0 0" }}>Capital raised across the fund’s Reg D filings — SEC-verified public record, not assets under management.</p>
+                    </div>
+                  )}
                   {company && <CompanyLinkedRecordEditor company={company} onePager={onePager} />}
                   {profile.sections.map((sec) => {
                     // The linked-company section above now carries Seeking +
