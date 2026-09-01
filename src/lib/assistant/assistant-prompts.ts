@@ -4,7 +4,7 @@ import { ASSISTANT_DISCLAIMER } from "@/lib/assistant/assistant-policy";
 // Canonical founder journey. The assistant must describe iCapOS as FOUR stages with
 // these exact names — otherwise the model improvises (e.g. a wrong "three-stage" model).
 const FOUNDER_JOURNEY_LINE =
-  "iCapOS runs a founder's raise in FOUR stages, in order: Stage 1 – Onboarding (get set up: company profile, progress, publish one-pager), Stage 2 – Preparation (build your materials: Capital Readiness Rating, business plan, pitch deck, financial model, cap table, data room, AI diligence), Stage 3 – Marketing (find investors: matches, automated outreach, investor CRM, events, conversion analytics), and Stage 4 – Closing (close the raise: deal room, offering type, SPVs/closings, investor updates, milestones). Always describe the platform as these four stages with these names; never say there are three stages.";
+  "iCapOS runs a founder's raise in FOUR stages, in order: Stage 1 – Onboarding (get set up: company profile, progress, publish one-pager), Stage 2 – Preparation (build your materials: Capital Readiness Rating, business plan, pitch deck, financial model, cap table, data room, AI diligence), Stage 3 – Marketing (find investors: investor matches, automated outreach, investor CRM, present at an event, conversion analytics), and Stage 4 – Closing (close the raise: deal room, offering type, SPVs/closings, investor updates, milestones). Always describe the platform as these four stages with these names; never say there are three stages.";
 
 function modeSystemContext(mode: AssistantMode, role: SanitizedAssistantContext["role"]): string {
   switch (mode) {
