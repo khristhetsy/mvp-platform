@@ -3,6 +3,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS } from "@/lib/investor-rating/types";
+import { tierFromScore } from "@/lib/investor-rating/scoring";
+import { getRatingConfig } from "@/lib/investor-rating/weights";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
+  const { secFormDBonus } = await getRatingConfig(admin);
 
   // Members → partner scores, keyed by lowercase email for CRM matching.
   const { data: members } = await admin.from("investor_profiles").select("profile_id, firm_name");
@@ -70,14 +73,23 @@ export async function GET(req: NextRequest): Promise<Response> {
     .limit(CONTACT_CAP);
   for (const c of (contacts ?? []) as Array<{ id: string; name: string | null; company: string | null; email: string | null; source: string | null }>) {
     const m = c.email ? emailToScore.get(c.email.toLowerCase()) : undefined;
+    const isFormD = c.source === "formd";
+    let score = m?.score ?? null;
+    let tier = m?.tier ?? null;
+    // SEC Form D provenance bonus (capped at 100). Lifts an unscored Form D
+    // investor from "New" to a verified floor of the bonus value.
+    if (isFormD && secFormDBonus > 0) {
+      score = Math.min(100, (score ?? 0) + secFormDBonus);
+      tier = TIER_LABELS[tierFromScore(score)];
+    }
     rows.push({
       id: `contact:${c.id}`,
       name: c.name ?? c.company ?? "Investor",
       firm: c.company,
-      source: c.source === "formd" ? "SEC Form D" : c.source === "manual" ? "Manual" : c.source ?? "CRM",
+      source: isFormD ? "SEC Form D" : c.source === "manual" ? "Manual" : c.source ?? "CRM",
       isMember: Boolean(m),
-      tier: m?.tier ?? null,
-      score: m?.score ?? null,
+      tier,
+      score,
       engaged: m?.engaged ?? 0,
     });
   }

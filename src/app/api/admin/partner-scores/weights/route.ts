@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getStoredWeights, saveStoredWeights, normalizeWeights, weightsSumToOne } from "@/lib/investor-rating/weights";
+import { getRatingConfig, saveStoredWeights, normalizeWeights, weightsSumToOne } from "@/lib/investor-rating/weights";
 import { refreshPartnerScoreSnapshots } from "@/lib/investor-rating/snapshot";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
@@ -12,8 +12,8 @@ export async function GET(): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const weights = await getStoredWeights(createServiceRoleClient() as unknown as SupabaseClient<any>);
-  return NextResponse.json({ weights });
+  const { weights, secFormDBonus } = await getRatingConfig(createServiceRoleClient() as unknown as SupabaseClient<any>);
+  return NextResponse.json({ weights, secFormDBonus });
 }
 
 // Save new pillar weights and recompute member snapshots with them so the scores
@@ -25,10 +25,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   const body = await req.json().catch(() => ({}));
   const weights = normalizeWeights((body as { weights?: unknown }).weights);
   if (!weightsSumToOne(weights)) return NextResponse.json({ error: "Weights must total 100%." }, { status: 400 });
+  const bonusRaw = Number((body as { secFormDBonus?: unknown }).secFormDBonus);
+  const secFormDBonus = Number.isFinite(bonusRaw) && bonusRaw >= 0 ? Math.min(bonusRaw, 100) : 20;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
-  await saveStoredWeights(admin, weights, profile.id);
+  await saveStoredWeights(admin, weights, secFormDBonus, profile.id);
 
   const { refreshed } = await refreshPartnerScoreSnapshots(admin as unknown as SupabaseClient<Database>, {
     weights,

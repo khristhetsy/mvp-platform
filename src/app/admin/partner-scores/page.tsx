@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { PartnerScoresClient } from "@/components/admin/PartnerScoresClient";
-import { getStoredWeights } from "@/lib/investor-rating/weights";
+import { getRatingConfig } from "@/lib/investor-rating/weights";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
@@ -14,7 +14,7 @@ export default async function AdminPartnerScoresPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const t = await getTranslations("usersAdmin.partnerScores");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const weights = await getStoredWeights(createServiceRoleClient() as unknown as SupabaseClient<any>);
+  const { weights, secFormDBonus } = await getRatingConfig(createServiceRoleClient() as unknown as SupabaseClient<any>);
 
   return (
     <AppShell
@@ -26,7 +26,7 @@ export default async function AdminPartnerScoresPage() {
     >
       <WorkspacePageContainer>
         <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("desc")} />
-        <PartnerScoresClient initialWeights={weights} />
+        <PartnerScoresClient initialWeights={weights} initialBonus={secFormDBonus} />
       </WorkspacePageContainer>
     </AppShell>
   );
