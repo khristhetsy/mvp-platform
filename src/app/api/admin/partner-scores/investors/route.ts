@@ -65,13 +65,22 @@ export async function GET(req: NextRequest): Promise<Response> {
   }
 
   const rows: Row[] = [];
-  // Investor contacts (the Sales Hub Investors group).
-  const { data: contacts } = await admin
-    .from("crm_contacts")
-    .select("id, name, company, email, source, contact_type, module")
-    .or("contact_type.eq.investor,module.eq.investor")
-    .limit(CONTACT_CAP);
-  for (const c of (contacts ?? []) as Array<{ id: string; name: string | null; company: string | null; email: string | null; source: string | null }>) {
+  // Investor contacts (the Sales Hub Investors group). PostgREST caps a single
+  // response at ~1000 rows regardless of .limit(), so page through with .range().
+  const contacts: Array<{ id: string; name: string | null; company: string | null; email: string | null; source: string | null }> = [];
+  const PAGE = 1000;
+  for (let from = 0; from < CONTACT_CAP; from += PAGE) {
+    const { data, error } = await admin
+      .from("crm_contacts")
+      .select("id, name, company, email, source, contact_type, module")
+      .or("contact_type.eq.investor,module.eq.investor")
+      .range(from, from + PAGE - 1);
+    const batch = (data ?? []) as typeof contacts;
+    if (error || batch.length === 0) break;
+    contacts.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  for (const c of contacts) {
     const m = c.email ? emailToScore.get(c.email.toLowerCase()) : undefined;
     const isFormD = c.source === "formd";
     let score = m?.score ?? null;
