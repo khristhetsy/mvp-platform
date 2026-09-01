@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { mirrorInvestorToContacts } from "@/lib/formd/mirror-investor-contact";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -33,9 +33,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "A lawful basis and a selection are required." }, { status: 400 });
   const { lawfulBasis, firmIds, all, q, band } = parsed.data;
 
-  const supabase = await createServerSupabaseClient();
+  // Service role: formd_firms has no RLS read policy, so the staff session can't
+  // see the rows to resolve/promote. The lawful basis + OFAC hard-stop live in the
+  // RPC logic, not in RLS, so they still apply.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as unknown as SupabaseClient<any>;
+  const db = createServiceRoleClient() as unknown as SupabaseClient<any>;
 
   // Resolve the target firm ids.
   let ids: string[] = [];
