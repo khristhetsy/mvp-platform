@@ -158,7 +158,18 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
               <p className="text-xs text-slate-500">{r.label} · Match {r.matchScore}%</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
+          <div className="flex items-start gap-3">
+            <div className="text-right">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Investor score</p>
+              {r.scoreRated && r.investorScore != null ? (
+                <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#EEF0FB] px-2 py-0.5">
+                  <span className="text-[15px] font-bold text-[#4338CA]">{r.investorScore}</span>
+                  {r.scoreTier ? <span className="text-[10px] text-slate-500">{r.scoreTier}</span> : null}
+                </span>
+              ) : <span className="mt-0.5 block text-[13px] font-semibold text-slate-400">New</span>}
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
+          </div>
         </div>
 
         <div className="px-5 pb-5">
@@ -189,8 +200,7 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Preferred stages</dt><dd className="font-medium text-slate-800">{r.stages.length ? r.stages.join(", ") : "—"}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Check size</dt><dd className="font-medium text-slate-800">{r.checkSize}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Geography</dt><dd className="font-medium text-slate-800">{r.geographies.length ? r.geographies.join(", ") : "—"}</dd></div>
-            <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Pledge activity</dt><dd className="font-medium text-slate-800">{r.pledgeCount > 0 ? `${r.pledgeCount} · ${money(r.indicated)} indicated` : "None yet"}</dd></div>
-            <div className="flex justify-between py-2"><dt className="text-slate-500">Investor score</dt><dd className="font-medium text-slate-800">{r.scoreRated && r.investorScore != null ? `${r.investorScore}${r.scoreTier ? ` · ${r.scoreTier}` : ""}` : "New"}</dd></div>
+            <div className="flex justify-between py-2"><dt className="text-slate-500">Pledge activity</dt><dd className="font-medium text-slate-800">{r.pledgeCount > 0 ? `${r.pledgeCount} · ${money(r.indicated)} indicated` : "None yet"}</dd></div>
           </dl>
 
           <div className="mt-4 rounded-xl p-4" style={{ background: "#0c2340" }}>

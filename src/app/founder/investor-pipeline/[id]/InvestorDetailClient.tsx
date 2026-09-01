@@ -32,6 +32,9 @@ export type PipelineInvestorDetail = {
   focus_sectors: string[] | null;
   location: string | null;
   notes: string | null;
+  // Investor rating = Partner Score + any SEC Form D bonus. Null → "New".
+  investor_score?: number | null;
+  investor_score_tier?: string | null;
 };
 
 export type InvestorPreference = { label: string; values: string[] };
@@ -191,10 +194,15 @@ export function InvestorDetailClient({
         <p className="mt-0.5 text-sm text-slate-500">{investor.investor_type}</p>
 
         {/* Metrics */}
-        <div className="mt-5 grid grid-cols-2 gap-5 border-b border-slate-100 pb-5 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-5 border-b border-slate-100 pb-5 sm:grid-cols-5">
           {metric("Check size", investor.investment_size ?? "—")}
           {metric("Match score", investor.match_score != null ? `${investor.match_score}%` : "—", investor.match_score != null && investor.match_score >= 70 ? "#0F6E56" : undefined)}
           {metric("Amount pledged", investor.pledge_amount != null ? `$${investor.pledge_amount.toLocaleString()}` : "—")}
+          {metric(
+            "Investor score",
+            investor.investor_score != null ? `${investor.investor_score}${investor.investor_score_tier ? ` · ${investor.investor_score_tier}` : ""}` : "New",
+            investor.investor_score != null ? "#4338CA" : undefined,
+          )}
           {metric("Stage", STAGES.find((s) => s.id === stage)?.label ?? "New")}
         </div>
 

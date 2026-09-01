@@ -8,6 +8,10 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadInvestorPreferences } from "@/lib/investors/contact-preferences";
+import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
+import { getRatingConfig } from "@/lib/investor-rating/weights";
+import { tierFromScore } from "@/lib/investor-rating/scoring";
+import { TIER_LABELS } from "@/lib/investor-rating/types";
 import { InvestorDetailClient, type PipelineInvestorDetail } from "./InvestorDetailClient";
 
 function untyped(client: unknown): SupabaseClient {
@@ -66,6 +70,41 @@ export default async function InvestorDetailPage({
   }
   const preferences = await loadInvestorPreferences(admin, email).catch(() => []);
 
+  // Investor rating = the member's Partner Score (via platform_investor_id) plus the
+  // SEC Form D verified bonus when the linked prospect came from Form D. Null → "New".
+  let investorScore: number | null = null;
+  let investorScoreTier: string | null = null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = admin as any;
+    const { secFormDBonus } = await getRatingConfig(a);
+    let base: number | null = null;
+    if (link?.platform_investor_id) {
+      base = (await loadPartnerScoresBatch(a, [link.platform_investor_id])).get(link.platform_investor_id)?.score ?? null;
+    }
+    let isFormD = false;
+    if (link?.name) {
+      const { data: pi } = await a
+        .from("prospect_investors")
+        .select("source")
+        .ilike("name", `${String(link.name).trim()}%`)
+        .limit(1)
+        .maybeSingle();
+      isFormD = (pi?.source ?? "") === "SEC Form D";
+    }
+    const bonus = isFormD ? secFormDBonus : 0;
+    if (base != null || bonus > 0) {
+      investorScore = Math.min(100, (base ?? 0) + bonus);
+      investorScoreTier = TIER_LABELS[tierFromScore(investorScore)];
+    }
+  } catch { /* rating unavailable → New */ }
+
+  const detail: PipelineInvestorDetail = {
+    ...(data as PipelineInvestorDetail),
+    investor_score: investorScore,
+    investor_score_tier: investorScoreTier,
+  };
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -73,7 +112,7 @@ export default async function InvestorDetailPage({
     >
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
-          <InvestorDetailClient investor={data as PipelineInvestorDetail} preferences={preferences} />
+          <InvestorDetailClient investor={detail} preferences={preferences} />
         </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>
