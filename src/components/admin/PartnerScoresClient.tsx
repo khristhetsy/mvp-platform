@@ -13,7 +13,7 @@ const PILLARS: Array<{ key: keyof Weights; label: string }> = [
   { key: "portfolioReadiness", label: "Portfolio readiness" },
   { key: "trackRecord", label: "Track record" },
 ];
-const SOURCES = ["Member", "SEC Form D", "Imported"];
+const SOURCES = ["SEC Form D", "CRM", "Manual"];
 const PER_PAGE = 100;
 
 export function PartnerScoresClient({ initialWeights }: Readonly<{ initialWeights: Weights }>) {
@@ -55,8 +55,8 @@ function InvestorsTab() {
     try {
       const p = new URLSearchParams();
       if (q) p.set("q", q);
-      const srcs = seg === "members" ? ["Member"] : seg === "prospects" ? SOURCES.filter((s) => s !== "Member") : sourceSel;
-      if (srcs.length) p.set("source", srcs.join(","));
+      if (seg !== "all") p.set("membership", seg);
+      if (sourceSel.length) p.set("source", sourceSel.join(","));
       if (minScore) p.set("minScore", minScore);
       p.set("sort", sort);
       p.set("limit", String(PER_PAGE));
