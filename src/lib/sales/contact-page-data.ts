@@ -8,6 +8,7 @@ import { listContactActivity } from "@/lib/sales/activity";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { fetchPartnerMessages } from "@/lib/crm-connectors/odoo/messages";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
+import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import type { LinkedCompany } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
 
 type ProfileLike = { id: string; email?: string | null; role?: string | null; is_super_admin?: boolean | null };
@@ -76,6 +77,8 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     }
   }
 
+  const investorRating = await getContactInvestorRating(data.contact).catch(() => null);
+
   return {
     contact: data.contact,
     opportunities: data.opportunities,
@@ -86,5 +89,6 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     onePager,
     company: linkedCompany,
     odooMessages,
+    investorRating,
   };
 }

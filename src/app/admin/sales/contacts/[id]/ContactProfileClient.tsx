@@ -235,7 +235,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; basePath?: string }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -536,6 +536,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <Chip label="Pipeline value" value={money(pipelineCents)} onClick={goToOpps} />
             <Chip label="Open opps" value={openOpps} onClick={goToOpps} />
             <Chip label="Last activity" value={lastActLabel} onClick={goToActivity} />
+            {investorRating ? <Chip label="Investor rating" value={investorRating.score != null ? `${investorRating.score} · ${investorRating.tier}` : "New"} /> : null}
           </div>
         </div>
 
