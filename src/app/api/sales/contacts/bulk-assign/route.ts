@@ -4,10 +4,11 @@ import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { listLeadAssignableStaff } from "@/lib/sales/settings";
-import { applyContactQuery } from "@/lib/sales/contact-filters";
+import { applyContactFilters } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
+const GROUPS = ["founder", "investor", "advisor", "other"];
 const MAX_TARGET = 25000; // safety cap on how many contacts one action can touch
 
 const schema = z.object({
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     const PAGE = 1000;
     for (let from = 0; from < MAX_TARGET; from += PAGE) {
       let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
-      q = await applyContactQuery(q, p, db, parsed.data.group);
+      if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
+      q = applyContactFilters(q, p);
       const { data, error } = await q;
       if (error || !data || data.length === 0) break;
       ids.push(...(data as Array<{ id: string }>).map((r) => r.id));

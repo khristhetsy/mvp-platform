@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactQuery } from "@/lib/sales/contact-filters";
+import { applyContactFilters } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +20,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   const contactsOwner = effectiveContactsOwner(scope);
 
   const countOne = async (group: string): Promise<number> => {
-    // Estimated count avoids a full COUNT(*) scan per group (the exact count was timing
-    // out on the large table and returning 0/errors). Fast, planner-based.
-    let q = db().from("crm_contacts").select("id", { count: "estimated", head: true });
+    // Match contact_type OR module so Form D promotions (keyed by module) are counted.
+    let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).or(`contact_type.eq.${group},module.eq.${group}`);
     if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
-    q = await applyContactQuery(q, p, db(), group);
+    q = applyContactFilters(q, p);
     const { count } = await q;
     return count ?? 0;
   };

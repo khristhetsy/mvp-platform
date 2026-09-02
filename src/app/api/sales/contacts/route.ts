@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactQuery } from "@/lib/sales/contact-filters";
+import { applyContactFilters } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,8 @@ const SORTABLE = new Set(["name", "company", "email", "country", "created_on"]);
 // crm_contacts has columns not all in the generated types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
+
+const GROUPS = ["founder", "investor", "advisor", "other"] as const;
 
 function rawPhone(raw: unknown): string {
   const r = raw as Record<string, unknown> | null;
@@ -50,28 +52,18 @@ export async function GET(req: NextRequest): Promise<Response> {
   const scope = await getSalesScope(profile, p.get("viewAs"));
 
   const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, overrides, assignee_ids, raw";
+  let query = db().from("crm_contacts").select(cols, { count: "exact" });
   // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
   const contactsOwner = effectiveContactsOwner(scope);
-  // Build the filtered base query. `estimated` count avoids a full-table COUNT(*) scan.
-  const buildBase = async () => {
-    let q = db().from("crm_contacts").select(cols, { count: "estimated" });
-    if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
-    return applyContactQuery(q, p, db(), group);
-  };
+  if (contactsOwner) query = query.contains("assignee_ids", [contactsOwner]);
+  // Match by contact_type OR module so promoted Form D contacts (which are keyed by
+  // module, like the Founder/Investor CRM pages) always land in the right group.
+  if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
+  query = applyContactFilters(query, p);
+  query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
-  // First attempt: sorted. On a very large table an ORDER BY on an unindexed column can
-  // hit the DB statement timeout, which returned an empty list while the count still
-  // worked ("shows 0 but data is there"). If the sorted fetch errors, retry WITHOUT the
-  // sort so the rows still come back (physical order) rather than an empty group.
-  let { data, count, error } = await (await buildBase())
-    .order(sort, { ascending: dir, nullsFirst: false })
-    .range(offset, offset + limit - 1);
-  if (error) {
-    console.error("[sales/contacts] sorted list query failed, retrying unsorted:", { group, message: error.message });
-    ({ data, count, error } = await (await buildBase()).range(offset, offset + limit - 1));
-    if (error) console.error("[sales/contacts] unsorted list query also failed:", { group, message: error.message });
-  }
+  const { data, count } = await query;
   const raw = (data ?? []) as Array<Row & { raw?: unknown; overrides?: unknown; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
 
   // Resolve assignee names for the Lead assign column in one lookup.

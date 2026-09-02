@@ -81,14 +81,13 @@ function loadLS<T>(key: string, fallback: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>, hasScore: string): string {
+function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>): string {
   const sp = new URLSearchParams();
   if (q.trim()) sp.set("q", q.trim());
   (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
   if (countries.length) sp.set("country", countries.join(","));
   if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
   for (const [key, vals] of Object.entries(facetSel)) for (const v of vals) if (v) sp.append(key, v);
-  if (hasScore) sp.set("hasScore", hasScore);
   return sp.toString();
 }
 
@@ -112,8 +111,6 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
   // Role + questionnaire facet filters (Odoo-style Filters dropdown).
   const [role, setRole] = useState<"" | "founder" | "investor" | "advisor">("");
-  // Role-contextual Score presence filter: "crr" (founders) or "investor" (investors).
-  const [hasScore, setHasScore] = useState<"" | "crr" | "investor">("");
   const [facetSel, setFacetSel] = useState<Record<string, string[]>>({});
   const [facetOpts, setFacetOpts] = useState<Record<string, string[]>>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -136,7 +133,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel, hasScore), [q, textFilters, countries, sort, facetSel, hasScore]);
+  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canBulkAssign ? `34px ${gridCols}` : gridCols;
@@ -235,7 +232,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
       return copy;
     });
   }
-  function clearAllFilters() { setRole(""); setHasScore(""); setFacetSel({}); setOpenFacetKey(null); }
+  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
 
   // ── Mass Lead assign helpers ──────────────────────────────────────────────
   const allLoadedIds = useMemo(() => GROUP_DEFS.flatMap((g) => (groups[g.id]?.rows ?? []).map((r) => r.id)), [groups]);
@@ -262,7 +259,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   }
 
   const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
-  const filterBadge = (role ? 1 : 0) + (hasScore ? 1 : 0) + facetCount;
+  const filterBadge = (role ? 1 : 0) + facetCount;
   const roleFacets = FACETS_BY_ROLE[role || "any"];
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
@@ -323,24 +320,10 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
                 <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Role</div>
                 <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                   {([["", "Any"], ["founder", "Founder"], ["investor", "Investor"], ["advisor", "Advisor"]] as const).map(([val, label]) => (
-                    <button key={val} onClick={() => { setRole(val); setHasScore(""); setOpenFacetKey(null); }} style={{ fontSize: 11.5, fontWeight: role === val ? 600 : 400, color: role === val ? "#fff" : "var(--muted-foreground)", background: role === val ? "#4338CA" : "transparent", border: "none", padding: "4px 10px", cursor: "pointer" }}>{label}</button>
+                    <button key={val} onClick={() => { setRole(val); setOpenFacetKey(null); }} style={{ fontSize: 11.5, fontWeight: role === val ? 600 : 400, color: role === val ? "#fff" : "var(--muted-foreground)", background: role === val ? "#4338CA" : "transparent", border: "none", padding: "4px 10px", cursor: "pointer" }}>{label}</button>
                   ))}
                 </div>
               </div>
-              {(role === "founder" || role === "investor") && (
-                <div style={{ padding: "10px 12px", borderBottom: "0.5px solid #eef1f5", background: "rgba(67,56,202,0.04)" }}>
-                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Score</div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--foreground)", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={hasScore === (role === "founder" ? "crr" : "investor")}
-                      onChange={(e) => setHasScore(e.target.checked ? (role === "founder" ? "crr" : "investor") : "")}
-                      style={{ width: 14, height: 14 }}
-                    />
-                    {role === "founder" ? "CRR Score" : "Investor Score"}
-                  </label>
-                </div>
-              )}
               <div style={{ maxHeight: 340, overflowY: "auto" }}>
                 {roleFacets.map((key) => {
                   const sel = facetSel[key] ?? [];
@@ -505,11 +488,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
         {GROUP_DEFS.map((g) => {
           const gs = groups[g.id];
-          // Prefer the list request's own total so the group badge always matches the
-          // rows it sits above. The separate facets count is only a fallback before the
-          // list has loaded — using it as the primary source let a heavier list query's
-          // silent failure show a phantom "N" over an empty list.
-          const count = gs?.total ?? facets.counts[g.id] ?? 0;
+          const count = facets.counts[g.id] ?? gs?.total ?? 0;
           const isOpen = !!expanded[g.id];
           return (
             <div key={g.id}>
