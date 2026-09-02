@@ -86,7 +86,10 @@ export async function getSalesScope(
     // Team view is gated on the manage_crm permission (managers/admins have it,
     // Member Sales reps do not) — additive to the admin-tier check.
     const canViewTeam = isAdmin || eff.permissions.includes("manage_crm");
-    const canSeeAllContacts = canViewTeam || (await departmentSeesAllContacts(profile.id));
+    // The Contacts page is gated to admin/analyst only, so any workspace analyst is a
+    // trusted internal user and should see the full contact list — not be scoped to
+    // their own (which reads 0 for a seed/admin account with nothing assigned to it).
+    const canSeeAllContacts = canViewTeam || profile.role === "analyst" || (await departmentSeesAllContacts(profile.id));
     return {
       isManager: isAdmin,
       canViewTeam,
@@ -100,9 +103,9 @@ export async function getSalesScope(
     // super admin. A transient RBAC-lookup failure must not blank an admin's entire
     // contacts list (they'd read 0 across every group). This only widens visibility for
     // accounts that are already top-privilege; everyone else still fails closed.
-    if (profile.role === "admin" || profile.is_super_admin === true) {
+    if (profile.role === "admin" || profile.role === "analyst" || profile.is_super_admin === true) {
       return {
-        isManager: true,
+        isManager: profile.role === "admin" || profile.is_super_admin === true,
         canViewTeam: true,
         canSeeAllContacts: true,
         ownerId: null,
