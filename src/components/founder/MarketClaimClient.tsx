@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { MarketClaimReport, ClaimSeverity } from "@/lib/founder/market-claim";
 
@@ -38,12 +38,27 @@ export function MarketClaimClient({
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("report");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [source, setSource] = useState<"deck" | "upload">(hasDeck ? "deck" : "upload");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
+
+  function pickUpload(f: File | null) {
+    if (!f) { setUploadFile(null); return; }
+    if (f.type && f.type !== "application/pdf") { setError("Upload a PDF — that's what reviewers read."); return; }
+    if (f.size > 25 * 1024 * 1024) { setError("That file is over 25 MB. Try a lighter PDF."); return; }
+    setError(null);
+    setUploadFile(f);
+    setSource("upload");
+  }
 
   async function grade() {
+    if (source === "upload" && !uploadFile) { setError("Choose a PDF to grade, or switch to your data-room deck."); return; }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/founder/market-claim", { method: "POST" });
+      const res = source === "upload" && uploadFile
+        ? await fetch("/api/founder/market-claim", { method: "POST", body: (() => { const fd = new FormData(); fd.append("file", uploadFile); return fd; })() })
+        : await fetch("/api/founder/market-claim", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.status === 429 && data.error === "usage_limit_reached") {
         setError(`You've used all ${data.limit ?? ""} grading runs for this period. It resets ${data.resetAt ? new Date(data.resetAt).toLocaleDateString() : "soon"}.`);
@@ -85,20 +100,65 @@ export function MarketClaimClient({
             and the concrete fixes that clear them.
           </p>
 
-          {hasDeck ? (
-            <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 10, background: C.wash, borderRadius: 8, padding: "12px 14px" }}>
-              <span style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 500, padding: "3px 6px", borderRadius: 3, background: C.navy, color: "#fff" }}>PDF</span>
-              <span style={{ flex: 1, fontSize: 13.5, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {deckFileName ?? "Your pitch deck"}
-              </span>
-              <span style={{ fontSize: 12, color: C.green }}>Ready to read</span>
+          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: C.muted, margin: "20px 0 8px" }}>Source</div>
+
+          {/* Option 1 — data-room deck */}
+          <button
+            type="button"
+            onClick={() => hasDeck && setSource("deck")}
+            disabled={!hasDeck}
+            style={{
+              width: "100%", textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start", cursor: hasDeck ? "pointer" : "not-allowed",
+              border: `${source === "deck" ? 2 : 1}px solid ${source === "deck" ? C.blue : C.hair}`, borderRadius: 10,
+              padding: source === "deck" ? "14px 15px" : "15px 16px", background: hasDeck ? "#fff" : C.wash, opacity: hasDeck ? 1 : 0.7,
+            }}
+          >
+            <span style={{ width: 18, height: 18, borderRadius: "50%", flex: "none", marginTop: 1, border: source === "deck" ? `5px solid ${C.blue}` : `1.5px solid ${C.hair}` }} />
+            <span style={{ flex: 1 }}>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.ink }}>Use your pitch deck from the data room</span>
+              {hasDeck ? (
+                <span style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, background: C.wash, borderRadius: 8, padding: "9px 11px" }}>
+                  <span style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 500, padding: "3px 6px", borderRadius: 3, background: C.navy, color: "#fff" }}>PDF</span>
+                  <span style={{ flex: 1, fontSize: 13, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{deckFileName ?? "Your pitch deck"}</span>
+                  <span style={{ fontSize: 12, color: C.green }}>Latest · ready</span>
+                </span>
+              ) : (
+                <span style={{ display: "block", marginTop: 2, fontSize: 12.5, color: C.muted }}>No deck in your data room yet — upload one below, or add it to your{" "}
+                  <Link href="/founder/readiness/data-room" style={{ color: C.steel, fontWeight: 500 }}>data room</Link>.
+                </span>
+              )}
+            </span>
+          </button>
+
+          {/* Option 2 — one-off upload */}
+          <div
+            onClick={() => setSource("upload")}
+            style={{
+              marginTop: 10, display: "flex", gap: 12, alignItems: "flex-start", cursor: "pointer",
+              border: `${source === "upload" ? 2 : 1}px solid ${source === "upload" ? C.blue : C.hair}`, borderRadius: 10,
+              padding: source === "upload" ? "14px 15px" : "15px 16px", background: "#fff",
+            }}
+          >
+            <span style={{ width: 18, height: 18, borderRadius: "50%", flex: "none", marginTop: 1, border: source === "upload" ? `5px solid ${C.blue}` : `1.5px solid ${C.hair}` }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Upload a different file</div>
+              <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>Grade a specific deck or one-pager. Used for this grade only — it doesn&apos;t change your data room.</div>
+              {uploadFile ? (
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, background: C.wash, borderRadius: 8, padding: "9px 11px" }}>
+                  <span style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 500, padding: "3px 6px", borderRadius: 3, background: C.navy, color: "#fff" }}>PDF</span>
+                  <span style={{ flex: 1, fontSize: 13, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{uploadFile.name}</span>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setUploadFile(null); if (uploadRef.current) uploadRef.current.value = ""; }} style={{ fontSize: 12, color: C.steel, background: "none", border: "none", cursor: "pointer" }}>Remove</button>
+                </div>
+              ) : (
+                <button type="button" onClick={(e) => { e.stopPropagation(); uploadRef.current?.click(); }}
+                  style={{ marginTop: 10, width: "100%", border: `2px dashed ${C.hair}`, borderRadius: 8, padding: 18, textAlign: "center", background: C.wash, cursor: "pointer" }}>
+                  <span style={{ fontSize: 13, color: C.muted }}><b style={{ color: C.ink }}>Drop a PDF here</b> or <span style={{ color: C.blue, fontWeight: 500 }}>choose file</span></span>
+                  <span style={{ display: "block", fontSize: 11, color: C.muted, marginTop: 3 }}>PDF up to 25 MB · used for this grade only</span>
+                </button>
+              )}
+              <input ref={uploadRef} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => pickUpload(e.target.files?.[0] ?? null)} />
             </div>
-          ) : (
-            <div style={{ marginTop: 18, border: `1px solid ${C.amber}`, background: C.amberBg, borderRadius: 8, padding: "13px 15px", fontSize: 13, color: C.amber, lineHeight: 1.5 }}>
-              <b>No pitch deck yet.</b> The grader reads the market section of your deck. Upload one to your{" "}
-              <Link href="/founder/readiness/data-room" style={{ color: C.steel, fontWeight: 500 }}>data room</Link>, then come back.
-            </div>
-          )}
+          </div>
 
           <div style={{ marginTop: 16, background: C.wash, borderRadius: 6, padding: "12px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
             <b style={{ color: C.ink, fontWeight: 500 }}>This stays yours.</b> The grader reads a copy of your deck. Nothing becomes
@@ -112,18 +172,23 @@ export function MarketClaimClient({
           )}
 
           <div style={{ marginTop: 22, display: "flex", gap: 10, alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={grade}
-              disabled={!hasDeck || loading}
-              style={{
-                fontSize: 14, fontWeight: 500, borderRadius: 6, padding: "10px 18px", border: "none",
-                background: !hasDeck || loading ? "#9DB4DE" : C.blue, color: "#fff", cursor: !hasDeck || loading ? "default" : "pointer",
-              }}
-            >
-              {loading ? "Grading… about 40 seconds" : "Grade my market claim"}
-            </button>
-            <span style={{ fontSize: 12, color: C.muted }}>Reads your latest deck. Uses one AI grading run.</span>
+            {(() => {
+              const canGrade = !loading && (source === "upload" ? Boolean(uploadFile) : hasDeck);
+              return (
+                <button
+                  type="button"
+                  onClick={grade}
+                  disabled={!canGrade}
+                  style={{
+                    fontSize: 14, fontWeight: 500, borderRadius: 6, padding: "10px 18px", border: "none",
+                    background: canGrade ? C.blue : "#9DB4DE", color: "#fff", cursor: canGrade ? "pointer" : "default",
+                  }}
+                >
+                  {loading ? "Grading… about 40 seconds" : "Grade my market claim"}
+                </button>
+              );
+            })()}
+            <span style={{ fontSize: 12, color: C.muted }}>{source === "upload" ? "Grades the uploaded file." : "Reads your latest deck."} Uses one AI grading run.</span>
           </div>
         </div>
       </div>

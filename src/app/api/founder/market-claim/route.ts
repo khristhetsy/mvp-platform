@@ -34,36 +34,69 @@ function describeFailure(input: { status?: number; detail?: string; err?: unknow
   return raw ? `the AI request failed — ${raw.slice(0, 160)}` : "the AI request failed — please try again";
 }
 
-// POST /api/founder/market-claim — grade the founder's market claim from their latest deck.
-export async function POST() {
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB, matches the client hint
+
+// POST /api/founder/market-claim — grade the founder's market claim.
+// Source is either the latest data-room pitch deck (default), or a one-off PDF uploaded
+// in this request (multipart form field "file"). An uploaded file is graded for this run
+// only — it is never stored and never replaces the saved deck.
+export async function POST(req: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  const supabase = await createServerSupabaseClient();
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company linked." }, { status: 400 });
 
-  const { data: doc } = await supabase
-    .from("documents")
-    .select("id, file_path, file_name, mime_type")
-    .eq("company_id", company.id)
-    .eq("document_type", "PITCH_DECK")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // A multipart body means the founder uploaded a one-off deck to grade.
+  let uploaded: { base64: string; fileName: string } | null = null;
+  if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+    const form = await req.formData().catch(() => null);
+    const file = form?.get("file");
+    if (file instanceof File) {
+      if (file.type && file.type !== "application/pdf") {
+        return NextResponse.json({ error: "Upload a PDF — that's what reviewers read." }, { status: 400 });
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        return NextResponse.json({ error: "That file is over 25 MB. Try a lighter PDF." }, { status: 400 });
+      }
+      uploaded = { base64: Buffer.from(await file.arrayBuffer()).toString("base64"), fileName: file.name || "uploaded deck" };
+    }
+  }
 
-  if (!doc?.file_path) {
-    return NextResponse.json(
-      { error: "No pitch deck found. Upload your deck to the data room first — the grader reads its market section." },
-      { status: 404 },
-    );
+  const supabase = await createServerSupabaseClient();
+  const admin = createServiceRoleClient();
+
+  // Resolve the PDF bytes: uploaded file wins; otherwise the latest data-room deck.
+  let base64: string;
+  let deckName: string;
+  if (uploaded) {
+    base64 = uploaded.base64;
+    deckName = uploaded.fileName;
+  } else {
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("id, file_path, file_name, mime_type")
+      .eq("company_id", company.id)
+      .eq("document_type", "PITCH_DECK")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!doc?.file_path) {
+      return NextResponse.json(
+        { error: "No pitch deck found. Upload a PDF above, or add your deck to the data room." },
+        { status: 404 },
+      );
+    }
+    const { data: fileData, error: dlError } = await admin.storage.from("company-documents").download(doc.file_path);
+    if (dlError || !fileData) return NextResponse.json({ error: "Unable to retrieve your deck file." }, { status: 500 });
+    base64 = Buffer.from(await fileData.arrayBuffer()).toString("base64");
+    deckName = doc.file_name ?? "your deck";
   }
 
   if (!isClaudeConfigured()) {
     return NextResponse.json({ report: marketClaimFallback() });
   }
 
-  const admin = createServiceRoleClient();
   const plan = await getUserPlan(auth.profile.id).catch(() => null);
   const usage = await checkUsage({ profileId: auth.profile.id, plan, feature: USAGE_FEATURE, admin });
   if (!usage.allowed) {
@@ -72,11 +105,6 @@ export async function POST() {
       { status: 429 },
     );
   }
-
-  const { data: fileData, error: dlError } = await admin.storage.from("company-documents").download(doc.file_path);
-  if (dlError || !fileData) return NextResponse.json({ error: "Unable to retrieve your deck file." }, { status: 500 });
-
-  const base64 = Buffer.from(await fileData.arrayBuffer()).toString("base64");
 
   const systemPrompt = buildMarketClaimSystemPrompt(
     company.company_name ?? "this company",
@@ -133,7 +161,7 @@ export async function POST() {
     await recordUsage({ profileId: auth.profile.id, feature: USAGE_FEATURE, admin });
     return NextResponse.json({
       report,
-      deck: { fileName: doc.file_name ?? "your deck" },
+      deck: { fileName: deckName },
       companyName: company.company_name ?? "Your company",
       industry: company.industry ?? null,
       stage: company.revenue_stage ?? null,
