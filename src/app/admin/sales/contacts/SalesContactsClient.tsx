@@ -102,7 +102,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ founder: true, investor: true, advisor: true });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [openColPicker, setOpenColPicker] = useState(false);
