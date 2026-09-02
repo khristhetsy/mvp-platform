@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
 export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null };
-type GroupState = { rows: SalesContact[]; total: number; loading: boolean };
+type GroupState = { rows: SalesContact[]; total: number; loading: boolean; loaded: boolean };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
 type Sort = { key: string; dir: "asc" | "desc" };
@@ -103,6 +103,10 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // Mirror `expanded` into a ref so loadAll can read which groups are open without
+  // re-running the load effect every time a group is toggled.
+  const expandedRef = useRef(expanded);
+  useEffect(() => { expandedRef.current = expanded; }, [expanded]);
 
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [openColPicker, setOpenColPicker] = useState(false);
@@ -141,29 +145,32 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v4", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
-  const loadAll = useCallback(async (params: string, roleFilter: string) => {
-    const defs = roleFilter ? GROUP_DEFS.filter((g) => g.id === roleFilter) : GROUP_DEFS;
-    setGroups((prev) => {
-      const next = { ...prev };
-      for (const g of GROUP_DEFS) next[g.id] = (roleFilter && g.id !== roleFilter)
-        ? { rows: [], total: 0, loading: false }
-        : { rows: next[g.id]?.rows ?? [], total: next[g.id]?.total ?? 0, loading: true };
-      return next;
-    });
-    const entries = await Promise.all(defs.map(async (g) => {
-      try {
-        const res = await fetch(`/api/sales/contacts?group=${g.id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
-        const data = res.ok ? await res.json() : { contacts: [], total: 0 };
-        return [g.id, { rows: data.contacts ?? [], total: data.total ?? 0, loading: false }] as const;
-      } catch { return [g.id, { rows: [], total: 0, loading: false }] as const; }
-    }));
-    setGroups((prev) => {
-      const next = { ...prev };
-      for (const [id, st] of entries) next[id] = st;
-      for (const g of GROUP_DEFS) if (roleFilter && g.id !== roleFilter) next[g.id] = { rows: [], total: 0, loading: false };
-      return next;
-    });
+  // Fetch one group's first page. Groups render collapsed by default, so we only
+  // pay for a group's rows (its exact count + name-sort + last-message lookups)
+  // once it's actually opened — the header counts come from the cheap facets call.
+  const loadGroup = useCallback(async (id: string, params: string) => {
+    setGroups((prev) => ({ ...prev, [id]: { rows: prev[id]?.rows ?? [], total: prev[id]?.total ?? 0, loading: true, loaded: prev[id]?.loaded ?? false } }));
+    try {
+      const res = await fetch(`/api/sales/contacts?group=${id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
+      const data = res.ok ? await res.json() : { contacts: [], total: 0 };
+      setGroups((prev) => ({ ...prev, [id]: { rows: data.contacts ?? [], total: data.total ?? 0, loading: false, loaded: true } }));
+    } catch { setGroups((prev) => ({ ...prev, [id]: { rows: [], total: 0, loading: false, loaded: true } })); }
   }, [viewQ]);
+
+  // On mount / filter change: only (re)load groups that are currently open (plus the
+  // active role filter). Collapsed groups are reset so re-opening refetches fresh.
+  const loadAll = useCallback(async (params: string, roleFilter: string) => {
+    const isOpen = (id: string) => !!expandedRef.current[id] || id === roleFilter;
+    const willLoad = (id: string) => (!roleFilter || id === roleFilter) && isOpen(id);
+    setGroups((prev) => {
+      const next: Record<string, GroupState> = {};
+      for (const g of GROUP_DEFS) next[g.id] = willLoad(g.id)
+        ? { rows: prev[g.id]?.rows ?? [], total: prev[g.id]?.total ?? 0, loading: true, loaded: false }
+        : { rows: [], total: 0, loading: false, loaded: false };
+      return next;
+    });
+    await Promise.all(GROUP_DEFS.filter((g) => willLoad(g.id)).map((g) => loadGroup(g.id, params)));
+  }, [loadGroup]);
 
   const loadFacets = useCallback(async (params: string) => {
     try {
@@ -172,6 +179,10 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
       if (res.ok) setFacets(await res.json());
     } catch { /* ignore */ }
   }, [viewAs]);
+
+  // Filtering to a single role opens that group so its results are visible (and load).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- open the filtered group
+  useEffect(() => { if (role) setExpanded((e) => (e[role] ? e : { ...e, [role]: true })); }, [role]);
 
   useEffect(() => {
     const t = setTimeout(() => { void loadAll(paramsStr, role); void loadFacets(paramsStr); }, 300);
@@ -194,6 +205,17 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on filter change
   useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); }, [paramsStr, role]);
 
+  // Open/close a group. Opening one that hasn't been loaded yet (or is mid-load)
+  // triggers its first fetch — this is what defers the cost off the initial render.
+  function toggleGroup(id: string) {
+    const opening = !expanded[id];
+    if (opening) {
+      const gs = groups[id];
+      if (!gs?.loaded && !gs?.loading) void loadGroup(id, paramsStr);
+    }
+    setExpanded((e) => ({ ...e, [id]: !e[id] }));
+  }
+
   async function loadMore(groupId: string) {
     const gs = groups[groupId];
     if (!gs) return;
@@ -201,7 +223,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     try {
       const res = await fetch(`/api/sales/contacts?group=${groupId}&offset=${gs.rows.length}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
       const data = res.ok ? await res.json() : { contacts: [], total: gs.total };
-      setGroups((prev) => ({ ...prev, [groupId]: { rows: [...prev[groupId].rows, ...(data.contacts ?? [])], total: data.total ?? prev[groupId].total, loading: false } }));
+      setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], rows: [...prev[groupId].rows, ...(data.contacts ?? [])], total: data.total ?? prev[groupId].total, loading: false } }));
     } catch { setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: false } })); }
   }
 
@@ -492,14 +514,14 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           const isOpen = !!expanded[g.id];
           return (
             <div key={g.id}>
-              <button onClick={() => setExpanded((e) => ({ ...e, [g.id]: !e[g.id] }))} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderTop: "0.5px solid #e2e6ed", cursor: "pointer" }}>
+              <button onClick={() => toggleGroup(g.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderTop: "0.5px solid #e2e6ed", cursor: "pointer" }}>
                 <i className={isOpen ? "ti ti-chevron-down" : "ti ti-chevron-right"} style={{ fontSize: 15, color: "#0C447C" }} aria-hidden="true" />
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{g.label}</span>
                 <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{count.toLocaleString()}</span>
               </button>
               {isOpen && (
                 <div>
-                  {gs?.loading && (gs?.rows.length ?? 0) === 0 ? (
+                  {(gs?.loading || !gs?.loaded) && (gs?.rows.length ?? 0) === 0 ? (
                     <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
                   ) : (gs?.rows.length ?? 0) === 0 ? (
                     <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>No matching contacts in this group.</p>
