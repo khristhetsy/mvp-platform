@@ -76,10 +76,13 @@ export async function getSalesScope(
     const eff = await getEffectivePermissions(supabase, profile.id);
     const slug = eff.roleSlug;
     const isSuper = eff.isSuperAdmin === true;
+    // A workspace admin always sees everything — regardless of their internal RBAC
+    // slug. (Previously this only held when the RBAC slug was null, so an admin who
+    // also had a non-admin RBAC row got scoped to their own records and saw 0 contacts.)
     const isAdmin =
       isSuper ||
-      (slug != null && INTERNAL_ROLE_RANK[slug] >= INTERNAL_ROLE_RANK.admin) ||
-      (slug == null && profile.role === "admin");
+      profile.role === "admin" ||
+      (slug != null && INTERNAL_ROLE_RANK[slug] >= INTERNAL_ROLE_RANK.admin);
     // Team view is gated on the manage_crm permission (managers/admins have it,
     // Member Sales reps do not) — additive to the admin-tier check.
     const canViewTeam = isAdmin || eff.permissions.includes("manage_crm");
@@ -93,8 +96,20 @@ export async function getSalesScope(
       viewOwnerId: resolveViewAs(canViewTeam, profile.id, viewAs),
     };
   } catch {
-    // Fail closed: on a lookup error, scope to the user's own records rather than
-    // exposing everyone's. Assign controls also stay hidden.
+    // Fail closed to the user's own records — EXCEPT for a known workspace admin or
+    // super admin. A transient RBAC-lookup failure must not blank an admin's entire
+    // contacts list (they'd read 0 across every group). This only widens visibility for
+    // accounts that are already top-privilege; everyone else still fails closed.
+    if (profile.role === "admin" || profile.is_super_admin === true) {
+      return {
+        isManager: true,
+        canViewTeam: true,
+        canSeeAllContacts: true,
+        ownerId: null,
+        isSuperAdmin: profile.is_super_admin === true,
+        viewOwnerId: resolveViewAs(true, profile.id, viewAs),
+      };
+    }
     return { isManager: false, canViewTeam: false, canSeeAllContacts: false, ownerId: profile.id, isSuperAdmin: false, viewOwnerId: undefined };
   }
 }
