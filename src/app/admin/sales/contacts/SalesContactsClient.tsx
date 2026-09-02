@@ -515,7 +515,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           return (
             <div key={g.id}>
               <button onClick={() => toggleGroup(g.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderTop: "0.5px solid #e2e6ed", cursor: "pointer" }}>
-                <i className={isOpen ? "ti ti-chevron-down" : "ti ti-chevron-right"} style={{ fontSize: 15, color: "#0C447C" }} aria-hidden="true" />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 120ms" }}><polyline points="9 6 15 12 9 18" /></svg>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{g.label}</span>
                 <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{count.toLocaleString()}</span>
               </button>
