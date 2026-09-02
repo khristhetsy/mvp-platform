@@ -12,6 +12,7 @@ import {
   normalizeMarketClaim,
   marketClaimFallback,
 } from "@/lib/founder/market-claim";
+import { saveMarketClaimReport } from "@/lib/founder/market-claim-store";
 
 // Grading a deck with Sonnet is the same class of call as the pitch-deck analyzer, so
 // it shares that feature's usage cap (both read the founder's deck with Sonnet).
@@ -159,8 +160,16 @@ export async function POST(req: Request) {
 
     const report = normalizeMarketClaim(parsed);
     await recordUsage({ profileId: auth.profile.id, feature: USAGE_FEATURE, admin });
+    // Persist the report so the founder re-opens it next visit — but only when it graded
+    // the canonical data-room deck. A one-off upload is a preview and must not overwrite
+    // the saved result.
+    let savedAt: string | null = null;
+    if (!uploaded) {
+      savedAt = await saveMarketClaimReport(admin, company.id, report).catch(() => null);
+    }
     return NextResponse.json({
       report,
+      savedAt,
       deck: { fileName: deckName },
       companyName: company.company_name ?? "Your company",
       industry: company.industry ?? null,

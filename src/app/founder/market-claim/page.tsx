@@ -4,7 +4,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { getMarketClaimReport } from "@/lib/founder/market-claim-store";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { MarketClaimClient } from "@/components/founder/MarketClaimClient";
 
@@ -40,6 +42,10 @@ export default async function MarketClaimPage() {
     .limit(1)
     .maybeSingle();
 
+  // A saved "fallback" report means the AI never actually ran — don't surface it.
+  const savedRaw = await getMarketClaimReport(createServiceRoleClient(), company.id).catch(() => null);
+  const saved = savedRaw?.report?.source === "fallback" ? null : savedRaw;
+
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company.company_name ?? "Your company"}>
       <FounderFeatureGate featureKey="ai_diligence">
@@ -55,6 +61,8 @@ export default async function MarketClaimPage() {
             stage={company.revenue_stage ?? null}
             hasDeck={Boolean(deck)}
             deckFileName={deck?.file_name ?? null}
+            initialReport={saved?.report ?? null}
+            initialGradedAt={saved?.updatedAt ?? null}
           />
         </WorkspacePageContainer>
       </FounderFeatureGate>

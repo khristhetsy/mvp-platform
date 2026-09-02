@@ -25,15 +25,18 @@ const SEV: Record<ClaimSeverity, { border: string; bg: string; fg: string; label
 type Tab = "report" | "whatif" | "sources";
 
 export function MarketClaimClient({
-  companyName, industry, stage, hasDeck, deckFileName,
+  companyName, industry, stage, hasDeck, deckFileName, initialReport = null, initialGradedAt = null,
 }: {
   companyName: string;
   industry: string | null;
   stage: string | null;
   hasDeck: boolean;
   deckFileName: string | null;
+  initialReport?: MarketClaimReport | null;
+  initialGradedAt?: string | null;
 }) {
-  const [report, setReport] = useState<MarketClaimReport | null>(null);
+  const [report, setReport] = useState<MarketClaimReport | null>(initialReport);
+  const [gradedAt, setGradedAt] = useState<string | null>(initialGradedAt);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("report");
@@ -73,6 +76,7 @@ export function MarketClaimClient({
         return;
       }
       setReport(data.report as MarketClaimReport);
+      setGradedAt(typeof data.savedAt === "string" ? data.savedAt : new Date().toISOString());
       setSelected(new Set());
       setTab("report");
     } catch {
@@ -230,7 +234,7 @@ export function MarketClaimClient({
           <div style={{ fontSize: 13, fontWeight: 600, color: C.navy }}>iCap<span style={{ color: C.blue }}>OS</span> · Investor-graded market claim</div>
           <h1 style={{ margin: "10px 0 6px", fontSize: 27, fontWeight: 500, letterSpacing: "-0.02em", color: C.navy, lineHeight: 1.15 }}>{companyName}</h1>
           <p style={{ margin: 0, fontSize: 13, color: C.muted }}>
-            {[stage, industry].filter(Boolean).join(" · ") || "Market narrative"} · Graded {new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
+            {[stage, industry].filter(Boolean).join(" · ") || "Market narrative"}{gradedAt ? ` · Graded ${new Date(gradedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}` : ""}
           </p>
         </div>
 
