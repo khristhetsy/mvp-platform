@@ -84,11 +84,18 @@ function TypeIcon({ type }: { type: SearchResult["type"] | "page" }) {
 }
 
 const TYPE_LABELS: Record<SearchResult["type"], string> = {
-  contact: "Sales Hub Contacts",
+  contact: "Contacts",
   investor: "Pipeline investors",
   document: "Documents",
   deal_room: "Deal rooms",
 };
+
+// The contacts category is called "Sales Hub Contacts" in the admin workspace, but for
+// founders/investors those are their own contacts — keep a neutral "Contacts" there.
+function typeLabel(type: SearchResult["type"], workspace: WorkspaceId): string {
+  if (type === "contact" && workspace === "admin") return "Sales Hub Contacts";
+  return TYPE_LABELS[type];
+}
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
@@ -320,7 +327,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             return (
               <div key={type} style={{ borderTop: "1px solid #f3f4f6" }}>
                 <p style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em" }}>
-                  {TYPE_LABELS[type]}
+                  {typeLabel(type, workspace)}
                 </p>
                 {rows.map((r, i) => {
                   const idx = sectionStart + i;
