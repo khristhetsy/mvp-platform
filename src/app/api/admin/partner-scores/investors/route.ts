@@ -43,7 +43,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
-  const { secFormDBonus } = await getRatingConfig(admin);
+  const { secFormDBonus, odooBonus } = await getRatingConfig(admin);
 
   // Members → partner scores, keyed by lowercase email for CRM matching.
   const { data: members } = await admin.from("investor_profiles").select("profile_id, firm_name");
@@ -83,12 +83,15 @@ export async function GET(req: NextRequest): Promise<Response> {
   for (const c of contacts) {
     const m = c.email ? emailToScore.get(c.email.toLowerCase()) : undefined;
     const isFormD = c.source === "formd";
+    const isOdoo = c.source === "odoo";
     let score = m?.score ?? null;
     let tier = m?.tier ?? null;
-    // SEC Form D provenance bonus (capped at 100). Lifts an unscored Form D
-    // investor from "New" to a verified floor of the bonus value.
-    if (isFormD && secFormDBonus > 0) {
-      score = Math.min(100, (score ?? 0) + secFormDBonus);
+    // Provenance bonuses (capped at 100). Lift an unscored contact from "New" to a
+    // verified floor. Form D = SEC-verified public record; Odoo = vetted/known
+    // contact. A contact has one source, so at most one applies.
+    const provenanceBonus = (isFormD ? secFormDBonus : 0) + (isOdoo ? odooBonus : 0);
+    if (provenanceBonus > 0) {
+      score = Math.min(100, (score ?? 0) + provenanceBonus);
       tier = TIER_LABELS[tierFromScore(score)];
     }
     rows.push({

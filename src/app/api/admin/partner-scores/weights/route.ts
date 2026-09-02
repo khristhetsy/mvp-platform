@@ -12,8 +12,8 @@ export async function GET(): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { weights, secFormDBonus } = await getRatingConfig(createServiceRoleClient() as unknown as SupabaseClient<any>);
-  return NextResponse.json({ weights, secFormDBonus });
+  const { weights, secFormDBonus, odooBonus } = await getRatingConfig(createServiceRoleClient() as unknown as SupabaseClient<any>);
+  return NextResponse.json({ weights, secFormDBonus, odooBonus });
 }
 
 // Save new pillar weights and recompute member snapshots with them so the scores
@@ -27,10 +27,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!weightsSumToOne(weights)) return NextResponse.json({ error: "Weights must total 100%." }, { status: 400 });
   const bonusRaw = Number((body as { secFormDBonus?: unknown }).secFormDBonus);
   const secFormDBonus = Number.isFinite(bonusRaw) && bonusRaw >= 0 ? Math.min(bonusRaw, 100) : 20;
+  const odooRaw = Number((body as { odooBonus?: unknown }).odooBonus);
+  const odooBonus = Number.isFinite(odooRaw) && odooRaw >= 0 ? Math.min(odooRaw, 100) : 25;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
-  await saveStoredWeights(admin, weights, secFormDBonus, profile.id);
+  await saveStoredWeights(admin, weights, secFormDBonus, odooBonus, profile.id);
 
   const { refreshed } = await refreshPartnerScoreSnapshots(admin as unknown as SupabaseClient<Database>, {
     weights,

@@ -16,7 +16,7 @@ const PILLARS: Array<{ key: keyof Weights; label: string }> = [
 const SOURCES = ["SEC Form D", "CRM", "Manual"];
 const PER_PAGE = 100;
 
-export function PartnerScoresClient({ initialWeights, initialBonus }: Readonly<{ initialWeights: Weights; initialBonus: number }>) {
+export function PartnerScoresClient({ initialWeights, initialBonus, initialOdooBonus }: Readonly<{ initialWeights: Weights; initialBonus: number; initialOdooBonus: number }>) {
   const [tab, setTab] = useState<"investors" | "weights">("investors");
   return (
     <div>
@@ -32,7 +32,7 @@ export function PartnerScoresClient({ initialWeights, initialBonus }: Readonly<{
           </button>
         ))}
       </div>
-      {tab === "investors" ? <InvestorsTab /> : <WeightsTab initial={initialWeights} initialBonus={initialBonus} />}
+      {tab === "investors" ? <InvestorsTab /> : <WeightsTab initial={initialWeights} initialBonus={initialBonus} initialOdooBonus={initialOdooBonus} />}
     </div>
   );
 }
@@ -164,9 +164,10 @@ function InvestorsTab() {
   );
 }
 
-function WeightsTab({ initial, initialBonus }: Readonly<{ initial: Weights; initialBonus: number }>) {
+function WeightsTab({ initial, initialBonus, initialOdooBonus }: Readonly<{ initial: Weights; initialBonus: number; initialOdooBonus: number }>) {
   const [w, setW] = useState<Weights>(initial);
   const [bonus, setBonus] = useState<number>(initialBonus);
+  const [odooBonus, setOdooBonus] = useState<number>(initialOdooBonus);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -181,7 +182,7 @@ function WeightsTab({ initial, initialBonus }: Readonly<{ initial: Weights; init
       const res = await fetch("/api/admin/partner-scores/weights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weights: w, secFormDBonus: bonus }),
+        body: JSON.stringify({ weights: w, secFormDBonus: bonus, odooBonus }),
       });
       const j = await res.json().catch(() => ({}));
       setMsg(res.ok ? `Saved. Recomputed ${j.recomputed ?? 0} investor scores.` : j.error ?? "Save failed.");
@@ -209,10 +210,18 @@ function WeightsTab({ initial, initialBonus }: Readonly<{ initial: Weights; init
         </div>
         <p className="mt-1 text-[11px] text-slate-500">Added to a SEC Form D investor’s score (SEC-verified public record), capped at 100. Applied on top of the weighted total.</p>
       </div>
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <div className="flex items-center gap-3">
+          <span className="w-40 text-sm text-slate-700">Import from Odoo bonus</span>
+          <input type="range" min={0} max={40} step={5} value={odooBonus} onChange={(e) => setOdooBonus(Number(e.target.value))} className="flex-1" />
+          <span className="w-12 text-right text-sm font-medium text-slate-900">+{odooBonus}</span>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Added to an investor imported from Odoo (a vetted, known contact), capped at 100. Applied on top of the weighted total.</p>
+      </div>
       <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
         <span className={`text-xs font-medium ${totalPct === 100 ? "text-emerald-600" : "text-rose-600"}`}>Total {totalPct}%{totalPct === 100 ? "" : " — must equal 100%"}</span>
         <div className="flex gap-2">
-          <button type="button" onClick={() => { setW(initial); setBonus(initialBonus); }} className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">Reset</button>
+          <button type="button" onClick={() => { setW(initial); setBonus(initialBonus); setOdooBonus(initialOdooBonus); }} className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">Reset</button>
           <button type="button" disabled={busy || totalPct !== 100} onClick={save} className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Recomputing…" : "Save and recompute"}</button>
         </div>
       </div>

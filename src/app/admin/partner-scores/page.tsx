@@ -14,7 +14,7 @@ export default async function AdminPartnerScoresPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const t = await getTranslations("usersAdmin.partnerScores");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { weights, secFormDBonus } = await getRatingConfig(createServiceRoleClient() as unknown as SupabaseClient<any>);
+  const { weights, secFormDBonus, odooBonus } = await getRatingConfig(createServiceRoleClient() as unknown as SupabaseClient<any>);
 
   return (
     <AppShell
@@ -26,7 +26,7 @@ export default async function AdminPartnerScoresPage() {
     >
       <WorkspacePageContainer>
         <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("desc")} />
-        <PartnerScoresClient initialWeights={weights} initialBonus={secFormDBonus} />
+        <PartnerScoresClient initialWeights={weights} initialBonus={secFormDBonus} initialOdooBonus={odooBonus} />
       </WorkspacePageContainer>
     </AppShell>
   );
