@@ -77,6 +77,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/dashboard": LayoutDashboard,
   "/founder/onboarding": Rocket, // Stage 1 – Onboarding
   "/founder/readiness": ClipboardCheck, // Stage 2 – Preparation
+  "/founder/market-claim": Gauge,
   "/founder/investors": Megaphone, // Stage 3 – Marketing
   "/founder/deal-room": FlagTriangleRight, // Stage 4 – Closing
   "/founder/readiness/diligence": ShieldCheck,
