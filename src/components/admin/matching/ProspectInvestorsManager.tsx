@@ -7,6 +7,16 @@ type Props = {
   initialProspects: ProspectInvestor[];
 };
 
+// Friendly display for the stored `source` value (the raw tag stays in the DB, unchanged).
+const SOURCE_LABELS: Record<string, string> = {
+  investor_crm: "Sales Hub Contacts",
+  "SEC Form D": "SEC Form D",
+  manual: "Manual",
+};
+function sourceLabel(source: string): string {
+  return SOURCE_LABELS[source] ?? source;
+}
+
 const EMPTY_FORM = {
   name: "",
   investor_type: "",
@@ -361,7 +371,7 @@ export function ProspectInvestorsManager({ initialProspects }: Props) {
                       {formatCheckSize(p.check_size_min, p.check_size_max)}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {p.source ?? <span className="text-slate-400">—</span>}
+                      {p.source ? sourceLabel(p.source) : <span className="text-slate-400">—</span>}
                     </td>
                   </tr>
                 ))}
