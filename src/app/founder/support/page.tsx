@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listFounderRequests } from "@/lib/support/support";
 import { FounderSupportClient, type FounderRequestRow } from "@/components/founder/FounderSupportClient";
+import { RequestHelpButton } from "@/components/founder/RequestHelpButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Support" };
@@ -29,6 +30,7 @@ export default async function FounderSupportPage() {
         title="Support"
         description="Your requests and conversations with the iCapOS team."
       />
+      <RequestHelpButton contextItem="Support" />
       <FounderSupportClient rows={rows} />
     </FounderAppShell>
   );
