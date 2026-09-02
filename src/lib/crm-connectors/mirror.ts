@@ -73,8 +73,10 @@ export async function countMirror(
   source: string,
 ): Promise<{ total: number; founders: number; investors: number; unclassified: number }> {
   const supabase = raw(createServiceRoleClient());
+  // Estimated count avoids a full COUNT(*) scan of the large contacts table, which was
+  // hitting the DB statement timeout ("canceling statement due to statement timeout").
   const one = async (module?: string) => {
-    let q = supabase.from("crm_contacts").select("id", { count: "exact", head: true }).eq("source", source);
+    let q = supabase.from("crm_contacts").select("id", { count: "estimated", head: true }).eq("source", source);
     if (module) q = q.eq("module", module);
     const { count } = await q;
     return count ?? 0;
