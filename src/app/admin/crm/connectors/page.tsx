@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { ConnectorsPanel } from "@/components/crm/ConnectorsPanel";
 import { FormDConnectorCard } from "@/components/crm/FormDConnectorCard";
 import { SyncCrmToMarketing } from "@/components/crm/SyncCrmToMarketing";
+import { ContactSyncTabs } from "@/components/crm/ContactSyncTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,19 @@ export default async function CrmConnectorsPage() {
             External systems remain the system of record. Contacts mirror into the CRM for fast views. Run a one-time full import, then an incremental sync keeps the mirror fresh.
           </p>
         </div>
-        <ConnectorsPanel />
-        <div className="mt-4"><FormDConnectorCard canPromote={profile.role === "admin"} /></div>
-        <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-panel)]">
-          <a href="/admin/marketing/prospects" className="font-semibold text-[#1A6CE4] hover:underline">Prospects pipeline →</a>
-          <span className="ml-2 text-slate-600">Import, verify, score, build the list &amp; export — now in the Marketing Hub.</span>
-        </div>
-        {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
+        <ContactSyncTabs
+          connectorsSlot={
+            <>
+              <ConnectorsPanel />
+              <div className="mt-4"><FormDConnectorCard canPromote={profile.role === "admin"} /></div>
+              <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-panel)]">
+                <a href="/admin/marketing/prospects" className="font-semibold text-[#1A6CE4] hover:underline">Prospects pipeline →</a>
+                <span className="ml-2 text-slate-600">Import, verify, score, build the list &amp; export — now in the Marketing Hub.</span>
+              </div>
+              {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
+            </>
+          }
+        />
       </div>
     </AppShell>
   );
