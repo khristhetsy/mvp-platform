@@ -20,7 +20,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   const contactsOwner = effectiveContactsOwner(scope);
 
   const countOne = async (group: string): Promise<number> => {
-    let q = db().from("crm_contacts").select("id", { count: "exact", head: true });
+    // Estimated count avoids a full COUNT(*) scan per group (the exact count was timing
+    // out on the large table and returning 0/errors). Fast, planner-based.
+    let q = db().from("crm_contacts").select("id", { count: "estimated", head: true });
     if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
     q = await applyContactQuery(q, p, db(), group);
     const { count } = await q;

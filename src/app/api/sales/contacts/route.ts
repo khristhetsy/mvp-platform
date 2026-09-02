@@ -50,7 +50,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   const scope = await getSalesScope(profile, p.get("viewAs"));
 
   const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, overrides, assignee_ids, raw";
-  let query = db().from("crm_contacts").select(cols, { count: "exact" });
+  // `estimated` count avoids a full-table COUNT(*) scan (which was timing out on the
+  // large contacts table and returning an error → the list looked empty). It's fast and
+  // uses planner stats, falling back to exact only for small results.
+  let query = db().from("crm_contacts").select(cols, { count: "estimated" });
   // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
   const contactsOwner = effectiveContactsOwner(scope);
