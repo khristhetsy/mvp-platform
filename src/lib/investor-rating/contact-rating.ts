@@ -22,8 +22,9 @@ export async function getContactInvestorRating(contact: {
   if (!isInvestor) return null;
 
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
-  const { secFormDBonus } = await getRatingConfig(admin);
+  const { secFormDBonus, odooBonus } = await getRatingConfig(admin);
   const isFormD = contact.source === "formd" || contact.lead_source === "SEC Form D";
+  const isOdoo = contact.source === "odoo";
 
   // Member match: contact email → profile → investor_profiles → partner score.
   let base: number | null = null;
@@ -36,7 +37,7 @@ export async function getContactInvestorRating(contact: {
     }
   }
 
-  const bonus = isFormD ? secFormDBonus : 0;
+  const bonus = isFormD ? secFormDBonus : isOdoo ? odooBonus : 0;
   if (base == null && bonus <= 0) return { score: null, tier: "New" };
   const score = Math.min(100, (base ?? 0) + bonus);
   return { score, tier: TIER_LABELS[tierFromScore(score)] };
