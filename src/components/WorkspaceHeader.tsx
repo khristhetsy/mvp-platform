@@ -196,6 +196,19 @@ function ProfileDropdown({
     }
   }
 
+  // Safety-net exit prompt: warn before leaving iCapOS via tab close, reload, or
+  // navigating away (Sign out shows its own confirm and isn't affected — that's a
+  // client-side router push, which doesn't fire beforeunload). Browsers show their own
+  // generic "Leave site?" dialog here; custom text/buttons aren't allowed on this event.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   // Runtime 4-step-nav toggle (build flag is the default until the fetch lands).
   const [founderNavV2, setFounderNavV2] = useState<boolean>(isFounderNavV2Enabled());
   useEffect(() => {
