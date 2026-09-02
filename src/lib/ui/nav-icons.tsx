@@ -9,17 +9,22 @@ import {
   Building,
   CalendarClock,
   Calendar,
+  Calculator,
   CheckSquare,
   CircleUser,
   ClipboardCheck,
   Coins,
   Compass,
   CreditCard,
+  Crosshair,
   Crown,
   DoorOpen,
   FileCheck,
+  FileSearch,
   FileText,
+  Files,
   Filter,
+  FolderOpen,
   Flag,
   FlagTriangleRight,
   Forward,
@@ -37,12 +42,16 @@ import {
   ListChecks,
   ListTodo,
   Mail,
+  Map,
   Megaphone,
   MessageSquare,
   Mic,
   PartyPopper,
   PieChart,
+  Presentation,
   Rocket,
+  Scale,
+  ScanLine,
   School,
   ScrollText,
   Settings,
@@ -76,14 +85,27 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder": LayoutDashboard,
   "/founder/dashboard": LayoutDashboard,
   "/founder/onboarding": Rocket, // Stage 1 – Onboarding
-  "/founder/readiness": ClipboardCheck, // Stage 2 – Preparation
-  "/founder/market-claim": Gauge,
+  "/founder/readiness": ClipboardCheck, // Stage 2 – Preparation (also "Readiness checklist")
+  // ── Stage 2 – Preparation children (distinct icon each) ───────────────────
+  "/founder/stages/preparation": Map,
+  "/founder/readiness/wizard": Gauge, // Capital Readiness Rating
+  "/founder/readiness/data-room": FolderOpen,
+  "/founder/preview": FileText, // One pager
+  "/founder/business-plan": BookOpen,
+  "/founder/pitch-deck": Presentation,
+  "/founder/pitch-deck-analyzer": ScanLine,
+  "/founder/market-claim": Crosshair,
+  "/founder/financial-model": Calculator,
+  "/founder/cap-table": PieChart,
+  "/founder/valuation": Scale,
+  "/founder/report": FileSearch, // AI diligence report
+  "/founder/pitch-practice": Mic, // Prep & practice
   "/founder/investors": Megaphone, // Stage 3 – Marketing
   "/founder/deal-room": FlagTriangleRight, // Stage 4 – Closing
   "/founder/readiness/diligence": ShieldCheck,
   "/founder/readiness/documents": FileText,
   "/founder/readiness/missing": AlertTriangle,
-  "/founder/documents": FileText,
+  "/founder/documents": Files,
   "/founder/private-market": Store,
   "/founder/inbox": MessageSquare, // Communications
   "/founder/messages": MessageSquare,

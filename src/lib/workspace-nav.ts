@@ -438,7 +438,6 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/settings", label: "Company profile" },
           { href: "/founder/journey", label: "My Progress" },
           { href: "/founder/actions", label: "Action Center" },
-          { href: "/founder/preview", label: "One pager" },
         ],
       },
       {
@@ -451,6 +450,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/readiness", label: "Readiness checklist", minStage: "qualify" },
           { href: "/founder/readiness/data-room", label: "Data room", minStage: "qualify" },
           { href: "/founder/documents", label: "Documents", minStage: "qualify" },
+          { href: "/founder/preview", label: "One pager" },
           { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
           { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
           { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
