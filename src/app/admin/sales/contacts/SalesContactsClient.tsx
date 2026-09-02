@@ -503,21 +503,6 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           })}
         </div>
 
-        {/* Totals by type — computed from the group counts. */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
-          {([
-            ["Founders", facets.counts.founder ?? 0],
-            ["Investors", facets.counts.investor ?? 0],
-            ["Advisors", facets.counts.advisor ?? 0],
-            ["All contacts", facets.counts.total ?? 0],
-          ] as const).map(([label, n]) => (
-            <div key={label} style={{ border: "0.5px solid var(--border, #e2e8f0)", borderRadius: 12, background: "var(--surface-2, #fff)", padding: "13px 15px" }}>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground, #64748b)" }}>{label}</div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: "var(--foreground, #0f172a)", marginTop: 6, lineHeight: 1 }}>{n.toLocaleString()}</div>
-            </div>
-          ))}
-        </div>
-
         {GROUP_DEFS.map((g) => {
           const gs = groups[g.id];
           // Prefer the list request's own total so the group badge always matches the
