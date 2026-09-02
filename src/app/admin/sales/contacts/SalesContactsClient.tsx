@@ -505,7 +505,11 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
         {GROUP_DEFS.map((g) => {
           const gs = groups[g.id];
-          const count = facets.counts[g.id] ?? gs?.total ?? 0;
+          // Prefer the list request's own total so the group badge always matches the
+          // rows it sits above. The separate facets count is only a fallback before the
+          // list has loaded — using it as the primary source let a heavier list query's
+          // silent failure show a phantom "N" over an empty list.
+          const count = gs?.total ?? facets.counts[g.id] ?? 0;
           const isOpen = !!expanded[g.id];
           return (
             <div key={g.id}>

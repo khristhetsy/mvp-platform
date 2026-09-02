@@ -58,7 +58,12 @@ export async function GET(req: NextRequest): Promise<Response> {
   query = await applyContactQuery(query, p, db(), group);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
-  const { data, count } = await query;
+  const { data, count, error } = await query;
+  // A silent list-query failure was the cause of "count says N, list shows none": the
+  // row fetch errored (e.g. statement timeout on the heavy select+order+range) while the
+  // lightweight facets count still returned N. Log it, and never report a total the rows
+  // don't back — total is derived from the actual result below.
+  if (error) console.error("[sales/contacts] list query failed:", { group, message: error.message });
   const raw = (data ?? []) as Array<Row & { raw?: unknown; overrides?: unknown; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
 
   // Resolve assignee names for the Lead assign column in one lookup.
