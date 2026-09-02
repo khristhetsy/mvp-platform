@@ -65,12 +65,26 @@ export default async function FounderMatchesPage() {
   // SEC Form D verified bonus: which prospect matches came from Form D.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as any;
-  const { secFormDBonus } = await getRatingConfig(admin);
+  const { secFormDBonus, odooBonus } = await getRatingConfig(admin);
   const prospectIds = data.cards.filter((c) => c.isProspect && c.ref).map((c) => (c.ref as string).replace(/^prospect:/, ""));
   const formdRefs = new Set<string>();
+  const odooRefs = new Set<string>();
   if (prospectIds.length) {
-    const { data: pis } = await admin.from("prospect_investors").select("id").in("id", prospectIds).eq("source", "SEC Form D");
-    for (const p of (pis ?? []) as Array<{ id: string }>) formdRefs.add(`prospect:${p.id}`);
+    const { data: pis } = await admin.from("prospect_investors").select("id, source, source_ref").in("id", prospectIds);
+    // Odoo-origin prospects are imported with source='investor_crm' + source_ref =
+    // the crm_contacts id; confirm that contact is actually Odoo-sourced before the
+    // provenance bonus applies (source_ref could also be a manual CRM add).
+    const crmRefByProspect = new Map<string, string>();
+    for (const p of (pis ?? []) as Array<{ id: string; source: string | null; source_ref: string | null }>) {
+      if (p.source === "SEC Form D") formdRefs.add(`prospect:${p.id}`);
+      else if (p.source === "investor_crm" && p.source_ref) crmRefByProspect.set(p.id, p.source_ref);
+    }
+    const crmIds = [...new Set(crmRefByProspect.values())];
+    if (crmIds.length) {
+      const { data: odooContacts } = await admin.from("crm_contacts").select("id").in("id", crmIds).eq("source", "odoo");
+      const odooCrmIds = new Set((odooContacts ?? []).map((c: { id: string }) => c.id));
+      for (const [pid, crmId] of crmRefByProspect) if (odooCrmIds.has(crmId)) odooRefs.add(`prospect:${pid}`);
+    }
   }
 
   const cards: MatchCenterCard[] = data.cards.map((c) => {
@@ -80,6 +94,10 @@ export default async function FounderMatchesPage() {
     let scoreRated = ps?.status === "rated";
     if (c.ref && formdRefs.has(c.ref) && secFormDBonus > 0) {
       investorScore = Math.min(100, (investorScore ?? 0) + secFormDBonus);
+      scoreTier = TIER_LABELS[tierFromScore(investorScore)];
+      scoreRated = true;
+    } else if (c.ref && odooRefs.has(c.ref) && odooBonus > 0) {
+      investorScore = Math.min(100, (investorScore ?? 0) + odooBonus);
       scoreTier = TIER_LABELS[tierFromScore(investorScore)];
       scoreRated = true;
     }

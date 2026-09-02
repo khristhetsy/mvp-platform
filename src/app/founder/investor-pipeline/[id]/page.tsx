@@ -77,22 +77,29 @@ export default async function InvestorDetailPage({
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const a = admin as any;
-    const { secFormDBonus } = await getRatingConfig(a);
+    const { secFormDBonus, odooBonus } = await getRatingConfig(a);
     let base: number | null = null;
     if (link?.platform_investor_id) {
       base = (await loadPartnerScoresBatch(a, [link.platform_investor_id])).get(link.platform_investor_id)?.score ?? null;
     }
     let isFormD = false;
+    let isOdoo = false;
     if (link?.name) {
       const { data: pi } = await a
         .from("prospect_investors")
-        .select("source")
+        .select("source, source_ref")
         .ilike("name", `${String(link.name).trim()}%`)
         .limit(1)
         .maybeSingle();
       isFormD = (pi?.source ?? "") === "SEC Form D";
+      // Odoo-origin: imported as source='investor_crm' with source_ref = the
+      // crm_contacts id; confirm that contact is actually Odoo-sourced.
+      if (!isFormD && (pi?.source ?? "") === "investor_crm" && pi?.source_ref) {
+        const { data: cc } = await a.from("crm_contacts").select("id").eq("id", pi.source_ref).eq("source", "odoo").maybeSingle();
+        isOdoo = !!cc;
+      }
     }
-    const bonus = isFormD ? secFormDBonus : 0;
+    const bonus = isFormD ? secFormDBonus : isOdoo ? odooBonus : 0;
     if (base != null || bonus > 0) {
       investorScore = Math.min(100, (base ?? 0) + bonus);
       investorScoreTier = TIER_LABELS[tierFromScore(investorScore)];
