@@ -159,7 +159,7 @@ export function ProspectInvestorsManager({ initialProspects }: Props) {
             {importing ? "Importing…" : "Import from investor CRM"}
           </button>
           <span className="text-xs text-slate-500">
-            Pulls investor CRM contacts in as prospects (best-effort sector/geography). Safe to re-run — duplicates are skipped.
+            Pulls investor Sales Hub Contacts in as prospects (best-effort sector/geography). Safe to re-run — duplicates are skipped.
           </span>
         </div>
 

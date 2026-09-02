@@ -491,7 +491,7 @@ export const ADMIN_SOPS: SopEntry[] = [
   {
     id: 31,
     part: "G",
-    title: "Import or export CRM contacts (CSV)",
+    title: "Import or export Sales Hub Contacts (CSV)",
     summary: "Bring contacts in or take data out via CSV.",
     permission: "manage_imports",
     keywords: ["csv", "import", "export", "contacts", "upload contacts", "data export", "crm export"],

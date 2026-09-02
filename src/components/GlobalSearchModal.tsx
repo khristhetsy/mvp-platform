@@ -84,7 +84,7 @@ function TypeIcon({ type }: { type: SearchResult["type"] | "page" }) {
 }
 
 const TYPE_LABELS: Record<SearchResult["type"], string> = {
-  contact: "CRM contacts",
+  contact: "Sales Hub Contacts",
   investor: "Pipeline investors",
   document: "Documents",
   deal_room: "Deal rooms",

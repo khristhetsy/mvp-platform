@@ -46,7 +46,7 @@ export function SyncCrmToMarketing() {
         <div className="flex items-center gap-2">
           <Megaphone className="h-5 w-5 text-slate-400" />
           <div>
-            <p className="text-sm font-semibold text-slate-800">Sync CRM contacts into Marketing Hub</p>
+            <p className="text-sm font-semibold text-slate-800">Sync Sales Hub Contacts into Marketing Hub</p>
             <p className="text-xs text-slate-500">Pushes your imported contacts into the Marketing Hub contact list (matched by email). Safe to re-run.</p>
           </div>
         </div>
