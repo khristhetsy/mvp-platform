@@ -520,6 +520,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           for (const [fk, vals] of Object.entries(facetSel)) for (const v of vals) chips.push({ key: `f:${fk}:${v}`, field: (FACET_LABEL as Record<string, string>)[fk] ?? fk, value: v, onRemove: () => setFacetSel((s) => ({ ...s, [fk]: (s[fk] ?? []).filter((x) => x !== v) })) });
           for (const c of countries) chips.push({ key: `c:${c}`, field: "Country", value: c, onRemove: () => setCountries((cs) => cs.filter((x) => x !== c)) });
           for (const col of ["name", "company", "email", "phone"] as const) if (textFilters[col]) chips.push({ key: `t:${col}`, field: col.charAt(0).toUpperCase() + col.slice(1), value: textFilters[col], onRemove: () => setTextFilters((f) => ({ ...f, [col]: "" })) });
+          if (q.trim()) chips.push({ key: "q", field: "Search", value: q, onRemove: () => setQ("") });
           if (chips.length === 0) return null;
           return (
             <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px" }}>
@@ -530,7 +531,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
                   <button type="button" onClick={ch.onRemove} aria-label={`Remove ${ch.field} ${ch.value}`} style={{ width: 16, height: 16, border: "none", background: "#B5D4F4", color: "#0C447C", borderRadius: "50%", fontSize: 10, lineHeight: 1, cursor: "pointer" }}>×</button>
                 </span>
               ))}
-              <button type="button" onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); setRole(""); setFacetSel({}); }} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "none", textDecoration: "underline", cursor: "pointer", marginLeft: 2 }}>Clear all</button>
+              <button type="button" onClick={() => { setQ(""); setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); setRole(""); setFacetSel({}); }} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "none", textDecoration: "underline", cursor: "pointer", marginLeft: 2 }}>Clear all</button>
             </div>
           );
         })()}
