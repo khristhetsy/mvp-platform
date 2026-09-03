@@ -152,6 +152,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   // Optimistic department overrides so a "Move" reflects instantly before refresh.
   const [deptOverride, setDeptOverride] = useState<Record<string, string>>({});
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
+  const [collapsedDepts, setCollapsedDepts] = useState<Record<string, boolean>>({});
 
   const deptOf = (t: MarketingTemplate) => (deptOverride[t.id] ?? t.department) || UNASSIGNED;
 
@@ -566,16 +567,20 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
       ) : view === "list" ? (
         groupByDept ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {grouped.map(({ dept, items }) => (
-              <div key={dept} style={{ ...card, overflow: "hidden" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#EEF0F4", borderBottom: "0.5px solid var(--border)" }}>
-                  <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
-                  <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
+            {grouped.map(({ dept, items }) => {
+              const open = !collapsedDepts[dept];
+              return (
+                <div key={dept} style={{ ...card, overflow: "hidden" }}>
+                  <button onClick={() => setCollapsedDepts((c) => ({ ...c, [dept]: !c[dept] }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform 120ms" }}><polyline points="9 6 15 12 9 18" /></svg>
+                    <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
+                    <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
+                  </button>
+                  {open && items.map((t, i) => listRow(t, i))}
                 </div>
-                {items.map((t, i) => listRow(t, i))}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div style={{ ...card, overflow: "hidden" }}>
