@@ -11,7 +11,17 @@ function applyFacetFilters(query: any, p: URLSearchParams): any {
   for (const key of FACET_KEYS) {
     const vals = p.getAll(key).map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"'));
     if (!vals.length) continue;
-    query = query.or(vals.map((v) => `raw->__profile->${key}.cs.["${v}"]`).join(","));
+    if (vals.length === 1) {
+      // Single value: a plain .filter() containment. The embedded JSON quotes in
+      // `["Venture Capital"]` are mangled by PostgREST's or() logic-tree parser
+      // (they read as value delimiters), so a multi-word facet returns zero rows.
+      // .filter() passes the jsonb operand verbatim and matches correctly.
+      query = query.filter(`raw->__profile->${key}`, "cs", JSON.stringify(vals));
+    } else {
+      // Multiple values OR'd: quote each jsonb operand for the or() parser
+      // (double-quote wrap, inner quotes doubled) so multi-word values survive.
+      query = query.or(vals.map((v) => `raw->__profile->${key}.cs.${`"${JSON.stringify([v]).replace(/"/g, '""')}"`}`).join(","));
+    }
   }
   return query;
 }
@@ -31,7 +41,9 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
   // profile (raw.__profile.leadSource). Match either. OR'd across selected values.
   const leadSources = p.getAll("leadSource").map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"') && !v.includes("("));
   if (leadSources.length) {
-    query = query.or(leadSources.flatMap((v) => [`overrides->>lead_source.eq.${v}`, `raw->__profile->>leadSource.eq.${v}`]).join(","));
+    // Double-quote each value so multi-word sources (e.g. "SEC Form D") survive
+    // the or() parser instead of the space breaking the operand.
+    query = query.or(leadSources.flatMap((v) => [`overrides->>lead_source.eq."${v}"`, `raw->__profile->>leadSource.eq."${v}"`]).join(","));
   }
   query = applyFacetFilters(query, p);
   return query;
