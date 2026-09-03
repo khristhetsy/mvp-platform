@@ -196,17 +196,32 @@ function ProfileDropdown({
     }
   }
 
-  // Safety-net exit prompt: warn before leaving iCapOS via tab close, reload, or
-  // navigating away (Sign out shows its own confirm and isn't affected — that's a
-  // client-side router push, which doesn't fire beforeunload). Browsers show their own
-  // generic "Leave site?" dialog here; custom text/buttons aren't allowed on this event.
+  // Exit prompt — fires ONLY when leaving the platform (a link that navigates the
+  // current tab to a different origin than icapos.com). Internal navigation never
+  // prompts. Sign out has its own confirm; new-tab (_blank) and mailto/tel links keep
+  // the app open, so they pass through. A blanket beforeunload can't tell internal
+  // navigation from leaving, so it's intentionally not used.
   useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = (e.target as HTMLElement | null)?.closest("a");
+      const href = anchor?.getAttribute("href");
+      if (!anchor || !href) return;
+      if (anchor.target === "_blank") return; // opens elsewhere — this tab stays on iCapOS
+      let url: URL;
+      try { url = new URL(href, window.location.href); } catch { return; }
+      if (url.protocol !== "http:" && url.protocol !== "https:") return; // mailto:, tel:, etc.
+      if (url.origin === window.location.origin) return; // internal — no prompt
       e.preventDefault();
-      e.returnValue = "";
+      void confirmDialog({
+        title: "Leave iCapOS?",
+        message: `You're about to go to ${url.hostname}. Any unsaved work stays safe in iCapOS.`,
+        confirmLabel: "Leave",
+        cancelLabel: "Stay",
+      }).then((ok) => { if (ok) window.location.href = url.href; });
     };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
 
   // Runtime 4-step-nav toggle (build flag is the default until the fetch lands).
