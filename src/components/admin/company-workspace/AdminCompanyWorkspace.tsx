@@ -260,8 +260,6 @@ export function AdminCompanyWorkspace({
           <PageSection title={t("cap_table")} subtitle={t("founder_s_shareholders_ownership_split_and_m")}>
             <CompanyCapTablePanel companyId={data.company.id} />
           </PageSection>
-
-          {reviewMarketplace}
         </div>
       ) : null}
 
@@ -270,7 +268,6 @@ export function AdminCompanyWorkspace({
         <div className="space-y-6">
           <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
-          {reviewMarketplace}
           {investablePanel}
           {investorActivity}
           {spvOperations}
