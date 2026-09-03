@@ -147,12 +147,14 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   const [editSource, setEditSource] = useState<"visual" | "html">("visual");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("list");
-  const [sort, setSort] = useState<SortKey>("edited");
-  const [groupByDept, setGroupByDept] = useState(false);
+  const [sort, setSort] = useState<SortKey>("name");
+  const [groupByDept, setGroupByDept] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
   // Optimistic department overrides so a "Move" reflects instantly before refresh.
   const [deptOverride, setDeptOverride] = useState<Record<string, string>>({});
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
-  const [collapsedDepts, setCollapsedDepts] = useState<Record<string, boolean>>({});
+  // Departments start collapsed on every load; a dept is open only if toggled open.
+  const [openDepts, setOpenDepts] = useState<Record<string, boolean>>({});
 
   const deptOf = (t: MarketingTemplate) => (deptOverride[t.id] ?? t.department) || UNASSIGNED;
 
@@ -168,7 +170,10 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
     } catch { /* optimistic; a refresh will reconcile */ }
   }
 
-  const sorted = [...templates].sort((a, b) => {
+  // Archived templates are hidden unless "Show archived" is on.
+  const archivedCount = templates.filter((t) => t.status === "archived").length;
+  const visible = showArchived ? templates : templates.filter((t) => t.status !== "archived");
+  const sorted = [...visible].sort((a, b) => {
     if (sort === "name") return a.name.localeCompare(b.name);
     if (sort === "status") return a.status.localeCompare(b.status);
     if (sort === "department") return deptOf(a).localeCompare(deptOf(b)) || a.name.localeCompare(b.name);
@@ -375,6 +380,11 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
             <option value="status">Status</option>
             <option value="department">Department</option>
           </select>
+          {archivedCount > 0 && (
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer" }}>
+              <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} style={{ width: 13, height: 13 }} /> Show archived ({archivedCount})
+            </label>
+          )}
           <label style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
             ↑ Upload HTML
             <input
@@ -568,10 +578,10 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
         groupByDept ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {grouped.map(({ dept, items }) => {
-              const open = !collapsedDepts[dept];
+              const open = !!openDepts[dept];
               return (
                 <div key={dept} style={{ ...card, overflow: "hidden" }}>
-                  <button onClick={() => setCollapsedDepts((c) => ({ ...c, [dept]: !c[dept] }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
+                  <button onClick={() => setOpenDepts((c) => ({ ...c, [dept]: !c[dept] }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform 120ms" }}><polyline points="9 6 15 12 9 18" /></svg>
                     <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
                     <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
