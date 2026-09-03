@@ -159,6 +159,10 @@ export function FounderJourneyPanel({
   const [reminders, setReminders] = useState<Record<string, ReminderStatus>>({});
   const [reminderBusy, setReminderBusy] = useState<string | null>(null);
   const [reminderMsg, setReminderMsg] = useState<string | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("09:00");
+  const [schedRecurring, setSchedRecurring] = useState(true);
 
   const loadReminders = useCallback(async () => {
     try {
@@ -175,18 +179,23 @@ export function FounderJourneyPanel({
   // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch sets state after mount
   useEffect(() => { void loadReminders(); }, [loadReminders]);
 
-  async function reminderAction(gateKey: string, action: "send-now" | "pause" | "resume") {
+  async function reminderAction(gateKey: string, action: "send-now" | "pause" | "resume" | "schedule", extra?: { sendAt: string; recurring: boolean }) {
     setReminderBusy(gateKey + action);
     setReminderMsg(null);
     try {
       const res = await fetch(`/api/admin/companies/${companyId}/gate-reminders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gateKey, action }),
+        body: JSON.stringify({ gateKey, action, ...extra }),
       });
       const j = await res.json().catch(() => ({}));
       if (res.ok) {
-        setReminderMsg(action === "send-now" ? "Reminder sent." : action === "pause" ? "Reminder paused." : "Reminder resumed.");
+        setReminderMsg(
+          action === "send-now" ? "Reminder sent." :
+          action === "pause" ? "Reminder paused." :
+          action === "schedule" ? "Reminder scheduled." : "Reminder resumed.",
+        );
+        if (action === "schedule") setScheduleOpen(false);
         await loadReminders();
       } else {
         setReminderMsg(j.error ?? "Something went wrong.");
@@ -194,6 +203,13 @@ export function FounderJourneyPanel({
     } finally {
       setReminderBusy(null);
     }
+  }
+
+  function submitSchedule(gateKey: string) {
+    if (!schedDate || !schedTime) { setReminderMsg("Pick a date and time first."); return; }
+    const when = new Date(`${schedDate}T${schedTime}`);
+    if (Number.isNaN(when.getTime())) { setReminderMsg("That date/time isn't valid."); return; }
+    void reminderAction(gateKey, "schedule", { sendAt: when.toISOString(), recurring: schedRecurring });
   }
 
   const activeReminder = active ? reminders[active.key] : undefined;
@@ -262,7 +278,7 @@ export function FounderJourneyPanel({
           <button
             key={g.key}
             type="button"
-            onClick={() => setOpenKey(g.key)}
+            onClick={() => { setOpenKey(g.key); setScheduleOpen(false); setReminderMsg(null); }}
             className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50"
           >
             <span
@@ -370,6 +386,13 @@ export function FounderJourneyPanel({
                   </button>
                   <button
                     type="button"
+                    onClick={() => setScheduleOpen((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11.5px] font-semibold text-sky-700 hover:bg-sky-100"
+                  >
+                    <i className="ti ti-calendar-plus" aria-hidden="true" /> Schedule
+                  </button>
+                  <button
+                    type="button"
                     disabled={reminderBusy !== null}
                     onClick={() => void reminderAction(active.key, activeReminder?.paused ? "resume" : "pause")}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-[11.5px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
@@ -378,6 +401,27 @@ export function FounderJourneyPanel({
                   </button>
                   {reminderMsg ? <span className="self-center text-[11px] font-medium text-indigo-700">{reminderMsg}</span> : null}
                 </div>
+
+                {scheduleOpen ? (
+                  <div className="mt-2.5 rounded-lg border border-slate-200 bg-white p-2.5">
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Schedule this reminder <span className="font-normal normal-case text-slate-400">· your local time</span></div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input type="date" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} className="rounded border border-slate-300 px-2 py-1 text-[11.5px]" />
+                      <input type="time" value={schedTime} onChange={(e) => setSchedTime(e.target.value)} className="rounded border border-slate-300 px-2 py-1 text-[11.5px]" />
+                      <button
+                        type="button"
+                        disabled={reminderBusy !== null}
+                        onClick={() => submitSchedule(active.key)}
+                        className="rounded-lg bg-[#5B2AD6] px-3 py-1.5 text-[11.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {reminderBusy === active.key + "schedule" ? "Scheduling…" : "Set schedule"}
+                      </button>
+                    </div>
+                    <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-600">
+                      <input type="checkbox" checked={schedRecurring} onChange={(e) => setSchedRecurring(e.target.checked)} /> Then keep repeating every 3 days until resolved
+                    </label>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

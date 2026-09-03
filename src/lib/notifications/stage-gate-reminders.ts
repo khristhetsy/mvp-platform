@@ -103,6 +103,7 @@ export type GateReminderStatus = {
   lastSentAt: string | null;
   nextSendAt: string | null;
   resolvedAt: string | null;
+  oneTime: boolean;
   // Derived UI state.
   state: "resolved" | "paused" | "sent" | "scheduled";
   subject: string;
@@ -118,6 +119,7 @@ type ReminderRow = {
   last_sent_at: string | null;
   next_send_at: string | null;
   resolved_at: string | null;
+  one_time: boolean;
 };
 
 /** Per-gate reminder statuses for one company (for the admin UI). */
@@ -132,7 +134,7 @@ export async function getCompanyGateReminders(companyId: string, founderId: stri
       conditions = null;
     }
   }
-  const { data } = await db.from("stage_gate_reminders").select("gate_key, paused, sends_count, last_sent_at, next_send_at, resolved_at").eq("company_id", companyId);
+  const { data } = await db.from("stage_gate_reminders").select("gate_key, paused, sends_count, last_sent_at, next_send_at, resolved_at, one_time").eq("company_id", companyId);
   const rowByKey = new Map<string, ReminderRow>();
   for (const r of (data ?? []) as ReminderRow[]) rowByKey.set(r.gate_key, r);
 
@@ -154,6 +156,7 @@ export async function getCompanyGateReminders(companyId: string, founderId: stri
       lastSentAt: row?.last_sent_at ?? null,
       nextSendAt: row?.next_send_at ?? null,
       resolvedAt: row?.resolved_at ?? null,
+      oneTime: row?.one_time ?? false,
       state,
       subject: gateEmail(gate, "there").subject,
     };
@@ -196,7 +199,7 @@ export async function sendGateReminderNow(companyId: string, founderId: string |
   const email = (prof as { email?: string | null } | null)?.email;
   if (!email) return { ok: false, error: "Founder has no email on file." };
   const firstName = ((prof as { full_name?: string | null } | null)?.full_name ?? "").split(" ")[0] || "there";
-  const { data: existingRows } = await db.from("stage_gate_reminders").select("gate_key, paused, sends_count, last_sent_at, next_send_at, resolved_at").eq("company_id", companyId).eq("gate_key", gateKey);
+  const { data: existingRows } = await db.from("stage_gate_reminders").select("gate_key, paused, sends_count, last_sent_at, next_send_at, resolved_at, one_time").eq("company_id", companyId).eq("gate_key", gateKey);
   const existing = (existingRows ?? [])[0] as ReminderRow | undefined;
   const sent = await sendGate(db, companyId, founderId, email, firstName, gate, existing);
   return sent ? { ok: true } : { ok: false, error: "Could not send the email." };
@@ -208,6 +211,33 @@ export async function setGateReminderPaused(companyId: string, founderId: string
   const now = new Date().toISOString();
   await db.from("stage_gate_reminders").upsert(
     { company_id: companyId, founder_id: founderId, gate_key: gateKey, paused, updated_at: now },
+    { onConflict: "company_id,gate_key" },
+  );
+  return { ok: true };
+}
+
+/**
+ * Schedule a gate's reminder to send at a specific time. `recurring` false = fire
+ * once then stop; true = fire at that time and then resume the 3-day cadence.
+ * Un-pauses the reminder and clears any resolved flag so the cron will pick it up.
+ */
+export async function setGateReminderSchedule(companyId: string, founderId: string | null, gateKey: string, sendAtISO: string, recurring: boolean): Promise<{ ok: boolean; error?: string }> {
+  if (!GATE_DEFS.some((g) => g.key === gateKey)) return { ok: false, error: "Unknown gate." };
+  const when = new Date(sendAtISO);
+  if (Number.isNaN(when.getTime())) return { ok: false, error: "Invalid date/time." };
+  const db = createServiceRoleClient() as unknown as LooseDb;
+  const now = new Date().toISOString();
+  await db.from("stage_gate_reminders").upsert(
+    {
+      company_id: companyId,
+      founder_id: founderId,
+      gate_key: gateKey,
+      paused: false,
+      one_time: !recurring,
+      next_send_at: when.toISOString(),
+      resolved_at: null,
+      updated_at: now,
+    },
     { onConflict: "company_id,gate_key" },
   );
   return { ok: true };
@@ -252,7 +282,7 @@ export async function runStageGateReminderPass(limit = 400): Promise<{ sent: num
         continue;
       }
 
-      const { data: rows } = await db.from("stage_gate_reminders").select("gate_key, paused, sends_count, last_sent_at, next_send_at, resolved_at").eq("company_id", company.id);
+      const { data: rows } = await db.from("stage_gate_reminders").select("gate_key, paused, sends_count, last_sent_at, next_send_at, resolved_at, one_time").eq("company_id", company.id);
       const rowByKey = new Map<string, ReminderRow>();
       for (const r of (rows ?? []) as ReminderRow[]) rowByKey.set(r.gate_key, r);
 
@@ -276,7 +306,13 @@ export async function runStageGateReminderPass(limit = 400): Promise<{ sent: num
         if (!due) continue;
 
         const ok = await sendGate(db, company.id, company.founder_id, prof.email, firstName, gate, row);
-        if (ok) sent += 1;
+        if (ok) {
+          sent += 1;
+          // A one-time scheduled send fires once, then stops (no re-arm of the cadence).
+          if (row?.one_time) {
+            await db.from("stage_gate_reminders").update({ next_send_at: null, one_time: false, paused: true, updated_at: new Date().toISOString() }).eq("company_id", company.id).eq("gate_key", gate.key);
+          }
+        }
       }
     }
   } catch {

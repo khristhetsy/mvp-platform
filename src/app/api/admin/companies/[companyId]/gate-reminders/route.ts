@@ -5,6 +5,7 @@ import {
   getCompanyGateReminders,
   sendGateReminderNow,
   setGateReminderPaused,
+  setGateReminderSchedule,
   gateEmailPreview,
 } from "@/lib/notifications/stage-gate-reminders";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -48,6 +49,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ com
   if (action === "pause" || action === "resume") {
     await setGateReminderPaused(companyId, founderId, gateKey, action === "pause");
     return NextResponse.json({ ok: true });
+  }
+  if (action === "schedule") {
+    const sendAt = String((body as { sendAt?: unknown }).sendAt ?? "");
+    const recurring = Boolean((body as { recurring?: unknown }).recurring);
+    const r = await setGateReminderSchedule(companyId, founderId, gateKey, sendAt, recurring);
+    return NextResponse.json(r, { status: r.ok ? 200 : 400 });
   }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
