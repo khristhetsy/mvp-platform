@@ -146,7 +146,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   // HTML. Whichever surface was touched last wins on save.
   const [editSource, setEditSource] = useState<"visual" | "html">("visual");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortKey>("edited");
   const [groupByDept, setGroupByDept] = useState(false);
   // Optimistic department overrides so a "Move" reflects instantly before refresh.
