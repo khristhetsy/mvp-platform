@@ -250,6 +250,7 @@ function ProfileDropdown({
   const items = tidyDividers(menuItemsForWorkspace(workspace, founderNavV2).filter(canShow));
 
   return (
+    <>
     <div ref={ref} className="relative">
       <button
         type="button"
@@ -325,12 +326,38 @@ function ProfileDropdown({
         </div>
       ) : null}
     </div>
+    {/* Always-visible Exit — same confirm as Sign out, then logs out and returns home. */}
+    <button
+      type="button"
+      aria-label="Exit iCapOS"
+      disabled={signingOut}
+      onClick={() => void handleSignOut()}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60 transition-colors"
+    >
+      <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="hidden sm:inline">{signingOut ? "Exiting…" : "Exit"}</span>
+    </button>
+    </>
   );
 }
 
 export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick }: Readonly<Props>) {
   const t = useTranslations("sharedCmp");
+  const router = useRouter();
   const companyLabel = profileSubtitle?.trim() || "Select company";
+
+  // Clicking the logo leaves the workspace for the public home — confirm first
+  // (stays signed in). Full sign-out lives on the Exit button / Sign out.
+  async function handleLogoExit(e: React.MouseEvent) {
+    e.preventDefault();
+    const ok = await confirmDialog({
+      title: "Leave iCapOS?",
+      message: "You're about to leave your workspace and return to the iCapOS home page. Any saved work stays safe.",
+      confirmLabel: "Leave",
+      cancelLabel: "Stay",
+    });
+    if (ok) router.push("/");
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white shadow-[var(--shadow-sticky)]">
@@ -345,7 +372,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
-        <Link href="/" className="flex shrink-0 items-center self-center">
+        <Link href="/" onClick={handleLogoExit} className="flex shrink-0 items-center self-center">
           <IcapOSLogo height={28} />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
