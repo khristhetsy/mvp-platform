@@ -1,8 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 // Option-1 section header used across the company workspace: a Tabler icon + title
 // + one-line hint, with a color-coded underline per tone so staff can scan the page
-// by group ("At a glance", "Do next", …). Same layout contract as PageSection.
+// by group. Each section is collapsible — clicking the header folds its content; the
+// open/closed choice is remembered per browser (keyed by title). Same layout
+// contract as PageSection, plus icon + tone + collapse.
 
 type Tone = "blue" | "purple" | "amber" | "gray" | "red" | "teal" | "green";
 
@@ -34,9 +39,36 @@ export function WorkspaceSection({
   className?: string;
 }>) {
   const c = TONES[tone];
+  const storageKey = `cw.section.${title}`;
+  // Default open; hydrate the remembered choice after mount to avoid SSR mismatch.
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate persisted collapse state after mount
+      if (window.localStorage.getItem(storageKey) === "0") setOpen(false);
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  function toggle() {
+    setOpen((o) => {
+      const next = !o;
+      try { window.localStorage.setItem(storageKey, next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
   return (
     <section className={`space-y-4 ${className}`}>
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b-2 pb-2" style={{ borderColor: c.line }}>
+      <header
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={toggle}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}
+        className="flex cursor-pointer select-none flex-wrap items-end justify-between gap-3 border-b-2 pb-2"
+        style={{ borderColor: c.line }}
+      >
         <div className="flex min-w-0 items-center gap-2.5">
           <i className={`ti ${icon} text-[18px]`} style={{ color: c.icon }} aria-hidden="true" />
           <div className="min-w-0">
@@ -44,9 +76,14 @@ export function WorkspaceSection({
             {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
           </div>
         </div>
-        {action}
+        <div className="flex items-center gap-3">
+          {/* Stop the header toggle when the action (e.g. a link) is clicked. */}
+          {action ? <span onClick={(e) => e.stopPropagation()}>{action}</span> : null}
+          <i className={`ti ${open ? "ti-chevron-down" : "ti-chevron-right"} text-[16px] text-slate-400`} aria-hidden="true" />
+        </div>
       </header>
-      {children}
+      {/* Kept mounted when collapsed (display:none) so child state and loads persist. */}
+      <div className={open ? "" : "hidden"}>{children}</div>
     </section>
   );
 }
