@@ -66,13 +66,12 @@ export function WorkspaceSection({
         aria-expanded={open}
         onClick={toggle}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}
-        className="flex cursor-pointer select-none flex-wrap items-end justify-between gap-3 border-b-2 pb-2"
-        style={{ borderColor: c.line }}
+        className="flex cursor-pointer select-none flex-wrap items-end justify-between gap-3 border-b-2 border-slate-200 pb-2"
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {/* Clear collapse arrow — tinted the section accent, rotates down when open. */}
           <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.icon}
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8"
             strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
             className="shrink-0 transition-transform duration-150"
             style={{ transform: open ? "rotate(90deg)" : "none" }}

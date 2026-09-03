@@ -151,33 +151,7 @@ export default async function AdminDashboardPage() {
           </span>
         </div>
       </div>
-      {showCard("platform_health") ? (
-        <div className="mb-6 px-1">
-          <WorkspaceSection icon="ti-heartbeat" tone="teal" title="Platform health" subtitle="Reviews, intros, compliance & approvals at a glance">
-            <AdminPlatformHealthWidget headerless />
-          </WorkspaceSection>
-        </div>
-      ) : null}
-      {showCard("next_best_actions") ? (
-        <div className="mb-6 px-1">
-          <WorkspaceSection icon="ti-checklist" tone="amber" title="Operational priorities" subtitle="Prioritized workflow actions with lifecycle tracking">
-            <NextBestActionsPanel
-              role={adminRole}
-              initialActions={nextBestActions.actions}
-              limit={5}
-              showEscalate
-              hideHeader
-              readOnly={!canActOnCard("next_best_actions", permissions)}
-              viewAllHref="/admin/actions?priority=critical"
-            />
-          </WorkspaceSection>
-        </div>
-      ) : null}
-      {showCard("upcoming_meetings") ? (
-        <div className="mb-6 px-1">
-          <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
-        </div>
-      ) : null}
+      {/* Operations Command Center — primary surface, pinned to the top. */}
       <AdminDashboardShell
         permissions={permissions}
         userId={profile.id}
@@ -205,6 +179,35 @@ export default async function AdminDashboardPage() {
         executionSummary={executionSummary}
         automationSummary={automationSummary}
       />
+      {showCard("platform_health") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-heartbeat" tone="teal" title="Platform health" subtitle="Reviews, intros, compliance & approvals at a glance">
+            <AdminPlatformHealthWidget headerless />
+          </WorkspaceSection>
+        </div>
+      ) : null}
+      {showCard("next_best_actions") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-checklist" tone="amber" title="Operational priorities" subtitle="Prioritized workflow actions with lifecycle tracking">
+            <NextBestActionsPanel
+              role={adminRole}
+              initialActions={nextBestActions.actions}
+              limit={5}
+              showEscalate
+              hideHeader
+              readOnly={!canActOnCard("next_best_actions", permissions)}
+              viewAllHref="/admin/actions?priority=critical"
+            />
+          </WorkspaceSection>
+        </div>
+      ) : null}
+      {showCard("upcoming_meetings") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-calendar" tone="blue" title="Upcoming meetings" subtitle="Your next scheduled calls">
+            <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
+          </WorkspaceSection>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
