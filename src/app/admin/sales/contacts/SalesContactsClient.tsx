@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
+
+const GROUP_BY_SECTIONS: { key: GroupSection; label: string }[] = [
+  { key: "profile", label: "Profile & role" },
+  { key: "facets", label: "Questionnaire facets" },
+  { key: "crm", label: "CRM fields" },
+];
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
 export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null };
@@ -108,6 +115,16 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   const expandedRef = useRef(expanded);
   useEffect(() => { expandedRef.current = expanded; }, [expanded]);
 
+  // Group by dimension. "profile" keeps the original role-group behaviour; any
+  // other dimension uses the dynamic group list from /groups.
+  const [groupBy, setGroupBy] = useState<string>(() => loadLS<string>("salesContacts.groupBy", "profile"));
+  const [groupByOpen, setGroupByOpen] = useState(false);
+  const [dynGroups, setDynGroups] = useState<{ id: string; label: string; count: number }[]>([]);
+  const [dynLoading, setDynLoading] = useState(false);
+  const groupByRef = useRef(groupBy);
+  useEffect(() => { groupByRef.current = groupBy; try { window.localStorage.setItem("salesContacts.groupBy", JSON.stringify(groupBy)); } catch { /* ignore */ } }, [groupBy]);
+  const groupByLabel = GROUP_BY_OPTIONS.find((o) => o.id === groupBy)?.label ?? "Profile";
+
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [openColPicker, setOpenColPicker] = useState(false);
   const [draft, setDraft] = useState("");
@@ -115,6 +132,8 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
 
   // Role + questionnaire facet filters (Odoo-style Filters dropdown).
   const [role, setRole] = useState<"" | "founder" | "investor" | "advisor">("");
+  const roleRef = useRef(role);
+  useEffect(() => { roleRef.current = role; }, [role]);
   const [facetSel, setFacetSel] = useState<Record<string, string[]>>({});
   const [facetOpts, setFacetOpts] = useState<Record<string, string[]>>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -148,10 +167,17 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   // Fetch one group's first page. Groups render collapsed by default, so we only
   // pay for a group's rows (its exact count + name-sort + last-message lookups)
   // once it's actually opened — the header counts come from the cheap facets call.
+  // URL fragment selecting one group: role groups use ?group=, every other
+  // dimension uses ?groupBy=&groupValue=. Reads groupBy from a ref so callbacks
+  // don't need to be re-created when the dimension changes.
+  const groupFrag = (id: string) => groupByRef.current === "profile"
+    ? `group=${id}`
+    : `groupBy=${encodeURIComponent(groupByRef.current)}&groupValue=${encodeURIComponent(id)}${roleRef.current ? `&group=${roleRef.current}` : ""}`;
+
   const loadGroup = useCallback(async (id: string, params: string) => {
     setGroups((prev) => ({ ...prev, [id]: { rows: prev[id]?.rows ?? [], total: prev[id]?.total ?? 0, loading: true, loaded: prev[id]?.loaded ?? false, page: 0 } }));
     try {
-      const res = await fetch(`/api/sales/contacts?group=${id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
+      const res = await fetch(`/api/sales/contacts?${groupFrag(id)}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
       const data = res.ok ? await res.json() : { contacts: [], total: 0 };
       setGroups((prev) => ({ ...prev, [id]: { rows: data.contacts ?? [], total: data.total ?? 0, loading: false, loaded: true, page: 0 } }));
     } catch { setGroups((prev) => ({ ...prev, [id]: { rows: [], total: 0, loading: false, loaded: true, page: 0 } })); }
@@ -180,14 +206,35 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     } catch { /* ignore */ }
   }, [viewAs]);
 
+  // Group list for a non-profile dimension (headers + counts). Role, if set, is
+  // passed as ?group= so "Investors grouped by industry" narrows correctly.
+  const loadDynGroups = useCallback(async (params: string, by: string, roleFilter: string) => {
+    setDynLoading(true);
+    try {
+      const qs = [`by=${encodeURIComponent(by)}`, roleFilter ? `group=${roleFilter}` : "", params, viewAs ? `viewAs=${encodeURIComponent(viewAs)}` : ""].filter(Boolean).join("&");
+      const res = await fetch(`/api/sales/contacts/groups?${qs}`);
+      const data = res.ok ? await res.json() : { groups: [] };
+      setDynGroups((data.groups ?? []) as { id: string; label: string; count: number }[]);
+    } catch { setDynGroups([]); } finally { setDynLoading(false); }
+  }, [viewAs]);
+
   // Filtering to a single role opens that group so its results are visible (and load).
   // eslint-disable-next-line react-hooks/set-state-in-effect -- open the filtered group
   useEffect(() => { if (role) setExpanded((e) => (e[role] ? e : { ...e, [role]: true })); }, [role]);
 
   useEffect(() => {
-    const t = setTimeout(() => { void loadAll(paramsStr, role); void loadFacets(paramsStr); }, 300);
+    const t = setTimeout(() => {
+      if (groupBy === "profile") void loadAll(paramsStr, role);
+      else void loadDynGroups(paramsStr, groupBy, role);
+      void loadFacets(paramsStr);
+    }, 300);
     return () => clearTimeout(t);
-  }, [paramsStr, role, loadAll, loadFacets]);
+  }, [paramsStr, role, groupBy, loadAll, loadDynGroups, loadFacets]);
+
+  // Switching the group-by dimension resets open groups + their cached rows so
+  // the new grouping starts clean (all collapsed).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset groups when dimension changes
+  useEffect(() => { setExpanded({}); setGroups({}); }, [groupBy]);
 
   // Load the questionnaire facet option lists once (universal — same for everyone).
   useEffect(() => {
@@ -225,7 +272,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     if (nextPage === gs.page) return;
     setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: true } }));
     try {
-      const res = await fetch(`/api/sales/contacts?group=${groupId}&offset=${nextPage * PAGE}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
+      const res = await fetch(`/api/sales/contacts?${groupFrag(groupId)}&offset=${nextPage * PAGE}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
       const data = res.ok ? await res.json() : { contacts: [], total: gs.total };
       setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], rows: data.contacts ?? [], total: data.total ?? prev[groupId].total, loading: false, page: nextPage } }));
     } catch { setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: false } })); }
@@ -261,8 +308,10 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
 
   // ── Mass Lead assign helpers ──────────────────────────────────────────────
-  const allLoadedIds = useMemo(() => GROUP_DEFS.flatMap((g) => (groups[g.id]?.rows ?? []).map((r) => r.id)), [groups]);
-  const matchingTotal = role ? (facets.counts[role] ?? 0) : (facets.counts.total ?? 0);
+  const activeGroupIds = useMemo(() => (groupBy === "profile" ? GROUP_DEFS.map((g) => g.id) : dynGroups.map((g) => g.id)), [groupBy, dynGroups]);
+  const allLoadedIds = useMemo(() => activeGroupIds.flatMap((id) => (groups[id]?.rows ?? []).map((r) => r.id)), [activeGroupIds, groups]);
+  const dynTotal = useMemo(() => dynGroups.reduce((a, g) => a + g.count, 0), [dynGroups]);
+  const matchingTotal = groupBy === "profile" ? (role ? (facets.counts[role] ?? 0) : (facets.counts.total ?? 0)) : dynTotal;
   const selectionCount = selectAllMatching ? matchingTotal : selected.size;
   const allLoadedSelected = allLoadedIds.length > 0 && allLoadedIds.every((id) => selected.has(id));
   function toggleRow(id: string) { setSelectAllMatching(false); setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
@@ -402,6 +451,32 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
             </div>
           )}
         </div>
+        <div style={{ position: "relative" }}>
+          <button onClick={() => { setGroupByOpen((v) => !v); setOpenColPicker(false); setFiltersOpen(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: groupBy !== "profile" ? "#fff" : "var(--foreground)", background: groupBy !== "profile" ? "#2E78F5" : "transparent", border: groupBy !== "profile" ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <i className="ti ti-layout-list" style={{ fontSize: 15 }} aria-hidden="true" /> Group by: {groupByLabel}
+            <i className="ti ti-chevron-down" style={{ fontSize: 13 }} aria-hidden="true" />
+          </button>
+          {groupByOpen && (
+            <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 250, maxHeight: 420, overflowY: "auto", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "6px 0" }}>
+              {GROUP_BY_SECTIONS.map((sec) => {
+                const opts = GROUP_BY_OPTIONS.filter((o) => o.section === sec.key && o.id !== "profile");
+                const rows = sec.key === "profile" ? GROUP_BY_OPTIONS.filter((o) => o.id === "profile") : opts;
+                if (rows.length === 0) return null;
+                return (
+                  <div key={sec.key}>
+                    <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "8px 13px 3px", background: "var(--muted)" }}>{sec.label}</div>
+                    {rows.map((o) => (
+                      <button key={o.id} onClick={() => { setGroupBy(o.id); setGroupByOpen(false); }} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "8px 13px", background: groupBy === o.id ? "#EEF0F4" : "none", border: "none", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
+                        {o.id === "profile" ? "Profile (Investor / Founder / Advisor)" : o.label}
+                        {groupBy === o.id && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
         <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>+ Add contact</button>
       </div>
 
@@ -419,13 +494,13 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
         </div>
       )}
 
-      {(openFilter || openColPicker || filtersOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+      {(openFilter || openColPicker || filtersOpen || groupByOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); setGroupByOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
       {canBulkAssign && selectionCount > 0 && (
         <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 500 }}>{selectAllMatching ? `All ${matchingTotal.toLocaleString()} matching selected` : `${selected.size.toLocaleString()} selected`}</span>
-            {!selectAllMatching && allLoadedSelected && matchingTotal > selected.size && (
+            {groupBy === "profile" && !selectAllMatching && allLoadedSelected && matchingTotal > selected.size && (
               <button onClick={() => setSelectAllMatching(true)} style={{ fontSize: 12.5, color: "#185FA5", background: "none", border: "none", textDecoration: "underline", cursor: "pointer", padding: 0 }}>Select all {matchingTotal.toLocaleString()} matching this filter</button>
             )}
             <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
@@ -536,9 +611,12 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           );
         })()}
 
-        {GROUP_DEFS.map((g) => {
+        {(groupBy === "profile"
+          ? GROUP_DEFS.map((g) => ({ id: g.id as string, label: g.label as string, count: facets.counts[g.id] ?? groups[g.id]?.total ?? 0 }))
+          : dynGroups
+        ).map((g) => {
           const gs = groups[g.id];
-          const count = facets.counts[g.id] ?? gs?.total ?? 0;
+          const count = g.count;
           const isOpen = !!expanded[g.id];
           return (
             <div key={g.id}>
@@ -589,8 +667,18 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
             </div>
           );
         })}
+        {groupBy !== "profile" && dynLoading && dynGroups.length === 0 && (
+          <p style={{ padding: "16px", fontSize: 12.5, color: "var(--muted-foreground)", borderTop: "0.5px solid #e2e6ed" }}>Computing groups…</p>
+        )}
+        {groupBy !== "profile" && !dynLoading && dynGroups.length === 0 && (
+          <p style={{ padding: "16px", fontSize: 12.5, color: "var(--muted-foreground)", borderTop: "0.5px solid #e2e6ed" }}>No contacts match the current filters.</p>
+        )}
       </div>
-      <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "10px 2px 0" }}>Grouped by membership type from Odoo (Entrepreneur shows as Founders). Click a column heading to sort, the filter icon to narrow by value, or Columns to choose what shows. Counts and filters run across all synced contacts.</p>
+      <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "10px 2px 0" }}>
+        {groupBy === "profile"
+          ? "Grouped by membership type from Odoo (Entrepreneur shows as Founders). Click a column heading to sort, the filter icon to narrow by value, or Columns to choose what shows. Counts and filters run across all synced contacts."
+          : `Grouped by ${groupByLabel.toLowerCase()}. Groups are collapsed — open one to load its contacts. Group by stacks on Filters, so you can narrow the set (e.g. Investors in FinTech) and then group. Counts run across all matching contacts.`}
+      </p>
     </div>
   );
 }

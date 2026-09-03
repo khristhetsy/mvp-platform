@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
 import { applyContactFilters } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
+import { GROUP_DIMS, isGroupBy } from "@/lib/sales/contact-grouping";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,12 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Match by contact_type OR module so promoted Form D contacts (which are keyed by
   // module, like the Founder/Investor CRM pages) always land in the right group.
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
+  // Generic "Group by <dimension>": page within one bucket of any dimension
+  // (industry, investor type, country, salesperson, month, …). Same filter the
+  // group-count endpoint used to bucket, so the rows match the header count.
+  const groupBy = p.get("groupBy");
+  const groupValue = p.get("groupValue");
+  if (groupBy && isGroupBy(groupBy) && groupValue != null) query = GROUP_DIMS[groupBy].applyFilter(query, groupValue);
   query = applyContactFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
