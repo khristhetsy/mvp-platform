@@ -23,6 +23,8 @@ type NextBestActionsPanelProps = {
   viewAllHref?: string;
   /** When true, hides complete/dismiss/snooze/escalate controls (view-only). */
   readOnly?: boolean;
+  /** When true, omits the panel's own title header (a wrapper provides one). */
+  hideHeader?: boolean;
 };
 
 type LifecycleAction = "complete" | "dismiss" | "snooze" | "escalate";
@@ -54,6 +56,7 @@ export function NextBestActionsPanel({
   showEscalate = false,
   viewAllHref,
   readOnly = false,
+  hideHeader = false,
 }: Readonly<NextBestActionsPanelProps>) {
   const t = useTranslations("actions");
   const panelTitle =
@@ -170,25 +173,27 @@ export function NextBestActionsPanel({
       className={`rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}
       aria-label={panelTitle}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-950">{panelTitle}</h2>
-            {readOnly ? (
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                {t("viewOnly")}
-              </span>
-            ) : null}
+      {hideHeader ? null : (
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-950">{panelTitle}</h2>
+              {readOnly ? (
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  {t("viewOnly")}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">{t("subtitle")}</p>
           </div>
-          <p className="mt-1 text-xs text-slate-500">{t("subtitle")}</p>
+          <Link
+            href={allActionsHref}
+            className="shrink-0 text-xs font-semibold text-[var(--blue)] hover:text-[var(--blue-hover)]"
+          >
+            {t("viewAll")}
+          </Link>
         </div>
-        <Link
-          href={allActionsHref}
-          className="shrink-0 text-xs font-semibold text-[var(--blue)] hover:text-[var(--blue-hover)]"
-        >
-          {t("viewAll")}
-        </Link>
-      </div>
+      )}
 
       <div className="flex gap-1 border-b border-slate-100 px-4 pt-3 sm:px-5">
         {VIEW_TABS.map((tab) => {

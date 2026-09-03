@@ -26,6 +26,7 @@ import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { canSeeCard, canActOnCard } from "@/lib/rbac/dashboard-cards";
 import { getPersonalDashboard } from "@/lib/dashboard/personal";
 import { PersonalDashboard } from "@/components/admin/PersonalDashboard";
+import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 
 export const dynamic = "force-dynamic";
 
@@ -150,17 +151,26 @@ export default async function AdminDashboardPage() {
           </span>
         </div>
       </div>
-      {showCard("platform_health") ? <AdminPlatformHealthWidget /> : null}
+      {showCard("platform_health") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-heartbeat" tone="teal" title="Platform health" subtitle="Reviews, intros, compliance & approvals at a glance">
+            <AdminPlatformHealthWidget headerless />
+          </WorkspaceSection>
+        </div>
+      ) : null}
       {showCard("next_best_actions") ? (
         <div className="mb-6 px-1">
-          <NextBestActionsPanel
-            role={adminRole}
-            initialActions={nextBestActions.actions}
-            limit={5}
-            showEscalate
-            readOnly={!canActOnCard("next_best_actions", permissions)}
-            viewAllHref="/admin/actions?priority=critical"
-          />
+          <WorkspaceSection icon="ti-checklist" tone="amber" title="Operational priorities" subtitle="Prioritized workflow actions with lifecycle tracking">
+            <NextBestActionsPanel
+              role={adminRole}
+              initialActions={nextBestActions.actions}
+              limit={5}
+              showEscalate
+              hideHeader
+              readOnly={!canActOnCard("next_best_actions", permissions)}
+              viewAllHref="/admin/actions?priority=critical"
+            />
+          </WorkspaceSection>
         </div>
       ) : null}
       {showCard("upcoming_meetings") ? (

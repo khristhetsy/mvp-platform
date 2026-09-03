@@ -30,7 +30,7 @@ const COUNT_CLASS: Record<Severity, string> = {
   critical: "text-red-700",
 };
 
-export async function AdminPlatformHealthWidget() {
+export async function AdminPlatformHealthWidget({ headerless = false }: { headerless?: boolean } = {}) {
   const t = await getTranslations("admin.platformHealth");
   const admin = createServiceRoleClient();
 
@@ -102,26 +102,28 @@ export async function AdminPlatformHealthWidget() {
   const allClear      = criticalCount === 0 && warningCount === 0;
 
   return (
-    <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
-        <h2 className="text-sm font-semibold text-slate-900">{t("title")}</h2>
-        {criticalCount > 0 && (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-            {t("critical", { count: criticalCount })}
-          </span>
-        )}
-        {warningCount > 0 && criticalCount === 0 && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-            {t("needsAttention", { count: warningCount })}
-          </span>
-        )}
-        {allClear && (
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-            {t("allClear")}
-          </span>
-        )}
-      </div>
+    <div className={`overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${headerless ? "" : "mb-6"}`}>
+      {/* Header — suppressed when wrapped in a collapsible WorkspaceSection */}
+      {headerless ? null : (
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+          <h2 className="text-sm font-semibold text-slate-900">{t("title")}</h2>
+          {criticalCount > 0 && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+              {t("critical", { count: criticalCount })}
+            </span>
+          )}
+          {warningCount > 0 && criticalCount === 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+              {t("needsAttention", { count: warningCount })}
+            </span>
+          )}
+          {allClear && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+              {t("allClear")}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Grid of health items */}
       <div className="grid grid-cols-2 gap-px bg-slate-100 lg:grid-cols-4">
