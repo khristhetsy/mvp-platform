@@ -75,7 +75,9 @@ function facetDim(id: string, key: string, label: string): Dim {
     // plain filter passes the jsonb operand verbatim.
     applyFilter: (query, value) =>
       value === NONE
-        ? query.or(`raw->__profile->${key}.is.null`)
+        // Unassigned = key missing/null OR an empty array (extract() buckets both
+        // as NONE, so the filter must match both or the count won't equal the rows).
+        ? query.or(`raw->__profile->${key}.is.null,raw->__profile->>${key}.eq.[]`)
         : query.filter(`raw->__profile->${key}`, "cs", JSON.stringify([value])),
   };
 }
@@ -95,7 +97,9 @@ export const GROUP_DIMS: Record<string, Dim> = {
     id: "leadSource", label: "Lead source", section: "facets",
     extract: (r) => { const v = leadSourceOf(r); return v ? [v] : []; },
     applyFilter: (query, value) => {
-      if (value === NONE) return query.or(`raw->__profile->>leadSource.is.null`);
+      // Unassigned = BOTH the override and the profile lead source are null
+      // (extract() only buckets a row NONE when neither is set).
+      if (value === NONE) return query.is("overrides->lead_source", null).is("raw->__profile->leadSource", null);
       // Double-quote the value so spaces/commas (e.g. "SEC Form D") survive the
       // or() logic-tree parser; strip quotes/backslashes that would break it.
       const safe = value.replace(/["\\]/g, "");

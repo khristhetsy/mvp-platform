@@ -250,7 +250,7 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   // The matching set changes with the filters — clear any selection so a stale
   // "select all matching" can't apply to a different set.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on filter change
-  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); }, [paramsStr, role]);
+  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); }, [paramsStr, role, groupBy]);
 
   // Open/close a group. Opening one that hasn't been loaded yet (or is mid-load)
   // triggers its first fetch — this is what defers the cost off the initial render.
