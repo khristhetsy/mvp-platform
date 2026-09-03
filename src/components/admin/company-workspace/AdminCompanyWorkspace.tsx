@@ -23,6 +23,7 @@ import { getStageMirror, stageLabel } from "@/lib/admin/stage-menu-mirror";
 import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
 import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
+import { CompanyActivityLog } from "@/components/admin/company-workspace/CompanyActivityLog";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
@@ -338,6 +339,10 @@ export function AdminCompanyWorkspace({
 
           <WorkspaceSection icon="ti-timeline" tone="blue" title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
             <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />
+          </WorkspaceSection>
+
+          <WorkspaceSection icon="ti-history" tone="gray" title="Activity log" subtitle="Reminder & gate activity — click a row to expand">
+            <CompanyActivityLog companyId={data.company.id} />
           </WorkspaceSection>
 
           <WorkspaceSection icon="ti-messages" tone="teal" title={t("team_discussion")} subtitle={t("entity_scoped_comments_not_investor_messagin")}>
