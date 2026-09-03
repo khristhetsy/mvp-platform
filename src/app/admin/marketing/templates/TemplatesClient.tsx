@@ -131,6 +131,7 @@ const DEPT_META: Record<string, { icon: string; color: string }> = {
   Events: { icon: "ti-calendar-event", color: "#199e70" },
   [UNASSIGNED]: { icon: "ti-folder", color: "#5F5E5A" },
 };
+const SORT_LABELS: Record<SortKey, string> = { edited: "Recently edited", name: "Name A–Z", status: "Status", department: "Department" };
 
 export function TemplatesClient({ templates, initialEditId }: { templates: MarketingTemplate[]; initialEditId?: string }) {
   const router = useRouter();
@@ -150,6 +151,8 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   const [sort, setSort] = useState<SortKey>("name");
   const [groupByDept, setGroupByDept] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
   // Optimistic department overrides so a "Move" reflects instantly before refresh.
   const [deptOverride, setDeptOverride] = useState<Record<string, string>>({});
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
@@ -259,6 +262,14 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
     const id = setTimeout(() => openEditor(t), 0);
     return () => clearTimeout(id);
   }, [initialEditId, templates]);
+
+  // Close the sort dropdown on an outside click.
+  useEffect(() => {
+    if (!sortOpen) return;
+    const onDown = (e: MouseEvent) => { if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [sortOpen]);
 
   /**
    * Duplicate a template: copies subject/body/blocks into a new DRAFT named
@@ -374,17 +385,29 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
             <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 10px", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /> Grid</button>
           </div>
           <button onClick={() => setGroupByDept((v) => !v)} style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "#fff", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", fontWeight: 500 }}><i className="ti ti-layout-list" aria-hidden="true" /> Group: Department</button>
-          <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
-            <option value="edited">Recently edited</option>
-            <option value="name">Name A–Z</option>
-            <option value="status">Status</option>
-            <option value="department">Department</option>
-          </select>
-          {archivedCount > 0 && (
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer" }}>
-              <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} style={{ width: 13, height: 13 }} /> Show archived ({archivedCount})
-            </label>
-          )}
+          <div style={{ position: "relative" }} ref={sortRef}>
+            <button onClick={() => setSortOpen((v) => !v)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: sortOpen ? "#F5F9FF" : "#fff", color: "var(--foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {SORT_LABELS[sort]} <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
+            </button>
+            {sortOpen && (
+              <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, zIndex: 30, width: 220, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 9, boxShadow: "0 12px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
+                <div style={{ padding: "7px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>Sort by</div>
+                {(["edited", "name", "status", "department"] as const).map((val) => (
+                  <button key={val} onClick={() => { setSort(val); setSortOpen(false); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: sort === val ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
+                    {SORT_LABELS[val]}{sort === val && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
+                  </button>
+                ))}
+                {archivedCount > 0 && (
+                  <>
+                    <div style={{ borderTop: "0.5px solid #eef1f5" }} />
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", fontSize: 12, cursor: "pointer", color: "var(--foreground)" }}>
+                      <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} style={{ width: 13, height: 13 }} /> Show archived <span style={{ color: "var(--muted-foreground)" }}>({archivedCount})</span>
+                    </label>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           <label style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
             ↑ Upload HTML
             <input
