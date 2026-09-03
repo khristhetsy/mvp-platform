@@ -23,6 +23,19 @@ const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> =
   cancelled: { bg: "#FCEBEB", color: "#A32D2D", label: "Cancelled" },
 };
 
+// Department is a separate grouping axis from group_type (audience). Mirrors the
+// Templates library so campaigns can be filed under a team and folded away.
+const DEPARTMENTS = ["Sales", "Investor Relations", "Marketing", "Administration", "Events"] as const;
+const UNASSIGNED = "Unassigned";
+const DEPT_META: Record<string, { icon: string; color: string }> = {
+  "Sales":              { icon: "ti-shopping-cart",  color: "#0F6E56" },
+  "Investor Relations": { icon: "ti-briefcase",      color: "#534AB7" },
+  "Marketing":          { icon: "ti-speakerphone",   color: "#BA7517" },
+  "Administration":     { icon: "ti-settings",        color: "#5F5E5A" },
+  "Events":             { icon: "ti-calendar-event", color: "#199E70" },
+  [UNASSIGNED]:         { icon: "ti-folder",          color: "#5F5E5A" },
+};
+
 type CampaignDetail = {
   id: string; name: string; status: string; from_name: string; from_email: string;
   reply_to: string | null; list_id: string | null; template_id: string | null;
@@ -61,7 +74,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [drawerTab, setDrawerTab] = useState<"analytics" | "preview">("analytics");
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", from_name: "", from_email: "", reply_to: "", list_id: "", template_id: "", scheduled_at: "" });
+  const [editForm, setEditForm] = useState({ name: "", from_name: "", from_email: "", reply_to: "", list_id: "", template_id: "", scheduled_at: "", department: "" });
   const [form, setForm] = useState({
     name: "",
     list_id: lists[0]?.id ?? "",
@@ -71,11 +84,32 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     reply_to: defaultSender?.replyTo || "admin@myicfos.com",
     scheduled_at: "",
     group_type: "founder",
+    department: "",
   });
   const [customFrom, setCustomFrom] = useState(false);
   const [groupFilter, setGroupFilter] = useState<"all" | "founder" | "investor" | "event">("all");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [sortKey, setSortKey] = useState<"created" | "name" | "opens">("created");
+  const [sortKey, setSortKey] = useState<"created" | "name" | "opens">("name");
+  // Department grouping (separate axis from the founder/investor/event audience filter).
+  const [groupByDept, setGroupByDept] = useState(true);
+  const [openDepts, setOpenDepts] = useState<Record<string, boolean>>({}); // collapsed by default
+  const [deptOverride, setDeptOverride] = useState<Record<string, string>>({}); // optimistic Move
+  const [moveOpen, setMoveOpen] = useState<string | null>(null);
+  const deptOf = (c: MarketingCampaign) => (deptOverride[c.id] ?? c.department) || UNASSIGNED;
+
+  async function moveToDepartment(c: MarketingCampaign, dept: string) {
+    setMoveOpen(null);
+    setDeptOverride((m) => ({ ...m, [c.id]: dept })); // optimistic
+    try {
+      await fetch(`/api/marketing/campaigns/${c.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ department: dept === UNASSIGNED ? null : dept }),
+      });
+    } catch (err) {
+      console.error("Failed to move campaign department:", err);
+    }
+  }
 
   // Deep-link from the Prospects wizard: ?new=<listId> opens the composer with
   // that list pre-filled as the audience (?new=1 just opens the composer).
@@ -116,6 +150,9 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     setSaving(true);
     try {
       const body: Record<string, string> = { ...form, status: "draft" };
+      // Omit an empty department so create still works before the column migration
+      // is applied; a picked department is inserted straight onto the campaign.
+      if (!form.department) delete body.department;
       // Convert the local datetime-picker value to an absolute UTC instant so the
       // scheduled send fires at the intended local time (not misread as UTC).
       if (form.scheduled_at) body.scheduled_at = new Date(form.scheduled_at).toISOString();
@@ -282,6 +319,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       list_id: analyticsData.list_id ?? "",
       template_id: analyticsData.template_id ?? "",
       scheduled_at: analyticsData.scheduled_at ? toLocalInput(analyticsData.scheduled_at) : "",
+      department: (analyticsData as { department?: string | null }).department ?? "",
     });
     setEditing(true);
   }
@@ -298,6 +336,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         list_id: editForm.list_id || null,
         template_id: editForm.template_id || null,
         scheduled_at: editForm.scheduled_at ? new Date(editForm.scheduled_at).toISOString() : null,
+        department: editForm.department || null,
       };
       const res = await fetch(`/api/marketing/campaigns/${analyticsId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -406,6 +445,14 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               </select>
             </div>
             <div>
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Department</label>
+              <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
+                <option value="">— Unassigned —</option>
+                {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div>
               <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Audience list</label>
               <select value={form.list_id} onChange={(e) => setForm({ ...form, list_id: e.target.value })}
                 style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
@@ -489,6 +536,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => setGroupByDept((v) => !v)}
+            title="Group campaigns under collapsible department headers"
+            style={{ fontSize: 11.5, borderRadius: 6, padding: "5px 11px", border: groupByDept ? "0.5px solid #B5D4F4" : "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "transparent", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <i className="ti ti-layout-list" aria-hidden="true" /> {groupByDept ? "Group: Department" : "Group: Off"}
+          </button>
           <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
             <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 9px", background: view === "list" ? "#1A6CE4" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /></button>
             <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 9px", background: view === "grid" ? "#1A6CE4" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
@@ -510,13 +562,13 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       {(() => { const visible = campaigns
           .filter((c) => (showArchived || !c.archived) && (groupFilter === "all" || c.group_type === groupFilter))
           .sort((a, b) => sortKey === "name" ? a.name.localeCompare(b.name) : sortKey === "opens" ? (b.stat_opened ?? 0) - (a.stat_opened ?? 0) : (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-        return visible.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
-          {campaigns.length === 0 ? "No campaigns yet. Create your first one above." : "No campaigns match this filter."}
-        </div>
-      ) : (
-        <div style={{ display: view === "list" ? "flex" : "grid", flexDirection: view === "list" ? "column" : undefined, gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, gap: view === "list" ? 8 : 14 }}>
-          {visible.map((c) => {
+        if (visible.length === 0) return (
+          <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
+            {campaigns.length === 0 ? "No campaigns yet. Create your first one above." : "No campaigns match this filter."}
+          </div>
+        );
+        const gridStyle: React.CSSProperties = { display: view === "list" ? "flex" : "grid", flexDirection: view === "list" ? "column" : undefined, gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, gap: view === "list" ? 8 : 14 };
+        const renderCard = (c: MarketingCampaign) => {
             const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
             const scheduledAt = (c as Record<string, unknown>).scheduled_at as string | null | undefined;
             return (
@@ -597,6 +649,31 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     {c.archived ? "Unarchive" : "Archive"}
                   </button>
+                  <div style={{ position: "relative" }}>
+                    <button onClick={() => setMoveOpen(moveOpen === c.id ? null : c.id)}
+                      title="File this campaign under a department"
+                      style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <i className={`ti ${DEPT_META[deptOf(c)].icon}`} style={{ color: DEPT_META[deptOf(c)].color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
+                    </button>
+                    {moveOpen === c.id && (
+                      <>
+                        <div onClick={() => setMoveOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 41, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, boxShadow: "0 6px 18px rgb(12 35 64 / 0.14)", minWidth: 190, overflow: "hidden", padding: "4px 0" }}>
+                          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted-foreground)", padding: "6px 12px 4px" }}>Move to department</div>
+                          {[...DEPARTMENTS, UNASSIGNED].map((d) => {
+                            const cur = deptOf(c) === d;
+                            return (
+                              <button key={d} onClick={() => void moveToDepartment(c, d)}
+                                style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
+                                <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}
+                                {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   {["draft", "paused", "scheduled"].includes(c.status) && (
                     <button onClick={() => handleAction(c.id, "cancel")} disabled={acting === c.id + "cancel"}
                       style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
@@ -611,9 +688,31 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                 </div>
               </div>
             );
-          })}
-        </div>
-      ); })()}
+        };
+        if (!groupByDept) return <div style={gridStyle}>{visible.map(renderCard)}</div>;
+        const grouped = [...DEPARTMENTS, UNASSIGNED]
+          .map((dept) => ({ dept, items: visible.filter((c) => deptOf(c) === dept) }))
+          .filter((g) => g.items.length > 0);
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {grouped.map(({ dept, items }) => {
+              const open = !!openDepts[dept];
+              return (
+                <div key={dept} style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "var(--muted)" }}>
+                  <button onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}><polyline points="9 6 15 12 9 18" /></svg>
+                    <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
+                    <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
+                  </button>
+                  {open && <div style={{ ...gridStyle, padding: 12 }}>{items.map(renderCard)}</div>}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Analytics drill-down drawer — portalled to body so it isn't trapped by overflow ancestors */}
       {analyticsId && typeof document !== "undefined" && createPortal(
@@ -685,7 +784,7 @@ function ScheduleButton({ onSchedule, acting }: { onSchedule: (at: string) => vo
   );
 }
 
-type EditForm = { name: string; from_name: string; from_email: string; reply_to: string; list_id: string; template_id: string; scheduled_at: string };
+type EditForm = { name: string; from_name: string; from_email: string; reply_to: string; list_id: string; template_id: string; scheduled_at: string; department: string };
 
 function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onCancel, senders = [] }: {
   form: EditForm; setForm: (f: EditForm) => void; lists: MarketingList[]; templates: MarketingTemplate[];
@@ -741,9 +840,18 @@ function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onC
             </select>
           </div>
         </div>
-        <div>
-          <label style={lbl}>Scheduled send</label>
-          <input type="datetime-local" value={form.scheduled_at} onChange={(e) => set({ scheduled_at: e.target.value })} style={inp} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={lbl}>Scheduled send</label>
+            <input type="datetime-local" value={form.scheduled_at} onChange={(e) => set({ scheduled_at: e.target.value })} style={inp} />
+          </div>
+          <div>
+            <label style={lbl}>Department</label>
+            <select value={form.department} onChange={(e) => set({ department: e.target.value })} style={inp}>
+              <option value="">— Unassigned —</option>
+              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 16, borderTop: "0.5px solid var(--border)" }}>

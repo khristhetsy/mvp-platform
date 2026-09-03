@@ -21,6 +21,10 @@ export type MarketingList = {
   id: string;
   name: string;
   description: string | null;
+  /** Owning department for grouping/sorting on the Lists page. Null = Unassigned. */
+  department?: string | null;
+  /** Hidden from the Lists page by default when true. */
+  archived?: boolean;
   created_at: string;
   updated_at: string;
   contact_count?: number;
@@ -71,6 +75,8 @@ export type MarketingCampaign = {
   updated_at: string;
   archived?: boolean;
   group_type?: "founder" | "investor" | "event" | null;
+  /** Owning department for grouping/sorting on the Campaigns page. Null = Unassigned. Separate axis from group_type. */
+  department?: string | null;
   // joined
   list?: MarketingList | null;
   template?: MarketingTemplate | null;
