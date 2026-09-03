@@ -31,12 +31,16 @@ export async function GET(): Promise<NextResponse> {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await requireRole(["admin"]);
-    const { name, description } = await req.json();
+    const { name, description, department } = await req.json();
     if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
     const db = await marketingDb();
+    const insert: Record<string, unknown> = { name: name.trim(), description: description?.trim() || null };
+    // Only touch the department column when a value is supplied, so create still
+    // works before the department/archive migration is applied.
+    if (department) insert.department = department;
     const { data, error } = await db
       .from("marketing_lists")
-      .insert({ name: name.trim(), description: description?.trim() || null })
+      .insert(insert)
       .select()
       .single();
     if (error) throw error;

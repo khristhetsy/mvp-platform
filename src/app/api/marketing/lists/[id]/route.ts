@@ -14,6 +14,8 @@ export async function PATCH(
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (body.name !== undefined) update.name = body.name.trim();
     if (body.description !== undefined) update.description = body.description?.trim() || null;
+    if (body.department !== undefined) update.department = body.department || null;
+    if (body.archived !== undefined) update.archived = !!body.archived;
     const { data, error } = await db
       .from("marketing_lists")
       .update(update)
