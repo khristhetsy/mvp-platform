@@ -13,6 +13,8 @@ import { canUser } from "@/lib/rbac/effective-permissions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { resolveCompanyDependencies } from "@/lib/automation/dependencies";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { computeCompanyReadinessRiskSignals } from "@/lib/predictive-intelligence/readiness-risk";
 import type { RiskSignal } from "@/lib/predictive-intelligence/types";
@@ -80,6 +82,18 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
     }
   }
 
+  // Investor access is a paid entitlement — used to plan-gate the reach-out card's
+  // upgrade note (Basic and up can distribute; Free cannot).
+  let founderCanDistribute = false;
+  if (workspace?.founder?.id && serviceRoleConfigured) {
+    try {
+      const plan = await getUserPlan(workspace.founder.id);
+      founderCanDistribute = founderEntitlements(plan).canDistribute;
+    } catch {
+      founderCanDistribute = false;
+    }
+  }
+
   return (
     <AppShell
       role="ADMIN"
@@ -113,6 +127,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 riskSignals={companyRiskSignals}
                 founderContactId={founderContactId}
                 canActOnBehalf={canActOnBehalf}
+                founderCanDistribute={founderCanDistribute}
               />
               {workspace.founder?.id ? (
                 <>

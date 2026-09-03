@@ -24,6 +24,7 @@ export function StageMenuMirror({
   companyId = null,
   founderName = "the founder",
   founderEmail = null,
+  reachOutHref,
 }: Readonly<{
   journey: FounderJourneyState;
   stage: JourneyStage;
@@ -32,6 +33,9 @@ export function StageMenuMirror({
   companyId?: string | null;
   founderName?: string;
   founderEmail?: string | null;
+  /** When set, the banner shows a jump-link to a combined reach-out card instead of
+   *  opening its own modal (avoids two entry points on stages that render that card). */
+  reachOutHref?: string;
 }>) {
   const mirror = getStageMirror(journey, stage);
   const pendingItems = mirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
@@ -43,13 +47,22 @@ export function StageMenuMirror({
         <i className="ti ti-sparkles mt-0.5 text-indigo-600" aria-hidden="true" />
         <p className="flex-1 text-[12.5px] leading-relaxed text-indigo-900">{mirror.recommendation}</p>
         {companyId && pendingItems.length > 0 ? (
-          <ReachOutPanel
-            companyId={companyId}
-            founderName={founderName}
-            founderEmail={founderEmail}
-            stageLabel={stageLabel(stage)}
-            pendingItems={pendingItems}
-          />
+          reachOutHref ? (
+            <a
+              href={reachOutHref}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <i className="ti ti-mail" aria-hidden="true" /> Reach out to founder
+            </a>
+          ) : (
+            <ReachOutPanel
+              companyId={companyId}
+              founderName={founderName}
+              founderEmail={founderEmail}
+              stageLabel={stageLabel(stage)}
+              pendingItems={pendingItems}
+            />
+          )
         ) : null}
       </div>
 

@@ -19,7 +19,8 @@ import { PageSection } from "@/components/ui/workspace-layout";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
-import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
+import { ReachOutCard } from "@/components/admin/company-workspace/ReachOutCard";
+import { getStageMirror, stageLabel } from "@/lib/admin/stage-menu-mirror";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
@@ -56,6 +57,7 @@ export function AdminCompanyWorkspace({
   riskSignals = [],
   founderContactId = null,
   canActOnBehalf = false,
+  founderCanDistribute = false,
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
   nextBestActions?: NextBestAction[];
@@ -64,11 +66,16 @@ export function AdminCompanyWorkspace({
   riskSignals?: RiskSignal[];
   founderContactId?: string | null;
   canActOnBehalf?: boolean;
+  founderCanDistribute?: boolean;
 }>) {
   const founderId = data.founder?.id ?? null;
   const founderName = data.founder?.full_name ?? data.founder?.email ?? "the founder";
   const founderEmail = data.founder?.email ?? null;
   const companyId = data.company.id;
+  // Pending gates for the Onboarding (initialize) stage — the reach-out draft
+  // summarizes these, and the count drives the card + banner jump-link.
+  const initMirror = getStageMirror(data.journey, "initialize");
+  const initPendingItems = initMirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
   const t = useTranslations("adminCmp");
   const [tab, setTab] = useState<TabKey>("initialize");
 
@@ -186,7 +193,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- INITIALIZE ---------- */}
       {tab === "initialize" ? (
         <div className="space-y-6">
-          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} reachOutHref={initPendingItems.length > 0 ? "#reach-out-founder" : undefined} />
 
           <CompanyWorkspaceMetrics data={data} />
 
@@ -194,12 +201,16 @@ export function AdminCompanyWorkspace({
             <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
           </PageSection>
 
-          <DraftEmailPanel
-            role={adminRole}
-            entityType="company"
-            entityId={data.company.id}
-            defaultTemplate="admin_company_review_followup"
-          />
+          {companyId && initPendingItems.length > 0 ? (
+            <ReachOutCard
+              companyId={companyId}
+              founderName={founderName}
+              founderEmail={founderEmail}
+              stageLabel={stageLabel("initialize")}
+              pendingItems={initPendingItems}
+              founderCanDistribute={founderCanDistribute}
+            />
+          ) : null}
 
           {workflowDependencies.length > 0 ? (
             <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("company_workflow_blockers")} />
