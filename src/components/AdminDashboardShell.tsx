@@ -51,14 +51,19 @@ export function AdminDashboardShell({
       serviceRoleConfigured={serviceRoleConfigured}
     >
       <WorkspacePageContainer>
-        <div className="flex items-start gap-2">
+        {/* Whole header toggles collapse — but clicks on the action links/buttons
+            inside pass through (navigate) instead of folding. */}
+        <div
+          onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) toggle(); }}
+          className="flex cursor-pointer select-none items-start gap-2"
+        >
           <button
             type="button" onClick={toggle} aria-expanded={open}
             aria-label={open ? "Collapse Operations Command Center" : "Expand Operations Command Center"}
             className="mt-1 shrink-0 rounded p-0.5 hover:bg-slate-100"
           >
             <svg
-              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8"
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b"
               strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
               className="transition-transform duration-150" style={{ transform: open ? "rotate(90deg)" : "none" }}
             >
