@@ -224,6 +224,16 @@ function ProfileDropdown({
     return () => document.removeEventListener("click", onClick, true);
   }, []);
 
+  // Safety net: also warn on tab close, reload, or typing a new URL in the address
+  // bar. Browsers show their own generic "Leave site?" here (custom text/buttons
+  // aren't allowed on this event). Client-side route pushes (in-app nav, sign out)
+  // don't fire beforeunload, so ordinary navigation inside the app stays silent.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   // Runtime 4-step-nav toggle (build flag is the default until the fetch lands).
   const [founderNavV2, setFounderNavV2] = useState<boolean>(isFounderNavV2Enabled());
   useEffect(() => {
