@@ -21,6 +21,8 @@ import { CollaborationDiscussionPanel } from "@/components/collaboration/Collabo
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import { ReachOutCard } from "@/components/admin/company-workspace/ReachOutCard";
 import { getStageMirror, stageLabel } from "@/lib/admin/stage-menu-mirror";
+import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
+import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
@@ -34,15 +36,15 @@ import { NotificationSettings } from "@/components/admin/company-workspace/Notif
 import { SubscriptionManager } from "@/components/admin/company-workspace/SubscriptionManager";
 import { CompanyBasicsEditor } from "@/components/admin/company-workspace/CompanyBasicsEditor";
 
-// Display labels mirror the founder's Stage 1–4 vocabulary; the underlying keys
-// (initialize/qualify/deploy/optimize) are the engine slugs and stay unchanged.
-// Review is kept but moved after the four stages so they read 1–2–3–4 in order.
+// Overview is the at-a-glance dashboard (default landing) — it holds the cross-cutting
+// cards + staff controls. The stage keys (initialize/qualify/deploy/optimize) are the
+// engine slugs and stay unchanged; the old standalone Review tab folded into Overview.
 const TABS = [
+  { key: "overview", label: "Overview" },
   { key: "initialize", label: "Onboarding" },
   { key: "qualify", label: "Preparation" },
   { key: "deploy", label: "Marketing" },
   { key: "optimize", label: "Closing" },
-  { key: "review", label: "Review" },
   { key: "tools", label: "Analytics & Tools" },
   { key: "settings", label: "Settings" },
 ] as const;
@@ -77,7 +79,7 @@ export function AdminCompanyWorkspace({
   const initMirror = getStageMirror(data.journey, "initialize");
   const initPendingItems = initMirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
   const t = useTranslations("adminCmp");
-  const [tab, setTab] = useState<TabKey>("initialize");
+  const [tab, setTab] = useState<TabKey>("overview");
 
   // Tabs are URL-hash addressable (#qualify, #deploy, …) so metric cards, workflow
   // blockers, and queue items can deep-link to a tab. Plain-anchor hash links fire
@@ -187,14 +189,12 @@ export function AdminCompanyWorkspace({
         </nav>
       </div>
 
-      {/* Company header — title, badges, actions; metric cards live on Initialize only */}
+      {/* Company header — title, badges, actions */}
       <CompanyWorkspaceHeader data={data} showMetrics={false} />
 
-      {/* ---------- INITIALIZE ---------- */}
-      {tab === "initialize" ? (
+      {/* ---------- OVERVIEW (dashboard, default) ---------- */}
+      {tab === "overview" ? (
         <div className="space-y-6">
-          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} reachOutHref={initPendingItems.length > 0 ? "#reach-out-founder" : undefined} />
-
           <CompanyWorkspaceMetrics data={data} />
 
           <PageSection title="Founder Progress" subtitle="Current stage, gates, and what's pending to advance">
@@ -232,6 +232,31 @@ export function AdminCompanyWorkspace({
           <PageSection title={t("active_queues")} subtitle={t("items_affecting_this_company_across_operatio")}>
             <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
           </PageSection>
+
+          {/* Staff controls — review/publish, stage override, and the destructive
+              delete all live here on the dashboard (were spread across tabs / page). */}
+          {reviewMarketplace}
+
+          {data.founder ? (
+            <>
+              <FounderStageOverride
+                founderId={data.founder.id}
+                founderName={data.founder.full_name ?? data.founder.email ?? null}
+              />
+              <DeleteUserDangerZone
+                userId={data.founder.id}
+                userName={data.founder.full_name ?? null}
+                userEmail={data.founder.email ?? null}
+              />
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ---------- INITIALIZE (Onboarding) — founder menu mirror only ---------- */}
+      {tab === "initialize" ? (
+        <div className="space-y-6">
+          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
         </div>
       ) : null}
 
@@ -273,9 +298,6 @@ export function AdminCompanyWorkspace({
           {spvOperations}
         </div>
       ) : null}
-
-      {/* ---------- REVIEW ---------- */}
-      {tab === "review" ? <div className="space-y-6">{reviewMarketplace}</div> : null}
 
       {/* ---------- OPTIMIZE ---------- */}
       {tab === "optimize" ? (
