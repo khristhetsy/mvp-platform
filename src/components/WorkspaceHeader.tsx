@@ -250,7 +250,6 @@ function ProfileDropdown({
   const items = tidyDividers(menuItemsForWorkspace(workspace, founderNavV2).filter(canShow));
 
   return (
-    <>
     <div ref={ref} className="relative">
       <button
         type="button"
@@ -326,18 +325,6 @@ function ProfileDropdown({
         </div>
       ) : null}
     </div>
-    {/* Always-visible Exit — same confirm as Sign out, then logs out and returns home. */}
-    <button
-      type="button"
-      aria-label="Exit iCapOS"
-      disabled={signingOut}
-      onClick={() => void handleSignOut()}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60 transition-colors"
-    >
-      <LogOut className="h-4 w-4 shrink-0" aria-hidden />
-      <span className="hidden sm:inline">{signingOut ? "Exiting…" : "Exit"}</span>
-    </button>
-    </>
   );
 }
 
