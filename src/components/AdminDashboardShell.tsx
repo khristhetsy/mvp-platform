@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCommandHeader } from "@/components/admin/dashboard/AdminCommandHeader";
 import { AdminInvestorActivityPanels } from "@/components/admin/dashboard/AdminInvestorActivityPanels";
@@ -36,6 +37,13 @@ export function AdminDashboardShell({
   const companyUpdateCount = companyCards.reduce((sum, company) => sum + company.company_updates_published_count, 0);
   const can = (id: DashboardCardId) => canSeeCard(id, permissions);
 
+  // Collapsible like the WorkspaceSection cards — its own header (AdminCommandHeader)
+  // gets a chevron; the body folds. Choice remembered per browser.
+  const [open, setOpen] = useState(true);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- restore collapsed choice after mount
+  useEffect(() => { try { if (window.localStorage.getItem("cw.section.Operations Command Center") === "0") setOpen(false); } catch { /* ignore */ } }, []);
+  const toggle = () => setOpen((o) => { const n = !o; try { window.localStorage.setItem("cw.section.Operations Command Center", n ? "1" : "0"); } catch { /* ignore */ } return n; });
+
   return (
     <AdminActionHealthProvider
       userId={userId}
@@ -43,8 +51,26 @@ export function AdminDashboardShell({
       serviceRoleConfigured={serviceRoleConfigured}
     >
       <WorkspacePageContainer>
-        <AdminCommandHeader pendingCount={pendingCount} loadedAt={loadedAt} />
+        <div className="flex items-start gap-2">
+          <button
+            type="button" onClick={toggle} aria-expanded={open}
+            aria-label={open ? "Collapse Operations Command Center" : "Expand Operations Command Center"}
+            className="mt-1 shrink-0 rounded p-0.5 hover:bg-slate-100"
+          >
+            <svg
+              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8"
+              strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+              className="transition-transform duration-150" style={{ transform: open ? "rotate(90deg)" : "none" }}
+            >
+              <polyline points="9 6 15 12 9 18" />
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
+            <AdminCommandHeader pendingCount={pendingCount} loadedAt={loadedAt} />
+          </div>
+        </div>
 
+        <div className={open ? "space-y-6" : "hidden"}>
         {can("operations_control") ? (
           <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
         ) : null}
@@ -84,6 +110,7 @@ export function AdminDashboardShell({
         ) : null}
 
         {can("system_health") ? <AdminSystemHealthSection /> : null}
+        </div>
       </WorkspacePageContainer>
     </AdminActionHealthProvider>
   );
