@@ -148,6 +148,29 @@ export function AdminCompanyWorkspace({
     </WorkspaceSection>
   ) : null;
 
+  // Per-stage "Reach out to founder" card: drafts an email about THAT stage's
+  // pending gates. When a stage is all-clear, show a compact all-good note instead.
+  const reachOutFor = (stage: "initialize" | "qualify" | "deploy" | "optimize") => {
+    const items = getStageMirror(data.journey, stage).items
+      .filter((i) => i.status === "attention" || i.status === "missing")
+      .map((i) => i.label);
+    if (!companyId) return null;
+    return items.length > 0 ? (
+      <ReachOutCard
+        companyId={companyId}
+        founderName={founderName}
+        founderEmail={founderEmail}
+        stageLabel={stageLabel(stage)}
+        pendingItems={items}
+        founderCanDistribute={founderCanDistribute}
+      />
+    ) : (
+      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-medium text-emerald-800">
+        <i className="ti ti-circle-check" aria-hidden="true" /> Nothing pending in {stageLabel(stage)} — no outreach needed right now.
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Stage tab menu — top of the workspace */}
@@ -268,6 +291,7 @@ export function AdminCompanyWorkspace({
       {tab === "initialize" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="initialize" />
+          {reachOutFor("initialize")}
           <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
         </div>
       ) : null}
@@ -276,6 +300,7 @@ export function AdminCompanyWorkspace({
       {tab === "qualify" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="qualify" />
+          {reachOutFor("qualify")}
           <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
@@ -305,6 +330,7 @@ export function AdminCompanyWorkspace({
       {tab === "deploy" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="deploy" />
+          {reachOutFor("deploy")}
           <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investablePanel}
@@ -317,6 +343,7 @@ export function AdminCompanyWorkspace({
       {tab === "optimize" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="optimize" />
+          {reachOutFor("optimize")}
           <StageMenuMirror journey={data.journey} stage="optimize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investorActivity}
