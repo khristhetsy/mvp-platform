@@ -118,7 +118,19 @@ function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> })
 }
 
 type ViewMode = "grid" | "list";
-type SortKey = "edited" | "name" | "status";
+type SortKey = "edited" | "name" | "status" | "department";
+
+// Fixed department set for the Templates library. Null/blank department = Unassigned.
+const DEPARTMENTS = ["Sales", "Investor Relations", "Marketing", "Administration", "Events"] as const;
+const UNASSIGNED = "Unassigned";
+const DEPT_META: Record<string, { icon: string; color: string }> = {
+  Sales: { icon: "ti-shopping-cart", color: "#0F6E56" },
+  "Investor Relations": { icon: "ti-briefcase", color: "#534AB7" },
+  Marketing: { icon: "ti-speakerphone", color: "#BA7517" },
+  Administration: { icon: "ti-building-bank", color: "#185FA5" },
+  Events: { icon: "ti-calendar-event", color: "#199e70" },
+  [UNASSIGNED]: { icon: "ti-folder", color: "#5F5E5A" },
+};
 
 export function TemplatesClient({ templates, initialEditId }: { templates: MarketingTemplate[]; initialEditId?: string }) {
   const router = useRouter();
@@ -136,12 +148,72 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   const [saveError, setSaveError] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortKey>("edited");
+  const [groupByDept, setGroupByDept] = useState(false);
+  // Optimistic department overrides so a "Move" reflects instantly before refresh.
+  const [deptOverride, setDeptOverride] = useState<Record<string, string>>({});
+  const [moveOpen, setMoveOpen] = useState<string | null>(null);
+
+  const deptOf = (t: MarketingTemplate) => (deptOverride[t.id] ?? t.department) || UNASSIGNED;
+
+  async function moveToDepartment(t: MarketingTemplate, dept: string) {
+    setMoveOpen(null);
+    setDeptOverride((o) => ({ ...o, [t.id]: dept }));
+    try {
+      await fetch(`/api/marketing/templates/${t.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ department: dept === UNASSIGNED ? null : dept }),
+      });
+    } catch { /* optimistic; a refresh will reconcile */ }
+  }
 
   const sorted = [...templates].sort((a, b) => {
     if (sort === "name") return a.name.localeCompare(b.name);
     if (sort === "status") return a.status.localeCompare(b.status);
+    if (sort === "department") return deptOf(a).localeCompare(deptOf(b)) || a.name.localeCompare(b.name);
     return (b.updated_at ?? b.created_at ?? "").localeCompare(a.updated_at ?? a.created_at ?? "");
   });
+
+  // Group into department order (known depts first, then Unassigned), dropping empties.
+  const grouped = [...DEPARTMENTS, UNASSIGNED]
+    .map((dept) => ({ dept, items: sorted.filter((t) => deptOf(t) === dept) }))
+    .filter((g) => g.items.length > 0);
+
+  const ghostBtn = { fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" } as const;
+
+  const listRow = (t: MarketingTemplate, i: number) => {
+    const sc = STATUS_MAP[t.status] ?? STATUS_MAP.draft;
+    return (
+      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: i ? "0.5px solid var(--border)" : "none" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>{t.name}</div>
+          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.subject}</div>
+        </div>
+        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
+        <button onClick={() => setPreview(t)} style={ghostBtn}>Preview</button>
+        <button onClick={() => openEditor(t)} style={ghostBtn}>Edit</button>
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setMoveOpen(moveOpen === t.id ? null : t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #B5D4F4", background: "#E6F1FB", cursor: "pointer", color: "#185FA5" }}><i className="ti ti-arrows-exchange" aria-hidden="true" /> Move</button>
+          {moveOpen === t.id && (
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 40, width: 200, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.14)", overflow: "hidden" }}>
+              <div style={{ padding: "7px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>Move to department</div>
+              {[...DEPARTMENTS, UNASSIGNED].map((d) => {
+                const cur = deptOf(t) === d;
+                return (
+                  <button key={d} onClick={() => void moveToDepartment(t, d)} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
+                    <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}
+                    {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <button onClick={() => void handleDuplicate(t)} disabled={saving} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>⧉ Duplicate</button>
+        <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
+      </div>
+    );
+  };
 
   /** Open a template in the editor, seeding blocks so the Visual tab works. */
   function openEditor(t: Partial<MarketingTemplate>, tab?: "visual" | "write") {
@@ -295,10 +367,12 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
             <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 10px", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /> List</button>
             <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 10px", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /> Grid</button>
           </div>
+          <button onClick={() => setGroupByDept((v) => !v)} style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "#fff", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", fontWeight: 500 }}><i className="ti ti-layout-list" aria-hidden="true" /> Group: Department</button>
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
             <option value="edited">Recently edited</option>
             <option value="name">Name A–Z</option>
             <option value="status">Status</option>
+            <option value="department">Department</option>
           </select>
           <label style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
             ↑ Upload HTML
@@ -353,6 +427,15 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Department</label>
+              <select value={editing.department ?? ""}
+                onChange={(e) => setEditing({ ...editing, department: e.target.value || null })}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
+                <option value="">Unassigned</option>
+                {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
           </div>
@@ -481,24 +564,24 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
           No templates yet. Create your first one above.
         </div>
       ) : view === "list" ? (
-        <div style={{ ...card, overflow: "hidden" }}>
-          {sorted.map((t, i) => {
-            const sc = STATUS_MAP[t.status] ?? STATUS_MAP.draft;
-            return (
-              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: i ? "0.5px solid var(--border)" : "none" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>{t.name}</div>
-                  <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.subject}</div>
+        groupByDept ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {grouped.map(({ dept, items }) => (
+              <div key={dept} style={{ ...card, overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#EEF0F4", borderBottom: "0.5px solid var(--border)" }}>
+                  <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
+                  <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
                 </div>
-                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
-                <button onClick={() => setPreview(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Preview</button>
-                <button onClick={() => openEditor(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
-                <button onClick={() => void handleDuplicate(t)} disabled={saving} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>⧉ Duplicate</button>
-                <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
+                {items.map((t, i) => listRow(t, i))}
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ ...card, overflow: "hidden" }}>
+            {sorted.map((t, i) => listRow(t, i))}
+          </div>
+        )
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {sorted.map((t) => {

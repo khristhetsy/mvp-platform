@@ -37,6 +37,8 @@ export type MarketingTemplate = {
   blocks?: unknown;
   /** Library category (added in 20260725001); 'event' rows come from Event Hub. */
   category?: "general" | "event";
+  /** Owning department for grouping/sorting in the Templates library. Null = Unassigned. */
+  department?: string | null;
   status: "draft" | "active" | "archived";
   created_by: string | null;
   created_at: string;
