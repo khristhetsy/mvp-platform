@@ -10,6 +10,7 @@ import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
 import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { refreshPartnerScoreSnapshots } from "@/lib/investor-rating/snapshot";
 import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges";
+import { runStageGateReminderPass } from "@/lib/notifications/stage-gate-reminders";
 import { digestStalledFoundersForStaff } from "@/lib/notifications/staff-journey-digest";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -69,7 +70,8 @@ async function handleCron(request: Request) {
     const partnerScores = await refreshPartnerScoresSafely(startedAt + 45_000);
     const journeyNudges = await nudgeStalledJourneyFounders().catch(() => ({ nudged: 0 }));
     const journeyDigest = await digestStalledFoundersForStaff().catch(() => ({ staffNotified: 0, stalled: 0 }));
-    return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores, journeyNudges, journeyDigest }, { status: result.success ? 200 : 207 });
+    const gateReminders = await runStageGateReminderPass().catch(() => ({ sent: 0, resolved: 0 }));
+    return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores, journeyNudges, journeyDigest, gateReminders }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
@@ -109,6 +109,42 @@ function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
   ];
 }
 
+type ReminderStatus = {
+  gateKey: string;
+  state: "resolved" | "paused" | "sent" | "scheduled";
+  paused: boolean;
+  sendsCount: number;
+  lastSentAt: string | null;
+  nextSendAt: string | null;
+  subject: string;
+};
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  } catch {
+    return "—";
+  }
+}
+
+// Compact reminder pill shown next to a pending gate.
+function ReminderPill({ r }: { r: ReminderStatus | undefined }) {
+  if (!r) return null;
+  const map = {
+    sent: { cls: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", text: `Reminder sent · ${fmtDate(r.lastSentAt)}` },
+    scheduled: { cls: "bg-sky-50 text-sky-700", icon: "ti-clock", text: "Reminder on · scheduled" },
+    paused: { cls: "bg-amber-50 text-amber-800", icon: "ti-player-pause", text: "Reminder paused" },
+    resolved: { cls: "bg-slate-100 text-slate-500", icon: "ti-bell-off", text: "Reminders stopped" },
+  } as const;
+  const m = map[r.state];
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${m.cls}`}>
+      <i className={`ti ${m.icon}`} aria-hidden="true" /> {m.text}
+    </span>
+  );
+}
+
 export function FounderJourneyPanel({
   journey,
   companyId,
@@ -119,6 +155,48 @@ export function FounderJourneyPanel({
   const pending = gates.filter((g) => !g.met);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const active = gates.find((g) => g.key === openKey) ?? null;
+
+  const [reminders, setReminders] = useState<Record<string, ReminderStatus>>({});
+  const [reminderBusy, setReminderBusy] = useState<string | null>(null);
+  const [reminderMsg, setReminderMsg] = useState<string | null>(null);
+
+  const loadReminders = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}/gate-reminders`);
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(j.gates)) {
+        const byKey: Record<string, ReminderStatus> = {};
+        for (const g of j.gates as ReminderStatus[]) byKey[g.gateKey] = g;
+        setReminders(byKey);
+      }
+    } catch { /* reminders are best-effort in the UI */ }
+  }, [companyId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch sets state after mount
+  useEffect(() => { void loadReminders(); }, [loadReminders]);
+
+  async function reminderAction(gateKey: string, action: "send-now" | "pause" | "resume") {
+    setReminderBusy(gateKey + action);
+    setReminderMsg(null);
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}/gate-reminders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gateKey, action }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setReminderMsg(action === "send-now" ? "Reminder sent." : action === "pause" ? "Reminder paused." : "Reminder resumed.");
+        await loadReminders();
+      } else {
+        setReminderMsg(j.error ?? "Something went wrong.");
+      }
+    } finally {
+      setReminderBusy(null);
+    }
+  }
+
+  const activeReminder = active ? reminders[active.key] : undefined;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[var(--shadow-card)]">
@@ -198,6 +276,7 @@ export function FounderJourneyPanel({
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-medium text-slate-800">{g.label}</span>
               <span className="block text-[11px] text-slate-500">{g.detail}</span>
+              {!g.met ? <span className="mt-1 block"><ReminderPill r={reminders[g.key]} /></span> : null}
             </span>
             <span className="mt-0.5 flex-none text-[11px] font-medium text-slate-400">
               {g.met ? "Details" : "Resolve"} ›
@@ -266,6 +345,41 @@ export function FounderJourneyPanel({
                 </li>
               ))}
             </ul>
+
+            {!active.met ? (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-1.5 flex items-center gap-2">
+                  <i className="ti ti-robot text-[14px] text-indigo-600" aria-hidden="true" />
+                  <span className="text-[11.5px] font-semibold text-slate-800">Reminder automation</span>
+                  <span className="text-[10.5px] text-slate-500">· every 3 days until resolved · from iCapOS</span>
+                </div>
+                <p className="text-[11.5px] text-slate-600"><b>Subject:</b> {activeReminder?.subject ?? `Reminder: ${active.label.toLowerCase()}`}</p>
+                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                  <span><i className="ti ti-send text-emerald-600" aria-hidden="true" /> Last sent {fmtDate(activeReminder?.lastSentAt ?? null)}</span>
+                  <span><i className="ti ti-clock text-sky-600" aria-hidden="true" /> Next {activeReminder?.paused ? "paused" : fmtDate(activeReminder?.nextSendAt ?? null)}</span>
+                  <span>{activeReminder?.sendsCount ?? 0} sent so far</span>
+                </div>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={reminderBusy !== null}
+                    onClick={() => void reminderAction(active.key, "send-now")}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    <i className="ti ti-send" aria-hidden="true" /> {reminderBusy === active.key + "send-now" ? "Sending…" : "Send now"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={reminderBusy !== null}
+                    onClick={() => void reminderAction(active.key, activeReminder?.paused ? "resume" : "pause")}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-[11.5px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <i className={`ti ${activeReminder?.paused ? "ti-player-play" : "ti-player-pause"}`} aria-hidden="true" /> {activeReminder?.paused ? "Resume" : "Pause"}
+                  </button>
+                  {reminderMsg ? <span className="self-center text-[11px] font-medium text-indigo-700">{reminderMsg}</span> : null}
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-4 flex justify-end gap-2">
               <button
