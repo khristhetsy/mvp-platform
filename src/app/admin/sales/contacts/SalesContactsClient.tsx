@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
 export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null };
-type GroupState = { rows: SalesContact[]; total: number; loading: boolean; loaded: boolean };
+type GroupState = { rows: SalesContact[]; total: number; loading: boolean; loaded: boolean; page: number };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
 type Sort = { key: string; dir: "asc" | "desc" };
@@ -149,12 +149,12 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
   // pay for a group's rows (its exact count + name-sort + last-message lookups)
   // once it's actually opened — the header counts come from the cheap facets call.
   const loadGroup = useCallback(async (id: string, params: string) => {
-    setGroups((prev) => ({ ...prev, [id]: { rows: prev[id]?.rows ?? [], total: prev[id]?.total ?? 0, loading: true, loaded: prev[id]?.loaded ?? false } }));
+    setGroups((prev) => ({ ...prev, [id]: { rows: prev[id]?.rows ?? [], total: prev[id]?.total ?? 0, loading: true, loaded: prev[id]?.loaded ?? false, page: 0 } }));
     try {
       const res = await fetch(`/api/sales/contacts?group=${id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
       const data = res.ok ? await res.json() : { contacts: [], total: 0 };
-      setGroups((prev) => ({ ...prev, [id]: { rows: data.contacts ?? [], total: data.total ?? 0, loading: false, loaded: true } }));
-    } catch { setGroups((prev) => ({ ...prev, [id]: { rows: [], total: 0, loading: false, loaded: true } })); }
+      setGroups((prev) => ({ ...prev, [id]: { rows: data.contacts ?? [], total: data.total ?? 0, loading: false, loaded: true, page: 0 } }));
+    } catch { setGroups((prev) => ({ ...prev, [id]: { rows: [], total: 0, loading: false, loaded: true, page: 0 } })); }
   }, [viewQ]);
 
   // On mount / filter change: only (re)load groups that are currently open (plus the
@@ -165,8 +165,8 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     setGroups((prev) => {
       const next: Record<string, GroupState> = {};
       for (const g of GROUP_DEFS) next[g.id] = willLoad(g.id)
-        ? { rows: prev[g.id]?.rows ?? [], total: prev[g.id]?.total ?? 0, loading: true, loaded: false }
-        : { rows: [], total: 0, loading: false, loaded: false };
+        ? { rows: prev[g.id]?.rows ?? [], total: prev[g.id]?.total ?? 0, loading: true, loaded: false, page: 0 }
+        : { rows: [], total: 0, loading: false, loaded: false, page: 0 };
       return next;
     });
     await Promise.all(GROUP_DEFS.filter((g) => willLoad(g.id)).map((g) => loadGroup(g.id, params)));
@@ -216,14 +216,18 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
   }
 
-  async function loadMore(groupId: string) {
+  // Odoo-style paging: jump to a page and REPLACE the visible rows (no append).
+  async function goPage(groupId: string, delta: number) {
     const gs = groups[groupId];
     if (!gs) return;
+    const totalPages = Math.max(1, Math.ceil(gs.total / PAGE));
+    const nextPage = Math.min(Math.max(0, gs.page + delta), totalPages - 1);
+    if (nextPage === gs.page) return;
     setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: true } }));
     try {
-      const res = await fetch(`/api/sales/contacts?group=${groupId}&offset=${gs.rows.length}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
+      const res = await fetch(`/api/sales/contacts?group=${groupId}&offset=${nextPage * PAGE}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
       const data = res.ok ? await res.json() : { contacts: [], total: gs.total };
-      setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], rows: [...prev[groupId].rows, ...(data.contacts ?? [])], total: data.total ?? prev[groupId].total, loading: false } }));
+      setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], rows: data.contacts ?? [], total: data.total ?? prev[groupId].total, loading: false, page: nextPage } }));
     } catch { setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: false } })); }
   }
 
@@ -541,10 +545,18 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
                           {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                         </Link>
                       ))}
-                      {gs!.rows.length < gs!.total && (
-                        <button onClick={() => loadMore(g.id)} disabled={gs!.loading} style={{ width: "100%", padding: "9px", fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", borderTop: "0.5px solid #eef1f5", cursor: "pointer" }}>
-                          {gs!.loading ? "Loading…" : `Load ${Math.min(PAGE, gs!.total - gs!.rows.length)} more of ${gs!.total.toLocaleString()}`}
-                        </button>
+                      {gs!.total > PAGE && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, padding: "8px 14px", background: "#F8FAFD", borderTop: "0.5px solid #eef1f5" }}>
+                          <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
+                            {(gs!.page * PAGE + 1).toLocaleString()}–{Math.min(gs!.total, gs!.page * PAGE + gs!.rows.length).toLocaleString()} / {gs!.total.toLocaleString()}
+                          </span>
+                          <button onClick={() => goPage(g.id, -1)} disabled={gs!.loading || gs!.page === 0} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: gs!.page === 0 ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: gs!.page === 0 ? "not-allowed" : "pointer", opacity: gs!.page === 0 ? 0.5 : 1 }}>
+                            <i className="ti ti-chevron-left" aria-hidden="true" /> Prev
+                          </button>
+                          <button onClick={() => goPage(g.id, 1)} disabled={gs!.loading || (gs!.page + 1) * PAGE >= gs!.total} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: (gs!.page + 1) * PAGE >= gs!.total ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: (gs!.page + 1) * PAGE >= gs!.total ? "not-allowed" : "pointer", opacity: (gs!.page + 1) * PAGE >= gs!.total ? 0.5 : 1 }}>
+                            Next <i className="ti ti-chevron-right" aria-hidden="true" />
+                          </button>
+                        </div>
                       )}
                     </>
                   )}
