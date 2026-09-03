@@ -512,6 +512,29 @@ export function SalesContactsClient({ canBulkAssign = false, basePath = "/admin/
           })}
         </div>
 
+        {/* Active filters as removable chips (Odoo-style) — each × clears just that
+            filter; "Clear all" resets them together. Reads the existing filter state. */}
+        {(() => {
+          const chips: { key: string; field: string; value: string; onRemove: () => void }[] = [];
+          if (role) chips.push({ key: "role", field: "Type", value: role.charAt(0).toUpperCase() + role.slice(1), onRemove: () => setRole("") });
+          for (const [fk, vals] of Object.entries(facetSel)) for (const v of vals) chips.push({ key: `f:${fk}:${v}`, field: (FACET_LABEL as Record<string, string>)[fk] ?? fk, value: v, onRemove: () => setFacetSel((s) => ({ ...s, [fk]: (s[fk] ?? []).filter((x) => x !== v) })) });
+          for (const c of countries) chips.push({ key: `c:${c}`, field: "Country", value: c, onRemove: () => setCountries((cs) => cs.filter((x) => x !== c)) });
+          for (const col of ["name", "company", "email", "phone"] as const) if (textFilters[col]) chips.push({ key: `t:${col}`, field: col.charAt(0).toUpperCase() + col.slice(1), value: textFilters[col], onRemove: () => setTextFilters((f) => ({ ...f, [col]: "" })) });
+          if (chips.length === 0) return null;
+          return (
+            <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px" }}>
+              <span style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)" }}>Filters</span>
+              {chips.map((ch) => (
+                <span key={ch.key} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#0C447C", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 16, padding: "3px 5px 3px 10px" }}>
+                  <span style={{ color: "#185FA5" }}>{ch.field}:</span> {ch.value}
+                  <button type="button" onClick={ch.onRemove} aria-label={`Remove ${ch.field} ${ch.value}`} style={{ width: 16, height: 16, border: "none", background: "#B5D4F4", color: "#0C447C", borderRadius: "50%", fontSize: 10, lineHeight: 1, cursor: "pointer" }}>×</button>
+                </span>
+              ))}
+              <button type="button" onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); setRole(""); setFacetSel({}); }} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "none", textDecoration: "underline", cursor: "pointer", marginLeft: 2 }}>Clear all</button>
+            </div>
+          );
+        })()}
+
         {GROUP_DEFS.map((g) => {
           const gs = groups[g.id];
           const count = facets.counts[g.id] ?? gs?.total ?? 0;
