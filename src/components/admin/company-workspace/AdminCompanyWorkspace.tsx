@@ -267,7 +267,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- INITIALIZE (Onboarding) — founder menu mirror only ---------- */}
       {tab === "initialize" ? (
         <div className="space-y-6">
-          <StageStepper journey={data.journey} />
+          <StageStepper journey={data.journey} viewedStage="initialize" />
           <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
         </div>
       ) : null}
@@ -275,7 +275,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- QUALIFY ---------- */}
       {tab === "qualify" ? (
         <div className="space-y-6">
-          <StageStepper journey={data.journey} />
+          <StageStepper journey={data.journey} viewedStage="qualify" />
           <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
@@ -304,7 +304,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- DEPLOY ---------- */}
       {tab === "deploy" ? (
         <div className="space-y-6">
-          <StageStepper journey={data.journey} />
+          <StageStepper journey={data.journey} viewedStage="deploy" />
           <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investablePanel}
@@ -316,7 +316,7 @@ export function AdminCompanyWorkspace({
       {/* ---------- OPTIMIZE ---------- */}
       {tab === "optimize" ? (
         <div className="space-y-6">
-          <StageStepper journey={data.journey} />
+          <StageStepper journey={data.journey} viewedStage="optimize" />
           <StageMenuMirror journey={data.journey} stage="optimize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investorActivity}
