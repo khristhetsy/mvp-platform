@@ -196,43 +196,9 @@ function ProfileDropdown({
     }
   }
 
-  // Exit prompt — fires ONLY when leaving the platform (a link that navigates the
-  // current tab to a different origin than icapos.com). Internal navigation never
-  // prompts. Sign out has its own confirm; new-tab (_blank) and mailto/tel links keep
-  // the app open, so they pass through. A blanket beforeunload can't tell internal
-  // navigation from leaving, so it's intentionally not used.
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const anchor = (e.target as HTMLElement | null)?.closest("a");
-      const href = anchor?.getAttribute("href");
-      if (!anchor || !href) return;
-      if (anchor.target === "_blank") return; // opens elsewhere — this tab stays on iCapOS
-      let url: URL;
-      try { url = new URL(href, window.location.href); } catch { return; }
-      if (url.protocol !== "http:" && url.protocol !== "https:") return; // mailto:, tel:, etc.
-      if (url.origin === window.location.origin) return; // internal — no prompt
-      e.preventDefault();
-      void confirmDialog({
-        title: "Leave iCapOS?",
-        message: `You're about to go to ${url.hostname}. Any unsaved work stays safe in iCapOS.`,
-        confirmLabel: "Leave",
-        cancelLabel: "Stay",
-      }).then((ok) => { if (ok) window.location.href = url.href; });
-    };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, []);
-
-  // Safety net: also warn on tab close, reload, or typing a new URL in the address
-  // bar. Browsers show their own generic "Leave site?" here (custom text/buttons
-  // aren't allowed on this event). Client-side route pushes (in-app nav, sign out)
-  // don't fire beforeunload, so ordinary navigation inside the app stays silent.
-  useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, []);
+  // No exit prompts while signed in: no beforeunload "Leave site?" on reload/close,
+  // and no interception of off-site links. Signing out has its own confirm dialog
+  // (handleSignOut), which is the only exit confirmation.
 
   // Runtime 4-step-nav toggle (build flag is the default until the fetch lands).
   const [founderNavV2, setFounderNavV2] = useState<boolean>(isFounderNavV2Enabled());
@@ -330,21 +296,7 @@ function ProfileDropdown({
 
 export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick }: Readonly<Props>) {
   const t = useTranslations("sharedCmp");
-  const router = useRouter();
   const companyLabel = profileSubtitle?.trim() || "Select company";
-
-  // Clicking the logo leaves the workspace for the public home — confirm first
-  // (stays signed in). Full sign-out lives on the Exit button / Sign out.
-  async function handleLogoExit(e: React.MouseEvent) {
-    e.preventDefault();
-    const ok = await confirmDialog({
-      title: "Leave iCapOS?",
-      message: "You're about to leave your workspace and return to the iCapOS home page. Any saved work stays safe.",
-      confirmLabel: "Leave",
-      cancelLabel: "Stay",
-    });
-    if (ok) router.push("/");
-  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white shadow-[var(--shadow-sticky)]">
@@ -359,7 +311,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
-        <Link href="/" onClick={handleLogoExit} className="flex shrink-0 items-center self-center">
+        <Link href="/" className="flex shrink-0 items-center self-center">
           <IcapOSLogo height={28} />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
