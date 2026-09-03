@@ -70,6 +70,15 @@ export function WorkspaceSection({
         style={{ borderColor: c.line }}
       >
         <div className="flex min-w-0 items-center gap-2.5">
+          {/* Clear collapse arrow — tinted the section accent, rotates down when open. */}
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.icon}
+            strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            className="shrink-0 transition-transform duration-150"
+            style={{ transform: open ? "rotate(90deg)" : "none" }}
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
           <i className={`ti ${icon} text-[18px]`} style={{ color: c.icon }} aria-hidden="true" />
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
@@ -79,7 +88,6 @@ export function WorkspaceSection({
         <div className="flex items-center gap-3">
           {/* Stop the header toggle when the action (e.g. a link) is clicked. */}
           {action ? <span onClick={(e) => e.stopPropagation()}>{action}</span> : null}
-          <i className={`ti ${open ? "ti-chevron-down" : "ti-chevron-right"} text-[16px] text-slate-400`} aria-hidden="true" />
         </div>
       </header>
       {/* Kept mounted when collapsed (display:none) so child state and loads persist. */}
