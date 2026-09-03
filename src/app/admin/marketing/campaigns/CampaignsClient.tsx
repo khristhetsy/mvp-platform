@@ -88,13 +88,17 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   });
   const [customFrom, setCustomFrom] = useState(false);
   const [groupFilter, setGroupFilter] = useState<"all" | "founder" | "investor" | "event">("all");
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<"grid" | "list">("list"); // List default; toggle persists below
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- read saved view after mount (avoids hydration mismatch)
+  useEffect(() => { try { const v = window.localStorage.getItem("campaigns.view"); if (v === "grid" || v === "list") setView(v); } catch { /* ignore */ } }, []);
+  useEffect(() => { try { window.localStorage.setItem("campaigns.view", view); } catch { /* ignore */ } }, [view]);
   const [sortKey, setSortKey] = useState<"created" | "name" | "opens">("name");
   // Department grouping (separate axis from the founder/investor/event audience filter).
   const [groupByDept, setGroupByDept] = useState(true);
   const [openDepts, setOpenDepts] = useState<Record<string, boolean>>({}); // collapsed by default
   const [deptOverride, setDeptOverride] = useState<Record<string, string>>({}); // optimistic Move
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
+  const [rowMenuOpen, setRowMenuOpen] = useState<string | null>(null); // list-row ⋯ menu
   const deptOf = (c: MarketingCampaign) => (deptOverride[c.id] ?? c.department) || UNASSIGNED;
 
   async function moveToDepartment(c: MarketingCampaign, dept: string) {
@@ -689,7 +693,63 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               </div>
             );
         };
-        if (!groupByDept) return <div style={gridStyle}>{visible.map(renderCard)}</div>;
+        const rowMenuItem: React.CSSProperties = { display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" };
+        const listHeader = (
+          <div style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, padding: "7px 13px", background: "var(--muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", fontWeight: 600, borderBottom: "0.5px solid var(--border)" }}>
+            <span>Campaign</span><span>Status</span><span>Sent · Open · Click</span><span style={{ textAlign: "right" }}>Actions</span>
+          </div>
+        );
+        const renderRow = (c: MarketingCampaign, i: number) => {
+          const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
+          const scheduledAt = (c as Record<string, unknown>).scheduled_at as string | null | undefined;
+          const menuOpen = rowMenuOpen === c.id;
+          return (
+            <div key={c.id} style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, alignItems: "center", padding: "9px 13px", fontSize: 12.5, borderTop: i > 0 ? "0.5px solid var(--border)" : "none", background: c.archived ? "#FAFBFC" : "#fff" }}>
+              <div style={{ minWidth: 0 }}>
+                <button onClick={() => openAnalytics(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  <span style={{ fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</span>
+                  {c.group_type && <span style={{ flexShrink: 0, fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", background: c.group_type === "investor" ? "#f0edfd" : c.group_type === "event" ? "#e9f7ef" : "#eef4fe", color: c.group_type === "investor" ? "#5b3fd4" : c.group_type === "event" ? "#1a7f4e" : "#1A6CE4" }}>{c.group_type}</span>}
+                </button>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {(c.list as { name?: string } | null)?.name ?? "No list"}{scheduledAt ? ` · Scheduled ${new Date(scheduledAt).toLocaleDateString()}` : ""}
+                </div>
+              </div>
+              <div><span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 16, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{sc.label}</span></div>
+              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>
+                <b style={{ color: "var(--foreground)" }}>{n(c.stat_sent).toLocaleString()}</b> · {rate(c.stat_opened, c.stat_sent)} · {rate(c.stat_clicked, c.stat_sent)}
+              </div>
+              <div style={{ position: "relative", textAlign: "right" }}>
+                <button onClick={() => setRowMenuOpen(menuOpen ? null : c.id)} aria-label="Row actions" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, color: "var(--muted-foreground)", padding: "0 4px" }}>⋯</button>
+                {menuOpen && (
+                  <>
+                    <div onClick={() => setRowMenuOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                    <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 41, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, boxShadow: "0 6px 18px rgb(12 35 64 / 0.14)", minWidth: 200, overflow: "hidden", padding: "4px 0" }}>
+                      <button onClick={() => { setRowMenuOpen(null); void openAnalytics(c.id); }} style={rowMenuItem}>↗ Details</button>
+                      {(c.status === "draft" || c.status === "paused") && (
+                        <button onClick={() => { setRowMenuOpen(null); void handleAction(c.id, "send"); }} style={rowMenuItem}>{c.status === "paused" ? "Resume" : "Send now"}</button>
+                      )}
+                      <button disabled={!resendReady} onClick={() => { setRowMenuOpen(null); void handleSendTest(c.id); }} style={{ ...rowMenuItem, opacity: resendReady ? 1 : 0.5 }}><i className="ti ti-mail" aria-hidden="true" /> Send test to me</button>
+                      <button onClick={() => { setRowMenuOpen(null); void setArchived(c.id, !c.archived); }} style={rowMenuItem}>{c.archived ? "Unarchive" : "Archive"}</button>
+                      <div style={{ borderTop: "0.5px solid var(--border)", margin: "4px 0" }} />
+                      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted-foreground)", padding: "4px 12px 3px" }}>Move to department</div>
+                      {[...DEPARTMENTS, UNASSIGNED].map((d) => {
+                        const cur = deptOf(c) === d;
+                        return (
+                          <button key={d} onClick={() => { setRowMenuOpen(null); void moveToDepartment(c, d); }} style={{ ...rowMenuItem, background: cur ? "#EEF0F4" : "transparent" }}>
+                            <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}{cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        };
+        if (!groupByDept) return view === "list"
+          ? <div style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>{listHeader}{visible.map(renderRow)}</div>
+          : <div style={gridStyle}>{visible.map(renderCard)}</div>;
         const grouped = [...DEPARTMENTS, UNASSIGNED]
           .map((dept) => ({ dept, items: visible.filter((c) => deptOf(c) === dept) }))
           .filter((g) => g.items.length > 0);
@@ -706,7 +766,9 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
                     <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
                   </button>
-                  {open && <div style={{ ...gridStyle, padding: 12 }}>{items.map(renderCard)}</div>}
+                  {open && (view === "list"
+                    ? <div style={{ background: "#fff" }}>{listHeader}{items.map(renderRow)}</div>
+                    : <div style={{ ...gridStyle, padding: 12 }}>{items.map(renderCard)}</div>)}
                 </div>
               );
             })}
