@@ -69,10 +69,14 @@ function facetDim(id: string, key: string, label: string): Dim {
   return {
     id, label, section: "facets",
     extract: (r) => strArray(r.profile?.[key]),
+    // Use .filter() (not .or()) for the containment: multi-word values like
+    // "Venture Capital" carry spaces + quotes that PostgREST's or() logic-tree
+    // parser mangles, returning zero rows even when the group count is > 0. A
+    // plain filter passes the jsonb operand verbatim.
     applyFilter: (query, value) =>
       value === NONE
         ? query.or(`raw->__profile->${key}.is.null`)
-        : query.or(`raw->__profile->${key}.cs.["${value.replace(/["\\]/g, "")}"]`),
+        : query.filter(`raw->__profile->${key}`, "cs", JSON.stringify([value])),
   };
 }
 
@@ -90,10 +94,13 @@ export const GROUP_DIMS: Record<string, Dim> = {
   leadSource: {
     id: "leadSource", label: "Lead source", section: "facets",
     extract: (r) => { const v = leadSourceOf(r); return v ? [v] : []; },
-    applyFilter: (query, value) =>
-      value === NONE
-        ? query.or(`raw->__profile->>leadSource.is.null`)
-        : query.or(`overrides->>lead_source.eq.${value},raw->__profile->>leadSource.eq.${value}`),
+    applyFilter: (query, value) => {
+      if (value === NONE) return query.or(`raw->__profile->>leadSource.is.null`);
+      // Double-quote the value so spaces/commas (e.g. "SEC Form D") survive the
+      // or() logic-tree parser; strip quotes/backslashes that would break it.
+      const safe = value.replace(/["\\]/g, "");
+      return query.or(`overrides->>lead_source.eq."${safe}",raw->__profile->>leadSource.eq."${safe}"`);
+    },
   },
   country: {
     id: "country", label: "Country", section: "crm",
