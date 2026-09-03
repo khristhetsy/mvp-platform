@@ -15,7 +15,6 @@ import { CompanySpvPanel } from "@/components/admin/company-workspace/CompanySpv
 import { CompanyTimelinePanel } from "@/components/admin/company-workspace/CompanyTimelinePanel";
 import { CompanyWorkspaceHeader, CompanyWorkspaceMetrics } from "@/components/admin/company-workspace/CompanyWorkspaceHeader";
 import { CompanyWorkspaceReportsPanel } from "@/components/admin/company-workspace/CompanyWorkspaceReportsPanel";
-import { PageSection } from "@/components/ui/workspace-layout";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
@@ -23,6 +22,7 @@ import { ReachOutCard } from "@/components/admin/company-workspace/ReachOutCard"
 import { getStageMirror, stageLabel } from "@/lib/admin/stage-menu-mirror";
 import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
 import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
+import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
@@ -100,7 +100,9 @@ export function AdminCompanyWorkspace({
   };
 
   const reviewMarketplace = (
-    <PageSection
+    <WorkspaceSection
+      icon="ti-checkbox"
+      tone="purple"
       title={t("review_marketplace_actions")}
       subtitle={t("same_controls_as_the_companies_list_changes")}
       action={
@@ -110,23 +112,25 @@ export function AdminCompanyWorkspace({
       }
     >
       <AdminCompanyCard company={data.company} />
-    </PageSection>
+    </WorkspaceSection>
   );
 
   const investorActivity = (
-    <PageSection title={t("investor_activity")} subtitle={t("aggregates_only_no_message_bodies")}>
+    <WorkspaceSection icon="ti-users" tone="teal" title={t("investor_activity")} subtitle={t("aggregates_only_no_message_bodies")}>
       <CompanyInvestorActivityPanel activity={data.investorActivity} companyId={data.company.id} />
-    </PageSection>
+    </WorkspaceSection>
   );
 
   const spvOperations = (
-    <PageSection title={t("spv_operations")} subtitle={t("source_spv_opportunities")}>
+    <WorkspaceSection icon="ti-building-bank" tone="green" title={t("spv_operations")} subtitle={t("source_spv_opportunities")}>
       <CompanySpvPanel spvs={data.spvs} companyId={data.company.id} />
-    </PageSection>
+    </WorkspaceSection>
   );
 
   const investablePanel = data.investable ? (
-    <PageSection
+    <WorkspaceSection
+      icon="ti-star"
+      tone="amber"
       title="Capital Readiness Rating (CRR)"
       subtitle="13-factor investability model — factor breakdown, recommendations, and score history"
     >
@@ -139,7 +143,7 @@ export function AdminCompanyWorkspace({
         scoredAt={data.investable.scoredAt}
         scoreHistory={data.investable.history}
       />
-    </PageSection>
+    </WorkspaceSection>
   ) : null;
 
   return (
@@ -194,62 +198,67 @@ export function AdminCompanyWorkspace({
 
       {/* ---------- OVERVIEW (dashboard, default) ---------- */}
       {tab === "overview" ? (
-        <div className="space-y-6">
-          <CompanyWorkspaceMetrics data={data} />
+        <div className="space-y-7">
+          <WorkspaceSection icon="ti-gauge" tone="blue" title="At a glance" subtitle="The company's current health">
+            <CompanyWorkspaceMetrics data={data} />
+          </WorkspaceSection>
 
-          <PageSection title="Founder Progress" subtitle="Current stage, gates, and what's pending to advance">
+          <WorkspaceSection icon="ti-route" tone="purple" title="Where they are" subtitle="Current stage, gates, and what's pending to advance">
             <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
-          {companyId && initPendingItems.length > 0 ? (
-            <ReachOutCard
-              companyId={companyId}
-              founderName={founderName}
-              founderEmail={founderEmail}
-              stageLabel={stageLabel("initialize")}
-              pendingItems={initPendingItems}
-              founderCanDistribute={founderCanDistribute}
-            />
+          {(companyId && initPendingItems.length > 0) || workflowDependencies.length > 0 || nextBestActions.length > 0 ? (
+            <WorkspaceSection icon="ti-checklist" tone="amber" title="Do next" subtitle="What needs your action">
+              {companyId && initPendingItems.length > 0 ? (
+                <ReachOutCard
+                  companyId={companyId}
+                  founderName={founderName}
+                  founderEmail={founderEmail}
+                  stageLabel={stageLabel("initialize")}
+                  pendingItems={initPendingItems}
+                  founderCanDistribute={founderCanDistribute}
+                />
+              ) : null}
+
+              {workflowDependencies.length > 0 ? (
+                <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("company_workflow_blockers")} />
+              ) : null}
+
+              {nextBestActions.length > 0 ? (
+                <NextBestActionsPanel
+                  role={adminRole}
+                  initialActions={nextBestActions}
+                  entityType="company"
+                  entityId={data.company.id}
+                  limit={3}
+                  showEscalate
+                />
+              ) : null}
+            </WorkspaceSection>
           ) : null}
 
-          {workflowDependencies.length > 0 ? (
-            <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("company_workflow_blockers")} />
-          ) : null}
-
-          {nextBestActions.length > 0 ? (
-            <PageSection title="Operational priorities" subtitle={t("items_affecting_this_company_across_operatio")}>
-              <NextBestActionsPanel
-                role={adminRole}
-                initialActions={nextBestActions}
-                entityType="company"
-                entityId={data.company.id}
-                limit={3}
-                showEscalate
-              />
-            </PageSection>
-          ) : null}
-
-          <PageSection title={t("active_queues")} subtitle={t("items_affecting_this_company_across_operatio")}>
+          <WorkspaceSection icon="ti-list-check" tone="gray" title="Operations" subtitle={t("items_affecting_this_company_across_operatio")}>
             <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
           {/* Staff controls — review/publish, stage override, and the destructive
               delete all live here on the dashboard (were spread across tabs / page). */}
-          {reviewMarketplace}
-
-          {data.founder ? (
-            <>
-              <FounderStageOverride
-                founderId={data.founder.id}
-                founderName={data.founder.full_name ?? data.founder.email ?? null}
-              />
-              <DeleteUserDangerZone
-                userId={data.founder.id}
-                userName={data.founder.full_name ?? null}
-                userEmail={data.founder.email ?? null}
-              />
-            </>
-          ) : null}
+          <WorkspaceSection icon="ti-settings-bolt" tone="red" title="Company controls" subtitle="Review, stage &amp; account — staff only">
+            {reviewMarketplace}
+            {data.founder ? (
+              <>
+                <FounderStageOverride
+                  founderId={data.founder.id}
+                  founderName={data.founder.full_name ?? data.founder.email ?? null}
+                />
+                <DeleteUserDangerZone
+                  userId={data.founder.id}
+                  userName={data.founder.full_name ?? null}
+                  userEmail={data.founder.email ?? null}
+                />
+              </>
+            ) : null}
+          </WorkspaceSection>
         </div>
       ) : null}
 
@@ -266,25 +275,25 @@ export function AdminCompanyWorkspace({
           <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <PageSection title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
+            <WorkspaceSection icon="ti-chart-line" tone="blue" title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
               <CompanyReadinessPanel readiness={data.readiness} companyId={data.company.id} />
-            </PageSection>
-            <PageSection title={t("compliance")} subtitle={t("source_compliance_events")}>
+            </WorkspaceSection>
+            <WorkspaceSection icon="ti-shield-check" tone="red" title={t("compliance")} subtitle={t("source_compliance_events")}>
               <CompanyCompliancePanel compliance={data.compliance} companyId={data.company.id} />
-            </PageSection>
+            </WorkspaceSection>
           </div>
 
-          <PageSection title={t("documents_diligence")} subtitle={t("source_documents_diligence_reports")}>
+          <WorkspaceSection icon="ti-files" tone="gray" title={t("documents_diligence")} subtitle={t("source_documents_diligence_reports")}>
             <CompanyDocumentsPanel documents={data.documents} companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
-          <PageSection title={t("business_plan")} subtitle={t("founder_s_ai_assisted_plan_sections_projecti")}>
+          <WorkspaceSection icon="ti-clipboard-text" tone="purple" title={t("business_plan")} subtitle={t("founder_s_ai_assisted_plan_sections_projecti")}>
             <CompanyBusinessPlanPanel companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
-          <PageSection title={t("cap_table")} subtitle={t("founder_s_shareholders_ownership_split_and_m")}>
+          <WorkspaceSection icon="ti-table" tone="teal" title={t("cap_table")} subtitle={t("founder_s_shareholders_ownership_split_and_m")}>
             <CompanyCapTablePanel companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
         </div>
       ) : null}
 
@@ -313,49 +322,49 @@ export function AdminCompanyWorkspace({
       {tab === "tools" ? (
         <div className="space-y-6">
           {riskSignals.length > 0 ? (
-            <PageSection title={t("predictive_insights")} subtitle={t("rules_based_risk_signals_phase_1")}>
+            <WorkspaceSection icon="ti-alert-triangle" tone="amber" title={t("predictive_insights")} subtitle={t("rules_based_risk_signals_phase_1")}>
               <RiskSignalsPanel
                 signals={riskSignals}
                 maxItems={3}
                 title={t("company_risk_signals")}
                 subtitle={t("deterministic_rules_no_auto_approvals_or_wor")}
               />
-            </PageSection>
+            </WorkspaceSection>
           ) : null}
 
-          <PageSection title={t("ai_company_assessment_2")} subtitle={t("structured_review_recommendation_strengths_c")}>
+          <WorkspaceSection icon="ti-robot" tone="purple" title={t("ai_company_assessment_2")} subtitle={t("structured_review_recommendation_strengths_c")}>
             <AdminCompanyAIAssessment companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
-          <PageSection title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
+          <WorkspaceSection icon="ti-timeline" tone="blue" title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
             <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
-          <PageSection title={t("team_discussion")} subtitle={t("entity_scoped_comments_not_investor_messagin")}>
+          <WorkspaceSection icon="ti-messages" tone="teal" title={t("team_discussion")} subtitle={t("entity_scoped_comments_not_investor_messagin")}>
             <CollaborationDiscussionPanel entityType="company" entityId={data.company.id} title={t("company_discussion")} />
-          </PageSection>
+          </WorkspaceSection>
 
-          <PageSection title={t("reports_exports")} subtitle={t("pre_filtered_admin_report_links")}>
+          <WorkspaceSection icon="ti-file-export" tone="gray" title={t("reports_exports")} subtitle={t("pre_filtered_admin_report_links")}>
             <CompanyWorkspaceReportsPanel companyId={data.company.id} companyName={data.company.company_name} />
-          </PageSection>
+          </WorkspaceSection>
         </div>
       ) : null}
 
       {/* ---------- SETTINGS ---------- */}
       {tab === "settings" ? (
         <div className="space-y-6">
-          <PageSection title="Company basics" subtitle="Edit industry, revenue stage, and funding target — audited">
+          <WorkspaceSection icon="ti-building" tone="blue" title="Company basics" subtitle="Edit industry, revenue stage, and funding target — audited">
             <CompanyBasicsEditor companyId={data.company.id} />
-          </PageSection>
+          </WorkspaceSection>
 
-          <PageSection title="Notifications" subtitle="Choose which events notify you and how">
+          <WorkspaceSection icon="ti-bell" tone="amber" title="Notifications" subtitle="Choose which events notify you and how">
             <NotificationSettings />
-          </PageSection>
+          </WorkspaceSection>
 
           {data.founder ? (
-            <PageSection title="Subscription" subtitle="Extend trial or comp a plan — no payment, audited">
+            <WorkspaceSection icon="ti-credit-card" tone="purple" title="Subscription" subtitle="Extend trial or comp a plan — no payment, audited">
               <SubscriptionManager profileId={data.founder.id} />
-            </PageSection>
+            </WorkspaceSection>
           ) : null}
         </div>
       ) : null}
