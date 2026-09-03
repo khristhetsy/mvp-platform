@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
+import { RatingRing } from "@/components/investor-rating/RatingRing";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
@@ -85,6 +86,19 @@ function Chip({ label, value, onClick }: { label: string; value: string | number
         {clickable && <i className="ti ti-arrow-right" aria-hidden="true" style={{ fontSize: 13, color: hover ? "#2E78F5" : "#9aa4b2" }} />}
       </div>
       <div style={{ fontSize: 18, fontWeight: 600, color: "#0A1A40", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+    </div>
+  );
+}
+
+// Investor rating as a circular gauge (score + tier), chip-styled to sit in the stat grid.
+function InvestorRatingChip({ score, tier }: { score: number | null; tier: string }) {
+  return (
+    <div style={{ background: "#F6F8FB", border: "1px solid transparent", borderRadius: 8, padding: "9px 12px" }}>
+      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Investor rating</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+        <RatingRing score={score} size={40} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#0C447C", background: "#E6F1FB", borderRadius: 20, padding: "2px 10px" }}>{tier}</span>
+      </div>
     </div>
   );
 }
@@ -539,7 +553,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <Chip label="Pipeline value" value={money(pipelineCents)} onClick={goToOpps} />
             <Chip label="Open opps" value={openOpps} onClick={goToOpps} />
             <Chip label="Last activity" value={lastActLabel} onClick={goToActivity} />
-            {investorRating ? <Chip label="Investor rating" value={investorRating.score != null ? `${investorRating.score} · ${investorRating.tier}` : "New"} /> : null}
+            {investorRating ? <InvestorRatingChip score={investorRating.score} tier={investorRating.score != null ? investorRating.tier : "New"} /> : null}
             {crr ? <Chip label="CRR" value={`${crr.score} · ${crr.tier}`} /> : null}
           </div>
         </div>

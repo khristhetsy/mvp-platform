@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { RatingRing } from "@/components/investor-rating/RatingRing";
 
 type InvestorNote = { id: string; body: string; created_at: string };
 
@@ -198,11 +199,15 @@ export function InvestorDetailClient({
           {metric("Check size", investor.investment_size ?? "—")}
           {metric("Match score", investor.match_score != null ? `${investor.match_score}%` : "—", investor.match_score != null && investor.match_score >= 70 ? "#0F6E56" : undefined)}
           {metric("Amount pledged", investor.pledge_amount != null ? `$${investor.pledge_amount.toLocaleString()}` : "—")}
-          {metric(
-            "Investor score",
-            investor.investor_score != null ? `${investor.investor_score}${investor.investor_score_tier ? ` · ${investor.investor_score_tier}` : ""}` : "New",
-            investor.investor_score != null ? "#4338CA" : undefined,
-          )}
+          <div>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>Investor rating</p>
+            <div className="mt-1 flex items-center gap-2">
+              <RatingRing score={investor.investor_score ?? null} size={40} />
+              <span className="text-sm font-medium" style={{ color: investor.investor_score != null ? "#0C447C" : "var(--text-muted)" }}>
+                {investor.investor_score != null ? (investor.investor_score_tier ?? "Rated") : "New"}
+              </span>
+            </div>
+          </div>
           {metric("Stage", STAGES.find((s) => s.id === stage)?.label ?? "New")}
         </div>
 

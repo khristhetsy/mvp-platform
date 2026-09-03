@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { RatingRing } from "@/components/investor-rating/RatingRing";
 
 // Shared, anonymized investor detail panel — the fit-breakdown + criteria + AI
 // positioning modal used by both the Outreach board (FounderPrivateMarketBoard)
@@ -166,16 +167,16 @@ export function InvestorDetailModal({
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="text-right">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Investor rating</div>
-              {r.scoreRated && r.investorScore != null ? (
-                <div className="flex items-baseline justify-end gap-1.5">
-                  <span className="text-2xl font-bold text-[var(--navy,#0c2340)]">{r.investorScore}</span>
-                  {r.scoreTier ? <span className="rounded bg-[#E6F1FB] px-1.5 py-0.5 text-[10px] font-semibold text-[#185FA5]">{r.scoreTier}</span> : null}
-                </div>
-              ) : (
-                <div className="text-xs font-medium text-slate-400">New</div>
-              )}
+            <div className="flex items-center gap-2.5">
+              <RatingRing score={r.scoreRated && r.investorScore != null ? r.investorScore : null} size={48} />
+              <div className="text-left">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Investor rating</div>
+                {r.scoreRated && r.investorScore != null ? (
+                  <span className="mt-0.5 inline-block rounded bg-[#E6F1FB] px-1.5 py-0.5 text-[10px] font-semibold text-[#185FA5]">{r.scoreTier ?? "Rated"}</span>
+                ) : (
+                  <div className="text-xs font-medium text-slate-400">New</div>
+                )}
+              </div>
             </div>
             <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
           </div>

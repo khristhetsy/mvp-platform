@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RatingRing } from "@/components/investor-rating/RatingRing";
 
 type Investor = { id: string; name: string; firm: string | null; source: string; isMember: boolean; tier: string | null; score: number | null; engaged: number };
 type Counts = { all: number; members: number; prospects: number };
@@ -143,7 +144,7 @@ function InvestorsTab() {
                   </td>
                   <td className="px-3 py-2.5 text-slate-600">{r.tier ?? "—"}</td>
                   <td className="px-3 py-2.5 text-slate-600">{r.engaged || "—"}</td>
-                  <td className="px-3 py-2.5">{r.score != null ? <span className="font-semibold text-slate-900">{Math.round(r.score)}</span> : <span className="text-slate-400">New</span>}</td>
+                  <td className="px-3 py-2.5"><RatingRing score={r.score != null ? Math.round(r.score) : null} size={32} /></td>
                 </tr>
               ))
             )}
