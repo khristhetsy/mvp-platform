@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
-import { DEPARTMENTS, UNASSIGNED, DEPT_META, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
+import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
 
 type ListWithCount = MarketingList & { contact_count: number };
 type ListMember = { contact_id: string; marketing_contacts: Pick<MarketingContact, "id" | "email" | "first_name" | "last_name" | "company"> | null };
@@ -39,23 +39,32 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   async function moveToDepartment(l: ListWithCount, dept: string) {
     setMoveOpen(null);
     const value = dept === UNASSIGNED ? null : dept;
-    setLists((prev) => prev.map((x) => (x.id === l.id ? { ...x, department: value } : x))); // optimistic
+    const prev = l.department;
+    setLists((ls) => ls.map((x) => (x.id === l.id ? { ...x, department: value } : x))); // optimistic
     try {
-      await fetch(`/api/marketing/lists/${l.id}`, {
+      const res = await fetch(`/api/marketing/lists/${l.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ department: value }),
       });
-    } catch (err) { console.error("Failed to move list department:", err); }
+      if (!res.ok) throw new Error("Move failed");
+    } catch (err) {
+      console.error("Failed to move list department:", err);
+      setLists((ls) => ls.map((x) => (x.id === l.id ? { ...x, department: prev ?? null } : x))); // roll back
+    }
   }
 
   async function toggleArchive(l: ListWithCount) {
     const next = !l.archived;
     setBusyId(l.id);
-    setLists((prev) => prev.map((x) => (x.id === l.id ? { ...x, archived: next } : x))); // optimistic
+    setLists((ls) => ls.map((x) => (x.id === l.id ? { ...x, archived: next } : x))); // optimistic
     try {
-      await fetch(`/api/marketing/lists/${l.id}`, {
+      const res = await fetch(`/api/marketing/lists/${l.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archived: next }),
       });
-    } catch (err) { console.error("Failed to archive list:", err); }
+      if (!res.ok) throw new Error("Archive failed");
+    } catch (err) {
+      console.error("Failed to archive list:", err);
+      setLists((ls) => ls.map((x) => (x.id === l.id ? { ...x, archived: !next } : x))); // roll back
+    }
     finally { setBusyId(null); }
   }
 
@@ -78,6 +87,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
+        if (!res.ok) throw new Error("Save failed");
         const updated = await res.json();
         setLists((prev) => prev.map((l) => l.id === editId ? { ...l, ...updated } : l));
       } else {
@@ -86,6 +96,9 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
+        // Guard: a failed create returns {error}, which must NOT be prepended as
+        // a phantom row (no id, "Invalid Date"). Throw so the modal stays open.
+        if (!res.ok) throw new Error("Create failed");
         const created = await res.json();
         setLists((prev) => [{ ...created, contact_count: 0 }, ...prev]);
       }
@@ -106,7 +119,10 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   async function finalizeDelete(id: string) {
     delete timers.current[id];
     try {
-      await fetch(`/api/marketing/lists/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/marketing/lists/${id}`, { method: "DELETE" });
+      // Only drop the row if the server actually deleted it — otherwise it would
+      // vanish from the UI but reappear on reload, contradicting the message.
+      if (!res.ok) throw new Error("Delete failed");
       setLists((prev) => prev.filter((l) => l.id !== id));
     } catch (err) {
       console.error("Failed to delete list:", err);
@@ -163,7 +179,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
         <div style={{ position: "relative" }}>
           <button onClick={() => setMoveOpen(moveOpen === list.id ? null : list.id)} title="File this list under a department"
             style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-            <i className={`ti ${DEPT_META[deptOf(list)].icon}`} style={{ color: DEPT_META[deptOf(list)].color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
+            <i className={`ti ${deptMeta(deptOf(list)).icon}`} style={{ color: deptMeta(deptOf(list)).color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
           </button>
           {moveOpen === list.id && (
             <>
@@ -175,7 +191,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
                   return (
                     <button key={d} onClick={() => void moveToDepartment(list, d)}
                       style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
-                      <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}
+                      <i className={`ti ${deptMeta(d).icon}`} style={{ color: deptMeta(d).color, fontSize: 14 }} aria-hidden="true" /> {d}
                       {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                     </button>
                   );
@@ -257,9 +273,9 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
                 <button onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}><polyline points="9 6 15 12 9 18" /></svg>
-                  <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
+                  <i className={`ti ${deptMeta(dept).icon}`} style={{ color: deptMeta(dept).color, fontSize: 15 }} aria-hidden="true" />
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
-                  <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
+                  <span style={{ fontSize: 11, color: deptMeta(dept).color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
                 </button>
                 {open && <div style={{ background: "#fff" }}>{items.map((list, i) => listRow(list, i === items.length - 1))}</div>}
               </div>

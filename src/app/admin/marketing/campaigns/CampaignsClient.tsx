@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
-import { DEPARTMENTS, UNASSIGNED, DEPT_META, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
+import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
 
 interface Props {
   campaigns: MarketingCampaign[];
@@ -93,13 +93,17 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     setMoveOpen(null);
     setDeptOverride((m) => ({ ...m, [c.id]: dept })); // optimistic
     try {
-      await fetch(`/api/marketing/campaigns/${c.id}`, {
+      const res = await fetch(`/api/marketing/campaigns/${c.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ department: dept === UNASSIGNED ? null : dept }),
       });
+      if (!res.ok) throw new Error("Move failed");
     } catch (err) {
       console.error("Failed to move campaign department:", err);
+      // Roll back the optimistic override so it doesn't permanently mask the
+      // real saved department for the rest of the session.
+      setDeptOverride((m) => { const n = { ...m }; delete n[c.id]; return n; });
     }
   }
 
@@ -645,7 +649,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     <button onClick={() => setMoveOpen(moveOpen === c.id ? null : c.id)}
                       title="File this campaign under a department"
                       style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <i className={`ti ${DEPT_META[deptOf(c)].icon}`} style={{ color: DEPT_META[deptOf(c)].color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
+                      <i className={`ti ${deptMeta(deptOf(c)).icon}`} style={{ color: deptMeta(deptOf(c)).color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
                     </button>
                     {moveOpen === c.id && (
                       <>
@@ -657,7 +661,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                             return (
                               <button key={d} onClick={() => void moveToDepartment(c, d)}
                                 style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
-                                <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}
+                                <i className={`ti ${deptMeta(d).icon}`} style={{ color: deptMeta(d).color, fontSize: 14 }} aria-hidden="true" /> {d}
                                 {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                               </button>
                             );
@@ -724,7 +728,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                         const cur = deptOf(c) === d;
                         return (
                           <button key={d} onClick={() => { setRowMenuOpen(null); void moveToDepartment(c, d); }} style={{ ...rowMenuItem, background: cur ? "#EEF0F4" : "transparent" }}>
-                            <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}{cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
+                            <i className={`ti ${deptMeta(d).icon}`} style={{ color: deptMeta(d).color, fontSize: 14 }} aria-hidden="true" /> {d}{cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                           </button>
                         );
                       })}
@@ -748,9 +752,9 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   <button onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}><polyline points="9 6 15 12 9 18" /></svg>
-                    <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
+                    <i className={`ti ${deptMeta(dept).icon}`} style={{ color: deptMeta(dept).color, fontSize: 15 }} aria-hidden="true" />
                     <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
-                    <span style={{ fontSize: 11, color: DEPT_META[dept].color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
+                    <span style={{ fontSize: 11, color: deptMeta(dept).color, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1px 8px" }}>{items.length}</span>
                   </button>
                   {open && (view === "list"
                     ? <div style={{ background: "#fff" }}>{listHeader}{items.map(renderRow)}</div>

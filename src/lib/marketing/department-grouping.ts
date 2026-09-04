@@ -14,6 +14,13 @@ export const DEPT_META: Record<string, { icon: string; color: string }> = {
   [UNASSIGNED]:         { icon: "ti-folder",         color: "#5F5E5A" },
 };
 
+/** Icon/color for a department, falling back to the Unassigned style for any
+ *  value that isn't one of the known departments (the DB column is unconstrained,
+ *  so a stray value must not crash the grid via DEPT_META[x].icon on undefined). */
+export function deptMeta(name: string): { icon: string; color: string } {
+  return DEPT_META[name] ?? DEPT_META[UNASSIGNED];
+}
+
 /** A record's effective department: an optimistic override wins, else its saved
  *  value, else Unassigned. */
 export function departmentOf(saved: string | null | undefined, override?: string | null): string {

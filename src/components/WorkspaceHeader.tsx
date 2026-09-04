@@ -146,7 +146,6 @@ function ProfileDropdown({
   profileSubtitle?: string;
   workspace: WorkspaceId;
 }>) {
-  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
