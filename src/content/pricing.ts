@@ -45,7 +45,7 @@ export const pricing = {
       price: "$3,500",
       per: "/month",
       badge: "Done-for-you",
-      desc: "We run the raise for you. 3-month minimum.",
+      desc: "We structure the raise through an SPV. 3-month minimum.",
       advisory: {
         brand: "Advisory · iCFO Capital",
         title: "Run this raise through an SPV",
