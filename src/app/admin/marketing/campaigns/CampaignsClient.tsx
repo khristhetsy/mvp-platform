@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
+import { DEPARTMENTS, UNASSIGNED, DEPT_META, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
 
 interface Props {
   campaigns: MarketingCampaign[];
@@ -21,19 +22,6 @@ const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> =
   sent:      { bg: "#E1F5EE", color: "#0F6E56", label: "Sent" },
   paused:    { bg: "#FAEEDA", color: "#854F0B", label: "Paused" },
   cancelled: { bg: "#FCEBEB", color: "#A32D2D", label: "Cancelled" },
-};
-
-// Department is a separate grouping axis from group_type (audience). Mirrors the
-// Templates library so campaigns can be filed under a team and folded away.
-const DEPARTMENTS = ["Sales", "Investor Relations", "Marketing", "Administration", "Events"] as const;
-const UNASSIGNED = "Unassigned";
-const DEPT_META: Record<string, { icon: string; color: string }> = {
-  "Sales":              { icon: "ti-shopping-cart",  color: "#0F6E56" },
-  "Investor Relations": { icon: "ti-briefcase",      color: "#534AB7" },
-  "Marketing":          { icon: "ti-speakerphone",   color: "#BA7517" },
-  "Administration":     { icon: "ti-settings",        color: "#5F5E5A" },
-  "Events":             { icon: "ti-calendar-event", color: "#199E70" },
-  [UNASSIGNED]:         { icon: "ti-folder",          color: "#5F5E5A" },
 };
 
 type CampaignDetail = {
@@ -99,7 +87,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [deptOverride, setDeptOverride] = useState<Record<string, string>>({}); // optimistic Move
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
   const [rowMenuOpen, setRowMenuOpen] = useState<string | null>(null); // list-row ⋯ menu
-  const deptOf = (c: MarketingCampaign) => (deptOverride[c.id] ?? c.department) || UNASSIGNED;
+  const deptOf = (c: MarketingCampaign) => departmentOf(c.department, deptOverride[c.id]);
 
   async function moveToDepartment(c: MarketingCampaign, dept: string) {
     setMoveOpen(null);
@@ -750,9 +738,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         if (!groupByDept) return view === "list"
           ? <div style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>{listHeader}{visible.map(renderRow)}</div>
           : <div style={gridStyle}>{visible.map(renderCard)}</div>;
-        const grouped = [...DEPARTMENTS, UNASSIGNED]
-          .map((dept) => ({ dept, items: visible.filter((c) => deptOf(c) === dept) }))
-          .filter((g) => g.items.length > 0);
+        const grouped = groupByDepartment(visible, deptOf);
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {grouped.map(({ dept, items }) => {

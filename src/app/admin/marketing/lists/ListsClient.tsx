@@ -5,21 +5,10 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
+import { DEPARTMENTS, UNASSIGNED, DEPT_META, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
 
 type ListWithCount = MarketingList & { contact_count: number };
 type ListMember = { contact_id: string; marketing_contacts: Pick<MarketingContact, "id" | "email" | "first_name" | "last_name" | "company"> | null };
-
-// Department is a grouping axis mirroring the Templates & Campaigns libraries.
-const DEPARTMENTS = ["Sales", "Investor Relations", "Marketing", "Administration", "Events"] as const;
-const UNASSIGNED = "Unassigned";
-const DEPT_META: Record<string, { icon: string; color: string }> = {
-  "Sales":              { icon: "ti-shopping-cart",  color: "#0F6E56" },
-  "Investor Relations": { icon: "ti-briefcase",      color: "#534AB7" },
-  "Marketing":          { icon: "ti-speakerphone",   color: "#BA7517" },
-  "Administration":     { icon: "ti-settings",        color: "#5F5E5A" },
-  "Events":             { icon: "ti-calendar-event", color: "#199E70" },
-  [UNASSIGNED]:         { icon: "ti-folder",          color: "#5F5E5A" },
-};
 
 const card: React.CSSProperties = {
   background: "#ffffff",
@@ -45,7 +34,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   const [showArchived, setShowArchived] = useState(false);
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const deptOf = (l: ListWithCount) => (l.department ?? null) || UNASSIGNED;
+  const deptOf = (l: ListWithCount) => departmentOf(l.department);
 
   async function moveToDepartment(l: ListWithCount, dept: string) {
     setMoveOpen(null);
@@ -211,9 +200,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
     .filter((l) => showArchived || !l.archived)
     .sort((a, b) => sortKey === "created" ? (b.created_at ?? "").localeCompare(a.created_at ?? "") : a.name.localeCompare(b.name));
   const archivedCount = lists.filter((l) => l.archived).length;
-  const grouped = [...DEPARTMENTS, UNASSIGNED]
-    .map((dept) => ({ dept, items: visible.filter((l) => deptOf(l) === dept) }))
-    .filter((g) => g.items.length > 0);
+  const grouped = groupByDepartment(visible, deptOf);
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
