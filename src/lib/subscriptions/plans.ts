@@ -47,6 +47,10 @@ export type SubscriptionRecord = {
   // When a past_due subscription loses access. Set by the billing webhook;
   // null for healthy subscriptions.
   grace_period_ends_at: string | null;
+  // True = founder keeps the pre-paywall free tool access (accounts that predate
+  // FREE_RETIRED_AT). Optional so existing code/tests treat undefined as "not
+  // gated" (fail-open); only an explicit false paywalls the tools.
+  grandfathered_free?: boolean | null;
   // LemonSqueezy
   ls_customer_id:     string | null;
   ls_subscription_id: string | null;
@@ -56,6 +60,13 @@ export type SubscriptionRecord = {
   stripe_subscription_id: string | null;
   stripe_price_id:        string | null;
 };
+
+/**
+ * Free access is retired: founders created on/after this instant must choose a
+ * paid plan to unlock the tools. Accounts created before it are grandfathered
+ * and keep their free access. Set this to the actual go-live date before deploy.
+ */
+export const FREE_RETIRED_AT = "2026-09-05T00:00:00Z";
 
 export const PLAN_LABELS: Record<PlanType, string> = {
   founder_free: "Free (grandfathered)",

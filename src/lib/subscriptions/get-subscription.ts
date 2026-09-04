@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isTrialExpired } from "@/lib/subscriptions/access";
 import {
+  FREE_RETIRED_AT,
   PLAN_PRICES,
   type PlanType,
   type SubscriptionRecord,
@@ -108,6 +109,13 @@ export async function ensureSubscriptionForProfile(input: {
   const now = new Date().toISOString();
   const admin = createServiceRoleClient();
 
+  // Grandfather free access for accounts that predate FREE_RETIRED_AT. Both new
+  // and legacy founders create their row here (signup doesn't), so the profile's
+  // created_at is the only reliable signal. Fail-open: unknown → grandfathered.
+  const { data: prof } = await admin.from("profiles").select("created_at").eq("id", input.profileId).maybeSingle();
+  const createdAt = (prof as { created_at?: string } | null)?.created_at ?? null;
+  const grandfatheredFree = !(createdAt && createdAt >= FREE_RETIRED_AT);
+
   const { error: insertError } = await admin
     .from("subscriptions")
     .insert({
@@ -121,6 +129,7 @@ export async function ensureSubscriptionForProfile(input: {
       current_period_end: defaults.trial_ends_at,
       monthly_price_cents: defaults.monthly_price_cents,
       currency: "USD",
+      grandfathered_free: grandfatheredFree,
     });
 
   // Duplicate key = race condition: another request already created it — just fetch it

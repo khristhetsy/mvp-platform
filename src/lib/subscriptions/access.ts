@@ -91,20 +91,24 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, n
     return new Set<FeatureKey>(["investor_workspace", "settings"]);
   }
 
-  // New pricing model: Free gives ALL tools (CRR, valuation, data room, e-learning).
-  // Paid tiers add distribution (investor identities, one-pager sends, limits,
-  // brokered intros) — that gating is enforced separately (Phase 2), not by the
-  // tool feature set here. Managed IR is done-for-you on top of Professional.
+  // Paid founders (Basic/Professional/Managed IR) get the full toolset; the paid
+  // difference is distribution, gated separately by founderEntitlements().
   if (
-    planType === "founder_free" ||
     planType === "founder_professional" ||
-    planType === "founder_managed_ir"
+    planType === "founder_managed_ir" ||
+    planType === "founder_basic"
   ) {
     return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
-  if (planType === "founder_basic") {
-    return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
+  // Free founders: grandfathered accounts (predating FREE_RETIRED_AT) keep the
+  // full toolset; new free accounts are paywalled to "settings" until they pick a
+  // paid plan. Fail-open — only an EXPLICIT false gates, so a missing flag on a
+  // legacy row keeps access rather than risking a lock-out.
+  if (planType === "founder_free") {
+    return subscription.grandfathered_free === false
+      ? new Set<FeatureKey>(["settings"])
+      : new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
   // Legacy 3-day trial rows are grandfathered into permanent Free (all tools).
@@ -149,6 +153,13 @@ export function canAccessFeature(
     return {
       allowed: false,
       reason: "Your tools are always free. Upgrade your plan when you're ready to raise capital — that reveals your matched investors and puts your materials in front of them.",
+    };
+  }
+
+  if (subscription.plan_type === "founder_free") {
+    return {
+      allowed: false,
+      reason: "Choose a plan to unlock the tools and reach your matched investors.",
     };
   }
 
