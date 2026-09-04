@@ -16,7 +16,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: { absolute: "iCapOS — Get your company in front of investors whose mandate fits" },
   description:
-    "iCapOS does the heavy lifting on investor outreach: it rates your readiness, matches your profile to investor mandates in the iCFO network, and distributes your materials to the ones that fit. Start free.",
+    "iCapOS does the heavy lifting on investor outreach: it rates your readiness, matches your profile to investor mandates in the iCFO network, and distributes your materials to the ones that fit.",
   alternates: { canonical: "/" },
   openGraph: { url: "/" },
 };

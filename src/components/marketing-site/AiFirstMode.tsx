@@ -46,7 +46,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
   founders: {
     label: "founders",
     title: "What do you want to sort out for your raise?",
-    sub: "Ask how readiness, matching, and distribution work — then start free. No polished deck required, and nothing here offers or sells securities.",
+    sub: "Ask how readiness, matching, and distribution work — then get started. No polished deck required, and nothing here offers or sells securities.",
     placeholder: "Ask about getting investor-ready…",
     openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my CRR scored?", "How do I get started?"],
   },
@@ -60,14 +60,14 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
   pricing: {
     label: "pricing",
     title: "Which plan fits your raise?",
-    sub: "Ask what's included or how self-serve works. Every tool is free — you upgrade a plan when you're ready to raise capital.",
+    sub: "Ask what's included or how self-serve works. A plan unlocks the tools and distribution to your matched investors.",
     placeholder: "Ask about plans and what's included…",
     openers: ["What's the difference between the plans?", "Is it really self-serve?", "Can I book a demo?", "How do I get started?"],
   },
   readiness: {
     label: "readiness",
     title: "Want to know where you stand?",
-    sub: "Ask what the rating measures and how to run it. It's free, and it's what iCapOS produces — not what it requires.",
+    sub: "Ask what the rating measures and how to run it. It's what iCapOS produces — not what it requires.",
     placeholder: "Ask about the readiness rating…",
     openers: ["What does the rating measure?", "How is it scored?", "How long does it take?", "How do I get started?"],
   },

@@ -8,7 +8,7 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
   description:
-    "Every tool is free. Free plan: readiness, valuation, data room, e-learning, and see your matches. Basic $499/mo (up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). Managed IR $3,500/mo done-for-you. Investor accounts free, no success fees.",
+    "Choose a plan to unlock the tools and your investor distribution. Basic $499/mo (all tools, up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). Managed IR $3,500/mo done-for-you. Investor accounts free, no success fees.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -42,7 +42,7 @@ export default function PricingPage() {
             </p>
           ) : null}
         </div>
-        <div className="mx-auto mt-10 grid max-w-6xl gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mx-auto mt-10 grid max-w-5xl gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {p.tiers.map((t) => (
             <div key={t.name} className={`relative rounded-2xl p-6 ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : "border border-white/12 bg-white/[0.03]"}`}>
               {/* Professional primacy tag; Professional is order-first on mobile (brief Step 6). */}

@@ -22,7 +22,7 @@ export const assessment = {
     bandNote: "This is a directional band from your answers — the full per-dimension rating is in your free account.",
     ctaFallback: "See plans",
     ctaFallbackHref: "/pricing",
-    learningNote: "New to the raise? Create your free account and start with the fundamentals — every tool is free. Upgrade when you're ready to raise.",
+    learningNote: "New to the raise? Create your account and choose a plan to unlock the tools and start with the fundamentals.",
     restart: "Retake the assessment",
   },
 } as const;

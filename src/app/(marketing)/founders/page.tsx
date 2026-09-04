@@ -7,7 +7,7 @@ import { OnePagerDrafter } from "@/components/marketing-site/OnePagerDrafter";
 export const metadata: Metadata = {
   title: "For founders — iCapOS",
   description:
-    "The investor legwork, run for you. iCapOS rates your readiness, builds your matched investor list, distributes your materials, and gets you on the conference agenda. Self-serve, no sales call. Start free.",
+    "The investor legwork, run for you. iCapOS rates your readiness, builds your matched investor list, distributes your materials, and gets you on the conference agenda. Self-serve, no sales call.",
   alternates: { canonical: "/founders" },
 };
 
