@@ -58,7 +58,7 @@ export type SubscriptionRecord = {
 };
 
 export const PLAN_LABELS: Record<PlanType, string> = {
-  founder_free: "Free",
+  founder_free: "Free (grandfathered)",
   founder_trial: "Free (legacy)",
   founder_basic: "Basic",
   founder_professional: "Professional",
