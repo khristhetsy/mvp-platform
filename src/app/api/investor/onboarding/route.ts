@@ -49,6 +49,8 @@ export async function PATCH(request: Request) {
     firm_name: parsed.data.firm_name?.trim() || null,
     check_size_min: parsed.data.check_size_min ?? null,
     check_size_max: parsed.data.check_size_max ?? null,
+    preferred_arr_range: parsed.data.preferred_arr_range?.trim() || null,
+    preferred_mrr_range: parsed.data.preferred_mrr_range?.trim() || null,
     preferred_sectors: parseCommaList(parsed.data.preferred_sectors),
     preferred_geographies: parseCommaList(parsed.data.preferred_geographies),
     preferred_stages: parseCommaList(parsed.data.preferred_stages),

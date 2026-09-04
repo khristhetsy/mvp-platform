@@ -169,6 +169,8 @@ export const investorOnboardingSchema = z
     firm_name: z.string().max(200).optional(),
     check_size_min: z.coerce.number().nonnegative().optional(),
     check_size_max: z.coerce.number().positive().optional(),
+    preferred_arr_range: z.string().max(120).optional(),
+    preferred_mrr_range: z.string().max(120).optional(),
     preferred_sectors: z.string().min(2),
     preferred_geographies: z.string().min(2),
     preferred_stages: z.string().min(2),

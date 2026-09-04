@@ -42,6 +42,8 @@ export function InvestorOnboardingWizard({
   const [checkSizeMax, setCheckSizeMax] = useState(
     investorProfile.check_size_max != null ? String(investorProfile.check_size_max) : "",
   );
+  const [preferredArrRange, setPreferredArrRange] = useState(investorProfile.preferred_arr_range ?? "");
+  const [preferredMrrRange, setPreferredMrrRange] = useState(investorProfile.preferred_mrr_range ?? "");
   const [preferredSectors, setPreferredSectors] = useState(joinList(investorProfile.preferred_sectors));
   const [preferredGeographies, setPreferredGeographies] = useState(joinList(investorProfile.preferred_geographies));
   const [preferredStages, setPreferredStages] = useState(joinList(investorProfile.preferred_stages));
@@ -88,6 +90,8 @@ export function InvestorOnboardingWizard({
         firm_name: firmName || undefined,
         check_size_min: checkSizeMin ? Number(checkSizeMin) : undefined,
         check_size_max: checkSizeMax ? Number(checkSizeMax) : undefined,
+        preferred_arr_range: preferredArrRange || undefined,
+        preferred_mrr_range: preferredMrrRange || undefined,
         preferred_sectors: preferredSectors,
         preferred_geographies: preferredGeographies,
         preferred_stages: preferredStages,
@@ -248,6 +252,25 @@ export function InvestorOnboardingWizard({
               className={`${BASE_INPUT} ${inputCls("check_size_max")}`}
               value={checkSizeMax}
               onChange={(e) => { setCheckSizeMax(e.target.value); clearError("check_size_max"); }}
+            />
+          </FormField>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Preferred ARR range" error={getError("preferred_arr_range")} hint="Target company ARR — e.g. $1M – $5M">
+            <input
+              className={`${BASE_INPUT} ${inputCls("preferred_arr_range")}`}
+              value={preferredArrRange}
+              onChange={(e) => { setPreferredArrRange(e.target.value); clearError("preferred_arr_range"); }}
+              placeholder="$1M – $5M"
+            />
+          </FormField>
+          <FormField label="Preferred MRR range" error={getError("preferred_mrr_range")} hint="Target company MRR — e.g. $80k – $400k">
+            <input
+              className={`${BASE_INPUT} ${inputCls("preferred_mrr_range")}`}
+              value={preferredMrrRange}
+              onChange={(e) => { setPreferredMrrRange(e.target.value); clearError("preferred_mrr_range"); }}
+              placeholder="$80k – $400k"
             />
           </FormField>
         </div>
