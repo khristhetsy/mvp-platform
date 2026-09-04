@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Tabler icon webfont — powers every `ti ti-*` icon across the app (189 files).
+   Bundled via the package so there's no CDN runtime dependency. */
+@import "@tabler/icons-webfont/dist/tabler-icons.min.css";
 
 :root {
   --background: #f5f6f8;
