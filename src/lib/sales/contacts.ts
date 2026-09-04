@@ -53,6 +53,15 @@ function flattenExtra(
     if (values.length) out.push({ label, values });
   }
 
+  // Surface the semantic `industries` list (stored under __profile.industries, not
+  // in extra) as an "Industry sector" field so it shows in the profile schema like
+  // any other questionnaire answer. Placed before overrides so a manual edit wins.
+  const industries = (raw?.__profile as { industries?: unknown } | undefined)?.industries;
+  const industryValues = Array.isArray(industries)
+    ? industries.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean)
+    : [];
+  if (industryValues.length) out.push({ label: "Industry sector", values: industryValues });
+
   // Apply array-valued overrides (structured "Additional details" edits): replace
   // a matching label, or add it if new. Empty override = remove the field.
   if (overrides) {

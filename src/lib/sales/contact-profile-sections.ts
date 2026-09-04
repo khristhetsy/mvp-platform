@@ -53,6 +53,7 @@ const FOUNDER_SCHEMA: SectionDef[] = [
   {
     title: "Company & stage",
     fields: [
+      { display: "Industry sector", match: "industry sector", odoo: "Industry sector" },
       { display: "Funding stage", match: "funding stage", odoo: "Entrepreneur funding stage?" },
       { display: "Operating stage", match: "operating stage", odoo: "Entrepreneur operating stage?" },
       { display: "Annual revenue size", match: "annual revenue size", odoo: "Entrepreneur annual revenue size?" },
@@ -102,6 +103,7 @@ const INVESTOR_SCHEMA: SectionDef[] = [
   {
     title: "Investor thesis",
     fields: [
+      { display: "Industry sector", match: "industry sector", odoo: "Industry sector" },
       { display: "Investment size", match: "investment size", odoo: "Investor investment size?" },
       { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },
       { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },
