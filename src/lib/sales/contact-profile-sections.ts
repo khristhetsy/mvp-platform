@@ -100,7 +100,7 @@ const INVESTOR_SCHEMA: SectionDef[] = [
     ],
   },
   {
-    title: "Investor preferences",
+    title: "Investor thesis",
     fields: [
       { display: "Investment size", match: "investment size", odoo: "Investor investment size?" },
       { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },

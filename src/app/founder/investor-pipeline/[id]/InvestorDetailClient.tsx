@@ -271,7 +271,7 @@ export function InvestorDetailClient({
           </div>
         ) : (
           <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Investor preferences</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Investor thesis</p>
             {preferences.length === 0 ? (
               <p className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-400">
                 No stated preferences on file for this investor.

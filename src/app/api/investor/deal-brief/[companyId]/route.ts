@@ -179,7 +179,7 @@ export async function GET(
     company.business_description ? `Description: ${company.business_description}` : null,
   ].filter(Boolean).join("\n");
 
-  const userMessage = `Investor preferences:\n${investorContext}\n\nCompany:\n${companyContext}\n\nGenerate a personalized thesis-fit brief for this investor.`;
+  const userMessage = `Investor thesis:\n${investorContext}\n\nCompany:\n${companyContext}\n\nGenerate a personalized thesis-fit brief for this investor.`;
 
   try {
     const raw = await claudeComplete(

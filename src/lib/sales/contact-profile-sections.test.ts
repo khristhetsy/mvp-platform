@@ -14,7 +14,7 @@ describe("groupContactProfile", () => {
     const titles = p.sections.map((s) => s.title);
     expect(titles).toContain("Investor information");
     expect(titles).toContain("Investor rating");
-    expect(titles).toContain("Investor preferences");
+    expect(titles).toContain("Investor thesis");
     expect(titles).toContain("Agent field (internal)");
   });
 
