@@ -26,6 +26,18 @@ function fmtDate(v: string | null): string {
   return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Badge status shown in the list. A published/live event whose end date has
+ *  passed reads as "Ended" — the stored status is untouched (so it stays live
+ *  and Unpublish/Archive still work); this only changes how the pill reads.
+ *  End = endsAt, falling back to startsAt when no end is set. */
+function displayStatus(ev: EventRecord): EventStatus {
+  if (ev.status === "published" || ev.status === "live") {
+    const end = ev.endsAt ?? ev.startsAt;
+    if (end && new Date(end).getTime() < Date.now()) return "ended";
+  }
+  return ev.status;
+}
+
 /** Turn an API error payload into a readable message. The API may return a string
  *  or a Zod fieldErrors object ({ field: ["msg", ...] }) — flatten the latter so
  *  validation failures aren't hidden behind a generic fallback. */
@@ -287,9 +299,14 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{ev.format.replace("_", " ")}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{fmtDate(ev.startsAt)}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[ev.status]}`}>
-                      {ev.status}
-                    </span>
+                    {(() => {
+                      const shown = displayStatus(ev);
+                      return (
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[shown]}`}>
+                          {shown}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
