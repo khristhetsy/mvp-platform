@@ -57,6 +57,9 @@ const FOUNDER_SCHEMA: SectionDef[] = [
       { display: "Operating stage", match: "operating stage", odoo: "Entrepreneur operating stage?" },
       { display: "Annual revenue size", match: "annual revenue size", odoo: "Entrepreneur annual revenue size?" },
       { display: "Annual EBITDA", match: "ebitda", odoo: "Entrepreneur annual EBITDA?" },
+      // Actuals — mirror the investor's preferred ARR/MRR range so matching can compare.
+      { display: "ARR", match: "annual recurring revenue", odoo: "Entrepreneur annual recurring revenue (ARR)?" },
+      { display: "MRR", match: "monthly recurring revenue", odoo: "Entrepreneur monthly recurring revenue (MRR)?" },
       { display: "Management team", match: "management team experience", odoo: "Entrepreneur management team experience?" },
     ],
   },
@@ -104,6 +107,9 @@ const INVESTOR_SCHEMA: SectionDef[] = [
       { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },
       { display: "Annual revenue range", match: "revenue range", odoo: "Investor preferences for the company with an annual revenue range of?" },
       { display: "Annual EBITDA range", match: "ebitda", odoo: "Investor preferences for company with annual EBITDA range of?" },
+      // Preferred ranges — mirror the founder's actual ARR/MRR for matching.
+      { display: "Preferred ARR range", match: "arr range", odoo: "Investor preferences for the company with an ARR range of?" },
+      { display: "Preferred MRR range", match: "mrr range", odoo: "Investor preferences for the company with an MRR range of?" },
       { display: "Management team", match: "management team", odoo: "Investor preferences for the management team?" },
     ],
   },
