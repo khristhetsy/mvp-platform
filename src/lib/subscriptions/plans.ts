@@ -62,7 +62,7 @@ export const PLAN_LABELS: Record<PlanType, string> = {
   founder_trial: "Free (legacy)",
   founder_basic: "Basic",
   founder_professional: "Professional",
-  founder_managed_ir: "Managed IR",
+  founder_managed_ir: "SPV Program",
   investor_free: "Investor Free",
   investor_pro: "Investor Pro",
   investor_premium: "Investor Premium",
@@ -163,7 +163,7 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
   },
   {
     planType: "founder_managed_ir",
-    title: "Managed IR",
+    title: "SPV Program",
     priceLabel: "$3,500",
     priceSubtext: "/month · 3-month minimum",
     contactSales: true,

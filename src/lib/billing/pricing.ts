@@ -72,7 +72,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   },
   {
     planType: "founder_managed_ir",
-    title: "Managed IR",
+    title: "SPV Program",
     priceLabel: "$3,500",
     priceSubtext: "/month · 3-month min",
     monthlyPriceCents: PLAN_PRICES.founder_managed_ir,

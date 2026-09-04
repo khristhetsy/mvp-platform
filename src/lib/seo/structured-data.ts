@@ -35,7 +35,7 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "How much does iCapOS cost for founders?",
-    a: "The founder account is free, forever — every tool, including the Capital Readiness Rating, valuation, data room, and e-learning, is included at no cost with no credit card. You only pay when you're ready to reach investors: paid plans (Basic, Professional, Managed IR) add distribution — revealing your matches and sending your one-pager.",
+    a: "Founders choose a plan to unlock the tools and their investor distribution: Basic ($499/mo), Professional ($1,000/mo), or the done-for-you SPV Program ($3,500/mo). Each plan includes every tool — the Capital Readiness Rating, valuation, data room, and e-learning — plus your matched investors are revealed and your materials are distributed to them. Investor accounts are free, and there are no success fees or commissions.",
   },
   {
     q: "What do investors get?",

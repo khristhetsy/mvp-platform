@@ -8,7 +8,7 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
   description:
-    "Choose a plan to unlock the tools and your investor distribution. Basic $499/mo (all tools, up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). Managed IR $3,500/mo done-for-you. Investor accounts free, no success fees.",
+    "Choose a plan to unlock the tools and your investor distribution. Basic $499/mo (all tools, up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). SPV Program $3,500/mo done-for-you. Investor accounts free, no success fees.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -55,9 +55,18 @@ export default function PricingPage() {
               </div>
               <div className="mt-3 flex items-baseline gap-1"><span className="font-site-display text-4xl font-extrabold">{t.price}</span><span className="text-sm text-white/50">{t.per}</span></div>
               <p className="mt-2 text-sm text-white/65">{t.desc}</p>
-              <ul className="mt-5 space-y-2.5">
-                {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
-              </ul>
+              {"features" in t && t.features ? (
+                <ul className="mt-5 space-y-2.5">
+                  {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
+                </ul>
+              ) : null}
+              {"advisory" in t && t.advisory ? (
+                <div className="mt-5 rounded-xl border border-site-blue-lt/30 bg-site-blue/[0.07] p-4">
+                  <div className="flex items-center gap-2 text-site-blue-lt"><i className="ti ti-building-bank" aria-hidden="true" /><span className="font-site-mono text-[10px] uppercase tracking-wider">{t.advisory.brand}</span></div>
+                  <p className="mt-2 text-[15px] font-semibold text-white">{t.advisory.title}</p>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">{t.advisory.body}</p>
+                </div>
+              ) : null}
               <Link href={t.cta.href} {...("contactSales" in t && t.contactSales ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
             </div>
           ))}

@@ -2,7 +2,7 @@
  * Pricing page copy. Model: a paid subscription unlocks the tools + investor
  * distribution — Basic $499 (all tools, up to 25, one-pager, DIY outreach,
  * spotlight) → Professional $1,000 (up to 100, live stage, brokered intros,
- * add-company $800) → Managed IR $3,500 (done-for-you, contact sales).
+ * add-company $800) → SPV Program $3,500 (done-for-you, contact sales).
  */
 export const pricing = {
   eyebrow: "Pricing",
@@ -41,18 +41,16 @@ export const pricing = {
       featured: true,
     },
     {
-      name: "Managed IR",
+      name: "SPV Program",
       price: "$3,500",
       per: "/month",
       badge: "Done-for-you",
       desc: "We run the raise for you. 3-month minimum.",
-      features: [
-        "Everything in Professional, uncapped",
-        "We curate the list and your materials",
-        "You review and approve",
-        "Post-conference follow-up run for you",
-        "Capacity-capped — talk to us",
-      ],
+      advisory: {
+        brand: "Advisory · iCFO Capital",
+        title: "Run this raise through an SPV",
+        body: "One vehicle, one cap table line, one close. We structure it and manage the outreach against your matched mandates.",
+      },
       cta: { label: "Talk to us", href: "/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" },
       featured: false,
       contactSales: true,
@@ -77,14 +75,14 @@ export const pricing = {
       { k: "Additional company accounts", vals: ["—", "$800/mo"] },
       { k: "Success fees or commission", vals: ["None", "None"] },
     ],
-    note: "Managed IR — $3,500/mo, 3-month minimum — is done-for-you: we curate the list and materials, you approve, we run follow-up. Talk to us.",
+    note: "SPV Program — $3,500/mo, 3-month minimum — is done-for-you: we run this raise through an SPV, structuring the vehicle and managing the outreach against your matched mandates. Talk to us.",
   },
   crossLink: { label: "Not sure which plan? See your Capital Readiness Rating first", href: "/readiness" },
   faq: {
     eyebrow: "Questions",
     title: "Before you subscribe.",
     items: [
-      { q: "Is there a sales call?", a: "Not for Basic or Professional — those are self-serve start to finish. Managed IR is done-for-you, so it starts with a conversation. You can book a 30-minute walkthrough of the self-serve plans if you'd find it useful, but nothing requires it." },
+      { q: "Is there a sales call?", a: "Not for Basic or Professional — those are self-serve start to finish. The SPV Program is done-for-you, so it starts with a conversation. You can book a 30-minute walkthrough of the self-serve plans if you'd find it useful, but nothing requires it." },
       { q: "What's included in a plan?", a: "Every tool — Capital Readiness Rating, valuation, the data room, and e-learning — plus your matched investors are revealed and your materials are distributed to them. Basic covers up to 25 investors; Professional up to 100 and adds the live stage and brokered intros." },
       { q: "Why “up to” 25 and 100?", a: "Investors set their own monthly acceptance caps. When the right-fit investors for your company have hit their limit that month, your list is shorter — which is what keeps response rates from collapsing." },
       { q: "Does iCapOS make introductions?", a: "On Professional, iCapOS passes along brokered introduction requests. It distributes your materials to matched investors; it does not recommend or vouch for anyone." },
