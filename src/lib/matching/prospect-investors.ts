@@ -207,6 +207,8 @@ export async function loadProspectInvestorMatchProfiles(): Promise<{
       preferred_sectors: p.preferred_sectors,
       preferred_geographies: p.preferred_geographies,
       preferred_stages: p.preferred_stages,
+      preferred_arr_range: null,
+      preferred_mrr_range: null,
       approval_status: "approved",
     });
     names.set(id, `${p.name} · prospect`);

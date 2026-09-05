@@ -68,11 +68,13 @@ function tokens(s: string | null): string[] {
 }
 
 /** Weights for each match factor (admin-adjustable). Sum is the denominator. */
-export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number; investorType?: number; arrMrr?: number };
-// investorType/arrMrr are additive: they count toward the score's denominator only
+export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number; investorType?: number; arr?: number; mrr?: number };
+// investorType/arr/mrr are additive: they count toward the score's denominator only
 // when both sides have data to compare, so scores are unchanged when that data is
-// absent (which is most contacts today) and grow in only where it exists.
-export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15, investorType: 12, arrMrr: 10 };
+// absent (which is most contacts today) and grow in only where it exists. ARR and
+// MRR are kept light — they're revenue-flavored, so heavy weights would let revenue
+// dominate the overall score.
+export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15, investorType: 12, arr: 6, mrr: 6 };
 
 /** Rough annual-revenue band (USD) implied by the founder's revenue stage, used
  *  to score against the investor's preferred revenue range when no exact figure
@@ -98,17 +100,19 @@ export function scoreInvestorPreferenceMatch(
 ): PreferenceMatch {
   const W = weights;
   const wInvestorType = W.investorType ?? 0;
-  const wArrMrr = W.arrMrr ?? 0;
+  const wArr = W.arr ?? 0;
+  const wMrr = W.mrr ?? 0;
   // Applicable only when BOTH sides have data — otherwise the factor is neutral
-  // (excluded from the denominator) rather than a drag on the score.
+  // (excluded from the denominator) rather than a drag on the score. ARR and MRR
+  // are independent: an investor who targets on ARR is scored on ARR alone.
   const investorTypeApplicable = pref.investorType.length > 0 && (company.soughtInvestorTypes?.length ?? 0) > 0;
-  const arrMrrApplicable =
-    (pref.arrRange.length > 0 && company.arr != null) ||
-    (pref.mrrRange.length > 0 && company.mrr != null);
+  const arrApplicable = pref.arrRange.length > 0 && company.arr != null;
+  const mrrApplicable = pref.mrrRange.length > 0 && company.mrr != null;
   const total =
     W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity +
     (investorTypeApplicable ? wInvestorType : 0) +
-    (arrMrrApplicable ? wArrMrr : 0);
+    (arrApplicable ? wArr : 0) +
+    (mrrApplicable ? wMrr : 0);
   if (total <= 0) return { score: 50, reasons: [] };
 
   // No scoreable preferences at all → neutral. Avoids a misleading 0% for an
@@ -213,14 +217,17 @@ export function scoreInvestorPreferenceMatch(
     }
   }
 
-  // ARR / MRR fit — the founder's actual ARR/MRR inside the investor's target range.
-  if (arrMrrApplicable) {
-    const inRange = (ranges: string[], actual: number | null | undefined): boolean =>
-      actual != null && ranges.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= actual && actual <= r.max; });
-    if (inRange(pref.arrRange, company.arr) || inRange(pref.mrrRange, company.mrr)) {
-      points += wArrMrr;
-      reasons.push("ARR/MRR in target range");
-    }
+  // ARR fit and MRR fit — independent: the founder's actual figure inside the
+  // investor's target range for that specific metric.
+  const inRange = (ranges: string[], actual: number | null | undefined): boolean =>
+    actual != null && ranges.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= actual && actual <= r.max; });
+  if (arrApplicable && inRange(pref.arrRange, company.arr)) {
+    points += wArr;
+    reasons.push("ARR in target range");
+  }
+  if (mrrApplicable && inRange(pref.mrrRange, company.mrr)) {
+    points += wMrr;
+    reasons.push("MRR in target range");
   }
 
   return { score: Math.round((points / total) * 100), reasons };

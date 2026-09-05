@@ -180,6 +180,8 @@ export async function PATCH(req: Request): Promise<Response> {
         investorType: clampScore(ew.investorType, dew.investorType),
         capitalType: clampScore(ew.capitalType, dew.capitalType),
         activeRating: clampScore(ew.activeRating, dew.activeRating),
+        arr: clampScore(ew.arr, dew.arr),
+        mrr: clampScore(ew.mrr, dew.mrr),
       },
     };
     const ok = await setInvestorMatchConfig(config, gate.userId);

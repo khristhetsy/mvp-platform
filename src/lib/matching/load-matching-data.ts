@@ -114,7 +114,7 @@ export async function loadApprovedInvestorMatchProfiles() {
     const { data, error } = await admin
       .from("investor_profiles")
       .select(
-        "profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, approval_status",
+        "profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, preferred_arr_range, preferred_mrr_range, approval_status",
       )
       .eq("approval_status", "approved")
       .order("profile_id", { ascending: true })

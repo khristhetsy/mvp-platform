@@ -36,6 +36,9 @@ export function buildCompanyMatchProfile(company: {
   marketplace_visible?: boolean | null;
   published_at?: string | null;
   readinessScore?: number | null;
+  /** Founder's actual ARR / MRR, USD (option B — from the CRM contact). */
+  arr?: number | null;
+  mrr?: number | null;
 }): CompanyMatchProfile {
   // Funding stage + operating stage + revenue stage all feed the stage factor.
   const stageParts = [company.funding_stage, company.operating_stage, company.revenue_stage]
@@ -57,6 +60,8 @@ export function buildCompanyMatchProfile(company: {
     isPublished: Boolean(company.is_published),
     marketplaceVisible: Boolean(company.marketplace_visible),
     publishedAt: company.published_at ?? null,
+    arr: company.arr ?? null,
+    mrr: company.mrr ?? null,
     ...(soughtInvestorTypes.length ? { soughtInvestorTypes } : {}),
     ...(soughtCapitalTypes.length ? { soughtCapitalTypes } : {}),
   };
@@ -73,6 +78,8 @@ export function investorProfileFromContact(s: ScoredInvestorContact): InvestorMa
     preferred_sectors: s.sectors,
     preferred_geographies: [],
     preferred_stages: s.preferences.useOfFunds,
+    preferred_arr_range: s.preferences.arrRange[0] ?? null,
+    preferred_mrr_range: s.preferences.mrrRange[0] ?? null,
     approval_status: "approved",
     capitalTypes: s.capitalTypes,
     activeRating: activeRatingScore(s.preferences),

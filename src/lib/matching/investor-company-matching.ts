@@ -17,6 +17,7 @@
 
 import type { InvestorProfileRecord } from "@/lib/investor/types";
 import { sectorsAlign } from "@/lib/matching/sector-synonyms";
+import { parseMoneyBand } from "@/lib/investors/preference-match";
 
 export type CompanyMatchProfile = {
   id: string;
@@ -36,6 +37,10 @@ export type CompanyMatchProfile = {
    *  absent means the factor simply drops out of the score. */
   soughtInvestorTypes?: string[];
   soughtCapitalTypes?: string[];
+  /** Founder's actual ARR / MRR, USD (option B: read from the CRM contact at load).
+   *  Optional — absent means the ARR/MRR factors drop out. */
+  arr?: number | null;
+  mrr?: number | null;
 };
 
 export type InvestorMatchProfile = Pick<
@@ -47,6 +52,8 @@ export type InvestorMatchProfile = Pick<
   | "preferred_sectors"
   | "preferred_geographies"
   | "preferred_stages"
+  | "preferred_arr_range"
+  | "preferred_mrr_range"
   | "approval_status"
 > & {
   /** Extras for the added factors (absent for platform investors → factor drops out). */
@@ -71,6 +78,8 @@ export type EngineWeights = {
   investorType: number;
   capitalType: number;
   activeRating: number;
+  arr: number;
+  mrr: number;
 };
 export const DEFAULT_ENGINE_WEIGHTS: EngineWeights = {
   sector: 25,
@@ -80,6 +89,9 @@ export const DEFAULT_ENGINE_WEIGHTS: EngineWeights = {
   investorType: 10,
   capitalType: 10,
   activeRating: 10,
+  // Revenue-flavored — kept light so they refine rather than dominate.
+  arr: 6,
+  mrr: 6,
 };
 
 function normalizeToken(value: string) {
@@ -199,6 +211,35 @@ function scoreActiveRating(investor: InvestorMatchProfile, weight: number): Fact
   return { points: Math.round(weight * fit), weight, evaluated: true, reason: rating >= 4 ? "Highly active investor" : null, missing: null };
 }
 
+/** ARR fit — the founder's actual ARR inside the investor's preferred ARR range.
+ *  Independent of MRR. Unlike the fixed-rubric factors above, ARR/MRR count toward
+ *  the denominator ONLY when evaluated (see matchInvestorToCompany), so they never
+ *  lower scores for the common case where the founder has no ARR/MRR on file. */
+function scoreArr(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
+  const range = investor.preferred_arr_range;
+  if (!range?.trim() || company.arr == null) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  }
+  const band = parseMoneyBand(range);
+  if (band && band.min <= company.arr && company.arr <= band.max) {
+    return { points: weight, weight, evaluated: true, reason: "ARR in target range", missing: null };
+  }
+  return { points: 0, weight, evaluated: true, reason: null, missing: "ARR outside target range" };
+}
+
+/** MRR fit — the founder's actual MRR inside the investor's preferred MRR range. */
+function scoreMrr(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
+  const range = investor.preferred_mrr_range;
+  if (!range?.trim() || company.mrr == null) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  }
+  const band = parseMoneyBand(range);
+  if (band && band.min <= company.mrr && company.mrr <= band.max) {
+    return { points: weight, weight, evaluated: true, reason: "MRR in target range", missing: null };
+  }
+  return { points: 0, weight, evaluated: true, reason: null, missing: "MRR outside target range" };
+}
+
 export function matchInvestorToCompany(
   investor: InvestorMatchProfile,
   company: CompanyMatchProfile,
@@ -226,10 +267,23 @@ export function matchInvestorToCompany(
   // earns 0 of its weight. This means matching a single dimension can NEVER read as
   // a 100% fit — the score is the true "% of the weighted match rubric satisfied,"
   // and 100% is reserved for an investor who fits every weighted criterion.
-  const factors = [sector, stage, geography, checkSize, investorType, capitalType, activeRating];
+  // ARR/MRR are opt-in: they count toward the denominator ONLY when evaluated
+  // (both sides have data), so adding them never lowers scores for the common case
+  // where the founder has no ARR/MRR on file. The 7 fixed-rubric factors keep their
+  // always-in-denominator behavior unchanged.
+  const arr = scoreArr(investor, company, weights.arr);
+  const mrr = scoreMrr(investor, company, weights.mrr);
+
+  const fixedFactors = [sector, stage, geography, checkSize, investorType, capitalType, activeRating];
+  const factors = [...fixedFactors, arr, mrr];
   let earned = 0;
   let totalWeight = 0;
-  for (const f of factors) {
+  for (const f of fixedFactors) {
+    earned += f.points;
+    totalWeight += f.weight;
+  }
+  for (const f of [arr, mrr]) {
+    if (!f.evaluated) continue; // drops out entirely when no ARR/MRR data
     earned += f.points;
     totalWeight += f.weight;
   }
