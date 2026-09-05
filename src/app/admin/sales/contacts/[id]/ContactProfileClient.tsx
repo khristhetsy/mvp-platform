@@ -732,6 +732,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               const profile = groupContactProfile(contact.extra, contact.membership);
               if (profile.sections.length === 0) return null;
               const hasInfoSection = profile.sections.some((s) => s.title.toLowerCase().includes("information"));
+              // "Investor profile" (Odoo "Investor profile?") — surfaced as an editable
+              // multi-select in Contact & lead; resolve its synced label so edits merge.
+              const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => /investor profile/i.test(f.label))?.saveKey ?? "Investor profile?";
               const formdBlock = formdFirm ? (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
@@ -773,6 +776,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     if (company && (sec.title === "Seeking" || sec.title === "Company & stage")) return null;
                     const rating = sec.title.toLowerCase().includes("rating");
                     const isInfo = sec.title.toLowerCase().includes("information");
+                    // Investor profile is rendered in Contact & lead — drop it here to avoid a duplicate.
+                    const visibleFields = sec.fields.filter((f) => f.saveKey !== investorProfileKey);
+                    if (sec.title === "Other details" && visibleFields.length === 0) return null;
                     return (
                       <div key={sec.title}>
                         <div style={{ marginTop: 14 }}>
@@ -804,7 +810,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <RoRow label="Language">{contact.language || null}</RoRow>
                             </>
                           )}
-                          {sec.fields.map((f) => (
+                          {visibleFields.map((f) => (
                             <EditablePrefRow
                               key={f.saveKey}
                               label={f.label}
@@ -849,6 +855,20 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
                       <div style={{ gridColumn: "1 / -1" }}>
                         <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
+                      </div>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <EditablePrefRow
+                          label="Investor profile"
+                          rating={false}
+                          options={fieldOptions[investorProfileKey] ?? []}
+                          value={prefEdits[investorProfileKey] ?? ""}
+                          changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
+                          editing={editingKey === investorProfileKey}
+                          onOpen={() => setEditingKey(investorProfileKey)}
+                          onChange={(v) => setPrefEdits((p) => ({ ...p, [investorProfileKey]: v }))}
+                          onSave={() => saveField(investorProfileKey)}
+                          onUndo={() => { setPrefEdits((p) => ({ ...p, [investorProfileKey]: prefOrig[investorProfileKey] ?? "" })); setEditingKey(null); }}
+                        />
                       </div>
                     </div>
                   </div>
