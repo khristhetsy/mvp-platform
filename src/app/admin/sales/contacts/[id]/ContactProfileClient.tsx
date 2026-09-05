@@ -731,6 +731,21 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             {(() => {
               const profile = groupContactProfile(contact.extra, contact.membership);
               if (profile.sections.length === 0) return null;
+              const hasInfoSection = profile.sections.some((s) => s.title.toLowerCase().includes("information"));
+              const formdBlock = formdFirm ? (
+                <div style={{ marginTop: 14 }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                    <RoRow label="Capital raised (Reg D)">{fmtUsdM(formdFirm.regd_footprint)}</RoRow>
+                    <RoRow label="Vehicles / funds">{formdFirm.vehicle_count != null ? String(formdFirm.vehicle_count) : null}</RoRow>
+                    <RoRow label="Fund types">{formdFirm.fund_types && formdFirm.fund_types.length ? formdFirm.fund_types.join(", ") : null}</RoRow>
+                    <RoRow label="Activity band">{formdFirm.activity_band || null}</RoRow>
+                    <RoRow label="Filings (24mo)">{formdFirm.investments_24mo != null ? String(formdFirm.investments_24mo) : null}</RoRow>
+                    <RoRow label="Most recent raise">{formdFirm.last_investment_issuer || null}</RoRow>
+                  </div>
+                  <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "5px 0 0" }}>Capital raised across the fund&rsquo;s Reg D filings &mdash; SEC-verified public record, not assets under management.</p>
+                </div>
+              ) : null;
               return (
               <div style={{ gridColumn: "1 / -1" }}>
                 <div>
@@ -749,20 +764,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
                     </span>
                   </div>
-                  {formdFirm && (
-                    <div style={{ marginTop: 14 }}>
-                      <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
-                        <RoRow label="Capital raised (Reg D)">{fmtUsdM(formdFirm.regd_footprint)}</RoRow>
-                        <RoRow label="Vehicles / funds">{formdFirm.vehicle_count != null ? String(formdFirm.vehicle_count) : null}</RoRow>
-                        <RoRow label="Fund types">{formdFirm.fund_types && formdFirm.fund_types.length ? formdFirm.fund_types.join(", ") : null}</RoRow>
-                        <RoRow label="Activity band">{formdFirm.activity_band || null}</RoRow>
-                        <RoRow label="Filings (24mo)">{formdFirm.investments_24mo != null ? String(formdFirm.investments_24mo) : null}</RoRow>
-                        <RoRow label="Most recent raise">{formdFirm.last_investment_issuer || null}</RoRow>
-                      </div>
-                      <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "5px 0 0" }}>Capital raised across the fund’s Reg D filings — SEC-verified public record, not assets under management.</p>
-                    </div>
-                  )}
+                  {!hasInfoSection && formdBlock}
                   {company && <CompanyLinkedRecordEditor company={company} onePager={onePager} />}
                   {profile.sections.map((sec) => {
                     // The linked-company section above now carries Seeking +
@@ -770,8 +772,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     // CRM-import duplicates when a company is linked.
                     if (company && (sec.title === "Seeking" || sec.title === "Company & stage")) return null;
                     const rating = sec.title.toLowerCase().includes("rating");
+                    const isInfo = sec.title.toLowerCase().includes("information");
                     return (
-                      <div key={sec.title} style={{ marginTop: 14 }}>
+                      <div key={sec.title}>
+                        <div style={{ marginTop: 14 }}>
                         <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
                         {sec.title === "Highlights" ? (
                           (() => {
@@ -817,6 +821,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                           ))}
                         </div>
                         )}
+                        </div>
+                        {isInfo ? formdBlock : null}
                       </div>
                     );
                   })}
