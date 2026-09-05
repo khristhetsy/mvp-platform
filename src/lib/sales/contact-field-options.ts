@@ -114,7 +114,7 @@ export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptio
 
 const PAGE = 1000;
 const MAX_PAGES = 40; // ~40k rows safety cap
-const SELECT = "extra:raw->__profile->extra, industries:raw->__profile->industries";
+const SELECT = "extra:raw->__profile->extra, industries:raw->__profile->industries, investorTypes:raw->__profile->investorTypes";
 
 /** Curated option lists for fields that have no synced values yet (so the
  *  click-to-edit picker is a select, not a text box). Merged with — never
@@ -140,21 +140,25 @@ const TTL_MS = 10 * 60 * 1000;
 export async function getContactFieldOptions(db: any, force = false): Promise<FieldOptions> {
   if (!force && cache && Date.now() - cache.at < TTL_MS) return cache.data;
   try {
-    const rows: Array<{ extra?: unknown; industries?: unknown }> = [];
+    const rows: Array<{ extra?: unknown; industries?: unknown; investorTypes?: unknown }> = [];
     for (let page = 0; page < MAX_PAGES; page++) {
       const from = page * PAGE;
       const { data, error } = await db.from("crm_contacts").select(SELECT).range(from, from + PAGE - 1);
       if (error || !data || data.length === 0) break;
-      rows.push(...(data as Array<{ extra?: unknown; industries?: unknown }>));
+      rows.push(...(data as Array<{ extra?: unknown; industries?: unknown; investorTypes?: unknown }>));
       if (data.length < PAGE) break;
     }
     const byLabel = aggregateExactLabels(rows);
-    // Industries live under __profile.industries (a semantic key), not in extra —
-    // fold their distinct values into the "Industries" option set so the field is
-    // a select like the questionnaire ones.
+    // Industries + Investor type live under semantic keys (__profile.industries /
+    // __profile.investorTypes), not in extra — fold their distinct values into the
+    // matching option sets so those fields are selects like the questionnaire ones.
     const indSet = byLabel.get("Industries") ?? new Set<string>();
     for (const row of rows) for (const v of normalizeValues(row.industries)) indSet.add(v);
     if (indSet.size) byLabel.set("Industries", indSet);
+
+    const invTypeSet = byLabel.get("Investor type") ?? new Set<string>();
+    for (const row of rows) for (const v of normalizeValues(row.investorTypes)) invTypeSet.add(v);
+    if (invTypeSet.size) byLabel.set("Investor type", invTypeSet);
 
     const options = buildFieldOptions(byLabel);
     // Merge curated fallbacks (fields with no synced data yet) without clobbering data.

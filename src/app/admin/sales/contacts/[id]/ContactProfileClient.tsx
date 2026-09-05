@@ -732,9 +732,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               const profile = groupContactProfile(contact.extra, contact.membership);
               if (profile.sections.length === 0) return null;
               const hasInfoSection = profile.sections.some((s) => s.title.toLowerCase().includes("information"));
-              // "Investor profile" (Odoo "Investor profile?") — surfaced as an editable
-              // multi-select in Contact & lead; resolve its synced label so edits merge.
-              const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => /investor profile/i.test(f.label))?.saveKey ?? "Investor profile?";
+              // "Investor type" (raw.__profile.investorTypes) — surfaced as an editable
+              // multi-select in Contact & lead; same data the Group-by "Investor type" uses.
+              const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => /investor type/i.test(f.label))?.saveKey ?? "Investor type";
               const formdBlock = formdFirm ? (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
@@ -856,20 +856,22 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <div style={{ gridColumn: "1 / -1" }}>
                         <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
                       </div>
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <EditablePrefRow
-                          label="Investor profile"
-                          rating={false}
-                          options={fieldOptions[investorProfileKey] ?? []}
-                          value={prefEdits[investorProfileKey] ?? ""}
-                          changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
-                          editing={editingKey === investorProfileKey}
-                          onOpen={() => setEditingKey(investorProfileKey)}
-                          onChange={(v) => setPrefEdits((p) => ({ ...p, [investorProfileKey]: v }))}
-                          onSave={() => saveField(investorProfileKey)}
-                          onUndo={() => { setPrefEdits((p) => ({ ...p, [investorProfileKey]: prefOrig[investorProfileKey] ?? "" })); setEditingKey(null); }}
-                        />
-                      </div>
+                      {profile.type === "investor" && (
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <EditablePrefRow
+                            label="Investor type"
+                            rating={false}
+                            options={fieldOptions[investorProfileKey] ?? []}
+                            value={prefEdits[investorProfileKey] ?? ""}
+                            changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
+                            editing={editingKey === investorProfileKey}
+                            onOpen={() => setEditingKey(investorProfileKey)}
+                            onChange={(v) => setPrefEdits((p) => ({ ...p, [investorProfileKey]: v }))}
+                            onSave={() => saveField(investorProfileKey)}
+                            onUndo={() => { setPrefEdits((p) => ({ ...p, [investorProfileKey]: prefOrig[investorProfileKey] ?? "" })); setEditingKey(null); }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   </>)}

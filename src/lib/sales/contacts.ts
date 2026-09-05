@@ -78,6 +78,25 @@ function flattenExtra(
   }
   if (industrySet.size) out.push({ label: "Industries", values: [...industrySet] });
 
+  // Investor type: the data lives in __profile.investorTypes (semantic key), same
+  // as industries. Surface it as one "Investor type" field, folding in any stray
+  // "Investor profile?" answer, so the contact detail matches the Group-by "Investor
+  // type" dimension. Placed before overrides so a manual edit still wins.
+  const STRAY_INVTYPE_LABELS = new Set(["investor profile?", "investor profile", "investor type"]);
+  const invTypes = (raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes;
+  const invTypeSet = new Set<string>(
+    Array.isArray(invTypes)
+      ? invTypes.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean)
+      : [],
+  );
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (STRAY_INVTYPE_LABELS.has(out[i].label.trim().toLowerCase())) {
+      for (const v of out[i].values) invTypeSet.add(v);
+      out.splice(i, 1);
+    }
+  }
+  if (invTypeSet.size) out.push({ label: "Investor type", values: [...invTypeSet] });
+
   // Apply array-valued overrides (structured "Additional details" edits): replace
   // a matching label, or add it if new. Empty override = remove the field.
   if (overrides) {
