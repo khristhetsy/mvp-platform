@@ -18,6 +18,12 @@ export type CompanyMatchInput = {
   /** Free-text use of funds / focus. */
   useOfFunds: string | null;
   industry: string | null;
+  /** Investor types the founder is seeking (for investor-type fit). Optional —
+   *  the factor stays neutral when absent. */
+  soughtInvestorTypes?: string[];
+  /** Founder's actual ARR / MRR, USD (for ARR/MRR fit). Optional — neutral when null. */
+  arr?: number | null;
+  mrr?: number | null;
 };
 
 export type PreferenceMatch = { score: number; reasons: string[] };
@@ -62,8 +68,11 @@ function tokens(s: string | null): string[] {
 }
 
 /** Weights for each match factor (admin-adjustable). Sum is the denominator. */
-export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
-export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15 };
+export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number; investorType?: number; arrMrr?: number };
+// investorType/arrMrr are additive: they count toward the score's denominator only
+// when both sides have data to compare, so scores are unchanged when that data is
+// absent (which is most contacts today) and grow in only where it exists.
+export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15, investorType: 12, arrMrr: 10 };
 
 /** Rough annual-revenue band (USD) implied by the founder's revenue stage, used
  *  to score against the investor's preferred revenue range when no exact figure
@@ -88,7 +97,18 @@ export function scoreInvestorPreferenceMatch(
   weights: MatchWeights = DEFAULT_WEIGHTS,
 ): PreferenceMatch {
   const W = weights;
-  const total = W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity;
+  const wInvestorType = W.investorType ?? 0;
+  const wArrMrr = W.arrMrr ?? 0;
+  // Applicable only when BOTH sides have data — otherwise the factor is neutral
+  // (excluded from the denominator) rather than a drag on the score.
+  const investorTypeApplicable = pref.investorType.length > 0 && (company.soughtInvestorTypes?.length ?? 0) > 0;
+  const arrMrrApplicable =
+    (pref.arrRange.length > 0 && company.arr != null) ||
+    (pref.mrrRange.length > 0 && company.mrr != null);
+  const total =
+    W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity +
+    (investorTypeApplicable ? wInvestorType : 0) +
+    (arrMrrApplicable ? wArrMrr : 0);
   if (total <= 0) return { score: 50, reasons: [] };
 
   // No scoreable preferences at all → neutral. Avoids a misleading 0% for an
@@ -99,6 +119,9 @@ export function scoreInvestorPreferenceMatch(
     pref.useOfFunds.length > 0 ||
     pref.investmentSize.length > 0 ||
     pref.revenueRange.length > 0 ||
+    pref.arrRange.length > 0 ||
+    pref.mrrRange.length > 0 ||
+    pref.investorType.length > 0 ||
     activeRatingScore(pref) != null;
   if (!hasSignal) return { score: 50, reasons: [] };
 
@@ -179,6 +202,25 @@ export function scoreInvestorPreferenceMatch(
   if (rating != null) {
     points += W.activity * (rating / 5);
     if (rating >= 4) reasons.push("Highly active investor");
+  }
+
+  // Investor type fit — the investor's type(s) overlap what the founder is seeking.
+  if (investorTypeApplicable) {
+    const want = new Set((company.soughtInvestorTypes ?? []).map((t) => t.trim().toLowerCase()));
+    if (pref.investorType.some((t) => want.has(t.trim().toLowerCase()))) {
+      points += wInvestorType;
+      reasons.push("Investor type fits founder's ask");
+    }
+  }
+
+  // ARR / MRR fit — the founder's actual ARR/MRR inside the investor's target range.
+  if (arrMrrApplicable) {
+    const inRange = (ranges: string[], actual: number | null | undefined): boolean =>
+      actual != null && ranges.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= actual && actual <= r.max; });
+    if (inRange(pref.arrRange, company.arr) || inRange(pref.mrrRange, company.mrr)) {
+      points += wArrMrr;
+      reasons.push("ARR/MRR in target range");
+    }
   }
 
   return { score: Math.round((points / total) * 100), reasons };

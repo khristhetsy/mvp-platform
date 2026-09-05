@@ -69,6 +69,9 @@ const MASKABLE_KEYS = [
   "dealsPerYear",
   "revenueRange",
   "ebitdaRange",
+  "arrRange",
+  "mrrRange",
+  "investorType",
   "managementTeam",
   "activeRating",
   "contactPreference",
@@ -105,6 +108,9 @@ const KEY_LABELS: Record<MaskKey, string> = {
   dealsPerYear: "Deals per year",
   revenueRange: "Revenue range",
   ebitdaRange: "EBITDA range",
+  arrRange: "ARR range",
+  mrrRange: "MRR range",
+  investorType: "Investor type",
   managementTeam: "Management team",
   activeRating: "Active rating",
   contactPreference: "Contact preference",
@@ -137,6 +143,9 @@ export function maskPreferences(p: InvestorPreferences, informative: Set<MaskKey
     dealsPerYear: informative.has("dealsPerYear") ? p.dealsPerYear : null,
     revenueRange: informative.has("revenueRange") ? p.revenueRange : [],
     ebitdaRange: informative.has("ebitdaRange") ? p.ebitdaRange : [],
+    arrRange: informative.has("arrRange") ? p.arrRange : [],
+    mrrRange: informative.has("mrrRange") ? p.mrrRange : [],
+    investorType: informative.has("investorType") ? p.investorType : [],
     managementTeam: informative.has("managementTeam") ? p.managementTeam : [],
     activeRating: informative.has("activeRating") ? p.activeRating : null,
     contactPreference: informative.has("contactPreference") ? p.contactPreference : null,
@@ -247,6 +256,7 @@ export async function loadInvestorContacts(opts?: {
     const sectors = asList(prof?.industries);
     const preferences = extractInvestorPreferences(extra);
     preferences.sectors = sectors;
+    preferences.investorType = asList(prof?.investorTypes);
     if (!hasAnyPreference(preferences)) continue;
 
     rows.push({
