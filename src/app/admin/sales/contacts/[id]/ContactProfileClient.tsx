@@ -22,7 +22,7 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
-const FREE_TEXT_FIELD_LABELS = new Set(["Management team", "Note", "Request", "Pitch frame to use", "If other, referred you"]);
+const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Pitch frame to use", "If other, referred you"]);
 // Curated option lists for the structured contact fields (rendered as dropdowns).
 // Any existing/legacy value that isn't in a list is preserved and pinned on top.
 const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];

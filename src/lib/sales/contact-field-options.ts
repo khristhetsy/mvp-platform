@@ -114,7 +114,19 @@ export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptio
 
 const PAGE = 1000;
 const MAX_PAGES = 40; // ~40k rows safety cap
-const SELECT = "extra:raw->__profile->extra";
+const SELECT = "extra:raw->__profile->extra, industries:raw->__profile->industries";
+
+/** Curated option lists for fields that have no synced values yet (so the
+ *  click-to-edit picker is a select, not a text box). Merged with — never
+ *  replacing — any data-derived options for the same canonical label. */
+const CURATED_OPTIONS: Record<string, string[]> = {
+  "Investor preferences for the company with an ARR range of?": [
+    "Less than $1M", "$1M – $5M", "$5M – $10M", "$10M – $25M", "$25M+",
+  ],
+  "Investor preferences for the company with an MRR range of?": [
+    "Less than $80k", "$80k – $200k", "$200k – $400k", "$400k – $1M", "$1M+",
+  ],
+};
 
 let cache: { at: number; data: FieldOptions } | null = null;
 const TTL_MS = 10 * 60 * 1000;
@@ -128,15 +140,27 @@ const TTL_MS = 10 * 60 * 1000;
 export async function getContactFieldOptions(db: any, force = false): Promise<FieldOptions> {
   if (!force && cache && Date.now() - cache.at < TTL_MS) return cache.data;
   try {
-    const rows: Array<{ extra?: unknown }> = [];
+    const rows: Array<{ extra?: unknown; industries?: unknown }> = [];
     for (let page = 0; page < MAX_PAGES; page++) {
       const from = page * PAGE;
       const { data, error } = await db.from("crm_contacts").select(SELECT).range(from, from + PAGE - 1);
       if (error || !data || data.length === 0) break;
-      rows.push(...(data as Array<{ extra?: unknown }>));
+      rows.push(...(data as Array<{ extra?: unknown; industries?: unknown }>));
       if (data.length < PAGE) break;
     }
-    const options = buildFieldOptions(aggregateExactLabels(rows));
+    const byLabel = aggregateExactLabels(rows);
+    // Industries live under __profile.industries (a semantic key), not in extra —
+    // fold their distinct values into the "Industries" option set so the field is
+    // a select like the questionnaire ones.
+    const indSet = byLabel.get("Industries") ?? new Set<string>();
+    for (const row of rows) for (const v of normalizeValues(row.industries)) indSet.add(v);
+    if (indSet.size) byLabel.set("Industries", indSet);
+
+    const options = buildFieldOptions(byLabel);
+    // Merge curated fallbacks (fields with no synced data yet) without clobbering data.
+    for (const [label, opts] of Object.entries(CURATED_OPTIONS)) {
+      options[label] = [...new Set([...(options[label] ?? []), ...opts])];
+    }
     cache = { at: Date.now(), data: options };
     return options;
   } catch {
