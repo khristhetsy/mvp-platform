@@ -53,14 +53,30 @@ function flattenExtra(
     if (values.length) out.push({ label, values });
   }
 
-  // Surface the semantic `industries` list (stored under __profile.industries, not
-  // in extra) as an "Industry sector" field so it shows in the profile schema like
-  // any other questionnaire answer. Placed before overrides so a manual edit wins.
+  // Consolidate ALL industry data into one "Industries" field: the semantic
+  // __profile.industries list plus any values that landed under stray Odoo labels
+  // (some contacts carry industries under the entrepreneur/investor questionnaire
+  // labels instead of the mapped key). Deduped, and the stray labels are removed
+  // from `out` so they don't show separately in "Other details". Placed before the
+  // override loop so a manual edit to "Industries" still wins.
+  const STRAY_INDUSTRY_LABELS = new Set([
+    "entrepreneur type of industries?",
+    "investor interested in type(s) of business industries?",
+    "industry sector",
+  ]);
   const industries = (raw?.__profile as { industries?: unknown } | undefined)?.industries;
-  const industryValues = Array.isArray(industries)
-    ? industries.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean)
-    : [];
-  if (industryValues.length) out.push({ label: "Industry sector", values: industryValues });
+  const industrySet = new Set<string>(
+    Array.isArray(industries)
+      ? industries.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean)
+      : [],
+  );
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (STRAY_INDUSTRY_LABELS.has(out[i].label.trim().toLowerCase())) {
+      for (const v of out[i].values) industrySet.add(v);
+      out.splice(i, 1);
+    }
+  }
+  if (industrySet.size) out.push({ label: "Industries", values: [...industrySet] });
 
   // Apply array-valued overrides (structured "Additional details" edits): replace
   // a matching label, or add it if new. Empty override = remove the field.
