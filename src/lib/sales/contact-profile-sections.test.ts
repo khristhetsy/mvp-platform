@@ -18,6 +18,17 @@ describe("groupContactProfile", () => {
     expect(titles).toContain("Agent field (internal)");
   });
 
+  it("maps the Odoo operational-stage label to the Operational stage field", () => {
+    const p = groupContactProfile([
+      { label: "Investor preferences for type(s) of company operational stage?", values: ["Expand Growth"] },
+    ]);
+    const thesis = p.sections.find((s) => s.title === "Investor thesis");
+    const opStage = thesis?.fields.find((f) => f.label === "Operational stage");
+    expect(opStage?.values).toEqual(["Expand Growth"]);
+    // And it should NOT leak into "Other details".
+    expect(p.sections.find((s) => s.title === "Other details")).toBeUndefined();
+  });
+
   it("titles and sections a founder contact", () => {
     const p = groupContactProfile([
       { label: "Entrepreneur: iCFO capital partner", values: ["Khris Thetsy"] },
