@@ -10,8 +10,11 @@
 
 import { AdapterNotConfiguredError, type Account, type Metrics, type SocialAdapter, type TokenSet, type Variant } from "@/lib/social/types";
 
-// Monthly versioning; each supported ~a year. Keep here, bump quarterly (§9).
-const LINKEDIN_VERSION = "202609";
+// Monthly versioning (YYYYMM); each supported ~a year. LinkedIn does not default to the
+// latest and rejects a version that isn't active yet — the current month often isn't live
+// for the posts endpoint. Default to a safely-active version; override with
+// LINKEDIN_API_VERSION to bump without a code change.
+export const LINKEDIN_VERSION = process.env.LINKEDIN_API_VERSION?.trim() || "202606";
 const REST_BASE = "https://api.linkedin.com/rest";
 
 function configured(): boolean {

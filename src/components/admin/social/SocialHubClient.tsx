@@ -248,7 +248,7 @@ function Accounts({ accounts, linkedInReady, facebookReady, failed24 }: { accoun
 
       <p className="mt-5 text-[13px] font-medium text-slate-700">API health</p>
       <div className={`${card} mt-2 divide-y divide-slate-100 text-[13px]`}>
-        <Row label="LinkedIn Posts API" value={linkedInReady ? "ok · v202609" : "not connected"} ok={linkedInReady} />
+        <Row label="LinkedIn Posts API" value={linkedInReady ? "ok" : "not connected"} ok={linkedInReady} />
         <Row label="Facebook Graph API" value={facebookReady ? "ok · v21.0" : "not connected"} ok={facebookReady} />
         <Row label="Failed last 24h" value={String(failed24)} ok={failed24 === 0} />
       </div>
