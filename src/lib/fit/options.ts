@@ -33,9 +33,11 @@ export type FitOption = {
   stored: string[];
 };
 
-/** Q1 — Where are you today? → Operational stage (30%). */
+/** Q1 — Where are you today? → Operational stage (30%). Stored values are the
+ *  Odoo operational-stage dropdown (Startup · Prototype · Expand Growth · Small
+ *  Business · Midsize Company · Large Corporation · Large Company · Other). */
 export const Q1_STAGE: FitOption[] = [
-  { key: "pre_revenue", label: "Pre-revenue", stored: ["Startup"] },
+  { key: "pre_revenue", label: "Pre-revenue", stored: ["Startup", "Prototype"] },
   { key: "revenue_pre_a", label: "Revenue, pre-Series A", stored: ["Expand Growth", "Small Business"] },
   { key: "series_a_plus", label: "Series A and beyond", stored: ["Midsize Company", "Large Corporation", "Large Company"] },
 ];
@@ -51,11 +53,12 @@ export const Q2_RAISE: FitRaiseOption[] = [
 ];
 
 /** Q4 — What is your revenue? → Annual revenue range (10%). */
+// Revenue-range values confirmed against live data (2026-09-07).
 export const Q4_REVENUE: FitOption[] = [
-  { key: "pre_revenue", label: "Pre-revenue", stored: ["Pre-revenue", "Less than $50k"] },
+  { key: "pre_revenue", label: "Pre-revenue", stored: ["Less than $50k"] },
   { key: "under_1m", label: "Under $1M", stored: ["$50k - $100k", "$100k - $250k", "$250k - $500k", "$500k - $1m"] },
-  { key: "1m_5m", label: "$1M – $5M", stored: ["$1m - $5m", "$1m - $10m"] },
-  { key: "over_5m", label: "Over $5M", stored: ["$5m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"] },
+  { key: "1m_5m", label: "$1M – $5M", stored: ["$1m - $10m"] },
+  { key: "over_5m", label: "Over $5M", stored: ["$10m - $50m", "$50m - $100m", "Over $100m"] },
 ];
 
 /** Q3 — What sector? → Industries (35%). Generated at runtime from the distinct
