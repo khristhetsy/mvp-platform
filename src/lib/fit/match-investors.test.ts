@@ -11,12 +11,14 @@ function inv(opts: {
   revenue?: string[];
   source?: string;
   verifiedAt?: string;
+  overrides?: Record<string, unknown> | null;
 }) {
   return {
     id: opts.id ?? opts.company,
     company: opts.company,
     inv_source: opts.source ?? "verified",
     inv_verified_at: opts.verifiedAt ?? "2026-09-01T00:00:00Z",
+    overrides: opts.overrides ?? null,
     raw: {
       __profile: {
         industries: opts.industries ?? [],

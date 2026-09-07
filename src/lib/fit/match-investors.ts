@@ -25,7 +25,6 @@ import {
 } from "@/lib/fit/options";
 
 const PASS_THRESHOLD = 70;
-const VERIFIED_WINDOW_DAYS = 180;
 const RESULT_LIMIT = 25;
 
 export type MatchResult = { company: string; summary: string; fit: number };
@@ -54,30 +53,43 @@ function lc(list: string[]): Set<string> {
   return new Set(list.map((s) => s.trim().toLowerCase()));
 }
 
-type GatedRow = { id: string; company: string | null; raw: Record<string, unknown> | null; inv_source: string; inv_verified_at: string | null };
+// Overrides (manual/self-reported edits) win over the Odoo-synced raw.__profile, and
+// survive a resync. Industries live under the consolidated "Industries" override key;
+// stage/size/revenue under their Odoo questionnaire label.
+function ovList(overrides: Record<string, unknown> | null, key: string): string[] | null {
+  const v = overrides?.[key];
+  return Array.isArray(v) ? asList(v) : null;
+}
+function mergedIndustries(row: GatedRow): string[] {
+  return ovList(row.overrides, "Industries") ?? asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries);
+}
+function mergedExtra(row: GatedRow, label: string): string[] {
+  return ovList(row.overrides, label) ?? extraValues(row.raw, label);
+}
+
+type GatedRow = { id: string; company: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; inv_source: string | null; inv_verified_at: string | null };
 
 /** Score one investor row against the founder's answers. Returns null when the
  *  industry hard filter fails (no sector overlap → never shown). */
 export function scoreRow(row: GatedRow, answers: FitAnswers): { fit: number; summary: string } | null {
-  const raw = row.raw;
-  const industries = lc(asList((raw?.__profile as { industries?: unknown } | undefined)?.industries));
+  const industries = lc(mergedIndustries(row));
   if (!industries.has(answers.industry.trim().toLowerCase())) return null; // hard filter
 
   let fit = 35; // industry matched (hard-filtered above)
 
-  const stageStored = lc(extraValues(raw, OP_STAGE_LABEL));
+  const stageStored = lc(mergedExtra(row, OP_STAGE_LABEL));
   if (stageStoredFor(answers.stage).some((s) => stageStored.has(s.toLowerCase()))) fit += 30;
 
   const bounds = raiseBoundsFor(answers.raise);
-  const sizeBands = extraValues(raw, INV_SIZE_LABEL).map(parseMoneyBand).filter((b): b is { min: number; max: number } => b != null);
+  const sizeBands = mergedExtra(row, INV_SIZE_LABEL).map(parseMoneyBand).filter((b): b is { min: number; max: number } => b != null);
   if (bounds && sizeBands.some((b) => b.min <= bounds.max && b.max >= bounds.min)) fit += 25;
 
-  const revStored = lc(extraValues(raw, REVENUE_LABEL));
+  const revStored = lc(mergedExtra(row, REVENUE_LABEL));
   if (revenueStoredFor(answers.revenue).some((r) => revStored.has(r.toLowerCase()))) fit += 10;
 
   const summary = [
-    extraValues(raw, OP_STAGE_LABEL).join("–") || null,
-    extraValues(raw, INV_SIZE_LABEL)[0] || null,
+    mergedExtra(row, OP_STAGE_LABEL).join("–") || null,
+    mergedExtra(row, INV_SIZE_LABEL)[0] || null,
   ].filter(Boolean).join(" · ");
 
   return { fit, summary };
@@ -85,17 +97,17 @@ export function scoreRow(row: GatedRow, answers: FitAnswers): { fit: number; sum
 
 /** Pure ranking: score → industry hard filter → one row per firm → threshold → sort. */
 export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
-  // One row per firm: prefer verified, then most recently confirmed.
+  // One row per firm: prefer the most-trusted source (verified > self_reported >
+  // inferred/other), then most recently confirmed.
+  const tier = (s: string | null) => (s === "verified" ? 2 : s === "self_reported" ? 1 : 0);
   const byFirm = new Map<string, GatedRow>();
   for (const r of rows) {
     if (!r.company) continue;
     const key = r.company.trim().toLowerCase();
     const cur = byFirm.get(key);
     if (!cur) { byFirm.set(key, r); continue; }
-    const better =
-      (r.inv_source === "verified" ? 0 : 1) - (cur.inv_source === "verified" ? 0 : 1) < 0 ||
-      ((r.inv_source === "verified") === (cur.inv_source === "verified") &&
-        (r.inv_verified_at ?? "") > (cur.inv_verified_at ?? ""));
+    const better = tier(r.inv_source) > tier(cur.inv_source) ||
+      (tier(r.inv_source) === tier(cur.inv_source) && (r.inv_verified_at ?? "") > (cur.inv_verified_at ?? ""));
     if (better) byFirm.set(key, r);
   }
 
@@ -114,17 +126,15 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
 export async function offerableSectors(): Promise<string[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
-  const cutoff = new Date(Date.now() - VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await db
     .from("crm_contacts")
-    .select("raw")
-    .in("inv_source", ["self_reported", "verified"])
-    .gt("inv_verified_at", cutoff)
-    .limit(5000);
+    .select("raw, overrides")
+    .or("contact_type.eq.investor,module.eq.investor")
+    .limit(20000);
   if (error || !Array.isArray(data)) return [];
   const seen = new Set<string>();
-  for (const row of data as { raw: Record<string, unknown> | null }[]) {
-    for (const v of asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries)) seen.add(v);
+  for (const row of data as { raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }[]) {
+    for (const v of mergedIndustries({ id: "", company: null, inv_source: null, inv_verified_at: null, ...row })) seen.add(v);
   }
   return [...seen].sort((a, b) => a.localeCompare(b));
 }
@@ -132,16 +142,16 @@ export async function offerableSectors(): Promise<string[]> {
 export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
-  const cutoff = new Date(Date.now() - VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  // Safety gate at the query level: inferred / stale contacts never fetched.
+  // Gate: any investor contact (open-gate mode — imported/inferred investors are
+  // matched, ranked below self_reported/verified). Founders are excluded by the
+  // investor scope; the industry hard filter excludes anyone without sector overlap.
   const { data, error } = await db
     .from("crm_contacts")
-    .select("id, company, raw, inv_source, inv_verified_at")
-    .in("inv_source", ["self_reported", "verified"])
-    .gt("inv_verified_at", cutoff)
+    .select("id, company, raw, overrides, inv_source, inv_verified_at")
+    .or("contact_type.eq.investor,module.eq.investor")
     .not("company", "is", null)
-    .limit(5000);
+    .limit(20000);
 
   if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true };
 

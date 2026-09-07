@@ -19,9 +19,22 @@ function Opt({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+function FunnelHeader() {
+  return (
+    <div className="mb-6 flex flex-col items-center text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icapos-logo.svg" alt="iCapOS" className="h-8 w-auto" />
+      <p className="mt-3 text-[13.5px] leading-relaxed text-slate-500">
+        Answer four quick questions and instantly see the investors in our network that match your raise.
+      </p>
+    </div>
+  );
+}
+
 function Q({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-md">
+      <FunnelHeader />
       <p className="font-mono text-xs uppercase tracking-wider text-indigo-500">Question {n} of 4</p>
       <h1 className="mt-2 text-[22px] font-semibold leading-snug text-slate-900">{title}</h1>
       <div className="mt-5 flex flex-col gap-2.5">{children}</div>
