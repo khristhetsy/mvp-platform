@@ -21,3 +21,16 @@ export async function listQueue(limit = 50): Promise<QueueItem[]> {
     .limit(limit);
   return (data ?? []) as QueueItem[];
 }
+
+export type SocialSettings = { approve_before_publish: boolean; rewrite_per_account: boolean; skip_empty_slot: boolean; auto_publish: boolean; rotation: string[] };
+export type SocialSlot = { id: string; weekday: number; time_local: string };
+
+export async function getSocialSettings(): Promise<SocialSettings> {
+  const { data } = await db().from("social_settings").select("approve_before_publish, rewrite_per_account, skip_empty_slot, auto_publish, rotation").eq("id", 1).maybeSingle();
+  return (data as SocialSettings | null) ?? { approve_before_publish: true, rewrite_per_account: true, skip_empty_slot: true, auto_publish: false, rotation: ["proof_case", "teardown", "named_ask"] };
+}
+
+export async function getSlots(): Promise<SocialSlot[]> {
+  const { data } = await db().from("social_slots").select("id, weekday, time_local").order("weekday").order("time_local");
+  return (data ?? []) as SocialSlot[];
+}
