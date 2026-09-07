@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { listOpportunities, createOpportunity, getDefaultPipeline } from "@/lib/sales/opportunities";
 import { getSalesScope, effectiveSalesOwner } from "@/lib/sales/scope";
+import { listAssignableStaff } from "@/lib/sales/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const includeArchived = req.nextUrl.searchParams.get("archived") === "1";
   const scope = await getSalesScope(profile, req.nextUrl.searchParams.get("viewAs"));
-  const [opportunities, pipeline] = await Promise.all([listOpportunities(includeArchived, effectiveSalesOwner(scope)), getDefaultPipeline()]);
-  return NextResponse.json({ opportunities, stages: pipeline?.stages ?? [] });
+  const [opportunities, pipeline, staff] = await Promise.all([listOpportunities(includeArchived, effectiveSalesOwner(scope)), getDefaultPipeline(), listAssignableStaff()]);
+  const nameById = new Map(staff.map((s) => [s.id, s.name]));
+  for (const o of opportunities) o.owner_name = o.owner_id ? nameById.get(o.owner_id) ?? null : null;
+  return NextResponse.json({ opportunities, stages: pipeline?.stages ?? [], staff });
 }
 
 const createSchema = z.object({

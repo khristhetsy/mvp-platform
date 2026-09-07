@@ -17,11 +17,12 @@ export type Opportunity = {
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
   status: "open" | "won" | "lost" | "archived"; notes: string | null;
   created_at: string; updated_at: string | null; last_activity_at: string | null;
+  owner_id: string | null; owner_name: string | null;
   lead_assignees: string[]; // names of the linked contact's Lead-assigned reps (read-only mirror)
 };
 
 const SELECT =
-  "id, title, contact_name, contact_email, contact_crm_id, stage_id, value_cents, billing, probability, expected_close, priority, tags, source, lead_status, status, notes, created_at, updated_at, last_activity_at, stage:sales_stages(name)";
+  "id, title, contact_name, contact_email, contact_crm_id, stage_id, value_cents, billing, probability, expected_close, priority, tags, source, lead_status, status, notes, created_at, updated_at, last_activity_at, owner_id, stage:sales_stages(name)";
 
 function mapRow(r: Record<string, unknown>): Opportunity {
   return {
@@ -46,6 +47,8 @@ function mapRow(r: Record<string, unknown>): Opportunity {
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) ?? null,
     last_activity_at: (r.last_activity_at as string) ?? null,
+    owner_id: (r.owner_id as string) ?? null,
+    owner_name: null,
     lead_assignees: [],
   };
 }
