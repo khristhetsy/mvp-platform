@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/posthog";
 import { createNotification } from "@/lib/notifications/notifications";
 import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
-import { getEventById } from "@/lib/icfo-events/queries";
+import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
 import { upsertOptin } from "@/lib/icfo-events/networking";
 import { awardPoints } from "@/lib/icfo-events/gamification";
@@ -17,14 +17,14 @@ export const dynamic = "force-dynamic";
  *  body: { attendeeType, answers }. */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
   const profile = await requireUserProfile();
   try {
-    const { id } = await params;
+    const { slug } = await params;
     const supabase = await createServerSupabaseClient();
 
-    const event = await getEventById(supabase, id);
+    const event = await getEventBySlug(supabase, slug);
     if (!event || !["published", "live", "ended"].includes(event.status)) {
       return NextResponse.json({ error: "Event not available for registration." }, { status: 404 });
     }
@@ -43,7 +43,7 @@ export async function POST(
       return NextResponse.json({ error: "Pick at least one networking interest." }, { status: 400 });
     }
 
-    const { registration, created } = await registerForEvent(supabase, id, profile.id);
+    const { registration, created } = await registerForEvent(supabase, event.id, profile.id);
 
     // Everyone who registers is in networking (opted in) with their chosen interests.
     await upsertOptin(supabase, event.id, profile.id, true, interests).catch(() => null);

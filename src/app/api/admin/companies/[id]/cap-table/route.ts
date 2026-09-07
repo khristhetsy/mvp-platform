@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 /** Staff: read a company's cap table for the admin workspace panel. */
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ companyId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const auth = await requireStaffApi(["admin", "analyst"]);
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const { companyId } = await params;
-    const capTable = await getCapTable(auth.supabase, companyId);
+    const { id } = await params;
+    const capTable = await getCapTable(auth.supabase, id);
     return NextResponse.json({ capTable });
   } catch (err) {
     Sentry.captureException(err);

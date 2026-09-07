@@ -28,11 +28,11 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ companyId: string }> }): Promise<Response> {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
 
-  const { companyId } = await ctx.params;
+  const { id } = await ctx.params;
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ companyId:
   const { data: company } = await admin
     .from("companies")
     .select("id, company_name, founder_id")
-    .eq("id", companyId)
+    .eq("id", id)
     .maybeSingle();
   const co = company as { id: string; company_name: string | null; founder_id: string | null } | null;
   if (!co?.founder_id) return NextResponse.json({ error: "Company or founder not found." }, { status: 404 });
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ companyId:
   if (parsed.data.action === "save-draft") {
     const r = await createGmailDraft(profile.id, msg);
     if ("error" in r) return NextResponse.json({ error: gmailError(r.error) }, { status: 400 });
-    await logOutreach(admin, companyId, profile.id, "draft");
+    await logOutreach(admin, id, profile.id, "draft");
     return NextResponse.json({ ok: true, draftId: r.id });
   }
 
@@ -104,10 +104,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ companyId:
       title: "A note from the iCapOS team",
       message: parsed.data.subject,
       entityType: "company",
-      entityId: companyId,
+      entityId: id,
     }).catch(() => {});
   }
-  await logOutreach(admin, companyId, profile.id, "sent");
+  await logOutreach(admin, id, profile.id, "sent");
   return NextResponse.json({ ok: true });
 }
 
@@ -117,14 +117,14 @@ function gmailError(e: Error): string {
     : "Gmail request failed. Try again.";
 }
 
-async function logOutreach(admin: SupabaseClient<Database>, companyId: string, actorId: string, kind: "draft" | "sent") {
+async function logOutreach(admin: SupabaseClient<Database>, id: string, actorId: string, kind: "draft" | "sent") {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin as unknown as SupabaseClient<any>).from("operational_activity_events").insert({
       event_type: kind === "sent" ? "founder_outreach_sent" : "founder_outreach_drafted",
       actor_user_id: actorId,
-      entity_id: companyId,
-      metadata: { company_id: companyId, via: "gmail" },
+      entity_id: id,
+      metadata: { company_id: id, via: "gmail" },
     });
   } catch {
     /* best-effort */

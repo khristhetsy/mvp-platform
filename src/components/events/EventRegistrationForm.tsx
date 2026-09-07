@@ -122,7 +122,7 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/events/${eventId}/register`, {
+      const res = await fetch(`/api/events/${slug}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attendeeType: role, answers, interests }),
