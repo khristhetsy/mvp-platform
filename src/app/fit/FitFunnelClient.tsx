@@ -39,7 +39,13 @@ export function FitFunnelClient() {
 
   useEffect(() => {
     fetch("/api/fit/sectors").then((r) => (r.ok ? r.json() : null)).then((d) => setSectors(d?.sectors ?? [])).catch(() => {});
+    // Session row on landing, before any answer. Attribution tag from ?s= (else direct).
+    const tag = new URLSearchParams(window.location.search).get("s");
+    fetch("/api/fit/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourceTag: tag }) }).catch(() => {});
   }, []);
+
+  // Field → the question number it answers (last_step diagnostic).
+  const STEP_OF: Record<keyof FitAnswers, number> = { stage: 1, raise: 2, industry: 3, revenue: 4 };
 
   async function runMatch(final: FitAnswers) {
     setBusy(true);
@@ -57,6 +63,8 @@ export function FitFunnelClient() {
   function choose(field: keyof FitAnswers, value: string, next: 2 | 3 | 4 | "done") {
     const merged = { ...answers, [field]: value } as FitAnswers;
     setAnswers(merged);
+    // Record the answer + last_step server-side (fire-and-forget).
+    fetch("/api/fit/session", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ step: STEP_OF[field], [field]: value }) }).catch(() => {});
     if (next === "done") void runMatch(merged);
     else setStep(next);
   }
@@ -114,7 +122,12 @@ export function FitFunnelClient() {
             <p className="text-[13px] text-emerald-700">Got it — we&apos;ll be in touch.</p>
           ) : (
             <form
-              onSubmit={(e) => { e.preventDefault(); if (email.trim()) setCaptured(true); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!email.trim()) return;
+                fetch("/api/fit/capture", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }) }).catch(() => {});
+                setCaptured(true);
+              }}
               className="flex gap-2"
             >
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none" />
