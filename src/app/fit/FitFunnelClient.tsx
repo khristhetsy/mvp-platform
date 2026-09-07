@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, type FitAnswers } from "@/lib/fit/options";
 
 type MatchResult = { company: string; summary: string; fit: number };
@@ -29,7 +30,7 @@ function Q({ n, title, children }: { n: number; title: string; children: React.R
 }
 
 export function FitFunnelClient() {
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | "match">(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | "match" | "method">(1);
   const [answers, setAnswers] = useState<Partial<FitAnswers>>({});
   const [sectors, setSectors] = useState<string[]>([]);
   const [result, setResult] = useState<MatchResponse | null>(null);
@@ -84,6 +85,47 @@ export function FitFunnelClient() {
   const count = result?.matched_count ?? 0;
   const thin = result?.thin ?? true;
 
+  // /fit/method — iCFO Capital advisory SPV screen (build-spec §6). Gold badge, a
+  // dot diagram sized to the actual match count, four steps, a scoped panel (no
+  // figures), the verbatim disclaimer, and one CTA to the structuring-call scheduler
+  // (which links back to this funnel session via the fs_session cookie).
+  if (step === "method") {
+    const dots = Math.max(1, Math.min(count || 1, 12));
+    return (
+      <div className="mx-auto w-full max-w-md">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+          <i className="ti ti-building-bank" aria-hidden="true" /> iCFO Capital · Advisory
+        </span>
+        <h1 className="mt-3 text-[22px] font-semibold leading-snug text-slate-900">Run this raise through an SPV</h1>
+        <p className="mt-1.5 text-[13px] text-slate-500">One vehicle, one cap table line, one close — scoped to your raise.</p>
+
+        <div className="mt-5 flex flex-wrap gap-1.5">
+          {Array.from({ length: dots }).map((_, i) => <span key={i} className="h-2.5 w-2.5 rounded-full bg-indigo-500" />)}
+        </div>
+
+        <ol className="mt-5 flex flex-col gap-3">
+          {["We form the vehicle", "Your materials go out to matched investors", "They subscribe into the SPV", "Diligence runs through to funding"].map((s, i) => (
+            <li key={s} className="flex gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">{i + 1}</span>
+              <span className="pt-0.5 text-[14px] text-slate-800">{s}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[13px] font-medium text-slate-700">Scoped to your raise</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{subline}. We structure the vehicle and manage outreach against your matched mandates.</p>
+        </div>
+
+        <Link href="/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" className="mt-6 block rounded-lg bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-indigo-700">Book a structuring call</Link>
+
+        <p className="mt-6 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-400">
+          iCFO Capital Global, Inc. is not a registered broker-dealer, funding portal, investment adviser, or placement agent. It does not offer or sell securities, effect securities transactions, hold or transmit customer funds, or receive transaction-based compensation.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-md">
       {busy ? (
@@ -108,6 +150,7 @@ export function FitFunnelClient() {
               </div>
             ) : null}
           </div>
+          <button onClick={() => setStep("method")} className="mt-5 w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700">See how we structure your raise</button>
         </>
       ) : (
         <>

@@ -80,9 +80,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     }).catch(() => {});
 
     // /fit handoff: on a funnel booking, write the lead + four answers to Sales Hub
-    // (matched on normalised email; first-touch lead source preserved). Best-effort.
-    if (parsed.data.fitSessionId) {
-      await handoffFitSession(parsed.data.fitSessionId, { name: parsed.data.name, email: parsed.data.email }).catch(() => {});
+    // (matched on normalised email; first-touch lead source preserved). The session id
+    // comes from the body or the funnel cookie, so booking after the funnel links
+    // automatically. Best-effort — never blocks the booking.
+    const fitSessionId = parsed.data.fitSessionId ?? req.cookies.get("fs_session")?.value;
+    if (fitSessionId) {
+      await handoffFitSession(fitSessionId, { name: parsed.data.name, email: parsed.data.email }).catch(() => {});
     }
 
     return NextResponse.json({ event: result.event, meetUrl: result.meetUrl });
