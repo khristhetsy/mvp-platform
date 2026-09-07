@@ -108,6 +108,27 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
   return scored.slice(0, RESULT_LIMIT);
 }
 
+/** Distinct sectors offerable at Q3 — the industries that at least one GATED
+ *  investor actually covers. Never hardcoded, so a sector with no investor behind
+ *  it can't be offered (build-spec §2). */
+export async function offerableSectors(): Promise<string[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createServiceRoleClient() as any;
+  const cutoff = new Date(Date.now() - VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await db
+    .from("crm_contacts")
+    .select("raw")
+    .in("inv_source", ["self_reported", "verified"])
+    .gt("inv_verified_at", cutoff)
+    .limit(5000);
+  if (error || !Array.isArray(data)) return [];
+  const seen = new Set<string>();
+  for (const row of data as { raw: Record<string, unknown> | null }[]) {
+    for (const v of asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries)) seen.add(v);
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b));
+}
+
 export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
