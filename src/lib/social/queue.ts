@@ -11,10 +11,11 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { AdapterNotConfiguredError, type Account, type SocialAdapter, type Variant } from "@/lib/social/types";
 import { linkedInAdapter } from "@/lib/social/linkedin-adapter";
+import { facebookAdapter } from "@/lib/social/facebook-adapter";
 import { backoffMsFor } from "@/lib/social/rules";
 import { openToken } from "@/lib/social/token-cipher";
 
-const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter };
+const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }

@@ -16,8 +16,8 @@ const card = "rounded-xl border border-slate-200 bg-white";
 
 type Tab = "composer" | "queue" | "rules" | "accounts" | "attribution";
 
-export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, attribution }: {
-  accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; attribution: WeekBar[];
+export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, attribution }: {
+  accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; attribution: WeekBar[];
 }) {
   const [tab, setTab] = useState<Tab>("composer");
   const failed24 = queue.filter((q) => q.status === "failed").length;
@@ -36,7 +36,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
         {tab === "composer" ? <Composer accounts={accounts} /> : null}
         {tab === "queue" ? <Queue queue={queue} /> : null}
         {tab === "rules" ? <Rules settings0={settings0} slots0={slots0} /> : null}
-        {tab === "accounts" ? <Accounts accounts={accounts} linkedInReady={linkedInReady} failed24={failed24} /> : null}
+        {tab === "accounts" ? <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} /> : null}
         {tab === "attribution" ? <Attribution data={attribution} /> : null}
       </div>
     </div>
@@ -199,32 +199,46 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
   );
 }
 
-function Accounts({ accounts, linkedInReady, failed24 }: { accounts: SocialAccount[]; linkedInReady: boolean; failed24: number }) {
+const PLATFORM_META: Record<string, { label: string; icon: string; color: string; start: string; kind: string }> = {
+  linkedin: { label: "LinkedIn", icon: "ti-brand-linkedin", color: "#0A66C2", start: "/api/social/linkedin/start", kind: "personal" },
+  facebook: { label: "Facebook", icon: "ti-brand-facebook", color: "#1877F2", start: "/api/social/facebook/start", kind: "Page" },
+};
+
+function Accounts({ accounts, linkedInReady, facebookReady, failed24 }: { accounts: SocialAccount[]; linkedInReady: boolean; facebookReady: boolean; failed24: number }) {
   const [now] = useState(() => Date.now());
   const days = (iso: string | null) => iso ? Math.max(0, Math.round((new Date(iso).getTime() - now) / 86400000)) : null;
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between">
         <p className="text-[13px] font-medium text-slate-700">Accounts</p>
-        {linkedInReady ? (
-          <a href="/api/social/linkedin/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#0A66C2] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
-            <i className="ti ti-brand-linkedin" aria-hidden="true" /> {accounts.length ? "Connect another" : "Connect LinkedIn"}
-          </a>
-        ) : (
-          <button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 opacity-50" title="Add LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET to enable"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</button>
-        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          {linkedInReady ? (
+            <a href="/api/social/linkedin/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#0A66C2] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</a>
+          ) : (
+            <button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 opacity-50" title="Add LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET to enable"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</button>
+          )}
+          {facebookReady ? (
+            <a href="/api/social/facebook/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#1877F2] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"><i className="ti ti-brand-facebook" aria-hidden="true" /> Connect Facebook</a>
+          ) : (
+            <button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 opacity-50" title="Add META_APP_ID / META_APP_SECRET to enable"><i className="ti ti-brand-facebook" aria-hidden="true" /> Connect Facebook</button>
+          )}
+        </div>
       </div>
       <div className={`${card} mt-2 divide-y divide-slate-100`}>
         {accounts.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No accounts connected yet.</p> : accounts.map((a) => {
           const d = days(a.token_expires_at);
+          const meta = PLATFORM_META[a.platform];
           return (
             <div key={a.id} className="flex items-center justify-between px-4 py-3 text-[13px]">
-              <div>
-                <p className="font-medium text-slate-900">{a.display_name ?? a.platform}</p>
-                <p className="text-[11px] text-slate-400">{a.platform} · personal{d != null ? ` · token ${d}d` : ""}</p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: meta?.color ?? "#64748b" }}><i className={`ti ${meta?.icon ?? "ti-world"}`} aria-hidden="true" /></div>
+                <div>
+                  <p className="font-medium text-slate-900">{a.display_name ?? meta?.label ?? a.platform}</p>
+                  <p className="text-[11px] text-slate-400">{a.platform} · {meta?.kind ?? "account"}{d != null ? ` · token ${d}d` : ""}</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                {a.status === "expiring" || a.status === "expired" ? <a href="/api/social/linkedin/start" className="text-[11px] text-indigo-600 hover:underline">Reconnect</a> : null}
+                {(a.status === "expiring" || a.status === "expired") && meta ? <a href={meta.start} className="text-[11px] text-indigo-600 hover:underline">Reconnect</a> : null}
                 <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[a.status] ?? "bg-slate-100 text-slate-600"}`}>{a.status}</span>
               </div>
             </div>
@@ -234,11 +248,11 @@ function Accounts({ accounts, linkedInReady, failed24 }: { accounts: SocialAccou
 
       <p className="mt-5 text-[13px] font-medium text-slate-700">API health</p>
       <div className={`${card} mt-2 divide-y divide-slate-100 text-[13px]`}>
-        <Row label="LinkedIn Posts API" value={linkedInReady ? "ok" : "not connected"} ok={linkedInReady} />
-        <Row label="Version header" value="202609" />
+        <Row label="LinkedIn Posts API" value={linkedInReady ? "ok · v202609" : "not connected"} ok={linkedInReady} />
+        <Row label="Facebook Graph API" value={facebookReady ? "ok · v21.0" : "not connected"} ok={facebookReady} />
         <Row label="Failed last 24h" value={String(failed24)} ok={failed24 === 0} />
       </div>
-      <p className="mt-2 text-[11.5px] text-slate-400">LinkedIn access tokens last 60 days, refresh tokens 365 — accounts die on a schedule without a refresh. The version header is monthly, supported ~a year; bump quarterly.</p>
+      <p className="mt-2 text-[11.5px] text-slate-400">LinkedIn posts as a personal profile; Facebook posts to a Page feed with the tagged link as a comment. Page posting needs Meta App Review to go live — dev mode works on Pages you admin. Instagram is off for now.</p>
     </div>
   );
 }

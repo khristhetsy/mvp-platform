@@ -3,22 +3,33 @@ import { requireRole } from "@/lib/supabase/auth";
 import { listSocialAccounts, listQueue, getSocialSettings, getSlots } from "@/lib/social/queries";
 import { isLinkedInConfigured } from "@/lib/social/linkedin-adapter";
 import { isLinkedInOAuthConfigured } from "@/lib/social/linkedin-oauth";
+import { isMetaConfigured } from "@/lib/social/meta-oauth";
 import { getAttribution } from "@/lib/social/attribution";
 import { SocialHubClient } from "@/components/admin/social/SocialHubClient";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social Media Hub" };
 
-const CONNECT_NOTICE: Record<string, { tone: "ok" | "warn"; text: string }> = {
-  connected: { tone: "ok", text: "LinkedIn account connected. Approved variants will publish through it." },
-  unconfigured: { tone: "warn", text: "LinkedIn isn't configured. Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET, then try again." },
-};
+type Notice = { tone: "ok" | "warn"; text: string };
 
-export default async function AdminSocialPage({ searchParams }: { searchParams: Promise<{ linkedin?: string; message?: string }> }) {
+function connectNotice(sp: { linkedin?: string; facebook?: string; message?: string }): Notice | undefined {
+  if (sp.linkedin) {
+    if (sp.linkedin === "connected") return { tone: "ok", text: "LinkedIn account connected. Approved variants will publish through it." };
+    if (sp.linkedin === "unconfigured") return { tone: "warn", text: "LinkedIn isn't configured. Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET, then try again." };
+    return { tone: "warn", text: `Couldn't connect LinkedIn${sp.message ? `: ${sp.message}` : "."}` };
+  }
+  if (sp.facebook) {
+    if (sp.facebook === "connected") return { tone: "ok", text: `Facebook connected — ${sp.message ?? "your"} Page(s) linked. Approved variants will publish to the Page feed.` };
+    if (sp.facebook === "unconfigured") return { tone: "warn", text: "Facebook isn't configured. Set META_APP_ID and META_APP_SECRET, then try again." };
+    if (sp.facebook === "no_pages") return { tone: "warn", text: "No Facebook Pages found on that account. Connect with an account that manages a Page." };
+    return { tone: "warn", text: `Couldn't connect Facebook${sp.message ? `: ${sp.message}` : "."}` };
+  }
+  return undefined;
+}
+
+export default async function AdminSocialPage({ searchParams }: { searchParams: Promise<{ linkedin?: string; facebook?: string; message?: string }> }) {
   const sp = await searchParams;
-  const notice = sp.linkedin === "error"
-    ? { tone: "warn" as const, text: `Couldn't connect LinkedIn${sp.message ? `: ${sp.message}` : "."}` }
-    : sp.linkedin ? CONNECT_NOTICE[sp.linkedin] : undefined;
+  const notice = connectNotice(sp);
   const profile = await requireRole(["admin", "analyst"]);
   const [accounts, queue, settings, slots, attribution] = await Promise.all([
     listSocialAccounts().catch(() => []),
@@ -47,7 +58,7 @@ export default async function AdminSocialPage({ searchParams }: { searchParams: 
         ) : null}
 
         <div className="mt-5">
-          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} attribution={attribution} />
+          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} attribution={attribution} />
         </div>
       </div>
     </AppShell>
