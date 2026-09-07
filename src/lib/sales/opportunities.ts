@@ -67,13 +67,21 @@ export async function getDefaultPipeline(): Promise<{ id: string; stages: Stage[
 }
 
 export async function listOpportunities(includeArchived = false, ownerId?: string | null): Promise<Opportunity[]> {
-  // Explicit high limit — Supabase caps unbounded selects at 1000 rows, which was
-  // truncating the list after the Odoo import (~1100 opps). Filtering is client-side.
-  let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false }).limit(20000);
-  if (!includeArchived) q = q.neq("status", "archived");
-  if (ownerId) q = q.eq("owner_id", ownerId);
-  const { data } = await q;
-  return ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);
+  // Page through every row — Supabase caps a single select at 1000, which truncated the
+  // list after the Odoo import (~1100 opps). No cap: loop until a short page. Filtering
+  // is client-side.
+  const PAGE = 1000;
+  const rows: Array<Record<string, unknown>> = [];
+  for (let from = 0; from < 200000; from += PAGE) {
+    let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false }).range(from, from + PAGE - 1);
+    if (!includeArchived) q = q.neq("status", "archived");
+    if (ownerId) q = q.eq("owner_id", ownerId);
+    const { data } = await q;
+    const page = (data ?? []) as Array<Record<string, unknown>>;
+    rows.push(...page);
+    if (page.length < PAGE) break;
+  }
+  return rows.map(mapRow);
 }
 
 export async function getOpportunity(id: string): Promise<Opportunity | null> {

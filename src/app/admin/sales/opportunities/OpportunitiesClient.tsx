@@ -61,7 +61,7 @@ export function OpportunitiesClient() {
 
   // Search + filters + grouping + columns (persisted).
   const [q, setQ] = useState("");
-  const [fStatus, setFStatus] = useState<string[]>(() => loadLS("opps.status", ["open"]));
+  const [fStatus, setFStatus] = useState<string[]>(() => loadLS<string[]>("opps.status2", []));
   const [fStages, setFStages] = useState<string[]>([]);
   const [fOwners, setFOwners] = useState<string[]>([]);
   const [fSources, setFSources] = useState<string[]>([]);
@@ -75,7 +75,7 @@ export function OpportunitiesClient() {
   const [colsOpen, setColsOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
 
-  useEffect(() => { try { window.localStorage.setItem("opps.status", JSON.stringify(fStatus)); } catch { /* ignore */ } }, [fStatus]);
+  useEffect(() => { try { window.localStorage.setItem("opps.status2", JSON.stringify(fStatus)); } catch { /* ignore */ } }, [fStatus]);
   useEffect(() => { try { window.localStorage.setItem("opps.groupBy", JSON.stringify(groupBy)); } catch { /* ignore */ } }, [groupBy]);
   useEffect(() => { try { window.localStorage.setItem("opps.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
 
