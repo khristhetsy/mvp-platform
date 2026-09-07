@@ -33,6 +33,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/admin/ceo", label: "CEO Hub", requiredPermission: "view_admin_dashboard" },
       { href: "/admin/ir-funnel", label: "IR Funnel", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/fit", label: "Fit funnel", requiredPermission: "view_admin_dashboard" },
     ],
   },
   {
