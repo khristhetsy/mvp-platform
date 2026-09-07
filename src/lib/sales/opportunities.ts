@@ -67,7 +67,9 @@ export async function getDefaultPipeline(): Promise<{ id: string; stages: Stage[
 }
 
 export async function listOpportunities(includeArchived = false, ownerId?: string | null): Promise<Opportunity[]> {
-  let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false });
+  // Explicit high limit — Supabase caps unbounded selects at 1000 rows, which was
+  // truncating the list after the Odoo import (~1100 opps). Filtering is client-side.
+  let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false }).limit(20000);
   if (!includeArchived) q = q.neq("status", "archived");
   if (ownerId) q = q.eq("owner_id", ownerId);
   const { data } = await q;
