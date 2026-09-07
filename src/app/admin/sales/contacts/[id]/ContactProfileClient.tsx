@@ -782,7 +782,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     return (
                       <div key={sec.title}>
                         <div style={{ marginTop: 14 }}>
-                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
+                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{isInfo ? "Details" : sec.title}</p>
                         {sec.title === "Highlights" ? (
                           (() => {
                             const text = sec.fields.flatMap((f) => f.values).join(" ").trim();
@@ -808,6 +808,29 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <RoRow label="Website">{contact.website ? <a href={contact.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{contact.website}</a> : null}</RoRow>
                               <RoRow label="Location">{address}</RoRow>
                               <RoRow label="Language">{contact.language || null}</RoRow>
+                              <RoRow label="Membership">{contact.membership || null}</RoRow>
+                              <RoRow label="Lead source">{contact.lead_source || null}</RoRow>
+                              <RoRow label="Owner">{contact.owner || null}</RoRow>
+                              <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
+                              <div style={{ gridColumn: "1 / -1" }}>
+                                <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
+                              </div>
+                              {profile.type === "investor" && (
+                                <div style={{ gridColumn: "1 / -1" }}>
+                                  <EditablePrefRow
+                                    label="Investor type"
+                                    rating={false}
+                                    options={fieldOptions[investorProfileKey] ?? []}
+                                    value={prefEdits[investorProfileKey] ?? ""}
+                                    changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
+                                    editing={editingKey === investorProfileKey}
+                                    onOpen={() => setEditingKey(investorProfileKey)}
+                                    onChange={(v) => setPrefEdits((p) => ({ ...p, [investorProfileKey]: v }))}
+                                    onSave={() => saveField(investorProfileKey)}
+                                    onUndo={() => { setPrefEdits((p) => ({ ...p, [investorProfileKey]: prefOrig[investorProfileKey] ?? "" })); setEditingKey(null); }}
+                                  />
+                                </div>
+                              )}
                             </>
                           )}
                           {visibleFields.map((f) => (
@@ -844,36 +867,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       </div>
                     );
                   })()}
-                  <div style={{ marginTop: 14 }}>
-                    <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>Contact &amp; lead</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
-                      <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
-                      <RoRow label="Job position">{contact.job_position || null}</RoRow>
-                      <RoRow label="Lead source">{contact.lead_source || null}</RoRow>
-                      <RoRow label="Owner">{contact.owner || null}</RoRow>
-                      <RoRow label="Membership">{contact.membership || null}</RoRow>
-                      <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
-                      </div>
-                      {profile.type === "investor" && (
-                        <div style={{ gridColumn: "1 / -1" }}>
-                          <EditablePrefRow
-                            label="Investor type"
-                            rating={false}
-                            options={fieldOptions[investorProfileKey] ?? []}
-                            value={prefEdits[investorProfileKey] ?? ""}
-                            changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
-                            editing={editingKey === investorProfileKey}
-                            onOpen={() => setEditingKey(investorProfileKey)}
-                            onChange={(v) => setPrefEdits((p) => ({ ...p, [investorProfileKey]: v }))}
-                            onSave={() => saveField(investorProfileKey)}
-                            onUndo={() => { setPrefEdits((p) => ({ ...p, [investorProfileKey]: prefOrig[investorProfileKey] ?? "" })); setEditingKey(null); }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
                   </>)}
                   {profileSub === "tasks" && (
                     <div style={{ paddingTop: 4 }}>
