@@ -824,22 +824,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
                           {sec.title.toLowerCase().includes("information") && (
                             <>
+                              {/* Contact / lead / address rows live in the top block above — not repeated here. */}
                               <RoRow label="Full name">{contact.name || null}</RoRow>
-                              <RoRow label="Job position">{contact.job_position || null}</RoRow>
                               <RoRow label="Company">{contact.company || null}</RoRow>
-                              <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
-                              <RoRow label="Phone">{contact.phone || null}</RoRow>
-                              <RoRow label="Phone 2">{contact.phone2 || null}</RoRow>
-                              <RoRow label="Website">{contact.website ? <a href={contact.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{contact.website}</a> : null}</RoRow>
-                              <RoRow label="Location">{address}</RoRow>
-                              <RoRow label="Language">{contact.language || null}</RoRow>
-                              <RoRow label="Membership">{contact.membership || null}</RoRow>
-                              <RoRow label="Lead source">{contact.lead_source || null}</RoRow>
-                              <RoRow label="Owner">{contact.owner || null}</RoRow>
                               <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
-                              <div style={{ gridColumn: "1 / -1" }}>
-                                <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
-                              </div>
                               {profile.type === "investor" && (
                                 <div style={{ gridColumn: "1 / -1" }}>
                                   <EditablePrefRow
