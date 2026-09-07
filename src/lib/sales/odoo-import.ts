@@ -75,9 +75,11 @@ function normEmail(v: unknown): string | null {
  *  re-ordered export still works. */
 export async function parseOdooLeadExport(buffer: ArrayBuffer | Buffer): Promise<OdooLeadRow[]> {
   const wb = new ExcelJS.Workbook();
-  // exceljs accepts a Node Buffer; normalize ArrayBuffer to one.
-  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as ArrayBuffer);
-  await wb.xlsx.load(buf);
+  // exceljs accepts a Node Buffer; normalize ArrayBuffer to one. Cast to exceljs's own
+  // expected param type — @types/node's Buffer is generic (Buffer<ArrayBufferLike>)
+  // and doesn't structurally match exceljs's non-generic Buffer typing.
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(new Uint8Array(buffer as ArrayBuffer));
+  await wb.xlsx.load(buf as unknown as Parameters<typeof wb.xlsx.load>[0]);
   const ws = wb.worksheets[0];
   if (!ws) return [];
 
