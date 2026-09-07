@@ -18,6 +18,7 @@ import {
   tokenExpiresAt,
   verifyLinkedInState,
 } from "@/lib/social/linkedin-oauth";
+import { originFromRequest } from "@/lib/social/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ function back(origin: string, status: string, message?: string) {
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const origin = requestUrl.origin;
+  const origin = originFromRequest(request);
   const code = requestUrl.searchParams.get("code");
   const state = requestUrl.searchParams.get("state");
   const oauthError = requestUrl.searchParams.get("error");
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
     return back(origin, "error", "missing_code");
   }
 
-  const env = getLinkedInOAuthEnv();
+  const env = getLinkedInOAuthEnv(origin);
   if (!env) {
     return back(origin, "unconfigured");
   }

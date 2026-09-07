@@ -26,17 +26,19 @@ export type LinkedInOAuthEnv = { clientId: string; clientSecret: string; redirec
 
 /**
  * Resolves OAuth config. redirectUri is LINKEDIN_REDIRECT_URI if set, else
- * `${appUrl}/api/social/linkedin/callback`. Returns null (flow unavailable) unless
+ * `${preferredOrigin ?? appUrl}/api/social/linkedin/callback`. Pass the request origin
+ * (originFromRequest) so the redirect matches the domain the user is actually on,
+ * rather than NEXT_PUBLIC_APP_URL / the internal Vercel host. Returns null unless
  * client id/secret AND a resolvable redirect URI are present.
  */
-export function getLinkedInOAuthEnv(): LinkedInOAuthEnv | null {
+export function getLinkedInOAuthEnv(preferredOrigin?: string): LinkedInOAuthEnv | null {
   const clientId = process.env.LINKEDIN_CLIENT_ID?.trim();
   const clientSecret = process.env.LINKEDIN_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) return null;
 
   const explicit = process.env.LINKEDIN_REDIRECT_URI?.trim();
-  const appUrl = getAppUrl();
-  const redirectUri = explicit || (appUrl ? `${appUrl.replace(/\/$/, "")}/api/social/linkedin/callback` : null);
+  const base = explicit ? null : (preferredOrigin || getAppUrl());
+  const redirectUri = explicit || (base ? `${base.replace(/\/$/, "")}/api/social/linkedin/callback` : null);
   if (!redirectUri) return null;
 
   // Prefer the shared token secret; fall back to the client secret so state signing

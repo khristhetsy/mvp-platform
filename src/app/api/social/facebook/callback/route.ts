@@ -18,6 +18,7 @@ import {
   META_STATE_COOKIE,
   verifyMetaState,
 } from "@/lib/social/meta-oauth";
+import { originFromRequest } from "@/lib/social/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ function back(origin: string, status: string, message?: string) {
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const origin = requestUrl.origin;
+  const origin = originFromRequest(request);
   const code = requestUrl.searchParams.get("code");
   const state = requestUrl.searchParams.get("state");
   const oauthError = requestUrl.searchParams.get("error");
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
   if (oauthError) return back(origin, "error", oauthErrorDesc ?? oauthError);
   if (!code || !state) return back(origin, "error", "missing_code");
 
-  const env = getMetaOAuthEnv();
+  const env = getMetaOAuthEnv(origin);
   if (!env) return back(origin, "unconfigured");
 
   const supabase = await createServerSupabaseClient();

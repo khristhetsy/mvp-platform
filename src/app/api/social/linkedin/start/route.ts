@@ -15,14 +15,15 @@ import {
   LINKEDIN_STATE_COOKIE,
   linkedInStateCookieOptions,
 } from "@/lib/social/linkedin-oauth";
+import { originFromRequest } from "@/lib/social/request-origin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const profile = await requireRole(["admin", "analyst"]);
-  const origin = new URL(request.url).origin;
+  const origin = originFromRequest(request);
 
-  const env = getLinkedInOAuthEnv();
+  const env = getLinkedInOAuthEnv(origin);
   if (!env) {
     return NextResponse.redirect(new URL("/admin/social?linkedin=unconfigured", origin));
   }

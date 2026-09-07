@@ -28,17 +28,19 @@ export type MetaOAuthEnv = { appId: string; appSecret: string; redirectUri: stri
 
 /**
  * Resolves OAuth config. redirectUri is META_REDIRECT_URI if set, else
- * `${appUrl}/api/social/facebook/callback`. configId supports Facebook Login for
+ * `${preferredOrigin ?? appUrl}/api/social/facebook/callback`. Pass the request origin
+ * (originFromRequest) so the redirect matches the domain the user is on rather than
+ * NEXT_PUBLIC_APP_URL / the internal Vercel host. configId supports Facebook Login for
  * Business. Returns null unless app id/secret AND a resolvable redirect URI exist.
  */
-export function getMetaOAuthEnv(): MetaOAuthEnv | null {
+export function getMetaOAuthEnv(preferredOrigin?: string): MetaOAuthEnv | null {
   const appId = process.env.META_APP_ID?.trim();
   const appSecret = process.env.META_APP_SECRET?.trim();
   if (!appId || !appSecret) return null;
 
   const explicit = process.env.META_REDIRECT_URI?.trim();
-  const appUrl = getAppUrl();
-  const redirectUri = explicit || (appUrl ? `${appUrl.replace(/\/$/, "")}/api/social/facebook/callback` : null);
+  const base = explicit ? null : (preferredOrigin || getAppUrl());
+  const redirectUri = explicit || (base ? `${base.replace(/\/$/, "")}/api/social/facebook/callback` : null);
   if (!redirectUri) return null;
 
   const stateSecret = process.env.TOKEN_ENCRYPTION_SECRET?.trim() || appSecret;

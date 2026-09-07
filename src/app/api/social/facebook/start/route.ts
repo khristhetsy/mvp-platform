@@ -15,14 +15,15 @@ import {
   META_STATE_COOKIE,
   metaStateCookieOptions,
 } from "@/lib/social/meta-oauth";
+import { originFromRequest } from "@/lib/social/request-origin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const profile = await requireRole(["admin", "analyst"]);
-  const origin = new URL(request.url).origin;
+  const origin = originFromRequest(request);
 
-  const env = getMetaOAuthEnv();
+  const env = getMetaOAuthEnv(origin);
   if (!env) {
     return NextResponse.redirect(new URL("/admin/social?facebook=unconfigured", origin));
   }
