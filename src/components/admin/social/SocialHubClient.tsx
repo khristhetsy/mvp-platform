@@ -206,7 +206,13 @@ function Accounts({ accounts, linkedInReady, failed24 }: { accounts: SocialAccou
     <div className="max-w-2xl">
       <div className="flex items-center justify-between">
         <p className="text-[13px] font-medium text-slate-700">Accounts</p>
-        <button disabled={!linkedInReady} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 disabled:opacity-50"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</button>
+        {linkedInReady ? (
+          <a href="/api/social/linkedin/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#0A66C2] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
+            <i className="ti ti-brand-linkedin" aria-hidden="true" /> {accounts.length ? "Connect another" : "Connect LinkedIn"}
+          </a>
+        ) : (
+          <button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 opacity-50" title="Add LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET to enable"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</button>
+        )}
       </div>
       <div className={`${card} mt-2 divide-y divide-slate-100`}>
         {accounts.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No accounts connected yet.</p> : accounts.map((a) => {
@@ -218,7 +224,7 @@ function Accounts({ accounts, linkedInReady, failed24 }: { accounts: SocialAccou
                 <p className="text-[11px] text-slate-400">{a.platform} · personal{d != null ? ` · token ${d}d` : ""}</p>
               </div>
               <div className="flex items-center gap-2">
-                {a.status === "expiring" ? <button className="text-[11px] text-indigo-600">Send re-auth link</button> : null}
+                {a.status === "expiring" || a.status === "expired" ? <a href="/api/social/linkedin/start" className="text-[11px] text-indigo-600 hover:underline">Reconnect</a> : null}
                 <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[a.status] ?? "bg-slate-100 text-slate-600"}`}>{a.status}</span>
               </div>
             </div>

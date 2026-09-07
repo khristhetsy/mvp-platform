@@ -12,6 +12,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { AdapterNotConfiguredError, type Account, type SocialAdapter, type Variant } from "@/lib/social/types";
 import { linkedInAdapter } from "@/lib/social/linkedin-adapter";
 import { backoffMsFor } from "@/lib/social/rules";
+import { openToken } from "@/lib/social/token-cipher";
 
 const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter };
 
@@ -31,7 +32,8 @@ function toVariant(r: VariantRow, linkUrl: string | null): Variant {
   return { id: r.id, body: r.body, commentText: r.comment_text, linkUrl, idempotencyKey: r.idempotency_key };
 }
 function toAccount(a: AccountRow): Account {
-  return { id: a.id, platform: a.platform, externalMemberId: a.external_member_id, accessToken: a.access_token, refreshToken: a.refresh_token, tokenExpiresAt: a.token_expires_at };
+  // Tokens are sealed at rest (token-cipher); open them just before the adapter uses them.
+  return { id: a.id, platform: a.platform, externalMemberId: a.external_member_id, accessToken: openToken(a.access_token), refreshToken: openToken(a.refresh_token), tokenExpiresAt: a.token_expires_at };
 }
 
 export type QueueRunResult = { processed: number; published: number; retried: number; failed: number; skipped: number };
