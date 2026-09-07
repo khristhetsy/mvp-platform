@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { parseOdooLeadExport, planImport, commitImport } from "@/lib/sales/odoo-import";
+import { parseOdooLeadExport, fetchOdooOpportunities, isOdooLiveConfigured, planImport, commitImport, type OdooLeadRow } from "@/lib/sales/odoo-import";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,17 +18,29 @@ export async function POST(req: NextRequest): Promise<Response> {
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   const mode = String(form?.get("mode") ?? "preview");
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "Attach the Odoo crm.lead .xlsx export." }, { status: 400 });
-  }
+  const source = String(form?.get("source") ?? (file && typeof file !== "string" ? "file" : "live"));
 
-  let rows;
-  try {
-    rows = await parseOdooLeadExport(await (file as File).arrayBuffer());
-  } catch {
-    return NextResponse.json({ error: "Couldn't read that file — export it from Odoo as .xlsx and try again." }, { status: 400 });
+  let rows: OdooLeadRow[];
+  if (source === "live") {
+    if (!isOdooLiveConfigured()) {
+      return NextResponse.json({ error: "Odoo API isn't configured — upload the .xlsx export instead." }, { status: 400 });
+    }
+    try {
+      rows = await fetchOdooOpportunities();
+    } catch (err) {
+      return NextResponse.json({ error: `Couldn't reach Odoo: ${err instanceof Error ? err.message : "unknown error"}` }, { status: 502 });
+    }
+  } else {
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ error: "Attach the Odoo crm.lead .xlsx export." }, { status: 400 });
+    }
+    try {
+      rows = await parseOdooLeadExport(await (file as File).arrayBuffer());
+    } catch {
+      return NextResponse.json({ error: "Couldn't read that file — export it from Odoo as .xlsx and try again." }, { status: 400 });
+    }
   }
-  if (rows.length === 0) return NextResponse.json({ error: "No rows found in the file." }, { status: 400 });
+  if (rows.length === 0) return NextResponse.json({ error: "No opportunities found." }, { status: 400 });
 
   const plan = await planImport(rows);
   const summary = {

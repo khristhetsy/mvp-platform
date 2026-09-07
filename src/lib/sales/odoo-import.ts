@@ -21,6 +21,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getDefaultPipeline, type Stage } from "@/lib/sales/opportunities";
 import { listAssignableStaff } from "@/lib/sales/settings";
 import { logActivity } from "@/lib/sales/activity";
+import { executeKw, odooConfigured } from "@/lib/crm-connectors/odoo/client";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -28,6 +29,8 @@ function db(): any { return createServiceRoleClient(); }
 export const ODOO_OPP_SOURCE = "odoo";
 
 export type OdooLeadRow = {
+  /** Odoo crm.lead id when pulled live; null for the file export (dedup falls back to email). */
+  externalId: string | null;
   title: string;
   contactName: string | null;
   email: string | null;
@@ -100,6 +103,7 @@ export async function parseOdooLeadExport(buffer: ArrayBuffer | Buffer): Promise
     const contactName = cellText(row, cN);
     if (!title && !contactName) return; // blank row
     rows.push({
+      externalId: null,
       title: title ?? contactName ?? "Untitled opportunity",
       contactName,
       email: normEmail(cellText(row, cE)),
@@ -113,7 +117,66 @@ export async function parseOdooLeadExport(buffer: ArrayBuffer | Buffer): Promise
   return rows;
 }
 
+// ── Live pull from Odoo (reuses the existing crm-connectors/odoo client) ─────────
+type LeadRow = {
+  id: number;
+  name?: string | false;
+  contact_name?: string | false;
+  partner_name?: string | false;
+  partner_id?: [number, string] | false;
+  email_from?: string | false;
+  user_id?: [number, string] | false;
+  probability?: number | false;
+  expected_revenue?: number | false;
+  recurring_revenue?: number | false;
+  stage_id?: [number, string] | false;
+};
+
+const LEAD_FIELDS_BASE = ["id", "name", "contact_name", "partner_name", "partner_id", "email_from", "user_id", "probability", "expected_revenue", "stage_id"];
+
+function mapLeadRow(r: LeadRow): OdooLeadRow {
+  const contact = (typeof r.contact_name === "string" && r.contact_name)
+    || (typeof r.partner_name === "string" && r.partner_name)
+    || (Array.isArray(r.partner_id) ? r.partner_id[1] : null) || null;
+  return {
+    externalId: String(r.id),
+    title: (typeof r.name === "string" && r.name) || contact || "Untitled opportunity",
+    contactName: contact,
+    email: normEmail(r.email_from),
+    salesperson: Array.isArray(r.user_id) ? r.user_id[1] : null,
+    probability: typeof r.probability === "number" ? Math.round(r.probability) : null,
+    expectedRevenue: typeof r.expected_revenue === "number" ? r.expected_revenue : null,
+    expectedMrr: typeof r.recurring_revenue === "number" ? r.recurring_revenue : null,
+    stage: Array.isArray(r.stage_id) ? r.stage_id[1] : null,
+  };
+}
+
+export function isOdooLiveConfigured(): boolean {
+  return odooConfigured();
+}
+
+/**
+ * Pull every opportunity (crm.lead type=opportunity) across all salespeople, including
+ * lost ones (active=false) via active_test:false. recurring_revenue (MRR) only exists
+ * when CRM recurring plans are enabled, so we try with it and retry without on error.
+ */
+export async function fetchOdooOpportunities(): Promise<OdooLeadRow[]> {
+  if (!odooConfigured()) throw new Error("Odoo API isn't configured (ODOO_URL/DB/USERNAME/API_KEY).");
+  const domain: unknown[] = [["type", "=", "opportunity"]];
+  const kwargs = { limit: 20000, order: "id asc", context: { active_test: false } };
+
+  let rows: LeadRow[];
+  try {
+    rows = await executeKw<LeadRow[]>("crm.lead", "search_read", [domain, [...LEAD_FIELDS_BASE, "recurring_revenue"]], kwargs);
+  } catch {
+    // recurring_revenue not available on this Odoo — pull without it.
+    rows = await executeKw<LeadRow[]>("crm.lead", "search_read", [domain, LEAD_FIELDS_BASE], kwargs);
+  }
+  return rows.map(mapLeadRow);
+}
+
 export type OppDraft = {
+  externalId: string; // Odoo lead id (live) or email (file) — the dedup key
   title: string; contactName: string | null; email: string;
   status: "open" | "won" | "lost"; stageId: string | null;
   probability: number | null; ownerId: string | null; contactCrmId: string | null;
@@ -186,6 +249,7 @@ export async function planImport(rows: OdooLeadRow[]): Promise<ImportPlan> {
     const noteAmount = `Odoo estimate: ${money(r.expectedRevenue)} expected revenue / ${money(r.expectedMrr)} MRR`;
     const noteStage = r.stage ? ` · Odoo stage: ${r.stage}` : "";
     plan.creates.push({
+      externalId: r.externalId ?? r.email,
       title: r.title,
       contactName: r.contactName,
       email: r.email,
@@ -222,7 +286,7 @@ export async function commitImport(creates: OppDraft[], actorId: string | null):
     created_by: actorId,
     notes: c.notes,
     external_source: ODOO_OPP_SOURCE,
-    external_id: c.email,
+    external_id: c.externalId,
     created_at: now,
     updated_at: now,
   }));

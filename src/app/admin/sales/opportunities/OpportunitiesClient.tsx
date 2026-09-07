@@ -45,6 +45,7 @@ export function OpportunitiesClient() {
   const [importBusy, setImportBusy] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [importDone, setImportDone] = useState<number | null>(null);
+  const [importSource, setImportSource] = useState<"live" | "file">("live");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,13 +73,14 @@ export function OpportunitiesClient() {
     finally { setBusy(false); }
   }
 
-  function resetImport() { setImportOpen(false); setImportFile(null); setImportPreview(null); setImportErr(null); setImportDone(null); setImportBusy(false); }
+  function resetImport() { setImportOpen(false); setImportFile(null); setImportPreview(null); setImportErr(null); setImportDone(null); setImportBusy(false); setImportSource("live"); }
 
-  async function runImport(file: File, mode: "preview" | "commit") {
+  async function runImport(mode: "preview" | "commit", source: "live" | "file", file: File | null) {
     setImportBusy(true); setImportErr(null);
     try {
       const fd = new FormData();
-      fd.append("file", file); fd.append("mode", mode);
+      fd.append("mode", mode); fd.append("source", source);
+      if (file) fd.append("file", file);
       const res = await fetch("/api/admin/sales/opportunities/import", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) { setImportErr(data.error ?? "Import failed."); return; }
@@ -89,8 +91,12 @@ export function OpportunitiesClient() {
   }
 
   function onImportFile(f: File | null) {
-    setImportFile(f); setImportPreview(null); setImportDone(null); setImportErr(null);
-    if (f) void runImport(f, "preview");
+    setImportFile(f); setImportSource("file"); setImportPreview(null); setImportDone(null); setImportErr(null);
+    if (f) void runImport("preview", "file", f);
+  }
+  function pullLive() {
+    setImportSource("live"); setImportFile(null); setImportPreview(null); setImportDone(null); setImportErr(null);
+    void runImport("preview", "live", null);
   }
 
   const filtered = useMemo(() => opps.filter((o) => {
@@ -185,13 +191,19 @@ export function OpportunitiesClient() {
               {importDone == null && (
                 <>
                   <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.6 }}>
-                    Upload the Odoo <b>Lead/Opportunity (crm.lead)</b> .xlsx export. Value comes in blank (Odoo amount kept as a note); duplicates already in iCapOS are skipped.
+                    Pull opportunities straight from Odoo, or upload the <b>crm.lead</b> .xlsx export. Value comes in blank (Odoo amount kept as a note); duplicates already in iCapOS are skipped.
                   </p>
+                  <button onClick={pullLive} disabled={importBusy} style={{ ...btn("#185FA5"), display: "inline-flex", alignItems: "center", gap: 6, alignSelf: "flex-start", opacity: importBusy ? 0.6 : 1 }}>
+                    <i className="ti ti-cloud-download" aria-hidden="true" /> Pull live from Odoo
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted-foreground)", fontSize: 11 }}>
+                    <div style={{ flex: 1, height: 1, background: "#eef1f5" }} /> or upload a file <div style={{ flex: 1, height: 1, background: "#eef1f5" }} />
+                  </div>
                   <input type="file" accept=".xlsx" onChange={(e) => onImportFile(e.target.files?.[0] ?? null)} style={{ fontSize: 12.5 }} />
                 </>
               )}
               {importErr && <p style={{ fontSize: 12.5, color: "#A32D2D", margin: 0 }}>{importErr}</p>}
-              {importBusy && <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: 0 }}>Reading file…</p>}
+              {importBusy && <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: 0 }}>{importSource === "live" ? "Pulling from Odoo…" : "Reading file…"}</p>}
 
               {importPreview && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -222,7 +234,7 @@ export function OpportunitiesClient() {
               ) : (
                 <>
                   <button onClick={resetImport} style={btn("#fff", "var(--muted-foreground)")}>Cancel</button>
-                  <button onClick={() => importFile && runImport(importFile, "commit")} disabled={!importPreview || importBusy || (importPreview?.toCreate ?? 0) === 0} style={{ ...btn("#0F6E56"), opacity: !importPreview || importBusy || (importPreview?.toCreate ?? 0) === 0 ? 0.5 : 1 }}>
+                  <button onClick={() => runImport("commit", importSource, importFile)} disabled={!importPreview || importBusy || (importPreview?.toCreate ?? 0) === 0} style={{ ...btn("#0F6E56"), opacity: !importPreview || importBusy || (importPreview?.toCreate ?? 0) === 0 ? 0.5 : 1 }}>
                     {importBusy ? "Importing…" : `Import ${importPreview?.toCreate ?? 0} opportunities`}
                   </button>
                 </>
