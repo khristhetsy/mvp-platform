@@ -34,7 +34,7 @@ const ANSWERS: FitAnswers = { stage: "revenue_pre_a", raise: "1m_10m", industry:
 
 describe("scoreRow", () => {
   it("scores a full match at 100", () => {
-    const r = scoreRow(inv({ company: "Meridian", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $5m"] }), ANSWERS);
+    const r = scoreRow(inv({ company: "Meridian", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $10m"] }), ANSWERS);
     expect(r?.fit).toBe(100);
   });
 
@@ -59,7 +59,7 @@ describe("scoreRow", () => {
 describe("rankRows", () => {
   it("keeps only firms at or above the pass threshold, sorted by fit", () => {
     const out = rankRows([
-      inv({ company: "Strong", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $5m"] }), // 100
+      inv({ company: "Strong", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $10m"] }), // 100
       inv({ company: "Weak", industries: ["Cleantech"], size: ["Less than $50k"] }), // 35 → dropped
     ], ANSWERS);
     expect(out.map((r) => r.company)).toEqual(["Strong"]);
