@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
+import { SalesChatter } from "@/components/sales/SalesChatter";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -320,6 +321,11 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
               </div>
             </>
           )}
+
+          {/* Chatter — send message / log note / activities */}
+          <div style={{ margin: "16px 0" }}>
+            <SalesChatter opportunityId={o.id} contactCrmId={o.contact_crm_id} contactName={o.contact_name} contactEmail={o.contact_email} staff={staff} />
+          </div>
 
           {/* Notes / extra tabs */}
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid #eef1f5", margin: "16px 0 12px" }}>

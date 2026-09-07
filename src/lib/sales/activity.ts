@@ -58,6 +58,27 @@ export async function logOutboundEmailActivity(
   } catch { /* never block the send */ }
 }
 
+/** Timeline for an opportunity (its own logged events). */
+export async function listOpportunityActivity(opportunityId: string): Promise<Activity[]> {
+  const { data } = await db()
+    .from("sales_activity_log")
+    .select("id, kind, summary, created_at, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)")
+    .eq("opportunity_id", opportunityId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const a = r.actor as { full_name?: string | null; email?: string | null } | null;
+    return { id: String(r.id), kind: r.kind as ActivityKind, summary: String(r.summary), actor_name: a?.full_name ?? a?.email ?? null, created_at: String(r.created_at) };
+  });
+}
+
+/** Log a free-text note to the timeline (opportunity or contact). */
+export async function logNote(text: string, opts: { opportunityId?: string | null; contactCrmId?: string | null; actorId?: string | null }): Promise<void> {
+  const summary = text.trim().slice(0, 2000);
+  if (!summary) return;
+  await logActivity({ kind: opts.opportunityId ? "opp_note" : "note", summary, actorId: opts.actorId, opportunityId: opts.opportunityId ?? null, contactCrmId: opts.contactCrmId ?? null });
+}
+
 export async function listContactActivity(contactCrmId: string): Promise<Activity[]> {
   const { data } = await db()
     .from("sales_activity_log")

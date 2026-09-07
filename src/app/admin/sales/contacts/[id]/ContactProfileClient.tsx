@@ -7,6 +7,7 @@ import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
+import { SalesChatter } from "@/components/sales/SalesChatter";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
@@ -1066,6 +1067,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {section === "activity" && (
         <div style={{ padding: "14px 16px" }}>
+          <div style={{ marginBottom: 16 }}>
+            <SalesChatter contactCrmId={initialContact.id} contactName={initialContact.name} contactEmail={initialContact.email} staff={staff} />
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
             {([["all", "All"], ["call", "Calls"], ["note", "Notes"], ["task", "Tasks"], ["stage", "Stage changes"]] as const).map(([f, label]) => (
               <button key={f} onClick={() => setActFilter(f)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 14, padding: "3px 11px", background: actFilter === f ? "#2E78F5" : "var(--muted)", color: actFilter === f ? "#fff" : "var(--muted-foreground)" }}>{label}</button>
