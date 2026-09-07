@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
+import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 
@@ -23,6 +24,10 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
 const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience"]);
+
+// Standard investor investment-size bands, smallest → largest. Used to derive
+// "all bands up to the Reg D raised" for SEC Form D-only investors.
+const INVESTMENT_SIZE_BANDS = ["Less than $50k", "$50k - $100k", "$100k - $250k", "$250k - $500k", "$500k - $1m", "$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"];
 // Curated option lists for the structured contact fields (rendered as dropdowns).
 // Any existing/legacy value that isn't in a list is preserved and pinned on top.
 const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];
@@ -276,6 +281,21 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const seedPrefs = () => {
     const o: Record<string, string> = {};
     for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.values.join(", ");
+    // SEC Form D-only investors: fill EMPTY thesis/rating fields with defaults
+    // derived from the filing. Real synced values (non-empty above) are left as-is,
+    // and this is display-only — seeded into both edits + baseline, so nothing is
+    // written unless staff actually change it.
+    if (initialProfile.type === "investor" && formdFirm) {
+      const regd = formdFirm.regd_footprint ?? null;
+      const bands = regd != null
+        ? INVESTMENT_SIZE_BANDS.filter((b) => { const r = parseMoneyBand(b); return r != null && r.min < regd; })
+        : [];
+      const fill = (key: string, val: string) => { if (!o[key]?.trim() && val) o[key] = val; };
+      fill("Active investor", "5-Excellent");
+      fill("Investor investment size?", bands.join(", "));
+      fill("Investor type", "Venture, Hedge Fund, Family Office, Fund Manager, Other");
+      fill("Investor preferences for the number of deals per year?", "5 - 10 Deals");
+    }
     return o;
   };
   const [prefEdits, setPrefEdits] = useState<Record<string, string>>(seedPrefs);

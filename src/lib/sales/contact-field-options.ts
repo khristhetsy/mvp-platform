@@ -126,6 +126,9 @@ const CURATED_OPTIONS: Record<string, string[]> = {
   "Investor preferences for the company with an MRR range of?": [
     "Less than $80k", "$80k – $200k", "$200k – $400k", "$400k – $1M", "$1M+",
   ],
+  // Ensure "Fund Manager" is always a selectable investor type (also used by the
+  // SEC Form D-only derived defaults).
+  "Investor type": ["Fund Manager"],
 };
 
 let cache: { at: number; data: FieldOptions } | null = null;
