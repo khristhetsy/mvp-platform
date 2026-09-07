@@ -65,22 +65,40 @@ export const Q4_REVENUE: FitOption[] = [
  *  Industries values across gated investors (never hardcoded, so a sector with no
  *  investor behind it is not offerable — build-spec §2). Founder value === stored value. */
 
+/** Q5 — What type of investor are you looking for? → investorTypes (semantic key,
+ *  like industries). "Open to any" (empty stored) disables the filter. */
+export const Q5_INVESTOR_TYPE: FitOption[] = [
+  { key: "angel", label: "Angel", stored: ["Angel", "Angel Investor"] },
+  { key: "vc", label: "Venture Capital", stored: ["Venture Capital", "Venture", "VC"] },
+  { key: "pe", label: "Private Equity", stored: ["Private Equity", "PE"] },
+  { key: "family_office", label: "Family Office", stored: ["Family Office"] },
+  { key: "corporate", label: "Corporate / Strategic", stored: ["Corporate", "Strategic", "Corporate / Strategic", "Corporate Venture"] },
+  { key: "any", label: "Open to any", stored: [] },
+];
+
 const byKey = <T extends { key: string }>(list: T[]) => new Map(list.map((o) => [o.key, o]));
 const Q1_BY_KEY = byKey(Q1_STAGE);
 const Q2_BY_KEY = byKey(Q2_RAISE);
 const Q4_BY_KEY = byKey(Q4_REVENUE);
+const Q5_BY_KEY = byKey(Q5_INVESTOR_TYPE);
 
-export function stageStoredFor(key: string): string[] { return Q1_BY_KEY.get(key)?.stored ?? []; }
-export function raiseBoundsFor(key: string): { min: number; max: number } | null {
-  const o = Q2_BY_KEY.get(key);
-  return o ? { min: o.min, max: o.max } : null;
+// Multi-select: answers are arrays; each helper unions the stored values / bounds.
+export function stageStoredFor(keys: string[]): string[] { return keys.flatMap((k) => Q1_BY_KEY.get(k)?.stored ?? []); }
+export function raiseBoundsFor(keys: string[]): { min: number; max: number } | null {
+  const bounds = keys.map((k) => Q2_BY_KEY.get(k)).filter((o): o is FitRaiseOption => !!o);
+  if (bounds.length === 0) return null;
+  return { min: Math.min(...bounds.map((b) => b.min)), max: Math.max(...bounds.map((b) => b.max)) };
 }
-export function revenueStoredFor(key: string): string[] { return Q4_BY_KEY.get(key)?.stored ?? []; }
+export function revenueStoredFor(keys: string[]): string[] { return keys.flatMap((k) => Q4_BY_KEY.get(k)?.stored ?? []); }
+export function investorTypeStoredFor(keys: string[]): string[] { return keys.flatMap((k) => Q5_BY_KEY.get(k)?.stored ?? []); }
+/** "Open to any" / nothing selected ⇒ no investor-type constraint. */
+export function investorTypeIsAny(keys: string[]): boolean { return keys.length === 0 || keys.includes("any"); }
 
-/** The four answers a founder submits. */
+/** The five answers a founder submits (each multi-select). */
 export type FitAnswers = {
-  stage: string;    // Q1 key
-  raise: string;    // Q2 key
-  industry: string; // Q3 stored industry value (identity)
-  revenue: string;  // Q4 key
+  stage: string[];        // Q1 keys
+  raise: string[];        // Q2 keys
+  industry: string[];     // Q3 stored industry values (identity)
+  revenue: string[];      // Q4 keys
+  investorType: string[]; // Q5 keys
 };

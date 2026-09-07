@@ -6,10 +6,11 @@ import { setSnapshot } from "@/lib/fit/sessions";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  stage: z.string().min(1).max(60),
-  raise: z.string().min(1).max(60),
-  industry: z.string().min(1).max(120),
-  revenue: z.string().min(1).max(60),
+  stage: z.array(z.string().max(60)).min(1).max(10),
+  raise: z.array(z.string().max(60)).min(1).max(10),
+  industry: z.array(z.string().max(120)).min(1).max(30),
+  revenue: z.array(z.string().max(60)).min(1).max(10),
+  investorType: z.array(z.string().max(60)).max(10).default([]),
 });
 
 // Public: run the founder's four answers against the gated investor set. Returns

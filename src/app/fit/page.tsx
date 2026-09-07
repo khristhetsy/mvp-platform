@@ -3,7 +3,7 @@ import { FitFunnelClient } from "./FitFunnelClient";
 
 export const metadata: Metadata = {
   title: "Find investors that fit your raise — iCapOS",
-  description: "Answer four questions and see the investors in our network that match your raise.",
+  description: "Answer five questions and see the investors in our network that match your raise.",
   robots: { index: false, follow: false },
 };
 

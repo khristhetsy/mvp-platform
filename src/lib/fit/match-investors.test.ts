@@ -9,6 +9,7 @@ function inv(opts: {
   stage?: string[];
   size?: string[];
   revenue?: string[];
+  invTypes?: string[];
   source?: string;
   verifiedAt?: string;
   overrides?: Record<string, unknown> | null;
@@ -22,6 +23,7 @@ function inv(opts: {
     raw: {
       __profile: {
         industries: opts.industries ?? [],
+        investorTypes: opts.invTypes ?? [],
         extra: {
           [OP_STAGE_LABEL]: opts.stage ?? [],
           [INV_SIZE_LABEL]: opts.size ?? [],
@@ -32,12 +34,13 @@ function inv(opts: {
   };
 }
 
-const ANSWERS: FitAnswers = { stage: "revenue_pre_a", raise: "1m_10m", industry: "Cleantech", revenue: "1m_5m" };
+// Multi-select answers; investorType empty = "open to any" (type factor is neutral +15).
+const ANSWERS: FitAnswers = { stage: ["revenue_pre_a"], raise: ["1m_10m"], industry: ["Cleantech"], revenue: ["1m_5m"], investorType: [] };
 
 describe("scoreRow", () => {
   it("scores a full match at 100", () => {
     const r = scoreRow(inv({ company: "Meridian", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $10m"] }), ANSWERS);
-    expect(r?.fit).toBe(100);
+    expect(r?.fit).toBe(100); // 30 + 25 + 20 + 15(any type) + 10
   });
 
   it("hard-filters a firm with no sector overlap (returns null)", () => {
@@ -45,16 +48,24 @@ describe("scoreRow", () => {
     expect(r).toBeNull();
   });
 
-  it("industry alone is 35 (below the 70 pass threshold)", () => {
+  it("industry + open-to-any-type alone is 45", () => {
     const r = scoreRow(inv({ company: "IndustryOnly", industries: ["Cleantech"] }), ANSWERS);
-    expect(r?.fit).toBe(35);
+    expect(r?.fit).toBe(45); // industry 30 + type 15 (any)
   });
 
   it("adds the investment weight only when the raise overlaps a stored band", () => {
     const hit = scoreRow(inv({ company: "A", industries: ["Cleantech"], size: ["$1m - $10m"] }), ANSWERS);
     const miss = scoreRow(inv({ company: "B", industries: ["Cleantech"], size: ["Less than $50k"] }), ANSWERS);
-    expect(hit?.fit).toBe(60);   // 35 + 25
-    expect(miss?.fit).toBe(35);  // 35 only
+    expect(hit?.fit).toBe(65);   // 30 + 20 + 15
+    expect(miss?.fit).toBe(45);  // 30 + 15
+  });
+
+  it("matches investor type when a specific type is selected", () => {
+    const answers: FitAnswers = { ...ANSWERS, investorType: ["vc"] };
+    const hit = scoreRow(inv({ company: "V", industries: ["Cleantech"], invTypes: ["Venture Capital"] }), answers);
+    const miss = scoreRow(inv({ company: "A", industries: ["Cleantech"], invTypes: ["Angel"] }), answers);
+    expect(hit?.fit).toBe(45);  // 30 + 15 (type overlap)
+    expect(miss?.fit).toBe(30); // 30, no type overlap
   });
 });
 

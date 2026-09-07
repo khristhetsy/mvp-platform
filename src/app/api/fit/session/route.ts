@@ -35,10 +35,10 @@ export async function POST(req: NextRequest): Promise<Response> {
 
 const patchSchema = z.object({
   step: z.number().int().min(0).max(5).optional(),
-  stage: z.string().max(60).optional(),
-  raise: z.string().max(60).optional(),
-  industry: z.string().max(120).optional(),
-  revenue: z.string().max(60).optional(),
+  stage: z.string().max(300).optional(),
+  raise: z.string().max(300).optional(),
+  industry: z.string().max(600).optional(),
+  revenue: z.string().max(300).optional(),
 });
 
 // Update the session as each question is answered (last_step is the drop-off signal).

@@ -22,14 +22,17 @@ import {
   stageStoredFor,
   raiseBoundsFor,
   revenueStoredFor,
+  investorTypeStoredFor,
+  investorTypeIsAny,
   type FitAnswers,
 } from "@/lib/fit/options";
 
-// Industry is a hard filter (no sector overlap → excluded before scoring), so a passing
-// row already fits on sector. Threshold 35 = "sector match is enough to show", with
-// stage/size/revenue lifting the fit score for ranking. Keeps the funnel showing results
-// even when imported investors carry only industry data. Override with FIT_PASS_THRESHOLD.
-const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? 35);
+// Fit weights (sum 100). Industry is also a hard filter (no sector overlap → excluded),
+// so a passing row already fits on sector. Threshold defaults to the industry weight, so
+// a sector-only match still shows even when imported investors carry only industry data.
+// Override with FIT_PASS_THRESHOLD.
+const WEIGHTS = { industry: 30, stage: 25, size: 20, type: 15, revenue: 10 };
+const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? WEIGHTS.industry);
 const RESULT_LIMIT = 25;
 
 export type MatchResult = {
@@ -38,6 +41,7 @@ export type MatchResult = {
   summary: string;
   fit: number;                 // 0–100 "% fit" to the founder's raise
   sectors: string[];
+  types: string[];
   stage: string | null;
   checkSize: string | null;
   revenue: string | null;
@@ -83,6 +87,9 @@ function mergedIndustries(row: GatedRow): string[] {
 function mergedExtra(row: GatedRow, label: string): string[] {
   return ovList(row.overrides, label) ?? extraValues(row.raw, label);
 }
+function mergedInvestorTypes(row: GatedRow): string[] {
+  return ovList(row.overrides, "Investor type") ?? asList((row.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes);
+}
 
 type GatedRow = {
   id: string; company: string | null; raw: Record<string, unknown> | null;
@@ -94,19 +101,24 @@ type GatedRow = {
  *  industry hard filter fails (no sector overlap → never shown). */
 export function scoreRow(row: GatedRow, answers: FitAnswers): { fit: number; summary: string } | null {
   const industries = lc(mergedIndustries(row));
-  if (!industries.has(answers.industry.trim().toLowerCase())) return null; // hard filter
+  // Hard filter: at least one selected sector overlaps (multi-select any-overlap).
+  if (!answers.industry.some((i) => industries.has(i.trim().toLowerCase()))) return null;
 
-  let fit = 35; // industry matched (hard-filtered above)
+  let fit = WEIGHTS.industry; // industry matched (hard-filtered above)
 
   const stageStored = lc(mergedExtra(row, OP_STAGE_LABEL));
-  if (stageStoredFor(answers.stage).some((s) => stageStored.has(s.toLowerCase()))) fit += 30;
+  if (stageStoredFor(answers.stage).some((s) => stageStored.has(s.toLowerCase()))) fit += WEIGHTS.stage;
 
-  const bounds = raiseBoundsFor(answers.raise);
+  const bounds = raiseBoundsFor(answers.raise); // union of selected raise bands
   const sizeBands = mergedExtra(row, INV_SIZE_LABEL).map(parseMoneyBand).filter((b): b is { min: number; max: number } => b != null);
-  if (bounds && sizeBands.some((b) => b.min <= bounds.max && b.max >= bounds.min)) fit += 25;
+  if (bounds && sizeBands.some((b) => b.min <= bounds.max && b.max >= bounds.min)) fit += WEIGHTS.size;
+
+  // Investor type: any selected type overlaps, or "Open to any" (no constraint).
+  const invTypes = lc(mergedInvestorTypes(row));
+  if (investorTypeIsAny(answers.investorType) || investorTypeStoredFor(answers.investorType).some((t) => invTypes.has(t.toLowerCase()))) fit += WEIGHTS.type;
 
   const revStored = lc(mergedExtra(row, REVENUE_LABEL));
-  if (revenueStoredFor(answers.revenue).some((r) => revStored.has(r.toLowerCase()))) fit += 10;
+  if (revenueStoredFor(answers.revenue).some((r) => revStored.has(r.toLowerCase()))) fit += WEIGHTS.revenue;
 
   const summary = [
     mergedExtra(row, OP_STAGE_LABEL).join("–") || null,
@@ -142,6 +154,7 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
         summary: s.summary,
         fit: s.fit,
         sectors: mergedIndustries(r),
+        types: mergedInvestorTypes(r),
         stage: mergedExtra(r, OP_STAGE_LABEL).join(", ") || null,
         checkSize: mergedExtra(r, INV_SIZE_LABEL)[0] ?? null,
         revenue: mergedExtra(r, REVENUE_LABEL)[0] ?? null,
