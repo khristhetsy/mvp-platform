@@ -21,6 +21,14 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 /** Page management + posting. Ignored when META_LOGIN_CONFIG_ID is set (the config carries them). */
 export const META_SCOPES = "pages_show_list,pages_manage_posts,pages_read_engagement";
 
+/**
+ * Facebook Login for Business requires a config_id — a plain scope request returns
+ * missing_code. This is the "iCapOS Page publishing" configuration (public, non-secret
+ * id) used as the default so the flow works without a Vercel env var; override with
+ * META_LOGIN_CONFIG_ID if the config ever changes.
+ */
+const DEFAULT_META_LOGIN_CONFIG_ID = "1381571883957072";
+
 export const META_STATE_COOKIE = "fb_oauth_state";
 export const META_STATE_MAX_AGE = 600; // 10 minutes
 
@@ -44,7 +52,7 @@ export function getMetaOAuthEnv(preferredOrigin?: string): MetaOAuthEnv | null {
   if (!redirectUri) return null;
 
   const stateSecret = process.env.TOKEN_ENCRYPTION_SECRET?.trim() || appSecret;
-  const configId = process.env.META_LOGIN_CONFIG_ID?.trim() || null;
+  const configId = process.env.META_LOGIN_CONFIG_ID?.trim() || DEFAULT_META_LOGIN_CONFIG_ID;
   return { appId, appSecret, redirectUri, stateSecret, configId };
 }
 
