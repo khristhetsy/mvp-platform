@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/social-queue",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/run-orchestration",
       "schedule": "0 7 * * *"
     },
