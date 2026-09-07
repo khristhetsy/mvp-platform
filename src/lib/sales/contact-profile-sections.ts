@@ -89,6 +89,7 @@ const INVESTOR_SCHEMA: SectionDef[] = [
       { display: "iCFO capital partner", match: "icfo capital partner", odoo: "Investor: iCFO capital partner" },
       { display: "Assigned agent", match: "assigned agent", odoo: "Investor assigned agent" },
       { display: "Contact preference", match: "contact preference", odoo: "Investor contact preference" },
+      { display: "Investor business summary", match: "business summary", odoo: "Investor business summary" },
     ],
   },
   {

@@ -22,7 +22,7 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
-const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you"]);
+const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience"]);
 // Curated option lists for the structured contact fields (rendered as dropdowns).
 // Any existing/legacy value that isn't in a list is preserved and pinned on top.
 const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];
@@ -732,6 +732,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               const profile = groupContactProfile(contact.extra, contact.membership);
               if (profile.sections.length === 0) return null;
               const hasInfoSection = profile.sections.some((s) => s.title.toLowerCase().includes("information"));
+              // "Other details" (leftover unmapped fields) is folded into the merged
+              // overview section, so it never renders as its own block.
+              const overviewTitle = profile.type === "investor" ? "Investor overview" : profile.type === "founder" ? "Founder overview" : "Overview";
+              const otherDetailsFields = profile.sections.find((s) => s.title === "Other details")?.fields ?? [];
               // "Investor type" (raw.__profile.investorTypes) — surfaced as an editable
               // multi-select in Contact & lead; same data the Group-by "Investor type" uses.
               const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => /investor type/i.test(f.label))?.saveKey ?? "Investor type";
@@ -776,13 +780,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     if (company && (sec.title === "Seeking" || sec.title === "Company & stage")) return null;
                     const rating = sec.title.toLowerCase().includes("rating");
                     const isInfo = sec.title.toLowerCase().includes("information");
-                    // Investor profile is rendered in Contact & lead — drop it here to avoid a duplicate.
+                    // Investor profile is rendered in the overview — drop it here to avoid a duplicate.
                     const visibleFields = sec.fields.filter((f) => f.saveKey !== investorProfileKey);
-                    if (sec.title === "Other details" && visibleFields.length === 0) return null;
+                    // Other details is folded into the merged overview section below.
+                    if (sec.title === "Other details") return null;
                     return (
                       <div key={sec.title}>
                         <div style={{ marginTop: 14 }}>
-                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{isInfo ? "Details" : sec.title}</p>
+                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{isInfo ? overviewTitle : sec.title}</p>
                         {sec.title === "Highlights" ? (
                           (() => {
                             const text = sec.fields.flatMap((f) => f.values).join(" ").trim();
@@ -838,6 +843,21 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               key={f.saveKey}
                               label={f.label}
                               rating={rating}
+                              options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
+                              value={prefEdits[f.saveKey] ?? ""}
+                              changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
+                              editing={editingKey === f.saveKey}
+                              onOpen={() => setEditingKey(f.saveKey)}
+                              onChange={(v) => setPrefEdits((p) => ({ ...p, [f.saveKey]: v }))}
+                              onSave={() => saveField(f.saveKey)}
+                              onUndo={() => { setPrefEdits((p) => ({ ...p, [f.saveKey]: prefOrig[f.saveKey] ?? "" })); setEditingKey(null); }}
+                            />
+                          ))}
+                          {isInfo && otherDetailsFields.filter((f) => f.saveKey !== investorProfileKey).map((f) => (
+                            <EditablePrefRow
+                              key={`od-${f.saveKey}`}
+                              label={f.label}
+                              rating={false}
                               options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
