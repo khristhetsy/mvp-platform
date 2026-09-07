@@ -182,7 +182,7 @@ export function FitFunnelClient() {
           <span className="absolute bottom-1.5 left-[11px] top-1.5 w-0.5 bg-gradient-to-b from-indigo-600 to-indigo-200" aria-hidden="true" />
           {[
             { t: "Form the vehicle", d: "We set up the SPV for this raise" },
-            { t: "Materials go out", d: `To your ${count || "matched"} matched investors` },
+            { t: "Outreach process", d: "To your matched investors" },
             { t: "They subscribe", d: "Into the SPV" },
             { t: "Funded", d: "Diligence runs through to close", done: true },
           ].map((s, i) => (
