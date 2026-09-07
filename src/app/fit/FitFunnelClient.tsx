@@ -4,8 +4,57 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, type FitAnswers } from "@/lib/fit/options";
 
-type MatchResult = { company: string; summary: string; fit: number };
-type MatchResponse = { matched_count: number; top: MatchResult[]; locked_count: number; thin: boolean };
+type MatchResult = {
+  contactId: string; company: string; summary: string; fit: number;
+  sectors: string[]; stage: string | null; checkSize: string | null; revenue: string | null;
+  score: number | null; tier: string | null;
+};
+type MatchResponse = { matched_count: number; top: MatchResult[]; locked_count: number; thin: boolean; network_total: number };
+
+// Tier → ring/badge colors (matches the investor-rating scale).
+function tierColor(tier: string | null): { ring: string; bg: string; fg: string } {
+  const t = (tier ?? "").toLowerCase();
+  if (t.startsWith("a") || t === "excellent") return { ring: "#1D9E75", bg: "#E1F5EE", fg: "#0F6E56" };
+  if (t.startsWith("b") || t === "strong" || t === "good") return { ring: "#BA7517", bg: "#FAEEDA", fg: "#854F0B" };
+  if (!tier || t === "new") return { ring: "#B4B2A9", bg: "#F1EFE8", fg: "#5F5E5A" };
+  return { ring: "#378ADD", bg: "#E6F1FB", fg: "#185FA5" };
+}
+
+function MatchCard({ m }: { m: MatchResult }) {
+  const [open, setOpen] = useState(false);
+  const c = tierColor(m.tier);
+  const summaryLine = [m.sectors[0], m.stage, m.checkSize].filter(Boolean).join(" · ");
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 p-3 text-left">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-slate-900">{m.company}</p>
+          {summaryLine ? <p className="mt-0.5 truncate text-[11px] text-slate-500">{summaryLine}</p> : null}
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-emerald-600">{m.fit}% fit</span>
+            <span className="h-1 w-16 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-emerald-500" style={{ width: `${m.fit}%` }} /></span>
+          </div>
+        </div>
+        <div className="flex w-[70px] flex-shrink-0 flex-col items-center gap-1">
+          <span className="text-[8.5px] font-medium uppercase tracking-wide text-slate-400">Investor score</span>
+          <span className="flex h-11 w-11 items-center justify-center rounded-full text-[15px] font-semibold text-slate-900" style={{ border: `3px solid ${c.ring}` }}>{m.score ?? "—"}</span>
+          <span className="rounded px-1.5 py-px text-[9px] font-medium" style={{ background: c.bg, color: c.fg }}>{m.tier ?? "New"}</span>
+        </div>
+        <i className={`ti ti-chevron-${open ? "down" : "right"} flex-shrink-0 text-slate-400`} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="border-t border-slate-100 bg-slate-50 px-3 py-3 text-[12px]">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div><p className="text-slate-400">Sectors</p><p className="text-slate-700">{m.sectors.slice(0, 4).join(", ") || "—"}</p></div>
+            <div><p className="text-slate-400">Stage</p><p className="text-slate-700">{m.stage ?? "—"}</p></div>
+            <div><p className="text-slate-400">Check size</p><p className="text-slate-700">{m.checkSize ?? "—"}</p></div>
+            <div><p className="text-slate-400">Revenue focus</p><p className="text-slate-700">{m.revenue ?? "—"}</p></div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const RAISE_LABEL: Record<string, string> = Object.fromEntries(Q2_RAISE.map((o) => [o.key, o.label]));
 const STAGE_LABEL: Record<string, string> = Object.fromEntries(Q1_STAGE.map((o) => [o.key, o.label]));
@@ -103,7 +152,6 @@ export function FitFunnelClient() {
   // figures), the verbatim disclaimer, and one CTA to the structuring-call scheduler
   // (which links back to this funnel session via the fs_session cookie).
   if (step === "method") {
-    const dots = Math.max(1, Math.min(count || 1, 12));
     return (
       <div className="mx-auto w-full max-w-md">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
@@ -112,18 +160,23 @@ export function FitFunnelClient() {
         <h1 className="mt-3 text-[22px] font-semibold leading-snug text-slate-900">Run this raise through an SPV</h1>
         <p className="mt-1.5 text-[13px] text-slate-500">One vehicle, one cap table line, one close — scoped to your raise.</p>
 
-        <div className="mt-5 flex flex-wrap gap-1.5">
-          {Array.from({ length: dots }).map((_, i) => <span key={i} className="h-2.5 w-2.5 rounded-full bg-indigo-500" />)}
-        </div>
-
-        <ol className="mt-5 flex flex-col gap-3">
-          {["We form the vehicle", "Your materials go out to matched investors", "They subscribe into the SPV", "Diligence runs through to funding"].map((s, i) => (
-            <li key={s} className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">{i + 1}</span>
-              <span className="pt-0.5 text-[14px] text-slate-800">{s}</span>
-            </li>
+        <div className="relative mt-6 pl-7">
+          <span className="absolute bottom-1.5 left-[11px] top-1.5 w-0.5 bg-gradient-to-b from-indigo-600 to-indigo-200" aria-hidden="true" />
+          {[
+            { t: "Form the vehicle", d: "We set up the SPV for this raise" },
+            { t: "Materials go out", d: `To your ${count || "matched"} matched investors` },
+            { t: "They subscribe", d: "Into the SPV" },
+            { t: "Funded", d: "Diligence runs through to close", done: true },
+          ].map((s, i) => (
+            <div key={s.t} className={`relative ${i < 3 ? "mb-5" : ""}`}>
+              <span className={`absolute -left-7 top-0 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold text-white ${s.done ? "bg-emerald-600" : "bg-indigo-600"}`}>
+                {s.done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
+              </span>
+              <p className="text-[14px] font-medium text-slate-900">{s.t}</p>
+              <p className="mt-0.5 text-[12px] text-slate-500">{s.d}</p>
+            </div>
           ))}
-        </ol>
+        </div>
 
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-[13px] font-medium text-slate-700">Scoped to your raise</p>
@@ -139,58 +192,64 @@ export function FitFunnelClient() {
     );
   }
 
+  const networkTotal = result?.network_total ?? 0;
+  const hasMatches = count > 0 && !thin;
+
   return (
     <div className="mx-auto w-full max-w-md">
       {busy ? (
         <p className="text-center text-sm text-slate-400">Matching against our network…</p>
-      ) : count > 0 && !thin ? (
+      ) : hasMatches ? (
         <>
-          <h1 className="text-[22px] font-semibold leading-snug text-slate-900">{count} investors in our network match your raise</h1>
-          <p className="mt-1.5 text-[13px] text-slate-500">{subline}</p>
-          <div className="mt-5 flex flex-col gap-2.5">
-            {result!.top.map((m) => (
-              <div key={m.company} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-[15px] font-semibold text-slate-900">{m.company}</p>
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">{m.fit}% fit</span>
-                </div>
-                {m.summary ? <p className="mt-1 text-[13px] text-slate-500">{m.summary}</p> : null}
-              </div>
-            ))}
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h1 className="text-[19px] font-semibold leading-snug text-slate-900">{count} investors match your raise</h1>
+              <p className="mt-1 text-[12px] text-slate-500">{subline}</p>
+            </div>
+            <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/25" /> Live data
+            </span>
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1 rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10.5px] text-slate-400">In our network</p><p className="text-[18px] font-semibold text-slate-900">{networkTotal.toLocaleString()}</p></div>
+            <div className="flex-1 rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10.5px] text-slate-400">Match you</p><p className="text-[18px] font-semibold text-emerald-600">{count}</p></div>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2.5">
+            {result!.top.map((m) => <MatchCard key={m.contactId} m={m} />)}
             {result!.locked_count > 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-slate-500">
-                <i className="ti ti-lock" aria-hidden="true" /> {result!.locked_count} more matched — book a structuring call to see them
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-[12.5px] text-slate-500">
+                <i className="ti ti-lock" aria-hidden="true" /> {result!.locked_count} more matched
               </div>
             ) : null}
           </div>
-          <button onClick={() => setStep("method")} className="mt-5 w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700">See how we structure your raise</button>
+
+          <button onClick={() => setStep("method")} className="mt-4 w-full rounded-lg bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white hover:bg-indigo-700">See how we structure your raise</button>
         </>
       ) : (
         <>
           <h1 className="text-[22px] font-semibold leading-snug text-slate-900">No investors in our network match this profile yet</h1>
           <p className="mt-1.5 text-[13px] text-slate-500">{subline}. Leave your email and we&apos;ll tell you when one does.</p>
+          <div className="mt-6 border-t border-slate-100 pt-5">
+            {captured ? (
+              <p className="text-[13px] text-emerald-700">Got it — we&apos;ll be in touch.</p>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!email.trim()) return;
+                  fetch("/api/fit/capture", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }) }).catch(() => {});
+                  setCaptured(true);
+                }}
+                className="flex gap-2"
+              >
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none" />
+                <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Notify me</button>
+              </form>
+            )}
+          </div>
         </>
-      )}
-
-      {!busy && (
-        <div className="mt-6 border-t border-slate-100 pt-5">
-          {captured ? (
-            <p className="text-[13px] text-emerald-700">Got it — we&apos;ll be in touch.</p>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!email.trim()) return;
-                fetch("/api/fit/capture", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }) }).catch(() => {});
-                setCaptured(true);
-              }}
-              className="flex gap-2"
-            >
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none" />
-              <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">{count > 0 && !thin ? "Book a call" : "Notify me"}</button>
-            </form>
-          )}
-        </div>
       )}
     </div>
   );

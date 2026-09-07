@@ -14,6 +14,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
+import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import {
   OP_STAGE_LABEL,
   INV_SIZE_LABEL,
@@ -31,12 +32,24 @@ import {
 const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? 35);
 const RESULT_LIMIT = 25;
 
-export type MatchResult = { company: string; summary: string; fit: number };
+export type MatchResult = {
+  contactId: string;
+  company: string;
+  summary: string;
+  fit: number;                 // 0–100 "% fit" to the founder's raise
+  sectors: string[];
+  stage: string | null;
+  checkSize: string | null;
+  revenue: string | null;
+  score: number | null;        // investor score (existing rating system), filled for shown rows
+  tier: string | null;
+};
 export type MatchResponse = {
   matched_count: number;
   top: MatchResult[];
   locked_count: number;
   thin: boolean;
+  network_total: number;       // total investors in the network
 };
 
 /** Coerce an Odoo jsonb value (array, [id,label] pairs, string) to a string list. */
@@ -71,7 +84,11 @@ function mergedExtra(row: GatedRow, label: string): string[] {
   return ovList(row.overrides, label) ?? extraValues(row.raw, label);
 }
 
-type GatedRow = { id: string; company: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; inv_source: string | null; inv_verified_at: string | null };
+type GatedRow = {
+  id: string; company: string | null; raw: Record<string, unknown> | null;
+  overrides: Record<string, unknown> | null; inv_source: string | null; inv_verified_at: string | null;
+  contact_type?: string | null; source?: string | null; email?: string | null;
+};
 
 /** Score one investor row against the founder's answers. Returns null when the
  *  industry hard filter fails (no sector overlap → never shown). */
@@ -118,8 +135,22 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
   const scored: MatchResult[] = [];
   for (const r of byFirm.values()) {
     const s = scoreRow(r, answers);
-    if (s && s.fit >= PASS_THRESHOLD) scored.push({ company: r.company as string, summary: s.summary, fit: s.fit });
+    if (s && s.fit >= PASS_THRESHOLD) {
+      scored.push({
+        contactId: r.id,
+        company: r.company as string,
+        summary: s.summary,
+        fit: s.fit,
+        sectors: mergedIndustries(r),
+        stage: mergedExtra(r, OP_STAGE_LABEL).join(", ") || null,
+        checkSize: mergedExtra(r, INV_SIZE_LABEL)[0] ?? null,
+        revenue: mergedExtra(r, REVENUE_LABEL)[0] ?? null,
+        score: null,
+        tier: null,
+      });
+    }
   }
+  // Sort by fit, then by investor score is applied after enrichment in matchInvestors.
   scored.sort((a, b) => b.fit - a.fit);
   return scored.slice(0, RESULT_LIMIT);
 }
@@ -150,20 +181,42 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
   // Gate: any investor contact (open-gate mode — imported/inferred investors are
   // matched, ranked below self_reported/verified). Founders are excluded by the
   // investor scope; the industry hard filter excludes anyone without sector overlap.
-  const { data, error } = await db
-    .from("crm_contacts")
-    .select("id, company, raw, overrides, inv_source, inv_verified_at")
-    .or("contact_type.eq.investor,module.eq.investor")
-    .not("company", "is", null)
-    .limit(20000);
+  const [{ data, error }, { count }] = await Promise.all([
+    db.from("crm_contacts")
+      .select("id, company, raw, overrides, inv_source, inv_verified_at, contact_type, source, email")
+      .or("contact_type.eq.investor,module.eq.investor")
+      .not("company", "is", null)
+      .limit(20000),
+    db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
+  ]);
+  const networkTotal = count ?? 0;
 
-  if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true };
+  if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
 
-  const ranked = rankRows(data as GatedRow[], answers);
+  const rows = data as GatedRow[];
+  const ranked = rankRows(rows, answers);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  // Enrich the shown rows with the existing investor score/tier, then sort by fit,
+  // score. Only the top few are displayed, so this stays cheap.
+  const shown = ranked.slice(0, 3);
+  await Promise.all(shown.map(async (m) => {
+    const row = byId.get(m.contactId);
+    if (!row) return;
+    const rating = await getContactInvestorRating({
+      source: row.source ?? null, contact_type: row.contact_type ?? "investor", email: row.email ?? null,
+      membership: (row.raw?.__profile as { membership?: string } | undefined)?.membership ?? null,
+    }).catch(() => null);
+    m.score = rating?.score ?? null;
+    m.tier = rating?.tier ?? null;
+  }));
+  shown.sort((a, b) => b.fit - a.fit || (b.score ?? -1) - (a.score ?? -1));
+
   return {
     matched_count: ranked.length,
-    top: ranked.slice(0, 3),
-    locked_count: Math.max(0, ranked.length - 3),
+    top: shown,
+    locked_count: Math.max(0, ranked.length - shown.length),
     thin: ranked.length < 3,
+    network_total: networkTotal,
   };
 }
