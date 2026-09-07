@@ -59,12 +59,13 @@ describe("scoreRow", () => {
 });
 
 describe("rankRows", () => {
-  it("keeps only firms at or above the pass threshold, sorted by fit", () => {
+  it("keeps sector-matching firms sorted by fit, and excludes off-sector", () => {
     const out = rankRows([
       inv({ company: "Strong", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $10m"] }), // 100
-      inv({ company: "Weak", industries: ["Cleantech"], size: ["Less than $50k"] }), // 35 → dropped
+      inv({ company: "SectorOnly", industries: ["Cleantech"] }), // 35 → shows (industry hard filter passed)
+      inv({ company: "OffSector", industries: ["Biotech"] }), // no sector overlap → excluded
     ], ANSWERS);
-    expect(out.map((r) => r.company)).toEqual(["Strong"]);
+    expect(out.map((r) => r.company)).toEqual(["Strong", "SectorOnly"]);
   });
 
   it("returns one row per firm, preferring verified over self_reported", () => {

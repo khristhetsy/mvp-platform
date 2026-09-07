@@ -24,7 +24,11 @@ import {
   type FitAnswers,
 } from "@/lib/fit/options";
 
-const PASS_THRESHOLD = 70;
+// Industry is a hard filter (no sector overlap → excluded before scoring), so a passing
+// row already fits on sector. Threshold 35 = "sector match is enough to show", with
+// stage/size/revenue lifting the fit score for ranking. Keeps the funnel showing results
+// even when imported investors carry only industry data. Override with FIT_PASS_THRESHOLD.
+const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? 35);
 const RESULT_LIMIT = 25;
 
 export type MatchResult = { company: string; summary: string; fit: number };
