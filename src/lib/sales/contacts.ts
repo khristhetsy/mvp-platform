@@ -1,6 +1,7 @@
 // Sales contact profile — reads the CRM mirror + annotations + linked opportunities.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/sales/activity";
+import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -76,7 +77,7 @@ function flattenExtra(
       out.splice(i, 1);
     }
   }
-  if (industrySet.size) out.push({ label: "Industries", values: [...industrySet] });
+  if (industrySet.size) out.push({ label: "Industries", values: sortSectors(canonicalizeIndustries([...industrySet])) });
 
   // Investor type: the data lives in __profile.investorTypes (semantic key), same
   // as industries. Surface it as one "Investor type" field, folding in any stray

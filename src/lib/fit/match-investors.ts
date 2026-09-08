@@ -15,6 +15,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
+import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 import {
   OP_STAGE_LABEL,
   INV_SIZE_LABEL,
@@ -82,7 +83,8 @@ function ovList(overrides: Record<string, unknown> | null, key: string): string[
   return Array.isArray(v) ? asList(v) : null;
 }
 function mergedIndustries(row: GatedRow): string[] {
-  return ovList(row.overrides, "Industries") ?? asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries);
+  const raw = ovList(row.overrides, "Industries") ?? asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries);
+  return canonicalizeIndustries(raw); // canonical taxonomy (merges/dedupes)
 }
 function mergedExtra(row: GatedRow, label: string): string[] {
   return ovList(row.overrides, label) ?? extraValues(row.raw, label);
@@ -184,7 +186,7 @@ export async function offerableSectors(): Promise<string[]> {
   for (const row of data as { raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }[]) {
     for (const v of mergedIndustries({ id: "", company: null, inv_source: null, inv_verified_at: null, ...row })) seen.add(v);
   }
-  return [...seen].sort((a, b) => a.localeCompare(b));
+  return sortSectors([...seen]); // canonical, deduped, "Other" last
 }
 
 export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
