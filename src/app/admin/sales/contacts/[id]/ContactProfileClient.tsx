@@ -19,7 +19,7 @@ type Contact = {
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
-type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null };
+type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null; isNote?: boolean };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
@@ -965,10 +965,12 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg === "Saved." ? "Message posted." : noteMsg}</span>}
                       </div>
                       <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history{odooMessages.length ? ` · ${odooMessages.length} from Odoo` : ""}</div>
-                        {odooMessages.length > 0 ? (
+                        {(() => { const msgs = odooMessages.filter((m) => !m.isNote); return (
+                        <>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history{msgs.length ? ` · ${msgs.length} from Odoo` : ""}</div>
+                        {msgs.length > 0 ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
-                            {odooMessages.map((m) => (
+                            {msgs.map((m) => (
                               <div key={m.id} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
                                 <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                                   <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{m.author ?? "—"}</span>
@@ -980,12 +982,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             ))}
                           </div>
                         ) : (
-                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No messages yet."}</div>
+                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>No messages yet.</div>
                         )}
+                        </>
+                        ); })()}
                       </div>
                     </div>
                   )}
-                  {profileSub === "notelog" && (
+                  {profileSub === "notelog" && (() => { const odooNotes = odooMessages.filter((m) => m.isNote && m.body); return (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
@@ -994,13 +998,27 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                           <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
                           {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
                         </div>
+                        {savedNotes ? <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, marginTop: 8 }}>{savedNotes}</div> : null}
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Notes</div>
-                        <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No notes yet."}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log notes{odooNotes.length ? ` · ${odooNotes.length} from Odoo` : ""}</div>
+                        {odooNotes.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
+                            {odooNotes.map((m) => (
+                              <div key={m.id} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                                  <span style={{ fontWeight: 600, color: "#854D0E" }}>📝 {m.author ?? "—"}</span>{m.date ? ` · ${new Date(m.date).toLocaleString()}` : ""} <span style={{ fontSize: 9, color: "var(--muted-foreground)" }}>· from Odoo</span>
+                                </div>
+                                <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>No log notes yet.</div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  ); })()}
                 </div>
               </div>
               );

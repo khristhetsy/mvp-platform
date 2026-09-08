@@ -26,7 +26,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
 
   const odooMessages =
     data.contact.source === "odoo" && data.contact.external_id
-      ? await fetchPartnerMessages(data.contact.external_id)
+      ? await fetchPartnerMessages(data.contact.external_id, 80)
       : [];
 
   let onePager: { slug: string | null; published: boolean; companyName: string | null } | null = null;
