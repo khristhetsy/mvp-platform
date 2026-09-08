@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type DragEvent } from "react";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
@@ -47,7 +47,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
 
       <div className="mt-5">
         {tab === "composer" ? <Composer accounts={accounts} googleReady={googleReady} /> : null}
-        {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
+        {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
         {tab === "rules" ? <Rules settings0={settings0} slots0={slots0} /> : null}
         {tab === "accounts" ? <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} /> : null}
         {tab === "attribution" ? <Attribution data={attribution} /> : null}
@@ -250,10 +250,10 @@ const itemISO = (q: QueueItem) => q.scheduled_at ?? q.published_at ?? null;
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue: QueueItem[]; accounts: SocialAccount[]; googleReady: boolean; onAddPost: () => void }) {
+function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: { queue: QueueItem[]; accounts: SocialAccount[]; slots: SocialSlot[]; googleReady: boolean; onAddPost: () => void }) {
   const [queue, setQueue] = useState<QueueItem[]>(initial);
-  const [view, setView] = useState<"month" | "list">("month");
-  const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const [view, setView] = useState<"month" | "week" | "list">("month");
+  const [anchor, setAnchor] = useState(() => new Date());
   const [selected, setSelected] = useState<QueueItem | null>(null);
   const [preview, setPreview] = useState<QueueItem | null>(null);
   const [editing, setEditing] = useState(false);
@@ -262,8 +262,11 @@ function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue:
   const [sDate, setSDate] = useState("");
   const [sTime, setSTime] = useState("08:15");
   const [busy, setBusy] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overKey, setOverKey] = useState<string | null>(null);
 
   const platformOf = (name: string | null) => accounts.find((a) => a.display_name === name)?.platform ?? "linkedin";
+  const defaultTime = slots[0]?.time_local?.slice(0, 5) || "08:15";
 
   const rail = queue.filter((q) => !itemISO(q));
   const dated = queue.filter((q) => itemISO(q));
@@ -292,44 +295,73 @@ function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue:
   }
   function openSchedule(q: QueueItem) {
     const base = q.scheduled_at ? new Date(q.scheduled_at) : null;
-    setSDate(base ? ymd(base) : ""); setSTime(base ? `${String(base.getHours()).padStart(2, "0")}:${String(base.getMinutes()).padStart(2, "0")}` : "08:15");
+    setSDate(base ? ymd(base) : ""); setSTime(base ? `${String(base.getHours()).padStart(2, "0")}:${String(base.getMinutes()).padStart(2, "0")}` : defaultTime);
     setScheduling(q);
   }
   function confirmSchedule() {
     if (!scheduling || !sDate) return;
-    act(scheduling.id, "schedule", { scheduledAt: new Date(`${sDate}T${sTime || "08:15"}`).toISOString() });
+    act(scheduling.id, "schedule", { scheduledAt: new Date(`${sDate}T${sTime || defaultTime}`).toISOString() });
   }
+  // Drop a dragged post onto a day: keep its existing time if it had one, else the default slot time.
+  function dropOnDay(dateKey: string) {
+    const id = dragId; setDragId(null); setOverKey(null);
+    if (!id) return;
+    const q = queue.find((x) => x.id === id);
+    if (!q || q.status === "published") return;
+    const base = q.scheduled_at ? new Date(q.scheduled_at) : null;
+    const time = base ? `${String(base.getHours()).padStart(2, "0")}:${String(base.getMinutes()).padStart(2, "0")}` : defaultTime;
+    act(id, "schedule", { scheduledAt: new Date(`${dateKey}T${time}`).toISOString() });
+  }
+  const dragProps = (q: QueueItem) => q.status === "published" ? {} : {
+    draggable: true,
+    onDragStart: (e: DragEvent) => { setDragId(q.id); e.dataTransfer.effectAllowed = "move"; },
+    onDragEnd: () => { setDragId(null); setOverKey(null); },
+  };
+  const dropProps = (key: string) => ({
+    onDragOver: (e: DragEvent) => { if (dragId) { e.preventDefault(); if (overKey !== key) setOverKey(key); } },
+    onDragLeave: () => setOverKey((k) => (k === key ? null : k)),
+    onDrop: (e: DragEvent) => { e.preventDefault(); dropOnDay(key); },
+  });
 
   // month grid (Monday-first)
-  const first = new Date(cursor.y, cursor.m, 1);
+  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const offset = (first.getDay() + 6) % 7;
-  const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
+  const daysInMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate();
   const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
   const todayKey = ymd(new Date());
+
+  // week (Monday-first, containing anchor)
+  const weekStart = (() => { const d = new Date(anchor); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d; })();
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
+  const weekEnd = weekDays[6];
+  const shift = (dir: number) => setAnchor((a) => { const d = new Date(a); if (view === "week") d.setDate(d.getDate() + dir * 7); else d.setMonth(d.getMonth() + dir); return d; });
+  const label = view === "month" ? `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`
+    : `${MONTHS[weekStart.getMonth()].slice(0, 3)} ${weekStart.getDate()} – ${weekStart.getMonth() === weekEnd.getMonth() ? "" : MONTHS[weekEnd.getMonth()].slice(0, 3) + " "}${weekEnd.getDate()}`;
 
   return (
     <div>
       {/* toolbar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {view === "month" ? (
+          {view !== "list" ? (
             <>
-              <span className="text-[15px] font-semibold text-slate-800">{MONTHS[cursor.m]} {cursor.y}</span>
-              <button onClick={() => setCursor((c) => { const d = new Date(c.y, c.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; })} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
-              <button onClick={() => setCursor((c) => { const d = new Date(c.y, c.m + 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; })} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
-              <button onClick={() => { const d = new Date(); setCursor({ y: d.getFullYear(), m: d.getMonth() }); }} className="rounded-md border border-slate-200 px-2.5 py-0.5 text-[12px] text-slate-500 hover:bg-slate-50">Today</button>
+              <span className="text-[15px] font-semibold text-slate-800">{label}</span>
+              <button type="button" onClick={() => shift(-1)} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
+              <button type="button" onClick={() => shift(1)} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+              <button type="button" onClick={() => setAnchor(new Date())} className="rounded-md border border-slate-200 px-2.5 py-0.5 text-[12px] text-slate-500 hover:bg-slate-50">Today</button>
             </>
           ) : <span className="text-[15px] font-semibold text-slate-800">All posts</span>}
           <span className="ml-1 inline-flex overflow-hidden rounded-lg border border-slate-200 text-[12px]">
-            <button onClick={() => setView("month")} className={`px-2.5 py-1 ${view === "month" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>Month</button>
-            <button onClick={() => setView("list")} className={`px-2.5 py-1 ${view === "list" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>List</button>
+            {(["month", "week", "list"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setView(v)} className={`px-2.5 py-1 capitalize ${view === v ? "bg-indigo-600 text-white" : "text-slate-500"}`}>{v}</button>
+            ))}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] ${googleReady ? "border-emerald-200 text-emerald-700" : "border-slate-200 text-slate-400"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${googleReady ? "bg-emerald-500" : "bg-slate-300"}`} />{googleReady ? "Google Calendar synced" : "Calendar not connected"}
           </span>
-          <button onClick={onAddPost} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700"><i className="ti ti-plus" aria-hidden="true" /> Add post</button>
+          <button type="button" onClick={onAddPost} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700"><i className="ti ti-plus" aria-hidden="true" /> Add post</button>
         </div>
       </div>
 
@@ -338,22 +370,22 @@ function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue:
         <div className={`${card} h-max overflow-hidden`}>
           <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
             <p className="text-[12px] font-semibold text-slate-700">Unscheduled · {rail.length}</p>
-            <p className="text-[10.5px] text-slate-400">Approved & drafts awaiting a date</p>
+            <p className="text-[10.5px] text-slate-400">{view === "list" ? "Approved & drafts awaiting a date" : "Drag onto a day to schedule"}</p>
           </div>
           <div className="flex flex-col gap-2 p-2">
             {rail.length === 0 ? <p className="px-1 py-3 text-center text-[11.5px] text-slate-400">Nothing parked.</p> : rail.map((q) => {
               const sm = statusMeta(q.status);
               return (
-                <button key={q.id} onClick={() => { setSelected(q); setEditing(false); }} className={`rounded-lg border px-2.5 py-2 text-left ${selected?.id === q.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
-                  <p className="truncate text-[11.5px] font-medium text-slate-800">{titleOf(q)}</p>
+                <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-grab rounded-lg border px-2.5 py-2 text-left active:cursor-grabbing ${selected?.id === q.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-white hover:bg-slate-50"} ${dragId === q.id ? "opacity-40" : ""}`}>
+                  <p className="truncate text-[11.5px] font-medium text-slate-800"><i className="ti ti-grip-vertical mr-0.5 text-slate-300" aria-hidden="true" />{titleOf(q)}</p>
                   <p className="mt-1 flex items-center gap-1 text-[9.5px] text-slate-400"><span className="h-1.5 w-1.5 rounded-full" style={{ background: sm.dot }} />{sm.label} · {q.account_name ?? q.platform ?? "—"}</p>
-                </button>
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* calendar / list */}
+        {/* calendar / week / list */}
         {view === "month" ? (
           <div className={`${card} overflow-hidden`}>
             <div className="grid grid-cols-7 bg-slate-50 text-center text-[10px] text-slate-400">
@@ -363,20 +395,21 @@ function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue:
               {Array.from({ length: totalCells }).map((_, i) => {
                 const dayNum = i - offset + 1;
                 const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
-                const dateObj = new Date(cursor.y, cursor.m, dayNum);
+                const dateObj = new Date(anchor.getFullYear(), anchor.getMonth(), dayNum);
                 const key = ymd(dateObj);
                 const items = inMonth ? (byDay.get(key) ?? []) : [];
+                const over = overKey === key && dragId;
                 return (
-                  <div key={i} className={`min-h-[76px] border-b border-l border-slate-100 p-1 ${i % 7 === 0 ? "border-l-0" : ""} ${!inMonth ? "bg-slate-50/60" : ""}`}>
+                  <div key={i} {...(inMonth ? dropProps(key) : {})} className={`min-h-[76px] border-b border-l border-slate-100 p-1 ${i % 7 === 0 ? "border-l-0" : ""} ${!inMonth ? "bg-slate-50/60" : ""} ${over ? "bg-emerald-50 ring-1 ring-inset ring-emerald-400" : ""}`}>
                     <div className={`text-[9.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-400"}`}>{inMonth ? dayNum : ""}</div>
                     {items.map((q) => {
                       const sm = statusMeta(q.status);
                       const iso = itemISO(q)!;
                       return (
-                        <button key={q.id} onClick={() => { setSelected(q); setEditing(false); }} className="mt-0.5 block w-full rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight" style={{ borderColor: sm.dot, background: `${sm.dot}14` }}>
+                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`mt-0.5 block w-full cursor-pointer rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: sm.dot, background: `${sm.dot}14` }}>
                           <span className="font-medium text-slate-700">{hhmm(iso)} {titleOf(q).slice(0, 16)}</span><br />
                           <span style={{ color: sm.dot }}>● {sm.label}</span>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -384,12 +417,34 @@ function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue:
               })}
             </div>
           </div>
+        ) : view === "week" ? (
+          <div className={`${card} grid grid-cols-2 overflow-hidden sm:grid-cols-4 lg:grid-cols-7`}>
+            {weekDays.map((d) => {
+              const key = ymd(d); const items = byDay.get(key) ?? []; const over = overKey === key && dragId;
+              return (
+                <div key={key} {...dropProps(key)} className={`min-h-[160px] border-b border-l border-slate-100 first:border-l-0 ${over ? "bg-emerald-50 ring-1 ring-inset ring-emerald-400" : ""}`}>
+                  <div className={`border-b border-slate-100 px-2 py-1.5 text-[10.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-500"}`}>{WD[d.getDay()]} {d.getDate()}</div>
+                  <div className="flex flex-col gap-1 p-1.5">
+                    {items.length === 0 ? <span className="px-1 text-[9.5px] text-slate-300">{dragId ? "drop here" : "—"}</span> : items.map((q) => {
+                      const sm = statusMeta(q.status); const iso = itemISO(q)!;
+                      return (
+                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-pointer rounded border-l-2 px-1.5 py-1 text-[10px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: sm.dot, background: `${sm.dot}14` }}>
+                          <span className="font-medium text-slate-700">{hhmm(iso)}</span> {titleOf(q).slice(0, 22)}<br />
+                          <span style={{ color: sm.dot }}>● {sm.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className={`${card} divide-y divide-slate-100`}>
             {dated.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No scheduled or published posts yet.</p> : [...dated].sort((a, b) => (itemISO(a)! < itemISO(b)! ? 1 : -1)).map((q) => {
               const sm = statusMeta(q.status); const iso = itemISO(q)!;
               return (
-                <button key={q.id} onClick={() => { setSelected(q); setEditing(false); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
+                <button key={q.id} type="button" onClick={() => { setSelected(q); setEditing(false); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-slate-800">{titleOf(q)}</span>
                   <span className="text-[11.5px] text-slate-500">{new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" })} · {hhmm(iso)}</span>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
