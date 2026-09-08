@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { SalesContactsClient } from "@/app/admin/sales/contacts/SalesContactsClient";
+import { BackfillInvestorTypeButton } from "@/components/admin/BackfillInvestorTypeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +13,14 @@ export default async function MarketingContactsPage() {
   const profile = await requireRole(["admin", "analyst"]);
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 14 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 500, margin: "0 0 4px" }}>Contacts</h1>
-        <p style={{ fontSize: 12, color: "#5f5e5a", margin: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <i className="ti ti-link" aria-hidden="true" /> One universal list shared across Sales, IR &amp; Marketing — you see only your Lead-assigned contacts (admins see all).
-        </p>
+      <div style={{ marginBottom: 14, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 500, margin: "0 0 4px" }}>Contacts</h1>
+          <p style={{ fontSize: 12, color: "#5f5e5a", margin: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <i className="ti ti-link" aria-hidden="true" /> One universal list shared across Sales, IR &amp; Marketing — you see only your Lead-assigned contacts (admins see all).
+          </p>
+        </div>
+        {isSuperAdmin(profile) ? <BackfillInvestorTypeButton /> : null}
       </div>
       <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} canCreateList odooSearch basePath="/admin/marketing/contacts" />
     </div>
