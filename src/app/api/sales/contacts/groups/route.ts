@@ -42,10 +42,28 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const buckets = bucketRows(rows, by);
 
+  // The capped in-memory scan is fine for discovering bucket VALUES but under-counts on
+  // a large table (e.g. "Investment Bank" showed 2 when 58 exist). Recompute each visible
+  // bucket's count with a real DB count query using the exact filter the row expansion
+  // uses, so the header count always equals the rows shown. Bounded to the top buckets.
+  const ROLES = ["founder", "investor", "advisor", "other"];
+  const TOP = 80;
+  const counted = await Promise.all(buckets.slice(0, TOP).map(async (b) => {
+    let q = db().from("crm_contacts").select("id", { count: "exact", head: true });
+    if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
+    if (role && ROLES.includes(role)) q = q.or(`contact_type.eq.${role},module.eq.${role}`);
+    q = GROUP_DIMS[by].applyFilter(q, b.value);
+    q = applyContactFilters(q, p);
+    const { count, error } = await q;
+    return { value: b.value, count: error ? b.count : (count ?? b.count) };
+  }));
+  const accurate = [...counted, ...buckets.slice(TOP)]
+    .sort((a, b) => (a.value === "__none__" ? 1 : b.value === "__none__" ? -1 : b.count - a.count));
+
   // Resolve assignee names for the "Salesperson / owner" dimension.
   const nameById = new Map<string, string>();
   if (GROUP_DIMS[by].needsNames) {
-    const ids = buckets.map((b) => b.value).filter((v) => v && v !== "__none__");
+    const ids = accurate.map((b) => b.value).filter((v) => v && v !== "__none__");
     if (ids.length) {
       const { data: profs } = await db().from("profiles").select("id, full_name, email").in("id", ids);
       for (const pr of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
@@ -54,8 +72,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     }
   }
 
-  const groups = buckets.map((b) => ({ id: b.value, label: bucketLabel(by, b.value, nameById), count: b.count }));
-  const total = buckets.reduce((a, b) => a + b.count, 0);
+  const groups = accurate.map((b) => ({ id: b.value, label: bucketLabel(by, b.value, nameById), count: b.count }));
+  const total = accurate.reduce((a, b) => a + b.count, 0);
   const capped = rows.length >= SCAN_CAP;
   return NextResponse.json({ groups, total, capped });
 }
