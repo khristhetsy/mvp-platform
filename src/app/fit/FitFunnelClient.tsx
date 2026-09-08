@@ -61,14 +61,14 @@ const RAISE_LABEL: Record<string, string> = Object.fromEntries(Q2_RAISE.map((o) 
 const STAGE_LABEL: Record<string, string> = Object.fromEntries(Q1_STAGE.map((o) => [o.key, o.label]));
 const REV_LABEL: Record<string, string> = Object.fromEntries(Q4_REVENUE.map((o) => [o.key, o.label]));
 
-function FunnelHeader() {
+const DEFAULT_SUBTITLE = "Answer five quick questions and instantly see the investors in our network that match your raise.";
+
+function FunnelHeader({ subtitle = DEFAULT_SUBTITLE }: { subtitle?: string | null }) {
   return (
-    <div className="mb-6 flex flex-col items-center text-center">
+    <div className="mb-5 flex flex-col items-center text-center">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icapos-logo.svg" alt="iCapOS" className="h-8 w-auto" />
-      <p className="mt-3 text-[13.5px] leading-relaxed text-slate-500">
-        Answer five quick questions and instantly see the investors in our network that match your raise.
-      </p>
+      {subtitle ? <p className="mt-3 text-[13.5px] leading-relaxed text-slate-500">{subtitle}</p> : null}
     </div>
   );
 }
@@ -171,7 +171,8 @@ export function FitFunnelClient() {
   // (which links back to this funnel session via the fs_session cookie).
   if (step === "method") {
     return (
-      <div className="mx-auto w-full max-w-md">
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <FunnelHeader subtitle={null} />
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
           <i className="ti ti-building-bank" aria-hidden="true" /> iCFO Capital · Advisory
         </span>
@@ -214,7 +215,8 @@ export function FitFunnelClient() {
   const hasMatches = count > 0 && !thin;
 
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <FunnelHeader subtitle={busy ? null : "The investors in our network that match your raise, ranked by fit and investor score."} />
       {busy ? (
         <p className="text-center text-sm text-slate-400">Matching against our network…</p>
       ) : hasMatches ? (
