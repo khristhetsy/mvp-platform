@@ -5,17 +5,17 @@ describe("conditionTerms", () => {
   it("text contains → ilike term", () => {
     expect(conditionTerms({ field: "name", op: "contains", value: "acme" })).toEqual(["name.ilike.%acme%"]);
   });
-  it("text equals → quoted eq", () => {
-    expect(conditionTerms({ field: "company", op: "equals", value: "Acme Inc" })).toEqual([`company.eq."Acme Inc"`]);
+  it("text equals → case-insensitive ilike (or()-safe)", () => {
+    expect(conditionTerms({ field: "company", op: "equals", value: "Acme Inc" })).toEqual([`company.ilike.Acme Inc`]);
   });
   it("set / not_set on a column", () => {
     expect(conditionTerms({ field: "email", op: "set" })).toEqual(["email.not.is.null"]);
     expect(conditionTerms({ field: "email", op: "not_set" })).toEqual(["email.is.null"]);
   });
-  it("country is any of → one eq term per value", () => {
+  it("country is any of → one ilike term per value", () => {
     expect(conditionTerms({ field: "country", op: "in", value: ["United States", "Canada"] })).toEqual([
-      `country.eq."United States"`,
-      `country.eq."Canada"`,
+      `country.ilike.United States`,
+      `country.ilike.Canada`,
     ]);
   });
   it("type maps to contact_type OR module", () => {
@@ -26,10 +26,10 @@ describe("conditionTerms", () => {
       "module.eq.founder",
     ]);
   });
-  it("lead source spans overrides + profile", () => {
-    expect(conditionTerms({ field: "leadSource", op: "in", value: "LinkedIn" })).toEqual([
-      `overrides->>lead_source.eq."LinkedIn"`,
-      `raw->__profile->>leadSource.eq."LinkedIn"`,
+  it("lead source spans overrides + profile (ilike, multi-word safe)", () => {
+    expect(conditionTerms({ field: "leadSource", op: "in", value: "SEC Form D" })).toEqual([
+      `overrides->>lead_source.ilike.SEC Form D`,
+      `raw->__profile->>leadSource.ilike.SEC Form D`,
     ]);
   });
   it("facet contains → jsonb containment, quoted for or()", () => {

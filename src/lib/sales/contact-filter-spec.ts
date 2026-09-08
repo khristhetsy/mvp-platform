@@ -61,11 +61,6 @@ export function fieldDef(key: string): FieldDef | undefined {
   return FIELD_REGISTRY.find((f) => f.key === key);
 }
 
-// Quote a scalar value for a PostgREST eq operand (double inner quotes; wrap in quotes)
-// so multi-word values survive the or() logic-tree parser.
-function qval(v: string): string {
-  return `"${String(v).replace(/"/g, '""')}"`;
-}
 // jsonb containment operand for a single facet value, quoted for or().
 function facetJson(v: string): string {
   return `"${JSON.stringify([v]).replace(/"/g, '""')}"`;
@@ -73,6 +68,19 @@ function facetJson(v: string): string {
 // Reject values that would break the or() parser (only relevant to unquoted ilike).
 function ilikeSafe(v: string): boolean {
   return !!v && !v.includes(",") && !v.includes("(") && !v.includes(")");
+}
+/**
+ * A PostgREST `ilike` term for use inside an or() logic tree — the construction the
+ * working global search uses, which survives multi-word values (a double-quoted `eq.`
+ * operand does not reliably survive the or() parser, which silently errored the whole
+ * count/list query → every group showed 0). ilike is exact here (no % wildcards) but
+ * case-insensitive, which also absorbs casing drift between the facet options and the
+ * stored value. Reserved-char values fall back to a quoted operand.
+ */
+function ilikeTerm(col: string, v: string): string {
+  const escaped = v.replace(/([%_\\])/g, "\\$1"); // escape ilike wildcards
+  if (/[,()]/.test(v)) return `${col}.ilike."${escaped.replace(/"/g, '""')}"`;
+  return `${col}.ilike.${escaped}`;
 }
 function asArray(value: Condition["value"]): string[] {
   if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
@@ -96,14 +104,14 @@ export function conditionTerms(cond: Condition): string[] | null {
       if (cond.op === "not_set") return [`${col}.is.null`];
       if (vals.length === 0) return null;
       if (cond.op === "contains") return ilikeSafe(vals[0]) ? [`${col}.ilike.%${vals[0]}%`] : null;
-      if (cond.op === "equals") return [`${col}.eq.${qval(vals[0])}`];
+      if (cond.op === "equals") return [ilikeTerm(col, vals[0])];
       return null;
     }
     case "enumCol": {
       const col = def.col!;
       if (cond.op === "set") return [`${col}.not.is.null`];
       if (cond.op === "not_set") return [`${col}.is.null`];
-      if (cond.op === "in") return vals.length ? vals.map((v) => `${col}.eq.${qval(v)}`) : null;
+      if (cond.op === "in") return vals.length ? vals.map((v) => ilikeTerm(col, v)) : null;
       return null;
     }
     case "type": {
@@ -113,7 +121,7 @@ export function conditionTerms(cond: Condition): string[] | null {
     }
     case "leadSource": {
       if (cond.op === "set") return ["overrides->>lead_source.not.is.null", "raw->__profile->>leadSource.not.is.null"];
-      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [`overrides->>lead_source.eq.${qval(v)}`, `raw->__profile->>leadSource.eq.${qval(v)}`]) : null;
+      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [ilikeTerm("overrides->>lead_source", v), ilikeTerm("raw->__profile->>leadSource", v)]) : null;
       return null;
     }
     case "facet": {

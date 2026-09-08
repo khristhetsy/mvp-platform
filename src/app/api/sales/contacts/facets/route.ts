@@ -24,7 +24,11 @@ export async function GET(req: NextRequest): Promise<Response> {
     let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).or(`contact_type.eq.${group},module.eq.${group}`);
     if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
     q = applyContactFilters(q, p);
-    const { count } = await q;
+    const { count, error } = await q;
+    // A malformed filter used to be swallowed here, so every group returned 0 and the
+    // grid looked empty rather than broken. Surface it so a bad filter can't hide as
+    // "no results".
+    if (error) throw new Error(`contacts facet count failed: ${error.message}`);
     return count ?? 0;
   };
 
@@ -39,11 +43,15 @@ export async function GET(req: NextRequest): Promise<Response> {
     return [...totals.entries()].map(([value, n]) => ({ value, n })).sort((a, b) => b.n - a.n).slice(0, 300);
   })();
 
-  const [founder, investor, advisor, other, countries] = await Promise.all([
-    countOne("founder"), countOne("investor"), countOne("advisor"), countOne("other"), countriesPromise,
-  ]);
-
-  const counts: Record<string, number> = { founder, investor, advisor, other };
-  const total = GROUPS.reduce((a, g) => a + counts[g], 0);
-  return NextResponse.json({ counts: { ...counts, total }, countries });
+  try {
+    const [founder, investor, advisor, other, countries] = await Promise.all([
+      countOne("founder"), countOne("investor"), countOne("advisor"), countOne("other"), countriesPromise,
+    ]);
+    const counts: Record<string, number> = { founder, investor, advisor, other };
+    const total = GROUPS.reduce((a, g) => a + counts[g], 0);
+    return NextResponse.json({ counts: { ...counts, total }, countries });
+  } catch (err) {
+    // Return a clean error (not silent zeros) so a malformed filter is visible.
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Facet count failed." }, { status: 400 });
+  }
 }
