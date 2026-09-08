@@ -103,22 +103,14 @@ export default async function DocumentUploadPage() {
               <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
             </div>
             <p className="mt-1.5 text-[13px] leading-6 text-slate-600">
-              Upload PDF, Word, Excel, or CSV files, up to 25&nbsp;MB each. For the AI diligence report to read a
-              document, use one of these formats:{" "}
-              <span className="font-medium text-slate-800">PDF (.pdf)</span>,{" "}
-              <span className="font-medium text-slate-800">Word (.docx)</span>,{" "}
-              <span className="font-medium text-slate-800">Excel (.xlsx, .xls)</span>, or{" "}
-              <span className="font-medium text-slate-800">CSV (.csv)</span>.
+              Upload <span className="font-medium text-slate-800">PDF (.pdf)</span> files only, up to 25&nbsp;MB each.
+              Other formats — Word, Excel, PowerPoint, CSV — aren&rsquo;t accepted; export or print them to PDF first.
             </p>
             <ul className="mt-2.5 space-y-1.5 text-[12.5px] leading-5 text-slate-600">
               <li className="flex items-start gap-2">
                 <span aria-hidden="true" className="text-slate-400">•</span>
-                The <span className="font-medium text-slate-800">pitch deck must be a PDF</span>.
-              </li>
-              <li className="flex items-start gap-2">
-                <span aria-hidden="true" className="text-amber-600">•</span>
-                Old <span className="font-medium text-slate-800">.doc</span> files upload but can&apos;t be analyzed — save as{" "}
-                <span className="font-medium text-slate-800">.docx</span> first.
+                Every document — pitch deck, financials, cap table, all of them — must be a{" "}
+                <span className="font-medium text-slate-800">PDF</span>.
               </li>
               <li className="flex items-start gap-2">
                 <span aria-hidden="true" className="text-amber-600">•</span>

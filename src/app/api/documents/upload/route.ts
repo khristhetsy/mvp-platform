@@ -20,14 +20,7 @@ import {
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { documentUploadSchema } from "@/lib/validation";
 import { getUploadLimits } from "@/lib/settings/platform-settings";
-const allowedMimeTypes = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/csv",
-]);
+import { validateFile, PDF_ONLY } from "@/lib/uploads/policy";
 
 const uploadErrorMessages: Record<number, string> = {
   400: "Upload failed due to invalid input. Please check the file and try again.",
@@ -276,16 +269,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!allowedMimeTypes.has(uploadType)) {
+  // PDF-only for all founder documents (single source of truth: PDF_ONLY policy).
+  const pdfCheck = validateFile({ name: uploadName, type: uploadType, size: uploadSize }, PDF_ONLY);
+  if (!pdfCheck.ok) {
     return NextResponse.json(
-      { stage: "validate_file", clientUsed: "auth_client", error: "Unsupported file type." },
-      { status: 400 },
-    );
-  }
-
-  if (parsed.data.documentType === "PITCH_DECK" && uploadType !== "application/pdf") {
-    return NextResponse.json(
-      { stage: "validate_file", clientUsed: "auth_client", error: "Pitch decks must be uploaded as a PDF." },
+      { stage: "validate_file", clientUsed: "auth_client", error: pdfCheck.message },
       { status: 400 },
     );
   }

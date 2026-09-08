@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PDF_ONLY, validateFile } from "@/lib/uploads/policy";
 
 type Props = {
   companyId: string;
@@ -38,23 +39,15 @@ function formatBytes(bytes: number) {
   return `${value.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
 }
 
-function isPitchDeck(documentType: string) {
-  return documentType === "PITCH_DECK";
-}
+// Every founder document must be a PDF (single source of truth: PDF_ONLY policy).
+const ALLOWED_ACCEPT = PDF_ONLY.ext.join(",");
 
-function allowedAccept(documentType: string) {
-  return isPitchDeck(documentType) ? ".pdf" : ".pdf,.doc,.docx,.xls,.xlsx,.csv";
-}
-
-function validateClientSide(file: File, documentType: string, maxUploadBytes: number): string | null {
+function validateClientSide(file: File, maxUploadBytes: number): string | null {
   if (file.size > maxUploadBytes) {
     return `File is too large (${formatBytes(file.size)}). Max size is ${formatBytes(maxUploadBytes)}.`;
   }
-
-  if (isPitchDeck(documentType) && file.type !== "application/pdf") {
-    return "Pitch decks must be uploaded as a PDF.";
-  }
-
+  const check = validateFile({ name: file.name, type: file.type, size: file.size }, PDF_ONLY);
+  if (!check.ok) return check.message;
   return null;
 }
 
@@ -125,7 +118,7 @@ export function DocumentUploadForm({
     }
   }
 
-  const accept = useMemo(() => allowedAccept(documentType), [documentType]);
+  const accept = ALLOWED_ACCEPT;
   const hasExistingForSelected = useMemo(() => {
     const key = documentType.toUpperCase();
     return Boolean(existingByType[key]?.fileName);
@@ -139,7 +132,7 @@ export function DocumentUploadForm({
       return;
     }
 
-    const validationError = validateClientSide(file, documentType, maxUploadBytes);
+    const validationError = validateClientSide(file, maxUploadBytes);
     if (validationError) {
       setResult({ ok: false, status: 0, message: validationError });
       return;
