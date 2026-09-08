@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -78,6 +79,10 @@ export function OpportunitiesClient() {
   useEffect(() => { try { window.localStorage.setItem("opps.status2", JSON.stringify(fStatus)); } catch { /* ignore */ } }, [fStatus]);
   useEffect(() => { try { window.localStorage.setItem("opps.groupBy", JSON.stringify(groupBy)); } catch { /* ignore */ } }, [groupBy]);
   useEffect(() => { try { window.localStorage.setItem("opps.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+
+  // Multi-select + mass email.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -171,7 +176,21 @@ export function OpportunitiesClient() {
   }, [filtered, groupBy]);
 
   const cols = OPT_COLS.filter((c) => visibleCols.includes(c.key));
-  const gridCols = ["1.9fr", "1.1fr", ...cols.map((c) => c.width), "190px"].join(" ");
+  const gridCols = ["30px", "1.9fr", "1.1fr", ...cols.map((c) => c.width), "190px"].join(" ");
+
+  // Selection helpers (over the loaded, filtered rows).
+  const filteredIds = useMemo(() => filtered.map((o) => o.id), [filtered]);
+  const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const selectionCount = selected.size;
+  function toggleRow(id: string) { setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  function toggleAll() { setSelected(allSelected ? new Set() : new Set(filteredIds)); }
+  function clearSelection() { setSelected(new Set()); }
+  async function bulkStatus(status: "won" | "archived") {
+    const ids = [...selected]; if (!ids.length) return;
+    setBusy(true);
+    try { for (const id of ids) await fetch(`/api/sales/opportunities/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); clearSelection(); await load(); }
+    finally { setBusy(false); }
+  }
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
   const btn = (bg: string, color = "#fff"): React.CSSProperties => ({ fontSize: 11, fontWeight: 600, color, background: bg, border: bg === "#fff" ? "0.5px solid var(--border-strong, #cbd5e1)" : "none", borderRadius: 6, padding: "4px 9px", cursor: "pointer" });
@@ -198,7 +217,10 @@ export function OpportunitiesClient() {
 
   function Row({ o }: { o: Opp }) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5 }}>
+      <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(o.id) ? "#F5F9FF" : undefined }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <input type="checkbox" checked={selected.has(o.id)} onChange={() => toggleRow(o.id)} aria-label={`Select ${o.title}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+        </div>
         <div style={{ minWidth: 0 }}>
           <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{o.title}</Link>
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_email ?? o.contact_name ?? "—"}</div>
@@ -296,7 +318,20 @@ export function OpportunitiesClient() {
           <button type="button" onClick={() => setImportOpen(true)} style={{ ...toolBtn(), color: "#185FA5" }}><i className="ti ti-download" aria-hidden="true" /> Import from Odoo</button>
         </div>
 
+        {selectionCount > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "#E6F1FB", borderBottom: "0.5px solid #B5D4F4", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 500 }}>{selectionCount.toLocaleString()} selected</span>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+              <button type="button" onClick={() => setEmailOpen(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-mail" aria-hidden="true" /> Email</button>
+              <button type="button" onClick={() => bulkStatus("won")} disabled={busy} style={{ fontSize: 12, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7E0CE", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Mark sold</button>
+              <button type="button" onClick={() => bulkStatus("archived")} disabled={busy} style={{ fontSize: 12, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Archive</button>
+              <button type="button" onClick={clearSelection} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Clear</button>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" style={{ width: 14, height: 14, cursor: "pointer" }} /></div>
           <div>Opportunity</div><div>Stage</div>{cols.map((c) => <div key={c.key}>{c.label}</div>)}<div></div>
         </div>
 
@@ -317,6 +352,10 @@ export function OpportunitiesClient() {
               );
             })}
       </div>
+
+      {emailOpen && (
+        <MassEmailComposer source="opportunities" selection={{ mode: "ids", ids: [...selected], count: selected.size }} onClose={() => setEmailOpen(false)} />
+      )}
 
       {importOpen && (
         <div onClick={resetImport} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
 import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
+import { MassEmailComposer, type SelectionPayload } from "@/components/marketing/MassEmailComposer";
 
 type SavedSearch = { id: string; name: string; spec: FilterSpec; groupBy: string | null; columns: string[] | null; isDefault: boolean; isShared: boolean; mine: boolean };
 
@@ -173,6 +174,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [listBusy, setListBusy] = useState(false);
   const [listMsg, setListMsg] = useState<string | null>(null);
   const [listResult, setListResult] = useState<string | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   // Odoo-style search (Marketing): a field·operator·value spec drives the query.
   const [spec, setSpec] = useState<FilterSpec>({ match: "all", conditions: [] });
@@ -717,6 +719,16 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         </div>
       )}
 
+      {emailOpen && (
+        <MassEmailComposer
+          source="contacts"
+          selection={selectAllMatching
+            ? { mode: "filter", params: paramsStr, group: role || undefined, count: matchingTotal }
+            : { mode: "ids", ids: [...selected], count: selected.size }}
+          onClose={() => setEmailOpen(false)}
+        />
+      )}
+
       {/* Save current search (Odoo Favorites) */}
       {saveOpen && (
         <div onClick={() => setSaveOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -751,7 +763,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             )}
             <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
               {canCreateList && (
-                <button onClick={openListPanel} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-list-details" aria-hidden="true" /> Create list</button>
+                <button onClick={() => { setEmailOpen(true); setListOpen(false); setAssignOpen(false); }} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-mail" aria-hidden="true" /> Email</button>
+              )}
+              {canCreateList && (
+                <button onClick={openListPanel} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-list-details" aria-hidden="true" /> Create list</button>
               )}
               {canBulkAssign && (
                 <button onClick={() => { setAssignOpen((v) => !v); setAssignMsg(null); }} style={{ fontSize: 12, fontWeight: 600, color: canCreateList ? "#185FA5" : "#fff", background: canCreateList ? "#fff" : "#2E78F5", border: canCreateList ? "0.5px solid #B5D4F4" : "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-users" aria-hidden="true" /> Lead assign</button>
