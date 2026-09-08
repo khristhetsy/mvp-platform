@@ -21,6 +21,8 @@ const KIND_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   email_draft: { icon: "ti-mail", color: "#854F0B", bg: "#FAEEDA" },
   call: { icon: "ti-phone", color: "#0F6E56", bg: "#E1F5EE" },
   message: { icon: "ti-message", color: "#854F0B", bg: "#FAEEDA" },
+  odoo_message: { icon: "ti-mail", color: "#185FA5", bg: "#E6F1FB" },
+  odoo_note: { icon: "ti-note", color: "#854D0E", bg: "#FEF9C3" },
   task_created: { icon: "ti-calendar-plus", color: "#854F0B", bg: "#FAEEDA" },
   task_done: { icon: "ti-check", color: "#0F6E56", bg: "#E1F5EE" },
   stage_changed: { icon: "ti-arrow-right", color: "#5F5E5A", bg: "#F1EFE8" },
@@ -203,8 +205,12 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
                 <div key={a.id} style={{ display: "flex", gap: 9 }}>
                   <div style={{ width: 24, height: 24, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: "var(--foreground)" }}>{a.summary}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{a.actor_name ? `${a.actor_name} · ` : ""}{ago(a.created_at)}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--foreground)", whiteSpace: "pre-wrap" }}>{a.summary}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span>{a.actor_name ? `${a.actor_name} · ` : ""}{ago(a.created_at)}</span>
+                      {a.kind === "odoo_message" ? <span style={{ fontSize: 9, color: "#185FA5", background: "#E6F1FB", borderRadius: 4, padding: "0 5px" }}>✉ Message · from Odoo</span> : null}
+                      {a.kind === "odoo_note" ? <span style={{ fontSize: 9, color: "#854D0E", background: "#FEF9C3", borderRadius: 4, padding: "0 5px" }}>📝 Note · from Odoo</span> : null}
+                    </div>
                   </div>
                 </div>
               );

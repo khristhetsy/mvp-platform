@@ -5,11 +5,20 @@ import { executeKw, odooConfigured } from "./client";
 
 export interface OdooContactMessage {
   id: number;
-  date: string | null;
+  date: string | null;   // ISO (UTC)
   author: string | null;
   subject: string | null;
   body: string; // plain text
   type: string | null;
+  isNote: boolean; // internal "Log note" (subtype Note) vs an outgoing message
+}
+
+// Odoo datetimes come as "YYYY-MM-DD HH:MM:SS" in UTC with no zone — normalize to ISO
+// so the chatter timeline sorts and displays them correctly.
+function toIso(d: string | false | undefined): string | null {
+  if (!d) return null;
+  const s = String(d).trim();
+  return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s) ? `${s.replace(" ", "T")}Z` : s;
 }
 
 function stripHtml(html: string): string {
@@ -35,6 +44,7 @@ type RawMessage = {
   message_type?: string | false;
   author_id?: [number, string] | false;
   email_from?: string | false;
+  subtype_id?: [number, string] | false;
 };
 
 /** Fetch the most recent chatter messages for an Odoo partner (by res.partner id). */
@@ -52,19 +62,25 @@ export async function fetchPartnerMessages(externalId: string, limit = 30): Prom
           ["model", "=", "res.partner"],
           ["res_id", "=", partnerId],
         ],
-        ["id", "date", "subject", "body", "message_type", "author_id", "email_from"],
+        ["id", "date", "subject", "body", "message_type", "author_id", "email_from", "subtype_id"],
       ],
       { limit, order: "date desc" },
     );
 
-    return (rows ?? []).map((r) => ({
-      id: r.id,
-      date: r.date || null,
-      author: (r.author_id && r.author_id[1]) || (r.email_from || null),
-      subject: r.subject || null,
-      body: r.body ? stripHtml(r.body) : "",
-      type: r.message_type || null,
-    }));
+    return (rows ?? []).map((r) => {
+      const subtype = (r.subtype_id && r.subtype_id[1]) || "";
+      return {
+        id: r.id,
+        date: toIso(r.date),
+        author: (r.author_id && r.author_id[1]) || (r.email_from || null),
+        subject: r.subject || null,
+        body: r.body ? stripHtml(r.body) : "",
+        type: r.message_type || null,
+        // Internal notes use the "Note" subtype (mail.mt_note); everything else is an
+        // outgoing/received message. message_type 'notification' is also treated as note.
+        isNote: /note/i.test(subtype) || r.message_type === "notification",
+      };
+    });
   } catch {
     return [];
   }
