@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
@@ -8,18 +8,29 @@ import type { SocialAccount, QueueItem, SocialSettings, SocialSlot } from "@/lib
 import type { WeekBar } from "@/lib/social/attribution";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const STATUS_STYLE: Record<string, string> = {
-  queued: "bg-amber-50 text-amber-700", publishing: "bg-blue-50 text-blue-700", published: "bg-emerald-50 text-emerald-700",
-  failed: "bg-rose-50 text-rose-700", skipped: "bg-slate-100 text-slate-500", live: "bg-emerald-50 text-emerald-700",
   connected: "bg-emerald-50 text-emerald-700", expiring: "bg-amber-50 text-amber-700", expired: "bg-rose-50 text-rose-700",
 };
 const chip = "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors";
 const card = "rounded-xl border border-slate-200 bg-white";
 
-type Tab = "composer" | "queue" | "rules" | "accounts" | "attribution";
+type Tab = "composer" | "schedule" | "rules" | "accounts" | "attribution";
 
-export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, attribution }: {
-  accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; attribution: WeekBar[];
+/** Display label + colors per variant status (parked/scheduled/published…). */
+function statusMeta(status: string): { label: string; cls: string; dot: string } {
+  switch (status) {
+    case "published": return { label: "Published", cls: "bg-blue-50 text-blue-700", dot: "#2563EB" };
+    case "publishing": return { label: "Publishing", cls: "bg-blue-50 text-blue-700", dot: "#2563EB" };
+    case "queued": return { label: "Scheduled", cls: "bg-emerald-50 text-emerald-700", dot: "#16A34A" };
+    case "failed": return { label: "Failed", cls: "bg-rose-50 text-rose-700", dot: "#E11D48" };
+    case "parked": return { label: "Parked", cls: "bg-amber-50 text-amber-700", dot: "#CA8A04" };
+    default: return { label: "Draft", cls: "bg-slate-100 text-slate-500", dot: "#64748B" };
+  }
+}
+
+export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, googleReady, attribution }: {
+  accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; googleReady: boolean; attribution: WeekBar[];
 }) {
   const [tab, setTab] = useState<Tab>("composer");
   const failed24 = queue.filter((q) => q.status === "failed").length;
@@ -27,16 +38,16 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   return (
     <div>
       <div className="flex flex-wrap gap-1 border-b border-slate-100">
-        {(["composer", "queue", "rules", "accounts", "attribution"] as Tab[]).map((t) => (
+        {(["composer", "schedule", "rules", "accounts", "attribution"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium capitalize ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t === "accounts" ? "Accounts & API" : t}{t === "queue" && queue.length ? ` · ${queue.length}` : ""}
+            {t === "accounts" ? "Accounts & API" : t}{t === "schedule" && queue.length ? ` · ${queue.length}` : ""}
           </button>
         ))}
       </div>
 
       <div className="mt-5">
-        {tab === "composer" ? <Composer accounts={accounts} /> : null}
-        {tab === "queue" ? <Queue queue={queue} /> : null}
+        {tab === "composer" ? <Composer accounts={accounts} googleReady={googleReady} /> : null}
+        {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
         {tab === "rules" ? <Rules settings0={settings0} slots0={slots0} /> : null}
         {tab === "accounts" ? <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} /> : null}
         {tab === "attribution" ? <Attribution data={attribution} /> : null}
@@ -45,7 +56,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   );
 }
 
-function Composer({ accounts }: { accounts: SocialAccount[] }) {
+function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; googleReady: boolean }) {
   const [brief, setBrief] = useState("");
   const [archetype, setArchetype] = useState<Archetype>("proof_case");
   const [department, setDepartment] = useState<string>("Marketing");
@@ -53,6 +64,9 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
   const [comment, setComment] = useState("");
+  const [schedOn, setSchedOn] = useState(true);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("08:15");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -89,14 +103,18 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
     setMsg(null);
   }
 
-  async function save(approve: boolean) {
+  const scheduledISO = () => (schedOn && schedDate ? new Date(`${schedDate}T${schedTime || "08:15"}`).toISOString() : null);
+
+  async function save(mode: "draft" | "park" | "schedule") {
     if (variants.length === 0) return;
+    const scheduledAt = mode === "schedule" ? scheduledISO() : null;
+    if (mode === "schedule" && !scheduledAt) { setMsg("Pick a date and time to schedule."); return; }
     setBusy(true); setMsg(null);
     try {
-      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, linkUrl: linkUrl || null, comment: comment || null, approve, variants }) });
+      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, linkUrl: linkUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
       const j = await res.json();
       if (!res.ok) { setMsg(j.error ?? "Save failed."); return; }
-      setMsg(approve ? `Queued ${j.queued} variant(s).` : "Saved as draft.");
+      setMsg(mode === "schedule" ? `Scheduled ${j.queued} post(s) — check the Schedule tab.` : mode === "park" ? `Parked ${j.parked} post(s) in the queue.` : "Saved as draft.");
       setVariants([]); setBrief("");
     } finally { setBusy(false); }
   }
@@ -171,142 +189,290 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
             <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="CTA link (https://…)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
           </div>
-          <div className="flex gap-2">
+
+          {/* schedule row */}
+          <div className={`${card} p-3`}>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => setSchedOn((v) => !v)} className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
+                <span className={`relative inline-flex h-5 w-9 items-center rounded-full ${schedOn ? "bg-emerald-600" : "bg-slate-300"}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${schedOn ? "translate-x-4" : "translate-x-1"}`} />
+                </span>
+                Schedule
+              </button>
+              <input type="date" value={schedDate} disabled={!schedOn} onChange={(e) => setSchedDate(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-40" />
+              <input type="time" value={schedTime} disabled={!schedOn} onChange={(e) => setSchedTime(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-40" />
+              {googleReady ? <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> mirrors to Google Calendar</span> : null}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">Toggle off to park the post in the queue without a date — you can schedule it later from the Schedule tab.</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
-            <button onClick={() => save(false)} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
-            <button onClick={() => save(true)} disabled={busy} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Approve &amp; queue</button>
+            <button onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
+            <button onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
+            <button onClick={() => save("schedule")} disabled={busy || !schedOn || !schedDate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Schedule post</button>
           </div>
         </div>
       ) : null}
       {msg ? <p className="mt-3 text-[12px] text-slate-500">{msg}</p> : null}
 
       {showPreview && variants[0] ? (
-        <div onClick={() => setShowPreview(false)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
-            <div className="flex items-center gap-2 px-3 py-2.5">
-              <span className={`flex h-9 w-9 items-center justify-center rounded-full text-white ${platformOf(variants[0].accountId) === "facebook" ? "bg-[#1877F2]" : "bg-[#0A66C2]"}`}><i className={`ti ${platformOf(variants[0].accountId) === "facebook" ? "ti-brand-facebook" : "ti-brand-linkedin"}`} aria-hidden="true" /></span>
-              <div><p className="text-[12.5px] font-medium text-slate-900">{nameOf(variants[0].accountId)}</p><p className="text-[10.5px] text-slate-400">{platformOf(variants[0].accountId) === "facebook" ? "Facebook" : "LinkedIn"} · preview</p></div>
-              <button type="button" onClick={() => setShowPreview(false)} className="ml-auto text-slate-400"><i className="ti ti-x" aria-hidden="true" /></button>
-            </div>
-            <div className="whitespace-pre-wrap px-3 pb-3 text-[13px] leading-relaxed text-slate-800">{variants[0].body}</div>
-            {comment || linkUrl ? (
-              <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-[11.5px] text-slate-600"><i className="ti ti-message-circle" aria-hidden="true" /> First comment: {comment ? `${comment} ` : ""}<span className="text-indigo-600">{linkUrl}</span></div>
-            ) : null}
-          </div>
-        </div>
+        <PreviewModal onClose={() => setShowPreview(false)} name={nameOf(variants[0].accountId)} platform={platformOf(variants[0].accountId)} body={variants[0].body} comment={comment} link={linkUrl} />
       ) : null}
     </div>
   );
 }
 
-type GroupBy = "none" | "department" | "status" | "account";
+/** Shared LinkedIn/Facebook-style post preview. */
+function PreviewModal({ onClose, name, platform, body, comment, link }: { onClose: () => void; name: string; platform: string | null; body: string; comment: string | null; link: string | null }) {
+  const fb = platform === "facebook";
+  return (
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <span className={`flex h-9 w-9 items-center justify-center rounded-full text-white ${fb ? "bg-[#1877F2]" : "bg-[#0A66C2]"}`}><i className={`ti ${fb ? "ti-brand-facebook" : "ti-brand-linkedin"}`} aria-hidden="true" /></span>
+          <div><p className="text-[12.5px] font-medium text-slate-900">{name}</p><p className="text-[10.5px] text-slate-400">{fb ? "Facebook" : "LinkedIn"} · how it&rsquo;ll post</p></div>
+          <button type="button" onClick={onClose} className="ml-auto text-slate-400"><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+        <div className="whitespace-pre-wrap px-3 pb-3 text-[13px] leading-relaxed text-slate-800">{body}</div>
+        {comment || link ? (
+          <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-[11.5px] text-slate-600"><i className="ti ti-message-circle" aria-hidden="true" /> First comment: {comment ? `${comment} ` : ""}<span className="text-indigo-600">{link}</span></div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
-function Queue({ queue: initial }: { queue: QueueItem[] }) {
+/* ── Schedule surface: calendar (month/list) + unscheduled rail ────────────── */
+
+const titleOf = (q: QueueItem) => (q.body.split("\n").find((l) => l.trim()) ?? "Post").slice(0, 60);
+const itemISO = (q: QueueItem) => q.scheduled_at ?? q.published_at ?? null;
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+function Schedule({ queue: initial, accounts, googleReady, onAddPost }: { queue: QueueItem[]; accounts: SocialAccount[]; googleReady: boolean; onAddPost: () => void }) {
   const [queue, setQueue] = useState<QueueItem[]>(initial);
-  const [groupBy, setGroupBy] = useState<GroupBy>("none");
-  const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
+  const [view, setView] = useState<"month" | "list">("month");
+  const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const [selected, setSelected] = useState<QueueItem | null>(null);
   const [preview, setPreview] = useState<QueueItem | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [scheduling, setScheduling] = useState<QueueItem | null>(null);
+  const [sDate, setSDate] = useState("");
+  const [sTime, setSTime] = useState("08:15");
+  const [busy, setBusy] = useState(false);
+
+  const platformOf = (name: string | null) => accounts.find((a) => a.display_name === name)?.platform ?? "linkedin";
+
+  const rail = queue.filter((q) => !itemISO(q));
+  const dated = queue.filter((q) => itemISO(q));
+
+  const byDay = useMemo(() => {
+    const m = new Map<string, QueueItem[]>();
+    for (const q of dated) { const iso = itemISO(q)!; const k = ymd(new Date(iso)); (m.get(k) ?? m.set(k, []).get(k)!).push(q); }
+    for (const list of m.values()) list.sort((a, b) => (itemISO(a)! < itemISO(b)! ? -1 : 1));
+    return m;
+  }, [dated]);
 
   async function reload() {
-    try { const r = await fetch("/api/admin/social/queue"); if (r.ok) setQueue((await r.json()).queue ?? []); } catch { /* keep */ }
+    try { const r = await fetch("/api/admin/social/queue"); if (r.ok) { const nq: QueueItem[] = (await r.json()).queue ?? []; setQueue(nq); setSelected((s) => (s ? nq.find((x) => x.id === s.id) ?? null : null)); } } catch { /* keep */ }
   }
-  async function act(id: string, action: "edit" | "archive" | "requeue", body?: string) {
+  async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
     try {
-      const r = await fetch(`/api/admin/social/queue/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, body }) });
-      if (r.ok) { setEditing(null); await reload(); } else { alert((await r.json()).error ?? "Failed."); }
+      const r = await fetch(`/api/admin/social/queue/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
+      if (r.ok) { setEditing(false); setScheduling(null); await reload(); } else { alert((await r.json()).error ?? "Failed."); }
     } finally { setBusy(false); }
   }
   async function del(id: string) {
-    if (!confirm("Delete this post from the queue?")) return;
+    if (!confirm("Delete this post permanently?")) return;
     setBusy(true);
-    try { await fetch(`/api/admin/social/queue/${id}`, { method: "DELETE" }); await reload(); } finally { setBusy(false); }
+    try { await fetch(`/api/admin/social/queue/${id}`, { method: "DELETE" }); setSelected(null); await reload(); } finally { setBusy(false); }
+  }
+  function openSchedule(q: QueueItem) {
+    const base = q.scheduled_at ? new Date(q.scheduled_at) : null;
+    setSDate(base ? ymd(base) : ""); setSTime(base ? `${String(base.getHours()).padStart(2, "0")}:${String(base.getMinutes()).padStart(2, "0")}` : "08:15");
+    setScheduling(q);
+  }
+  function confirmSchedule() {
+    if (!scheduling || !sDate) return;
+    act(scheduling.id, "schedule", { scheduledAt: new Date(`${sDate}T${sTime || "08:15"}`).toISOString() });
   }
 
-  if (queue.length === 0) return <p className={`${card} px-4 py-8 text-center text-[13px] text-slate-400`}>Nothing queued. Approved posts appear here per account, then publish on the next 5-minute pass.</p>;
-
-  const keyOf = (q: QueueItem) => groupBy === "department" ? (q.department ?? "Unassigned")
-    : groupBy === "status" ? q.status
-    : groupBy === "account" ? (q.account_name ?? q.platform ?? "—") : "";
-  const groups = groupBy === "none" ? [["", queue] as [string, QueueItem[]]]
-    : [...queue.reduce((m, q) => { const k = keyOf(q); (m.get(k) ?? m.set(k, []).get(k)!).push(q); return m; }, new Map<string, QueueItem[]>()).entries()];
-
-  const action = (label: string, icon: string, cls: string, onClick: () => void) => (
-    <button type="button" onClick={onClick} disabled={busy} className={`inline-flex items-center gap-1 text-[11.5px] ${cls} disabled:opacity-50`}><i className={`ti ${icon}`} aria-hidden="true" /> {label}</button>
-  );
-
-  function Row({ q }: { q: QueueItem }) {
-    const live = q.status === "published";
-    return (
-      <li className="px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
-          {editing === q.id ? (
-            <div className="flex-1">
-              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-200 p-2 text-[13px]" />
-              <div className="mt-1.5 flex gap-2">
-                <button type="button" onClick={() => act(q.id, "edit", draft)} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
-                <button type="button" onClick={() => setEditing(null)} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <span className="min-w-0 flex-1 text-[13px] text-slate-800">{q.body}</span>
-          )}
-          <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-slate-400">
-            {q.status === "failed" && q.attempts ? `retry ${q.attempts}/3` : null}
-            <span className={`rounded-full px-2.5 py-0.5 font-medium ${STATUS_STYLE[q.status] ?? "bg-slate-100 text-slate-600"}`}>{q.status}</span>
-          </span>
-        </div>
-        {q.error ? <p className="mt-1 text-[11px] text-rose-600">{q.error}</p> : null}
-        {editing !== q.id ? (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-            {action("Preview", "ti-eye", "text-indigo-600 font-medium", () => setPreview(q))}
-            {!live ? action("Edit", "ti-edit", "text-slate-600", () => { setEditing(q.id); setDraft(q.body); }) : null}
-            {(q.status === "failed" || q.status === "skipped") ? action("Requeue", "ti-refresh", "text-slate-600", () => act(q.id, "requeue")) : null}
-            {action("Archive", "ti-archive", "text-slate-600", () => act(q.id, "archive"))}
-            {!live ? action("Delete", "ti-trash", "text-rose-600", () => del(q.id)) : null}
-            {q.url ? <a href={q.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-blue-600"><i className="ti ti-external-link" aria-hidden="true" /> View post</a> : null}
-          </div>
-        ) : null}
-      </li>
-    );
-  }
+  // month grid (Monday-first)
+  const first = new Date(cursor.y, cursor.m, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
+  const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+  const todayKey = ymd(new Date());
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-[12px] text-slate-500">View by</span>
-        <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
-          <option value="none">None</option>
-          <option value="department">Department</option>
-          <option value="status">Status</option>
-          <option value="account">Account</option>
-        </select>
-      </div>
-      {groups.map(([g, items]) => (
-        <div key={g || "all"} className="mb-3">
-          {g ? <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-semibold text-slate-700"><span className="capitalize">{g}</span><span className="font-normal text-slate-400">{items.length}</span></div> : null}
-          <ul className={`${card} divide-y divide-slate-100`}>{items.map((q) => <Row key={q.id} q={q} />)}</ul>
+      {/* toolbar */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {view === "month" ? (
+            <>
+              <span className="text-[15px] font-semibold text-slate-800">{MONTHS[cursor.m]} {cursor.y}</span>
+              <button onClick={() => setCursor((c) => { const d = new Date(c.y, c.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; })} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
+              <button onClick={() => setCursor((c) => { const d = new Date(c.y, c.m + 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; })} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+              <button onClick={() => { const d = new Date(); setCursor({ y: d.getFullYear(), m: d.getMonth() }); }} className="rounded-md border border-slate-200 px-2.5 py-0.5 text-[12px] text-slate-500 hover:bg-slate-50">Today</button>
+            </>
+          ) : <span className="text-[15px] font-semibold text-slate-800">All posts</span>}
+          <span className="ml-1 inline-flex overflow-hidden rounded-lg border border-slate-200 text-[12px]">
+            <button onClick={() => setView("month")} className={`px-2.5 py-1 ${view === "month" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>Month</button>
+            <button onClick={() => setView("list")} className={`px-2.5 py-1 ${view === "list" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>List</button>
+          </span>
         </div>
-      ))}
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] ${googleReady ? "border-emerald-200 text-emerald-700" : "border-slate-200 text-slate-400"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${googleReady ? "bg-emerald-500" : "bg-slate-300"}`} />{googleReady ? "Google Calendar synced" : "Calendar not connected"}
+          </span>
+          <button onClick={onAddPost} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700"><i className="ti ti-plus" aria-hidden="true" /> Add post</button>
+        </div>
+      </div>
 
-      {preview ? (
-        <div onClick={() => setPreview(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
-            <div className="flex items-center gap-2 px-3 py-2.5">
-              <span className={`flex h-9 w-9 items-center justify-center rounded-full text-white ${preview.platform === "facebook" ? "bg-[#1877F2]" : "bg-[#0A66C2]"}`}><i className={`ti ${preview.platform === "facebook" ? "ti-brand-facebook" : "ti-brand-linkedin"}`} aria-hidden="true" /></span>
-              <div><p className="text-[12.5px] font-medium text-slate-900">{preview.account_name ?? "Your account"}</p><p className="text-[10.5px] text-slate-400">{preview.platform === "facebook" ? "Facebook" : "LinkedIn"} · preview</p></div>
-              <button type="button" onClick={() => setPreview(null)} className="ml-auto text-slate-400"><i className="ti ti-x" aria-hidden="true" /></button>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[200px_1fr]">
+        {/* unscheduled rail */}
+        <div className={`${card} h-max overflow-hidden`}>
+          <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
+            <p className="text-[12px] font-semibold text-slate-700">Unscheduled · {rail.length}</p>
+            <p className="text-[10.5px] text-slate-400">Approved & drafts awaiting a date</p>
+          </div>
+          <div className="flex flex-col gap-2 p-2">
+            {rail.length === 0 ? <p className="px-1 py-3 text-center text-[11.5px] text-slate-400">Nothing parked.</p> : rail.map((q) => {
+              const sm = statusMeta(q.status);
+              return (
+                <button key={q.id} onClick={() => { setSelected(q); setEditing(false); }} className={`rounded-lg border px-2.5 py-2 text-left ${selected?.id === q.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                  <p className="truncate text-[11.5px] font-medium text-slate-800">{titleOf(q)}</p>
+                  <p className="mt-1 flex items-center gap-1 text-[9.5px] text-slate-400"><span className="h-1.5 w-1.5 rounded-full" style={{ background: sm.dot }} />{sm.label} · {q.account_name ?? q.platform ?? "—"}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* calendar / list */}
+        {view === "month" ? (
+          <div className={`${card} overflow-hidden`}>
+            <div className="grid grid-cols-7 bg-slate-50 text-center text-[10px] text-slate-400">
+              {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((d) => <div key={d} className="py-1.5">{d}</div>)}
             </div>
-            <div className="whitespace-pre-wrap px-3 pb-3 text-[13px] leading-relaxed text-slate-800">{preview.body}</div>
-            {preview.comment_text || preview.link_url ? (
-              <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-[11.5px] text-slate-600"><i className="ti ti-message-circle" aria-hidden="true" /> First comment: <span className="text-indigo-600">{preview.comment_text ?? preview.link_url}</span></div>
-            ) : null}
+            <div className="grid grid-cols-7">
+              {Array.from({ length: totalCells }).map((_, i) => {
+                const dayNum = i - offset + 1;
+                const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+                const dateObj = new Date(cursor.y, cursor.m, dayNum);
+                const key = ymd(dateObj);
+                const items = inMonth ? (byDay.get(key) ?? []) : [];
+                return (
+                  <div key={i} className={`min-h-[76px] border-b border-l border-slate-100 p-1 ${i % 7 === 0 ? "border-l-0" : ""} ${!inMonth ? "bg-slate-50/60" : ""}`}>
+                    <div className={`text-[9.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-400"}`}>{inMonth ? dayNum : ""}</div>
+                    {items.map((q) => {
+                      const sm = statusMeta(q.status);
+                      const iso = itemISO(q)!;
+                      return (
+                        <button key={q.id} onClick={() => { setSelected(q); setEditing(false); }} className="mt-0.5 block w-full rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight" style={{ borderColor: sm.dot, background: `${sm.dot}14` }}>
+                          <span className="font-medium text-slate-700">{hhmm(iso)} {titleOf(q).slice(0, 16)}</span><br />
+                          <span style={{ color: sm.dot }}>● {sm.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className={`${card} divide-y divide-slate-100`}>
+            {dated.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No scheduled or published posts yet.</p> : [...dated].sort((a, b) => (itemISO(a)! < itemISO(b)! ? 1 : -1)).map((q) => {
+              const sm = statusMeta(q.status); const iso = itemISO(q)!;
+              return (
+                <button key={q.id} onClick={() => { setSelected(q); setEditing(false); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-slate-800">{titleOf(q)}</span>
+                  <span className="text-[11.5px] text-slate-500">{new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" })} · {hhmm(iso)}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* selected detail */}
+      {selected ? (() => {
+        const q = selected; const sm = statusMeta(q.status); const iso = itemISO(q); const live = q.status === "published"; const onCal = Boolean(iso);
+        return (
+          <div className={`${card} mt-4 p-4`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-slate-800">{titleOf(q)}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
+                </div>
+                <p className="mt-1 text-[11.5px] text-slate-500">{q.account_name ?? q.platform ?? "—"}{iso ? ` · ${new Date(iso).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : " · no date"}</p>
+                {q.error ? <p className="mt-1 text-[11px] text-rose-600">{q.error}</p> : null}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <DetailBtn icon="ti-eye" label="Preview" onClick={() => setPreview(q)} accent />
+                {!live ? <DetailBtn icon="ti-edit" label="Edit" onClick={() => { setEditing(true); setDraft(q.body); }} /> : null}
+                {onCal && !live ? <DetailBtn icon="ti-calendar" label="Reschedule" onClick={() => openSchedule(q)} /> : null}
+                {!onCal ? <DetailBtn icon="ti-calendar-plus" label="Schedule" onClick={() => openSchedule(q)} /> : null}
+                {onCal && !live ? <DetailBtn icon="ti-calendar-off" label="Unschedule" onClick={() => act(q.id, "unschedule")} /> : null}
+                <DetailBtn icon="ti-archive" label="Archive" onClick={() => act(q.id, "archive")} />
+                {!live ? <DetailBtn icon="ti-trash" label="Delete" onClick={() => del(q.id)} danger /> : null}
+                {q.url ? <a href={q.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-[11.5px] text-blue-600"><i className="ti ti-external-link" aria-hidden="true" /> View</a> : null}
+              </div>
+            </div>
+            {editing ? (
+              <div className="mt-3">
+                <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={5} className="w-full rounded-lg border border-slate-200 p-2 text-[13px]" />
+                <div className="mt-1.5 flex gap-2">
+                  <button type="button" onClick={() => act(q.id, "edit", { body: draft })} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
+                  <button type="button" onClick={() => setEditing(false)} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Cancel</button>
+                </div>
+              </div>
+            ) : <p className="mt-3 whitespace-pre-wrap text-[12.5px] leading-relaxed text-slate-600">{q.body}</p>}
+          </div>
+        );
+      })() : <p className="mt-4 text-center text-[11.5px] text-slate-400">Select a post from the rail or calendar to edit, reschedule, or preview it.</p>}
+
+      {/* status legend */}
+      <div className="mt-4 flex flex-wrap gap-4 text-[11px] text-slate-500">
+        {[["Draft", "#64748B"], ["Parked", "#CA8A04"], ["Scheduled", "#16A34A"], ["Published", "#2563EB"], ["Failed", "#E11D48"]].map(([l, c]) => (
+          <span key={l} className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{l}</span>
+        ))}
+      </div>
+
+      {scheduling ? (
+        <div onClick={() => setScheduling(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xs rounded-xl bg-white p-4 shadow-xl">
+            <p className="text-[13px] font-semibold text-slate-800">{scheduling.scheduled_at ? "Reschedule post" : "Schedule post"}</p>
+            <p className="mt-0.5 truncate text-[11px] text-slate-400">{titleOf(scheduling)}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div><p className="text-[10px] text-slate-400">Date</p><input type="date" value={sDate} onChange={(e) => setSDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12px]" /></div>
+              <div><p className="text-[10px] text-slate-400">Time</p><input type="time" value={sTime} onChange={(e) => setSTime(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12px]" /></div>
+            </div>
+            {googleReady ? <p className="mt-2 text-[10.5px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> Adds to your Google Calendar.</p> : null}
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" onClick={() => setScheduling(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] text-slate-600">Cancel</button>
+              <button type="button" onClick={confirmSchedule} disabled={busy || !sDate} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50">Confirm</button>
+            </div>
           </div>
         </div>
       ) : null}
+
+      {preview ? <PreviewModal onClose={() => setPreview(null)} name={preview.account_name ?? "Your account"} platform={platformOf(preview.account_name)} body={preview.body} comment={preview.comment_text} link={preview.link_url} /> : null}
     </div>
+  );
+}
+
+function DetailBtn({ icon, label, onClick, accent, danger }: { icon: string; label: string; onClick: () => void; accent?: boolean; danger?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11.5px] ${danger ? "border-rose-200 text-rose-600" : accent ? "border-indigo-200 text-indigo-600" : "border-slate-200 text-slate-600"} hover:bg-slate-50`}>
+      <i className={`ti ${icon}`} aria-hidden="true" /> {label}
+    </button>
   );
 }
 
@@ -345,7 +511,7 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
           <button onClick={() => patch({ addSlot: { weekday: wd, time_local: time } })} className="text-indigo-600"><i className="ti ti-plus" aria-hidden="true" /></button>
         </span>
       </div>
-      <p className="mt-2 text-[11.5px] text-slate-400">Rotation: {settings.rotation.map((r) => r.replace(/_/g, " ")).join(" → ")}. Slots pull from the approved queue in order.</p>
+      <p className="mt-2 text-[11.5px] text-slate-400">Rotation: {settings.rotation.map((r) => r.replace(/_/g, " ")).join(" → ")}. Slots suggest posting times on the Schedule calendar.</p>
 
       <p className="mt-5 text-[13px] font-medium text-slate-700">Rules</p>
       <div className="mt-2 flex flex-col gap-2">
@@ -412,16 +578,16 @@ function Accounts({ accounts, linkedInReady, facebookReady, failed24 }: { accoun
 
       <p className="mt-5 text-[13px] font-medium text-slate-700">API health</p>
       <div className={`${card} mt-2 divide-y divide-slate-100 text-[13px]`}>
-        <Row label="LinkedIn Posts API" value={linkedInReady ? "ok" : "not connected"} ok={linkedInReady} />
-        <Row label="Facebook Graph API" value={facebookReady ? "ok · v21.0" : "not connected"} ok={facebookReady} />
-        <Row label="Failed last 24h" value={String(failed24)} ok={failed24 === 0} />
+        <HealthRow label="LinkedIn Posts API" value={linkedInReady ? "ok" : "not connected"} ok={linkedInReady} />
+        <HealthRow label="Facebook Graph API" value={facebookReady ? "ok · v21.0" : "not connected"} ok={facebookReady} />
+        <HealthRow label="Failed last 24h" value={String(failed24)} ok={failed24 === 0} />
       </div>
       <p className="mt-2 text-[11.5px] text-slate-400">LinkedIn posts as a personal profile; Facebook posts to a Page feed with the tagged link as a comment. Page posting needs Meta App Review to go live — dev mode works on Pages you admin. Instagram is off for now.</p>
     </div>
   );
 }
 
-function Row({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+function HealthRow({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
   return (
     <div className="flex items-center justify-between px-4 py-2.5">
       <span className="text-slate-600">{label}</span>

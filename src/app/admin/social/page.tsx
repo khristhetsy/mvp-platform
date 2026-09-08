@@ -5,6 +5,7 @@ import { isLinkedInConfigured } from "@/lib/social/linkedin-adapter";
 import { isLinkedInOAuthConfigured } from "@/lib/social/linkedin-oauth";
 import { isMetaConfigured } from "@/lib/social/meta-oauth";
 import { getAttribution } from "@/lib/social/attribution";
+import { isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
 import { SocialHubClient } from "@/components/admin/social/SocialHubClient";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ export default async function AdminSocialPage({ searchParams }: { searchParams: 
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Social Media Hub">
       <div className="mx-auto max-w-4xl px-4 py-6">
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">Social Media Hub</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">Publishing only — Prospects and Scheduling stay in Sales Hub. LinkedIn first; the queue runs every 5 minutes and the tagged link posts as the first comment.</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">Compose, schedule on a calendar, and publish. The queue runs every 5 minutes; scheduled posts go out at their time and the tagged link posts as the first comment.</p>
 
         {notice ? (
           <div className={`mt-4 rounded-xl border px-4 py-3 text-[13px] ${notice.tone === "ok" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
@@ -58,7 +59,7 @@ export default async function AdminSocialPage({ searchParams }: { searchParams: 
         ) : null}
 
         <div className="mt-5">
-          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} attribution={attribution} />
+          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} googleReady={isGoogleCalendarConfigured()} attribution={attribution} />
         </div>
       </div>
     </AppShell>

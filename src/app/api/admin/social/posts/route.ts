@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
+import { syncPostEvent } from "@/lib/social/gcal-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ const schema = z.object({
   linkUrl: z.string().url().max(500).nullish(),
   comment: z.string().max(1000).nullish(),
   approve: z.boolean().optional(),
+  // ISO datetime. When present the post is scheduled (queued to publish at that time)
+  // and mirrored to Google Calendar; when absent + approved it's parked (undated).
+  scheduledAt: z.string().datetime().nullish(),
   variants: z.array(z.object({ accountId: z.string().uuid(), body: z.string().min(1).max(4000) })).min(1).max(6),
 });
 
@@ -29,6 +33,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
   const approved = Boolean(parsed.data.approve);
+  const scheduledAt = parsed.data.scheduledAt ?? null;
+  // Three landing states: scheduled (queued + dated), parked (approved, undated), draft.
+  const variantStatus = scheduledAt ? "queued" : approved ? "parked" : "skipped";
 
   const { data: post, error: postErr } = await db.from("social_posts").insert({
     archetype: parsed.data.archetype,
@@ -37,7 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     body: parsed.data.variants[0]?.body ?? "",
     comment_text: parsed.data.comment ?? null,
     link_url: parsed.data.linkUrl ?? null,
-    status: approved ? "approved" : "draft",
+    status: scheduledAt ? "scheduled" : approved ? "approved" : "draft",
     created_by: profile.id,
   }).select("id").single();
   if (postErr || !post) return NextResponse.json({ error: postErr?.message ?? "Could not save post." }, { status: 400 });
@@ -47,11 +54,22 @@ export async function POST(req: NextRequest): Promise<Response> {
     account_id: v.accountId,
     body: v.body,
     comment_text: parsed.data.comment ?? null,
-    status: approved ? "queued" : "skipped",   // held until approved
+    status: variantStatus,
+    scheduled_at: scheduledAt,
+    next_attempt_at: scheduledAt,   // cron publishes at/after this time
     idempotency_key: `${post.id}:${v.accountId}`,
   }));
-  const { error: varErr } = await db.from("social_variants").insert(rows);
+  const { data: inserted, error: varErr } = await db.from("social_variants").insert(rows).select("id");
   if (varErr) return NextResponse.json({ error: varErr.message }, { status: 400 });
 
-  return NextResponse.json({ ok: true, postId: post.id, queued: approved ? rows.length : 0 });
+  // Mirror each scheduled variant onto the staff member's Google Calendar (best-effort).
+  if (scheduledAt && Array.isArray(inserted)) {
+    const title = (parsed.data.brief?.trim() || parsed.data.variants[0]?.body || "Social post").split("\n")[0].slice(0, 80);
+    for (const row of inserted as { id: string }[]) {
+      const eventId = await syncPostEvent({ userId: profile.id, existingEventId: null, title, startISO: scheduledAt, notes: parsed.data.variants[0]?.body ?? null });
+      if (eventId) await db.from("social_variants").update({ gcal_event_id: eventId }).eq("id", row.id);
+    }
+  }
+
+  return NextResponse.json({ ok: true, postId: post.id, queued: scheduledAt ? rows.length : 0, parked: !scheduledAt && approved ? rows.length : 0 });
 }
