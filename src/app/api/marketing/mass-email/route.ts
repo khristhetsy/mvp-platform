@@ -12,7 +12,7 @@
  * Staff-only.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
@@ -24,6 +24,7 @@ import { enrollList } from "@/lib/marketing/sequences";
 import { sendMarketingEmail, makeUnsubscribeToken, interpolate, htmlToText, emailConfigured } from "@/lib/marketing/send";
 import { isUnsubscribed } from "@/lib/marketing/contacts";
 import { sendViaGmail } from "@/lib/integrations/gmail-send";
+import { logOutboundEmailActivity } from "@/lib/sales/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +147,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       if ("error" in r) failed++; else sent++;
       await new Promise((res) => setTimeout(res, 120));
     }
+    // Log to the sales timeline so the send shows on each contact + their open opps.
+    const gmailEmails = recipients.map((rc) => rc.email);
+    after(() => logOutboundEmailActivity(gmailEmails, subject || "(no subject)", profile.id, 1000));
     return NextResponse.json({ ok: true, channel: "gmail", sent, skipped, failed, skippedNoEmail });
   }
 
@@ -165,6 +169,9 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   try {
     const result = await sendCampaign(campaign.id);
+    // Log to the sales timeline so the send shows on each contact + their open opps.
+    const icaposEmails = recipients.map((r) => r.email);
+    after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000));
     return NextResponse.json({ ok: true, channel: "icapos", campaignId: campaign.id, ...result, skippedNoEmail });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Send failed." }, { status: 400 });

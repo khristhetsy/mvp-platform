@@ -34,9 +34,10 @@ export async function logOutboundEmailActivity(
   recipients: string[],
   subject: string,
   actorId?: string | null,
+  limit = 25,
 ): Promise<void> {
   try {
-    const emails = [...new Set(recipients.map((e) => e.trim().toLowerCase()).filter(Boolean))].slice(0, 25);
+    const emails = [...new Set(recipients.map((e) => e.trim().toLowerCase()).filter(Boolean))].slice(0, limit);
     if (emails.length === 0) return;
     const summary = `Email sent${subject ? `: ${subject.slice(0, 160)}` : ""}`;
     for (const email of emails) {
