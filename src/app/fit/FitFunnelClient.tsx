@@ -20,6 +20,23 @@ function tierColor(tier: string | null): { ring: string; bg: string; fg: string 
   return { ring: "#378ADD", bg: "#E6F1FB", fg: "#185FA5" };
 }
 
+/** Circular progress gauge for the fit %. */
+function FitGauge({ value }: { value: number }) {
+  const v = Math.max(0, Math.min(100, Math.round(value)));
+  const C = 2 * Math.PI * 18;
+  const strong = v >= 60;
+  const track = strong ? "#E1F5EE" : "#FAEEDA";
+  const arc = strong ? "#1D9E75" : "#BA7517";
+  const text = strong ? "#0F6E56" : "#854F0B";
+  return (
+    <svg width="44" height="44" viewBox="0 0 46 46" role="img" aria-label={`${v}% fit`}>
+      <circle cx="23" cy="23" r="18" fill="none" stroke={track} strokeWidth="5" />
+      <circle cx="23" cy="23" r="18" fill="none" stroke={arc} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(v / 100) * C} ${C}`} transform="rotate(-90 23 23)" />
+      <text x="23" y="27" textAnchor="middle" fontSize="13" fontWeight="500" fill={text}>{v}%</text>
+    </svg>
+  );
+}
+
 function MatchCard({ m }: { m: MatchResult }) {
   const [open, setOpen] = useState(false);
   const c = tierColor(m.tier);
@@ -31,14 +48,13 @@ function MatchCard({ m }: { m: MatchResult }) {
           <p className="truncate text-[14px] font-semibold text-slate-900">{m.company}</p>
           {summaryLine ? <p className="mt-0.5 truncate text-[11px] text-slate-500">{summaryLine}</p> : null}
           <div className="mt-1.5 flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-emerald-600">{m.fit}% fit</span>
-            <span className="h-1 w-16 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-emerald-500" style={{ width: `${m.fit}%` }} /></span>
+            <span className="text-[11px] font-semibold text-slate-800">Investor score {m.score ?? "—"}</span>
+            <span className="rounded px-1.5 py-px text-[9px] font-medium" style={{ background: c.bg, color: c.fg }}>{m.tier ?? "New"}</span>
           </div>
         </div>
-        <div className="flex w-[70px] flex-shrink-0 flex-col items-center gap-1">
-          <span className="text-[8.5px] font-medium uppercase tracking-wide text-slate-400">Investor score</span>
-          <span className="flex h-11 w-11 items-center justify-center rounded-full text-[15px] font-semibold text-slate-900" style={{ border: `3px solid ${c.ring}` }}>{m.score ?? "—"}</span>
-          <span className="rounded px-1.5 py-px text-[9px] font-medium" style={{ background: c.bg, color: c.fg }}>{m.tier ?? "New"}</span>
+        <div className="flex w-[66px] flex-shrink-0 flex-col items-center gap-1">
+          <span className="text-[8.5px] font-medium uppercase tracking-wide text-slate-400">Fit</span>
+          <FitGauge value={m.fit} />
         </div>
         <i className={`ti ti-chevron-${open ? "down" : "right"} flex-shrink-0 text-slate-400`} aria-hidden="true" />
       </button>
