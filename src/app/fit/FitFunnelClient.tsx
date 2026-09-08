@@ -82,7 +82,7 @@ function MultiQ({ n, title, options, selected, onToggle, onContinue, loading }: 
   selected: string[]; onToggle: (key: string) => void; onContinue: () => void; loading?: boolean;
 }) {
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <FunnelHeader />
       <p className="font-mono text-xs uppercase tracking-wider text-indigo-500">Question {n} of {TOTAL_STEPS}</p>
       <h1 className="mt-2 text-[22px] font-semibold leading-snug text-slate-900">{title}</h1>
