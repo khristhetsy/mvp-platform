@@ -31,23 +31,27 @@ describe("isFormD", () => {
 });
 
 describe("decideInvestorTypes", () => {
-  it("Odoo profile wins", () => {
-    const d = decideInvestorTypes({ source: "formd", raw: { __profile: { extra: { "Investor Profile": "Private Equity" } } } });
-    expect(d).toMatchObject({ types: ["Private Equity"], from: "odoo", write: true });
-  });
-  it("Form D fallback when no Odoo profile", () => {
+  it("Form D is authoritative → Venture Capital + Fund Manager", () => {
     const d = decideInvestorTypes({ source: "formd", raw: { __profile: { extra: {} } } });
     expect(d.types).toEqual([...FORM_D_TYPES]);
-    expect(d.from).toBe("formd");
-    expect(d.write).toBe(true);
+    expect(d).toMatchObject({ from: "formd", write: true });
+  });
+  it("Form D replaces a wrong prior type (removes Family Office)", () => {
+    const d = decideInvestorTypes({ source: "formd", raw: { __profile: { investorTypes: ["Family Office"] } } });
+    expect(d.types).toEqual([...FORM_D_TYPES]);
+    expect(d).toMatchObject({ from: "formd", write: true });
+  });
+  it("Form D already correct → no write", () => {
+    const d = decideInvestorTypes({ source: "formd", raw: { __profile: { investorTypes: ["Venture Capital", "Fund Manager"] } } });
+    expect(d).toMatchObject({ from: "formd", write: false });
+  });
+  it("non-Form-D: Odoo profile wins", () => {
+    const d = decideInvestorTypes({ source: "odoo", raw: { __profile: { extra: { "Investor Profile": "Private Equity" } } } });
+    expect(d).toMatchObject({ types: ["Private Equity"], from: "odoo", write: true });
   });
   it("fill-blanks: leaves an existing type untouched", () => {
-    const d = decideInvestorTypes({ raw: { __profile: { investorTypes: ["Angel Investor"], extra: { "Investor Profile": "VC" } } } });
+    const d = decideInvestorTypes({ source: "odoo", raw: { __profile: { investorTypes: ["Angel Investor"], extra: { "Investor Profile": "VC" } } } });
     expect(d).toMatchObject({ from: "existing", write: false });
-  });
-  it("overwrite: replaces existing from Odoo", () => {
-    const d = decideInvestorTypes({ raw: { __profile: { investorTypes: ["Angel Investor"], extra: { "Investor Profile": "Venture Capital" } } } }, { overwrite: true });
-    expect(d).toMatchObject({ types: ["Venture Capital"], from: "odoo", write: true });
   });
   it("no source → no write", () => {
     expect(decideInvestorTypes({ source: "odoo", raw: { __profile: { extra: {} } } })).toMatchObject({ from: "none", write: false });

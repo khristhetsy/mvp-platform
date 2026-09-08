@@ -57,12 +57,20 @@ export type Decision = { types: string[]; from: "existing" | "odoo" | "formd" | 
 export function decideInvestorTypes(row: ContactRow, opts: { overwrite?: boolean; label?: string } = {}): Decision {
   const profile = row.raw?.__profile;
   const current = toStrList(profile?.investorTypes);
+
+  // SEC Form D is authoritative: these investors are always Venture Capital + Fund
+  // Manager, replacing any prior type (e.g. a wrong Family Office tag). Only skipped
+  // when already exactly that — so it removes them from Family Office etc.
+  if (isFormD(row)) {
+    const want = [...FORM_D_TYPES];
+    const same = current.length === want.length && want.every((t) => current.includes(t));
+    return { types: want, from: "formd", write: !same, matchedLabel: null };
+  }
+
   if (current.length && !opts.overwrite) return { types: current, from: "existing", write: false, matchedLabel: null };
 
   const odoo = odooInvestorTypes(profile, opts.label);
   if (odoo.types.length) return { types: dedupe(odoo.types), from: "odoo", write: true, matchedLabel: odoo.label };
-
-  if (isFormD(row)) return { types: [...FORM_D_TYPES], from: "formd", write: true, matchedLabel: null };
 
   return { types: current, from: "none", write: false, matchedLabel: null };
 }
