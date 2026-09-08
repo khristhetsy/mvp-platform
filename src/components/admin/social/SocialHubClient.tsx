@@ -54,8 +54,16 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const nameOf = (id: string) => accounts.find((a) => a.id === id)?.display_name ?? "Account";
+  const platformOf = (id: string) => accounts.find((a) => a.id === id)?.platform ?? "linkedin";
+
+  const CTAS = [
+    { key: "fit", label: "Take the fit quiz", text: "See the investors that match your raise →", url: "https://icapos.com/fit" },
+    { key: "call", label: "Book a call", text: "Book a structuring call →", url: "https://icapos.com/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" },
+    { key: "learn", label: "Learn more", text: "Learn more →", url: "https://icapos.com" },
+  ];
 
   async function draft() {
     if (brief.trim().length < 10 || selected.length === 0) { setMsg("Add a brief and pick at least one account."); return; }
@@ -117,17 +125,43 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
               <textarea value={v.body} onChange={(e) => setVariants((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} rows={5} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             </div>
           ))}
+          <div>
+            <p className="mb-1.5 text-[12px] font-medium text-slate-600">Call to action</p>
+            <div className="flex flex-wrap gap-2">
+              {CTAS.map((c) => (
+                <button key={c.key} type="button" onClick={() => { setComment(c.text); setLinkUrl(c.url); }} className={`${chip} ${comment === c.text ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{c.label}</button>
+              ))}
+              <button type="button" onClick={() => { setComment(""); setLinkUrl(""); }} className={`${chip} border-slate-200 text-slate-600`}>Custom</button>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="Tagged link (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
-            <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="First-comment text" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+            <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="CTA link (https://…)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
           </div>
           <div className="flex gap-2">
+            <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
             <button onClick={() => save(false)} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
             <button onClick={() => save(true)} disabled={busy} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Approve &amp; queue</button>
           </div>
         </div>
       ) : null}
       {msg ? <p className="mt-3 text-[12px] text-slate-500">{msg}</p> : null}
+
+      {showPreview && variants[0] ? (
+        <div onClick={() => setShowPreview(false)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex items-center gap-2 px-3 py-2.5">
+              <span className={`flex h-9 w-9 items-center justify-center rounded-full text-white ${platformOf(variants[0].accountId) === "facebook" ? "bg-[#1877F2]" : "bg-[#0A66C2]"}`}><i className={`ti ${platformOf(variants[0].accountId) === "facebook" ? "ti-brand-facebook" : "ti-brand-linkedin"}`} aria-hidden="true" /></span>
+              <div><p className="text-[12.5px] font-medium text-slate-900">{nameOf(variants[0].accountId)}</p><p className="text-[10.5px] text-slate-400">{platformOf(variants[0].accountId) === "facebook" ? "Facebook" : "LinkedIn"} · preview</p></div>
+              <button type="button" onClick={() => setShowPreview(false)} className="ml-auto text-slate-400"><i className="ti ti-x" aria-hidden="true" /></button>
+            </div>
+            <div className="whitespace-pre-wrap px-3 pb-3 text-[13px] leading-relaxed text-slate-800">{variants[0].body}</div>
+            {comment || linkUrl ? (
+              <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-[11.5px] text-slate-600"><i className="ti ti-message-circle" aria-hidden="true" /> First comment: {comment ? `${comment} ` : ""}<span className="text-indigo-600">{linkUrl}</span></div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
