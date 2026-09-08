@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
+import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
 import type { SocialAccount, QueueItem, SocialSettings, SocialSlot } from "@/lib/social/queries";
 import type { WeekBar } from "@/lib/social/attribution";
 
@@ -55,6 +56,7 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [libOpen, setLibOpen] = useState(false);
 
   const nameOf = (id: string) => accounts.find((a) => a.id === id)?.display_name ?? "Account";
   const platformOf = (id: string) => accounts.find((a) => a.id === id)?.platform ?? "linkedin";
@@ -74,6 +76,17 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
       if (!res.ok) { setMsg(j.error ?? "Draft failed."); return; }
       setVariants(j.variants ?? []);
     } finally { setBusy(false); }
+  }
+
+  function loadLibraryPost(p: (typeof POST_LIBRARY)[number]) {
+    if (selected.length === 0) { setMsg("Pick at least one account, then load a post."); return; }
+    setArchetype(p.archetype);
+    setBrief(p.title);
+    setVariants(selected.map((id) => ({ accountId: id, body: p.body })));
+    setComment(p.cta);
+    setLinkUrl(fitLink(p.tag));
+    setLibOpen(false);
+    setMsg(null);
   }
 
   async function save(approve: boolean) {
@@ -114,7 +127,27 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
         })}
       </div>
 
-      <button onClick={draft} disabled={busy} className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
+      <div className="mt-4 flex items-center gap-3">
+        <button onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
+        <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
+      </div>
+
+      {libOpen ? (
+        <div className={`${card} mt-3 divide-y divide-slate-100`}>
+          <div className="flex items-center justify-between px-4 py-2 text-[11px] text-slate-400">
+            <span>Capital funnel · load a post into the composer</span><span>Order: 1 · 5 · 8 · 3 · 7</span>
+          </div>
+          {POST_LIBRARY.map((p) => (
+            <div key={p.n} className="flex items-center gap-3 px-4 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-medium text-slate-800">{p.n} · {p.title} <span className="font-mono text-[10px] text-slate-400">{p.tag}</span></p>
+                <p className="truncate text-[11px] text-slate-400">{p.body.split("\n")[0]}</p>
+              </div>
+              <button type="button" onClick={() => loadLibraryPost(p)} className="flex-shrink-0 rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Use</button>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {variants.length > 0 ? (
         <div className="mt-5 flex flex-col gap-3">
