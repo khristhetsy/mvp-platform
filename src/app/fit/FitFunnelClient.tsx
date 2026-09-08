@@ -237,8 +237,8 @@ export function FitFunnelClient() {
           <div className="mt-3 flex flex-col gap-2.5">
             {result!.top.map((m) => <MatchCard key={m.contactId} m={m} />)}
             {result!.locked_count > 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-[12.5px] text-slate-500">
-                <i className="ti ti-lock" aria-hidden="true" /> {result!.locked_count} more matched
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-[12.5px] font-medium text-indigo-600">
+                <i className="ti ti-lock" aria-hidden="true" /> Unlock more matched
               </div>
             ) : null}
           </div>
