@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
+import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import type { SocialAccount, QueueItem, SocialSettings, SocialSlot } from "@/lib/social/queries";
 import type { WeekBar } from "@/lib/social/attribution";
 
@@ -46,6 +47,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
 function Composer({ accounts }: { accounts: SocialAccount[] }) {
   const [brief, setBrief] = useState("");
   const [archetype, setArchetype] = useState<Archetype>("proof_case");
+  const [department, setDepartment] = useState<string>("Marketing");
   const [selected, setSelected] = useState<string[]>([]);
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
@@ -70,7 +72,7 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
     if (variants.length === 0) return;
     setBusy(true); setMsg(null);
     try {
-      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, linkUrl: linkUrl || null, comment: comment || null, approve, variants }) });
+      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, linkUrl: linkUrl || null, comment: comment || null, approve, variants }) });
       const j = await res.json();
       if (!res.ok) { setMsg(j.error ?? "Save failed."); return; }
       setMsg(approve ? `Queued ${j.queued} variant(s).` : "Saved as draft.");
@@ -90,6 +92,11 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
           <button key={a.key} onClick={() => setArchetype(a.key)} className={`${chip} ${archetype === a.key ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{a.label}</button>
         ))}
       </div>
+
+      <p className="mt-4 text-[13px] font-medium text-slate-700">Department</p>
+      <select value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
+        {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
 
       <p className="mt-4 text-[13px] font-medium text-slate-700">Post as</p>
       <div className="mt-1.5 flex flex-wrap gap-2">

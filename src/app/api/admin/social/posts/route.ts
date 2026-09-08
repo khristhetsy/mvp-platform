@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   brief: z.string().max(4000).optional(),
   archetype: z.enum(ARCHETYPES.map((a) => a.key) as [Archetype, ...Archetype[]]),
+  department: z.string().max(60).nullish(),
   linkUrl: z.string().url().max(500).nullish(),
   comment: z.string().max(1000).nullish(),
   approve: z.boolean().optional(),
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const { data: post, error: postErr } = await db.from("social_posts").insert({
     archetype: parsed.data.archetype,
     brief: parsed.data.brief ?? null,
+    department: parsed.data.department ?? null,
     body: parsed.data.variants[0]?.body ?? "",
     comment_text: parsed.data.comment ?? null,
     link_url: parsed.data.linkUrl ?? null,
