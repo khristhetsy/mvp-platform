@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
+import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
+
+type SavedSearch = { id: string; name: string; spec: FilterSpec; groupBy: string | null; columns: string[] | null; isDefault: boolean; isShared: boolean; mine: boolean };
 
 const GROUP_BY_SECTIONS: { key: GroupSection; label: string }[] = [
   { key: "profile", label: "Profile & role" },
@@ -88,19 +91,21 @@ function loadLS<T>(key: string, fallback: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>): string {
+function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>, spec?: FilterSpec): string {
   const sp = new URLSearchParams();
   if (q.trim()) sp.set("q", q.trim());
   (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
   if (countries.length) sp.set("country", countries.join(","));
   if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
   for (const [key, vals] of Object.entries(facetSel)) for (const v of vals) if (v) sp.append(key, v);
+  // Odoo-style custom filter spec (Marketing). Serialized as one `filter` param.
+  if (spec && spec.conditions.length) sp.set("filter", JSON.stringify(spec));
   return sp.toString();
 }
 
 const LIST_DEPARTMENTS = ["Marketing", "Sales", "Investor Relations", "Administration", "Events"] as const;
 
-export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; basePath?: string }) {
+export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; odooSearch?: boolean; basePath?: string }) {
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
@@ -169,9 +174,23 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [listMsg, setListMsg] = useState<string | null>(null);
   const [listResult, setListResult] = useState<string | null>(null);
 
+  // Odoo-style search (Marketing): a field·operator·value spec drives the query.
+  const [spec, setSpec] = useState<FilterSpec>({ match: "all", conditions: [] });
+  const [typed, setTyped] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [draftSpec, setDraftSpec] = useState<FilterSpec>({ match: "all", conditions: [] });
+  const [valuePickerAt, setValuePickerAt] = useState<number | null>(null);
+  const [saved, setSaved] = useState<SavedSearch[]>([]);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saveDefault, setSaveDefault] = useState(false);
+  const [saveShared, setSaveShared] = useState(false);
+  const defaultApplied = useRef(false);
+
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
+  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel, odooSearch ? spec : undefined), [q, textFilters, countries, sort, facetSel, odooSearch, spec]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canSelect ? `34px ${gridCols}` : gridCols;
@@ -322,6 +341,90 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   }
   function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
 
+  // ── Odoo-style search helpers ─────────────────────────────────────────────
+  const TYPE_OPTIONS: { value: string; label: string }[] = [
+    { value: "investor", label: "Investor" }, { value: "founder", label: "Founder" }, { value: "advisor", label: "Advisor" }, { value: "other", label: "Other" },
+  ];
+  function optionsFor(source: OptionSource | undefined): { value: string; label: string }[] {
+    if (source === "countries") return facets.countries.map((c) => ({ value: c.value, label: c.value }));
+    if (source === "type") return TYPE_OPTIONS;
+    if (source) return (facetOpts[source] ?? []).map((v) => ({ value: v, label: v }));
+    return [];
+  }
+  function condLabel(c: Condition): string {
+    const def = fieldDef(c.field);
+    const name = def?.label ?? c.field;
+    if (c.op === "set" || c.op === "not_set") return `${name} ${OP_LABEL[c.op]}`;
+    const raw = Array.isArray(c.value) ? c.value : c.value != null ? [String(c.value)] : [];
+    const vals = def?.options === "type" ? raw.map((v) => TYPE_OPTIONS.find((t) => t.value === v)?.label ?? v) : raw;
+    return `${name} ${OP_LABEL[c.op]} ${vals.join(", ")}`;
+  }
+  const sameCond = (a: Condition, b: Condition) => a.field === b.field && a.op === b.op && JSON.stringify(a.value ?? null) === JSON.stringify(b.value ?? null);
+  function toggleQuick(cond: Condition) {
+    setSpec((s) => {
+      const exists = s.conditions.some((c) => sameCond(c, cond));
+      return { ...s, conditions: exists ? s.conditions.filter((c) => !sameCond(c, cond)) : [...s.conditions, cond] };
+    });
+  }
+  function addCondition(cond: Condition) {
+    setSpec((s) => (s.conditions.some((c) => sameCond(c, cond)) ? s : { ...s, conditions: [...s.conditions, cond] }));
+    setTyped(""); setSearchOpen(false);
+  }
+  function removeConditionAt(i: number) { setSpec((s) => ({ ...s, conditions: s.conditions.filter((_, j) => j !== i) })); }
+  const quickActive = (cond: Condition) => spec.conditions.some((c) => sameCond(c, cond));
+  const firstOfMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; };
+
+  const fetchSaved = useCallback(async () => {
+    try { const r = await fetch("/api/marketing/saved-searches"); if (r.ok) setSaved((await r.json()).searches ?? []); } catch { /* ignore */ }
+  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch sets state later
+  useEffect(() => { if (odooSearch) void fetchSaved(); }, [odooSearch, fetchSaved]);
+  // Apply the owner's default saved search once on first load.
+  useEffect(() => {
+    if (!odooSearch || defaultApplied.current) return;
+    const def = saved.find((s) => s.isDefault && s.mine);
+    if (!def) return;
+    defaultApplied.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time default apply
+    setSpec(def.spec);
+    if (def.groupBy) setGroupBy(def.groupBy);
+    if (def.columns?.length) setVisibleCols(def.columns);
+  }, [odooSearch, saved]);
+  function applySaved(s: SavedSearch) {
+    setSpec(s.spec); setGroupBy(s.groupBy || "profile"); if (s.columns?.length) setVisibleCols(s.columns); setSearchOpen(false);
+  }
+  async function deleteSaved(id: string) {
+    try { await fetch(`/api/marketing/saved-searches/${id}`, { method: "DELETE" }); await fetchSaved(); } catch { /* ignore */ }
+  }
+  async function saveCurrent() {
+    if (!saveName.trim()) return;
+    try {
+      await fetch("/api/marketing/saved-searches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: saveName.trim(), spec, groupBy, columns: visibleCols, isDefault: saveDefault, isShared: saveShared }) });
+      setSaveOpen(false); setSaveName(""); setSaveDefault(false); setSaveShared(false); await fetchSaved();
+    } catch { /* ignore */ }
+  }
+  function openCustom() { setDraftSpec({ match: spec.match, conditions: spec.conditions.length ? spec.conditions : [{ field: "name", op: "contains", value: "" }] }); setValuePickerAt(null); setCustomOpen(true); setSearchOpen(false); }
+  function applyCustom() { setSpec({ match: draftSpec.match, conditions: draftSpec.conditions.filter((c) => fieldDef(c.field)) }); setCustomOpen(false); }
+  function updateDraftAt(i: number, patch: Partial<Condition>) {
+    setDraftSpec((d) => ({ ...d, conditions: d.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
+  }
+  function changeDraftField(i: number, field: string) {
+    const def = fieldDef(field); const op = (def?.ops[0] ?? "contains") as Operator;
+    updateDraftAt(i, { field, op, value: op === "in" ? [] : "" });
+  }
+  function changeDraftOp(i: number, op: Operator) {
+    updateDraftAt(i, { op, value: op === "in" ? [] : op === "set" || op === "not_set" ? undefined : "" });
+  }
+  function toggleDraftValue(i: number, v: string) {
+    setDraftSpec((d) => ({ ...d, conditions: d.conditions.map((c, j) => {
+      if (j !== i) return c;
+      const cur = Array.isArray(c.value) ? c.value : [];
+      return { ...c, value: cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v] };
+    }) }));
+  }
+  function addDraftRow() { setDraftSpec((d) => ({ ...d, conditions: [...d.conditions, { field: "name", op: "contains" as Operator, value: "" }] })); }
+  function removeDraftRow(i: number) { setDraftSpec((d) => ({ ...d, conditions: d.conditions.filter((_, j) => j !== i) })); }
+
   // ── Mass Lead assign helpers ──────────────────────────────────────────────
   const activeGroupIds = useMemo(() => (groupBy === "profile" ? GROUP_DEFS.map((g) => g.id) : dynGroups.map((g) => g.id)), [groupBy, dynGroups]);
   const allLoadedIds = useMemo(() => activeGroupIds.flatMap((id) => (groups[id]?.rows ?? []).map((r) => r.id)), [activeGroupIds, groups]);
@@ -423,11 +526,23 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
-        {activeFilters > 0 && (
+        {odooSearch ? (
+          <OdooSearchBar
+            spec={spec} typed={typed} setTyped={setTyped} searchOpen={searchOpen} setSearchOpen={setSearchOpen}
+            addCondition={addCondition} removeConditionAt={removeConditionAt} condLabel={condLabel}
+            toggleQuick={toggleQuick} quickActive={quickActive} firstOfMonth={firstOfMonth}
+            groupBy={groupBy} setGroupBy={setGroupBy} groupByLabel={groupByLabel}
+            saved={saved} applySaved={applySaved} deleteSaved={deleteSaved}
+            openCustom={openCustom} openSave={() => { setSaveOpen(true); setSearchOpen(false); }}
+            clearAll={() => setSpec({ match: "all", conditions: [] })}
+          />
+        ) : (
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
+        )}
+        {!odooSearch && activeFilters > 0 && (
           <button onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); }} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", display: odooSearch ? "none" : undefined }}>
           <button onClick={() => { setFiltersOpen((v) => !v); setOpenColPicker(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: filterBadge ? "#fff" : "var(--foreground)", background: filterBadge ? "#2E78F5" : "transparent", border: filterBadge ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <i className="ti ti-adjustments" style={{ fontSize: 15 }} aria-hidden="true" /> Filters
             {filterBadge > 0 && <span style={{ background: "rgba(255,255,255,.28)", borderRadius: 10, padding: "0 6px", fontSize: 10 }}>{filterBadge}</span>}
@@ -495,7 +610,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             </div>
           )}
         </div>
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", display: odooSearch ? "none" : undefined }}>
           <button onClick={() => { setGroupByOpen((v) => !v); setOpenColPicker(false); setFiltersOpen(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: groupBy !== "profile" ? "#fff" : "var(--foreground)", background: groupBy !== "profile" ? "#2E78F5" : "transparent", border: groupBy !== "profile" ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <i className="ti ti-layout-list" style={{ fontSize: 15 }} aria-hidden="true" /> Group by: {groupByLabel}
             <i className="ti ti-chevron-down" style={{ fontSize: 13 }} aria-hidden="true" />
@@ -539,6 +654,84 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       )}
 
       {(openFilter || openColPicker || filtersOpen || groupByOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); setGroupByOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+
+      {/* Custom filter builder (Odoo) */}
+      {customOpen && (
+        <div onClick={() => setCustomOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: 16, width: 620, maxWidth: "100%", maxHeight: "88vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Add custom filter</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
+              Match{" "}
+              <select value={draftSpec.match} onChange={(e) => setDraftSpec((d) => ({ ...d, match: e.target.value as "all" | "any" }))} style={{ ...inp, padding: "3px 7px" }}>
+                <option value="all">all</option><option value="any">any</option>
+              </select>{" "}of the following:
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {draftSpec.conditions.map((c, i) => {
+                const def = fieldDef(c.field);
+                const needsValue = c.op !== "set" && c.op !== "not_set";
+                const isMulti = c.op === "in";
+                const isDate = def?.kind === "date";
+                const opts = optionsFor(def?.options);
+                return (
+                  <div key={i} style={{ border: "0.5px solid #e2e6ed", borderRadius: 9, padding: 10 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <select value={c.field} onChange={(e) => changeDraftField(i, e.target.value)} style={{ ...inp, flex: 1.2 }}>
+                        {FIELD_REGISTRY.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                      </select>
+                      <select value={c.op} onChange={(e) => changeDraftOp(i, e.target.value as Operator)} style={{ ...inp, flex: 1 }}>
+                        {(def?.ops ?? []).map((o) => <option key={o} value={o}>{OP_LABEL[o]}</option>)}
+                      </select>
+                      <button onClick={() => removeDraftRow(i)} style={{ border: "0.5px solid #F0C0C0", color: "#A32D2D", background: "#fff", borderRadius: 7, padding: "6px 9px", cursor: "pointer" }}>×</button>
+                    </div>
+                    {needsValue && (
+                      <div style={{ marginTop: 8 }}>
+                        {isMulti ? (
+                          <div style={{ maxHeight: 132, overflowY: "auto", border: "0.5px solid #e2e6ed", borderRadius: 7, padding: 6 }}>
+                            {opts.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: 4 }}>No options.</div>}
+                            {opts.map((o) => {
+                              const checked = Array.isArray(c.value) && c.value.includes(o.value);
+                              return (
+                                <label key={o.value} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 4px", fontSize: 12, cursor: "pointer" }}>
+                                  <input type="checkbox" checked={checked} onChange={() => toggleDraftValue(i, o.value)} style={{ width: 13, height: 13 }} />
+                                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <input type={isDate ? "date" : "text"} value={typeof c.value === "string" ? c.value : ""} onChange={(e) => updateDraftAt(i, { value: e.target.value })} placeholder="Value…" style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={addDraftRow} style={{ marginTop: 10, fontSize: 12, color: "#2E78F5", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>＋ New condition</button>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+              <button onClick={() => setCustomOpen(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={applyCustom} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save current search (Odoo Favorites) */}
+      {saveOpen && (
+        <div onClick={() => setSaveOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: 16, width: 320, boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>Save current search</div>
+            <input value={saveName} onChange={(e) => setSaveName(e.target.value)} autoFocus placeholder="Name this search" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 9 }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--text-secondary)", marginBottom: 6 }}><input type="checkbox" checked={saveDefault} onChange={(e) => setSaveDefault(e.target.checked)} style={{ width: 13, height: 13 }} /> Use by default</label>
+            <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}><input type="checkbox" checked={saveShared} onChange={(e) => setSaveShared(e.target.checked)} style={{ width: 13, height: 13 }} /> Share with all staff</label>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setSaveOpen(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={saveCurrent} disabled={!saveName.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: saveName.trim() ? 1 : 0.5 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {canCreateList && listResult && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#E1F5EE", border: "0.5px solid #A7E0CE", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
@@ -782,6 +975,108 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           ? "Grouped by membership type from Odoo (Entrepreneur shows as Founders). Click a column heading to sort, the filter icon to narrow by value, or Columns to choose what shows. Counts and filters run across all synced contacts."
           : `Grouped by ${groupByLabel.toLowerCase()}. Groups are collapsed — open one to load its contacts. Group by stacks on Filters, so you can narrow the set (e.g. Investors in FinTech) and then group. Counts run across all matching contacts.`}
       </p>
+    </div>
+  );
+}
+
+// Odoo-style unified search bar: facet pills + field type-ahead + a three-panel
+// (Filters / Group By / Favorites) dropdown. Presentational — all state lives in the
+// parent; this renders it and calls back.
+type OdooSearchBarProps = {
+  spec: FilterSpec; typed: string; setTyped: (v: string) => void; searchOpen: boolean; setSearchOpen: (v: boolean) => void;
+  addCondition: (c: Condition) => void; removeConditionAt: (i: number) => void; condLabel: (c: Condition) => string;
+  toggleQuick: (c: Condition) => void; quickActive: (c: Condition) => boolean; firstOfMonth: () => string;
+  groupBy: string; setGroupBy: (v: string) => void; groupByLabel: string;
+  saved: SavedSearch[]; applySaved: (s: SavedSearch) => void; deleteSaved: (id: string) => void;
+  openCustom: () => void; openSave: () => void; clearAll: () => void;
+};
+function OdooSearchBar(p: OdooSearchBarProps) {
+  const TEXT_FIELDS = [{ f: "name", l: "Name" }, { f: "company", l: "Company" }, { f: "email", l: "Email" }, { f: "phone", l: "Phone" }];
+  const QUICK: { label: string; cond: Condition }[] = [
+    { label: "Has email", cond: { field: "email", op: "set" } },
+    { label: "Has phone", cond: { field: "phone", op: "set" } },
+    { label: "Unassigned", cond: { field: "assignee", op: "not_set" } },
+    { label: "Added this month", cond: { field: "createdAt", op: "after", value: p.firstOfMonth() } },
+    { label: "Investors", cond: { field: "type", op: "in", value: ["investor"] } },
+    { label: "Founders", cond: { field: "type", op: "in", value: ["founder"] } },
+  ];
+  const groupOpts = GROUP_BY_OPTIONS.filter((o) => o.id === "profile" || o.section !== "profile");
+  const item = { display: "block", width: "100%", textAlign: "left" as const, padding: "6px 12px 6px 26px", fontSize: 12.5, background: "none", border: "none", cursor: "pointer", color: "var(--foreground)" };
+
+  return (
+    <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
+        {p.spec.conditions.map((c, i) => (
+          <span key={i} style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #B5D4F4", background: "#E6F1FB", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>
+            <span style={{ padding: "3px 8px", color: "#0C447C" }}>{p.condLabel(c)}</span>
+            <button onClick={() => p.removeConditionAt(i)} style={{ border: "none", background: "#B5D4F4", color: "#0C447C", padding: "3px 6px", cursor: "pointer" }}>×</button>
+          </span>
+        ))}
+        {p.groupBy !== "profile" && (
+          <span style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #E3C08A", background: "#FAEEDA", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>
+            <span style={{ padding: "3px 8px", color: "#633806" }}>▤ {p.groupByLabel}</span>
+            <button onClick={() => p.setGroupBy("profile")} style={{ border: "none", background: "#E3C08A", color: "#633806", padding: "3px 6px", cursor: "pointer" }}>×</button>
+          </span>
+        )}
+        <input
+          value={p.typed}
+          onChange={(e) => { p.setTyped(e.target.value); p.setSearchOpen(true); }}
+          onFocus={() => p.setSearchOpen(true)}
+          onKeyDown={(e) => { if (e.key === "Enter" && p.typed.trim()) p.addCondition({ field: "name", op: "contains", value: p.typed.trim() }); }}
+          placeholder={p.spec.conditions.length ? "" : "Search…"}
+          style={{ flex: 1, minWidth: 90, border: "none", outline: "none", fontSize: 13, padding: "4px 2px", background: "transparent" }}
+        />
+        <button onClick={() => p.setSearchOpen(!p.searchOpen)} style={{ border: "none", background: "none", color: "#2E78F5", cursor: "pointer", fontSize: 14 }}><i className="ti ti-chevron-down" aria-hidden="true" /></button>
+      </div>
+
+      {p.searchOpen && (
+        <>
+          <div onClick={() => p.setSearchOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 25 }} />
+          <div style={{ position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0, zIndex: 30, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", overflow: "hidden" }}>
+            {p.typed.trim() ? (
+              <div style={{ padding: "4px 0" }}>
+                {TEXT_FIELDS.map(({ f, l }) => (
+                  <button key={f} onClick={() => p.addCondition({ field: f, op: "contains", value: p.typed.trim() })} style={{ ...item, paddingLeft: 12 }}>
+                    Search <b>{l}</b> for: <span style={{ color: "#185FA5" }}>{p.typed.trim()}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+                <div style={{ borderRight: "0.5px solid #eef1f5" }}>
+                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#185FA5" }}>▼ FILTERS</div>
+                  {QUICK.map((qf) => {
+                    const on = p.quickActive(qf.cond);
+                    return <button key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
+                  })}
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
+                  <button onClick={p.openCustom} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Add Custom Filter</button>
+                </div>
+                <div style={{ borderRight: "0.5px solid #eef1f5" }}>
+                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#633806" }}>▤ GROUP BY</div>
+                  {groupOpts.map((o) => {
+                    const on = p.groupBy === o.id;
+                    return <button key={o.id} onClick={() => { p.setGroupBy(o.id); }} style={{ ...item, background: on ? "#FBF3E6" : "none", color: on ? "#633806" : "var(--foreground)" }}>{on ? "✓ " : ""}{o.id === "profile" ? "Type" : o.label}</button>;
+                  })}
+                </div>
+                <div>
+                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#7A5AA8" }}>★ FAVORITES</div>
+                  {p.saved.length === 0 && <div style={{ padding: "4px 12px 4px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>None yet.</div>}
+                  {p.saved.map((s) => (
+                    <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
+                      <button onClick={() => p.applySaved(s)} style={{ ...item, flex: 1, paddingRight: 4 }}>★ {s.name}{s.isShared ? <span style={{ color: "var(--muted-foreground)" }}> · shared</span> : null}</button>
+                      {s.mine && <button onClick={() => p.deleteSaved(s.id)} aria-label="Delete saved search" style={{ border: "none", background: "none", color: "#A32D2D", cursor: "pointer", padding: "0 10px" }}>×</button>}
+                    </div>
+                  ))}
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
+                  <button onClick={p.openSave} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Save current search</button>
+                  {p.spec.conditions.length > 0 && <button onClick={() => { p.clearAll(); }} style={{ ...item, color: "#A32D2D", paddingLeft: 12 }}>Clear all filters</button>}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

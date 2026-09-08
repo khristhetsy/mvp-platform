@@ -2,6 +2,8 @@
 // facets endpoint, and the bulk-assign endpoint so "select all matching" targets
 // exactly the rows the list shows. Keep this the single source of truth for filters.
 
+import { applyFilterSpec, type FilterSpec } from "@/lib/sales/contact-filter-spec";
+
 // Questionnaire facets stored as jsonb arrays under raw.__profile.<key>; filtered via
 // jsonb containment (@>). Values within a facet are OR'd; different facets are AND'd.
 export const FACET_KEYS = ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"] as const;
@@ -46,5 +48,14 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
     query = query.or(leadSources.flatMap((v) => [`overrides->>lead_source.eq."${v}"`, `raw->__profile->>leadSource.eq."${v}"`]).join(","));
   }
   query = applyFacetFilters(query, p);
+  // Odoo-style custom filter spec (field·operator·value, any/all) — additive over the
+  // param-based filters above. Marketing Contacts drives everything through this.
+  const specRaw = p.get("filter");
+  if (specRaw) {
+    try {
+      const spec = JSON.parse(specRaw) as FilterSpec;
+      if (spec && Array.isArray(spec.conditions)) query = applyFilterSpec(query, spec);
+    } catch { /* ignore a malformed spec rather than 500 the list */ }
+  }
   return query;
 }
