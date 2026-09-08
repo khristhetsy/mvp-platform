@@ -175,16 +175,16 @@ export function FitFunnelClient() {
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
           <i className="ti ti-building-bank" aria-hidden="true" /> iCFO Capital · Advisory
         </span>
-        <h1 className="mt-3 text-[22px] font-semibold leading-snug text-slate-900">Run this raise through an SPV</h1>
-        <p className="mt-1.5 text-[13px] text-slate-500">One vehicle, one cap table line, one close — scoped to your raise.</p>
+        <h1 className="mt-3 text-[22px] font-semibold leading-snug text-slate-900">Run your raise through an SPV</h1>
+        <p className="mt-1.5 text-[13px] text-slate-500">One vehicle. One cap-table line. One close — scoped to your raise.</p>
 
         <div className="relative mt-6 pl-7">
           <span className="absolute bottom-1.5 left-[11px] top-1.5 w-0.5 bg-gradient-to-b from-indigo-600 to-indigo-200" aria-hidden="true" />
           {[
-            { t: "Form the vehicle", d: "We set up the SPV for this raise" },
-            { t: "Outreach process", d: "To your matched investors" },
-            { t: "They subscribe", d: "Into the SPV" },
-            { t: "Funded", d: "Diligence runs through to close", done: true },
+            { t: "Form the vehicle", d: "We structure the SPV. Due diligence runs in parallel." },
+            { t: "Reach matched investors", d: "The opportunity goes to investors whose stage, sector, and check size fit." },
+            { t: "Investors subscribe", d: "Participation flows directly into the SPV as limited partners." },
+            { t: "Funded", d: "Capital deploys on a rolling basis — first in, first out.", done: true },
           ].map((s, i) => (
             <div key={s.t} className={`relative ${i < 3 ? "mb-5" : ""}`}>
               <span className={`absolute -left-7 top-0 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold text-white ${s.done ? "bg-emerald-600" : "bg-indigo-600"}`}>
