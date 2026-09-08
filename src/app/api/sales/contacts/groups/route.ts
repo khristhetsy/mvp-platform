@@ -13,7 +13,7 @@ function db(): any { return createServiceRoleClient(); }
 // Rows scanned to compute group counts. Sales contacts are in the low tens of
 // thousands; one lightweight select over the filtered set is cheaper than a
 // count query per bucket, and lets every dimension be grouped in memory.
-const SCAN_CAP = 25000;
+const SCAN_CAP = 80000;
 
 // GET /api/sales/contacts/groups?by=<dimension> — group values + counts for the
 // chosen dimension, respecting the active filters. Mirrors the list's filters so
@@ -29,16 +29,23 @@ export async function GET(req: NextRequest): Promise<Response> {
   const scope = await getSalesScope(profile, p.get("viewAs"));
   const contactsOwner = effectiveContactsOwner(scope);
 
-  let query = db().from("crm_contacts").select(AGG_SELECT);
-  if (contactsOwner) query = query.contains("assignee_ids", [contactsOwner]);
-  // Optional role narrowing (Any/Founder/Investor/Advisor) — matches the list's
-  // ?group= so grouping by another dimension can still be scoped to one role.
   const role = p.get("group");
-  if (role && ["founder", "investor", "advisor", "other"].includes(role)) query = query.or(`contact_type.eq.${role},module.eq.${role}`);
-  query = applyContactFilters(query, p).range(0, SCAN_CAP - 1);
-
-  const { data } = await query;
-  const rows = (data ?? []) as LiteRow[];
+  // Discover which bucket VALUES exist. A single capped .range() only returns the
+  // first page (PostgREST row limit), so values that live only in later rows —
+  // e.g. "Fund Manager", carried solely by SEC Form D investors — were never
+  // discovered and their group didn't render. Page through so discovery is complete.
+  const PAGE = 1000;
+  const rows: LiteRow[] = [];
+  for (let from = 0; from < SCAN_CAP; from += PAGE) {
+    let q = db().from("crm_contacts").select(AGG_SELECT);
+    if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
+    if (role && ["founder", "investor", "advisor", "other"].includes(role)) q = q.or(`contact_type.eq.${role},module.eq.${role}`);
+    q = applyContactFilters(q, p).range(from, from + PAGE - 1);
+    const { data, error } = await q;
+    if (error || !data || data.length === 0) break;
+    rows.push(...(data as LiteRow[]));
+    if (data.length < PAGE) break;
+  }
 
   const buckets = bucketRows(rows, by);
 
