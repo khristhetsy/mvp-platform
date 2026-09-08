@@ -125,24 +125,114 @@ function Composer({ accounts }: { accounts: SocialAccount[] }) {
   );
 }
 
-function Queue({ queue }: { queue: QueueItem[] }) {
+type GroupBy = "none" | "department" | "status" | "account";
+
+function Queue({ queue: initial }: { queue: QueueItem[] }) {
+  const [queue, setQueue] = useState<QueueItem[]>(initial);
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [preview, setPreview] = useState<QueueItem | null>(null);
+
+  async function reload() {
+    try { const r = await fetch("/api/admin/social/queue"); if (r.ok) setQueue((await r.json()).queue ?? []); } catch { /* keep */ }
+  }
+  async function act(id: string, action: "edit" | "archive" | "requeue", body?: string) {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/admin/social/queue/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, body }) });
+      if (r.ok) { setEditing(null); await reload(); } else { alert((await r.json()).error ?? "Failed."); }
+    } finally { setBusy(false); }
+  }
+  async function del(id: string) {
+    if (!confirm("Delete this post from the queue?")) return;
+    setBusy(true);
+    try { await fetch(`/api/admin/social/queue/${id}`, { method: "DELETE" }); await reload(); } finally { setBusy(false); }
+  }
+
   if (queue.length === 0) return <p className={`${card} px-4 py-8 text-center text-[13px] text-slate-400`}>Nothing queued. Approved posts appear here per account, then publish on the next 5-minute pass.</p>;
-  return (
-    <ul className={`${card} divide-y divide-slate-100`}>
-      {queue.map((q) => (
-        <li key={q.id} className="px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 flex-1 truncate text-[13px] text-slate-800">{q.body}</span>
-            <span className="flex items-center gap-2 text-[11px] text-slate-400">
-              {q.status === "failed" && q.attempts ? `retry ${q.attempts}/3` : null}
-              <span className={`rounded-full px-2.5 py-0.5 font-medium ${STATUS_STYLE[q.status] ?? "bg-slate-100 text-slate-600"}`}>{q.status}</span>
-            </span>
+
+  const keyOf = (q: QueueItem) => groupBy === "department" ? (q.department ?? "Unassigned")
+    : groupBy === "status" ? q.status
+    : groupBy === "account" ? (q.account_name ?? q.platform ?? "—") : "";
+  const groups = groupBy === "none" ? [["", queue] as [string, QueueItem[]]]
+    : [...queue.reduce((m, q) => { const k = keyOf(q); (m.get(k) ?? m.set(k, []).get(k)!).push(q); return m; }, new Map<string, QueueItem[]>()).entries()];
+
+  const action = (label: string, icon: string, cls: string, onClick: () => void) => (
+    <button type="button" onClick={onClick} disabled={busy} className={`inline-flex items-center gap-1 text-[11.5px] ${cls} disabled:opacity-50`}><i className={`ti ${icon}`} aria-hidden="true" /> {label}</button>
+  );
+
+  function Row({ q }: { q: QueueItem }) {
+    const live = q.status === "published";
+    return (
+      <li className="px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          {editing === q.id ? (
+            <div className="flex-1">
+              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-200 p-2 text-[13px]" />
+              <div className="mt-1.5 flex gap-2">
+                <button type="button" onClick={() => act(q.id, "edit", draft)} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
+                <button type="button" onClick={() => setEditing(null)} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <span className="min-w-0 flex-1 text-[13px] text-slate-800">{q.body}</span>
+          )}
+          <span className="flex flex-shrink-0 items-center gap-2 text-[11px] text-slate-400">
+            {q.status === "failed" && q.attempts ? `retry ${q.attempts}/3` : null}
+            <span className={`rounded-full px-2.5 py-0.5 font-medium ${STATUS_STYLE[q.status] ?? "bg-slate-100 text-slate-600"}`}>{q.status}</span>
+          </span>
+        </div>
+        {q.error ? <p className="mt-1 text-[11px] text-rose-600">{q.error}</p> : null}
+        {editing !== q.id ? (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {action("Preview", "ti-eye", "text-indigo-600 font-medium", () => setPreview(q))}
+            {!live ? action("Edit", "ti-edit", "text-slate-600", () => { setEditing(q.id); setDraft(q.body); }) : null}
+            {(q.status === "failed" || q.status === "skipped") ? action("Requeue", "ti-refresh", "text-slate-600", () => act(q.id, "requeue")) : null}
+            {action("Archive", "ti-archive", "text-slate-600", () => act(q.id, "archive"))}
+            {!live ? action("Delete", "ti-trash", "text-rose-600", () => del(q.id)) : null}
+            {q.url ? <a href={q.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-blue-600"><i className="ti ti-external-link" aria-hidden="true" /> View post</a> : null}
           </div>
-          {q.error ? <p className="mt-1 text-[11px] text-rose-600">{q.error}</p> : null}
-          {q.url ? <a href={q.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-[11px] text-blue-600">View post</a> : null}
-        </li>
+        ) : null}
+      </li>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-[12px] text-slate-500">View by</span>
+        <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
+          <option value="none">None</option>
+          <option value="department">Department</option>
+          <option value="status">Status</option>
+          <option value="account">Account</option>
+        </select>
+      </div>
+      {groups.map(([g, items]) => (
+        <div key={g || "all"} className="mb-3">
+          {g ? <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-semibold text-slate-700"><span className="capitalize">{g}</span><span className="font-normal text-slate-400">{items.length}</span></div> : null}
+          <ul className={`${card} divide-y divide-slate-100`}>{items.map((q) => <Row key={q.id} q={q} />)}</ul>
+        </div>
       ))}
-    </ul>
+
+      {preview ? (
+        <div onClick={() => setPreview(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex items-center gap-2 px-3 py-2.5">
+              <span className={`flex h-9 w-9 items-center justify-center rounded-full text-white ${preview.platform === "facebook" ? "bg-[#1877F2]" : "bg-[#0A66C2]"}`}><i className={`ti ${preview.platform === "facebook" ? "ti-brand-facebook" : "ti-brand-linkedin"}`} aria-hidden="true" /></span>
+              <div><p className="text-[12.5px] font-medium text-slate-900">{preview.account_name ?? "Your account"}</p><p className="text-[10.5px] text-slate-400">{preview.platform === "facebook" ? "Facebook" : "LinkedIn"} · preview</p></div>
+              <button type="button" onClick={() => setPreview(null)} className="ml-auto text-slate-400"><i className="ti ti-x" aria-hidden="true" /></button>
+            </div>
+            <div className="whitespace-pre-wrap px-3 pb-3 text-[13px] leading-relaxed text-slate-800">{preview.body}</div>
+            {preview.comment_text || preview.link_url ? (
+              <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-[11.5px] text-slate-600"><i className="ti ti-message-circle" aria-hidden="true" /> First comment: <span className="text-indigo-600">{preview.comment_text ?? preview.link_url}</span></div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -6,20 +6,34 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 function db(): any { return createServiceRoleClient(); }
 
 export type SocialAccount = { id: string; platform: string; display_name: string | null; status: string; token_expires_at: string | null };
-export type QueueItem = { id: string; status: string; body: string; url: string | null; error: string | null; attempts: number; next_attempt_at: string | null; published_at: string | null };
+export type QueueItem = {
+  id: string; status: string; body: string; comment_text: string | null; url: string | null; error: string | null;
+  attempts: number; next_attempt_at: string | null; published_at: string | null;
+  department: string | null; platform: string | null; account_name: string | null; link_url: string | null;
+};
 
 export async function listSocialAccounts(): Promise<SocialAccount[]> {
   const { data } = await db().from("social_accounts").select("id, platform, display_name, status, token_expires_at").order("created_at", { ascending: false }).limit(50);
   return (data ?? []) as SocialAccount[];
 }
 
-export async function listQueue(limit = 50): Promise<QueueItem[]> {
+export async function listQueue(limit = 200): Promise<QueueItem[]> {
   const { data } = await db()
     .from("social_variants")
-    .select("id, status, body, url, error, attempts, next_attempt_at, published_at")
+    .select("id, status, body, comment_text, url, error, attempts, next_attempt_at, published_at, account:social_accounts(platform, display_name), post:social_posts(department, link_url)")
+    .neq("status", "archived")
     .order("updated_at", { ascending: false })
     .limit(limit);
-  return (data ?? []) as QueueItem[];
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const acc = r.account as { platform?: string; display_name?: string } | null;
+    const post = r.post as { department?: string | null; link_url?: string | null } | null;
+    return {
+      id: String(r.id), status: String(r.status), body: String(r.body ?? ""), comment_text: (r.comment_text as string) ?? null,
+      url: (r.url as string) ?? null, error: (r.error as string) ?? null, attempts: (r.attempts as number) ?? 0,
+      next_attempt_at: (r.next_attempt_at as string) ?? null, published_at: (r.published_at as string) ?? null,
+      department: post?.department ?? null, platform: acc?.platform ?? null, account_name: acc?.display_name ?? null, link_url: post?.link_url ?? null,
+    };
+  });
 }
 
 export type SocialSettings = { approve_before_publish: boolean; rewrite_per_account: boolean; skip_empty_slot: boolean; auto_publish: boolean; rotation: string[] };
