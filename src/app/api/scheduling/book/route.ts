@@ -15,6 +15,7 @@ const schema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().email(),
   phone: z.string().max(40).optional(),
+  company: z.string().max(200).optional(),
   note: z.string().max(2000).nullish(),
   answers: z.array(z.object({ label: z.string().max(300), value: z.string().max(1000) })).max(20).optional(),
   // Present when the booking came from the /fit funnel — triggers the Sales Hub handoff.
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     const result = await bookSlot({
       hostId: parsed.data.hostId,
-      booker: { id: null, email: parsed.data.email, name: parsed.data.name, phone: parsed.data.phone ?? null },
+      booker: { id: null, email: parsed.data.email, name: parsed.data.name, phone: parsed.data.phone ?? null, company: parsed.data.company ?? null },
       startTime: parsed.data.startTime,
       endTime: parsed.data.endTime,
       timezone: parsed.data.timezone,

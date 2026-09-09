@@ -11,7 +11,7 @@ import type { CalendarEventRecord, TimeInterval } from "./types";
 export interface BookSlotInput {
   hostId: string;
   /** id is null for guest bookers (no iCapOS account). */
-  booker: { id: string | null; email: string | null; name: string | null; phone?: string | null };
+  booker: { id: string | null; email: string | null; name: string | null; phone?: string | null; company?: string | null };
   startTime: string;
   endTime: string;
   timezone: string;
@@ -121,18 +121,24 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
   // contact timeline. All best-effort: a failure here must never fail the booking.
   try {
     const answers = (input.answers ?? []).filter((a) => a.value);
+    const company = input.booker.company?.trim() || null;
     let contactCrmId: string | null = null;
     if (input.booker.email) {
-      const { data } = await admin.from("crm_contacts").select("id, overrides").ilike("email", input.booker.email).maybeSingle();
-      const contact = data as { id: string; overrides: Record<string, unknown> | null } | null;
+      const { data } = await admin.from("crm_contacts").select("id, overrides, company").ilike("email", input.booker.email).maybeSingle();
+      const contact = data as { id: string; overrides: Record<string, unknown> | null; company: string | null } | null;
       contactCrmId = contact?.id ?? null;
-      // "How did you hear about us?" → fill lead source when it's blank.
-      const heard = answers.find((a) => /how did you hear|hear about/i.test(a.label))?.value;
-      if (contactCrmId && heard) {
-        const overrides = contact?.overrides ?? {};
-        if (!overrides.lead_source) {
+      // Best-effort enrichment of the linked contact: fill lead source from "how did
+      // you hear", and Company from the booking — only when each is currently blank.
+      if (contactCrmId) {
+        const overrides = { ...(contact?.overrides ?? {}) };
+        let changed = false;
+        const heard = answers.find((a) => /how did you hear|hear about/i.test(a.label))?.value;
+        if (heard && !overrides.lead_source) { overrides.lead_source = heard; changed = true; }
+        const existingCompany = (overrides.company as string | undefined) || contact?.company || "";
+        if (company && !existingCompany.trim()) { overrides.company = company; changed = true; }
+        if (changed) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (admin.from("crm_contacts") as any).update({ overrides: { ...overrides, lead_source: heard } }).eq("id", contactCrmId);
+          await (admin.from("crm_contacts") as any).update({ overrides }).eq("id", contactCrmId);
         }
       }
     }
@@ -140,6 +146,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     await createBooking({
       host_id: input.hostId, event_id: hostEvent.id, event_type: title,
       booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: input.booker.phone ?? null,
+      booker_company: company,
       contact_crm_id: contactCrmId,
       start_time: input.startTime, end_time: input.endTime, timezone: input.timezone,
       meet_url: hostEvent.meet_url, note: input.note ?? null, answers,

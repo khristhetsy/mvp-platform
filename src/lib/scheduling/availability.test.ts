@@ -7,6 +7,7 @@ import {
   offsetMinutesForTimeZone,
 } from "./availability";
 import type { AvailabilityConfig } from "./types";
+import { DEFAULT_CONTACT_FIELDS } from "./types";
 
 const utcConfig = (rules: AvailabilityConfig["weeklyRules"]): AvailabilityConfig => ({
   weeklyRules: rules,
@@ -107,7 +108,7 @@ describe("availableSlots (end-to-end)", () => {
 });
 
 describe("configFromSettings", () => {
-  const base = { timezone: "UTC", slotMinutes: 45, slotDurations: [30, 45, 60], bufferMinutes: 10, weeklyRules: [], meetingTitle: "", questions: [] };
+  const base = { timezone: "UTC", slotMinutes: 45, slotDurations: [30, 45, 60], bufferMinutes: 10, weeklyRules: [], meetingTitle: "", questions: [], contactFields: DEFAULT_CONTACT_FIELDS };
 
   it("carries through settings and resolves the offset", () => {
     const cfg = configFromSettings(base, new Date("2026-06-22T12:00:00Z"));

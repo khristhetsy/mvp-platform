@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { loadAvailability, saveAvailability } from "@/lib/scheduling/store";
+import { DEFAULT_CONTACT_FIELDS } from "@/lib/scheduling/types";
 
 export async function GET(): Promise<Response> {
   const auth = await requireApiProfile();
@@ -24,6 +25,15 @@ const questionSchema = z.object({
   required: z.boolean().default(false),
 });
 
+const stdFieldSchema = z.object({ label: z.string().min(1).max(60), required: z.boolean() });
+const optFieldSchema = z.object({ label: z.string().min(1).max(60), collect: z.boolean(), required: z.boolean() });
+const contactFieldsSchema = z.object({
+  name: stdFieldSchema,
+  email: stdFieldSchema,
+  phone: optFieldSchema,
+  company: optFieldSchema,
+});
+
 const putSchema = z.object({
   timezone: z.string().min(1).max(64),
   // Legacy single length — optional; superseded by slotDurations.
@@ -33,6 +43,7 @@ const putSchema = z.object({
   weeklyRules: z.array(ruleSchema).max(50),
   meetingTitle: z.string().max(120).default(""),
   questions: z.array(questionSchema).max(20).default([]),
+  contactFields: contactFieldsSchema.optional(),
 });
 
 export async function PUT(req: NextRequest): Promise<Response> {
@@ -52,6 +63,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
       ...parsed.data,
       slotDurations: parsed.data.slotDurations,
       slotMinutes: parsed.data.slotMinutes ?? parsed.data.slotDurations[0],
+      contactFields: parsed.data.contactFields ?? DEFAULT_CONTACT_FIELDS,
     });
     return NextResponse.json({ settings });
   } catch (err) {

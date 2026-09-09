@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Clock, Video, Check, Globe, ChevronLeft, ChevronRight } from "lucide-react";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
-import type { TimeInterval, ScheduleQuestion } from "@/lib/scheduling/types";
+import type { TimeInterval, ScheduleQuestion, ContactFieldConfig } from "@/lib/scheduling/types";
+import { DEFAULT_CONTACT_FIELDS } from "@/lib/scheduling/types";
 
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -32,6 +33,7 @@ export function BookingClient({
   meetingTitle,
   slotDurations,
   questions = [],
+  contactFields = DEFAULT_CONTACT_FIELDS,
   viewerName,
   viewerEmail,
 }: {
@@ -40,10 +42,12 @@ export function BookingClient({
   meetingTitle?: string;
   slotDurations?: number[];
   questions?: ScheduleQuestion[];
+  contactFields?: ContactFieldConfig;
   viewerName?: string | null;
   viewerEmail?: string | null;
 }) {
   const durations = slotDurations && slotDurations.length > 0 ? slotDurations : [30];
+  const cf = contactFields;
   const t = useTranslations("sharedCmp");
   const title = meetingTitle?.trim() || `Meeting with ${hostName}`;
   const [firstSeed, lastSeed] = (() => {
@@ -65,6 +69,7 @@ export function BookingClient({
   const [lastName, setLastName] = useState(lastSeed);
   const [email, setEmail] = useState(viewerEmail ?? "");
   const [phone, setPhone] = useState("");
+  const [company, setCompany] = useState("");
   const [note, setNote] = useState("");
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
 
@@ -125,6 +130,8 @@ export function BookingClient({
   const book = useCallback(async () => {
     if (!pending) return;
     if (!firstName.trim() || !email.trim()) { setError("Name and email are required."); return; }
+    if (cf.phone.collect && cf.phone.required && !phone.trim()) { setError(`${cf.phone.label} is required.`); return; }
+    if (cf.company.collect && cf.company.required && !company.trim()) { setError(`${cf.company.label} is required.`); return; }
     for (const q of questions) {
       if (!q.required) continue;
       const v = answers[q.id];
@@ -152,6 +159,7 @@ export function BookingClient({
           name: `${firstName} ${lastName}`.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,
+          company: company.trim() || undefined,
           note: note.trim() || undefined,
           answers: answerPayload,
         }),
@@ -169,7 +177,7 @@ export function BookingClient({
     } finally {
       setBooking(false);
     }
-  }, [hostId, pending, firstName, lastName, email, phone, note, questions, answers, load]);
+  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, load]);
 
   if (confirmed) {
     return (
@@ -270,12 +278,21 @@ export function BookingClient({
               ) : (
                 <div>
                   <p className="mb-2 text-xs font-semibold text-slate-700">{t("enter_details")}</p>
+                  <p className="mb-1 text-xs font-medium text-slate-800">{cf.name.label}{cf.name.required ? <span className="text-red-500"> *</span> : null}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("first_name")} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
                     <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t("last_name")} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
                   </div>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_2")} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("phone_optional")} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  <p className="mt-2 mb-1 text-xs font-medium text-slate-800">{cf.email.label}{cf.email.required ? <span className="text-red-500"> *</span> : null}</p>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_2")} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  {cf.phone.collect ? (<>
+                    <p className="mt-2 mb-1 text-xs font-medium text-slate-800">{cf.phone.label}{cf.phone.required ? <span className="text-red-500"> *</span> : null}</p>
+                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={cf.phone.label} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  </>) : null}
+                  {cf.company.collect ? (<>
+                    <p className="mt-2 mb-1 text-xs font-medium text-slate-800">{cf.company.label}{cf.company.required ? <span className="text-red-500"> *</span> : null}</p>
+                    <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={cf.company.label} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  </>) : null}
 
                   {questions.map((q) => (
                     <div key={q.id} className="mt-3 border-t border-slate-100 pt-3">

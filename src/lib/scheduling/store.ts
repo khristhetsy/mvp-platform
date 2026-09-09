@@ -5,8 +5,8 @@ import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-toke
 import { getGoogleBusyIntervals } from "@/lib/integrations/google-freebusy";
 import { listEvents } from "@/lib/calendar/events";
 import { availableSlots, configFromSettings } from "./availability";
-import { DEFAULT_AVAILABILITY } from "./types";
-import type { AvailabilitySettings, TimeInterval, WeeklyRule } from "./types";
+import { DEFAULT_AVAILABILITY, DEFAULT_CONTACT_FIELDS, resolveContactFields } from "./types";
+import type { AvailabilitySettings, ContactFieldConfig, TimeInterval, WeeklyRule } from "./types";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
@@ -20,7 +20,9 @@ type AvailabilityRow = {
   weekly_rules: WeeklyRule[] | null;
   meeting_title: string | null;
   questions: AvailabilitySettings["questions"] | null;
+  contact_fields: Partial<ContactFieldConfig> | null;
 };
+
 
 /** Sanitize/sort the offered durations; fall back to the legacy single length. */
 function resolveDurations(row: AvailabilityRow): number[] {
@@ -41,6 +43,7 @@ function rowToSettings(row: AvailabilityRow | null): AvailabilitySettings {
     weeklyRules: Array.isArray(row.weekly_rules) ? row.weekly_rules : DEFAULT_AVAILABILITY.weeklyRules,
     meetingTitle: row.meeting_title ?? "",
     questions: Array.isArray(row.questions) ? row.questions : [],
+    contactFields: resolveContactFields(row.contact_fields),
   };
 }
 
@@ -50,7 +53,7 @@ export async function loadAvailability(
 ): Promise<AvailabilitySettings> {
   const { data } = await raw(supabase)
     .from("scheduling_availability")
-    .select("timezone, slot_minutes, slot_durations, buffer_minutes, weekly_rules, meeting_title, questions")
+    .select("timezone, slot_minutes, slot_durations, buffer_minutes, weekly_rules, meeting_title, questions, contact_fields")
     .eq("profile_id", profileId)
     .maybeSingle();
   return rowToSettings(data as AvailabilityRow | null);
@@ -78,6 +81,7 @@ export async function saveAvailability(
         weekly_rules: settings.weeklyRules,
         meeting_title: settings.meetingTitle,
         questions: settings.questions,
+        contact_fields: settings.contactFields ?? DEFAULT_CONTACT_FIELDS,
         updated_at: now,
       },
       { onConflict: "profile_id" },

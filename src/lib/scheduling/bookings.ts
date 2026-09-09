@@ -18,6 +18,7 @@ export type Booking = {
   booker_name: string | null;
   booker_email: string | null;
   booker_phone: string | null;
+  booker_company: string | null;
   contact_crm_id: string | null;
   start_time: string;
   end_time: string;
@@ -42,6 +43,7 @@ export async function createBooking(input: CreateBookingInput): Promise<string |
     booker_name: input.booker_name,
     booker_email: input.booker_email,
     booker_phone: input.booker_phone,
+    booker_company: input.booker_company ?? null,
     contact_crm_id: input.contact_crm_id,
     start_time: input.start_time,
     end_time: input.end_time,
@@ -61,6 +63,7 @@ function mapRow(r: Record<string, unknown>): Booking {
     id: String(r.id), host_id: (r.host_id as string) ?? null, host_name: host?.full_name ?? host?.email ?? null, host_email: host?.email ?? null,
     event_id: (r.event_id as string) ?? null, event_type: (r.event_type as string) ?? null,
     booker_name: (r.booker_name as string) ?? null, booker_email: (r.booker_email as string) ?? null, booker_phone: (r.booker_phone as string) ?? null,
+    booker_company: (r.booker_company as string) ?? null,
     contact_crm_id: (r.contact_crm_id as string) ?? null,
     start_time: String(r.start_time), end_time: String(r.end_time), timezone: (r.timezone as string) ?? null,
     meet_url: (r.meet_url as string) ?? null, note: (r.note as string) ?? null,
@@ -69,7 +72,7 @@ function mapRow(r: Record<string, unknown>): Booking {
   };
 }
 
-const SELECT = "id, host_id, event_id, event_type, booker_name, booker_email, booker_phone, contact_crm_id, start_time, end_time, timezone, meet_url, note, answers, status, created_at, host:profiles!scheduling_bookings_host_id_fkey(full_name, email)";
+const SELECT = "id, host_id, event_id, event_type, booker_name, booker_email, booker_phone, booker_company, contact_crm_id, start_time, end_time, timezone, meet_url, note, answers, status, created_at, host:profiles!scheduling_bookings_host_id_fkey(full_name, email)";
 
 export async function listBookings(opts: { hostId?: string; limit?: number } = {}): Promise<Booking[]> {
   let q = db().from("scheduling_bookings").select(SELECT).order("start_time", { ascending: false }).limit(opts.limit ?? 200);

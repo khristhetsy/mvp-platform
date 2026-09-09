@@ -46,7 +46,7 @@ export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
   const filtered = useMemo(() => {
     const n = q.trim().toLowerCase();
     if (!n) return bookings;
-    return bookings.filter((b) => `${b.booker_name ?? ""} ${b.booker_email ?? ""} ${b.event_type ?? ""}`.toLowerCase().includes(n));
+    return bookings.filter((b) => `${b.booker_name ?? ""} ${b.booker_email ?? ""} ${b.booker_company ?? ""} ${b.event_type ?? ""}`.toLowerCase().includes(n));
   }, [bookings, q]);
 
   const selected = bookings.find((b) => b.id === selectedId) ?? null;
@@ -152,7 +152,7 @@ function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) =
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#EEF2FF", color: "#4338CA", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 14, flexShrink: 0 }}>{initials(b.booker_name, b.booker_email)}</div>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{b.booker_name ?? "Invitee"}</p>
+            <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{b.booker_name ?? "Invitee"}{b.booker_company ? <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> · {b.booker_company}</span> : null}</p>
             <p style={{ fontSize: 11.5, color: "#185FA5", margin: "1px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[b.booker_email, b.booker_phone].filter(Boolean).join(" · ") || "—"}</p>
             {b.timezone ? <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "1px 0 0" }}>{b.timezone}</p> : null}
           </div>

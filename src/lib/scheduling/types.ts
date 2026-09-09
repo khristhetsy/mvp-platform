@@ -23,6 +23,36 @@ export interface ScheduleQuestion {
   required: boolean;
 }
 
+/** Per-field config for the standard invitee contact fields on the booking form. */
+export interface ContactFieldConfig {
+  /** Name + Email are always collected (email is needed for the invite); only their
+   *  label and required flag are configurable. Phone + Company can be turned off. */
+  name: { label: string; required: boolean };
+  email: { label: string; required: boolean };
+  phone: { label: string; collect: boolean; required: boolean };
+  company: { label: string; collect: boolean; required: boolean };
+}
+
+export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig = {
+  name: { label: "Full name", required: true },
+  email: { label: "Email", required: true },
+  phone: { label: "Phone", collect: true, required: false },
+  company: { label: "Company", collect: false, required: false },
+};
+
+/** Merge a stored (possibly partial/null) contact-fields config over the defaults,
+ *  so a missing column or a newly-added sub-key always resolves to a safe value. */
+export function resolveContactFields(raw: Partial<ContactFieldConfig> | null | undefined): ContactFieldConfig {
+  const d = DEFAULT_CONTACT_FIELDS;
+  const r = raw ?? {};
+  return {
+    name: { label: r.name?.label ?? d.name.label, required: r.name?.required ?? d.name.required },
+    email: { label: r.email?.label ?? d.email.label, required: r.email?.required ?? d.email.required },
+    phone: { label: r.phone?.label ?? d.phone.label, collect: r.phone?.collect ?? d.phone.collect, required: r.phone?.required ?? d.phone.required },
+    company: { label: r.company?.label ?? d.company.label, collect: r.company?.collect ?? d.company.collect, required: r.company?.required ?? d.company.required },
+  };
+}
+
 /** A user's saved scheduling preferences. */
 export interface AvailabilitySettings {
   timezone: string;
@@ -36,6 +66,8 @@ export interface AvailabilitySettings {
   meetingTitle: string;
   /** Custom intake questions shown on the booking form. */
   questions: ScheduleQuestion[];
+  /** Standard invitee contact fields (labels, collect, required). */
+  contactFields: ContactFieldConfig;
 }
 
 /** Engine config: settings resolved to a concrete UTC offset for the range. */
@@ -75,6 +107,7 @@ export const DEFAULT_AVAILABILITY: AvailabilitySettings = {
   bufferMinutes: 0,
   meetingTitle: "",
   questions: [],
+  contactFields: DEFAULT_CONTACT_FIELDS,
   // Mon–Fri, 9:00–17:00 local.
   weeklyRules: [1, 2, 3, 4, 5].map((weekday) => ({
     weekday,

@@ -32,6 +32,7 @@ export default async function BookingPage({ params }: Props) {
         meetingTitle={availability.meetingTitle}
         slotDurations={availability.slotDurations}
         questions={availability.questions}
+        contactFields={availability.contactFields}
         viewerName={viewer?.full_name ?? null}
         viewerEmail={viewer?.email ?? null}
       />
