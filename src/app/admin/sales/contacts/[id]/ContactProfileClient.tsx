@@ -329,9 +329,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [prefOrig, setPrefOrig] = useState<Record<string, string>>(seedPrefs);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
-  // Left pane always shows the profile fields; this drives the RIGHT chatter pane
-  // (Send message / Note Log / Tasks). Default to the message composer.
-  const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog" | "tasks">("sendmsg");
+  const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog" | "tasks">("profile");
   // ── Send message: a real email composer (same engine as mass-email) ──────────
   type MailTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
   const [mailTemplates, setMailTemplates] = useState<MailTemplate[]>([]);
@@ -862,12 +860,18 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               ) : null;
               return (
               <div style={{ gridColumn: "1 / -1" }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
-                  {/* LEFT pane — the record's profile fields, always visible. Wide: sits
-                      beside the chatter; narrow: chatter wraps below it. */}
-                  <div style={{ flex: "2 1 340px", minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, minHeight: 18, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "#4338CA" }}>{profile.title}</span>
+                <div>
+                  {/* Founder/Investor Profile · Note Log · Activity strip */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
+                    {([["sendmsg", "Send message"], ["profile", profile.title]] as const).map(([k, label]) => (
+                      <button key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
+                    ))}
+                    <button onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
+                    <button onClick={() => setProfileSub("notelog")} style={{ background: "none", border: "none", borderBottom: profileSub === "notelog" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "notelog" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "notelog" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Note Log</button>
+                    <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
+                  </div>
+                  {profileSub === "profile" && (<>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 4, minHeight: 18 }}>
                     <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
                       <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
                     </span>
@@ -902,7 +906,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             );
                           })()
                         ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2px 28px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: RESP_COLS, gap: "2px 28px" }}>
                           {sec.title.toLowerCase().includes("information") && (
                             <>
                               {/* Contact / lead / address rows live in the top block above — not repeated here. */}
@@ -980,16 +984,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       </div>
                     );
                   })()}
-                  </div>
-                  {/* RIGHT pane — chatter (Send message / Note Log / Tasks / Activity).
-                      Wide: sits to the right of the fields; narrow: wraps below. */}
-                  <div style={{ flex: "1 1 300px", minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
-                    <button onClick={() => setProfileSub("sendmsg")} style={{ background: "none", border: "none", borderBottom: profileSub === "sendmsg" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "sendmsg" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "sendmsg" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Send message</button>
-                    <button onClick={() => setProfileSub("notelog")} style={{ background: "none", border: "none", borderBottom: profileSub === "notelog" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "notelog" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "notelog" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Note Log</button>
-                    <button onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
-                    <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
-                  </div>
+                  </>)}
                   {profileSub === "tasks" && (
                     <div style={{ paddingTop: 4 }}>
                       <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks auto-link to {contact.name}.</div>
@@ -1003,8 +998,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         </div>
                       </div>
 
-                      <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflowX: "auto" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, minWidth: 452, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
+                      <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
                           <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
                         </div>
                         {!tasksLoaded ? (
@@ -1025,7 +1020,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             );
                           }
                           return (
-                            <div key={ct.id} style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, minWidth: 452, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
+                            <div key={ct.id} style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
                               <span style={{ textDecoration: cdone ? "line-through" : "none", color: cdone ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.title}</span>
                               <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{ct.task_type}</span>
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{ct.due_date ? ct.due_date.slice(5) : "—"}</span>
@@ -1113,7 +1108,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     </div>
                   )}
                   {profileSub === "notelog" && (() => { const odooNotes = odooMessages.filter((m) => m.isNote && m.body); return (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, paddingTop: 4 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
                         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 56, resize: "vertical" }} />
@@ -1142,7 +1137,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       </div>
                     </div>
                   ); })()}
-                  </div>
                 </div>
               </div>
               );
