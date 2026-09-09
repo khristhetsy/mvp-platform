@@ -93,6 +93,13 @@ export async function updateBookingStatus(id: string, status: BookingStatus): Pr
   return data ? mapRow(data as Record<string, unknown>) : null;
 }
 
+/** Set a booking's internal note (Calendly-style private meeting notes). */
+export async function updateBookingNote(id: string, note: string | null): Promise<Booking | null> {
+  const { data, error } = await db().from("scheduling_bookings").update({ note }).eq("id", id).select(SELECT).maybeSingle();
+  if (error) return null;
+  return data ? mapRow(data as Record<string, unknown>) : null;
+}
+
 export async function listContactBookings(contactCrmId: string): Promise<Booking[]> {
   const { data } = await db().from("scheduling_bookings").select(SELECT).eq("contact_crm_id", contactCrmId).order("start_time", { ascending: false }).limit(50);
   return ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);

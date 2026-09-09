@@ -8,25 +8,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getBooking, updateBookingStatus, BOOKING_STATUSES } from "@/lib/scheduling/bookings";
+import { getBooking, updateBookingStatus, updateBookingNote, BOOKING_STATUSES } from "@/lib/scheduling/bookings";
 import { cancelEvent } from "@/lib/calendar/events";
 import { sendBookingCancellation } from "@/lib/scheduling/notify";
 import { logActivity } from "@/lib/sales/activity";
 
 export const dynamic = "force-dynamic";
 
-const patchSchema = z.object({ status: z.enum(BOOKING_STATUSES) });
+const patchSchema = z.object({
+  status: z.enum(BOOKING_STATUSES).optional(),
+  note: z.string().max(4000).nullable().optional(),
+}).refine((d) => d.status !== undefined || d.note !== undefined, { message: "Nothing to update." });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid status." }, { status: 400 });
-  const { status } = parsed.data;
+  if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  const { status, note } = parsed.data;
 
   const before = await getBooking(id);
   if (!before) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+
+  // Note-only update (private meeting notes) — no calendar/email side effects.
+  if (status === undefined) {
+    const noted = await updateBookingNote(id, note ?? null);
+    if (!noted) return NextResponse.json({ error: "Couldn’t save the note." }, { status: 500 });
+    return NextResponse.json({ ok: true, booking: noted });
+  }
 
   const updated = await updateBookingStatus(id, status);
   if (!updated) return NextResponse.json({ error: "Couldn’t update the booking." }, { status: 500 });

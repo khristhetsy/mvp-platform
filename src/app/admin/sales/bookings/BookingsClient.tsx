@@ -100,12 +100,28 @@ function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) =
   const [msg, setMsg] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
+  const [noteVal, setNoteVal] = useState(b.note ?? "");
+  const [noteEditing, setNoteEditing] = useState(false);
+  const [noteBusy, setNoteBusy] = useState(false);
 
   const st = STATUS[b.status] ?? STATUS.confirmed;
   const { day, time } = fmtRange(b.start_time, b.end_time, b.timezone);
   const mins = Math.round((new Date(b.end_time).getTime() - new Date(b.start_time).getTime()) / 60000);
   const lbl = { fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".04em", color: "var(--muted-foreground)", margin: "0 0 3px" };
   const isConfirmed = b.status === "confirmed";
+  // Calendly shows both sides' clocks: the booking timezone + the viewer's own.
+  const localTz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null;
+  const showLocal = !!(b.timezone && localTz && b.timezone !== localTz);
+  const localTime = showLocal ? fmtRange(b.start_time, b.end_time, localTz).time : null;
+
+  async function saveNote() {
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`/api/scheduling/bookings/${b.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: noteVal.trim() || null }) });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.booking) { onUpdated(j.booking as Booking); setNoteEditing(false); }
+    } finally { setNoteBusy(false); }
+  }
 
   async function setStatus(status: "completed" | "cancelled" | "no_show" | "confirmed") {
     setBusy(true); setMsg(null); setConfirmCancel(false);
@@ -149,8 +165,9 @@ function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) =
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div style={{ background: "var(--muted)", borderRadius: 10, padding: "10px 12px" }}>
             <p style={lbl}><i className="ti ti-calendar" aria-hidden="true" /> When</p>
-            <p style={{ fontSize: 12.5, fontWeight: 500, margin: 0 }}>{day}</p>
-            <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "2px 0 0" }}>{time} · {mins} min</p>
+            <p style={{ fontSize: 12.5, fontWeight: 500, margin: 0 }}>{day} · {mins} min</p>
+            <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "2px 0 0" }}>{time}{showLocal ? " · booking time" : ""}</p>
+            {showLocal ? <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "1px 0 0" }}>{localTime} · your time</p> : null}
             <a href={gcalUrl(b)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 6, fontSize: 10.5, color: "#185FA5", textDecoration: "none" }}><i className="ti ti-calendar-plus" aria-hidden="true" /> Add to calendar</a>
           </div>
           <div style={{ background: "var(--muted)", borderRadius: 10, padding: "10px 12px" }}>
@@ -180,9 +197,21 @@ function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) =
           </div>
         ) : null}
 
-        {b.note ? (
-          <div><p style={lbl}>Note</p><p style={{ fontSize: 12, color: "var(--foreground)", margin: 0, whiteSpace: "pre-wrap" }}>{b.note}</p></div>
-        ) : null}
+        {/* Meeting notes — private, editable */}
+        <div>
+          <p style={lbl}>Meeting notes</p>
+          {noteEditing ? (
+            <div>
+              <textarea value={noteVal} onChange={(e) => setNoteVal(e.target.value)} rows={3} placeholder="Add a private note about this meeting…" style={{ width: "100%", boxSizing: "border-box", fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 7, padding: "6px 8px", resize: "vertical", lineHeight: 1.5 }} />
+              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                <button onClick={saveNote} disabled={noteBusy} style={{ fontSize: 11, fontWeight: 500, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "5px 12px", cursor: noteBusy ? "not-allowed" : "pointer", opacity: noteBusy ? 0.5 : 1 }}>Save note</button>
+                <button onClick={() => { setNoteVal(b.note ?? ""); setNoteEditing(false); }} disabled={noteBusy} style={{ fontSize: 11, color: "var(--foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <p onClick={() => setNoteEditing(true)} title="Click to edit" style={{ fontSize: 12, margin: 0, whiteSpace: "pre-wrap", cursor: "pointer", color: b.note ? "var(--foreground)" : "var(--muted-foreground)", fontStyle: b.note ? "normal" : "italic" }}>{b.note || "Add a private note about this meeting…"}</p>
+          )}
+        </div>
 
         {/* Activity */}
         <div>
