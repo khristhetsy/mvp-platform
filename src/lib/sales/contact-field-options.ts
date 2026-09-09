@@ -10,8 +10,20 @@
 // canonical label — still resolves to its options.
 
 import { ALL_SCHEMA_FIELDS } from "@/lib/sales/contact-profile-sections";
+import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 
 export type FieldOptions = Record<string, string[]>;
+
+/**
+ * Run the Industries option list through the canonical taxonomy so the picker
+ * shows clean values: stray Odoo number-ids dropped, Business Service(s)/biote/
+ * Hospitality/etc. merged, sorted with "Other" last. Read-time only — stored
+ * contact values are untouched. Returns a NEW object; other fields pass through.
+ */
+export function canonicalizeIndustryOptions(options: FieldOptions): FieldOptions {
+  if (!options.Industries) return options;
+  return { ...options, Industries: sortSectors(canonicalizeIndustries(options.Industries)) };
+}
 
 function norm(s: string): string {
   return s.trim().toLowerCase();
@@ -109,7 +121,7 @@ export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptio
     }
     if (union.size && !out[f.odoo]) out[f.odoo] = sort(union);
   }
-  return out;
+  return canonicalizeIndustryOptions(out);
 }
 
 const PAGE = 1000;

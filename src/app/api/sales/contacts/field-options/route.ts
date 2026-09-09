@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { getContactFieldOptions, type FieldOptions } from "@/lib/sales/contact-field-options";
+import { getContactFieldOptions, canonicalizeIndustryOptions, type FieldOptions } from "@/lib/sales/contact-field-options";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +24,17 @@ export async function GET(): Promise<Response> {
     const { data: row } = await db.from("crm_facet_cache").select("data, updated_at").eq("id", "field_options").maybeSingle();
     const cached = (row?.data ?? null) as FieldOptions | null;
     const fresh = row?.updated_at ? Date.now() - new Date(row.updated_at).getTime() < TTL_MS : false;
-    if (fresh && hasValues(cached)) return NextResponse.json({ options: cached });
+    // Canonicalize Industries on read too — a cache row written before the taxonomy
+    // fix still holds stray number-ids; strip them on the way out so the picker is
+    // clean immediately, without waiting for the daily recompute.
+    if (fresh && hasValues(cached)) return NextResponse.json({ options: canonicalizeIndustryOptions(cached as FieldOptions) });
 
     const options = await getContactFieldOptions(db, true);
     if (hasValues(options)) {
       await db.from("crm_facet_cache").upsert({ id: "field_options", data: options, updated_at: new Date().toISOString() }, { onConflict: "id" });
       return NextResponse.json({ options });
     }
-    return NextResponse.json({ options: hasValues(cached) ? cached : {} });
+    return NextResponse.json({ options: hasValues(cached) ? canonicalizeIndustryOptions(cached as FieldOptions) : {} });
   } catch {
     return NextResponse.json({ options: {} });
   }

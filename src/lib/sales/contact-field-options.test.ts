@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateExactLabels, buildFieldOptions } from "./contact-field-options";
+import { aggregateExactLabels, buildFieldOptions, canonicalizeIndustryOptions } from "./contact-field-options";
 
 describe("buildFieldOptions — case-only dedupe", () => {
   it("collapses case-variant duplicates to one canonical spelling", () => {
@@ -32,5 +32,27 @@ describe("buildFieldOptions — case-only dedupe", () => {
     const rows = [{ extra: { "Entrepreneur funding stage?": ["Seed", "Series A"] } }];
     const opts = buildFieldOptions(aggregateExactLabels(rows));
     expect(opts["Entrepreneur funding stage?"]).toEqual(["Seed", "Series A"]);
+  });
+});
+
+describe("canonicalizeIndustryOptions — Industries picker cleanup", () => {
+  it("drops stray Odoo number-ids and merges variants", () => {
+    const out = canonicalizeIndustryOptions({
+      Industries: ["20", "29", "3", "30", "33", "41", "42", "7", "9", "Business Service", "business services", "hospitality", "SaaS", "Other"],
+    });
+    // No pure-number ids survive.
+    expect(out.Industries.filter((v) => /^\d+$/.test(v))).toEqual([]);
+    // Business Service(s) collapse to one canonical label.
+    expect(out.Industries.filter((v) => v === "Business Services")).toEqual(["Business Services"]);
+    // Hospitality canon-cased, present once.
+    expect(out.Industries).toContain("Hospitality");
+    expect(out.Industries).toContain("SaaS");
+    // "Other" sorts last.
+    expect(out.Industries[out.Industries.length - 1]).toBe("Other");
+  });
+
+  it("leaves other fields untouched and returns the same object when no Industries key", () => {
+    const input = { "Entrepreneur funding stage?": ["Seed"] };
+    expect(canonicalizeIndustryOptions(input)).toBe(input);
   });
 });
