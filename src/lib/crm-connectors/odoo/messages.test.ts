@@ -50,4 +50,23 @@ describe("fetchPartnerMessages — note vs message classification", () => {
     expect(rows).toEqual([]);
     expect(executeKw).not.toHaveBeenCalled();
   });
+
+  it("falls back to the partner's message_ids when the record search is empty", async () => {
+    executeKw
+      // 1) mail.message search_read on the record → empty
+      .mockResolvedValueOnce([])
+      // 2) res.partner read message_ids
+      .mockResolvedValueOnce([{ message_ids: [11, 12] }])
+      // 3) mail.message read those ids
+      .mockResolvedValueOnce([
+        { id: 12, date: "2026-08-29 12:43:00", subject: false, body: "<p>Fallback message</p>", message_type: "notification", author_id: [5, "Jessica Santos"], subtype_id: [2, "Discussions"] },
+        { id: 11, date: "2026-08-28 09:00:00", subject: false, body: "<p>Older note</p>", message_type: "comment", author_id: [5, "Jessica Santos"], subtype_id: [1, "Note"] },
+      ]);
+
+    const rows = await fetchPartnerMessages("184293", 80);
+    expect(rows.map((r) => r.id)).toEqual([12, 11]); // newest first
+    expect(rows[0].isNote).toBe(false);
+    expect(rows[1].isNote).toBe(true);
+    expect(rows[0].body).toBe("Fallback message");
+  });
 });

@@ -1038,13 +1038,16 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       {/* Unified history: emails sent from iCapOS + messages imported from Odoo */}
                       <div style={{ marginTop: 16 }}>
                         {(() => {
-                          type H = { key: string; source: "icapos" | "odoo"; author: string; date: string; subject: string; body: string };
+                          type H = { key: string; source: "icapos" | "odoo" | "odoo-note"; author: string; date: string; subject: string; body: string };
                           const hist: H[] = [
                             ...sentMail.map((s) => ({ key: s.id, source: "icapos" as const, author: s.author, date: s.date, subject: s.subject, body: s.body })),
                             ...acts.filter((a) => a.kind === "email" && a.summary.startsWith("Email sent") && !a.id.startsWith("tmp-")).map((a) => ({ key: a.id, source: "icapos" as const, author: a.actor_name ?? "iCapOS", date: a.created_at, subject: a.summary.replace(/^Email sent:?\s*/, ""), body: "" })),
-                            ...odooMessages.filter((m) => !m.isNote).map((m) => ({ key: `odoo-${m.id}`, source: "odoo" as const, author: m.author ?? "—", date: m.date ?? "", subject: m.subject ?? "", body: m.body })),
+                            // The full Odoo thread — messages AND logged notes (both are real
+                            // communication history with this contact). Notes are tagged so the
+                            // distinction is clear; the Note Log tab still shows notes on their own.
+                            ...odooMessages.filter((m) => m.body || m.subject).map((m) => ({ key: `odoo-${m.id}`, source: (m.isNote ? "odoo-note" : "odoo") as "odoo" | "odoo-note", author: m.author ?? "—", date: m.date ?? "", subject: m.isNote ? "" : (m.subject ?? ""), body: m.body })),
                           ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-                          const odooCount = hist.filter((h) => h.source === "odoo").length;
+                          const odooCount = hist.filter((h) => h.source === "odoo" || h.source === "odoo-note").length;
                           return (
                             <>
                               <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Message history{hist.length ? ` · ${hist.length}` : ""}{odooCount ? ` · ${odooCount} from Odoo` : ""}</div>
@@ -1057,6 +1060,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                                         {m.date ? <span>· {new Date(m.date).toLocaleString()}</span> : null}
                                         {m.source === "odoo"
                                           ? <span style={{ fontSize: 9.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-cloud-download" aria-hidden="true" /> from Odoo</span>
+                                          : m.source === "odoo-note"
+                                          ? <span style={{ fontSize: 9.5, fontWeight: 600, color: "#854D0E", background: "#FAEEDA", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-note" aria-hidden="true" /> Odoo note</span>
                                           : <span style={{ fontSize: 9.5, fontWeight: 600, color: "#3B6D11", background: "#EAF3DE", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-send" aria-hidden="true" /> sent · iCapOS</span>}
                                       </div>
                                       {m.subject ? <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{m.subject}</div> : null}

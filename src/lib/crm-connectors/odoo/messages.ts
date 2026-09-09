@@ -47,14 +47,41 @@ type RawMessage = {
   subtype_id?: [number, string] | false;
 };
 
-/** Fetch the most recent chatter messages for an Odoo partner (by res.partner id). */
+const MSG_FIELDS = ["id", "date", "subject", "body", "message_type", "author_id", "email_from", "subtype_id"];
+
+function mapMessage(r: RawMessage): OdooContactMessage {
+  const subtype = (r.subtype_id && r.subtype_id[1]) || "";
+  return {
+    id: r.id,
+    date: toIso(r.date),
+    author: (r.author_id && r.author_id[1]) || (r.email_from || null),
+    subject: r.subject || null,
+    body: r.body ? stripHtml(r.body) : "",
+    type: r.message_type || null,
+    // A chatter entry is an internal "Log note" ONLY when Odoo tagged it with the
+    // Note subtype (mail.mt_note). Everything else — Discussions, emails, and
+    // integration-posted messages that arrive as message_type 'notification' — is a
+    // real message to the contact. (We do NOT key off message_type here: 'notification'
+    // is used for both real outbound mail logged by integrations and for system
+    // tracking, so subtype is the reliable signal.)
+    isNote: /note/i.test(subtype),
+  };
+}
+
+/**
+ * Fetch a partner's chatter. Primary path is a mail.message search on the record
+ * (model=res.partner, res_id). Some chatter — posts authored by an integration, or
+ * left behind after a partner merge/recreate — isn't returned by that search, so we
+ * fall back to reading the partner's own message_ids and loading those records
+ * directly. Read-only, best-effort: any failure yields [].
+ */
 export async function fetchPartnerMessages(externalId: string, limit = 30): Promise<OdooContactMessage[]> {
   if (!odooConfigured() || !externalId) return [];
   const partnerId = Number(externalId);
   if (!Number.isFinite(partnerId)) return [];
 
   try {
-    const rows = await executeKw<RawMessage[]>(
+    let rows = await executeKw<RawMessage[]>(
       "mail.message",
       "search_read",
       [
@@ -62,29 +89,24 @@ export async function fetchPartnerMessages(externalId: string, limit = 30): Prom
           ["model", "=", "res.partner"],
           ["res_id", "=", partnerId],
         ],
-        ["id", "date", "subject", "body", "message_type", "author_id", "email_from", "subtype_id"],
+        MSG_FIELDS,
       ],
       { limit, order: "date desc" },
     );
 
-    return (rows ?? []).map((r) => {
-      const subtype = (r.subtype_id && r.subtype_id[1]) || "";
-      return {
-        id: r.id,
-        date: toIso(r.date),
-        author: (r.author_id && r.author_id[1]) || (r.email_from || null),
-        subject: r.subject || null,
-        body: r.body ? stripHtml(r.body) : "",
-        type: r.message_type || null,
-        // A chatter entry is an internal "Log note" ONLY when Odoo tagged it with the
-        // Note subtype (mail.mt_note). Everything else — Discussions, emails, and
-        // integration-posted messages that arrive as message_type 'notification' — is a
-        // real message to the contact and belongs in the Send message thread. (We do NOT
-        // key off message_type here: 'notification' is used for both real outbound mail
-        // logged by integrations and for system tracking, so subtype is the reliable signal.)
-        isNote: /note/i.test(subtype),
-      };
-    });
+    // Fallback: read the partner's linked message_ids and load them directly.
+    if (!rows || rows.length === 0) {
+      const partner = await executeKw<Array<{ message_ids?: number[] }>>(
+        "res.partner", "read", [[partnerId], ["message_ids"]],
+      );
+      const ids = (partner?.[0]?.message_ids ?? []).slice(-limit).reverse();
+      if (ids.length) {
+        const read = await executeKw<RawMessage[]>("mail.message", "read", [ids, MSG_FIELDS]);
+        rows = (read ?? []).sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+      }
+    }
+
+    return (rows ?? []).map(mapMessage);
   } catch {
     return [];
   }
