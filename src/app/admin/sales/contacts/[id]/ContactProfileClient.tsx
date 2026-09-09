@@ -304,6 +304,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
+  // Tags edit: a token multi-select over the comma-joined form.tags string.
+  const [tagInput, setTagInput] = useState("");
   // Self-contained editor for the structured "Additional details" fields.
   const [prefBusy, setPrefBusy] = useState(false);
   // Click-to-edit: values are staged in prefEdits (keyed by save-label);
@@ -654,7 +656,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               {contact.phone
                 ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
-              {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
@@ -704,7 +705,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 ["phone", "Phone", "+1 …"], ["phone2", "Phone 2", ""],
                 ["website", "Website", "example.com"], ["owner", "Owner", ""],
                 ["membership", "Membership", ""], ["job_position", "Job position", ""],
-                ["lead_source", "Lead source", ""], ["language", "Language", ""],
+                ["lead_source", "Lead source", ""],
               ] as const).map(([key, label, ph]) => {
                 const opts =
                   key === "owner" ? staff.map((s) => s.name)
@@ -746,8 +747,34 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags (comma-separated)</label>
-              <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} />
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags</label>
+              {(() => {
+                const current = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+                const addTag = (raw: string) => {
+                  const name = raw.trim();
+                  if (!name || current.some((t) => t.toLowerCase() === name.toLowerCase())) { setTagInput(""); return; }
+                  setForm({ ...form, tags: [...current, name].join(", ") });
+                  setTagInput("");
+                };
+                const removeTag = (tg: string) => setForm({ ...form, tags: current.filter((t) => t !== tg).join(", ") });
+                return (
+                  <div style={{ ...inp, width: "100%", marginTop: 4, display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minHeight: 34 }}>
+                    {current.map((tg) => { const c = tagColor(tg); return (
+                      <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 4px 1px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {tg}<i className="ti ti-x" aria-hidden="true" style={{ fontSize: 10, cursor: "pointer" }} onClick={() => removeTag(tg)} />
+                      </span>
+                    ); })}
+                    <input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); } else if (e.key === "Backspace" && !tagInput && current.length) { removeTag(current[current.length - 1]); } }}
+                      onBlur={() => addTag(tagInput)}
+                      placeholder={current.length ? "Add a tag…" : "Type a tag, press Enter…"}
+                      style={{ border: "none", outline: "none", flex: 1, minWidth: 90, fontSize: 12, background: "transparent", color: "var(--foreground)" }}
+                    />
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ marginTop: 12, display: "flex", gap: 6 }}>
@@ -758,6 +785,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
           </div>
         ) : (
           <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+            {/* Edit hint for the Details section — opens the edit form (replaces the Edit button). */}
+            <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
+              <button onClick={() => setEditing(true)} style={{ fontSize: 11, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}><i className="ti ti-click" aria-hidden="true" /> Click any field to edit</button>
+            </div>
             {/* LEFT column — Odoo field order */}
             <div>
               <Row icon="ti-id-badge" label="Membership Type" value={contact.membership} />
@@ -783,7 +814,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <Row icon="ti-mail" label="Email" value={contact.email} link />
               <Row icon="ti-world" label="Website" value={contact.website} link />
               <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} />
-              <Row icon="ti-language" label="Language" value={contact.language} />
               {/* Tags — colored pills, auto color per tag name. */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
                 <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 2 }} />
@@ -890,11 +920,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
                   </div>
                   {profileSub === "profile" && (<>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 4, minHeight: 18 }}>
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
-                      <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
-                    </span>
-                  </div>
                   {!hasInfoSection && formdBlock}
                   {company && <CompanyLinkedRecordEditor company={company} onePager={onePager} />}
                   {profile.sections.map((sec) => {
