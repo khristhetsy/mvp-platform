@@ -70,3 +70,24 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
   }
   await Promise.allSettled(sends);
 }
+
+function cancelBodyHtml(opts: { greetingName: string | null; otherName: string | null; when: string }): string {
+  return [
+    `<p>Hi ${opts.greetingName ?? "there"},</p>`,
+    `<p>Your meeting${opts.otherName ? ` with <strong>${opts.otherName}</strong>` : ""} on ${opts.when} has been cancelled.</p>`,
+    `<p>The calendar invitation has been removed. Reply to this email if you'd like to find another time.</p>`,
+  ].join("");
+}
+
+/** Notify both parties that a booking was cancelled. Best-effort, never throws. */
+export async function sendBookingCancellation(input: Omit<BookingEmailInput, "meetUrl">): Promise<void> {
+  const when = formatWhen(input.startTime, input.timezone);
+  const sends: Array<Promise<boolean>> = [];
+  if (input.bookerEmail) {
+    sends.push(sendEmail({ to: input.bookerEmail, subject: `Cancelled: ${input.title}`, html: cancelBodyHtml({ greetingName: input.bookerName, otherName: input.hostName, when }) }));
+  }
+  if (input.hostEmail) {
+    sends.push(sendEmail({ to: input.hostEmail, subject: `Cancelled: ${input.title}`, html: cancelBodyHtml({ greetingName: input.hostName, otherName: input.bookerName, when }) }));
+  }
+  await Promise.allSettled(sends);
+}

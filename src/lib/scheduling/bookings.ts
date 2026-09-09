@@ -12,6 +12,7 @@ export type Booking = {
   id: string;
   host_id: string | null;
   host_name?: string | null;
+  host_email?: string | null;
   event_id: string | null;
   event_type: string | null;
   booker_name: string | null;
@@ -57,7 +58,7 @@ export async function createBooking(input: CreateBookingInput): Promise<string |
 function mapRow(r: Record<string, unknown>): Booking {
   const host = r.host as { full_name?: string | null; email?: string | null } | null;
   return {
-    id: String(r.id), host_id: (r.host_id as string) ?? null, host_name: host?.full_name ?? host?.email ?? null,
+    id: String(r.id), host_id: (r.host_id as string) ?? null, host_name: host?.full_name ?? host?.email ?? null, host_email: host?.email ?? null,
     event_id: (r.event_id as string) ?? null, event_type: (r.event_type as string) ?? null,
     booker_name: (r.booker_name as string) ?? null, booker_email: (r.booker_email as string) ?? null, booker_phone: (r.booker_phone as string) ?? null,
     contact_crm_id: (r.contact_crm_id as string) ?? null,
@@ -79,6 +80,16 @@ export async function listBookings(opts: { hostId?: string; limit?: number } = {
 
 export async function getBooking(id: string): Promise<Booking | null> {
   const { data } = await db().from("scheduling_bookings").select(SELECT).eq("id", id).maybeSingle();
+  return data ? mapRow(data as Record<string, unknown>) : null;
+}
+
+export const BOOKING_STATUSES = ["confirmed", "completed", "cancelled", "no_show"] as const;
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
+/** Set a booking's status; returns the updated row (with host) or null on failure. */
+export async function updateBookingStatus(id: string, status: BookingStatus): Promise<Booking | null> {
+  const { data, error } = await db().from("scheduling_bookings").update({ status }).eq("id", id).select(SELECT).maybeSingle();
+  if (error) return null;
   return data ? mapRow(data as Record<string, unknown>) : null;
 }
 
