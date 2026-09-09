@@ -4,6 +4,8 @@ import { getGoogleBusyIntervals } from "@/lib/integrations/google-freebusy";
 import { listEvents, createEvent, insertLocalEvent } from "@/lib/calendar/events";
 import { loadAvailability } from "./store";
 import { configFromSettings, expandWindows } from "./availability";
+import { createBooking } from "./bookings";
+import { logActivity } from "@/lib/sales/activity";
 import type { CalendarEventRecord, TimeInterval } from "./types";
 
 export interface BookSlotInput {
@@ -110,6 +112,40 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
       meetUrl: hostEvent.meet_url,
     });
   }
+
+  // Persist a structured booking (Calendly-style detail) + link it to the CRM and the
+  // contact timeline. All best-effort: a failure here must never fail the booking.
+  try {
+    const answers = (input.answers ?? []).filter((a) => a.value);
+    let contactCrmId: string | null = null;
+    if (input.booker.email) {
+      const { data } = await admin.from("crm_contacts").select("id, overrides").ilike("email", input.booker.email).maybeSingle();
+      const contact = data as { id: string; overrides: Record<string, unknown> | null } | null;
+      contactCrmId = contact?.id ?? null;
+      // "How did you hear about us?" → fill lead source when it's blank.
+      const heard = answers.find((a) => /how did you hear|hear about/i.test(a.label))?.value;
+      if (contactCrmId && heard) {
+        const overrides = contact?.overrides ?? {};
+        if (!overrides.lead_source) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (admin.from("crm_contacts") as any).update({ overrides: { ...overrides, lead_source: heard } }).eq("id", contactCrmId);
+        }
+      }
+    }
+
+    await createBooking({
+      host_id: input.hostId, event_id: hostEvent.id, event_type: title,
+      booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: input.booker.phone ?? null,
+      contact_crm_id: contactCrmId,
+      start_time: input.startTime, end_time: input.endTime, timezone: input.timezone,
+      meet_url: hostEvent.meet_url, note: input.note ?? null, answers,
+    });
+
+    if (contactCrmId) {
+      const when = new Date(input.startTime).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      await logActivity({ kind: "call", summary: `Booked: ${title} · ${when}`, actorId: input.hostId, contactCrmId });
+    }
+  } catch { /* never block a confirmed booking on bookkeeping */ }
 
   return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName };
 }
