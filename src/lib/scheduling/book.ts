@@ -79,7 +79,11 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
   const hostName = (hostProfile as { full_name: string | null } | null)?.full_name ?? null;
 
   const bookerLabel = input.booker.name ?? input.booker.email ?? "a member";
-  const title = input.title?.trim() || `Meeting with ${bookerLabel}`;
+  // Auto titles embed the OTHER party's name, so each calendar shows who they're
+  // meeting: the host's event says "Meeting with <booker>", the booker's mirror
+  // says "Meeting with <host>" (below) — never the viewer's own name.
+  const isAutoTitle = !input.title?.trim();
+  const title = isAutoTitle ? `Meeting with ${bookerLabel}` : (input.title as string).trim();
   const description = [
     input.note ?? null,
     input.booker.name ? `Booked by: ${input.booker.name}` : null,
@@ -103,7 +107,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
   // local only, since the host's Google event already invites them.
   if (input.booker.id) {
     await insertLocalEvent(admin, input.booker.id, {
-      title: hostName ? `${title} (${hostName})` : title,
+      title: isAutoTitle ? (hostName ? `Meeting with ${hostName}` : title) : (hostName ? `${title} (with ${hostName})` : title),
       description: input.note ?? null,
       startTime: input.startTime,
       endTime: input.endTime,

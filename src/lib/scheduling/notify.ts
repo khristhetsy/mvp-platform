@@ -27,13 +27,15 @@ function formatWhen(startTime: string, timezone: string): string {
   }
 }
 
-function bodyHtml(opts: { greetingName: string | null; otherName: string | null; title: string; when: string; meetUrl: string | null }): string {
+export function bodyHtml(opts: { greetingName: string | null; otherName: string | null; when: string; meetUrl: string | null }): string {
   const meet = opts.meetUrl
     ? `<p>Join Google Meet: <a href="${opts.meetUrl}">${opts.meetUrl}</a></p>`
     : "";
+  // Phrase the confirmation around the OTHER party's name so it never doubles a
+  // name that the auto event title ("Meeting with <booker>") already contains.
   return [
     `<p>Hi ${opts.greetingName ?? "there"},</p>`,
-    `<p>Your meeting <strong>${opts.title}</strong>${opts.otherName ? ` with ${opts.otherName}` : ""} is confirmed.</p>`,
+    `<p>Your meeting${opts.otherName ? ` with <strong>${opts.otherName}</strong>` : ""} is confirmed.</p>`,
     `<p><strong>When:</strong> ${opts.when}</p>`,
     meet,
     `<p>This invitation was also added to your calendar.</p>`,
@@ -53,7 +55,7 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
       sendEmail({
         to: input.bookerEmail,
         subject: `Confirmed: ${input.title}`,
-        html: bodyHtml({ greetingName: input.bookerName, otherName: input.hostName, title: input.title, when, meetUrl: input.meetUrl }),
+        html: bodyHtml({ greetingName: input.bookerName, otherName: input.hostName, when, meetUrl: input.meetUrl }),
       }),
     );
   }
@@ -62,7 +64,7 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
       sendEmail({
         to: input.hostEmail,
         subject: `New booking: ${input.title}`,
-        html: bodyHtml({ greetingName: input.hostName, otherName: input.bookerName, title: input.title, when, meetUrl: input.meetUrl }),
+        html: bodyHtml({ greetingName: input.hostName, otherName: input.bookerName, when, meetUrl: input.meetUrl }),
       }),
     );
   }
