@@ -71,9 +71,9 @@ function Chips({ options, value, onToggle, single = false }: { options: string[]
 function ViewRow({ label, children }: { label: string; children: React.ReactNode }) {
   const empty = children == null || children === "" || (Array.isArray(children) && children.length === 0);
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
       <span style={LBL}>{label}</span>
-      <span style={{ flex: 1, minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", wordBreak: "break-word" }}>{empty ? "—" : children}</span>
+      <span style={{ flex: "1 1 160px", minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", overflowWrap: "anywhere" }}>{empty ? "—" : children}</span>
     </div>
   );
 }
@@ -162,7 +162,7 @@ export function CompanyLinkedRecordEditor({
       {err ? <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>{err}</p> : null}
 
       {!editing ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0 28px" }}>
           <ViewRow label="Industry">{data.industry ? pill(data.industry) : null}</ViewRow>
           <ViewRow label="Revenue stage">{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
           <ViewRow label="Funding target">{data.funding_amount ? `$${Number(data.funding_amount).toLocaleString()}` : null}</ViewRow>

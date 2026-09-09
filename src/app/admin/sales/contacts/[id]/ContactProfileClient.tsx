@@ -59,6 +59,10 @@ function actWhen(iso: string): string {
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
+// Responsive field columns: two-up when there's room, collapsing to one column as
+// the panel narrows (Odoo-style). minmax floor sets the drop-to-one threshold.
+const RESP_COLS = "repeat(auto-fit, minmax(240px, 1fr))";
+const RESP_COLS_SM = "repeat(auto-fit, minmax(150px, 1fr))";
 const outlineBtn: React.CSSProperties = { fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" };
 
 const LEAD_TONE: Record<string, { bg: string; c: string }> = {
@@ -113,10 +117,10 @@ function InvestorRatingChip({ score, tier }: { score: number | null; tier: strin
 }
 function Row({ icon, label, value, link }: { icon: string; label: string; value: string | null; link?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5 }}>
       <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
       <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>
-      <span style={{ color: link && value ? "#185FA5" : "var(--foreground)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value || "—"}</span>
+      <span style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{value || "—"}</span>
     </div>
   );
 }
@@ -221,19 +225,19 @@ function EditablePrefRow({
   // Free-text fields render as one paragraph; option/multi fields split into chips.
   const values = freeText ? (value.trim() ? [value.trim()] : []) : value.split(",").map((s) => s.trim()).filter(Boolean);
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", alignItems: "flex-start", padding: "5px 0", fontSize: 12.5 }}>
       <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
       <span
         onClick={onOpen}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         title="Click to edit"
-        style={{ flex: 1, minWidth: 0, cursor: "pointer", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, borderRadius: 6, padding: "2px 4px", margin: "-2px -4px", background: hover ? "#F1EFE8" : "transparent" }}
+        style={{ flex: "1 1 160px", minWidth: 0, cursor: "pointer", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, borderRadius: 6, padding: "2px 4px", margin: "-2px -4px", background: hover ? "#F1EFE8" : "transparent", overflowWrap: "anywhere", lineHeight: 1.5 }}
       >
         {values.length === 0 ? (
           <span style={{ color: "var(--muted-foreground)" }}>—</span>
         ) : values.length === 1 && values[0].length > 40 ? (
-          <span style={{ color: "var(--foreground)" }}>{values[0]}</span>
+          <span style={{ color: "var(--foreground)", overflowWrap: "anywhere" }}>{values[0]}</span>
         ) : values.map((v) => (
           <span key={v} style={{ fontSize: 11, background: rating ? "#E1F5EE" : "#EEEDFE", color: rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
         ))}
@@ -270,9 +274,9 @@ export type LinkedCompany = {
 function RoRow({ label, children }: { label: string; children: React.ReactNode }) {
   const empty = children == null || children === "" || children === "—";
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
       <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
-      <span style={{ flex: 1, minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", display: "flex", flexWrap: "wrap", gap: 5, wordBreak: "break-word" }}>{empty ? "—" : children}</span>
+      <span style={{ flex: "1 1 160px", minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", display: "flex", flexWrap: "wrap", gap: 5, overflowWrap: "anywhere" }}>{empty ? "—" : children}</span>
     </div>
   );
 }
@@ -671,7 +675,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         {/* Field grid */}
         {editing ? (
           <div style={{ padding: "14px 16px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: RESP_COLS, gap: "10px 24px" }}>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Name</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" style={{ ...inp, width: "100%", marginTop: 4 }} />
@@ -724,7 +728,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Address</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: RESP_COLS_SM, gap: "10px 16px" }}>
                 {([
                   ["street", "Street", "1 / -1"], ["street2", "Street 2", "1 / -1"],
                   ["city", "City", "auto"], ["state", "State", "auto"], ["zip", "ZIP", "auto"], ["country", "Country", "auto"],
@@ -749,7 +753,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
           </div>
         ) : (
-          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
+          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: RESP_COLS, gap: "0 28px" }}>
             <Section title="Contact">
               <Row icon="ti-mail" label="Email" value={contact.email} link />
               <Row icon="ti-phone" label="Phone" value={contact.phone} />
@@ -843,7 +847,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               const formdBlock = formdFirm ? (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: RESP_COLS, gap: "2px 28px" }}>
                     <RoRow label="Capital raised (Reg D)">{fmtUsdM(formdFirm.regd_footprint)}</RoRow>
                     <RoRow label="Vehicles / funds">{formdFirm.vehicle_count != null ? String(formdFirm.vehicle_count) : null}</RoRow>
                     <RoRow label="Fund types">{formdFirm.fund_types && formdFirm.fund_types.length ? formdFirm.fund_types.join(", ") : null}</RoRow>
@@ -902,7 +906,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             );
                           })()
                         ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: RESP_COLS, gap: "2px 28px" }}>
                           {sec.title.toLowerCase().includes("information") && (
                             <>
                               {/* Contact / lead / address rows live in the top block above — not repeated here. */}
