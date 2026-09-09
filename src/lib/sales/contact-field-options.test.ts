@@ -33,6 +33,12 @@ describe("buildFieldOptions — case-only dedupe", () => {
     const opts = buildFieldOptions(aggregateExactLabels(rows));
     expect(opts["Entrepreneur funding stage?"]).toEqual(["Seed", "Series A"]);
   });
+
+  it("drops stray pure-number option values from every field", () => {
+    const rows = [{ extra: { "Entrepreneur seeking type(s) of capital?": ["Equity", "1", "2", "Convertible note", "7"] } }];
+    const opts = buildFieldOptions(aggregateExactLabels(rows));
+    expect(opts["Entrepreneur seeking type(s) of capital?"]).toEqual(["Convertible note", "Equity"]);
+  });
 });
 
 describe("canonicalizeIndustryOptions — Industries picker cleanup", () => {

@@ -92,10 +92,14 @@ function preferredSpelling(a: string, b: string): string {
 }
 
 /** Collapse case-only duplicates (keyed by trimmed+lowercased value) to one
- *  canonical spelling, then return sorted. Stored contact values are unaffected. */
+ *  canonical spelling, then return sorted. Stored contact values are unaffected.
+ *  Pure-number values (e.g. "1", "7") are stray Odoo selection/many2many ids that
+ *  leak into the option list — never a real choice — so they're dropped from every
+ *  picker. (If a field ever needs bare numbers as genuine options, exempt it here.) */
 function dedupeCanonical(set: Set<string>): string[] {
   const canonical = new Map<string, string>();
   for (const raw of set) {
+    if (/^\d+$/.test(raw.trim())) continue;
     const v = canonicalizeValue(raw);
     const key = v.trim().toLowerCase();
     const existing = canonical.get(key);
@@ -131,13 +135,16 @@ const SELECT = "extra:raw->__profile->extra, industries:raw->__profile->industri
 /** Curated option lists for fields that have no synced values yet (so the
  *  click-to-edit picker is a select, not a text box). Merged with — never
  *  replacing — any data-derived options for the same canonical label. */
+const ARR_BANDS = ["Less than $1M", "$1M – $5M", "$5M – $10M", "$10M – $25M", "$25M+"];
+const MRR_BANDS = ["Less than $80k", "$80k – $200k", "$200k – $400k", "$400k – $1M", "$1M+"];
+
 const CURATED_OPTIONS: Record<string, string[]> = {
-  "Investor preferences for the company with an ARR range of?": [
-    "Less than $1M", "$1M – $5M", "$5M – $10M", "$10M – $25M", "$25M+",
-  ],
-  "Investor preferences for the company with an MRR range of?": [
-    "Less than $80k", "$80k – $200k", "$200k – $400k", "$400k – $1M", "$1M+",
-  ],
+  "Investor preferences for the company with an ARR range of?": ARR_BANDS,
+  "Investor preferences for the company with an MRR range of?": MRR_BANDS,
+  // Founder actuals mirror the investor bands so a select — not a free-text box —
+  // and matching can compare like-for-like.
+  "Entrepreneur annual recurring revenue (ARR)?": ARR_BANDS,
+  "Entrepreneur monthly recurring revenue (MRR)?": MRR_BANDS,
   // Ensure "Fund Manager" is always a selectable investor type (also used by the
   // SEC Form D-only derived defaults).
   "Investor type": ["Fund Manager"],

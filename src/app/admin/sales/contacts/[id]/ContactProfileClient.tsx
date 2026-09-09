@@ -25,7 +25,9 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
-const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience"]);
+const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Business summary", "Management team"]);
+// Fields that hold exactly one value (a range/band) — the picker is single-select.
+const SINGLE_SELECT_FIELD_LABELS = new Set(["ARR", "MRR"]);
 
 // Standard investor investment-size bands, smallest → largest. Used to derive
 // "all bands up to the Reg D raised" for SEC Form D-only investors.
@@ -131,9 +133,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // (Odoo selection / many2many) show a searchable checkbox dropdown with chips
 // (Option 1); free-text fields fall back to a plain input. Inline save (check) + undo.
 function EditablePrefRow({
-  label, value, changed, editing, rating, options, onOpen, onChange, onSave, onUndo,
+  label, value, changed, editing, rating, options, freeText = false, single = false, onOpen, onChange, onSave, onUndo,
 }: {
   label: string; value: string; changed: boolean; editing: boolean; rating: boolean; options: string[];
+  freeText?: boolean; single?: boolean;
   onOpen: () => void; onChange: (v: string) => void; onSave: () => void; onUndo: () => void;
 }) {
   const [hover, setHover] = useState(false);
@@ -144,7 +147,10 @@ function EditablePrefRow({
     const selSet = new Set(selected);
     const allOpts = [...new Set([...options, ...selected])];
     const filtered = allOpts.filter((o) => o.toLowerCase().includes(search.trim().toLowerCase()));
-    const toggle = (o: string) => onChange((selSet.has(o) ? selected.filter((x) => x !== o) : [...selected, o]).join(", "));
+    // Single-select fields (ARR/MRR bands) replace the value; multi-select toggle.
+    const toggle = (o: string) => single
+      ? onChange(selSet.has(o) ? "" : o)
+      : onChange((selSet.has(o) ? selected.filter((x) => x !== o) : [...selected, o]).join(", "));
     const chipBg = rating ? "#E1F5EE" : "#EEEDFE";
     const chipFg = rating ? "#0F6E56" : "#3C3489";
     return (
@@ -170,7 +176,7 @@ function EditablePrefRow({
               {filtered.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>No matches.</div>}
               {filtered.map((o) => (
                 <label key={o} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", fontSize: 12, cursor: "pointer" }}>
-                  <input type="checkbox" checked={selSet.has(o)} onChange={() => toggle(o)} style={{ width: 14, height: 14 }} />
+                  <input type={single ? "radio" : "checkbox"} name={single ? `pick-${label}` : undefined} checked={selSet.has(o)} onChange={() => toggle(o)} style={{ width: 14, height: 14 }} />
                   <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o}</span>
                 </label>
               ))}
@@ -182,23 +188,38 @@ function EditablePrefRow({
   }
 
   if (editing) {
+    // Long free-text fields (Business summary, Management team) get a multi-line
+    // textarea; other plain fields keep a single-line input.
     return (
-      <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
-        <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onSave(); if (e.key === "Escape") onUndo(); }}
-          placeholder="Type a value…"
-          style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
-        />
+      <div style={{ display: "flex", gap: 8, alignItems: freeText ? "flex-start" : "center", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
+        <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)", paddingTop: freeText ? 6 : 0 }}>{label}</span>
+        {freeText ? (
+          <textarea
+            autoFocus
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSave(); if (e.key === "Escape") onUndo(); }}
+            placeholder="Type a value…  (⌘/Ctrl+Enter to save)"
+            rows={4}
+            style={{ flex: 1, minWidth: 0, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "6px 8px", boxShadow: "0 0 0 2px #EEEDFE", resize: "vertical", lineHeight: 1.5 }}
+          />
+        ) : (
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onSave(); if (e.key === "Escape") onUndo(); }}
+            placeholder="Type a value…"
+            style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
+          />
+        )}
         <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
         <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
       </div>
     );
   }
-  const values = value.split(",").map((s) => s.trim()).filter(Boolean);
+  // Free-text fields render as one paragraph; option/multi fields split into chips.
+  const values = freeText ? (value.trim() ? [value.trim()] : []) : value.split(",").map((s) => s.trim()).filter(Boolean);
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5 }}>
       <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
@@ -911,6 +932,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               key={f.saveKey}
                               label={f.label}
                               rating={rating}
+                              freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
+                              single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
                               options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
@@ -926,6 +949,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               key={`od-${f.saveKey}`}
                               label={f.label}
                               rating={false}
+                              freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
+                              single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
                               options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
