@@ -53,6 +53,7 @@ const FOUNDER_SCHEMA: SectionDef[] = [
   {
     title: "Company & stage",
     fields: [
+      { display: "Business summary", match: "business summary", odoo: "Entrepreneur business summary" },
       { display: "Industries", match: "industries", odoo: "Industries" },
       { display: "Funding stage", match: "funding stage", odoo: "Entrepreneur funding stage?" },
       { display: "Operating stage", match: "operating stage", odoo: "Entrepreneur operating stage?" },
