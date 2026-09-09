@@ -76,9 +76,13 @@ export async function fetchPartnerMessages(externalId: string, limit = 30): Prom
         subject: r.subject || null,
         body: r.body ? stripHtml(r.body) : "",
         type: r.message_type || null,
-        // Internal notes use the "Note" subtype (mail.mt_note); everything else is an
-        // outgoing/received message. message_type 'notification' is also treated as note.
-        isNote: /note/i.test(subtype) || r.message_type === "notification",
+        // A chatter entry is an internal "Log note" ONLY when Odoo tagged it with the
+        // Note subtype (mail.mt_note). Everything else — Discussions, emails, and
+        // integration-posted messages that arrive as message_type 'notification' — is a
+        // real message to the contact and belongs in the Send message thread. (We do NOT
+        // key off message_type here: 'notification' is used for both real outbound mail
+        // logged by integrations and for system tracking, so subtype is the reliable signal.)
+        isNote: /note/i.test(subtype),
       };
     });
   } catch {

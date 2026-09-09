@@ -305,6 +305,26 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
   const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog" | "tasks">("profile");
+  // ── Send message: a real email composer (same engine as mass-email) ──────────
+  type MailTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
+  const [mailTemplates, setMailTemplates] = useState<MailTemplate[]>([]);
+  const [mailChannel, setMailChannel] = useState<"icapos" | "gmail">("icapos");
+  const [mailTemplateId, setMailTemplateId] = useState("");
+  const [mailSubject, setMailSubject] = useState("");
+  const [mailBody, setMailBody] = useState("");
+  const [mailBusy, setMailBusy] = useState(false);
+  const [mailMsg, setMailMsg] = useState<string | null>(null);
+  // Emails sent from this screen this session — prepended to the history for instant
+  // feedback (they also persist to the sales timeline server-side via the send route).
+  const [sentMail, setSentMail] = useState<{ id: string; author: string; date: string; subject: string; body: string }[]>([]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/marketing/templates")
+      .then((r) => (r.ok ? r.json() : { templates: [] }))
+      .then((d) => { if (active) setMailTemplates((d.templates ?? d ?? []) as MailTemplate[]); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   // Option lists per profile field (Odoo selection / many2many) for the pickers.
   const [fieldOptions, setFieldOptions] = useState<Record<string, string[]>>({});
   useEffect(() => {
@@ -472,6 +492,44 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       setSavedNotes((prev) => (prev ? `${prev}\n[${new Date().toISOString().slice(0, 10)}] ${note}` : `[${new Date().toISOString().slice(0, 10)}] ${note}`));
       setNote(""); setNoteMsg("Saved.");
     } catch (e) { setNoteMsg(e instanceof Error ? e.message : "Save failed."); } finally { setBusy(false); }
+  }
+  function pickMailTemplate(id: string) {
+    setMailTemplateId(id);
+    const t = mailTemplates.find((x) => x.id === id);
+    if (t) { setMailSubject(t.subject); setMailBody(t.html_body); }
+  }
+  // One shared POST to the mass-email engine, scoped to this single contact.
+  async function postMail(body: Record<string, unknown>) {
+    return fetch("/api/marketing/mass-email", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "contacts", mode: "ids", ids: [contact.id], channel: mailChannel, templateId: mailTemplateId || null, subject: mailSubject || null, html: mailBody || null, ...body }),
+    });
+  }
+  async function sendMailTest() {
+    setMailBusy(true); setMailMsg(null);
+    try {
+      const r = await postMail({ action: "test", testEmail: "" });
+      const j = await r.json().catch(() => ({}));
+      setMailMsg(r.ok ? `Test sent to ${j.to ?? "you"}.` : (j.error ?? "Test failed."));
+    } catch { setMailMsg("Network error — test not sent."); } finally { setMailBusy(false); }
+  }
+  async function sendMail() {
+    if (!contact.email) { setMailMsg("Add an email to this contact first."); return; }
+    if (!mailSubject.trim() && !mailBody.trim()) { setMailMsg("Pick a template or write a subject and body first."); return; }
+    setMailBusy(true); setMailMsg(null);
+    try {
+      const r = await postMail({ action: "send" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setMailMsg(j.error ?? "Send failed."); return; }
+      if ((j.sent ?? 0) === 0 && (j.skipped || j.skippedNoEmail)) {
+        setMailMsg(j.skipped ? "Not sent — the contact is unsubscribed." : "Not sent — no email on file.");
+        return;
+      }
+      const now = new Date().toISOString();
+      setSentMail((p) => [{ id: `sent-${Date.now()}`, author: "You", date: now, subject: mailSubject.trim(), body: mailBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() }, ...p]);
+      setActs((p) => [{ id: `tmp-${Date.now()}`, kind: "email", summary: `Email sent${mailSubject.trim() ? `: ${mailSubject.trim()}` : ""}`, actor_name: "You", created_at: now }, ...p]);
+      setMailSubject(""); setMailBody(""); setMailTemplateId(""); setMailMsg(`Sent via ${mailChannel === "gmail" ? "Gmail" : "iCapOS"}.`);
+    } catch { setMailMsg("Network error — email not sent."); } finally { setMailBusy(false); }
   }
   async function createTask() {
     if (!task.title.trim()) return;
@@ -951,42 +1009,67 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   )}
                   {profileSub === "sendmsg" && (
                     <div style={{ paddingTop: 4 }}>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                        {contact.email
-                          ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
-                          : <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No email on file</span>}
-                        {contact.phone
-                          ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>
-                          : null}
+                      {/* To + channel */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                          To {contact.email
+                            ? <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{contact.email}</span>
+                            : <span style={{ color: "#A32D2D" }}>no email on file</span>}
+                        </div>
+                        <div style={{ display: "inline-flex", gap: 2, background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 7, padding: 2 }}>
+                          {(["icapos", "gmail"] as const).map((c) => (
+                            <button key={c} onClick={() => setMailChannel(c)} style={{ fontSize: 10.5, fontWeight: mailChannel === c ? 600 : 400, color: mailChannel === c ? "#fff" : "var(--muted-foreground)", background: mailChannel === c ? "#4338CA" : "transparent", border: "none", borderRadius: 5, padding: "3px 10px", cursor: "pointer" }}>{c === "icapos" ? "iCapOS" : "Gmail"}</button>
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message on this record</div>
-                      <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Write a message…" style={{ ...inp, width: "100%", minHeight: 64, resize: "vertical" }} />
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                        <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Send message</button>
-                        {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg === "Saved." ? "Message posted." : noteMsg}</span>}
+                      {/* Template */}
+                      <select value={mailTemplateId} onChange={(e) => pickMailTemplate(e.target.value)} style={{ ...inp, width: "100%", marginBottom: 8 }}>
+                        <option value="">Use template…</option>
+                        {mailTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                      <input value={mailSubject} onChange={(e) => setMailSubject(e.target.value)} placeholder="Subject… ({{first_name}}, {{company}})" style={{ ...inp, width: "100%", marginBottom: 8 }} />
+                      <textarea value={mailBody} onChange={(e) => setMailBody(e.target.value)} placeholder="Write your email… (HTML ok · merge {{first_name}} {{company}})" style={{ ...inp, width: "100%", minHeight: 96, resize: "vertical", fontFamily: "var(--font-mono)" }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        <button onClick={sendMail} disabled={mailBusy || !contact.email} title={contact.email ? "" : "Add an email to this contact to send"} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: mailBusy || !contact.email ? "not-allowed" : "pointer", opacity: mailBusy || !contact.email ? 0.5 : 1 }}><i className="ti ti-send" aria-hidden="true" /> Send email</button>
+                        <button onClick={sendMailTest} disabled={mailBusy} style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cdd9ec)", borderRadius: 6, padding: "6px 12px", cursor: mailBusy ? "not-allowed" : "pointer", opacity: mailBusy ? 0.5 : 1 }}>Send test to me</button>
+                        {contact.phone && <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 6, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>}
+                        {mailMsg && <span style={{ fontSize: 11, color: /sent|Sent/.test(mailMsg) ? "#0F6E56" : "#A32D2D" }}>{mailMsg}</span>}
                       </div>
-                      <div style={{ marginTop: 14 }}>
-                        {(() => { const msgs = odooMessages.filter((m) => !m.isNote); return (
-                        <>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history{msgs.length ? ` · ${msgs.length} from Odoo` : ""}</div>
-                        {msgs.length > 0 ? (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
-                            {msgs.map((m) => (
-                              <div key={m.id} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
-                                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                                  <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{m.author ?? "—"}</span>
-                                  {m.date ? ` · ${new Date(m.date).toLocaleString()}` : ""}
+                      {/* Unified history: emails sent from iCapOS + messages imported from Odoo */}
+                      <div style={{ marginTop: 16 }}>
+                        {(() => {
+                          type H = { key: string; source: "icapos" | "odoo"; author: string; date: string; subject: string; body: string };
+                          const hist: H[] = [
+                            ...sentMail.map((s) => ({ key: s.id, source: "icapos" as const, author: s.author, date: s.date, subject: s.subject, body: s.body })),
+                            ...acts.filter((a) => a.kind === "email" && a.summary.startsWith("Email sent") && !a.id.startsWith("tmp-")).map((a) => ({ key: a.id, source: "icapos" as const, author: a.actor_name ?? "iCapOS", date: a.created_at, subject: a.summary.replace(/^Email sent:?\s*/, ""), body: "" })),
+                            ...odooMessages.filter((m) => !m.isNote).map((m) => ({ key: `odoo-${m.id}`, source: "odoo" as const, author: m.author ?? "—", date: m.date ?? "", subject: m.subject ?? "", body: m.body })),
+                          ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+                          const odooCount = hist.filter((h) => h.source === "odoo").length;
+                          return (
+                            <>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Message history{hist.length ? ` · ${hist.length}` : ""}{odooCount ? ` · ${odooCount} from Odoo` : ""}</div>
+                              {hist.length > 0 ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
+                                  {hist.map((m) => (
+                                    <div key={m.key} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)", flexWrap: "wrap" }}>
+                                        <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{m.author}</span>
+                                        {m.date ? <span>· {new Date(m.date).toLocaleString()}</span> : null}
+                                        {m.source === "odoo"
+                                          ? <span style={{ fontSize: 9.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-cloud-download" aria-hidden="true" /> from Odoo</span>
+                                          : <span style={{ fontSize: 9.5, fontWeight: 600, color: "#3B6D11", background: "#EAF3DE", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-send" aria-hidden="true" /> sent · iCapOS</span>}
+                                      </div>
+                                      {m.subject ? <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{m.subject}</div> : null}
+                                      {m.body ? <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div> : null}
+                                    </div>
+                                  ))}
                                 </div>
-                                {m.subject ? <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{m.subject}</div> : null}
-                                {m.body ? <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div> : null}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>No messages yet.</div>
-                        )}
-                        </>
-                        ); })()}
+                              ) : (
+                                <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>No messages yet. Emails you send here and messages synced from Odoo will appear in this thread.</div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
