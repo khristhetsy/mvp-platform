@@ -8,6 +8,7 @@
 // Lowercased raw value → canonical display label (merges + moves).
 const MERGE: Record<string, string> = {
   "biote": "Biotechnology/Life Science",
+  "business service": "Business Services",
   "internet": "Data/IoT",
   "technology/web": "Data/IoT",
   "information technology": "Data/IoT",
@@ -29,6 +30,8 @@ const CANON: Record<string, string> = {
   "aerospace": "Aerospace",
   "agtech": "AgTech",
   "biotechnology/life science": "Biotechnology/Life Science",
+  "business services": "Business Services",
+  "hospitality": "Hospitality",
   "artificial intelligence": "Artificial Intelligence",
   "other": "Other",
 };
@@ -37,6 +40,8 @@ const CANON: Record<string, string> = {
 export function canonicalizeIndustry(raw: string): string | null {
   const k = raw.trim().toLowerCase();
   if (!k) return null;
+  // Pure-number values (e.g. "20", "3", "42") are stray Odoo ids, not industries — drop.
+  if (/^\d+$/.test(k)) return null;
   if (REMOVE.has(k)) return null;
   if (MERGE[k]) return MERGE[k];
   return CANON[k] ?? raw.trim();

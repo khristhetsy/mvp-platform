@@ -12,9 +12,15 @@ describe("canonicalizeIndustry", () => {
     expect(canonicalizeIndustry("Space Tech")).toBe("Aerospace");
     expect(canonicalizeIndustry("Education")).toBe("EdTech");
   });
-  it("removes Agnostic and blanks", () => {
+  it("removes Agnostic, blanks, and stray number ids", () => {
     expect(canonicalizeIndustry("Agnostic")).toBeNull();
     expect(canonicalizeIndustry("  ")).toBeNull();
+    for (const n of ["20", "29", "3", "30", "33", "41", "42", "7", "9"]) expect(canonicalizeIndustry(n)).toBeNull();
+  });
+  it("merges Business Service into Business Services and canon-cases Hospitality", () => {
+    expect(canonicalizeIndustry("Business Service")).toBe("Business Services");
+    expect(canonicalizeIndustry("business services")).toBe("Business Services");
+    expect(canonicalizeIndustry("hospitality")).toBe("Hospitality");
   });
   it("normalizes case variants to one spelling", () => {
     expect(canonicalizeIndustry("fintech")).toBe("Fintech");
