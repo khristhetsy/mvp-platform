@@ -162,7 +162,7 @@ export function CompanyLinkedRecordEditor({
       {err ? <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>{err}</p> : null}
 
       {!editing ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0 28px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 28px" }}>
           <ViewRow label="Industry">{data.industry ? pill(data.industry) : null}</ViewRow>
           <ViewRow label="Revenue stage">{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
           <ViewRow label="Funding target">{data.funding_amount ? `$${Number(data.funding_amount).toLocaleString()}` : null}</ViewRow>
