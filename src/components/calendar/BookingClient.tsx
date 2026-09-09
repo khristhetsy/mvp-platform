@@ -36,6 +36,7 @@ export function BookingClient({
   contactFields = DEFAULT_CONTACT_FIELDS,
   viewerName,
   viewerEmail,
+  rescheduleToken,
 }: {
   hostId: string;
   hostName: string;
@@ -45,6 +46,9 @@ export function BookingClient({
   contactFields?: ContactFieldConfig;
   viewerName?: string | null;
   viewerEmail?: string | null;
+  /** When set, this booking replaces an existing one — sent so the book route
+   *  cancels the old booking after the new slot is confirmed. */
+  rescheduleToken?: string;
 }) {
   const durations = slotDurations && slotDurations.length > 0 ? slotDurations : [30];
   const cf = contactFields;
@@ -162,6 +166,7 @@ export function BookingClient({
           company: company.trim() || undefined,
           note: note.trim() || undefined,
           answers: answerPayload,
+          rescheduleToken: rescheduleToken || undefined,
         }),
       });
       const data = await res.json();
@@ -177,7 +182,7 @@ export function BookingClient({
     } finally {
       setBooking(false);
     }
-  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, load]);
+  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, load]);
 
   if (confirmed) {
     return (

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { bookSlot } from "@/lib/scheduling/book";
 import { sendBookingEmails } from "@/lib/scheduling/notify";
+import { cancelBookingByToken } from "@/lib/scheduling/cancel";
 import { handoffFitSession } from "@/lib/fit/handoff";
 
 // Public endpoint: anyone with the link can book (guest booking). Booker
@@ -20,6 +21,9 @@ const schema = z.object({
   answers: z.array(z.object({ label: z.string().max(300), value: z.string().max(1000) })).max(20).optional(),
   // Present when the booking came from the /fit funnel — triggers the Sales Hub handoff.
   fitSessionId: z.string().uuid().optional(),
+  // Present when this booking replaces an existing one (from a reschedule link) —
+  // the old booking is cancelled after the new one is confirmed.
+  rescheduleToken: z.string().max(600).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -69,15 +73,23 @@ export async function POST(req: NextRequest): Promise<Response> {
       answers: parsed.data.answers,
     });
 
+    // Reschedule: cancel the prior booking now that the new slot is confirmed.
+    if (parsed.data.rescheduleToken) {
+      await cancelBookingByToken(parsed.data.rescheduleToken, "reschedule", { silent: true }).catch(() => {});
+    }
+
     await sendBookingEmails({
+      bookingId: result.bookingId,
       hostEmail: result.hostEmail,
       hostName: result.hostName,
       bookerEmail: parsed.data.email,
       bookerName: parsed.data.name,
       title: result.event.title,
       startTime: result.event.start_time,
+      endTime: result.event.end_time,
       timezone: parsed.data.timezone,
       meetUrl: result.meetUrl,
+      answers: parsed.data.answers,
     }).catch(() => {});
 
     // /fit handoff: on a funnel booking, write the lead + four answers to Sales Hub

@@ -25,6 +25,9 @@ export interface BookSlotResult {
   meetUrl: string | null;
   hostEmail: string | null;
   hostName: string | null;
+  /** The structured booking row id (for cancel/reschedule links). Null if the
+   *  best-effort booking-record write failed. */
+  bookingId: string | null;
 }
 
 /** Throws if [start,end] is outside the host's hours or conflicts with busy time. */
@@ -119,6 +122,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
 
   // Persist a structured booking (Calendly-style detail) + link it to the CRM and the
   // contact timeline. All best-effort: a failure here must never fail the booking.
+  let bookingId: string | null = null;
   try {
     const answers = (input.answers ?? []).filter((a) => a.value);
     const company = input.booker.company?.trim() || null;
@@ -143,7 +147,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
       }
     }
 
-    await createBooking({
+    bookingId = await createBooking({
       host_id: input.hostId, event_id: hostEvent.id, event_type: title,
       booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: input.booker.phone ?? null,
       booker_company: company,
@@ -158,5 +162,5 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     }
   } catch { /* never block a confirmed booking on bookkeeping */ }
 
-  return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName };
+  return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName, bookingId };
 }
