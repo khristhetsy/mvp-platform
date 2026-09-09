@@ -1,7 +1,8 @@
 /**
  * LinkedIn adapter (build-spec §9). Publishes to a personal profile with
  * w_member_social (self-serve, no partner approval). The tagged link goes in the
- * first comment against the post URN, never in the body.
+ * post body; the first comment is best-effort (LinkedIn's socialActions comment API
+ * is partner-gated and 403s without Community Management access).
  *
  * Credential-gated: until LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET are set, every
  * method throws AdapterNotConfiguredError, which the queue treats as a skip. Live
@@ -38,12 +39,16 @@ export const linkedInAdapter: SocialAdapter = {
   async publish(v: Variant, a: Account): Promise<{ externalId: string; url: string }> {
     requireConfigured();
     if (!a.accessToken || !a.externalMemberId) throw new Error("LinkedIn account is missing a token or member id.");
+    // The tagged link goes in the post body. LinkedIn's first-comment API
+    // (socialActions) is partner-gated (403 without Community Management access),
+    // so the body is the only reliable place to deliver the link self-serve.
+    const commentary = v.linkUrl ? `${v.body}\n\n${v.linkUrl}` : v.body;
     const res = await fetch(`${REST_BASE}/posts`, {
       method: "POST",
       headers: headers(a.accessToken),
       body: JSON.stringify({
         author: a.externalMemberId,
-        commentary: v.body,
+        commentary,
         visibility: "PUBLIC",
         distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
         lifecycleState: "PUBLISHED",

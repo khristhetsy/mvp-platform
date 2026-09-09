@@ -80,9 +80,20 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
     try {
       const variant = toVariant(row, (post as { link_url: string | null } | null)?.link_url ?? null);
       const { externalId, url } = await adapter.publish(variant, toAccount(account as AccountRow));
-      if (variant.commentText) await adapter.comment(externalId, variant.commentText, toAccount(account as AccountRow));
+      // The first comment is best-effort: the post is already live, so a comment
+      // failure (e.g. LinkedIn's partner-gated comment API returning 403) must never
+      // fail the variant or trigger a re-publish (which would double-post). Record a
+      // soft note instead, and still mark the post published.
+      let commentNote: string | null = null;
+      if (variant.commentText) {
+        try {
+          await adapter.comment(externalId, variant.commentText, toAccount(account as AccountRow));
+        } catch (ce) {
+          commentNote = `Published — first comment skipped: ${ce instanceof Error ? ce.message : "comment failed"}`;
+        }
+      }
       await supabase.from("social_variants").update({
-        status: "published", external_id: externalId, url, published_at: new Date().toISOString(), error: null, updated_at: new Date().toISOString(),
+        status: "published", external_id: externalId, url, published_at: new Date().toISOString(), error: commentNote, updated_at: new Date().toISOString(),
       }).eq("id", row.id);
       res.published++;
     } catch (err) {
