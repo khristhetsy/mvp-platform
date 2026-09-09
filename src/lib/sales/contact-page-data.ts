@@ -7,6 +7,7 @@ import { listAssignableStaff, listLeadAssignableStaff } from "@/lib/sales/settin
 import { listContactActivity } from "@/lib/sales/activity";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { fetchPartnerMessages } from "@/lib/crm-connectors/odoo/messages";
+import { listContactBookings } from "@/lib/scheduling/bookings";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import type { LinkedCompany } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
@@ -23,6 +24,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     ? await Promise.all([listAssignableStaff(), listLeadAssignableStaff()])
     : [[] as { id: string; name: string }[], [] as { id: string; name: string }[]];
   const activity = await listContactActivity(id);
+  const bookings = await listContactBookings(id).catch(() => []);
 
   const odooMessages =
     data.contact.source === "odoo" && data.contact.external_id
@@ -110,6 +112,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     onePager,
     company: linkedCompany,
     odooMessages,
+    bookings,
     investorRating,
     formdFirm,
     crr,

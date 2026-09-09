@@ -20,6 +20,7 @@ type LinkedOpp = { id: string; title: string; stage_name: string | null; value_c
 type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null; isNote?: boolean };
+type BookingLite = { id: string; event_type: string | null; start_time: string; end_time: string; timezone: string | null; meet_url: string | null; status: string; answers: { label: string; value: string }[]; booker_phone: string | null };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
@@ -258,7 +259,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
 type FormdFirmSummary = { regd_footprint: number | null; vehicle_count: number | null; fund_types: string[] | null; last_investment_at: string | null; last_investment_issuer: string | null; last_investment_round_size: number | null; activity_band: string | null; state_or_country: string | null; investments_24mo: number | null };
 const fmtUsdM = (n: number | null | undefined) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, formdFirm = null, crr = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; basePath?: string }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], bookings = [], investorRating = null, formdFirm = null, crr = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; bookings?: BookingLite[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -1085,6 +1086,33 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {section === "activity" && (
         <div style={{ padding: "14px 16px" }}>
+          {bookings.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Bookings · {bookings.length}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {bookings.map((bk) => {
+                  const s = new Date(bk.start_time), e = new Date(bk.end_time);
+                  const when = `${s.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${s.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}–${e.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+                  return (
+                    <div key={bk.id} style={{ border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{bk.event_type ?? "Meeting"}</span>
+                        <span style={{ fontSize: 9.5, background: bk.status === "cancelled" ? "#FCEBEB" : "#E8F5F1", color: bk.status === "cancelled" ? "#A32D2D" : "#0F6E56", borderRadius: 20, padding: "1px 7px" }}>{bk.status}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>{when}{bk.timezone ? ` ${bk.timezone}` : ""}</span>
+                      </div>
+                      {(bk.booker_phone || bk.answers.length > 0) && (
+                        <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                          {bk.booker_phone ? <div><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Phone</div><div style={{ fontSize: 12 }}>{bk.booker_phone}</div></div> : null}
+                          {bk.answers.map((a, i) => <div key={i}><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>{a.label}</div><div style={{ fontSize: 12 }}>{a.value}</div></div>)}
+                        </div>
+                      )}
+                      {bk.meet_url ? <a href={bk.meet_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 11, color: "#185FA5" }}>📹 Join Meet</a> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div style={{ marginBottom: 16 }}>
             <SalesChatter contactCrmId={initialContact.id} contactName={initialContact.name} contactEmail={initialContact.email} staff={staff} />
           </div>
