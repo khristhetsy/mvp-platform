@@ -10,6 +10,8 @@ import { fetchPartnerMessages } from "@/lib/crm-connectors/odoo/messages";
 import { listContactBookings } from "@/lib/scheduling/bookings";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import type { LinkedCompany } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
 
 type ProfileLike = { id: string; email?: string | null; role?: string | null; is_super_admin?: boolean | null };
@@ -34,11 +36,18 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
   let onePager: { slug: string | null; published: boolean; companyName: string | null } | null = null;
   let linkedCompany: LinkedCompany | null = null;
   let crr: { score: number; tier: string } | null = null;
+  // Member Portal Plan — the contact's live subscription plan (label), when their
+  // email matches a portal account. Read-only.
+  let memberPlan: string | null = null;
   if (data.contact.email) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
     const { data: prof } = await admin.from("profiles").select("id").eq("email", data.contact.email).maybeSingle();
     if (prof?.id) {
+      try {
+        const plan = await getUserPlan(prof.id);
+        if (plan) memberPlan = PLAN_LABELS[plan] ?? null;
+      } catch { /* ignore — plan stays null */ }
       const { data: comp } = await admin
         .from("companies")
         .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds, readiness_score")
@@ -116,6 +125,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     investorRating,
     formdFirm,
     crr,
+    memberPlan,
   };
 }
 

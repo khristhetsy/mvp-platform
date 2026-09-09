@@ -63,6 +63,19 @@ const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadiu
 // the panel narrows (Odoo-style). minmax floor sets the drop-to-one threshold.
 const RESP_COLS = "repeat(auto-fit, minmax(240px, 1fr))";
 const RESP_COLS_SM = "repeat(auto-fit, minmax(150px, 1fr))";
+// Tags: each name maps to a stable color (same tag → same color everywhere), so no
+// per-tag color store is needed. Hash the name into a fixed pastel palette.
+const TAG_PALETTE = [
+  { bg: "#D5F5E8", fg: "#0F6E56" }, { bg: "#E6F1FB", fg: "#185FA5" },
+  { bg: "#FBE7F0", fg: "#993556" }, { bg: "#FAEEDA", fg: "#854F0B" },
+  { bg: "#EEEDFE", fg: "#3C3489" }, { bg: "#FCEBEB", fg: "#A32D2D" },
+  { bg: "#EAF3DE", fg: "#3B6D11" }, { bg: "#F1EFE8", fg: "#5F5E5A" },
+];
+function tagColor(name: string): { bg: string; fg: string } {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return TAG_PALETTE[h % TAG_PALETTE.length];
+}
 const outlineBtn: React.CSSProperties = { fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" };
 
 const LEAD_TONE: Record<string, { bg: string; c: string }> = {
@@ -124,15 +137,6 @@ function Row({ icon, label, value, link }: { icon: string; label: string; value:
     </div>
   );
 }
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", margin: "10px 0 4px" }}>{title}</div>
-      {children}
-    </div>
-  );
-}
-
 // One click-to-edit profile field. In edit mode, fields with a known option list
 // (Odoo selection / many2many) show a searchable checkbox dropdown with chips
 // (Option 1); free-text fields fall back to a plain input. Inline save (check) + undo.
@@ -284,7 +288,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
 type FormdFirmSummary = { regd_footprint: number | null; vehicle_count: number | null; fund_types: string[] | null; last_investment_at: string | null; last_investment_issuer: string | null; last_investment_round_size: number | null; activity_band: string | null; state_or_country: string | null; investments_24mo: number | null };
 const fmtUsdM = (n: number | null | undefined) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], bookings = [], investorRating = null, formdFirm = null, crr = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; bookings?: BookingLite[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; basePath?: string }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], bookings = [], investorRating = null, formdFirm = null, crr = null, memberPlan = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; bookings?: BookingLite[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; memberPlan?: string | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -753,17 +757,41 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
           </div>
         ) : (
-          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: RESP_COLS, gap: "0 28px" }}>
-            <Section title="Contact">
-              <Row icon="ti-mail" label="Email" value={contact.email} link />
+          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+            {/* LEFT column — Odoo field order */}
+            <div>
+              <Row icon="ti-id-badge" label="Membership Type" value={contact.membership} />
+              {/* Member Portal Plan — live subscription plan (read-only). */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
+                <i className="ti ti-crown" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+                <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Member Portal Plan</span>
+                {memberPlan ? <span style={{ fontSize: 11, fontWeight: 600, color: "#3C3489", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>{memberPlan}</span> : <span style={{ color: "var(--muted-foreground)" }}>—</span>}
+              </div>
+              <Row icon="ti-flag" label="Lead Status" value={contact.lead_status} />
+              <Row icon="ti-arrow-down-circle" label="Lead Source" value={contact.lead_source} />
+              <Row icon="ti-map-pin" label="Contact" value={address} />
+              <Row icon="ti-hash" label="EIN" value={null} />
+              <Row icon="ti-certificate" label="Operator Licence" value={null} />
+              <Row icon="ti-id" label="CURP" value={null} />
+            </div>
+            {/* RIGHT column — Odoo field order */}
+            <div>
+              <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} />
               <Row icon="ti-phone" label="Phone" value={contact.phone} />
               <Row icon="ti-phone" label="Phone 2" value={contact.phone2} />
+              <Row icon="ti-device-mobile" label="Mobile" value={null} />
+              <Row icon="ti-mail" label="Email" value={contact.email} link />
               <Row icon="ti-world" label="Website" value={contact.website} link />
+              <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} />
               <Row icon="ti-language" label="Language" value={contact.language} />
-            </Section>
-            <Section title="Lead">
-              <Row icon="ti-flag" label="Lead status" value={contact.lead_status} />
-              <Row icon="ti-arrow-down-circle" label="Lead source" value={contact.lead_source} />
+              {/* Tags — colored pills, auto color per tag name. */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
+                <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 2 }} />
+                <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 2 }}>Tags</span>
+                <span style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {contact.tags.length === 0 ? <span style={{ color: "var(--muted-foreground)" }}>—</span> : contact.tags.map((tg) => { const c = tagColor(tg); return <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 9px" }}>{tg}</span>; })}
+                </span>
+              </div>
               {/* Lead assign — under Lead source. Editable by super admin only. */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
                 <i className="ti ti-users" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 3 }} />
@@ -821,17 +849,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   )}
                 </div>
               </div>
-              {/* Owner + Source — moved here from the header, directly under Lead assign. */}
+              {/* Owner + Source — iCapOS internal, kept below the Odoo fields. */}
               <Row icon="ti-user-check" label="Owner" value={contact.owner} />
               <Row icon="ti-plug" label="Source" value={contact.source} />
-              <Row icon="ti-id-badge" label="Membership" value={contact.membership} />
-              <Row icon="ti-briefcase" label="Job position" value={contact.job_position} />
-              <Row icon="ti-tag" label="Tags" value={contact.tags.length ? contact.tags.join(", ") : null} />
-            </Section>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Section title="Address">
-                <Row icon="ti-map-pin" label="Location" value={address} />
-              </Section>
             </div>
             {(() => {
               const profile = groupContactProfile(contact.extra, contact.membership);
