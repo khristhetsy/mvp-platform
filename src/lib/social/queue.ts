@@ -32,6 +32,20 @@ type AccountRow = {
 function toVariant(r: VariantRow, linkUrl: string | null): Variant {
   return { id: r.id, body: r.body, commentText: r.comment_text, linkUrl, idempotencyKey: r.idempotency_key };
 }
+
+/** Append the campaign attribution tag (?s=<source_tag>) to a link so clicks →
+ *  /fit sessions → signups trace back to the campaign. No-op without both, or if
+ *  an `s` param is already present. */
+export function taggedLink(url: string | null, sourceTag: string | null): string | null {
+  if (!url || !sourceTag) return url;
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has("s")) u.searchParams.set("s", sourceTag);
+    return u.toString();
+  } catch {
+    return url; // not an absolute URL — leave as-is
+  }
+}
 function toAccount(a: AccountRow): Account {
   // Tokens are sealed at rest (token-cipher); open them just before the adapter uses them.
   return { id: a.id, platform: a.platform, externalMemberId: a.external_member_id, accessToken: openToken(a.access_token), refreshToken: openToken(a.refresh_token), tokenExpiresAt: a.token_expires_at };
@@ -67,7 +81,7 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
 
     const [{ data: account }, { data: post }] = await Promise.all([
       supabase.from("social_accounts").select("id, platform, external_member_id, access_token, refresh_token, token_expires_at").eq("id", row.account_id).maybeSingle(),
-      supabase.from("social_posts").select("link_url").eq("id", row.post_id).maybeSingle(),
+      supabase.from("social_posts").select("link_url, campaign:social_campaigns(source_tag)").eq("id", row.post_id).maybeSingle(),
     ]);
 
     const adapter = account ? ADAPTERS[(account as AccountRow).platform] : undefined;
@@ -78,7 +92,8 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
     }
 
     try {
-      const variant = toVariant(row, (post as { link_url: string | null } | null)?.link_url ?? null);
+      const p = post as { link_url: string | null; campaign?: { source_tag: string | null } | null } | null;
+      const variant = toVariant(row, taggedLink(p?.link_url ?? null, p?.campaign?.source_tag ?? null));
       const { externalId, url } = await adapter.publish(variant, toAccount(account as AccountRow));
       // The first comment is best-effort: the post is already live, so a comment
       // failure (e.g. LinkedIn's partner-gated comment API returning 403) must never

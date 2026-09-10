@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
@@ -15,7 +15,7 @@ const STATUS_STYLE: Record<string, string> = {
 const chip = "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors";
 const card = "rounded-xl border border-slate-200 bg-white";
 
-type Tab = "composer" | "schedule" | "rules" | "accounts" | "attribution";
+type Tab = "composer" | "schedule" | "rules" | "accounts" | "attribution" | "campaigns";
 
 /** Display label + colors per variant status (parked/scheduled/published…). */
 function statusMeta(status: string): { label: string; cls: string; dot: string } {
@@ -38,9 +38,9 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   return (
     <div>
       <div className="flex flex-wrap gap-1 border-b border-slate-100">
-        {(["composer", "schedule", "rules", "accounts", "attribution"] as Tab[]).map((t) => (
+        {(["composer", "schedule", "rules", "accounts", "attribution", "campaigns"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium capitalize ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t === "accounts" ? "Accounts & API" : t}{t === "schedule" && queue.length ? ` · ${queue.length}` : ""}
+            {t === "accounts" ? "Accounts & API" : t === "campaigns" ? "Campaigns & ROI" : t}{t === "schedule" && queue.length ? ` · ${queue.length}` : ""}
           </button>
         ))}
       </div>
@@ -51,6 +51,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
         {tab === "rules" ? <Rules settings0={settings0} slots0={slots0} /> : null}
         {tab === "accounts" ? <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} /> : null}
         {tab === "attribution" ? <Attribution data={attribution} /> : null}
+        {tab === "campaigns" ? <Campaigns /> : null}
       </div>
     </div>
   );
@@ -60,6 +61,9 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [brief, setBrief] = useState("");
   const [archetype, setArchetype] = useState<Archetype>("proof_case");
   const [department, setDepartment] = useState<string>("Marketing");
+  const [campaignId, setCampaignId] = useState<string>("");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [newCampaign, setNewCampaign] = useState<{ open: boolean; name: string; budget: string }>({ open: false, name: "", budget: "" });
   const [selected, setSelected] = useState<string[]>([]);
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
@@ -71,6 +75,18 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [msg, setMsg] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setCampaigns((d.campaigns ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))).catch(() => {}); }, []);
+
+  async function saveNewCampaign() {
+    const name = newCampaign.name.trim();
+    if (!name) return;
+    const budgetCents = Math.round((parseFloat(newCampaign.budget) || 0) * 100);
+    const r = await fetch("/api/admin/social/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, budgetCents }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.campaign) { setCampaigns((p) => [{ id: j.campaign.id, name: j.campaign.name }, ...p]); setCampaignId(j.campaign.id); setNewCampaign({ open: false, name: "", budget: "" }); }
+  }
 
   const nameOf = (id: string) => accounts.find((a) => a.id === id)?.display_name ?? "Account";
   const platformOf = (id: string) => accounts.find((a) => a.id === id)?.platform ?? "linkedin";
@@ -111,7 +127,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
     if (mode === "schedule" && !scheduledAt) { setMsg("Pick a date and time to schedule."); return; }
     setBusy(true); setMsg(null);
     try {
-      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, linkUrl: linkUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
+      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, campaignId: campaignId || null, linkUrl: linkUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
       const j = await res.json();
       if (!res.ok) { setMsg(j.error ?? "Save failed."); return; }
       setMsg(mode === "schedule" ? `Scheduled ${j.queued} post(s) — check the Schedule tab.` : mode === "park" ? `Parked ${j.parked} post(s) in the queue.` : "Saved as draft.");
@@ -132,10 +148,34 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
         ))}
       </div>
 
-      <p className="mt-4 text-[13px] font-medium text-slate-700">Department</p>
-      <select value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
-        {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-      </select>
+      <div className="mt-4 flex flex-wrap gap-6">
+        <div>
+          <p className="text-[13px] font-medium text-slate-700">Department</p>
+          <select value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
+            {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <p className="text-[13px] font-medium text-slate-700">Campaign</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <select value={campaignId} onChange={(e) => setCampaignId(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
+              <option value="">None</option>
+              {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setNewCampaign((p) => ({ ...p, open: !p.open }))} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] text-slate-600 hover:bg-slate-50">＋ New</button>
+          </div>
+          {newCampaign.open ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <input value={newCampaign.name} onChange={(e) => setNewCampaign((p) => ({ ...p, name: e.target.value }))} placeholder="Campaign name" className="rounded-md border border-slate-200 px-2 py-1 text-[12px]" />
+              <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1">
+                <span className="text-[12px] text-slate-400">$</span>
+                <input value={newCampaign.budget} onChange={(e) => setNewCampaign((p) => ({ ...p, budget: e.target.value.replace(/[^0-9.]/g, "") }))} placeholder="Budget" className="w-20 text-[12px] outline-none" />
+              </div>
+              <button type="button" onClick={() => void saveNewCampaign()} disabled={!newCampaign.name.trim()} className="rounded-md bg-indigo-600 px-3 py-1 text-[12px] font-medium text-white disabled:opacity-50">Create</button>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       <p className="mt-4 text-[13px] font-medium text-slate-700">Post as</p>
       <div className="mt-1.5 flex flex-wrap gap-2">
@@ -674,6 +714,75 @@ function Attribution({ data }: { data: WeekBar[] }) {
         {legend.map(([label, color]) => <span key={label} className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: color }} />{label}</span>)}
       </div>
       <p className="mt-2 text-[11.5px] text-slate-400">Sourced from funnel leads by attribution tag (li-/em-/web-). Posts rank by in-range founders, never impressions.</p>
+    </div>
+  );
+}
+
+type CampaignReport = { id: string; name: string; budget_cents: number; source_tag: string; posts: number; published: number; signups: number; members: number; revenue_cents: number; roi: number | null };
+
+function Campaigns() {
+  const [rows, setRows] = useState<CampaignReport[] | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setRows(d.campaigns ?? [])).catch(() => setRows([])); }, []);
+
+  const usd = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
+  const totals = (rows ?? []).reduce((a, r) => ({ published: a.published + r.published, signups: a.signups + r.signups, members: a.members + r.members, revenue: a.revenue + r.revenue_cents, budget: a.budget + r.budget_cents }), { published: 0, signups: 0, members: 0, revenue: 0, budget: 0 });
+  const totalRoi = totals.budget > 0 ? (totals.revenue / totals.budget) : null;
+
+  if (rows === null) return <p className="text-[13px] text-slate-400">Loading…</p>;
+  if (rows.length === 0) return <p className="max-w-xl text-[13px] text-slate-500">No campaigns yet. Create one in the Composer (Campaign → ＋ New) and assign posts to it — KPIs and ROI appear here as signups convert to members.</p>;
+
+  const kpi = (label: string, value: string, sub?: string) => (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+      <p className="text-[11px] text-slate-400">{label}</p>
+      <p className="mt-1 text-[22px] font-semibold text-slate-900">{value}</p>
+      {sub ? <p className="mt-0.5 text-[11px] text-slate-500">{sub}</p> : null}
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {kpi("Published", String(totals.published))}
+        {kpi("Signups", String(totals.signups))}
+        {kpi("Members", String(totals.members))}
+        {kpi("Revenue / mo", usd(totals.revenue))}
+        {kpi("ROI", totalRoi == null ? "—" : `${totalRoi.toFixed(1)}×`, totals.budget ? `${usd(totals.revenue)} / ${usd(totals.budget)}` : "set a budget")}
+      </div>
+
+      <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-[12.5px]" style={{ minWidth: 640 }}>
+          <thead>
+            <tr className="border-b border-slate-100 text-left text-[10px] uppercase tracking-wide text-slate-400">
+              <th className="px-3 py-2 font-semibold">Campaign</th>
+              <th className="px-3 py-2 text-right font-semibold">Posts</th>
+              <th className="px-3 py-2 text-right font-semibold">Published</th>
+              <th className="px-3 py-2 text-right font-semibold">Signups</th>
+              <th className="px-3 py-2 text-right font-semibold">Members</th>
+              <th className="px-3 py-2 text-right font-semibold">Revenue/mo</th>
+              <th className="px-3 py-2 text-right font-semibold">Budget</th>
+              <th className="px-3 py-2 text-right font-semibold">ROI</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-slate-50">
+                <td className="px-3 py-2 text-slate-800">{r.name}</td>
+                <td className="px-3 py-2 text-right">{r.posts}</td>
+                <td className="px-3 py-2 text-right">{r.published}</td>
+                <td className="px-3 py-2 text-right">{r.signups}</td>
+                <td className="px-3 py-2 text-right">{r.members}</td>
+                <td className="px-3 py-2 text-right">{usd(r.revenue_cents)}</td>
+                <td className="px-3 py-2 text-right text-slate-500">{r.budget_cents ? usd(r.budget_cents) : "—"}</td>
+                <td className="px-3 py-2 text-right">
+                  {r.roi == null ? <span className="text-slate-400">—</span> : <span className={`rounded-full px-2 py-0.5 text-[11px] ${r.roi >= 1 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{r.roi.toFixed(1)}×</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 max-w-2xl text-[11.5px] text-slate-400">Revenue = monthly plan value of members whose signup traces to this campaign (via the post link&rsquo;s <code>?s=</code> tag → /fit → Sales Hub). ROI = revenue ÷ budget. Impressions/CTR need the platform analytics APIs.</p>
     </div>
   );
 }
