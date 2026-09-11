@@ -38,7 +38,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const parsed = z.object({
     scope: z.enum(["this", "following", "all"]),
     postId: z.string().uuid().nullable().optional(),
-    from: z.string().datetime().nullable().optional(),
+    from: z.string().nullable().optional(), // any date string; used only as a gte filter
   }).safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const deleted = await deleteSeriesPosts(id, parsed.data.scope, { postId: parsed.data.postId ?? null, fromISO: parsed.data.from ?? null });

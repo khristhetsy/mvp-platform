@@ -216,10 +216,19 @@ export async function deleteSeriesPosts(recurrenceId: string, scope: "this" | "f
     if (!opts.postId) return 0;
     ids = [opts.postId];
   } else {
+    // For "following", cut off at the clicked post's own scheduled time (read from the DB
+    // so we don't depend on the client's date format); fall back to the passed value.
+    let cutoff = opts.fromISO ?? null;
+    if (scope === "following" && opts.postId) {
+      const { data: p } = await db().from("social_posts").select("scheduled_at").eq("id", opts.postId).maybeSingle();
+      if (p?.scheduled_at) cutoff = p.scheduled_at as string;
+    }
     let q = db().from("social_posts").select("id").eq("recurrence_id", recurrenceId);
-    if (scope === "following" && opts.fromISO) q = q.gte("scheduled_at", opts.fromISO);
+    if (scope === "following" && cutoff) q = q.gte("scheduled_at", cutoff);
     const { data } = await q;
     ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+    // Ensure the clicked post is included even if its scheduled_at is null (already published).
+    if (scope === "following" && opts.postId && !ids.includes(opts.postId)) ids.push(opts.postId);
   }
   if (ids.length) await db().from("social_posts").delete().in("id", ids);
   if (scope !== "this") {

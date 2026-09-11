@@ -482,7 +482,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     if (!q.recurrence_id) return;
     setBusy(true);
     try {
-      await fetch(`/api/admin/social/recurrences/${q.recurrence_id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, postId: q.post_id, from: itemISO(q) }) });
+      const r = await fetch(`/api/admin/social/recurrences/${q.recurrence_id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, postId: q.post_id, from: itemISO(q) }) });
+      if (!r.ok) { alert((await r.json().catch(() => ({}))).error ?? "Could not delete."); return; }
       setRecDelete(null); setSelected(null); await reload();
     } finally { setBusy(false); }
   }
