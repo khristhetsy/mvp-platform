@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   STAGES, STAGE_LABELS, STAGE_COLORS, GRAINS, GRAIN_LABELS, fmt,
-  type Grain, type StageResult, type CampaignFunnel,
+  type Grain, type StageKey, type StageResult, type CampaignFunnel,
 } from "./funnel-types";
 import { AiCmo } from "./AiCmo";
 
@@ -39,6 +39,16 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
   const [aggregate, setAggregate] = useState<StageResult[]>([]);
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [moverMetric, setMoverMetric] = useState<StageKey>("conversions");
+
+  // Remember the Top-movers metric choice across sessions.
+  useEffect(() => {
+    let v: string | null = null;
+    try { v = localStorage.getItem("social_mover_metric"); } catch { v = null; }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (v && (STAGES as string[]).includes(v)) setMoverMetric(v as StageKey);
+  }, []);
+  function pickMoverMetric(m: StageKey) { setMoverMetric(m); try { localStorage.setItem("social_mover_metric", m); } catch { /* ignore */ } }
 
   useEffect(() => {
     let live = true;
@@ -65,8 +75,8 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
   }, [aggregate]);
 
   const movers = useMemo(() =>
-    [...funnels].map((f) => ({ f, conv: f.stages.find((s) => s.stage === "conversions") }))
-      .sort((a, b) => (b.conv?.actual ?? 0) - (a.conv?.actual ?? 0)).slice(0, 4), [funnels]);
+    [...funnels].map((f) => ({ f, m: f.stages.find((s) => s.stage === moverMetric) }))
+      .sort((a, b) => (b.m?.actual ?? 0) - (a.m?.actual ?? 0)).slice(0, 4), [funnels, moverMetric]);
 
   const cmoContext = useMemo(() => () => ({ grain, blended, stages: aggregate.map((s) => ({ stage: s.stage, actual: s.actual, target: s.target, pctOfGoal: s.pctOfGoal, deltaPct: s.deltaPct })) }), [grain, blended, aggregate]);
 
@@ -112,14 +122,21 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-white p-3.5">
-          <div className="mb-2 text-[12px] font-semibold text-slate-800">Top movers <span className="font-normal text-slate-400">· by conversions</span></div>
-          {movers.length ? movers.map(({ f, conv }) => {
-            const d = conv?.deltaPct ?? null;
+          <div className="mb-2 flex items-center gap-1.5">
+            <span className="text-[12px] font-semibold text-slate-800">Top movers</span>
+            <span className="text-[11px] text-slate-400">· by</span>
+            <select value={moverMetric} onChange={(e) => pickMoverMetric(e.target.value as StageKey)} className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 outline-none">
+              {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+            </select>
+          </div>
+          {movers.length ? movers.map(({ f, m }) => {
+            const d = m?.deltaPct ?? null;
+            const showRevenue = moverMetric === "conversions" && f.revenueCents > 0;
             return (
               <div key={f.campaignId} className="flex items-center gap-2 py-1 text-[11.5px]">
                 <span className="h-2 w-2 rounded-sm bg-indigo-500" />
                 <span className="min-w-0 flex-1 truncate text-slate-700">{f.name}</span>
-                <span className={d !== null && d < 0 ? "text-rose-600" : "text-emerald-600"}>{conv?.actual ?? 0} conv · ${(f.revenueCents / 100).toLocaleString()}</span>
+                <span className={d !== null && d < 0 ? "text-rose-600" : "text-emerald-600"}>{fmt(m?.actual ?? 0)} {STAGE_LABELS[moverMetric].toLowerCase()}{showRevenue ? ` · $${(f.revenueCents / 100).toLocaleString()}` : ""}</span>
               </div>
             );
           }) : <div className="py-1 text-[11.5px] text-slate-400">No campaign data yet.</div>}
