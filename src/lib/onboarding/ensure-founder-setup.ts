@@ -127,6 +127,29 @@ export async function ensureFounderCompanyForUser(profile: Profile): Promise<Com
       .single());
   }
 
+  // Race guard: a concurrent onboarding call may have created the same default
+  // company first. With the (founder_id, company_name) unique index this insert
+  // hits 23505 — return the existing row instead of erroring or duplicating.
+  if (createError?.code === "23505") {
+    const { data: existing } = await admin
+      .from("companies")
+      .select("*")
+      .eq("founder_id", profile.id)
+      .eq("company_name", companyPayload.company_name)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      if (!companyMembersMissing) {
+        await admin.from("company_members").upsert(
+          { company_id: (existing as Company).id, user_id: profile.id, role: "owner" },
+          { onConflict: "company_id,user_id" },
+        );
+      }
+      return existing as Company;
+    }
+  }
+
   if (createError || !createdCompany) {
     throw new Error(`Failed to create default company: ${createError?.message ?? "unknown error"}`);
   }
