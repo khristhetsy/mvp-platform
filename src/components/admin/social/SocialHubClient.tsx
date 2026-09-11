@@ -62,8 +62,10 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; googleReady: boolean; attribution: WeekBar[];
 }) {
   const [tab, setTab] = useState<Tab>("overview");
+  const [goalsFocus, setGoalsFocus] = useState<{ campaignId?: string; stage?: string } | null>(null);
   const failed24 = queue.filter((q) => q.status === "failed").length;
   const topPostBody = queue.find((q) => q.status === "published" && q.body)?.body ?? null;
+  const navigate = (t: string, focus?: { campaignId?: string; stage?: string }) => { if (t === "goals") setGoalsFocus(focus ?? null); setTab(t as Tab); };
 
   return (
     <div>
@@ -76,8 +78,8 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
       </div>
 
       <div className="mt-5">
-        {tab === "overview" ? <Overview failedCount={failed24} topPostBody={topPostBody} onNavigate={(t) => setTab(t as Tab)} /> : null}
-        {tab === "goals" ? <CampaignsGoals /> : null}
+        {tab === "overview" ? <Overview failedCount={failed24} topPostBody={topPostBody} onNavigate={navigate} /> : null}
+        {tab === "goals" ? <CampaignsGoals focus={goalsFocus} /> : null}
         {tab === "composer" ? <Composer accounts={accounts} googleReady={googleReady} /> : null}
         {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
         {tab === "library" ? <Library /> : null}

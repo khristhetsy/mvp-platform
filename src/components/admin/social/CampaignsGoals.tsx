@@ -26,12 +26,12 @@ function stepLabel(s: StageResult): string {
 /** Aggregate the per-campaign contributions to one stage. */
 function contributions(funnels: CampaignFunnel[], stage: StageKey) {
   return funnels
-    .map((f) => ({ name: f.name, s: f.stages.find((x) => x.stage === stage)! }))
+    .map((f) => ({ id: f.campaignId, name: f.name, s: f.stages.find((x) => x.stage === stage)! }))
     .filter((r) => r.s && (r.s.actual > 0 || r.s.target))
     .sort((a, b) => b.s.actual - a.s.actual);
 }
 
-export function CampaignsGoals() {
+export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage?: string } | null }) {
   const [grain, setGrain] = useState<Grain>("month");
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [aggregate, setAggregate] = useState<StageResult[]>([]);
@@ -94,6 +94,14 @@ export function CampaignsGoals() {
     }).catch(() => { if (live) { setFunnels([]); setAggregate([]); setLoading(false); } });
     return () => { live = false; };
   }, [grain]);
+
+  // Arriving from a Top-movers click: expand that stage's per-campaign drill-down and highlight it in the graph.
+  useEffect(() => {
+    if (!focus?.stage) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpanded(focus.stage as StageKey);
+    setSelected(focus.stage as StageKey);
+  }, [focus]);
 
   const cmoContext = useMemo(() => () => ({ grain, stages: aggregate.map((s) => ({ stage: s.stage, actual: s.actual, target: s.target, pctOfGoal: s.pctOfGoal, deltaPct: s.deltaPct })) }), [grain, aggregate]);
 
@@ -161,13 +169,16 @@ export function CampaignsGoals() {
                     <tr className="bg-slate-50/70">
                       <td colSpan={5} className="px-4 py-2">
                         <div className="mb-1 text-[10px] uppercase tracking-wide text-slate-400">{STAGE_LABELS[k]} by campaign</div>
-                        {contributions(funnels, k).length ? contributions(funnels, k).map((r) => (
-                          <div key={r.name} className="flex items-center gap-3 py-1 text-[11.5px]">
-                            <span className="min-w-0 flex-1 truncate text-slate-700">{r.name}</span>
-                            <span className="text-slate-600">{fmt(r.s.actual)}{r.s.target != null ? ` / ${fmt(r.s.target)}` : ""}</span>
-                            <span className="w-10 text-right font-medium text-slate-500">{pct(r.s.pctOfGoal)}</span>
-                          </div>
-                        )) : <div className="py-1 text-[11.5px] text-slate-400">No campaign data this period.</div>}
+                        {contributions(funnels, k).length ? contributions(funnels, k).map((r) => {
+                          const hit = focus?.campaignId === r.id && focus?.stage === k;
+                          return (
+                            <div key={r.id} className={`flex items-center gap-3 rounded-md px-1 py-1 text-[11.5px] ${hit ? "bg-indigo-100/70 ring-1 ring-indigo-200" : ""}`}>
+                              <span className="min-w-0 flex-1 truncate text-slate-700">{r.name}</span>
+                              <span className="text-slate-600">{fmt(r.s.actual)}{r.s.target != null ? ` / ${fmt(r.s.target)}` : ""}</span>
+                              <span className="w-10 text-right font-medium text-slate-500">{pct(r.s.pctOfGoal)}</span>
+                            </div>
+                          );
+                        }) : <div className="py-1 text-[11.5px] text-slate-400">No campaign data this period.</div>}
                       </td>
                     </tr>
                   ) : null}

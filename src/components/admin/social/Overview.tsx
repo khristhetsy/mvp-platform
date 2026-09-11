@@ -33,7 +33,7 @@ function step(next: StageResult | undefined): string {
 }
 
 export function Overview({ failedCount, topPostBody, onNavigate }: {
-  failedCount: number; topPostBody: string | null; onNavigate: (tab: string) => void;
+  failedCount: number; topPostBody: string | null; onNavigate: (tab: string, focus?: { campaignId?: string; stage?: StageKey }) => void;
 }) {
   const [grain, setGrain] = useState<Grain>("month");
   const [aggregate, setAggregate] = useState<StageResult[]>([]);
@@ -133,11 +133,12 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
             const d = m?.deltaPct ?? null;
             const showRevenue = moverMetric === "conversions" && f.revenueCents > 0;
             return (
-              <div key={f.campaignId} className="flex items-center gap-2 py-1 text-[11.5px]">
+              <button key={f.campaignId} type="button" onClick={() => onNavigate("goals", { campaignId: f.campaignId, stage: moverMetric })} className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left text-[11.5px] hover:bg-slate-50">
                 <span className="h-2 w-2 rounded-sm bg-indigo-500" />
                 <span className="min-w-0 flex-1 truncate text-slate-700">{f.name}</span>
                 <span className={d !== null && d < 0 ? "text-rose-600" : "text-emerald-600"}>{fmt(m?.actual ?? 0)} {STAGE_LABELS[moverMetric].toLowerCase()}{showRevenue ? ` · $${(f.revenueCents / 100).toLocaleString()}` : ""}</span>
-              </div>
+                <span className="text-slate-300">›</span>
+              </button>
             );
           }) : <div className="py-1 text-[11.5px] text-slate-400">No campaign data yet.</div>}
           <button type="button" onClick={() => onNavigate("goals")} className="mt-1.5 text-[10.5px] text-indigo-600 hover:underline">View all campaigns →</button>
