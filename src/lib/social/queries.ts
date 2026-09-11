@@ -11,6 +11,7 @@ export type QueueItem = {
   attempts: number; next_attempt_at: string | null; published_at: string | null; scheduled_at: string | null; gcal_event_id: string | null;
   department: string | null; platform: string | null; account_name: string | null; link_url: string | null;
   post_id: string | null; campaign_id: string | null; campaign_name: string | null;
+  event_color: string | null; busy: boolean;
 };
 
 export async function listSocialAccounts(): Promise<SocialAccount[]> {
@@ -21,7 +22,7 @@ export async function listSocialAccounts(): Promise<SocialAccount[]> {
 export async function listQueue(limit = 200): Promise<QueueItem[]> {
   const { data } = await db()
     .from("social_variants")
-    .select("id, status, body, comment_text, url, error, attempts, next_attempt_at, published_at, scheduled_at, gcal_event_id, account:social_accounts(platform, display_name), post:social_posts(id, department, link_url, campaign:social_campaigns(id, name))")
+    .select("id, status, body, comment_text, url, error, attempts, next_attempt_at, published_at, scheduled_at, gcal_event_id, event_color, busy, account:social_accounts(platform, display_name), post:social_posts(id, department, link_url, campaign:social_campaigns(id, name))")
     .neq("status", "archived")
     .order("updated_at", { ascending: false })
     .limit(limit);
@@ -35,6 +36,7 @@ export async function listQueue(limit = 200): Promise<QueueItem[]> {
       scheduled_at: (r.scheduled_at as string) ?? null, gcal_event_id: (r.gcal_event_id as string) ?? null,
       department: post?.department ?? null, platform: acc?.platform ?? null, account_name: acc?.display_name ?? null, link_url: post?.link_url ?? null,
       post_id: post?.id ?? null, campaign_id: post?.campaign?.id ?? null, campaign_name: post?.campaign?.name ?? null,
+      event_color: (r.event_color as string) ?? null, busy: r.busy === undefined ? true : Boolean(r.busy),
     };
   });
 }

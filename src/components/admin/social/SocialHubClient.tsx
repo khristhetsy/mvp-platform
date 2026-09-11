@@ -6,6 +6,12 @@ import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
 import type { SocialAccount, QueueItem, SocialSettings, SocialSlot } from "@/lib/social/queries";
 import type { WeekBar } from "@/lib/social/attribution";
+import { Overview } from "./Overview";
+import { CampaignsGoals } from "./CampaignsGoals";
+import { Library } from "./Library";
+import { AlertRules } from "./AlertRules";
+import { AttributionPeriods } from "./AttributionPeriods";
+import { AiCmo } from "./AiCmo";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -15,7 +21,12 @@ const STATUS_STYLE: Record<string, string> = {
 const chip = "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors";
 const card = "rounded-xl border border-slate-200 bg-white";
 
-type Tab = "composer" | "schedule" | "rules" | "accounts" | "attribution" | "campaigns";
+type Tab = "overview" | "goals" | "composer" | "schedule" | "library" | "attribution" | "settings";
+const TAB_ORDER: Tab[] = ["overview", "goals", "composer", "schedule", "library", "attribution", "settings"];
+const TAB_LABELS: Record<Tab, string> = {
+  overview: "Overview", goals: "Campaigns & Goals", composer: "Compose", schedule: "Schedule",
+  library: "Library", attribution: "Attribution", settings: "Settings",
+};
 
 /** Display label + colors per variant status (parked/scheduled/published…). */
 function statusMeta(status: string): { label: string; cls: string; dot: string } {
@@ -32,26 +43,42 @@ function statusMeta(status: string): { label: string; cls: string; dot: string }
 export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, googleReady, attribution }: {
   accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; googleReady: boolean; attribution: WeekBar[];
 }) {
-  const [tab, setTab] = useState<Tab>("composer");
+  const [tab, setTab] = useState<Tab>("overview");
   const failed24 = queue.filter((q) => q.status === "failed").length;
+  const topPostBody = queue.find((q) => q.status === "published" && q.body)?.body ?? null;
 
   return (
     <div>
       <div className="flex flex-wrap gap-1 border-b border-slate-100">
-        {(["composer", "schedule", "rules", "accounts", "attribution", "campaigns"] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium capitalize ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t === "accounts" ? "Accounts & API" : t === "campaigns" ? "Campaigns & ROI" : t}{t === "schedule" && queue.length ? ` · ${queue.length}` : ""}
+        {TAB_ORDER.map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+            {TAB_LABELS[t]}{t === "schedule" && queue.length ? ` · ${queue.length}` : ""}
           </button>
         ))}
       </div>
 
       <div className="mt-5">
+        {tab === "overview" ? <Overview failedCount={failed24} topPostBody={topPostBody} onNavigate={(t) => setTab(t as Tab)} /> : null}
+        {tab === "goals" ? <CampaignsGoals /> : null}
         {tab === "composer" ? <Composer accounts={accounts} googleReady={googleReady} /> : null}
         {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
-        {tab === "rules" ? <Rules settings0={settings0} slots0={slots0} /> : null}
-        {tab === "accounts" ? <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} /> : null}
-        {tab === "attribution" ? <Attribution data={attribution} /> : null}
-        {tab === "campaigns" ? <Campaigns /> : null}
+        {tab === "library" ? <Library /> : null}
+        {tab === "attribution" ? (
+          <div className="space-y-5">
+            <AttributionPeriods />
+            <div>
+              <div className="mb-2 text-[12.5px] font-semibold text-slate-800">Signups by channel</div>
+              <Attribution data={attribution} />
+            </div>
+          </div>
+        ) : null}
+        {tab === "settings" ? (
+          <div className="space-y-6">
+            <AlertRules />
+            <Rules settings0={settings0} slots0={slots0} />
+            <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -259,6 +286,10 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
       {showPreview && variants[0] ? (
         <PreviewModal onClose={() => setShowPreview(false)} name={nameOf(variants[0].accountId)} platform={platformOf(variants[0].accountId)} body={variants[0].body} comment={comment} link={linkUrl} />
       ) : null}
+
+      <div className="mt-4">
+        <AiCmo tab="Compose" context={() => ({ archetype, department, campaign: campaigns.find((c) => c.id === campaignId)?.name ?? null, hasLink: Boolean(linkUrl) })} />
+      </div>
     </div>
   );
 }
@@ -347,6 +378,11 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     if (!confirm("Delete this post permanently?")) return;
     setBusy(true);
     try { await fetch(`/api/admin/social/queue/${id}`, { method: "DELETE" }); setSelected(null); await reload(); } finally { setBusy(false); }
+  }
+  // Per-event calendar styling: color + busy/free. Updates the variant then reloads.
+  async function setStyle(id: string, patch: { color?: string | null; busy?: boolean }) {
+    setBusy(true);
+    try { await fetch("/api/admin/social/variants/style", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ variantId: id, ...patch }) }); await reload(); } finally { setBusy(false); }
   }
   function openSchedule(q: QueueItem) {
     const base = q.scheduled_at ? new Date(q.scheduled_at) : null;
@@ -461,9 +497,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                       const sm = statusMeta(q.status);
                       const iso = itemISO(q)!;
                       return (
-                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`mt-0.5 block w-full cursor-pointer rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: sm.dot, background: `${sm.dot}14` }}>
+                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`mt-0.5 block w-full cursor-pointer rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: q.event_color ?? sm.dot, background: `${q.event_color ?? sm.dot}14` }}>
                           <span className="font-medium text-slate-700">{hhmm(iso)} {titleOf(q).slice(0, 16)}</span><br />
-                          <span style={{ color: sm.dot }}>● {sm.label}</span>
+                          <span style={{ color: q.event_color ?? sm.dot }}>{q.busy ? "●" : "○"} {sm.label}{!q.busy ? " · free" : ""}</span>
                         </div>
                       );
                     })}
@@ -483,9 +519,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                     {items.length === 0 ? <span className="px-1 text-[9.5px] text-slate-300">{dragId ? "drop here" : "—"}</span> : items.map((q) => {
                       const sm = statusMeta(q.status); const iso = itemISO(q)!;
                       return (
-                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-pointer rounded border-l-2 px-1.5 py-1 text-[10px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: sm.dot, background: `${sm.dot}14` }}>
+                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-pointer rounded border-l-2 px-1.5 py-1 text-[10px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: q.event_color ?? sm.dot, background: `${q.event_color ?? sm.dot}14` }}>
                           <span className="font-medium text-slate-700">{hhmm(iso)}</span> {titleOf(q).slice(0, 22)}<br />
-                          <span style={{ color: sm.dot }}>● {sm.label}</span>
+                          <span style={{ color: q.event_color ?? sm.dot }}>{q.busy ? "●" : "○"} {sm.label}{!q.busy ? " · free" : ""}</span>
                         </div>
                       );
                     })}
@@ -541,6 +577,17 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 </div>
                 <p className="mt-1 text-[11.5px] text-slate-500">{q.account_name ?? q.platform ?? "—"}{iso ? ` · ${new Date(iso).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : " · no date"}</p>
                 {q.error ? <p className="mt-1 text-[11px] text-rose-600">{q.error}</p> : null}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[10.5px] text-slate-400">Event color</span>
+                  {["#534AB7", "#185FA5", "#0F6E56", "#CA8A04", "#A32D2D"].map((c) => (
+                    <button key={c} type="button" aria-label={`Set color ${c}`} onClick={() => void setStyle(q.id, { color: c })}
+                      className="h-4 w-4 rounded-full ring-offset-1" style={{ background: c, boxShadow: q.event_color === c ? `0 0 0 2px #fff, 0 0 0 3px ${c}` : "none" }} />
+                  ))}
+                  <button type="button" onClick={() => void setStyle(q.id, { color: null })} className="text-[10px] text-slate-400 hover:text-slate-600">by campaign</button>
+                  <span className="ml-2 text-[10.5px] text-slate-400">·</span>
+                  <button type="button" onClick={() => void setStyle(q.id, { busy: true })} className={`rounded px-2 py-0.5 text-[10px] ${q.busy ? "bg-rose-50 text-rose-700" : "text-slate-500"}`}>● Busy</button>
+                  <button type="button" onClick={() => void setStyle(q.id, { busy: false })} className={`rounded px-2 py-0.5 text-[10px] ${!q.busy ? "bg-emerald-50 text-emerald-700" : "text-slate-500"}`}>○ Free</button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <DetailBtn icon="ti-eye" label="Preview" onClick={() => setPreview(q)} accent />
@@ -747,75 +794,6 @@ function Attribution({ data }: { data: WeekBar[] }) {
         {legend.map(([label, color]) => <span key={label} className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: color }} />{label}</span>)}
       </div>
       <p className="mt-2 text-[11.5px] text-slate-400">Sourced from funnel leads by attribution tag (li-/em-/web-). Posts rank by in-range founders, never impressions.</p>
-    </div>
-  );
-}
-
-type CampaignReport = { id: string; name: string; budget_cents: number; source_tag: string; posts: number; published: number; signups: number; members: number; revenue_cents: number; roi: number | null };
-
-function Campaigns() {
-  const [rows, setRows] = useState<CampaignReport[] | null>(null);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setRows(d.campaigns ?? [])).catch(() => setRows([])); }, []);
-
-  const usd = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
-  const totals = (rows ?? []).reduce((a, r) => ({ published: a.published + r.published, signups: a.signups + r.signups, members: a.members + r.members, revenue: a.revenue + r.revenue_cents, budget: a.budget + r.budget_cents }), { published: 0, signups: 0, members: 0, revenue: 0, budget: 0 });
-  const totalRoi = totals.budget > 0 ? (totals.revenue / totals.budget) : null;
-
-  if (rows === null) return <p className="text-[13px] text-slate-400">Loading…</p>;
-  if (rows.length === 0) return <p className="max-w-xl text-[13px] text-slate-500">No campaigns yet. Create one in the Composer (Campaign → ＋ New) and assign posts to it — KPIs and ROI appear here as signups convert to members.</p>;
-
-  const kpi = (label: string, value: string, sub?: string) => (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-      <p className="text-[11px] text-slate-400">{label}</p>
-      <p className="mt-1 text-[22px] font-semibold text-slate-900">{value}</p>
-      {sub ? <p className="mt-0.5 text-[11px] text-slate-500">{sub}</p> : null}
-    </div>
-  );
-
-  return (
-    <div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {kpi("Published", String(totals.published))}
-        {kpi("Signups", String(totals.signups))}
-        {kpi("Members", String(totals.members))}
-        {kpi("Revenue / mo", usd(totals.revenue))}
-        {kpi("ROI", totalRoi == null ? "—" : `${totalRoi.toFixed(1)}×`, totals.budget ? `${usd(totals.revenue)} / ${usd(totals.budget)}` : "set a budget")}
-      </div>
-
-      <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-[12.5px]" style={{ minWidth: 640 }}>
-          <thead>
-            <tr className="border-b border-slate-100 text-left text-[10px] uppercase tracking-wide text-slate-400">
-              <th className="px-3 py-2 font-semibold">Campaign</th>
-              <th className="px-3 py-2 text-right font-semibold">Posts</th>
-              <th className="px-3 py-2 text-right font-semibold">Published</th>
-              <th className="px-3 py-2 text-right font-semibold">Signups</th>
-              <th className="px-3 py-2 text-right font-semibold">Members</th>
-              <th className="px-3 py-2 text-right font-semibold">Revenue/mo</th>
-              <th className="px-3 py-2 text-right font-semibold">Budget</th>
-              <th className="px-3 py-2 text-right font-semibold">ROI</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-50">
-                <td className="px-3 py-2 text-slate-800">{r.name}</td>
-                <td className="px-3 py-2 text-right">{r.posts}</td>
-                <td className="px-3 py-2 text-right">{r.published}</td>
-                <td className="px-3 py-2 text-right">{r.signups}</td>
-                <td className="px-3 py-2 text-right">{r.members}</td>
-                <td className="px-3 py-2 text-right">{usd(r.revenue_cents)}</td>
-                <td className="px-3 py-2 text-right text-slate-500">{r.budget_cents ? usd(r.budget_cents) : "—"}</td>
-                <td className="px-3 py-2 text-right">
-                  {r.roi == null ? <span className="text-slate-400">—</span> : <span className={`rounded-full px-2 py-0.5 text-[11px] ${r.roi >= 1 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{r.roi.toFixed(1)}×</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-3 max-w-2xl text-[11.5px] text-slate-400">Revenue = monthly plan value of members whose signup traces to this campaign (via the post link&rsquo;s <code>?s=</code> tag → /fit → Sales Hub). ROI = revenue ÷ budget. Impressions/CTR need the platform analytics APIs.</p>
     </div>
   );
 }
