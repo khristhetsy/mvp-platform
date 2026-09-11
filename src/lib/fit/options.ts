@@ -19,7 +19,11 @@
  */
 
 /** Odoo questionnaire labels the criteria live under in raw.__profile.extra. */
-export const OP_STAGE_LABEL = "Investor preferences for type(s) of company operational stage?";
+// The investor questionnaire stores the operating-stage preference under this key
+// ("Startup" / "Prototype" / "Expand Growth" / …) — these are the values Q1_STAGE maps
+// to. (It is NOT stored under the older "Investor preferences for … operational stage?"
+// label, which is why stage silently never matched until this was corrected.)
+export const OP_STAGE_LABEL = "Entrepreneur operating stage?";
 export const INV_SIZE_LABEL = "Investor investment size?";
 export const REVENUE_LABEL = "Investor preferences for the company with an annual revenue range of?";
 
