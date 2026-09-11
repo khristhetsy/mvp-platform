@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AiCmo } from "./AiCmo";
 
-type LibPost = { id: string; body: string; archetype: string | null; campaign_id: string | null; campaign_name: string | null; archived: boolean; published: number; top: boolean };
+type LibPost = { id: string; body: string; archetype: string | null; campaign_id: string | null; campaign_name: string | null; archived: boolean; published: number; clicks: number; top: boolean };
 type Campaign = { id: string; name: string };
 
 export function Library() {
@@ -78,7 +78,7 @@ export function Library() {
                 <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-medium text-slate-500">{p.archetype ?? "Post"}</span>
               )}
               <span className="min-w-0 flex-1 truncate text-[12px] text-slate-700">{p.body || "(no text)"}</span>
-              <span className="hidden text-[10.5px] text-slate-400 sm:inline">{p.campaign_name ?? "No campaign"} · {p.published} published</span>
+              <span className="hidden text-[10.5px] text-slate-400 sm:inline">{p.campaign_name ?? "No campaign"} · {p.published} published{p.clicks > 0 ? ` · ${p.clicks} clicks` : ""}</span>
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               <button type="button" onClick={() => { setDup(dup === p.id ? null : p.id); setDupSel(new Set()); }} className="rounded-md bg-indigo-600 px-2.5 py-1 text-[10.5px] font-medium text-white">⧉ Duplicate</button>

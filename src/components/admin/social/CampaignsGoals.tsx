@@ -41,6 +41,20 @@ export function CampaignsGoals() {
   const [chart, setChart] = useState<ChartType>("bar");
   const [mode, setMode] = useState<"value" | "pct">("pct");
   const [planning, setPlanning] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creatingBusy, setCreatingBusy] = useState(false);
+
+  async function createCampaign() {
+    const name = newName.trim();
+    if (!name) return;
+    setCreatingBusy(true);
+    try {
+      const res = await fetch("/api/admin/social/campaigns", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, budgetCents: 0 }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.campaign?.id) { setNewName(""); setCreating(false); await load(); setPlanning(d.campaign.id); }
+    } finally { setCreatingBusy(false); }
+  }
 
   async function load() {
     try {
@@ -70,6 +84,18 @@ export function CampaignsGoals() {
           ))}
         </div>
         {loading ? <span className="text-[12px] text-slate-400">Loading…</span> : null}
+        <div className="ml-auto">
+          {creating ? (
+            <div className="flex items-center gap-1.5">
+              <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void createCampaign(); if (e.key === "Escape") { setCreating(false); setNewName(""); } }}
+                placeholder="Campaign name" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] outline-none focus:border-indigo-300" />
+              <button type="button" disabled={creatingBusy || !newName.trim()} onClick={() => void createCampaign()} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50">{creatingBusy ? "Creating…" : "Create"}</button>
+              <button type="button" onClick={() => { setCreating(false); setNewName(""); }} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] text-slate-600">Cancel</button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-indigo-700">＋ New campaign</button>
+          )}
+        </div>
       </div>
 
       {/* Aggregate funnel table with per-stage drill-down */}
@@ -179,7 +205,7 @@ export function CampaignsGoals() {
             ) : null}
           </div>
         ))}
-        {!loading && !funnels.length ? <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-[12.5px] text-slate-400">No campaigns yet. Create one in Compose to start setting goals.</div> : null}
+        {!loading && !funnels.length ? <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-[12.5px] text-slate-400">No campaigns yet. Use <b className="font-medium text-slate-500">＋ New campaign</b> above to create one and set its goals.</div> : null}
       </div>
 
       <AiCmo tab="Campaigns & Goals" context={cmoContext} />

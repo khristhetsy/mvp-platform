@@ -183,14 +183,25 @@ async function outreachByTag(campaigns: CampaignRow[], start: Date, end: Date): 
   return out;
 }
 
-/** Clicks (fit_sessions with the tag) within [start,end). */
+/** Clicks within [start,end). Prefers real tracked clicks (social_clicks via the
+ *  /r/<post> redirect); for tags with no tracked clicks yet, falls back to /fit
+ *  sessions so historical posts (published before tracking) still report. */
 async function clicksByTag(tags: string[], start: Date, end: Date): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (!tags.length) return out;
-  const { data } = await db().from("fit_sessions").select("source_tag, created_at")
-    .in("source_tag", tags).gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(100000);
-  for (const r of (data ?? []) as { source_tag: string | null }[]) {
-    const t = r.source_tag ?? ""; if (out.has(t) || tags.includes(t)) out.set(t, (out.get(t) ?? 0) + 1);
+  const { data: clicks } = await db().from("social_clicks").select("source_tag, created_at")
+    .in("source_tag", tags).gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(200000);
+  for (const r of (clicks ?? []) as { source_tag: string | null }[]) {
+    const t = r.source_tag ?? ""; if (tags.includes(t)) out.set(t, (out.get(t) ?? 0) + 1);
+  }
+  // Fallback: only for tags with zero tracked clicks this period.
+  const missing = tags.filter((t) => !out.get(t));
+  if (missing.length) {
+    const { data: sessions } = await db().from("fit_sessions").select("source_tag, created_at")
+      .in("source_tag", missing).gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(100000);
+    for (const r of (sessions ?? []) as { source_tag: string | null }[]) {
+      const t = r.source_tag ?? ""; if (missing.includes(t)) out.set(t, (out.get(t) ?? 0) + 1);
+    }
   }
   return out;
 }

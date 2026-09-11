@@ -46,6 +46,15 @@ export function taggedLink(url: string | null, sourceTag: string | null): string
     return url; // not an absolute URL — leave as-is
   }
 }
+/** Route a published link through the /r/<post> click tracker (which forwards to the
+ *  tagged destination). Falls back to the direct tagged link when there's no post id
+ *  or destination. */
+export function trackedLink(postId: string | null, linkUrl: string | null, sourceTag: string | null): string | null {
+  if (!linkUrl) return null;
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (!postId || !base) return taggedLink(linkUrl, sourceTag);
+  return `${base}/r/${postId}`;
+}
 function toAccount(a: AccountRow): Account {
   // Tokens are sealed at rest (token-cipher); open them just before the adapter uses them.
   return { id: a.id, platform: a.platform, externalMemberId: a.external_member_id, accessToken: openToken(a.access_token), refreshToken: openToken(a.refresh_token), tokenExpiresAt: a.token_expires_at };
@@ -93,7 +102,7 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
 
     try {
       const p = post as { link_url: string | null; campaign?: { source_tag: string | null } | null } | null;
-      const variant = toVariant(row, taggedLink(p?.link_url ?? null, p?.campaign?.source_tag ?? null));
+      const variant = toVariant(row, trackedLink(row.post_id, p?.link_url ?? null, p?.campaign?.source_tag ?? null));
       const { externalId, url } = await adapter.publish(variant, toAccount(account as AccountRow));
       // The first comment is best-effort: the post is already live, so a comment
       // failure (e.g. LinkedIn's partner-gated comment API returning 403) must never
