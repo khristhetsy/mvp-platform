@@ -203,6 +203,31 @@ export async function setRecurrenceStatus(id: string, status: "active" | "paused
   return true;
 }
 
+/**
+ * Delete series posts by scope (Google-style). Variants cascade on post delete.
+ *   this       → just the one post (postId)
+ *   following  → this post + all later occurrences (scheduled_at >= fromISO); ends series
+ *   all        → every post in the series; ends series
+ * Returns how many posts were deleted.
+ */
+export async function deleteSeriesPosts(recurrenceId: string, scope: "this" | "following" | "all", opts: { postId?: string | null; fromISO?: string | null }): Promise<number> {
+  let ids: string[] = [];
+  if (scope === "this") {
+    if (!opts.postId) return 0;
+    ids = [opts.postId];
+  } else {
+    let q = db().from("social_posts").select("id").eq("recurrence_id", recurrenceId);
+    if (scope === "following" && opts.fromISO) q = q.gte("scheduled_at", opts.fromISO);
+    const { data } = await q;
+    ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+  }
+  if (ids.length) await db().from("social_posts").delete().in("id", ids);
+  if (scope !== "this") {
+    await db().from("social_recurrences").update({ status: "ended", next_run: null, updated_at: new Date().toISOString() }).eq("id", recurrenceId);
+  }
+  return ids.length;
+}
+
 /** Series summary for a post's recurrence (for the Schedule detail card). */
 export async function recurrenceSummary(id: string): Promise<{ id: string; status: string; label: string; madeCount: number } | null> {
   const { data: row } = await db().from("social_recurrences").select("*").eq("id", id).maybeSingle();

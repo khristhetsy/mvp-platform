@@ -382,6 +382,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const [selPosts, setSelPosts] = useState<Set<string>>(new Set());
   // Recurrence series summary for the selected post.
   const [recSummary, setRecSummary] = useState<{ label: string; status: string; madeCount: number } | null>(null);
+  // Google-style "delete recurring post" scope dialog.
+  const [recDelete, setRecDelete] = useState<QueueItem | null>(null);
+  const [recDeleteScope, setRecDeleteScope] = useState<"this" | "following" | "all">("this");
   // "Make recurring" panel state (for non-series posts).
   const [mrOpen, setMrOpen] = useState(false);
   const [mrFreq, setMrFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
@@ -475,6 +478,14 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     } finally { setBusy(false); }
   }
   const MR_WEEKDAYS: { l: string; d: number }[] = [{ l: "S", d: 0 }, { l: "M", d: 1 }, { l: "T", d: 2 }, { l: "W", d: 3 }, { l: "T", d: 4 }, { l: "F", d: 5 }, { l: "S", d: 6 }];
+  async function deleteRecurring(q: QueueItem, scope: "this" | "following" | "all") {
+    if (!q.recurrence_id) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/admin/social/recurrences/${q.recurrence_id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, postId: q.post_id, from: itemISO(q) }) });
+      setRecDelete(null); setSelected(null); await reload();
+    } finally { setBusy(false); }
+  }
   async function recAct(id: string, action: "pause" | "resume" | "end") {
     if (action === "end" && !confirm("End this recurring series? Already-scheduled occurrences stay; no new ones are created.")) return;
     setBusy(true);
@@ -750,7 +761,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 {!onCal ? <DetailBtn icon="ti-calendar-plus" label="Schedule" onClick={() => openSchedule(q)} /> : null}
                 {onCal && !live ? <DetailBtn icon="ti-calendar-off" label="Unschedule" onClick={() => act(q.id, "unschedule")} /> : null}
                 <DetailBtn icon="ti-archive" label="Archive" onClick={() => act(q.id, "archive")} />
-                {!live ? <DetailBtn icon="ti-trash" label="Delete" onClick={() => del(q.id)} danger /> : null}
+                {q.recurrence_id
+                  ? <DetailBtn icon="ti-trash" label="Delete" onClick={() => { setRecDeleteScope("this"); setRecDelete(q); }} danger />
+                  : (!live ? <DetailBtn icon="ti-trash" label="Delete" onClick={() => del(q.id)} danger /> : null)}
                 {q.url ? <a href={q.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-[11.5px] text-blue-600"><i className="ti ti-external-link" aria-hidden="true" /> View</a> : null}
               </div>
             </div>
@@ -787,6 +800,25 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
             <div className="mt-3 flex justify-end gap-2">
               <button type="button" onClick={() => setScheduling(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] text-slate-600">Cancel</button>
               <button type="button" onClick={confirmSchedule} disabled={busy || !sDate} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50">Confirm</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {recDelete ? (
+        <div onClick={() => setRecDelete(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[320px] rounded-xl bg-white p-4 shadow-xl">
+            <p className="text-[14px] font-semibold text-slate-800">Delete recurring post</p>
+            <div className="mt-3 flex flex-col gap-0.5">
+              {([["this", "This post"], ["following", "This and following posts"], ["all", "All posts"]] as const).map(([v, lbl]) => (
+                <label key={v} className="flex items-center gap-2.5 py-1.5 text-[13px] text-slate-700">
+                  <input type="radio" name="recdel" checked={recDeleteScope === v} onChange={() => setRecDeleteScope(v)} /> {lbl}
+                </label>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setRecDelete(null)} className="text-[12.5px] font-medium text-indigo-600">Cancel</button>
+              <button type="button" disabled={busy} onClick={() => void deleteRecurring(recDelete, recDeleteScope)} className="rounded-full bg-indigo-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
             </div>
           </div>
         </div>
