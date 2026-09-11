@@ -120,15 +120,6 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [msg, setMsg] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
-  // Recurrence
-  const [repeat, setRepeat] = useState(false);
-  const [recFreq, setRecFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
-  const [recInterval, setRecInterval] = useState("1");
-  const [recWeekdays, setRecWeekdays] = useState<number[]>([]);
-  const [recEndType, setRecEndType] = useState<"never" | "on_date" | "after">("never");
-  const [recEndDate, setRecEndDate] = useState("");
-  const [recEndCount, setRecEndCount] = useState("12");
-  const [recPreview, setRecPreview] = useState<{ upcoming: number[]; total: number } | null>(null);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setCampaigns((d.campaigns ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))).catch(() => {}); }, []);
@@ -174,41 +165,6 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   }
 
   const scheduledISO = () => (schedOn && schedDate ? new Date(`${schedDate}T${schedTime || "08:15"}`).toISOString() : null);
-
-  // Recurrence rule assembled from the schedule inputs.
-  function recRule() {
-    return {
-      freq: recFreq,
-      interval: Math.max(1, parseInt(recInterval, 10) || 1),
-      weekdays: recFreq === "weekly" ? (recWeekdays.length ? recWeekdays : (schedDate ? [new Date(`${schedDate}T00:00`).getDay()] : [])) : [],
-      timeLocal: schedTime || "08:15",
-      startDate: schedDate,
-      endType: recEndType,
-      endDate: recEndType === "on_date" ? (recEndDate || null) : null,
-      endCount: recEndType === "after" ? (Math.max(1, parseInt(recEndCount, 10) || 1)) : null,
-    };
-  }
-  async function previewRec() {
-    if (!schedDate) { setRecPreview(null); return; }
-    try {
-      const res = await fetch("/api/admin/social/recurrences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recRule(), dryRun: true }) });
-      const d = await res.json();
-      setRecPreview({ upcoming: d.upcoming ?? [], total: d.total ?? 0 });
-    } catch { setRecPreview(null); }
-  }
-  async function saveRecurring() {
-    if (variants.length === 0) { setMsg("Draft the post first."); return; }
-    if (!schedDate) { setMsg("Pick a start date."); return; }
-    setBusy(true); setMsg(null);
-    try {
-      const res = await fetch("/api/admin/social/recurrences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recRule(), campaignId: campaignId || null, archetype, department, brief: brief || null, body: variants[0]?.body ?? "", comment: comment || null, linkUrl: linkUrl || null, variants }) });
-      const j = await res.json();
-      if (!res.ok) { setMsg(j.error ?? "Could not schedule the series."); return; }
-      setMsg(`Recurring series scheduled — ${recPreview?.total ?? "the"} occurrences will appear on the Schedule tab.`);
-      setVariants([]); setBrief(""); setRepeat(false); setRecPreview(null);
-    } finally { setBusy(false); }
-  }
-  const WEEKDAYS: { l: string; d: number }[] = [{ l: "S", d: 0 }, { l: "M", d: 1 }, { l: "T", d: 2 }, { l: "W", d: 3 }, { l: "T", d: 4 }, { l: "F", d: 5 }, { l: "S", d: 6 }];
 
   async function save(mode: "draft" | "park" | "schedule") {
     if (variants.length === 0) return;
@@ -357,56 +313,6 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
               {googleReady ? <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> mirrors to Google Calendar</span> : null}
             </div>
             <p className="mt-1.5 text-[11px] text-slate-400">Toggle off to park the post in the queue without a date — you can schedule it later from the Schedule tab.</p>
-
-            {schedOn && (
-              <div className="mt-3 border-t border-slate-100 pt-3">
-                <button type="button" onClick={() => { setRepeat((v) => !v); setRecPreview(null); }} className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
-                  <span className={`relative inline-flex h-5 w-9 items-center rounded-full ${repeat ? "bg-indigo-600" : "bg-slate-300"}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${repeat ? "translate-x-4" : "translate-x-1"}`} />
-                  </span>
-                  <i className="ti ti-repeat" aria-hidden="true" /> Repeat
-                </button>
-                {repeat && (
-                  <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] text-slate-500">Every</span>
-                      <input value={recInterval} onChange={(e) => { setRecInterval(e.target.value.replace(/[^0-9]/g, "")); setRecPreview(null); }} className="w-12 rounded-md border border-slate-200 px-2 py-1 text-[12px]" />
-                      <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-[11px]">
-                        {(["daily", "weekly", "monthly"] as const).map((f) => (
-                          <button key={f} type="button" onClick={() => { setRecFreq(f); setRecPreview(null); }} className={`px-2.5 py-1 capitalize ${recFreq === f ? "bg-indigo-600 text-white" : "border-l border-slate-200 text-slate-600 first:border-l-0"}`}>{f === "daily" ? "Day" : f === "weekly" ? "Week" : "Month"}</button>
-                        ))}
-                      </div>
-                    </div>
-                    {recFreq === "weekly" && (
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <span className="mr-1 text-[10.5px] text-slate-400">On</span>
-                        {WEEKDAYS.map((w, i) => {
-                          const on = recWeekdays.includes(w.d);
-                          return <button key={i} type="button" onClick={() => { setRecWeekdays((p) => on ? p.filter((x) => x !== w.d) : [...p, w.d]); setRecPreview(null); }} className={`h-6 w-6 rounded-full text-[10.5px] ${on ? "bg-indigo-600 text-white" : "border border-slate-200 text-slate-600"}`}>{w.l}</button>;
-                        })}
-                      </div>
-                    )}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] text-slate-500">Ends</span>
-                      {([["never", "Never"], ["on_date", "On date"], ["after", "After N"]] as const).map(([v, lbl]) => (
-                        <button key={v} type="button" onClick={() => { setRecEndType(v); setRecPreview(null); }} className={`rounded-full px-2.5 py-1 text-[11px] ${recEndType === v ? "border-[1.5px] border-indigo-400 text-indigo-700" : "border border-slate-200 text-slate-600"}`}>{lbl}</button>
-                      ))}
-                      {recEndType === "on_date" && <input type="date" value={recEndDate} onChange={(e) => { setRecEndDate(e.target.value); setRecPreview(null); }} className="rounded-md border border-slate-200 px-2 py-1 text-[12px]" />}
-                      {recEndType === "after" && <span className="flex items-center gap-1 text-[11px] text-slate-500"><input value={recEndCount} onChange={(e) => { setRecEndCount(e.target.value.replace(/[^0-9]/g, "")); setRecPreview(null); }} className="w-12 rounded-md border border-slate-200 px-2 py-1 text-[12px]" /> posts</span>}
-                    </div>
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <button type="button" onClick={() => void previewRec()} disabled={!schedDate} className="rounded-md border border-slate-300 px-2.5 py-1 text-[11px] text-indigo-600 disabled:opacity-40">Preview dates</button>
-                      {recPreview && (
-                        <span className="text-[11px] text-slate-500">
-                          {recPreview.upcoming.length ? recPreview.upcoming.slice(0, 4).map((ms) => new Date(ms).toLocaleDateString([], { month: "short", day: "numeric" })).join(" · ") : "No dates"}
-                          {recPreview.total ? ` … ${recPreview.total} total` : ""}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           </div>
 
@@ -414,9 +320,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
             <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
             <button onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
             <button onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
-            {repeat
-              ? <button onClick={() => void saveRecurring()} disabled={busy || !schedDate} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"><i className="ti ti-repeat" aria-hidden="true" /> Schedule recurring post</button>
-              : <button onClick={() => save("schedule")} disabled={busy || !schedOn || !schedDate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Schedule post</button>}
+            <button onClick={() => save("schedule")} disabled={busy || !schedOn || !schedDate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Schedule post</button>
           </div>
         </div>
       ) : null}
