@@ -171,11 +171,18 @@ export async function applyProposal(id: string, edits: { industries?: string[]; 
   if (type && !hasTyp) overrides["Investor type"] = [type];
   // Only mark inferred when the contact isn't already verified/self_reported.
   const trusted = c?.inv_source === "verified" || c?.inv_source === "self_reported";
-  const patch: Record<string, unknown> = { overrides, updated_at: new Date().toISOString() };
-  if (!trusted) patch.inv_source = "inferred";
-  const { error } = await db().from("crm_contacts").update(patch).eq("id", prop.contact_id);
+  const now = new Date().toISOString();
+  // Try to also stamp inv_source='inferred'; if that column rejects the value (e.g. a
+  // constrained enum), fall back to writing just the overrides so approval still lands.
+  let error = null;
+  if (!trusted) {
+    ({ error } = await db().from("crm_contacts").update({ overrides, inv_source: "inferred", updated_at: now }).eq("id", prop.contact_id));
+  }
+  if (trusted || error) {
+    ({ error } = await db().from("crm_contacts").update({ overrides, updated_at: now }).eq("id", prop.contact_id));
+  }
   if (error) return false;
-  await db().from("investor_enrichment").update({ status: "approved", reviewed_by: reviewerId ?? null, reviewed_at: new Date().toISOString() }).eq("id", id);
+  await db().from("investor_enrichment").update({ status: "approved", reviewed_by: reviewerId ?? null, reviewed_at: now }).eq("id", id);
   return true;
 }
 

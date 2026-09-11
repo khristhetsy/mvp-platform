@@ -65,7 +65,9 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   async function decide(id: string, action: "approve" | "reject", industries?: string[], type?: string | null) {
     setBusy(true);
     try {
-      await fetch(`/api/admin/investors/enrich/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, industries, type }) });
+      const res = await fetch(`/api/admin/investors/enrich/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, industries, type }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.ok === false) { setMsg(`Couldn't ${action} — ${d.error ?? "try again"}.`); return; }
       setRows((p) => p.filter((r) => r.id !== id)); setEditId(null);
     } finally { setBusy(false); }
   }
