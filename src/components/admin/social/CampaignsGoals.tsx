@@ -44,6 +44,16 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [creatingBusy, setCreatingBusy] = useState(false);
+  // "Who clicked" per campaign.
+  const [clickersOpen, setClickersOpen] = useState<string | null>(null);
+  const [clickers, setClickers] = useState<{ total: number; anonymous: number; identified: { email: string; name: string | null; company: string | null; contactId: string | null; at: string | null; stage: string | null }[] } | null>(null);
+  const [clickersBusy, setClickersBusy] = useState(false);
+
+  async function openClickers(campaignId: string, sourceTag: string) {
+    if (clickersOpen === campaignId) { setClickersOpen(null); return; }
+    setClickersOpen(campaignId); setClickers(null); setClickersBusy(true);
+    try { const d = await fetch(`/api/admin/social/clickers?tag=${encodeURIComponent(sourceTag)}`).then((r) => r.json()); setClickers(d); } catch { setClickers(null); } finally { setClickersBusy(false); }
+  }
 
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
@@ -241,13 +251,34 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
                 <button type="button" disabled={rowBusy} onClick={() => void deleteCampaignAction(f.campaignId, f.name)} className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-[11.5px] text-rose-600 hover:bg-rose-50">Delete</button>
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {f.stages.map((s) => (
                 <span key={s.stage} className="rounded-md bg-slate-50 px-2 py-1 text-[10.5px] text-slate-600">
                   {STAGE_LABELS[s.stage]} <b className="font-semibold text-slate-800">{pct(s.pctOfGoal)}</b>
                 </span>
               ))}
+              {(f.stages.find((s) => s.stage === "clicks")?.actual ?? 0) > 0 ? (
+                <button type="button" onClick={() => void openClickers(f.campaignId, f.sourceTag)} className="rounded-md border border-slate-200 px-2 py-1 text-[10.5px] text-indigo-600 hover:bg-indigo-50">
+                  {clickersOpen === f.campaignId ? "Hide clickers" : "Who clicked →"}
+                </button>
+              ) : null}
             </div>
+            {clickersOpen === f.campaignId ? (
+              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[11.5px]">
+                {clickersBusy ? <span className="text-slate-400">Loading…</span> : clickers ? (
+                  <>
+                    <div className="mb-1.5 text-slate-600"><b className="font-semibold text-slate-800">{clickers.total}</b> clicks · <b className="font-semibold text-emerald-700">{clickers.identified.length}</b> identified · {clickers.anonymous} anonymous</div>
+                    {clickers.identified.length ? clickers.identified.map((c) => (
+                      <div key={c.email} className="flex items-center gap-2 py-0.5">
+                        <span className="min-w-0 flex-1 truncate text-slate-700">{c.name ?? c.email}{c.company ? <span className="text-slate-400"> · {c.company}</span> : null}</span>
+                        <span className="text-slate-400">{c.at ? new Date(c.at).toLocaleDateString([], { month: "short", day: "numeric" }) : ""}</span>
+                        {c.contactId ? <a href={`/admin/sales/contacts/${c.contactId}`} className="text-indigo-600">Open →</a> : <span className="text-slate-400">{c.email}</span>}
+                      </div>
+                    )) : <div className="text-slate-400">No one identified themselves yet — all clicks were anonymous. People appear here once they submit their email on /fit.</div>}
+                  </>
+                ) : <span className="text-slate-400">Couldn&rsquo;t load clickers.</span>}
+              </div>
+            ) : null}
             {planning === f.campaignId ? (
               <div className="mt-3"><GoalPlanner campaignId={f.campaignId} grain={grain} stages={f.stages} onSaved={() => { setPlanning(null); void load(); }} onCancel={() => setPlanning(null)} /></div>
             ) : null}
