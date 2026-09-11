@@ -2,9 +2,6 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
-import { MarketingStatCards } from "@/components/marketing/MarketingStatCards";
-import { GuidedBanner } from "@/components/marketing/GuidedBanner";
-import { LifecycleStepper } from "@/components/admin/LifecycleStepper";
 import { marketingLifecycle } from "@/lib/lifecycle/counts";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +21,9 @@ const SEQ_STATUS_MAP: Record<string, { bg: string; color: string }> = {
   draft:    { bg: "#F1EFE8", color: "#5F5E5A" },
   archived: { bg: "#FCEBEB", color: "#A32D2D" },
 };
+
+// Ring colors across the lead lifecycle stages.
+const LIFECYCLE_PALETTE = ["#6D28D9", "#7C3AED", "#0F6E56", "#854F0B", "#7C3AED", "#0F6E56"];
 
 // Shared white card style
 const card = {
@@ -75,24 +75,25 @@ export default async function MarketingDashboardPage() {
   const openRate  = sent > 0 ? (opened  / sent) * 100 : 0;
   const clickRate = sent > 0 ? (clicked / sent) * 100 : 0;
 
-  const statCardData = {
-    totalContacts: totalContacts ?? 0,
-    newContacts7d: newContacts7d ?? 0,
-    sent,
-    opened,
-    clicked,
-    openRate,
-    clickRate,
-    activeCampaigns: (campaigns.data ?? []).length,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    campaigns: (campaigns.data ?? []).map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      stat_sent: c.stat_sent,
-      stat_opened: c.stat_opened,
-      stat_clicked: c.stat_clicked,
-    })),
-  };
+  // Command-center derivations
+  const lifecycleTotal = marketingStages.reduce((a, s) => a + s.count, 0);
+  let lifecycleBottleneck: string | null = null;
+  for (let i = 1; i < marketingStages.length; i++) {
+    if (marketingStages[i - 1].count > 0 && marketingStages[i].count < marketingStages[i - 1].count) {
+      lifecycleBottleneck = `${marketingStages[i - 1].label} → ${marketingStages[i].label}`; break;
+    }
+  }
+  const activeCampaignCount = (campaigns.data ?? []).length;
+  const activeSequenceCount = (sequences.data ?? []).length;
+  const newStageCount = marketingStages[0]?.count ?? 0;
+  const downstream = marketingStages.slice(1).reduce((a, s) => a + s.count, 0);
+  const nextActions: Array<{ icon: string; tone: string; title: string; detail: string; cta: string; href: string }> = [];
+  if (newStageCount > 0 && downstream === 0)
+    nextActions.push({ icon: "!", tone: "#A32D2D", title: `${newStageCount.toLocaleString()} leads uncontacted`, detail: "— launch a campaign to move them forward.", cta: "Set up", href: "/admin/marketing/campaigns" });
+  if (activeCampaignCount === 0)
+    nextActions.push({ icon: "◔", tone: "#854F0B", title: "No active campaigns", detail: "— create one to start reaching contacts.", cta: "New campaign", href: "/admin/marketing/campaigns" });
+  if (activeSequenceCount > 0)
+    nextActions.push({ icon: "★", tone: "#0F6E56", title: `${activeSequenceCount} active sequence${activeSequenceCount === 1 ? "" : "s"}`, detail: "— review cadence and performance.", cta: "Open sequences", href: "/admin/marketing/sequences" });
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -110,18 +111,55 @@ export default async function MarketingDashboardPage() {
         </Link>
       </div>
 
-      {/* Lead lifecycle — pinned to the top of the dashboard */}
-      {marketingStages.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
-          <LifecycleStepper title="Lead lifecycle" stages={marketingStages} accent="#7C3AED" askLabel="Marketing AI" />
+      {/* Command Center — lead lifecycle rings + health line */}
+      <div style={{ ...card, padding: "16px 12px", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>Lead lifecycle</span>
+          <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{lifecycleTotal.toLocaleString()} in funnel</span>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: openRate >= 21 ? "#3B6D11" : "#854F0B", background: openRate >= 21 ? "#EAF3DE" : "#FAEEDA", borderRadius: 999, padding: "3px 11px" }}>Open {openRate.toFixed(1)}% {openRate >= 21 ? "· above benchmark" : ""}</span>
         </div>
-      )}
+        {marketingStages.length === 0 ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No lifecycle stages yet.</p> : (
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 0, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 4 }}>
+            {marketingStages.map((s, i) => {
+              const share = lifecycleTotal > 0 ? Math.round((s.count / lifecycleTotal) * 100) : 0;
+              const C = 175.93; const off = C * (1 - Math.min(100, share) / 100);
+              const color = LIFECYCLE_PALETTE[i % LIFECYCLE_PALETTE.length];
+              const big = s.count >= 10000 ? `${(s.count / 1000).toFixed(1)}k` : s.count >= 1000 ? `${(s.count / 1000).toFixed(1)}k` : String(s.count);
+              return (
+                <div key={s.key} style={{ display: "flex", alignItems: "center", flex: "0 0 auto" }}>
+                  <Link href={s.href ?? "#"} style={{ textAlign: "center", width: 94, textDecoration: "none", display: "block" }}>
+                    <svg viewBox="0 0 72 72" style={{ width: 64, height: 64 }} role="img" aria-label={`${s.label} ${s.count}`}>
+                      <circle cx="36" cy="36" r="28" fill="none" stroke="#eef2f7" strokeWidth="6" />
+                      <circle cx="36" cy="36" r="28" fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off} transform="rotate(-90 36 36)" />
+                      <text x="36" y="41" fontSize={s.count >= 1000 ? "12" : "16"} fontWeight="700" fill="#0f172a" textAnchor="middle">{big}</text>
+                    </svg>
+                    <div style={{ fontSize: 9.5, color: "var(--muted-foreground)", marginTop: 2, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</div>
+                    <div style={{ fontSize: 9, color: "var(--muted-foreground)", opacity: 0.8 }}>{share}%</div>
+                  </Link>
+                  {i < marketingStages.length - 1 && <span style={{ color: "var(--muted-foreground)", fontSize: 12, flex: "0 0 auto" }}>›</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div style={{ borderTop: "0.5px solid #eef1f5", marginTop: 12, paddingTop: 9, display: "flex", gap: 18, flexWrap: "wrap", fontSize: 11.5, color: "var(--muted-foreground)" }}>
+          <Link href="/admin/marketing/contacts" style={{ textDecoration: "none", color: "var(--muted-foreground)" }}><b style={{ color: "var(--foreground)" }}>{(totalContacts ?? 0).toLocaleString()}</b> contacts <span style={{ opacity: 0.8 }}>(+{newContacts7d ?? 0} this week)</span></Link>
+          <span><b style={{ color: "var(--foreground)" }}>{sent.toLocaleString()}</b> emails sent (30d)</span>
+          <span><b style={{ color: "var(--foreground)" }}>{openRate.toFixed(1)}%</b> open</span>
+          <span><b style={{ color: "var(--foreground)" }}>{clickRate.toFixed(1)}%</b> click</span>
+          {lifecycleBottleneck && <span style={{ color: "#A32D2D" }}>Bottleneck → <b>{lifecycleBottleneck}</b></span>}
+        </div>
+      </div>
 
-      {/* Dismissible guided flow */}
-      <GuidedBanner />
-
-      {/* Clickable stat cards */}
-      <MarketingStatCards data={statCardData} />
+      {/* Next best actions */}
+      <div style={{ ...card, padding: "12px 16px", marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Next best actions</div>
+        {nextActions.length === 0 ? <p style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>Nothing urgent — funnel looks healthy.</p> : nextActions.map((a, i) => (
+          <Link key={i} href={a.href} style={{ display: "flex", gap: 8, padding: "5px 0", fontSize: 11.5, textDecoration: "none", color: "var(--foreground)" }}>
+            <span style={{ color: a.tone }}>{a.icon}</span><span><b style={{ fontWeight: 500 }}>{a.title}</b> {a.detail} <span style={{ color: "#2E78F5" }}>{a.cta} →</span></span>
+          </Link>
+        ))}
+      </div>
 
       {/* Campaigns + Sequences */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
@@ -184,33 +222,6 @@ export default async function MarketingDashboardPage() {
               );
             })
           )}
-        </div>
-      </div>
-
-      {/* Funnel overview */}
-      <div style={{ ...card, padding: "16px 18px" }}>
-        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 14 }}>30-day funnel</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
-          {[
-            { label: "Sent",      val: sent,   color: "var(--muted-foreground)", bg: "var(--muted)" },
-            { label: "Opened",    val: opened,  color: "#2E78F5",                bg: "#EEEDFE" },
-            { label: "Clicked",   val: clicked, color: "#0F6E56",                bg: "#E1F5EE" },
-          ].map((s) => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: "10px 14px" }}>
-              <div style={{ fontSize: 18, fontWeight: 500, color: s.color }}>{s.val.toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{s.label}</div>
-              {sent > 0 && s.label !== "Sent" && (
-                <div style={{ fontSize: 10, color: s.color, marginTop: 2 }}>
-                  {((s.val / sent) * 100).toFixed(1)}% of sent
-                </div>
-              )}
-            </div>
-          ))}
-          <div style={{ background: "var(--muted)", borderRadius: 8, padding: "10px 14px" }}>
-            <div style={{ fontSize: 18, fontWeight: 500, color: "var(--muted-foreground)" }}>{(totalContacts ?? 0).toLocaleString()}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>Total contacts</div>
-            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>+{newContacts7d ?? 0} this week</div>
-          </div>
         </div>
       </div>
     </div>

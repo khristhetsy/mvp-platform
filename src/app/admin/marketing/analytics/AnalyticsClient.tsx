@@ -193,8 +193,8 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, marginBottom: 2 }}>Analytics</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · icapos.com</div>
+          <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Marketing Analytics</h1>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>How your outreach performs — deliverability, engagement, and per-campaign results. Last 30 days · icapos.com</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button type="button" onClick={() => setShowLog((v) => !v)} title="Click to see the raw webhook activity from Resend." style={{ display: "flex", alignItems: "center", gap: 7, background: hook.bg, border: `0.5px solid ${hook.border}`, borderRadius: 10, padding: "6px 12px", cursor: "pointer" }}>
