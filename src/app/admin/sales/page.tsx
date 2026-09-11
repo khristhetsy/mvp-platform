@@ -9,15 +9,26 @@ import { getSalesScope, effectiveSalesOwner } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesDashboardPage({ searchParams }: { searchParams: Promise<{ viewAs?: string }> }) {
+const SALES_PERIOD_DAYS: Record<string, number> = { week: 7, month: 30, qtr: 90, year: 365 };
+const SALES_PERIODS: Array<{ key: string; short: string }> = [{ key: "week", short: "Week" }, { key: "month", short: "Month" }, { key: "qtr", short: "Qtr" }, { key: "year", short: "Year" }];
+
+export default async function SalesDashboardPage({ searchParams }: { searchParams: Promise<{ viewAs?: string; period?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin: any = createServiceRoleClient();
-  const viewAs = (await searchParams).viewAs ?? null;
+  const sp = await searchParams;
+  const viewAs = sp.viewAs ?? null;
+  const period = SALES_PERIOD_DAYS[sp.period ?? ""] ? (sp.period as string) : "qtr";
+  const periodDays = SALES_PERIOD_DAYS[period];
   const scope = await getSalesScope(profile, viewAs);
   const owner = effectiveSalesOwner(scope);
   const withView = (href: string) =>
     viewAs && viewAs !== "team" ? `${href}${href.includes("?") ? "&" : "?"}viewAs=${encodeURIComponent(viewAs)}` : href;
+  // Preserve viewAs, then swap period — for the period toggle links.
+  const withPeriod = (p: string) => {
+    const base = withView("/admin/sales");
+    return `${base}${base.includes("?") ? "&" : "?"}period=${p}`;
+  };
 
   let oppQuery = admin.from("sales_opportunities").select("id, name, status, value_cents, stage_id, billing, probability, updated_at");
   if (owner) oppQuery = oppQuery.eq("owner_id", owner);
@@ -26,7 +37,13 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
   const open = opps.filter((o) => o.status === "open");
   const won = opps.filter((o) => o.status === "won");
   const lost = opps.filter((o) => o.status === "lost");
-  const winRate = won.length + lost.length > 0 ? Math.round((won.length / (won.length + lost.length)) * 100) : null;
+  // Win rate is scoped to the selected period (by close/update time); won count stays all-time.
+  // eslint-disable-next-line react-hooks/purity -- server component, single render
+  const periodSince = Date.now() - periodDays * 86400000;
+  const inPeriod = (o: { updated_at: string | null }) => o.updated_at != null && new Date(o.updated_at).getTime() >= periodSince;
+  const wonInPeriod = won.filter(inPeriod).length;
+  const lostInPeriod = lost.filter(inPeriod).length;
+  const winRate = wonInPeriod + lostInPeriod > 0 ? Math.round((wonInPeriod / (wonInPeriod + lostInPeriod)) * 100) : null;
   const mrrCents = (o: { value_cents: number | null; billing: string | null }) => (o.value_cents == null ? 0 : o.billing === "monthly" ? o.value_cents : Math.round(o.value_cents / 12));
   const pipelineValue = Math.round(open.reduce((a, o) => a + (o.value_cents ?? 0), 0) / 100);
   const weightedValue = Math.round(open.reduce((a, o) => a + (o.value_cents ?? 0) * ((o.probability ?? 0) / 100), 0) / 100);
@@ -81,8 +98,13 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Sales lifecycle</span>
           <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{open.length} in funnel</span>
+          <div style={{ display: "flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+            {SALES_PERIODS.map((p) => (
+              <Link key={p.key} href={withPeriod(p.key)} style={{ fontSize: 11, padding: "4px 10px", textDecoration: "none", background: period === p.key ? "#2E78F5" : "transparent", color: period === p.key ? "#fff" : "var(--muted-foreground)", borderLeft: p.key !== "week" ? "0.5px solid var(--border)" : "none" }}>{p.short}</Link>
+            ))}
+          </div>
           <span style={{ marginLeft: "auto", fontSize: 11, color: "#0C447C", background: "#E6F1FB", borderRadius: 999, padding: "3px 11px" }}>
-            {winRate !== null ? `Win rate ${winRate}%` : "Win rate —"} · {won.length} won all-time
+            {winRate !== null ? `Win rate ${winRate}% this ${period === "qtr" ? "quarter" : period}` : "Win rate —"} · {won.length} won all-time
           </span>
         </div>
 
