@@ -20,8 +20,10 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
     const d = await fetch("/api/admin/investors/enrich?status=pending").then((r) => r.json()).catch(() => ({ proposals: [] }));
     setRows(d.proposals ?? []);
   }
-  async function runBatch() {
-    return fetch("/api/admin/investors/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "run", limit: 40 }) }).then((r) => r.json());
+  async function runBatch(limit = 40) {
+    const res = await fetch("/api/admin/investors/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "run", limit }) });
+    if (!res.ok) throw new Error(String(res.status));
+    return res.json();
   }
   async function run() {
     setBusy(true); setMsg("Running AI enrichment…");
@@ -33,19 +35,24 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   }
   async function runAll() {
     setBusy(true);
-    let totalProposed = 0, totalSkipped = 0, guard = 0;
-    try {
-      // Auto-continue through 40-at-a-time batches until nothing is left (each batch
-      // stays within the serverless time limit). Guard caps runaway loops.
-      while (guard++ < 200) {
-        const d = await runBatch();
-        totalProposed += d.proposed ?? 0; totalSkipped += d.skipped ?? 0;
+    let totalProposed = 0, totalSkipped = 0, guard = 0, fails = 0;
+    // Smaller batches (20) so each pass finishes well inside the serverless limit even
+    // with website fetches. A stalled batch is retried; work is committed per batch so
+    // nothing is lost on a transient error.
+    while (guard++ < 400) {
+      try {
+        const d = await runBatch(20);
+        totalProposed += d.proposed ?? 0; totalSkipped += d.skipped ?? 0; fails = 0;
         setMsg(`Processing… ${d.remaining ?? 0} remaining · ${totalProposed} proposed so far`);
-        if (!d || (d.remaining ?? 0) <= 0) break;
+        await refresh();
+        if ((d.remaining ?? 0) <= 0) { setMsg(`Done — ${totalProposed} proposed, ${totalSkipped} skipped (no signal).`); break; }
+      } catch {
+        fails++;
+        if (fails >= 3) { setMsg(`Paused after a few errors — ${totalProposed} proposed so far. Click Run all to resume.`); break; }
+        await new Promise((r) => setTimeout(r, 1500)); // brief backoff, then retry the next batch
       }
-      setMsg(`Done — ${totalProposed} proposed, ${totalSkipped} skipped (no signal).`);
-      await refresh();
-    } catch { setMsg("Enrichment stopped on an error — re-run to continue."); await refresh(); } finally { setBusy(false); }
+    }
+    setBusy(false);
   }
   async function bulk() {
     setBusy(true);

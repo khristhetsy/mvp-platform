@@ -54,7 +54,7 @@ const GENERIC_DOMAINS = new Set(["gmail.com", "googlemail.com", "yahoo.com", "ou
 async function fetchSiteText(domain: string | null): Promise<string | null> {
   if (!domain || GENERIC_DOMAINS.has(domain)) return null;
   try {
-    const res = await fetch(`https://${domain}`, { redirect: "follow", signal: AbortSignal.timeout(5000), headers: { "user-agent": "iCapOS-enrichment/1.0" } });
+    const res = await fetch(`https://${domain}`, { redirect: "follow", signal: AbortSignal.timeout(4000), headers: { "user-agent": "iCapOS-enrichment/1.0" } });
     if (!res.ok) return null;
     const html = (await res.text()).slice(0, 40000);
     const text = html
@@ -115,19 +115,27 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
   const todo = pending.slice(0, limit);
 
   let proposed = 0, skipped = 0;
-  for (const r of todo) {
-    const p = await proposeFor(r);
-    const hasSignal = p && (p.industries.length > 0 || p.investorType);
-    // Record no-signal contacts as 'rejected' so they aren't retried on the next pass.
-    const { error } = await db().from("investor_enrichment").upsert({
-      contact_id: r.id,
-      proposed_industries: hasSignal ? p!.industries : [], proposed_type: hasSignal ? p!.investorType : null,
-      confidence: hasSignal ? p!.confidence : 0, basis: p?.basis ?? null,
-      rationale: hasSignal ? p!.rationale : "No signal from name/domain/website.", model: CLAUDE_HAIKU,
-      status: hasSignal ? "pending" : "rejected", updated_at: new Date().toISOString(),
-    }, { onConflict: "contact_id" });
-    if (!error && hasSignal) proposed++; else skipped++;
+  // Process the batch with bounded concurrency so it finishes inside the serverless
+  // time limit (each item is a website fetch + a Claude call).
+  const CONCURRENCY = 6;
+  let cursor = 0;
+  async function worker() {
+    while (cursor < todo.length) {
+      const r = todo[cursor++];
+      const p = await proposeFor(r);
+      const hasSignal = p && (p.industries.length > 0 || p.investorType);
+      // Record no-signal contacts as 'rejected' so they aren't retried on the next pass.
+      const { error } = await db().from("investor_enrichment").upsert({
+        contact_id: r.id,
+        proposed_industries: hasSignal ? p!.industries : [], proposed_type: hasSignal ? p!.investorType : null,
+        confidence: hasSignal ? p!.confidence : 0, basis: p?.basis ?? null,
+        rationale: hasSignal ? p!.rationale : "No signal from name/domain/website.", model: CLAUDE_HAIKU,
+        status: hasSignal ? "pending" : "rejected", updated_at: new Date().toISOString(),
+      }, { onConflict: "contact_id" });
+      if (!error && hasSignal) proposed++; else skipped++;
+    }
   }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, () => worker()));
   // remaining = un-proposed candidates left after this batch (0 → run-all is done).
   return { scanned: missing.length, proposed, skipped, remaining: Math.max(0, pending.length - todo.length) };
 }
