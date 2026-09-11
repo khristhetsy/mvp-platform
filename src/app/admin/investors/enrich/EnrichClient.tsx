@@ -20,13 +20,32 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
     const d = await fetch("/api/admin/investors/enrich?status=pending").then((r) => r.json()).catch(() => ({ proposals: [] }));
     setRows(d.proposals ?? []);
   }
+  async function runBatch() {
+    return fetch("/api/admin/investors/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "run", limit: 40 }) }).then((r) => r.json());
+  }
   async function run() {
     setBusy(true); setMsg("Running AI enrichment…");
     try {
-      const d = await fetch("/api/admin/investors/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "run", limit: 40 }) }).then((r) => r.json());
-      setMsg(`Scanned ${d.scanned} missing · proposed ${d.proposed} · skipped ${d.skipped} (no signal). Run again to continue.`);
+      const d = await runBatch();
+      setMsg(`Scanned ${d.scanned} missing · proposed ${d.proposed} · skipped ${d.skipped} (no signal). ${d.remaining > 0 ? `${d.remaining} to go — run again or use Run all.` : "All done."}`);
       await refresh();
     } catch { setMsg("Enrichment failed."); } finally { setBusy(false); }
+  }
+  async function runAll() {
+    setBusy(true);
+    let totalProposed = 0, totalSkipped = 0, guard = 0;
+    try {
+      // Auto-continue through 40-at-a-time batches until nothing is left (each batch
+      // stays within the serverless time limit). Guard caps runaway loops.
+      while (guard++ < 200) {
+        const d = await runBatch();
+        totalProposed += d.proposed ?? 0; totalSkipped += d.skipped ?? 0;
+        setMsg(`Processing… ${d.remaining ?? 0} remaining · ${totalProposed} proposed so far`);
+        if (!d || (d.remaining ?? 0) <= 0) break;
+      }
+      setMsg(`Done — ${totalProposed} proposed, ${totalSkipped} skipped (no signal).`);
+      await refresh();
+    } catch { setMsg("Enrichment stopped on an error — re-run to continue."); await refresh(); } finally { setBusy(false); }
   }
   async function bulk() {
     setBusy(true);
@@ -50,7 +69,8 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => void run()} disabled={busy} className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700 disabled:opacity-50">▷ Run enrichment (next 40)</button>
+        <button type="button" onClick={() => void run()} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">▷ Run next 40</button>
+        <button type="button" onClick={() => void runAll()} disabled={busy} className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700 disabled:opacity-50">▷▷ Run all</button>
         {highCount > 0 ? <button type="button" onClick={() => void bulk()} disabled={busy} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-[13px] font-medium text-emerald-700 disabled:opacity-50">✓ Approve all ≥{HIGH}% ({highCount})</button> : null}
         <span className="ml-auto text-[12px] text-slate-500">{rows.length} pending{msg ? ` · ${msg}` : ""}</span>
       </div>

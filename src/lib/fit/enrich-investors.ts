@@ -96,34 +96,40 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
 }
 
 /** Run a capped batch: propose for investors missing industry or type, store as pending. */
-export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number }> {
+export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number }> {
   const { data } = await db().from("crm_contacts")
     .select("id, company, email, raw, overrides, inv_source")
     .or("contact_type.eq.investor,module.eq.investor").not("company", "is", null).limit(20000);
   const rows = (data ?? []) as InvestorRow[];
   const missing = rows.filter((r) => !hasIndustry(r) || !hasType(r));
 
-  // Skip contacts that already have a pending/approved proposal.
+  // Skip any contact that already has a proposal (pending/approved/rejected) — so a
+  // "run all" loop makes forward progress and terminates instead of re-scanning them.
   const ids = missing.map((r) => r.id);
   const existing = new Set<string>();
   if (ids.length) {
-    const { data: ex } = await db().from("investor_enrichment").select("contact_id").in("contact_id", ids).neq("status", "rejected");
+    const { data: ex } = await db().from("investor_enrichment").select("contact_id").in("contact_id", ids);
     for (const e of (ex ?? []) as { contact_id: string }[]) existing.add(e.contact_id);
   }
-  const todo = missing.filter((r) => !existing.has(r.id)).slice(0, limit);
+  const pending = missing.filter((r) => !existing.has(r.id));
+  const todo = pending.slice(0, limit);
 
   let proposed = 0, skipped = 0;
   for (const r of todo) {
     const p = await proposeFor(r);
-    if (!p || (p.industries.length === 0 && !p.investorType)) { skipped++; continue; }
+    const hasSignal = p && (p.industries.length > 0 || p.investorType);
+    // Record no-signal contacts as 'rejected' so they aren't retried on the next pass.
     const { error } = await db().from("investor_enrichment").upsert({
-      contact_id: r.id, proposed_industries: p.industries, proposed_type: p.investorType,
-      confidence: p.confidence, basis: p.basis, rationale: p.rationale, model: CLAUDE_HAIKU,
-      status: "pending", updated_at: new Date().toISOString(),
+      contact_id: r.id,
+      proposed_industries: hasSignal ? p!.industries : [], proposed_type: hasSignal ? p!.investorType : null,
+      confidence: hasSignal ? p!.confidence : 0, basis: p?.basis ?? null,
+      rationale: hasSignal ? p!.rationale : "No signal from name/domain/website.", model: CLAUDE_HAIKU,
+      status: hasSignal ? "pending" : "rejected", updated_at: new Date().toISOString(),
     }, { onConflict: "contact_id" });
-    if (!error) proposed++; else skipped++;
+    if (!error && hasSignal) proposed++; else skipped++;
   }
-  return { scanned: missing.length, proposed, skipped };
+  // remaining = un-proposed candidates left after this batch (0 → run-all is done).
+  return { scanned: missing.length, proposed, skipped, remaining: Math.max(0, pending.length - todo.length) };
 }
 
 export type EnrichmentRow = {
