@@ -47,6 +47,22 @@ function domainOf(email: string | null): string | null {
   if (!email || !email.includes("@")) return null;
   return email.split("@")[1].trim().toLowerCase() || null;
 }
+// Generic mailbox domains carry no company signal — don't fetch a "website" for them.
+const GENERIC_DOMAINS = new Set(["gmail.com", "googlemail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com", "aol.com", "proton.me", "protonmail.com"]);
+
+/** Best-effort homepage text for a domain (timeout + size capped). Null on any failure. */
+async function fetchSiteText(domain: string | null): Promise<string | null> {
+  if (!domain || GENERIC_DOMAINS.has(domain)) return null;
+  try {
+    const res = await fetch(`https://${domain}`, { redirect: "follow", signal: AbortSignal.timeout(5000), headers: { "user-agent": "iCapOS-enrichment/1.0" } });
+    if (!res.ok) return null;
+    const html = (await res.text()).slice(0, 40000);
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1500);
+    return text || null;
+  } catch { return null; }
+}
 function hasIndustry(r: InvestorRow): boolean {
   const ov = r.overrides?.["Industries"];
   if (Array.isArray(ov) && ov.length) return true;
@@ -64,8 +80,13 @@ function hasType(r: InvestorRow): boolean {
 export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis: string }) | null> {
   if (!isClaudeConfigured()) return null;
   const domain = domainOf(row.email);
-  const basis = domain ? "domain" : "name";
-  const user = `Company: ${row.company ?? "(unknown)"}\nEmail domain: ${domain ?? "(none)"}`;
+  const site = await fetchSiteText(domain);
+  const basis = site ? "website" : domain ? "domain" : "name";
+  const user = [
+    `Company: ${row.company ?? "(unknown)"}`,
+    `Email domain: ${domain ?? "(none)"}`,
+    site ? `Website text (excerpt): ${site}` : null,
+  ].filter(Boolean).join("\n");
   try {
     const reply = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
     const p = parseProposal(reply);

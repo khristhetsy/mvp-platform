@@ -47,16 +47,24 @@ export async function handoffFitSession(sessionId: string, booker: { name: strin
   // compare normalised against the small candidate set sharing the domain.
   const norm = normalizeEmail(booker.email);
   const domain = norm.slice(norm.indexOf("@") + 1);
-  const { data: candidates } = await db.from("crm_contacts").select("id, email, raw").ilike("email", `%@${domain}`).limit(200);
-  const hit = ((candidates ?? []) as { id: string; email: string | null; raw: Record<string, unknown> | null }[])
+  const { data: candidates } = await db.from("crm_contacts").select("id, email, raw, overrides").ilike("email", `%@${domain}`).limit(200);
+  const hit = ((candidates ?? []) as { id: string; email: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }[])
     .find((c) => c.email && normalizeEmail(c.email) === norm);
 
   if (hit) {
-    // Append the fit answers; keep the existing lead source (first touch wins).
+    // Append the fit answers. Keep any existing lead source (first touch wins), but
+    // backfill it from this fit session's source_tag when the contact has none yet —
+    // otherwise a returning lead's meeting/conversion never attributes to the campaign.
     const raw = (hit.raw ?? {}) as Record<string, unknown>;
     const prof = (raw.__profile ?? {}) as Record<string, unknown>;
     raw.__profile = { ...prof, fit };
-    await db.from("crm_contacts").update({ raw }).eq("id", hit.id);
+    const update: Record<string, unknown> = { raw };
+    const overrides = { ...((hit.overrides as Record<string, unknown> | null) ?? {}) };
+    if (sess.source_tag && !overrides.lead_source) {
+      overrides.lead_source = sess.source_tag;
+      update.overrides = overrides;
+    }
+    await db.from("crm_contacts").update(update).eq("id", hit.id);
     return;
   }
 
