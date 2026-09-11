@@ -13,7 +13,7 @@ import { listAlertRules, createAlertRule, updateAlertRule, deleteAlertRule } fro
 export const dynamic = "force-dynamic";
 
 const base = {
-  metric: z.enum(["outreach", "impressions", "clicks", "meetings", "conversions", "revenue", "goal_pacing"]),
+  metric: z.enum(["outreach", "clicks", "meetings", "conversions", "revenue", "goal_pacing"]),
   direction: z.enum(["up", "down", "behind_pace"]),
   threshold_pct: z.number().min(0).max(1000),
   grain: z.enum(["week", "month", "quarter", "year"]),

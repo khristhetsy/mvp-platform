@@ -1,7 +1,7 @@
 /**
  * Funnel goals + report. Staff-only.
  *   GET  ?grain=week|month|quarter|year → { grain, periodStart, funnels, aggregate }
- *   POST { campaignId, grain, goals:{outreach?,impressions?,clicks?,meetings?,conversions?} } → { goals }
+ *   POST { campaignId, grain, goals:{outreach?,clicks?,meetings?,conversions?} } → { goals }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -27,7 +27,6 @@ const postSchema = z.object({
   grain: z.enum(GRAINS),
   goals: z.object({
     outreach: z.number().int().min(0).nullable().optional(),
-    impressions: z.number().int().min(0).nullable().optional(),
     clicks: z.number().int().min(0).nullable().optional(),
     meetings: z.number().int().min(0).nullable().optional(),
     conversions: z.number().int().min(0).nullable().optional(),

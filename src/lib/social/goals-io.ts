@@ -8,7 +8,7 @@ function db(): any { return createServiceRoleClient(); }
 
 export type CampaignGoalRow = {
   campaign_id: string; grain: Grain; period_start: string;
-  goal_outreach: number | null; goal_impressions: number | null; goal_clicks: number | null;
+  goal_outreach: number | null; goal_clicks: number | null;
   goal_meetings: number | null; goal_conversions: number | null;
 };
 
@@ -20,13 +20,13 @@ export async function setCampaignGoals(
   const norm = (n: number | null | undefined) => (n === null || n === undefined || Number.isNaN(n) ? null : Math.max(0, Math.round(n)));
   const row = {
     campaign_id: campaignId, grain, period_start: ps,
-    goal_outreach: norm(goals.outreach), goal_impressions: norm(goals.impressions), goal_clicks: norm(goals.clicks),
+    goal_outreach: norm(goals.outreach), goal_clicks: norm(goals.clicks),
     goal_meetings: norm(goals.meetings), goal_conversions: norm(goals.conversions),
     created_by: createdBy ?? null, updated_at: new Date().toISOString(),
   };
   const { data, error } = await db().from("social_campaign_goals")
     .upsert(row, { onConflict: "campaign_id,grain,period_start" })
-    .select("campaign_id, grain, period_start, goal_outreach, goal_impressions, goal_clicks, goal_meetings, goal_conversions").single();
+    .select("campaign_id, grain, period_start, goal_outreach, goal_clicks, goal_meetings, goal_conversions").single();
   if (error) return null;
   return data as CampaignGoalRow;
 }
@@ -35,10 +35,10 @@ export async function setCampaignGoals(
 export async function getCampaignGoals(campaignId: string, grain: Grain, when = new Date()): Promise<StageGoals> {
   const ps = periodKey(periodStart(grain, when));
   const { data } = await db().from("social_campaign_goals")
-    .select("goal_outreach, goal_impressions, goal_clicks, goal_meetings, goal_conversions")
+    .select("goal_outreach, goal_clicks, goal_meetings, goal_conversions")
     .eq("campaign_id", campaignId).eq("grain", grain).eq("period_start", ps).maybeSingle();
   const g = (data ?? {}) as Record<string, number | null>;
-  return { outreach: g.goal_outreach ?? null, impressions: g.goal_impressions ?? null, clicks: g.goal_clicks ?? null, meetings: g.goal_meetings ?? null, conversions: g.goal_conversions ?? null };
+  return { outreach: g.goal_outreach ?? null, clicks: g.goal_clicks ?? null, meetings: g.goal_meetings ?? null, conversions: g.goal_conversions ?? null };
 }
 
 // ── Alert rules ────────────────────────────────────────────────────────────────

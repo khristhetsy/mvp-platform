@@ -29,7 +29,7 @@ function Ring({ s }: { s: StageResult }) {
 
 function step(next: StageResult | undefined): string {
   if (!next || next.stepFromPrevRatio === null) return "";
-  return next.stage === "impressions" ? `${Math.round(next.stepFromPrevRatio)}/post` : `${(next.stepFromPrevRatio * 100).toFixed(1)}%`;
+  return `${(next.stepFromPrevRatio * 100).toFixed(1)}%`;
 }
 
 export function Overview({ failedCount, topPostBody, onNavigate }: {
@@ -68,7 +68,7 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
     let worst: { label: string; val: number } | null = null;
     for (let i = 1; i < STAGES.length; i++) {
       const s = aggregate.find((x) => x.stage === STAGES[i]);
-      if (!s || s.stepFromPrevRatio === null || s.stage === "impressions") continue;
+      if (!s || s.stepFromPrevRatio === null) continue;
       if (!worst || s.stepFromPrevRatio < worst.val) worst = { label: `${STAGE_LABELS[STAGES[i - 1]]} → ${STAGE_LABELS[STAGES[i]]}`, val: s.stepFromPrevRatio };
     }
     return worst;

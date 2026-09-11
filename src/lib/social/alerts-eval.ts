@@ -14,7 +14,7 @@ import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
-const STAGE_METRICS: StageKey[] = ["outreach", "impressions", "clicks", "meetings", "conversions"];
+const STAGE_METRICS: StageKey[] = ["outreach", "clicks", "meetings", "conversions"];
 
 export type MetricSnapshot = {
   /** % change vs previous comparable period (null when previous is 0). */

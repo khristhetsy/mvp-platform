@@ -5,7 +5,7 @@ import { AiCmo } from "./AiCmo";
 
 type Rule = { id: string; metric: string; direction: "up" | "down" | "behind_pace"; threshold_pct: number; grain: string; channel: string; campaign_id: string | null; enabled: boolean };
 
-const METRICS = ["conversions", "meetings", "clicks", "impressions", "outreach", "revenue", "goal_pacing"] as const;
+const METRICS = ["conversions", "meetings", "clicks", "outreach", "revenue", "goal_pacing"] as const;
 const DIRS: { v: Rule["direction"]; label: string }[] = [{ v: "down", label: "drops" }, { v: "up", label: "rises" }, { v: "behind_pace", label: "falls behind pace" }];
 
 export function AlertRules() {

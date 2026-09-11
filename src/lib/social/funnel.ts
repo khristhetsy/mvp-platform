@@ -1,7 +1,10 @@
 /**
- * Five-stage funnel goals + reporting for the Social Media Hub.
+ * Four-stage funnel goals + reporting for the Social Media Hub.
  *
- *   Outreach → Impressions → Clicks → Meetings → Conversions
+ *   Outreach → Clicks → Meetings → Conversions
+ *
+ * (Impressions was dropped — no platform exposes real per-post reach via API for the
+ * current setup, and an estimate wasn't worth showing.)
  *
  * Goals are stored per campaign, per period grain (week/month/quarter/year) and per
  * period_start (social_campaign_goals). Reporting rolls actuals into the same buckets
@@ -9,9 +12,7 @@
  *
  * Actuals per stage (per campaign, within a period window):
  *   Outreach     = published variants (posts that went out)
- *   Impressions  = estimated (published × IMPRESSIONS_PER_POST) until a platform
- *                  analytics API is wired — flagged `estimated` in the UI
- *   Clicks       = fit_sessions carrying the campaign source_tag (link-tag hits)
+ *   Clicks       = social_clicks / fit_sessions carrying the campaign source_tag
  *   Meetings     = scheduling_bookings whose contact's lead_source = source_tag
  *   Conversions  = crm_contacts whose lead_source = source_tag (attributed signups)
  *
@@ -22,14 +23,12 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { PLAN_PRICES, type PlanType } from "@/lib/subscriptions/plans";
 
 export type Grain = "week" | "month" | "quarter" | "year";
-export type StageKey = "outreach" | "impressions" | "clicks" | "meetings" | "conversions";
+export type StageKey = "outreach" | "clicks" | "meetings" | "conversions";
 
-export const STAGES: StageKey[] = ["outreach", "impressions", "clicks", "meetings", "conversions"];
+export const STAGES: StageKey[] = ["outreach", "clicks", "meetings", "conversions"];
 export const STAGE_LABELS: Record<StageKey, string> = {
-  outreach: "Outreach", impressions: "Impressions", clicks: "Clicks", meetings: "Meetings", conversions: "Conversions",
+  outreach: "Outreach", clicks: "Clicks", meetings: "Meetings", conversions: "Conversions",
 };
-/** Reach estimate per published post until a platform analytics API is connected. */
-export const IMPRESSIONS_PER_POST = 300;
 
 /** Paid plans that count toward attributed revenue (mirrors campaigns.ts). */
 const PAID_PLANS = new Set<PlanType>(["founder_basic", "founder_professional", "founder_managed_ir", "investor_pro", "investor_premium"]);
@@ -97,8 +96,7 @@ export type StageResult = {
   pctOfGoal: number | null;   // actual / target * 100, null when no target
   prevActual: number;
   deltaPct: number | null;    // change vs previous period, null when prev = 0
-  stepFromPrevRatio: number | null; // actual / previous-stage actual (impressions/post, CTR, …)
-  estimated: boolean;         // true for impressions (until analytics API)
+  stepFromPrevRatio: number | null; // actual / previous-stage actual (CTR, % booked, % won)
 };
 
 /** Round to one decimal for stable display/serialisation. */
@@ -122,7 +120,6 @@ export function computeFunnel(current: StageCounts, previous: StageCounts, goals
       prevActual,
       deltaPct: prevActual > 0 ? r1(((actual - prevActual) / prevActual) * 100) : null,
       stepFromPrevRatio: i > 0 && prevStageActual > 0 ? r1((actual / prevStageActual) * 100) / 100 : null,
-      estimated: stage === "impressions",
     };
   });
 }
@@ -271,10 +268,8 @@ async function countsFor(campaigns: CampaignRow[], tags: string[], start: Date, 
   ]);
   const byTag = new Map<string, StageCounts>();
   for (const t of tags) {
-    const o = outreach.get(t) ?? 0;
     byTag.set(t, {
-      outreach: o,
-      impressions: o * IMPRESSIONS_PER_POST,
+      outreach: outreach.get(t) ?? 0,
       clicks: clicks.get(t) ?? 0,
       meetings: meetings.get(t) ?? 0,
       conversions: conv.get(t)?.signups ?? 0,
@@ -296,17 +291,17 @@ export async function campaignFunnels(grain: Grain, now = new Date()): Promise<C
   const [cur, prev, goalsRows, convCur] = await Promise.all([
     countsFor(campaigns, tags, start, end),
     countsFor(campaigns, tags, prevStart, start),
-    db().from("social_campaign_goals").select("campaign_id, goal_outreach, goal_impressions, goal_clicks, goal_meetings, goal_conversions").eq("grain", grain).eq("period_start", periodKey(start)),
+    db().from("social_campaign_goals").select("campaign_id, goal_outreach, goal_clicks, goal_meetings, goal_conversions").eq("grain", grain).eq("period_start", periodKey(start)),
     conversionsByTag(tags, start, end),
   ]);
   const goalsByCampaign = new Map<string, StageGoals>();
   for (const g of ((goalsRows.data ?? []) as Record<string, number | null>[])) {
     goalsByCampaign.set(String(g.campaign_id), {
-      outreach: g.goal_outreach, impressions: g.goal_impressions, clicks: g.goal_clicks, meetings: g.goal_meetings, conversions: g.goal_conversions,
+      outreach: g.goal_outreach, clicks: g.goal_clicks, meetings: g.goal_meetings, conversions: g.goal_conversions,
     });
   }
 
-  const zero: StageCounts = { outreach: 0, impressions: 0, clicks: 0, meetings: 0, conversions: 0 };
+  const zero: StageCounts = { outreach: 0, clicks: 0, meetings: 0, conversions: 0 };
   return campaigns.map((c) => {
     const conv = convCur.get(c.source_tag) ?? { signups: 0, members: 0, revenueCents: 0 };
     return {
@@ -324,10 +319,10 @@ export async function campaignFunnels(grain: Grain, now = new Date()): Promise<C
 
 /** Sum per-campaign funnels into one blended funnel across all campaigns (Overview). */
 export function aggregateFunnels(funnels: CampaignFunnel[]): StageResult[] {
-  const cur: StageCounts = { outreach: 0, impressions: 0, clicks: 0, meetings: 0, conversions: 0 };
-  const prev: StageCounts = { outreach: 0, impressions: 0, clicks: 0, meetings: 0, conversions: 0 };
-  const goals: Record<StageKey, number> = { outreach: 0, impressions: 0, clicks: 0, meetings: 0, conversions: 0 };
-  const hasGoal: Record<StageKey, boolean> = { outreach: false, impressions: false, clicks: false, meetings: false, conversions: false };
+  const cur: StageCounts = { outreach: 0, clicks: 0, meetings: 0, conversions: 0 };
+  const prev: StageCounts = { outreach: 0, clicks: 0, meetings: 0, conversions: 0 };
+  const goals: Record<StageKey, number> = { outreach: 0, clicks: 0, meetings: 0, conversions: 0 };
+  const hasGoal: Record<StageKey, boolean> = { outreach: false, clicks: false, meetings: false, conversions: false };
   for (const f of funnels) for (const s of f.stages) {
     cur[s.stage] += s.actual; prev[s.stage] += s.prevActual;
     if (s.target !== null) { goals[s.stage] += s.target; hasGoal[s.stage] = true; }

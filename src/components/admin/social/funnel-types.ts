@@ -1,13 +1,13 @@
 /** Client-safe mirror of the funnel types (no server imports). */
 export type Grain = "week" | "month" | "quarter" | "year";
-export type StageKey = "outreach" | "impressions" | "clicks" | "meetings" | "conversions";
+export type StageKey = "outreach" | "clicks" | "meetings" | "conversions";
 
-export const STAGES: StageKey[] = ["outreach", "impressions", "clicks", "meetings", "conversions"];
+export const STAGES: StageKey[] = ["outreach", "clicks", "meetings", "conversions"];
 export const STAGE_LABELS: Record<StageKey, string> = {
-  outreach: "Outreach", impressions: "Impressions", clicks: "Clicks", meetings: "Meetings", conversions: "Conversions",
+  outreach: "Outreach", clicks: "Clicks", meetings: "Meetings", conversions: "Conversions",
 };
 export const STAGE_COLORS: Record<StageKey, string> = {
-  outreach: "#534AB7", impressions: "#2A4B86", clicks: "#185FA5", meetings: "#0F6E56", conversions: "#3B6D11",
+  outreach: "#534AB7", clicks: "#185FA5", meetings: "#0F6E56", conversions: "#3B6D11",
 };
 export const GRAINS: Grain[] = ["week", "month", "quarter", "year"];
 export const GRAIN_LABELS: Record<Grain, string> = { week: "Week", month: "Month", quarter: "Quarter", year: "Year" };
@@ -20,7 +20,6 @@ export type StageResult = {
   prevActual: number;
   deltaPct: number | null;
   stepFromPrevRatio: number | null;
-  estimated: boolean;
 };
 
 export type CampaignFunnel = {

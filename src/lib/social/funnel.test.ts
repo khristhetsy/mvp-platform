@@ -33,18 +33,22 @@ describe("period math", () => {
   });
 });
 
-const counts = (o: number, im: number, c: number, m: number, cv: number): StageCounts => ({ outreach: o, impressions: im, clicks: c, meetings: m, conversions: cv });
+const counts = (o: number, c: number, m: number, cv: number): StageCounts => ({ outreach: o, clicks: c, meetings: m, conversions: cv });
 
 describe("computeFunnel", () => {
-  const cur = counts(124, 37200, 5180, 248, 142);
-  const prev = counts(110, 33000, 4796, 256, 149);
-  const goals = { outreach: 160, impressions: 48000, clicks: 6000, meetings: 320, conversions: 200 };
+  const cur = counts(124, 5180, 248, 142);
+  const prev = counts(110, 4796, 256, 149);
+  const goals = { outreach: 160, clicks: 6000, meetings: 320, conversions: 200 };
   const res = computeFunnel(cur, prev, goals);
 
   it("computes % of goal per stage", () => {
     expect(res.find((s) => s.stage === "outreach")!.pctOfGoal).toBe(77.5);
     expect(res.find((s) => s.stage === "clicks")!.pctOfGoal).toBeCloseTo(86.3, 1);
     expect(res.find((s) => s.stage === "conversions")!.pctOfGoal).toBe(71);
+  });
+  it("has no impressions stage", () => {
+    expect(res.find((s) => (s.stage as string) === "impressions")).toBeUndefined();
+    expect(res).toHaveLength(4);
   });
   it("returns null % when no target", () => {
     const r = computeFunnel(cur, prev, { conversions: null });
@@ -55,33 +59,27 @@ describe("computeFunnel", () => {
     expect(res.find((s) => s.stage === "conversions")!.deltaPct).toBeLessThan(0);   // 142 vs 149 ↓
   });
   it("null delta when previous is zero", () => {
-    const r = computeFunnel(cur, counts(0, 0, 0, 0, 0), goals);
+    const r = computeFunnel(cur, counts(0, 0, 0, 0), goals);
     expect(r[0].deltaPct).toBeNull();
   });
-  it("step ratio: clicks/impressions is a small fraction, impressions/outreach is large", () => {
-    const impr = res.find((s) => s.stage === "impressions")!.stepFromPrevRatio!; // 37200/124 = 300
-    const ctr = res.find((s) => s.stage === "clicks")!.stepFromPrevRatio!;        // 5180/37200 ≈ 0.139
-    expect(impr).toBeGreaterThan(100);
-    expect(ctr).toBeGreaterThan(0.1);
-    expect(ctr).toBeLessThan(0.2);
-  });
-  it("flags impressions as estimated", () => {
-    expect(res.find((s) => s.stage === "impressions")!.estimated).toBe(true);
-    expect(res.find((s) => s.stage === "clicks")!.estimated).toBe(false);
+  it("step ratio: CTR = clicks / outreach is the first step", () => {
+    const ctr = res.find((s) => s.stage === "clicks")!.stepFromPrevRatio!; // 5180/124
+    expect(ctr).toBeGreaterThan(0);
+    expect(res.find((s) => s.stage === "outreach")!.stepFromPrevRatio).toBeNull();
   });
 });
 
 describe("blendedPct + pacing", () => {
   const stages = computeFunnel(
-    counts(124, 37200, 5180, 248, 142),
-    counts(0, 0, 0, 0, 0),
-    { outreach: 160, impressions: 48000, clicks: 6000, meetings: 320, conversions: 200 },
+    counts(124, 5180, 248, 142),
+    counts(0, 0, 0, 0),
+    { outreach: 160, clicks: 6000, meetings: 320, conversions: 200 },
   );
   it("blends only stages with a goal", () => {
     const b = blendedPct(stages)!;
     expect(b).toBeGreaterThan(70);
     expect(b).toBeLessThan(90);
-    expect(blendedPct(computeFunnel(counts(1, 1, 1, 1, 1), counts(0, 0, 0, 0, 0), {}))).toBeNull();
+    expect(blendedPct(computeFunnel(counts(1, 1, 1, 1), counts(0, 0, 0, 0), {}))).toBeNull();
   });
   it("pacing verdicts against elapsed (target = elapsed×100, ±8 band)", () => {
     expect(pacing(79, 0.63)).toBe("ahead");    // 79 ≥ 63+8
@@ -94,7 +92,7 @@ describe("blendedPct + pacing", () => {
 describe("aggregateFunnels", () => {
   const mk = (name: string, o: number, cv: number, goalO: number | null): CampaignFunnel => ({
     campaignId: name, name, sourceTag: name, grain: "month", periodStart: "2026-09-01",
-    stages: computeFunnel(counts(o, o * 300, o * 40, o * 2, cv), counts(0, 0, 0, 0, 0), { outreach: goalO, conversions: 100 }),
+    stages: computeFunnel(counts(o, o * 40, o * 2, cv), counts(0, 0, 0, 0), { outreach: goalO, conversions: 100 }),
     members: 0, revenueCents: 0,
   });
   it("sums actuals and targets across campaigns", () => {

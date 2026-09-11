@@ -19,8 +19,7 @@ function delta(n: number | null): { txt: string; cls: string } {
 }
 function stepLabel(s: StageResult): string {
   if (s.stepFromPrevRatio === null) return "—";
-  // impressions/post is a multiplier; the rest read as a percentage.
-  return s.stage === "impressions" ? `${Math.round(s.stepFromPrevRatio)}/post` : `${(s.stepFromPrevRatio * 100).toFixed(1)}%`;
+  return `${(s.stepFromPrevRatio * 100).toFixed(1)}%`;
 }
 
 /** Aggregate the per-campaign contributions to one stage. */
@@ -163,7 +162,6 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
                     <td className="px-4 py-2.5">
                       <span className="mr-1 text-slate-400">{open ? "▾" : "▸"}</span>
                       <span className="inline-block h-2 w-2 rounded-sm align-middle" style={{ background: STAGE_COLORS[k] }} /> <span className="align-middle">{STAGE_LABELS[k]}</span>
-                      {s.estimated ? <span className="ml-1.5 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700">est.</span> : null}
                     </td>
                     <td className="px-3 py-2.5">{fmt(s.actual)} / {s.target != null ? fmt(s.target) : "—"}</td>
                     <td className="px-3 py-2.5">
