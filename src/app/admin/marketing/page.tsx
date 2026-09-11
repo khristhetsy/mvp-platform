@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
 import { marketingLifecycle } from "@/lib/lifecycle/counts";
+import { MarketingAdvisor } from "@/components/marketing/MarketingAdvisor";
 
 export const dynamic = "force-dynamic";
 
@@ -33,14 +34,18 @@ const card = {
   boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
 } as React.CSSProperties;
 
-export default async function MarketingDashboardPage() {
+const PERIOD_DAYS: Record<string, number> = { week: 7, "30d": 30, qtr: 90, year: 365 };
+const PERIOD_LABEL: Record<string, string> = { week: "Last 7 days", "30d": "Last 30 days", qtr: "Last quarter", year: "Last year" };
+const PERIODS: Array<{ key: string; short: string }> = [{ key: "week", short: "Week" }, { key: "30d", short: "30d" }, { key: "qtr", short: "Qtr" }, { key: "year", short: "Year" }];
+
+export default async function MarketingDashboardPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const t = await getTranslations("adminPages");
   await requireRole(["admin"]);
   const supabase = await marketingDb();
+  const period = PERIOD_DAYS[(await searchParams).period ?? ""] ? ((await searchParams).period as string) : "30d";
+  const days = PERIOD_DAYS[period];
   // eslint-disable-next-line react-hooks/purity
-  const since30d = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
-  // eslint-disable-next-line react-hooks/purity
-  const since7d  = new Date(Date.now() - 7  * 86400 * 1000).toISOString();
+  const sinceISO = new Date(Date.now() - days * 86400 * 1000).toISOString();
   const marketingStages = await marketingLifecycle();
 
   const [
@@ -53,10 +58,10 @@ export default async function MarketingDashboardPage() {
     sequences,
   ] = await Promise.all([
     supabase.from("marketing_contacts").select("*", { count: "exact", head: true }),
-    supabase.from("marketing_contacts").select("*", { count: "exact", head: true }).gte("created_at", since7d),
-    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "sent").gte("occurred_at", since30d),
-    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "opened").gte("occurred_at", since30d),
-    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "clicked").gte("occurred_at", since30d),
+    supabase.from("marketing_contacts").select("*", { count: "exact", head: true }).gte("created_at", sinceISO),
+    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "sent").gte("occurred_at", sinceISO),
+    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "opened").gte("occurred_at", sinceISO),
+    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "clicked").gte("occurred_at", sinceISO),
     supabase.from("marketing_campaigns")
       .select("id, name, status, stat_sent, stat_opened, stat_clicked, list:marketing_lists(name)")
       .in("status", ["sending", "sent", "scheduled", "paused"])
@@ -101,7 +106,7 @@ export default async function MarketingDashboardPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>{t("overviewP")}</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{PERIOD_LABEL[period]}</div>
         </div>
         <Link
           href="/admin/marketing/campaigns"
@@ -116,6 +121,11 @@ export default async function MarketingDashboardPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>Lead lifecycle</span>
           <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{lifecycleTotal.toLocaleString()} in funnel</span>
+          <div style={{ display: "flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+            {PERIODS.map((p) => (
+              <Link key={p.key} href={p.key === "30d" ? "/admin/marketing" : `/admin/marketing?period=${p.key}`} style={{ fontSize: 11, padding: "4px 10px", textDecoration: "none", background: period === p.key ? "#6D28D9" : "transparent", color: period === p.key ? "#fff" : "var(--muted-foreground)", borderLeft: p.key !== "week" ? "0.5px solid var(--border)" : "none" }}>{p.short}</Link>
+            ))}
+          </div>
           <span style={{ marginLeft: "auto", fontSize: 11, color: openRate >= 21 ? "#3B6D11" : "#854F0B", background: openRate >= 21 ? "#EAF3DE" : "#FAEEDA", borderRadius: 999, padding: "3px 11px" }}>Open {openRate.toFixed(1)}% {openRate >= 21 ? "· above benchmark" : ""}</span>
         </div>
         {marketingStages.length === 0 ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No lifecycle stages yet.</p> : (
@@ -160,6 +170,9 @@ export default async function MarketingDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* AI Marketing Advisor */}
+      <MarketingAdvisor funnelSummary={marketingStages.map((s) => `${s.label} ${s.count}`).join(", ")} />
 
       {/* Campaigns + Sequences */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
