@@ -304,6 +304,21 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const [busy, setBusy] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  // Assign existing posts to a campaign — selection is keyed by post_id.
+  const [selPosts, setSelPosts] = useState<Set<string>>(new Set());
+  const [camps, setCamps] = useState<{ id: string; name: string }[]>([]);
+  const [assignTo, setAssignTo] = useState<string>("");
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setCamps((d.campaigns ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))).catch(() => {}); }, []);
+  const toggleSel = (postId: string) => setSelPosts((p) => { const n = new Set(p); if (n.has(postId)) n.delete(postId); else n.add(postId); return n; });
+  async function assignCampaign() {
+    if (selPosts.size === 0) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/admin/social/posts/assign-campaign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postIds: [...selPosts], campaignId: assignTo || null }) });
+      if (r.ok) { setSelPosts(new Set()); setAssignTo(""); await reload(); }
+    } finally { setBusy(false); }
+  }
 
   const platformOf = (name: string | null) => accounts.find((a) => a.display_name === name)?.platform ?? "linkedin";
   const defaultTime = slots[0]?.time_local?.slice(0, 5) || "08:15";
@@ -480,17 +495,35 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
             })}
           </div>
         ) : (
-          <div className={`${card} divide-y divide-slate-100`}>
+          <div>
+            {selPosts.size > 0 ? (
+              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[13px] text-indigo-800">
+                <b>{selPosts.size} selected</b>
+                <span>Assign to campaign</span>
+                <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-[12.5px]">
+                  <option value="">None (clear)</option>
+                  {camps.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <button type="button" onClick={() => void assignCampaign()} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[12.5px] font-medium text-white disabled:opacity-50">Apply</button>
+                <button type="button" onClick={() => setSelPosts(new Set())} className="ml-auto text-[12px] text-indigo-500">Clear</button>
+              </div>
+            ) : null}
+            <div className={`${card} divide-y divide-slate-100`}>
             {dated.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No scheduled or published posts yet.</p> : [...dated].sort((a, b) => (itemISO(a)! < itemISO(b)! ? 1 : -1)).map((q) => {
               const sm = statusMeta(q.status); const iso = itemISO(q)!;
               return (
-                <button key={q.id} type="button" onClick={() => { setSelected(q); setEditing(false); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-slate-800">{titleOf(q)}</span>
-                  <span className="text-[11.5px] text-slate-500">{new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" })} · {hhmm(iso)}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
-                </button>
+                <div key={q.id} className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
+                  {q.post_id ? <input type="checkbox" checked={selPosts.has(q.post_id)} onChange={() => toggleSel(q.post_id!)} className="h-3.5 w-3.5 shrink-0" aria-label="Select post" /> : <span className="w-3.5" />}
+                  <button type="button" onClick={() => { setSelected(q); setEditing(false); }} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-slate-800">{titleOf(q)}</span>
+                    {q.campaign_name ? <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-700">{q.campaign_name}</span> : null}
+                    <span className="shrink-0 text-[11.5px] text-slate-500">{new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" })} · {hhmm(iso)}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
+                  </button>
+                </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>
