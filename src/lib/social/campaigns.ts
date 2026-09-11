@@ -45,6 +45,26 @@ export async function createCampaign(name: string, budgetCents: number, createdB
   return data as Campaign;
 }
 
+/** Rename a campaign. */
+export async function updateCampaign(id: string, patch: { name?: string }): Promise<boolean> {
+  const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.name !== undefined) { const n = patch.name.trim(); if (!n) return false; row.name = n; }
+  const { error } = await db().from("social_campaigns").update(row).eq("id", id);
+  return !error;
+}
+
+/** Archive / unarchive a campaign (archived ones drop out of the Hub but keep history). */
+export async function setCampaignArchived(id: string, archived: boolean): Promise<boolean> {
+  const { error } = await db().from("social_campaigns").update({ archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() }).eq("id", id);
+  return !error;
+}
+
+/** Permanently delete a campaign. Posts unlink (campaign_id → null via FK on delete set null). */
+export async function deleteCampaign(id: string): Promise<boolean> {
+  const { error } = await db().from("social_campaigns").delete().eq("id", id);
+  return !error;
+}
+
 /**
  * Pure roll-up: given campaigns and the raw counts/attribution rows, compute the
  * report per campaign. Kept separate from IO so it's unit-testable.

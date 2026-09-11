@@ -45,6 +45,10 @@ export function CampaignsGoals() {
   const [newName, setNewName] = useState("");
   const [creatingBusy, setCreatingBusy] = useState(false);
 
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameVal, setRenameVal] = useState("");
+  const [rowBusy, setRowBusy] = useState(false);
+
   async function createCampaign() {
     const name = newName.trim();
     if (!name) return;
@@ -54,6 +58,25 @@ export function CampaignsGoals() {
       const d = await res.json().catch(() => ({}));
       if (res.ok && d.campaign?.id) { setNewName(""); setCreating(false); await load(); setPlanning(d.campaign.id); }
     } finally { setCreatingBusy(false); }
+  }
+
+  async function renameCampaign(id: string) {
+    const name = renameVal.trim(); if (!name) { setRenaming(null); return; }
+    setRowBusy(true);
+    try { await fetch("/api/admin/social/campaigns", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, name }) }); setRenaming(null); await load(); }
+    finally { setRowBusy(false); }
+  }
+  async function archiveCampaign(id: string, name: string) {
+    if (!confirm(`Archive "${name}"? It's hidden from the Hub but keeps its posts, goals and history. You can unarchive later.`)) return;
+    setRowBusy(true);
+    try { await fetch("/api/admin/social/campaigns", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, archived: true }) }); await load(); }
+    finally { setRowBusy(false); }
+  }
+  async function deleteCampaignAction(id: string, name: string) {
+    if (!confirm(`Delete "${name}" permanently? Its posts stay but lose their campaign link and attribution grouping. Consider Archive instead.`)) return;
+    setRowBusy(true);
+    try { await fetch("/api/admin/social/campaigns", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }); await load(); }
+    finally { setRowBusy(false); }
   }
 
   async function load() {
@@ -187,11 +210,25 @@ export function CampaignsGoals() {
         {funnels.map((f) => (
           <div key={f.campaignId} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-slate-800">{f.name}</span>
+              {renaming === f.campaignId ? (
+                <span className="flex items-center gap-1.5">
+                  <input autoFocus value={renameVal} onChange={(e) => setRenameVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void renameCampaign(f.campaignId); if (e.key === "Escape") setRenaming(null); }}
+                    className="rounded-lg border border-slate-200 px-2 py-1 text-[13px] outline-none focus:border-indigo-300" />
+                  <button type="button" disabled={rowBusy} onClick={() => void renameCampaign(f.campaignId)} className="rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50">Save</button>
+                  <button type="button" onClick={() => setRenaming(null)} className="text-[11px] text-slate-500">Cancel</button>
+                </span>
+              ) : (
+                <span className="text-[13px] font-semibold text-slate-800">{f.name}</span>
+              )}
               <span className="text-[11px] text-slate-500">{f.members} members · ${(f.revenueCents / 100).toLocaleString()}/mo</span>
-              <button type="button" onClick={() => setPlanning(planning === f.campaignId ? null : f.campaignId)} className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-[11.5px] font-medium text-indigo-600 hover:bg-indigo-50">
-                {planning === f.campaignId ? "Close" : "Adjust goals"}
-              </button>
+              <span className="ml-auto flex items-center gap-1.5">
+                <button type="button" onClick={() => setPlanning(planning === f.campaignId ? null : f.campaignId)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11.5px] font-medium text-indigo-600 hover:bg-indigo-50">
+                  {planning === f.campaignId ? "Close" : "Adjust goals"}
+                </button>
+                <button type="button" disabled={rowBusy} onClick={() => { setRenaming(f.campaignId); setRenameVal(f.name); }} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11.5px] text-slate-600 hover:bg-slate-50">Rename</button>
+                <button type="button" disabled={rowBusy} onClick={() => void archiveCampaign(f.campaignId, f.name)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11.5px] text-slate-600 hover:bg-slate-50">Archive</button>
+                <button type="button" disabled={rowBusy} onClick={() => void deleteCampaignAction(f.campaignId, f.name)} className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-[11.5px] text-rose-600 hover:bg-rose-50">Delete</button>
+              </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {f.stages.map((s) => (
