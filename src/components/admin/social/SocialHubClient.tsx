@@ -382,6 +382,15 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const [selPosts, setSelPosts] = useState<Set<string>>(new Set());
   // Recurrence series summary for the selected post.
   const [recSummary, setRecSummary] = useState<{ label: string; status: string; madeCount: number } | null>(null);
+  // "Make recurring" panel state (for non-series posts).
+  const [mrOpen, setMrOpen] = useState(false);
+  const [mrFreq, setMrFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
+  const [mrInterval, setMrInterval] = useState("1");
+  const [mrWeekdays, setMrWeekdays] = useState<number[]>([]);
+  const [mrEndType, setMrEndType] = useState<"never" | "on_date" | "after">("never");
+  const [mrEndDate, setMrEndDate] = useState("");
+  const [mrEndCount, setMrEndCount] = useState("12");
+  const [mrPreview, setMrPreview] = useState<{ upcoming: number[]; total: number } | null>(null);
   const [camps, setCamps] = useState<{ id: string; name: string }[]>([]);
   const [assignTo, setAssignTo] = useState<string>("");
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -441,6 +450,31 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     fetch(`/api/admin/social/recurrences/${rid}`).then((r) => r.json()).then((d) => { if (live) setRecSummary(d.summary ?? null); }).catch(() => { if (live) setRecSummary(null); });
     return () => { live = false; };
   }, [selected?.recurrence_id]);
+  // Build a recurrence rule for the "Make recurring" panel, seeded from the selected post's time.
+  function mrRule(q: QueueItem) {
+    const iso = itemISO(q);
+    const timeLocal = iso ? `${String(new Date(iso).getHours()).padStart(2, "0")}:${String(new Date(iso).getMinutes()).padStart(2, "0")}` : "08:15";
+    const today = new Date(); const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return {
+      freq: mrFreq, interval: Math.max(1, parseInt(mrInterval, 10) || 1),
+      weekdays: mrFreq === "weekly" ? (mrWeekdays.length ? mrWeekdays : [today.getDay()]) : [],
+      timeLocal, startDate,
+      endType: mrEndType, endDate: mrEndType === "on_date" ? (mrEndDate || null) : null,
+      endCount: mrEndType === "after" ? (Math.max(1, parseInt(mrEndCount, 10) || 1)) : null,
+    };
+  }
+  async function mrPreviewFor(q: QueueItem) {
+    try { const r = await fetch("/api/admin/social/recurrences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...mrRule(q), dryRun: true }) }); const d = await r.json(); setMrPreview({ upcoming: d.upcoming ?? [], total: d.total ?? 0 }); } catch { setMrPreview(null); }
+  }
+  async function startSeries(q: QueueItem) {
+    if (!q.post_id) { alert("This post can't be made recurring."); return; }
+    setBusy(true);
+    try {
+      const r = await fetch("/api/admin/social/recurrences/from-post", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postId: q.post_id, ...mrRule(q) }) });
+      if (r.ok) { setMrOpen(false); setMrPreview(null); await reload(); } else { alert((await r.json()).error ?? "Could not create series."); }
+    } finally { setBusy(false); }
+  }
+  const MR_WEEKDAYS: { l: string; d: number }[] = [{ l: "S", d: 0 }, { l: "M", d: 1 }, { l: "T", d: 2 }, { l: "W", d: 3 }, { l: "T", d: 4 }, { l: "F", d: 5 }, { l: "S", d: 6 }];
   async function recAct(id: string, action: "pause" | "resume" | "end") {
     if (action === "end" && !confirm("End this recurring series? Already-scheduled occurrences stay; no new ones are created.")) return;
     setBusy(true);
@@ -661,6 +695,51 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                           : null}
                       {recSummary.status !== "ended" && <button type="button" disabled={busy} onClick={() => void recAct(q.recurrence_id!, "end")} className="rounded-md border border-rose-200 px-2.5 py-1 text-[10.5px] text-rose-600">End series</button>}
                     </div>
+                  </div>
+                ) : null}
+
+                {!q.recurrence_id && q.post_id ? (
+                  <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2">
+                    <button type="button" onClick={() => { setMrOpen((v) => !v); setMrPreview(null); }} className="flex w-full items-center gap-2 text-left">
+                      <span className="text-[11.5px] font-semibold text-indigo-700"><i className="ti ti-repeat" aria-hidden="true" /> Make recurring</span>
+                      <span className={`ml-auto relative inline-flex h-4 w-8 items-center rounded-full ${mrOpen ? "bg-indigo-600" : "bg-slate-300"}`}><span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${mrOpen ? "translate-x-4" : "translate-x-0.5"}`} /></span>
+                    </button>
+                    {mrOpen ? (
+                      <div className="mt-2">
+                        <div className="text-[10px] text-slate-500">Reuse this post&rsquo;s copy &amp; link on a repeating schedule.</div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="text-[10.5px] text-slate-500">Every</span>
+                          <input value={mrInterval} onChange={(e) => { setMrInterval(e.target.value.replace(/[^0-9]/g, "")); setMrPreview(null); }} className="w-11 rounded-md border border-slate-200 px-2 py-0.5 text-[11.5px]" />
+                          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-[10.5px]">
+                            {(["daily", "weekly", "monthly"] as const).map((f) => (
+                              <button key={f} type="button" onClick={() => { setMrFreq(f); setMrPreview(null); }} className={`px-2 py-0.5 ${mrFreq === f ? "bg-indigo-600 text-white" : "border-l border-slate-200 text-slate-600 first:border-l-0"}`}>{f === "daily" ? "Day" : f === "weekly" ? "Week" : "Month"}</button>
+                            ))}
+                          </div>
+                        </div>
+                        {mrFreq === "weekly" ? (
+                          <div className="mt-2 flex items-center gap-1">
+                            <span className="mr-1 text-[10px] text-slate-400">On</span>
+                            {MR_WEEKDAYS.map((w, i) => {
+                              const on = mrWeekdays.includes(w.d);
+                              return <button key={i} type="button" onClick={() => { setMrWeekdays((p) => on ? p.filter((x) => x !== w.d) : [...p, w.d]); setMrPreview(null); }} className={`h-5 w-5 rounded-full text-[10px] ${on ? "bg-indigo-600 text-white" : "border border-slate-200 text-slate-600"}`}>{w.l}</button>;
+                            })}
+                          </div>
+                        ) : null}
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10.5px] text-slate-500">Ends</span>
+                          {([["never", "Never"], ["on_date", "On date"], ["after", "After N"]] as const).map(([v, lbl]) => (
+                            <button key={v} type="button" onClick={() => { setMrEndType(v); setMrPreview(null); }} className={`rounded-full px-2 py-0.5 text-[10.5px] ${mrEndType === v ? "border-[1.5px] border-indigo-400 text-indigo-700" : "border border-slate-200 text-slate-600"}`}>{lbl}</button>
+                          ))}
+                          {mrEndType === "on_date" && <input type="date" value={mrEndDate} onChange={(e) => { setMrEndDate(e.target.value); setMrPreview(null); }} className="rounded-md border border-slate-200 px-2 py-0.5 text-[11.5px]" />}
+                          {mrEndType === "after" && <input value={mrEndCount} onChange={(e) => { setMrEndCount(e.target.value.replace(/[^0-9]/g, "")); setMrPreview(null); }} className="w-11 rounded-md border border-slate-200 px-2 py-0.5 text-[11.5px]" />}
+                        </div>
+                        <div className="mt-2.5 flex items-center gap-2">
+                          <button type="button" onClick={() => void mrPreviewFor(q)} className="rounded-md border border-slate-300 px-2 py-1 text-[10.5px] text-indigo-600">Preview</button>
+                          {mrPreview ? <span className="text-[10.5px] text-slate-500">{mrPreview.upcoming.slice(0, 3).map((ms) => new Date(ms).toLocaleDateString([], { month: "short", day: "numeric" })).join(" · ")}{mrPreview.total ? ` … ${mrPreview.total} total` : ""}</span> : null}
+                          <button type="button" disabled={busy} onClick={() => void startSeries(q)} className="ml-auto rounded-md bg-indigo-600 px-3 py-1 text-[10.5px] font-medium text-white disabled:opacity-50">Start series</button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
