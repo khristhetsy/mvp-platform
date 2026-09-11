@@ -58,6 +58,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/admin/companies",  label: "Companies",  requiredPermission: "manage_companies" },
       { href: "/admin/investors",  label: "Investors",  requiredPermission: "manage_investors" },
+      { href: "/admin/investors/enrich", label: "Enrich data", requiredPermission: "manage_investors" },
     ],
   },
   {
