@@ -21,6 +21,24 @@ const STATUS_STYLE: Record<string, string> = {
 const chip = "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors";
 const card = "rounded-xl border border-slate-200 bg-white";
 
+/** One-line meaning per archetype (mirrors the composer's ARCHETYPE_GUIDE), shown on hover. */
+const ARCHETYPE_DESC: Record<string, string> = {
+  proof_case: "A concrete result or moment that proves a point. Open with the specific, show what happened, end on the lesson.",
+  teardown: "Dissect what went wrong or right in a real situation — the mistakes, the fix, what to copy or avoid.",
+  named_ask: "State a clear, specific ask — who you want to hear from and why. Direct, not needy.",
+};
+
+/** Numbered section header for the Compose steps. */
+function StepHead({ n, title, hint }: { n: number; title: string; hint?: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex h-[17px] w-[17px] items-center justify-center rounded-full bg-indigo-600 text-[10.5px] font-semibold text-white">{n}</span>
+      <span className="text-[12.5px] font-semibold text-slate-800">{title}</span>
+      {hint ? <span className="text-[11px] text-slate-400">— {hint}</span> : null}
+    </div>
+  );
+}
+
 type Tab = "overview" | "goals" | "composer" | "schedule" | "library" | "attribution" | "settings";
 const TAB_ORDER: Tab[] = ["overview", "goals", "composer", "schedule", "library", "attribution", "settings"];
 const TAB_LABELS: Record<Tab, string> = {
@@ -164,20 +182,38 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
 
   return (
     <div className="max-w-2xl">
-      <label className="text-[13px] font-medium text-slate-700">What happened</label>
-      <p className="text-[11.5px] text-slate-400">Raw notes, not a topic — a specific moment produces a specific post.</p>
-      <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={3} placeholder="A founder told me she'd pitched 11 investors, 9 were the wrong fit entirely…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none" />
-
-      <p className="mt-4 text-[13px] font-medium text-slate-700">Archetype</p>
-      <div className="mt-1.5 flex flex-wrap gap-2">
-        {ARCHETYPES.map((a) => (
-          <button key={a.key} onClick={() => setArchetype(a.key)} className={`${chip} ${archetype === a.key ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{a.label}</button>
-        ))}
+      {/* Heading */}
+      <div className="border-b border-slate-100 pb-3">
+        <h2 className="text-[16px] font-semibold text-slate-900">Compose a post</h2>
+        <p className="mt-0.5 text-[12px] text-slate-500">Draft once, publish to every connected account. AI writes a per-account variant from your notes — you review before anything goes out.</p>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-6">
+      {/* 1 · What to post */}
+      <div className="mt-4">
+        <StepHead n={1} title="What to post" hint="your raw notes + the angle" />
+        <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={3} placeholder="A founder told me she'd pitched 11 investors, 9 were the wrong fit entirely…" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none" />
+        <p className="mt-1 text-[11px] text-slate-400">Raw notes, not a topic — a specific moment produces a specific post.</p>
+        <p className="mt-3 text-[11px] text-slate-500">Angle <span className="text-slate-400">(hover for what each means)</span></p>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {ARCHETYPES.map((a) => (
+            <span key={a.key} className="group relative">
+              <button onClick={() => setArchetype(a.key)} className={`${chip} inline-flex items-center gap-1.5 ${archetype === a.key ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>
+                {a.label}<span className="text-[10px] opacity-50">ⓘ</span>
+              </button>
+              <span role="tooltip" className="pointer-events-none invisible absolute left-0 top-[calc(100%+8px)] z-10 w-56 rounded-lg bg-slate-900 px-2.5 py-2 text-[11px] leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                {ARCHETYPE_DESC[a.key] ?? ""}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* 2 · Where it belongs */}
+      <div className="mt-5">
+        <StepHead n={2} title="Where it belongs" hint="for goals & attribution" />
+      <div className="mt-2 flex flex-wrap gap-6">
         <div>
-          <p className="text-[13px] font-medium text-slate-700">Department</p>
+          <p className="text-[12px] font-medium text-slate-700">Department</p>
           <select value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
             {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
@@ -204,17 +240,21 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
         </div>
       </div>
 
-      <p className="mt-4 text-[13px] font-medium text-slate-700">Post as</p>
-      <div className="mt-1.5 flex flex-wrap gap-2">
-        {accounts.length === 0 ? <span className="text-[12px] text-slate-400">No accounts connected.</span> : accounts.map((a) => {
-          const on = selected.includes(a.id);
-          return <button key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{a.display_name ?? a.platform}</button>;
-        })}
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
-        <button onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
-        <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
+      {/* 3 · Accounts & author */}
+      <div className="mt-5">
+        <StepHead n={3} title="Accounts & author" hint="who this publishes to" />
+        <div className="mt-2 flex flex-wrap gap-2">
+          {accounts.length === 0 ? <span className="text-[12px] text-slate-400">No accounts connected.</span> : accounts.map((a) => {
+            const on = selected.includes(a.id);
+            return <button key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{a.display_name ?? a.platform}</button>;
+          })}
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <button onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
+          <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
+        </div>
       </div>
 
       {libOpen ? (
@@ -244,8 +284,8 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
             </div>
           ))}
           <div>
-            <p className="mb-1.5 text-[12px] font-medium text-slate-600">Call to action</p>
-            <div className="flex flex-wrap gap-2">
+            <StepHead n={4} title="Link & call-to-action" hint="posts as the first comment" />
+            <div className="mt-2 flex flex-wrap gap-2">
               {CTAS.map((c) => (
                 <button key={c.key} type="button" onClick={() => { setComment(c.text); setLinkUrl(c.url); }} className={`${chip} ${comment === c.text ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{c.label}</button>
               ))}
@@ -258,7 +298,9 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
           </div>
 
           {/* schedule row */}
-          <div className={`${card} p-3`}>
+          <div>
+          <StepHead n={5} title="When to publish" />
+          <div className={`${card} mt-2 p-3`}>
             <div className="flex flex-wrap items-center gap-3">
               <button type="button" onClick={() => setSchedOn((v) => !v)} className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
                 <span className={`relative inline-flex h-5 w-9 items-center rounded-full ${schedOn ? "bg-emerald-600" : "bg-slate-300"}`}>
@@ -271,6 +313,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
               {googleReady ? <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> mirrors to Google Calendar</span> : null}
             </div>
             <p className="mt-1.5 text-[11px] text-slate-400">Toggle off to park the post in the queue without a date — you can schedule it later from the Schedule tab.</p>
+          </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
