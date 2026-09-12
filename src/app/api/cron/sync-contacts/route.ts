@@ -9,7 +9,7 @@ import {
 import { configuredSources } from "@/lib/crm-connectors/registry";
 import { syncDelta } from "@/lib/crm-connectors/sync-engine";
 import { rebuildMatchIndex } from "@/lib/fit/match-index";
-import { applyStageDerivation } from "@/lib/investors/derive-stage";
+import { applyStageDerivation } from "@/lib/investors/derive-from-type";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

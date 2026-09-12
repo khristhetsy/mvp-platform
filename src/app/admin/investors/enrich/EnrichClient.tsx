@@ -37,7 +37,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   }
   // Step 1b — derive stage from investor type. Deterministic, free, never overwrites a
   // stated stage. Also runs after each contacts sync so new investors stay covered.
-  const [dv, setDv] = useState<{ total: number; scanned: number; byRule: Record<string, number>; rules: { id: string; label: string; stages: string[] }[] } | null>(null);
+  const [dv, setDv] = useState<{ total: number; scanned: number; byRule: Record<string, Record<string, number>>; rules: { id: string; label: string; fills: { field: string; weight: number; values: string[] }[] }[] } | null>(null);
   const [dvMsg, setDvMsg] = useState<string | null>(null);
   async function derive(op: "preview" | "apply") {
     setBusy(true); setDvMsg(op === "preview" ? "Scanning…" : "Filling…");
@@ -46,15 +46,15 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       if (!res.ok) { setDvMsg(`${op} failed.`); return; }
       const d = await res.json();
       if (op === "preview") { setDv(d); setDvMsg(d.total === 0 ? `Nothing to derive — scanned ${d.scanned}, every investor already has a stage or no usable type.` : null); }
-      else { setDvMsg(`Filled ${d.filled} of ${d.scanned} scanned${d.errors ? ` · ${d.errors} failed: ${d.firstError ?? ""}` : ""}${d.reindexed ? ` · ${d.reindexed} reindexed` : ""}.`); setDv(null); }
+      else { setDvMsg(`Filled ${d.fields} fields across ${d.contacts} contacts (of ${d.scanned} scanned)${d.errors ? ` · ${d.errors} failed: ${d.firstError ?? ""}` : ""}${d.reindexed ? ` · ${d.reindexed} reindexed` : ""}.`); setDv(null); }
     } finally { setBusy(false); }
   }
-  async function undoRule(ruleId: string) {
-    setBusy(true); setDvMsg(`Undoing ${ruleId}…`);
+  async function undoRule(ruleId: string, field: string) {
+    setBusy(true); setDvMsg(`Undoing ${ruleId} · ${field}…`);
     try {
-      const res = await fetch("/api/admin/investors/derive-stage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "undo", ruleId }) });
+      const res = await fetch("/api/admin/investors/derive-stage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "undo", ruleId, field }) });
       const d = await res.json();
-      setDvMsg(res.ok ? `Removed ${d.removed} stages written by ${ruleId}.` : "Undo failed.");
+      setDvMsg(res.ok ? `Removed ${d.removed} ${field} values written by ${ruleId}.` : "Undo failed.");
     } finally { setBusy(false); }
   }
 
@@ -183,9 +183,9 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       </div>
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-        <div className="text-[13px] font-semibold text-slate-800">Step 1b · Derive stage from investor type <span className="font-normal text-slate-500">— free, no AI</span></div>
+        <div className="text-[13px] font-semibold text-slate-800">Step 1b · Derive missing fields from investor type <span className="font-normal text-slate-500">— free, no AI</span></div>
         <p className="mt-1 text-[11.5px] text-slate-500">
-          Fills the 25-point operating-stage weight from what the investor <i>is</i>. Only touches contacts with no stage at all — a stated or AI-extracted stage always wins. Each value is tagged with the rule that wrote it, so it&rsquo;s visible on the profile and reversible per rule. Runs automatically after each contacts sync.
+          Fills missing criteria from what the investor <i>is</i> — stage for every type, plus cheque size, revenue and EBITDA for private equity. Only touches contacts with no stage at all — a stated or AI-extracted stage always wins. Each value is tagged with the rule that wrote it, so it&rsquo;s visible on the profile and reversible per rule. Runs automatically after each contacts sync.
         </p>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => void derive("preview")} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">⌕ Preview</button>
@@ -196,17 +196,18 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
           <div className="mt-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white">
             <table className="w-full text-[11.5px]">
               <thead className="bg-slate-50 text-left text-[10.5px] text-slate-500">
-                <tr><th className="px-3 py-1.5 font-medium">Rule</th><th className="px-3 py-1.5 font-medium">Stage written</th><th className="px-3 py-1.5 font-medium">Contacts</th><th className="px-3 py-1.5 font-medium">Undo</th></tr>
+                <tr><th className="px-3 py-1.5 font-medium">Type</th><th className="px-3 py-1.5 font-medium">Field</th><th className="px-3 py-1.5 font-medium">Values written</th><th className="px-3 py-1.5 font-medium">To fill</th><th className="px-3 py-1.5 font-medium">Undo</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {dv.rules.map((r) => (
-                  <tr key={r.id}>
+                {dv.rules.flatMap((r) => r.fills.map((f) => (
+                  <tr key={`${r.id}-${f.field}`}>
                     <td className="px-3 py-1.5 font-medium text-slate-700">{r.label}</td>
-                    <td className="px-3 py-1.5 text-slate-500">{r.stages.join(" · ")}</td>
-                    <td className="px-3 py-1.5"><b>{dv.byRule[r.id] ?? 0}</b></td>
-                    <td className="px-3 py-1.5"><button type="button" disabled={busy} onClick={() => void undoRule(r.id)} className="text-[11px] text-rose-600 hover:underline">remove</button></td>
+                    <td className="px-3 py-1.5 text-slate-600">{f.field} {f.weight > 0 ? <span className="text-[10px] text-emerald-700">{f.weight}pts</span> : <span className="text-[10px] text-amber-700">display only</span>}</td>
+                    <td className="px-3 py-1.5 text-slate-500">{f.values.join(" · ")}</td>
+                    <td className="px-3 py-1.5"><b>{dv.byRule[r.id]?.[f.field] ?? 0}</b></td>
+                    <td className="px-3 py-1.5"><button type="button" disabled={busy} onClick={() => void undoRule(r.id, f.field)} className="text-[11px] text-rose-600 hover:underline">remove</button></td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

@@ -1,14 +1,14 @@
 /**
- * Derive operating stage from investor type. Staff-only, no AI, no cost.
- *   POST { op: "preview" }            → { plan (sample), total, byRule, scanned }
- *   POST { op: "apply" }              → { scanned, filled, byRule, errors, firstError, reindexed }
- *   POST { op: "undo", ruleId }       → { removed }
- * See src/lib/investors/derive-stage.ts for the rules and why they are safe.
+ * Derive missing investor criteria from investor type. Staff-only, no AI, no cost.
+ *   POST { op: "preview" }                → { plan (sample), total, byRule, scanned, rules }
+ *   POST { op: "apply" }                  → { scanned, contacts, fields, byRule, errors, reindexed }
+ *   POST { op: "undo", ruleId, field }    → { removed }
+ * See src/lib/investors/derive-from-type.ts for the rules and why they are safe.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { planStageDerivation, applyStageDerivation, undoStageRule, summarise, STAGE_RULES } from "@/lib/investors/derive-stage";
+import { planDerivation, applyDerivation, undoDerivation, summarise, TYPE_RULES } from "@/lib/investors/derive-from-type";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,6 +16,7 @@ export const maxDuration = 60;
 const schema = z.object({
   op: z.enum(["preview", "apply", "undo"]),
   ruleId: z.string().max(60).optional(),
+  field: z.string().max(30).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -25,21 +26,21 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
   if (parsed.data.op === "preview") {
-    const { plan, scanned } = await planStageDerivation();
+    const { plan, scanned } = await planDerivation();
     return NextResponse.json({
-      plan: plan.slice(0, 200),   // sample for the table; counts describe the whole plan
       total: plan.length,
       scanned,
       byRule: summarise(plan),
-      rules: STAGE_RULES.map((r) => ({ id: r.id, label: r.label, stages: r.stages })),
+      rules: TYPE_RULES.map((r) => ({
+        id: r.id, label: r.label,
+        fills: r.fills.map((f) => ({ field: f.field, weight: f.weight, values: f.values })),
+      })),
     });
   }
   if (parsed.data.op === "undo") {
-    const ruleId = parsed.data.ruleId;
-    if (!ruleId || !STAGE_RULES.some((r) => r.id === ruleId)) {
-      return NextResponse.json({ error: "Unknown rule." }, { status: 400 });
-    }
-    return NextResponse.json({ removed: await undoStageRule(ruleId) });
+    const { ruleId, field } = parsed.data;
+    if (!ruleId || !field) return NextResponse.json({ error: "ruleId and field required." }, { status: 400 });
+    return NextResponse.json({ removed: await undoDerivation(ruleId, field) });
   }
-  return NextResponse.json(await applyStageDerivation());
+  return NextResponse.json(await applyDerivation());
 }
