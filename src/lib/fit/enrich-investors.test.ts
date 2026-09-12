@@ -47,6 +47,18 @@ describe("parseProposal", () => {
   });
 });
 
+describe("ClaudeUnavailableError", () => {
+  it("is distinguishable from a null (nothing-found) result", async () => {
+    // The whole point: an outage must not be recorded as "this investor has no signal",
+    // which would reject the contact permanently.
+    const { ClaudeUnavailableError } = await import("./enrich-investors");
+    const e = new ClaudeUnavailableError("out of credits");
+    expect(e).toBeInstanceOf(Error);
+    expect(e.name).toBe("ClaudeUnavailableError");
+    expect(e instanceof ClaudeUnavailableError).toBe(true);
+  });
+});
+
 describe("normalizeStages", () => {
   it("drops anything outside the vocabulary", () => {
     // A model that free-styles ("Seed", "Series A") must not reach the contact — those

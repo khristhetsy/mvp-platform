@@ -135,9 +135,19 @@ function hasStage(r: InvestorRow): boolean {
   return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v.trim() !== "";
 }
 
-/** Propose enrichment for one investor via Claude. Returns null if not configured/failed. */
+/**
+ * Raised when the AI itself is unreachable (no key, no credits, API error) — as opposed
+ * to the AI running and finding nothing. The two used to be indistinguishable, so an
+ * outage silently marked every contact 'rejected' and permanently removed it from the
+ * candidate pool. A run must abort on this, never record it as a result.
+ */
+export class ClaudeUnavailableError extends Error {
+  constructor(message: string) { super(message); this.name = "ClaudeUnavailableError"; }
+}
+
+/** Propose enrichment for one investor via Claude. Null = ran, found nothing usable. */
 export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis: string }) | null> {
-  if (!isClaudeConfigured()) return null;
+  if (!isClaudeConfigured()) throw new ClaudeUnavailableError("Claude is not configured (no API key).");
   const domain = domainOf(row.email);
   const site = await fetchSiteText(domain);
   const basis = site ? "website" : domain ? "domain" : "name";
@@ -146,16 +156,20 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
     `Email domain: ${domain ?? "(none)"}`,
     site ? `Website text (excerpt): ${site}` : null,
   ].filter(Boolean).join("\n");
+  let reply: string;
   try {
-    const reply = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
-    const p = parseProposal(reply);
-    if (!p) return null;
-    return { ...p, industries: canonicalizeIndustries(p.industries), basis };
-  } catch { return null; }
+    reply = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
+  } catch (e) {
+    // The call itself failed — out of credits, rate limited, network. Not a verdict.
+    throw new ClaudeUnavailableError(e instanceof Error ? e.message.slice(0, 200) : "Claude request failed.");
+  }
+  const p = parseProposal(reply);           // null here DOES mean "nothing usable"
+  if (!p) return null;
+  return { ...p, industries: canonicalizeIndustries(p.industries), basis };
 }
 
 /** Run a capped batch: propose for investors missing industry or type, store as pending. */
-export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number }> {
+export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number; unavailable: string | null }> {
   // IDS ONLY. This used to select the full row — including the fat Odoo `raw` jsonb —
   // for every investor, on EVERY batch. A "run all" of ~50 batches therefore parsed the
   // whole network ~50 times over, which is what pinned the database CPU at 97%.
@@ -201,14 +215,24 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
   }
 
   let proposed = 0, skipped = 0;
+  // Set when the AI becomes unreachable: every worker stops immediately and nothing more
+  // is written. Without this an outage burns through the whole candidate list marking it
+  // rejected, which would be unrecoverable without manual SQL.
+  let unavailable: string | null = null;
   // Process the batch with bounded concurrency so it finishes inside the serverless
   // time limit (each item is a website fetch + a Claude call).
   const CONCURRENCY = 6;
   let cursor = 0;
   async function worker() {
-    while (cursor < todo.length) {
+    while (cursor < todo.length && !unavailable) {
       const r = todo[cursor++];
-      const p = await proposeFor(r);
+      let p: (Proposal & { basis: string }) | null;
+      try {
+        p = await proposeFor(r);
+      } catch (e) {
+        if (e instanceof ClaudeUnavailableError) { unavailable = e.message; return; }
+        throw e;
+      }
       const hasSignal = p && (p.industries.length > 0 || p.investorType || p.stages.length > 0);
       // Record no-signal contacts as 'rejected' so they aren't retried on the next pass.
       const { error } = await db().from("investor_enrichment").upsert({
@@ -226,7 +250,11 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
   // remaining = candidates left after this batch (0 → run-all is done). Both the rows we
   // processed and the ones recorded as already-complete come off the list.
   const consumed = todo.length + nothingToDo.length;
-  return { scanned: candidates.length, proposed, skipped, remaining: Math.max(0, candidates.length - consumed) };
+  return {
+    scanned: candidates.length, proposed, skipped,
+    remaining: Math.max(0, candidates.length - consumed),
+    unavailable,
+  };
 }
 
 export type EnrichmentRow = {

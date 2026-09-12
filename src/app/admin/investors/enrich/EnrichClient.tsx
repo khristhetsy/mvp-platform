@@ -74,6 +74,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
     setBusy(true); setMsg("Running AI enrichment…");
     try {
       const d = await runBatch();
+      if (d.unavailable) { setMsg(`AI unavailable: ${d.unavailable} — nothing was written off.`); return; }
       setMsg(`Scanned ${d.scanned} missing · proposed ${d.proposed} · skipped ${d.skipped} (no signal). ${d.remaining > 0 ? `${d.remaining} to go — run again or use Run all.` : "All done."}`);
       await refresh();
     } catch { setMsg("Enrichment failed."); } finally { setBusy(false); }
@@ -87,6 +88,9 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
     while (guard++ < 400) {
       try {
         const d = await runBatch(20);
+        // The AI is unreachable (no credits, rate limit, outage). Stop immediately —
+        // continuing would march through every remaining contact recording nothing.
+        if (d.unavailable) { setMsg(`Stopped — AI unavailable: ${d.unavailable}. ${totalProposed} proposed before stopping; no contacts were written off.`); break; }
         totalProposed += d.proposed ?? 0; totalSkipped += d.skipped ?? 0; fails = 0;
         setMsg(`Processing… ${d.remaining ?? 0} remaining · ${totalProposed} proposed so far`);
         await refresh();
