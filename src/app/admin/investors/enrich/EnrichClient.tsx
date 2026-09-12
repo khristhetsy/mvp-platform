@@ -56,7 +56,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       const d = await res.json();
       setJtMsg(d.errors > 0
         ? `Applied ${d.companies} companies, ${d.types} types — but ${d.errors} of ${d.scanned} failed: ${d.firstError ?? "unknown error"}`
-        : `Applied — ${d.companies} company names, ${d.types} investor types (from ${d.rowsRead} contacts scanned).`);
+        : `Applied — ${d.companies} company names, ${d.types} investor types (from ${d.rowsRead} contacts scanned)${d.reindexed ? `, ${d.reindexed} reindexed for /fit` : ""}.`);
       setJt(null);
     } finally { setBusy(false); }
   }
@@ -169,7 +169,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
         <div className="text-[13px] font-semibold text-slate-800">Step 3 · Rebuild match index <span className="font-normal text-slate-500">— publishes approved data to /fit</span></div>
-        <p className="mt-1 text-[11.5px] text-slate-500">Approved values don&rsquo;t reach matching until the index is rebuilt. Incremental only reprojects contacts changed since the last run — use it routinely. Full reads every investor, so run it for the first build or after a bulk approval sweep.</p>
+        <p className="mt-1 text-[11.5px] text-slate-500">Approvals and the job-title backfill now reindex their own contacts, so this is mostly a safety net. Incremental picks up contacts re-synced from Odoo since the last run; Full reads every investor — use it for the first build, or if you suspect the index has drifted.</p>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => void rebuildIndex(false)} disabled={busy} className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">↻ Rebuild changed</button>
           <button type="button" onClick={() => void rebuildIndex(true)} disabled={busy} className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">↻↻ Full rebuild</button>

@@ -16,6 +16,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows } from "@/lib/supabase/paged";
 import { canonicalInvestorType } from "@/lib/fit/options";
+import { reindexContacts } from "@/lib/fit/match-index";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -153,12 +154,13 @@ export async function planBackfill(): Promise<{ changes: BackfillChange[]; rowsR
  * type goes to overrides["Investor type"] so it survives an Odoo re-sync, exactly like
  * an approved enrichment. Best-effort per row — one bad row doesn't stop the rest.
  */
-export async function applyBackfill(): Promise<{ rowsRead: number; scanned: number; companies: number; types: number; errors: number; firstError: string | null }> {
+export async function applyBackfill(): Promise<{ rowsRead: number; scanned: number; companies: number; types: number; errors: number; firstError: string | null; reindexed: number }> {
   const { changes, rowsRead } = await planBackfill();
   let companies = 0, types = 0, errors = 0;
   // A failing update used to be swallowed, so "applied 0" was indistinguishable from
   // "nothing to apply". Keep going on error, but count and report the first reason.
   let firstError: string | null = null;
+  const touched: string[] = [];
   for (const ch of changes) {
     // NOTE: no updated_at — crm_contacts does not have that column (it has synced_at,
     // written by the connector). Including it failed every update, which is exactly the
@@ -178,6 +180,11 @@ export async function applyBackfill(): Promise<{ rowsRead: number; scanned: numb
     }
     if (ch.newCompany) companies++;
     if (ch.newType) types++;
+    touched.push(ch.contactId);
   }
-  return { rowsRead, scanned: changes.length, companies, types, errors, firstError };
+  // Reproject the contacts we changed. These edits don't move synced_at, so the scheduled
+  // incremental rebuild would skip them and /fit would keep matching on the old company
+  // name. Batched at the end rather than per row. Best-effort.
+  const reindexed = await reindexContacts(touched).catch(() => 0);
+  return { rowsRead, scanned: changes.length, companies, types, errors, firstError, reindexed };
 }

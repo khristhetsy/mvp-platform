@@ -12,6 +12,7 @@
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, chunk } from "@/lib/supabase/paged";
+import { reindexContacts } from "@/lib/fit/match-index";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
 import { OP_STAGE_LABEL, OP_STAGE_LABELS, canonicalInvestorType, INVESTOR_TYPE_VOCAB } from "@/lib/fit/options";
@@ -314,6 +315,10 @@ export async function applyProposal(id: string, edits: { industries?: string[]; 
   }
   if (error) return false;
   await db().from("investor_enrichment").update({ status: "approved", reviewed_by: reviewerId ?? null, reviewed_at: now }).eq("id", id);
+  // Push the approved values into the match index now. An in-app edit doesn't move
+  // synced_at, so the scheduled incremental rebuild would not notice it and the approval
+  // would have no effect on /fit until a manual full rebuild. Best-effort.
+  await reindexContacts([prop.contact_id as string]).catch(() => 0);
   return true;
 }
 

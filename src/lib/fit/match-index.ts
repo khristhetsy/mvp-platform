@@ -114,6 +114,44 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
 }
 
 /**
+ * Reproject specific contacts immediately.
+ *
+ * Change detection for the scheduled rebuild keys off synced_at, which only moves when the
+ * connector re-syncs a contact. Edits made in-app — an approved enrichment, the job-title
+ * backfill — do NOT bump it, so an incremental pass would skip them and the new data would
+ * sit invisible to /fit until somebody remembered to press "Full rebuild". Calling this
+ * right after such an edit closes that gap.
+ *
+ * Best-effort: matching still works from the previous projection if this fails, so it must
+ * never break the write that triggered it.
+ */
+export async function reindexContacts(contactIds: string[]): Promise<number> {
+  const ids = [...new Set(contactIds.filter(Boolean))];
+  if (ids.length === 0) return 0;
+  let written = 0;
+  const now = new Date().toISOString();
+  for (const part of chunk(ids, 200)) {
+    const { data, error } = await db().from("crm_contacts")
+      .select("id, company, raw, overrides, inv_source, inv_verified_at").in("id", part);
+    if (reportDbError("reindexContacts: read", error)) continue;
+    const rows = ((data ?? []) as GatedRow[]).map((r) => toIndexRow(r, now));
+    const keep = rows.filter((r): r is IndexRow => r !== null);
+    if (keep.length) {
+      const { error: upErr } = await db().from("investor_match_index").upsert(keep, { onConflict: "contact_id" });
+      if (!reportDbError("reindexContacts: upsert", upErr)) written += keep.length;
+    }
+    // A contact that no longer qualifies (company or industries removed) must leave the
+    // index, or matching keeps returning a stale row for it.
+    const drop = part.filter((id) => !keep.some((k) => k.contact_id === id));
+    if (drop.length) {
+      const { error: delErr } = await db().from("investor_match_index").delete().in("contact_id", drop);
+      reportDbError("reindexContacts: delete", delErr);
+    }
+  }
+  return written;
+}
+
+/**
  * Investors whose sectors overlap the founder's answers — the industry hard filter, run in
  * the database. Returns Scorables ready for rankScorables().
  */
