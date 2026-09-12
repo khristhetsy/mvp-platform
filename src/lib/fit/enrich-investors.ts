@@ -180,7 +180,7 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
     .or("contact_type.eq.investor,module.eq.investor")
     .not("company", "is", null)
     .order("id", { ascending: true })
-    .range(from, to));
+    .range(from, to), { context: "runEnrichment: crm_contacts ids" });
 
   // Skip any contact that already has a proposal (pending/approved/rejected) — so a
   // "run all" loop makes forward progress and terminates instead of re-scanning them.

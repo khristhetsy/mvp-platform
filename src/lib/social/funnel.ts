@@ -21,6 +21,7 @@
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { PLAN_PRICES, type PlanType } from "@/lib/subscriptions/plans";
+import { reportDbError } from "@/lib/supabase/report";
 
 export type Grain = "week" | "month" | "quarter" | "year";
 export type StageKey = "outreach" | "clicks" | "meetings" | "conversions";
@@ -164,16 +165,18 @@ async function outreachByTag(campaigns: CampaignRow[], start: Date, end: Date): 
   const ids = campaigns.map((c) => c.id);
   if (!ids.length) return out;
   const idToTag = new Map(campaigns.map((c) => [c.id, c.source_tag]));
-  const { data: posts } = await db().from("social_posts").select("id, campaign_id").in("campaign_id", ids);
+  const { data: posts, error: ePosts } = await db().from("social_posts").select("id, campaign_id").in("campaign_id", ids);
+  reportDbError("outreachByTag: social_posts", ePosts);
   const postToTag = new Map<string, string>();
   for (const p of (posts ?? []) as { id: string; campaign_id: string }[]) {
     const tag = idToTag.get(p.campaign_id); if (tag) postToTag.set(p.id, tag);
   }
   const postIds = [...postToTag.keys()];
   if (!postIds.length) return out;
-  const { data: vars } = await db().from("social_variants")
+  const { data: vars, error: eVars } = await db().from("social_variants")
     .select("post_id, published_at").eq("status", "published")
     .gte("published_at", start.toISOString()).lt("published_at", end.toISOString()).in("post_id", postIds);
+  reportDbError("outreachByTag: social_variants", eVars);
   for (const v of (vars ?? []) as { post_id: string }[]) {
     const tag = postToTag.get(v.post_id); if (tag) out.set(tag, (out.get(tag) ?? 0) + 1);
   }
@@ -186,16 +189,18 @@ async function outreachByTag(campaigns: CampaignRow[], start: Date, end: Date): 
 async function clicksByTag(tags: string[], start: Date, end: Date): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (!tags.length) return out;
-  const { data: clicks } = await db().from("social_clicks").select("source_tag, created_at")
+  const { data: clicks, error: eClicks } = await db().from("social_clicks").select("source_tag, created_at")
     .in("source_tag", tags).gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(200000);
+  reportDbError("clicksByTag: social_clicks", eClicks);
   for (const r of (clicks ?? []) as { source_tag: string | null }[]) {
     const t = r.source_tag ?? ""; if (tags.includes(t)) out.set(t, (out.get(t) ?? 0) + 1);
   }
   // Fallback: only for tags with zero tracked clicks this period.
   const missing = tags.filter((t) => !out.get(t));
   if (missing.length) {
-    const { data: sessions } = await db().from("fit_sessions").select("source_tag, created_at")
+    const { data: sessions, error: eSess } = await db().from("fit_sessions").select("source_tag, created_at")
       .in("source_tag", missing).gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(100000);
+    reportDbError("clicksByTag: fit_sessions", eSess);
     for (const r of (sessions ?? []) as { source_tag: string | null }[]) {
       const t = r.source_tag ?? ""; if (missing.includes(t)) out.set(t, (out.get(t) ?? 0) + 1);
     }
@@ -227,22 +232,25 @@ async function conversionsByTag(tags: string[], start: Date, end: Date): Promise
   // `overrides` avoids detoasting a large column per row. See migration 20260912003.
   const rows: Array<{ email: string | null; tag: string }> = [];
   for (const tag of tags) {
-    const { data } = await db().from("crm_contacts").select("email")
+    const { data, error } = await db().from("crm_contacts").select("email")
       .eq("overrides->>lead_source", tag)
       .gte("created_on", odooStamp(start)).lt("created_on", odooStamp(end))
       .limit(20000);
+    reportDbError("conversionsByTag: crm_contacts", error);
     for (const r of (data ?? []) as { email: string | null }[]) rows.push({ email: r.email, tag });
   }
   const emails = [...new Set(rows.map((r) => (r.email ?? "").trim().toLowerCase()).filter(Boolean))];
   const emailToPlan = new Map<string, PlanType | null>();
   if (emails.length) {
-    const { data: profs } = await db().from("profiles").select("id, email").in("email", emails);
+    const { data: profs, error: eProfs } = await db().from("profiles").select("id, email").in("email", emails);
+    reportDbError("conversionsByTag: profiles", eProfs);
     const profRows = (profs ?? []) as { id: string; email: string | null }[];
     const idToEmail = new Map<string, string>();
     for (const p of profRows) if (p.email) idToEmail.set(p.id, p.email.trim().toLowerCase());
     const profIds = profRows.map((p) => p.id);
     if (profIds.length) {
-      const { data: subs } = await db().from("subscriptions").select("profile_id, plan_type").in("profile_id", profIds);
+      const { data: subs, error: eSubs } = await db().from("subscriptions").select("profile_id, plan_type").in("profile_id", profIds);
+      reportDbError("conversionsByTag: subscriptions", eSubs);
       for (const s of (subs ?? []) as { profile_id: string; plan_type: PlanType }[]) {
         const em = idToEmail.get(s.profile_id); if (em) emailToPlan.set(em, s.plan_type);
       }
@@ -268,8 +276,9 @@ async function meetingsByTag(tags: string[], start: Date, end: Date): Promise<Ma
   // thing the funnel did. See migration 20260912003.
   const emailToTag = new Map<string, string>();
   for (const tag of tags) {
-    const { data } = await db().from("crm_contacts").select("email")
+    const { data, error } = await db().from("crm_contacts").select("email")
       .eq("overrides->>lead_source", tag).limit(20000);
+    reportDbError("meetingsByTag: crm_contacts", error);
     for (const c of (data ?? []) as { email: string | null }[]) {
       const em = (c.email ?? "").trim().toLowerCase();
       if (em) emailToTag.set(em, tag);
@@ -277,8 +286,9 @@ async function meetingsByTag(tags: string[], start: Date, end: Date): Promise<Ma
   }
   const emails = [...emailToTag.keys()];
   if (!emails.length) return out;
-  const { data: bookings } = await db().from("scheduling_bookings").select("booker_email, created_at")
+  const { data: bookings, error: eBook } = await db().from("scheduling_bookings").select("booker_email, created_at")
     .gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(100000);
+  reportDbError("meetingsByTag: scheduling_bookings", eBook);
   for (const b of (bookings ?? []) as { booker_email: string | null }[]) {
     const tag = emailToTag.get((b.booker_email ?? "").trim().toLowerCase());
     if (tag) out.set(tag, (out.get(tag) ?? 0) + 1);
@@ -307,7 +317,8 @@ async function countsFor(campaigns: CampaignRow[], tags: string[], start: Date, 
 
 /** Per-campaign funnel for the period containing `now` at the given grain. */
 export async function campaignFunnels(grain: Grain, now = new Date()): Promise<CampaignFunnel[]> {
-  const { data } = await db().from("social_campaigns").select("id, name, source_tag").is("archived_at", null).order("created_at", { ascending: false });
+  const { data, error: eCamp } = await db().from("social_campaigns").select("id, name, source_tag").is("archived_at", null).order("created_at", { ascending: false });
+  reportDbError("campaignFunnels: social_campaigns", eCamp);
   const campaigns = (data ?? []) as CampaignRow[];
   if (!campaigns.length) return [];
   const tags = campaigns.map((c) => c.source_tag);

@@ -9,6 +9,8 @@
  * Pure paging logic only; the caller supplies the query.
  */
 
+import { reportDbError } from "@/lib/supabase/report";
+
 /** Default page size — matches the common db-max-rows so one request fills a page. */
 export const PAGE_SIZE = 1000;
 
@@ -26,13 +28,16 @@ type PagedQuery = (from: number, to: number) => PromiseLike<{ data: any; error: 
  */
 export async function readAllRows<T>(
   makeQuery: PagedQuery,
-  opts: { page?: number; max?: number } = {},
+  opts: { page?: number; max?: number; context?: string } = {},
 ): Promise<T[]> {
   const page = opts.page ?? PAGE_SIZE;
   const max = opts.max ?? 100_000;
   const out: T[] = [];
   for (let from = 0; from < max; from += page) {
     const { data, error } = await makeQuery(from, from + page - 1);
+    // Stopping silently on error made a broken query look like a short final page — i.e.
+    // like a complete read. Report it, then stop.
+    if (reportDbError(`${opts.context ?? "readAllRows"} (rows ${from}-${from + page - 1})`, error)) break;
     if (error) break;
     const rows = (data ?? []) as T[];
     out.push(...rows);

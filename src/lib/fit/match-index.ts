@@ -15,6 +15,7 @@
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, chunk } from "@/lib/supabase/paged";
+import { reportDbError } from "@/lib/supabase/report";
 import { fieldsOf, type GatedRow, type Scorable } from "@/lib/fit/match-investors";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,7 +91,7 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
     // the admin card offers one.
     if (since) q = q.gt("synced_at", since);
     return q.order("id", { ascending: true }).range(from, to);
-  });
+  }, { context: "rebuildMatchIndex: crm_contacts" });
 
   const now = new Date().toISOString();
   const indexRows = rows.map((r) => toIndexRow(r, now)).filter((r): r is IndexRow => r !== null);
@@ -98,7 +99,7 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
   let written = 0;
   for (const part of chunk(indexRows, 500)) {
     const { error } = await db().from("investor_match_index").upsert(part, { onConflict: "contact_id" });
-    if (!error) written += part.length;
+    if (!reportDbError("rebuildMatchIndex: upsert", error)) written += part.length;
   }
 
   // Prune only on a FULL rebuild. "Anything untouched is stale" is only true when every
@@ -122,6 +123,7 @@ export async function scorablesForIndustries(industries: string[]): Promise<Scor
     .select("contact_id, company, industries, stages, sizes, types, revenues, inv_source, inv_verified_at")
     .overlaps("industries", industries)
     .limit(5000);
+  reportDbError("scorablesForIndustries", error);
   // null (not []) signals "index unusable" so the caller can fall back to the wide scan
   // rather than silently returning no matches.
   if (error) return null;

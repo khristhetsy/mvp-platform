@@ -139,7 +139,7 @@ export async function planBackfill(): Promise<{ changes: BackfillChange[]; rowsR
     .select("id, name, company, raw, overrides")
     .or("contact_type.eq.investor,module.eq.investor")
     .order("id", { ascending: true })
-    .range(from, to));
+    .range(from, to), { context: "planBackfill: crm_contacts" });
   const changes: BackfillChange[] = [];
   for (const r of rows) {
     const change = planChange({ id: r.id, name: r.name, company: r.company, jobTitle: jobTitleOf(r), hasType: hasTypeOf(r) });
