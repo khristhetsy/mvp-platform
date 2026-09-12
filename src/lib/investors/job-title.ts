@@ -14,6 +14,7 @@
  * Pure parsing (parseJobTitle, planChange) is unit-tested; the IO helpers are server-only.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { readAllRows } from "@/lib/supabase/paged";
 import { canonicalInvestorType } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,31 +133,13 @@ function hasTypeOf(r: Row): boolean {
   return Array.isArray(t) && t.length > 0;
 }
 
-/**
- * Read every investor contact, PAGED. A bare .limit(20000) is silently truncated by
- * PostgREST's db-max-rows (1000 by default on Supabase), so a single call can miss most
- * of the table without erroring. Pages until a short page comes back.
- */
-const PAGE = 1000;
-async function readInvestorRows(): Promise<Row[]> {
-  const rows: Row[] = [];
-  for (let from = 0; from < 50000; from += PAGE) {
-    const { data, error } = await db().from("crm_contacts")
-      .select("id, name, company, raw, overrides")
-      .or("contact_type.eq.investor,module.eq.investor")
-      .order("id", { ascending: true })          // stable order, or pages can repeat/skip
-      .range(from, from + PAGE - 1);
-    if (error) break;
-    const page = (data ?? []) as Row[];
-    rows.push(...page);
-    if (page.length < PAGE) break;
-  }
-  return rows;
-}
-
-/** Every change the backfill would make, for the preview list. */
+/** Every change the backfill would make, for the preview list. Paged — see paged.ts. */
 export async function planBackfill(): Promise<{ changes: BackfillChange[]; rowsRead: number }> {
-  const rows = await readInvestorRows();
+  const rows = await readAllRows<Row>((from, to) => db().from("crm_contacts")
+    .select("id, name, company, raw, overrides")
+    .or("contact_type.eq.investor,module.eq.investor")
+    .order("id", { ascending: true })
+    .range(from, to));
   const changes: BackfillChange[] = [];
   for (const r of rows) {
     const change = planChange({ id: r.id, name: r.name, company: r.company, jobTitle: jobTitleOf(r), hasType: hasTypeOf(r) });

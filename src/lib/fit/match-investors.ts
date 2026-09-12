@@ -13,6 +13,7 @@
  */
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { readAllRows } from "@/lib/supabase/paged";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
@@ -176,14 +177,17 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
 export async function offerableSectors(): Promise<string[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
-  const { data, error } = await db
-    .from("crm_contacts")
-    .select("raw, overrides")
-    .or("contact_type.eq.investor,module.eq.investor")
-    .limit(20000);
-  if (error || !Array.isArray(data)) return [];
+  // Paged: a single .limit() is truncated at db-max-rows, which would hide the sectors
+  // that only later investors cover — and an unofferable sector is unmatchable.
+  const data = await readAllRows<{ raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }>(
+    (from, to) => db.from("crm_contacts")
+      .select("raw, overrides")
+      .or("contact_type.eq.investor,module.eq.investor")
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
   const seen = new Set<string>();
-  for (const row of data as { raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }[]) {
+  for (const row of data) {
     for (const v of mergedIndustries({ id: "", company: null, inv_source: null, inv_verified_at: null, ...row })) seen.add(v);
   }
   return sortSectors([...seen]); // canonical, deduped, "Other" last
@@ -196,19 +200,20 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
   // Gate: any investor contact (open-gate mode — imported/inferred investors are
   // matched, ranked below self_reported/verified). Founders are excluded by the
   // investor scope; the industry hard filter excludes anyone without sector overlap.
-  const [{ data, error }, { count }] = await Promise.all([
-    db.from("crm_contacts")
+  // Paged — see readAllRows. A single .limit(20000) is capped at db-max-rows (1000),
+  // which meant ranking against a fraction of the network without any error surfacing.
+  const [rows, { count }] = await Promise.all([
+    readAllRows<GatedRow>((from, to) => db.from("crm_contacts")
       .select("id, company, raw, overrides, inv_source, inv_verified_at, contact_type, source, email")
       .or("contact_type.eq.investor,module.eq.investor")
       .not("company", "is", null)
-      .limit(20000),
+      .order("id", { ascending: true })
+      .range(from, to)),
     db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
   ]);
   const networkTotal = count ?? 0;
 
-  if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
-
-  const rows = data as GatedRow[];
+  if (rows.length === 0) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
   const ranked = rankRows(rows, answers);
   const byId = new Map(rows.map((r) => [r.id, r]));
 

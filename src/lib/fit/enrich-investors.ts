@@ -11,6 +11,7 @@
  * Server-only, except the pure parseProposal / normalizeStages (unit-tested).
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { readAllRows, chunk } from "@/lib/supabase/paged";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
 import { OP_STAGE_LABEL, canonicalInvestorType, INVESTOR_TYPE_VOCAB } from "@/lib/fit/options";
@@ -155,18 +156,23 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
 
 /** Run a capped batch: propose for investors missing industry or type, store as pending. */
 export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number }> {
-  const { data } = await db().from("crm_contacts")
+  // Paged — a single .limit() is truncated at db-max-rows (1000), which capped how much
+  // of the network enrichment could ever see. See @/lib/supabase/paged.
+  const rows = await readAllRows<InvestorRow>((from, to) => db().from("crm_contacts")
     .select("id, company, email, raw, overrides, inv_source")
-    .or("contact_type.eq.investor,module.eq.investor").not("company", "is", null).limit(20000);
-  const rows = (data ?? []) as InvestorRow[];
+    .or("contact_type.eq.investor,module.eq.investor")
+    .not("company", "is", null)
+    .order("id", { ascending: true })
+    .range(from, to));
   const missing = rows.filter((r) => !hasIndustry(r) || !hasType(r) || !hasStage(r));
 
   // Skip any contact that already has a proposal (pending/approved/rejected) — so a
   // "run all" loop makes forward progress and terminates instead of re-scanning them.
+  // Chunked: .in() goes in the URL, and an uncapped id list is long enough to 414.
   const ids = missing.map((r) => r.id);
   const existing = new Set<string>();
-  if (ids.length) {
-    const { data: ex } = await db().from("investor_enrichment").select("contact_id").in("contact_id", ids);
+  for (const part of chunk(ids)) {
+    const { data: ex } = await db().from("investor_enrichment").select("contact_id").in("contact_id", part);
     for (const e of (ex ?? []) as { contact_id: string }[]) existing.add(e.contact_id);
   }
   const pending = missing.filter((r) => !existing.has(r.id));
