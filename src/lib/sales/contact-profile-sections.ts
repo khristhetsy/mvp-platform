@@ -118,6 +118,29 @@ const INVESTOR_SCHEMA: SectionDef[] = [
       { display: "Management team", match: "management team", odoo: "Investor preferences for the management team?" },
     ],
   },
+  // Mirrors the "About me" block on the Odoo investor form.
+  {
+    title: "About me",
+    fields: [
+      { display: "Short bio", match: "short bio", odoo: "Investor short bio" },
+      { display: "Special skills", match: "special skills", odoo: "Investor special skills" },
+      { display: "Work experience", match: "work experience", odoo: "Investor work experience" },
+    ],
+  },
+  // Mirrors the "Social" block on the Odoo investor form. These are Odoo studio fields,
+  // so where they're populated they already sync into raw.__profile.extra by label and
+  // were previously landing in the catch-all "Other details" group.
+  {
+    title: "Social",
+    fields: [
+      { display: "LinkedIn", match: "linkedin", odoo: "Investor linkedin url" },
+      { display: "AngelList", match: "angellist", odoo: "Investor angellist url" },
+      { display: "Facebook", match: "facebook", odoo: "Investor facebook url" },
+      { display: "Twitter / X", match: "twitter", odoo: "Investor twitter url" },
+      { display: "Instagram", match: "instagram", odoo: "Investor instagram url" },
+      { display: "Other", match: "other url", odoo: "Investor other url" },
+    ],
+  },
   {
     title: "Agent field (internal)",
     fields: [

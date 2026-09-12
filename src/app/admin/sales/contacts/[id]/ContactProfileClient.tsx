@@ -25,7 +25,12 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
-const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Business summary", "Management team"]);
+const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Short bio", "Special skills", "Work experience", "Business summary", "Management team"]);
+// A value that is a URL (the Social section, a website in Other details) renders as a
+// link rather than a chip. Detected from the value, not the label, so it works for any
+// synced field. Requires an alphabetic TLD so numbers like "1.5" aren't caught.
+const URLISH = /^(https?:\/\/\S+|(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?)$/i;
+const hrefOf = (v: string) => (/^https?:\/\//i.test(v) ? v : `https://${v}`);
 // Fields that hold exactly one value (a range/band) — the picker is single-select.
 const SINGLE_SELECT_FIELD_LABELS = new Set(["ARR", "MRR"]);
 
@@ -240,6 +245,16 @@ function EditablePrefRow({
       >
         {values.length === 0 ? (
           <span style={{ color: "var(--muted-foreground)" }}>—</span>
+        ) : values.length === 1 && URLISH.test(values[0]) ? (
+          // stopPropagation so following the link doesn't also open the editor; the
+          // pencil and the rest of the row still start an edit.
+          <a
+            href={hrefOf(values[0])} target="_blank" rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ color: "#3C3489", textDecoration: "underline", overflowWrap: "anywhere" }}
+          >
+            {values[0]} <i className="ti ti-external-link" aria-hidden="true" style={{ fontSize: 11 }} />
+          </a>
         ) : values.length === 1 && values[0].length > 40 ? (
           <span style={{ color: "var(--foreground)", overflowWrap: "anywhere" }}>{values[0]}</span>
         ) : values.map((v) => (

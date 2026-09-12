@@ -7,6 +7,8 @@ type Row = {
   proposed_stage: string[]; confidence: number; basis: string | null; rationale: string | null; status: string;
 };
 
+type JtChange = { contactId: string; name: string | null; oldCompany: string | null; newCompany: string | null; newType: string | null };
+
 const HIGH = 85;
 // The closed stage vocabulary the matcher compares against (mirrors STAGE_VOCAB on the
 // server). Editing is a toggle rather than free text so a reviewer can't type a value
@@ -20,6 +22,28 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
   const [editStages, setEditStages] = useState<string[]>([]);
+  // Step 1 — deterministic job-title backfill (no AI). Preview before applying.
+  const [jt, setJt] = useState<{ changes: JtChange[]; total: number; companies: number; types: number } | null>(null);
+  const [jtMsg, setJtMsg] = useState<string | null>(null);
+
+  async function jtPreview() {
+    setBusy(true); setJtMsg("Scanning job titles…");
+    try {
+      const res = await fetch("/api/admin/investors/job-title-backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "preview" }) });
+      if (!res.ok) { setJtMsg("Preview failed."); return; }
+      const d = await res.json();
+      setJt(d); setJtMsg(d.total === 0 ? "Nothing to backfill — every job title is already reflected." : null);
+    } finally { setBusy(false); }
+  }
+  async function jtApply() {
+    setBusy(true); setJtMsg("Applying…");
+    try {
+      const res = await fetch("/api/admin/investors/job-title-backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "apply" }) });
+      if (!res.ok) { setJtMsg("Apply failed."); return; }
+      const d = await res.json();
+      setJtMsg(`Applied — ${d.companies} company names, ${d.types} investor types.`); setJt(null);
+    } finally { setBusy(false); }
+  }
 
   async function refresh() {
     const d = await fetch("/api/admin/investors/enrich?status=pending").then((r) => r.json()).catch(() => ({ proposals: [] }));
@@ -82,6 +106,40 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
 
   return (
     <div>
+      {/* Step 1 — deterministic, free, and it improves the signal Step 2 reads. */}
+      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+        <div className="text-[13px] font-semibold text-slate-800">Step 1 · Backfill from job title <span className="font-normal text-slate-500">— free, instant, run this first</span></div>
+        <p className="mt-1 text-[11.5px] text-slate-500">Pulls the firm name out of &ldquo;Technology Investor <b>at</b> TA Associates&rdquo; and sets the investor type when the title actually names one. A real company name is never overwritten — only blanks and rows where the company is the contact&rsquo;s own name.</p>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => void jtPreview()} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">⌕ Preview</button>
+          {jt && jt.total > 0 ? (
+            <button type="button" onClick={() => void jtApply()} disabled={busy} className="rounded-lg bg-slate-800 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-slate-900 disabled:opacity-50">✓ Apply {jt.total}</button>
+          ) : null}
+          {jt ? <span className="text-[11.5px] text-slate-500">{jt.companies} companies · {jt.types} types{jt.total > jt.changes.length ? ` · showing first ${jt.changes.length}` : ""}</span> : null}
+          {jtMsg ? <span className="text-[11.5px] text-slate-500">{jtMsg}</span> : null}
+        </div>
+        {jt && jt.changes.length > 0 ? (
+          <div className="mt-2.5 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white">
+            <table className="w-full text-[11.5px]">
+              <thead className="sticky top-0 bg-slate-50 text-left text-[10.5px] text-slate-500">
+                <tr><th className="px-3 py-1.5 font-medium">Contact</th><th className="px-3 py-1.5 font-medium">Company now</th><th className="px-3 py-1.5 font-medium">→ Company</th><th className="px-3 py-1.5 font-medium">→ Type</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {jt.changes.map((c) => (
+                  <tr key={c.contactId}>
+                    <td className="px-3 py-1.5"><a href={`/admin/sales/contacts/${c.contactId}`} className="text-slate-700 hover:underline">{c.name ?? "(no name)"}</a></td>
+                    <td className="px-3 py-1.5 text-slate-400">{c.oldCompany || "—"}</td>
+                    <td className="px-3 py-1.5">{c.newCompany ? <b className="text-emerald-700">{c.newCompany}</b> : <span className="text-slate-300">unchanged</span>}</td>
+                    <td className="px-3 py-1.5">{c.newType ? <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-indigo-700">{c.newType}</span> : <span className="text-slate-300">—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mb-1.5 text-[13px] font-semibold text-slate-800">Step 2 · AI enrichment <span className="font-normal text-slate-500">— industry, type &amp; thesis stage</span></div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => void run()} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">▷ Run next 40</button>
         <button type="button" onClick={() => void runAll()} disabled={busy} className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700 disabled:opacity-50">▷▷ Run all</button>
