@@ -40,7 +40,7 @@ describe("canonicalInvestorType", () => {
     const matchable = new Set(Q5_INVESTOR_TYPE.flatMap((o) => o.stored));
     for (const t of INVESTOR_TYPE_VOCAB) {
       if (t === "Accelerator") continue;
-      expect(matchable, `"${t}" is not in Q5_INVESTOR_TYPE.stored`).toContain(t);
+      expect(Array.from(matchable)).toContain(t);
     }
   });
   it("a founder picking a type matches contacts stamped with the canonical value", () => {
