@@ -35,6 +35,19 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       setJt(d); setJtMsg(d.total === 0 ? `Nothing to backfill — scanned ${d.rowsRead} investor contacts, no job title yielded a change.` : null);
     } finally { setBusy(false); }
   }
+  // Step 3 — refresh the narrow table /fit matches against. Also runs after each
+  // contacts sync; this is the "don't wait four hours" button.
+  const [idxMsg, setIdxMsg] = useState<string | null>(null);
+  async function rebuildIndex() {
+    setBusy(true); setIdxMsg("Rebuilding…");
+    try {
+      const res = await fetch("/api/admin/investors/match-index", { method: "POST" });
+      if (!res.ok) { setIdxMsg("Rebuild failed."); return; }
+      const d = await res.json();
+      setIdxMsg(`Indexed ${d.written} investors from ${d.scanned} scanned${d.removed ? `, removed ${d.removed} stale` : ""}.`);
+    } finally { setBusy(false); }
+  }
+
   async function jtApply() {
     setBusy(true); setJtMsg("Applying…");
     try {
@@ -148,6 +161,15 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
         <button type="button" onClick={() => void runAll()} disabled={busy} className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700 disabled:opacity-50">▷▷ Run all</button>
         {highCount > 0 ? <button type="button" onClick={() => void bulk()} disabled={busy} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-[13px] font-medium text-emerald-700 disabled:opacity-50">✓ Approve all ≥{HIGH}% ({highCount})</button> : null}
         <span className="ml-auto text-[12px] text-slate-500">{rows.length} pending{msg ? ` · ${msg}` : ""}</span>
+      </div>
+
+      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+        <div className="text-[13px] font-semibold text-slate-800">Step 3 · Rebuild match index <span className="font-normal text-slate-500">— publishes approved data to /fit</span></div>
+        <p className="mt-1 text-[11.5px] text-slate-500">Approved values don&rsquo;t reach matching until the index is rebuilt. This runs automatically after each contacts sync; use the button to apply changes now.</p>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => void rebuildIndex()} disabled={busy} className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">↻ Rebuild now</button>
+          {idxMsg ? <span className="text-[11.5px] text-slate-500">{idxMsg}</span> : null}
+        </div>
       </div>
 
       <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">

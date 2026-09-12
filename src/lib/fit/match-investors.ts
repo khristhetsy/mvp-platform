@@ -13,6 +13,7 @@
  */
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { scorablesForIndustries, indexedSectors } from "@/lib/fit/match-index";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
@@ -82,61 +83,89 @@ function ovList(overrides: Record<string, unknown> | null, key: string): string[
   const v = overrides?.[key];
   return Array.isArray(v) ? asList(v) : null;
 }
-function mergedIndustries(row: GatedRow): string[] {
+export function mergedIndustries(row: GatedRow): string[] {
   const raw = ovList(row.overrides, "Industries") ?? asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries);
   return canonicalizeIndustries(raw); // canonical taxonomy (merges/dedupes)
 }
-function mergedExtra(row: GatedRow, label: string): string[] {
+export function mergedExtra(row: GatedRow, label: string): string[] {
   return ovList(row.overrides, label) ?? extraValues(row.raw, label);
 }
-function mergedInvestorTypes(row: GatedRow): string[] {
+export function mergedInvestorTypes(row: GatedRow): string[] {
   return ovList(row.overrides, "Investor type") ?? asList((row.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes);
 }
 
-type GatedRow = {
+export type GatedRow = {
   id: string; company: string | null; raw: Record<string, unknown> | null;
   overrides: Record<string, unknown> | null; inv_source: string | null; inv_verified_at: string | null;
   contact_type?: string | null; source?: string | null; email?: string | null;
 };
 
-/** Score one investor row against the founder's answers. Returns null when the
- *  industry hard filter fails (no sector overlap → never shown). */
-export function scoreRow(row: GatedRow, answers: FitAnswers): { fit: number; summary: string } | null {
-  const industries = lc(mergedIndustries(row));
+/**
+ * The five fields scoring actually needs, already merged (overrides over Odoo) and
+ * canonicalised. Both paths produce this: the wide crm_contacts scan via fieldsOf(), and
+ * the narrow investor_match_index read. Scoring therefore has ONE implementation, and
+ * the index cannot drift into scoring differently from the fallback.
+ */
+export type MatchFields = { industries: string[]; stages: string[]; sizes: string[]; types: string[]; revenues: string[] };
+
+/** Project a wide crm_contacts row down to the scoring fields. */
+export function fieldsOf(row: GatedRow): MatchFields {
+  return {
+    industries: mergedIndustries(row),
+    stages: mergedExtra(row, OP_STAGE_LABEL),
+    sizes: mergedExtra(row, INV_SIZE_LABEL),
+    types: mergedInvestorTypes(row),
+    revenues: mergedExtra(row, REVENUE_LABEL),
+  };
+}
+
+/** Score merged fields against the founder's answers. Null = industry filter failed. */
+export function scoreFields(f: MatchFields, answers: FitAnswers): { fit: number; summary: string } | null {
+  const industries = lc(f.industries);
   // Hard filter: at least one selected sector overlaps (multi-select any-overlap).
   if (!answers.industry.some((i) => industries.has(i.trim().toLowerCase()))) return null;
 
   let fit = WEIGHTS.industry; // industry matched (hard-filtered above)
 
-  const stageStored = lc(mergedExtra(row, OP_STAGE_LABEL));
+  const stageStored = lc(f.stages);
   if (stageStoredFor(answers.stage).some((s) => stageStored.has(s.toLowerCase()))) fit += WEIGHTS.stage;
 
   const bounds = raiseBoundsFor(answers.raise); // union of selected raise bands
-  const sizeBands = mergedExtra(row, INV_SIZE_LABEL).map(parseMoneyBand).filter((b): b is { min: number; max: number } => b != null);
+  const sizeBands = f.sizes.map(parseMoneyBand).filter((b): b is { min: number; max: number } => b != null);
   if (bounds && sizeBands.some((b) => b.min <= bounds.max && b.max >= bounds.min)) fit += WEIGHTS.size;
 
   // Investor type: any selected type overlaps, or "Open to any" (no constraint).
-  const invTypes = lc(mergedInvestorTypes(row));
+  const invTypes = lc(f.types);
   if (investorTypeIsAny(answers.investorType) || investorTypeStoredFor(answers.investorType).some((t) => invTypes.has(t.toLowerCase()))) fit += WEIGHTS.type;
 
-  const revStored = lc(mergedExtra(row, REVENUE_LABEL));
+  const revStored = lc(f.revenues);
   if (revenueStoredFor(answers.revenue).some((r) => revStored.has(r.toLowerCase()))) fit += WEIGHTS.revenue;
 
-  const summary = [
-    mergedExtra(row, OP_STAGE_LABEL).join("–") || null,
-    mergedExtra(row, INV_SIZE_LABEL)[0] || null,
-  ].filter(Boolean).join(" · ");
-
+  const summary = [f.stages.join("–") || null, f.sizes[0] || null].filter(Boolean).join(" · ");
   return { fit, summary };
 }
 
+/** Score one wide row. Kept as the thin wrapper the fallback path and tests use. */
+export function scoreRow(row: GatedRow, answers: FitAnswers): { fit: number; summary: string } | null {
+  return scoreFields(fieldsOf(row), answers);
+}
+
+/** An investor reduced to what ranking needs, from either source. */
+export type Scorable = {
+  id: string;
+  company: string | null;
+  inv_source: string | null;
+  inv_verified_at: string | null;
+  fields: MatchFields;
+};
+
 /** Pure ranking: score → industry hard filter → one row per firm → threshold → sort. */
-export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
+export function rankScorables(items: Scorable[], answers: FitAnswers): MatchResult[] {
   // One row per firm: prefer the most-trusted source (verified > self_reported >
   // inferred/other), then most recently confirmed.
   const tier = (s: string | null) => (s === "verified" ? 2 : s === "self_reported" ? 1 : 0);
-  const byFirm = new Map<string, GatedRow>();
-  for (const r of rows) {
+  const byFirm = new Map<string, Scorable>();
+  for (const r of items) {
     if (!r.company) continue;
     const key = r.company.trim().toLowerCase();
     const cur = byFirm.get(key);
@@ -148,18 +177,18 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
 
   const scored: MatchResult[] = [];
   for (const r of byFirm.values()) {
-    const s = scoreRow(r, answers);
+    const s = scoreFields(r.fields, answers);
     if (s && s.fit >= PASS_THRESHOLD) {
       scored.push({
         contactId: r.id,
         company: r.company as string,
         summary: s.summary,
         fit: s.fit,
-        sectors: mergedIndustries(r),
-        types: mergedInvestorTypes(r),
-        stage: mergedExtra(r, OP_STAGE_LABEL).join(", ") || null,
-        checkSize: mergedExtra(r, INV_SIZE_LABEL)[0] ?? null,
-        revenue: mergedExtra(r, REVENUE_LABEL)[0] ?? null,
+        sectors: r.fields.industries,
+        types: r.fields.types,
+        stage: r.fields.stages.join(", ") || null,
+        checkSize: r.fields.sizes[0] ?? null,
+        revenue: r.fields.revenues[0] ?? null,
         score: null,
         tier: null,
       });
@@ -170,6 +199,13 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
   return scored.slice(0, RESULT_LIMIT);
 }
 
+/** Rank wide crm_contacts rows (the fallback path). */
+export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
+  return rankScorables(rows.map((r) => ({
+    id: r.id, company: r.company, inv_source: r.inv_source, inv_verified_at: r.inv_verified_at, fields: fieldsOf(r),
+  })), answers);
+}
+
 /** Distinct sectors offerable at Q3 — the industries that at least one GATED
  *  investor actually covers. Never hardcoded, so a sector with no investor behind
  *  it can't be offered (build-spec §2). */
@@ -178,12 +214,20 @@ const SECTOR_TTL_MS = 10 * 60 * 1000;
 
 export async function offerableSectors(): Promise<string[]> {
   if (sectorCache && Date.now() - sectorCache.at < SECTOR_TTL_MS) return sectorCache.sectors;
+
+  // Preferred: read the narrow index — one small column, every investor covered.
+  const indexed = await indexedSectors().catch(() => null);
+  if (indexed && indexed.length > 0) {
+    const sectors = sortSectors(indexed);
+    sectorCache = { at: Date.now(), sectors };
+    return sectors;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
-  // NOT paged, deliberately. This runs on every /fit page load, and each row carries the
-  // whole Odoo `raw` blob — paging all 7,184 made Q3 hang for tens of seconds. Capped at
-  // db-max-rows the sector list is near-complete anyway (sectors repeat across
-  // investors), and the result is cached. See MATCH_SCAN_NOTE below for the real fix.
+  // Fallback (index not built yet): NOT paged, deliberately. This runs on every /fit page
+  // load and each row carries the whole Odoo `raw` blob — paging all 7,184 made Q3 hang.
+  // Capped, the sector list is near-complete anyway (sectors repeat across investors).
   const { data, error } = await db
     .from("crm_contacts")
     .select("raw, overrides")
@@ -199,55 +243,36 @@ export async function offerableSectors(): Promise<string[]> {
   return sectors;
 }
 
-export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
+/**
+ * Attach the investor score/tier to the rows we're about to show and finalise the
+ * response. Only the top 3 are displayed, so their rating inputs are fetched by id —
+ * three wide rows, not the whole network. Shared by the index and fallback paths.
+ */
+async function finish(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = createServiceRoleClient() as any;
-
-  // Gate: any investor contact (open-gate mode — imported/inferred investors are
-  // matched, ranked below self_reported/verified). Founders are excluded by the
-  // investor scope; the industry hard filter excludes anyone without sector overlap.
-  // MATCH_SCAN_NOTE — known limitation, deliberately left in place.
-  //
-  // This read is capped at PostgREST's db-max-rows (1000), so ranking sees ~1,000 of the
-  // 7,184 investors. Paging it (commit 2bc175b) fixed the coverage but made /fit unusable:
-  // every row ships the entire Odoo `raw` jsonb, so eight paged round trips moved tens of
-  // megabytes on each funnel submission and the page hung.
-  //
-  // The fix is NOT to page a wide scan. It is to stop scanning wide: a narrow projection
-  // of the five match fields (industries / stage / size / type / revenue as text[]),
-  // maintained alongside crm_contacts, so matching reads a small table and can apply the
-  // industry filter in SQL instead of in memory. Until that exists, correctness here is
-  // bounded by the cap.
-  const [{ data, error }, { count }] = await Promise.all([
-    db.from("crm_contacts")
-      .select("id, company, raw, overrides, inv_source, inv_verified_at, contact_type, source, email")
-      .or("contact_type.eq.investor,module.eq.investor")
-      .not("company", "is", null)
-      .limit(20000),
-    db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
-  ]);
-  const networkTotal = count ?? 0;
-
-  if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
-  const rows = data as GatedRow[];
-  const ranked = rankRows(rows, answers);
-  const byId = new Map(rows.map((r) => [r.id, r]));
-
-  // Enrich the shown rows with the existing investor score/tier, then sort by fit,
-  // score. Only the top few are displayed, so this stays cheap.
+  db: any,
+  ranked: MatchResult[],
+  networkTotal: number,
+): Promise<MatchResponse> {
   const shown = ranked.slice(0, 3);
-  await Promise.all(shown.map(async (m) => {
-    const row = byId.get(m.contactId);
-    if (!row) return;
-    const rating = await getContactInvestorRating({
-      source: row.source ?? null, contact_type: row.contact_type ?? "investor", email: row.email ?? null,
-      membership: (row.raw?.__profile as { membership?: string } | undefined)?.membership ?? null,
-    }).catch(() => null);
-    m.score = rating?.score ?? null;
-    m.tier = rating?.tier ?? null;
-  }));
-  shown.sort((a, b) => b.fit - a.fit || (b.score ?? -1) - (a.score ?? -1));
-
+  if (shown.length > 0) {
+    type RatingRow = { id: string; source: string | null; contact_type: string | null; email: string | null; raw: Record<string, unknown> | null };
+    const { data } = await db.from("crm_contacts")
+      .select("id, source, contact_type, email, raw")
+      .in("id", shown.map((m) => m.contactId));
+    const byId = new Map(((data ?? []) as RatingRow[]).map((r) => [r.id, r]));
+    await Promise.all(shown.map(async (m) => {
+      const row = byId.get(m.contactId);
+      if (!row) return;
+      const rating = await getContactInvestorRating({
+        source: row.source ?? null, contact_type: row.contact_type ?? "investor", email: row.email ?? null,
+        membership: (row.raw?.__profile as { membership?: string } | undefined)?.membership ?? null,
+      }).catch(() => null);
+      m.score = rating?.score ?? null;
+      m.tier = rating?.tier ?? null;
+    }));
+    shown.sort((a, b) => b.fit - a.fit || (b.score ?? -1) - (a.score ?? -1));
+  }
   return {
     matched_count: ranked.length,
     top: shown,
@@ -255,4 +280,35 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
     thin: ranked.length < 3,
     network_total: networkTotal,
   };
+}
+
+export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createServiceRoleClient() as any;
+
+  // Gate: any investor contact (open-gate mode — imported/inferred investors are
+  // matched, ranked below self_reported/verified). Founders are excluded by the
+  // investor scope; the industry hard filter excludes anyone without sector overlap.
+  // Preferred path: the industry hard filter runs IN SQL against investor_match_index, so
+  // we read back only investors that could match — no wide scan, full network coverage.
+  const [scorables, { count }] = await Promise.all([
+    scorablesForIndustries(answers.industry).catch(() => null),
+    db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
+  ]);
+  const networkTotal = count ?? 0;
+
+  if (scorables && scorables.length > 0) {
+    return await finish(db, rankScorables(scorables, answers), networkTotal);
+  }
+
+  // Fallback: index missing or empty. Capped read — see the migration comment for why a
+  // paged wide scan is not the answer here.
+  const { data, error } = await db.from("crm_contacts")
+    .select("id, company, raw, overrides, inv_source, inv_verified_at, contact_type, source, email")
+    .or("contact_type.eq.investor,module.eq.investor")
+    .not("company", "is", null)
+    .limit(20000);
+
+  if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
+  return await finish(db, rankRows(data as GatedRow[], answers), networkTotal);
 }
