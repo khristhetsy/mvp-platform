@@ -169,49 +169,68 @@ export async function planDerivation(): Promise<{ plan: PlanItem[]; scanned: num
  * Apply the plan. All fields for one contact are merged into a single update, then the
  * contact is reindexed so /fit sees it without a manual rebuild. Best-effort per contact.
  */
-export async function applyDerivation(): Promise<{ scanned: number; contacts: number; fields: number; byRule: Record<string, Record<string, number>>; errors: number; firstError: string | null; reindexed: number }> {
+/**
+ * Each contact costs a read and a write. Done serially, ~380 contacts is ~760 round trips
+ * and blows the 60s function limit part-way through — which is exactly what happened on
+ * the first real run (285 of 377 written, the rest lost to the timeout). Bounded
+ * concurrency turns that into seconds; the cap keeps any single request finite and
+ * returns `remaining` so the caller can loop.
+ */
+const WRITE_CONCURRENCY = 6;
+const MAX_PER_RUN = 400;
+
+export async function applyDerivation(): Promise<{ scanned: number; contacts: number; fields: number; byRule: Record<string, Record<string, number>>; errors: number; firstError: string | null; reindexed: number; remaining: number }> {
   const { plan, scanned } = await planDerivation();
 
   const byContact = new Map<string, PlanItem[]>();
   for (const p of plan) byContact.set(p.contactId, [...(byContact.get(p.contactId) ?? []), p]);
+
+  const queue = [...byContact.entries()];
+  const remaining = Math.max(0, queue.length - MAX_PER_RUN);
+  const todo = queue.slice(0, MAX_PER_RUN);
 
   let contacts = 0, fields = 0, errors = 0;
   let firstError: string | null = null;
   const byRule: Record<string, Record<string, number>> = {};
   const touched: string[] = [];
 
-  for (const [contactId, items] of byContact) {
-    // Re-read immediately before writing: the plan is a snapshot, and an approved
-    // enrichment may have given this contact a real value since it was built.
-    const { data: c } = await db().from("crm_contacts").select("raw, overrides").eq("id", contactId).maybeSingle();
-    if (!c) continue;
-    const fresh: Row = { id: contactId, company: null, raw: c.raw ?? null, overrides: c.overrides ?? null };
-    const overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}) };
+  let cursor = 0;
+  async function worker() {
+    while (cursor < todo.length) {
+      const [contactId, items] = todo[cursor++];
+      // Re-read immediately before writing: the plan is a snapshot, and an approved
+      // enrichment may have given this contact a real value since it was built.
+      const { data: c } = await db().from("crm_contacts").select("raw, overrides").eq("id", contactId).maybeSingle();
+      if (!c) continue;
+      const fresh: Row = { id: contactId, company: null, raw: c.raw ?? null, overrides: c.overrides ?? null };
+      const overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}) };
 
-    let wrote = 0;
-    for (const item of items) {
-      const rule = TYPE_RULES.find((r) => r.id === item.ruleId);
-      const fill = rule?.fills.find((f) => f.field === item.field);
-      if (!fill || hasFieldValue(fresh, fill)) continue;   // someone got there first
-      overrides[item.label] = item.values;
-      overrides[item.sourceKey] = item.ruleId;
-      wrote++;
-      byRule[item.ruleId] ??= {};
-      byRule[item.ruleId][item.field] = (byRule[item.ruleId][item.field] ?? 0) + 1;
-    }
-    if (wrote === 0) continue;
+      let wrote = 0;
+      for (const item of items) {
+        const rule = TYPE_RULES.find((r) => r.id === item.ruleId);
+        const fill = rule?.fills.find((f) => f.field === item.field);
+        if (!fill || hasFieldValue(fresh, fill)) continue;   // someone got there first
+        overrides[item.label] = item.values;
+        overrides[item.sourceKey] = item.ruleId;
+        wrote++;
+        byRule[item.ruleId] ??= {};
+        byRule[item.ruleId][item.field] = (byRule[item.ruleId][item.field] ?? 0) + 1;
+      }
+      if (wrote === 0) continue;
 
-    const { error } = await db().from("crm_contacts").update({ overrides }).eq("id", contactId);
-    if (error) {
-      errors++;
-      if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
-      continue;
+      const { error } = await db().from("crm_contacts").update({ overrides }).eq("id", contactId);
+      if (error) {
+        errors++;
+        if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
+        continue;
+      }
+      contacts++; fields += wrote; touched.push(contactId);
     }
-    contacts++; fields += wrote; touched.push(contactId);
   }
+  await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, todo.length) }, () => worker()));
 
   const reindexed = await reindexContacts(touched).catch(() => 0);
-  return { scanned, contacts, fields, byRule, errors, firstError, reindexed };
+  return { scanned, contacts, fields, byRule, errors, firstError, reindexed, remaining };
 }
 
 /**

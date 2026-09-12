@@ -45,8 +45,25 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       const res = await fetch("/api/admin/investors/derive-stage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op }) });
       if (!res.ok) { setDvMsg(`${op} failed.`); return; }
       const d = await res.json();
-      if (op === "preview") { setDv(d); setDvMsg(d.total === 0 ? `Nothing to derive — scanned ${d.scanned}, every investor already has a stage or no usable type.` : null); }
-      else { setDvMsg(`Filled ${d.fields} fields across ${d.contacts} contacts (of ${d.scanned} scanned)${d.errors ? ` · ${d.errors} failed: ${d.firstError ?? ""}` : ""}${d.reindexed ? ` · ${d.reindexed} reindexed` : ""}.`); setDv(null); }
+      if (op === "preview") { setDv(d); setDvMsg(d.total === 0 ? `Nothing to derive — scanned ${d.scanned}, every investor already has a stage or no usable type.` : null); return; }
+
+      // Each request is capped so it finishes inside the 60s function limit; keep going
+      // until nothing is left. Filling is idempotent (only ever fills a missing field),
+      // so a repeated pass can't double-write.
+      let fields = d.fields ?? 0, contacts = d.contacts ?? 0, errs = d.errors ?? 0;
+      let firstError: string | null = d.firstError ?? null;
+      let left = d.remaining ?? 0, guard = 0;
+      while (left > 0 && guard++ < 50) {
+        setDvMsg(`Filling… ${left} contacts to go · ${fields} fields written`);
+        const r2 = await fetch("/api/admin/investors/derive-stage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "apply" }) });
+        if (!r2.ok) { setDvMsg(`Stopped with ${left} to go — ${fields} fields written so far. Press Fill to resume.`); return; }
+        const n = await r2.json();
+        fields += n.fields ?? 0; contacts += n.contacts ?? 0; errs += n.errors ?? 0;
+        firstError ??= n.firstError ?? null;
+        left = n.remaining ?? 0;
+      }
+      setDvMsg(`Filled ${fields} fields across ${contacts} contacts${errs ? ` · ${errs} failed: ${firstError ?? ""}` : ""}.`);
+      setDv(null);
     } finally { setBusy(false); }
   }
   async function undoRule(ruleId: string, field: string) {
