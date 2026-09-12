@@ -200,8 +200,14 @@ export async function applyDerivation(): Promise<{ scanned: number; contacts: nu
       const [contactId, items] = todo[cursor++];
       // Re-read immediately before writing: the plan is a snapshot, and an approved
       // enrichment may have given this contact a real value since it was built.
-      const { data: c } = await db().from("crm_contacts").select("raw, overrides").eq("id", contactId).maybeSingle();
-      if (!c) continue;
+      const { data: c, error: readErr } = await db().from("crm_contacts").select("raw, overrides").eq("id", contactId).maybeSingle();
+      // Must check: a swallowed read error would leave c null, and the spread below would
+      // then replace the whole overrides column with just our keys.
+      if (readErr || !c) {
+        errors++;
+        if (!firstError) firstError = `read overrides failed: ${readErr?.message ?? "no row"}`;
+        continue;
+      }
       const fresh: Row = { id: contactId, company: null, raw: c.raw ?? null, overrides: c.overrides ?? null };
       const overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}) };
 

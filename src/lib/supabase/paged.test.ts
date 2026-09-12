@@ -52,9 +52,15 @@ describe("readAllRows", () => {
 
 describe("chunk", () => {
   it("splits a long id list so .in() can't overflow the URL", () => {
-    const parts = chunk(Array.from({ length: 1250 }, (_, i) => i));
-    expect(parts.map((p) => p.length)).toEqual([500, 500, 250]);
-    expect(parts.flat()).toHaveLength(1250);
+    const parts = chunk(Array.from({ length: 250 }, (_, i) => i));
+    expect(parts.map((p) => p.length)).toEqual([100, 100, 50]);
+    expect(parts.flat()).toHaveLength(250);
+  });
+  it("defaults small enough that a UUID list stays well under an 8KB header", () => {
+    // 36-char uuid + quotes + comma ~= 39 bytes; 100 ids ~= 4KB of URL.
+    const parts = chunk(Array.from({ length: 100 }, () => "00000000-0000-0000-0000-000000000000"));
+    expect(parts).toHaveLength(1);
+    expect(parts[0].join(",").length).toBeLessThan(8000);
   });
   it("returns nothing for an empty list, and one chunk when it fits", () => {
     expect(chunk([])).toEqual([]);

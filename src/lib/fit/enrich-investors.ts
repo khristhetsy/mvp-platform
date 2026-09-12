@@ -202,7 +202,7 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
   // some will turn out to need nothing once their profile is inspected.
   const slice = candidates.slice(0, limit * 3);
   const fetched: InvestorRow[] = [];
-  for (const part of chunk(slice, 200)) {
+  for (const part of chunk(slice)) {   // URL-bound .in() — default 100
     const { data } = await db().from("crm_contacts")
       .select("id, company, email, raw, overrides, inv_source").in("id", part);
     fetched.push(...((data ?? []) as InvestorRow[]));
@@ -285,8 +285,12 @@ export async function listProposals(status: "pending" | "approved" | "rejected" 
 export async function applyProposal(id: string, edits: { industries?: string[]; type?: string | null; stages?: string[] } | null, reviewerId?: string | null): Promise<boolean> {
   const { data: prop } = await db().from("investor_enrichment").select("contact_id, proposed_industries, proposed_type, proposed_stage").eq("id", id).maybeSingle();
   if (!prop) return false;
-  const { data: c } = await db().from("crm_contacts").select("overrides, inv_source").eq("id", prop.contact_id).maybeSingle();
-  const overrides = { ...((c?.overrides as Record<string, unknown> | null) ?? {}) };
+  // The error MUST be checked: on a failed read c is null, `?? {}` yields an empty
+  // object, and the update below would replace the whole overrides column — wiping every
+  // other approved value and provenance tag on this contact while returning true.
+  const { data: c, error: readErr } = await db().from("crm_contacts").select("overrides, inv_source").eq("id", prop.contact_id).maybeSingle();
+  if (readErr || !c) return false;
+  const overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}) };
   const industries = edits?.industries ?? (prop.proposed_industries as string[]) ?? [];
   const type = canonicalInvestorType(edits?.type !== undefined ? edits.type : (prop.proposed_type as string | null));
   // Edits go through the same vocabulary clamp as the model's output, so a reviewer

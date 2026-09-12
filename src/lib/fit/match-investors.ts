@@ -6,10 +6,15 @@
  * inv_source in ('self_reported','verified') and verified within 180 days are
  * scanned, so an 'inferred' (or stale) contact can never reach a founder.
  *
- * Scoring (weights §2): industry 35 (also a HARD filter — a firm with no sector
- * overlap is never returned), stage 30, investment-size overlap 25, revenue 10.
- * One row per firm (normalised company), preferring verified then most recently
- * confirmed. Passing threshold fit >= 70; `thin` when fewer than three pass.
+ * Scoring — the authoritative numbers are WEIGHTS below, not this comment:
+ * industry 30 (also a HARD filter — a firm with no sector overlap is never returned),
+ * stage 25, investment size 20, investor type 15, revenue 10.
+ *
+ * The pass threshold equals the industry weight, and industry is a hard filter, so every
+ * row that survives the filter passes. matched_count therefore means "investors in your
+ * sector", not "investors above a quality bar" — worth knowing before treating it as one.
+ * Rows are scored first and de-duplicated by firm afterwards; `thin` when fewer than
+ * three pass.
  */
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -35,7 +40,6 @@ import {
 // Override with FIT_PASS_THRESHOLD.
 const WEIGHTS = { industry: 30, stage: 25, size: 20, type: 15, revenue: 10 };
 const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? WEIGHTS.industry);
-const RESULT_LIMIT = 25;
 
 export type MatchResult = {
   contactId: string;
@@ -204,42 +208,53 @@ export type Scorable = {
 
 /** Pure ranking: score → industry hard filter → one row per firm → threshold → sort. */
 export function rankScorables(items: Scorable[], answers: FitAnswers): MatchResult[] {
-  // One row per firm: prefer the most-trusted source (verified > self_reported >
-  // inferred/other), then most recently confirmed.
+  // SCORE FIRST, then de-dup. De-duplicating first meant the tie-break (trust tier, then
+  // recency) could pick a contact that happens to carry none of the firm's sector data —
+  // that row then fails the industry filter and the whole firm vanishes, even though a
+  // sibling contact would have matched. Scoring first means only rows that actually match
+  // compete for the slot.
   const tier = (s: string | null) => (s === "verified" ? 2 : s === "self_reported" ? 1 : 0);
-  const byFirm = new Map<string, Scorable>();
+  const passed: Array<{ r: Scorable; s: { fit: number; summary: string } }> = [];
   for (const r of items) {
     if (!r.company) continue;
-    const key = r.company.trim().toLowerCase();
+    const s = scoreFields(r.fields, answers);
+    if (s && s.fit >= PASS_THRESHOLD) passed.push({ r, s });
+  }
+
+  // One row per firm among the matches: best fit wins, then trust tier, then recency.
+  const byFirm = new Map<string, { r: Scorable; s: { fit: number; summary: string } }>();
+  for (const cand of passed) {
+    const key = (cand.r.company as string).trim().toLowerCase();
     const cur = byFirm.get(key);
-    if (!cur) { byFirm.set(key, r); continue; }
-    const better = tier(r.inv_source) > tier(cur.inv_source) ||
-      (tier(r.inv_source) === tier(cur.inv_source) && (r.inv_verified_at ?? "") > (cur.inv_verified_at ?? ""));
-    if (better) byFirm.set(key, r);
+    if (!cur) { byFirm.set(key, cand); continue; }
+    const better = cand.s.fit > cur.s.fit ||
+      (cand.s.fit === cur.s.fit && tier(cand.r.inv_source) > tier(cur.r.inv_source)) ||
+      (cand.s.fit === cur.s.fit && tier(cand.r.inv_source) === tier(cur.r.inv_source) &&
+        (cand.r.inv_verified_at ?? "") > (cur.r.inv_verified_at ?? ""));
+    if (better) byFirm.set(key, cand);
   }
 
   const scored: MatchResult[] = [];
-  for (const r of byFirm.values()) {
-    const s = scoreFields(r.fields, answers);
-    if (s && s.fit >= PASS_THRESHOLD) {
-      scored.push({
-        contactId: r.id,
-        company: r.company as string,
-        summary: s.summary,
-        fit: s.fit,
-        sectors: r.fields.industries,
-        types: r.fields.types,
-        stage: r.fields.stages.join(", ") || null,
-        checkSize: r.fields.sizes[0] ?? null,
-        revenue: r.fields.revenues[0] ?? null,
-        score: null,
-        tier: null,
-      });
-    }
+  for (const { r, s } of byFirm.values()) {
+    scored.push({
+      contactId: r.id,
+      company: r.company as string,
+      summary: s.summary,
+      fit: s.fit,
+      sectors: r.fields.industries,
+      types: r.fields.types,
+      stage: r.fields.stages.join(", ") || null,
+      checkSize: r.fields.sizes[0] ?? null,
+      revenue: r.fields.revenues[0] ?? null,
+      score: null,
+      tier: null,
+    });
   }
-  // Sort by fit, then by investor score is applied after enrichment in matchInvestors.
-  scored.sort((a, b) => b.fit - a.fit);
-  return scored.slice(0, RESULT_LIMIT);
+  // Stable order: fit, then firm name, so two identical searches rank identically. Without
+  // the tiebreak the order came from Map insertion, which differs between the index path
+  // and the fallback path for the same founder.
+  scored.sort((a, b) => b.fit - a.fit || a.company.localeCompare(b.company));
+  return scored;
 }
 
 /** Rank wide crm_contacts rows (the fallback path). */
@@ -297,6 +312,9 @@ async function finish(
   ranked: MatchResult[],
   networkTotal: number,
 ): Promise<MatchResponse> {
+  // ranked is the COMPLETE match list. Truncation happens here, at the display boundary,
+  // so matched_count and locked_count describe reality — previously the list was cut to
+  // 25 before counting, so "N more locked" saturated at 22 however many actually matched.
   const shown = ranked.slice(0, 3);
   if (shown.length > 0) {
     type RatingRow = { id: string; source: string | null; contact_type: string | null; email: string | null; raw: Record<string, unknown> | null };

@@ -151,3 +151,38 @@ describe("rankScorables", () => {
     expect(out).toEqual([]);
   });
 });
+
+describe("de-dup happens AFTER scoring", () => {
+  const f = (industries: string[]) => ({ industries, stages: [], sizes: [], types: [], revenues: [] });
+
+  it("keeps a firm when only its lower-trust contact carries the sector data", () => {
+    // De-duplicating first picked the verified-but-empty row, which then failed the
+    // industry filter — and the whole firm disappeared from the founder's results.
+    const out = rankScorables([
+      { id: "empty", company: "Acme Capital", inv_source: "verified", inv_verified_at: "2026-09-01", fields: f([]) },
+      { id: "rich", company: "Acme Capital", inv_source: "inferred", inv_verified_at: null, fields: f(["Fintech"]) },
+    ], answers());
+    expect(out).toHaveLength(1);
+    expect(out[0].contactId).toBe("rich");
+  });
+  it("still prefers the more trusted contact when both match equally", () => {
+    const out = rankScorables([
+      { id: "low", company: "Acme", inv_source: "inferred", inv_verified_at: null, fields: f(["Fintech"]) },
+      { id: "high", company: "acme", inv_source: "verified", inv_verified_at: null, fields: f(["Fintech"]) },
+    ], answers());
+    expect(out).toHaveLength(1);
+    expect(out[0].contactId).toBe("high");
+  });
+  it("orders deterministically so two identical searches agree", () => {
+    const mk = (id: string, company: string) => ({ id, company, inv_source: null, inv_verified_at: null, fields: f(["Fintech"]) });
+    const a = rankScorables([mk("1", "Zeta"), mk("2", "Alpha"), mk("3", "Mid")], answers()).map((r) => r.company);
+    const b = rankScorables([mk("3", "Mid"), mk("1", "Zeta"), mk("2", "Alpha")], answers()).map((r) => r.company);
+    expect(a).toEqual(b);
+  });
+  it("returns every match, not a truncated page — matched_count must be honest", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({
+      id: `c${i}`, company: `Firm ${i}`, inv_source: null, inv_verified_at: null, fields: f(["Fintech"]),
+    }));
+    expect(rankScorables(many, answers())).toHaveLength(40);
+  });
+});

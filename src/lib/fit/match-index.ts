@@ -14,7 +14,7 @@
  * The index is a cache: stale by at most one rebuild, and safe to truncate.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { readAllRows, chunk } from "@/lib/supabase/paged";
+import { readAllRows, readAllRowsChecked, chunk } from "@/lib/supabase/paged";
 import { reportDbError } from "@/lib/supabase/report";
 import { fieldsOf, type GatedRow, type Scorable } from "@/lib/fit/match-investors";
 
@@ -66,7 +66,7 @@ export function toIndexRow(row: GatedRow, now = new Date().toISOString()): Index
  * Rebuild the whole index from crm_contacts. Paged and chunked — this is a background job
  * where the wide read is fine, precisely so the request path never has to do it.
  */
-export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<{ scanned: number; written: number; removed: number; mode: "full" | "incremental" }> {
+export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<{ scanned: number; written: number; removed: number; mode: "full" | "incremental"; complete: boolean }> {
   // Incremental by default. A full reprojection reads every investor's `raw` jsonb, which
   // is CPU-expensive enough to matter on small compute — and running it on every contacts
   // sync (six times a day) is pure waste when only a few contacts changed. So unless a
@@ -79,7 +79,7 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
   }
   const mode: "full" | "incremental" = since ? "incremental" : "full";
 
-  const rows = await readAllRows<GatedRow>((from, to) => {
+  const { rows, complete } = await readAllRowsChecked<GatedRow>((from, to) => {
     let q = db().from("crm_contacts")
       .select("id, company, raw, overrides, inv_source, inv_verified_at")
       .or("contact_type.eq.investor,module.eq.investor")
@@ -97,20 +97,26 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
   const indexRows = rows.map((r) => toIndexRow(r, now)).filter((r): r is IndexRow => r !== null);
 
   let written = 0;
+  // A chunk that failed to upsert has NOT been refreshed, so its rows still carry an old
+  // updated_at — pruning would then delete them. Count failures and skip the prune.
+  let failedChunks = 0;
   for (const part of chunk(indexRows, 500)) {
     const { error } = await db().from("investor_match_index").upsert(part, { onConflict: "contact_id" });
-    if (!reportDbError("rebuildMatchIndex: upsert", error)) written += part.length;
+    if (reportDbError("rebuildMatchIndex: upsert", error)) failedChunks++;
+    else written += part.length;
   }
 
-  // Prune only on a FULL rebuild. "Anything untouched is stale" is only true when every
-  // contact was reprojected — on an incremental pass it would delete the entire index.
+  // Prune only on a FULL rebuild, and only when the scan actually COMPLETED. "Anything
+  // untouched is stale" holds only if we truly saw every contact — on an incremental pass
+  // it would delete the whole index, and after a read that died on page 5 of 8 it would
+  // delete the ~3,000 investors we never got to.
   let removed = 0;
-  if (mode === "full") {
+  if (mode === "full" && complete && failedChunks === 0) {
     const { data: removedRows } = await db().from("investor_match_index")
       .delete().lt("updated_at", now).select("contact_id");
     removed = (removedRows ?? []).length;
   }
-  return { scanned: rows.length, written, removed, mode };
+  return { scanned: rows.length, written, removed, mode, complete };
 }
 
 /**
@@ -130,7 +136,7 @@ export async function reindexContacts(contactIds: string[]): Promise<number> {
   if (ids.length === 0) return 0;
   let written = 0;
   const now = new Date().toISOString();
-  for (const part of chunk(ids, 200)) {
+  for (const part of chunk(ids)) {   // URL-bound .in() — default 100
     const { data, error } = await db().from("crm_contacts")
       .select("id, company, raw, overrides, inv_source, inv_verified_at").in("id", part);
     if (reportDbError("reindexContacts: read", error)) continue;
@@ -157,15 +163,20 @@ export async function reindexContacts(contactIds: string[]): Promise<number> {
  */
 export async function scorablesForIndustries(industries: string[]): Promise<Scorable[] | null> {
   if (industries.length === 0) return [];
-  const { data, error } = await db().from("investor_match_index")
+  // PAGED, not .limit(5000): .limit() does NOT lift PostgREST's db-max-rows, so that
+  // returned an arbitrary 1,000 of the matching investors — with no ordering, a different
+  // 1,000 on each request. That is the exact bug this index was built to remove, so it
+  // must not live on the index's own hot path. Ordered for a stable page walk.
+  const { rows: data, complete } = await readAllRowsChecked<IndexRow>((from, to) => db()
+    .from("investor_match_index")
     .select("contact_id, company, industries, stages, sizes, types, revenues, inv_source, inv_verified_at")
     .overlaps("industries", industries)
-    .limit(5000);
-  reportDbError("scorablesForIndustries", error);
+    .order("contact_id", { ascending: true })
+    .range(from, to), { context: "scorablesForIndustries" });
   // null (not []) signals "index unusable" so the caller can fall back to the wide scan
-  // rather than silently returning no matches.
-  if (error) return null;
-  return ((data ?? []) as IndexRow[]).map((r) => ({
+  // rather than silently returning a truncated result as if it were the whole network.
+  if (!complete) return null;
+  return (data as IndexRow[]).map((r) => ({
     id: r.contact_id,
     company: r.company,
     inv_source: r.inv_source,

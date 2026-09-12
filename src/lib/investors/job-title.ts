@@ -169,8 +169,17 @@ export async function applyBackfill(): Promise<{ rowsRead: number; scanned: numb
     const patch: Record<string, any> = {};
     if (ch.newCompany) patch.company = ch.newCompany;
     if (ch.newType) {
-      const { data: c } = await db().from("crm_contacts").select("overrides").eq("id", ch.contactId).maybeSingle();
-      patch.overrides = { ...((c?.overrides as Record<string, unknown> | null) ?? {}), "Investor type": [ch.newType] };
+      // The error MUST be checked. Without it a failed read gives c = null, `?? {}`
+      // produces an empty object, and the update below replaces the whole overrides
+      // column — destroying every approved industry, stage, size and provenance tag on
+      // that contact, while still reporting success. There is no backup of overrides.
+      const { data: c, error: readErr } = await db().from("crm_contacts").select("overrides").eq("id", ch.contactId).maybeSingle();
+      if (readErr || !c) {
+        errors++;
+        if (!firstError) firstError = `read overrides failed: ${readErr?.message ?? "no row"}`;
+        continue;
+      }
+      patch.overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}), "Investor type": [ch.newType] };
     }
     const { error } = await db().from("crm_contacts").update(patch).eq("id", ch.contactId);
     if (error) {

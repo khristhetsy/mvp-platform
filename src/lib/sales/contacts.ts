@@ -2,9 +2,24 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/sales/activity";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
+import { reindexContacts } from "@/lib/fit/match-index";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
+
+/**
+ * Odoo label → the provenance tag that would mark it as DERIVED by us rather than stated.
+ * Mirrors the sourceKeys in @/lib/investors/derive-from-type. Editing one of these fields
+ * by hand clears the tag: the value is now a human statement, and undoDerivation() must
+ * not be able to delete it.
+ */
+const SOURCE_KEY_FOR_LABEL: Record<string, string> = {
+  "Entrepreneur operating stage?": "_stage_source",
+  "Investor preferences for type(s) of company operational stage?": "_stage_source",
+  "Investor investment size?": "_size_source",
+  "Investor preferences for the company with an annual revenue range of?": "_revenue_source",
+  "Investor preferences for company with annual EBITDA range of?": "_ebitda_source",
+};
 
 export type ContactProfile = {
   id: string; source: string; external_id: string; name: string; email: string | null; company: string | null;
@@ -221,18 +236,35 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   if (patch.preferences) {
     for (const [label, values] of Object.entries(patch.preferences)) {
       ovPatch[label] = values.map((s) => s.trim()).filter(Boolean);
+      // A human has now stated this value, so it is no longer our assumption. Clearing
+      // the provenance tag matters for more than display: undoDerivation() deletes by
+      // tag, so leaving it would let "reverse this rule" destroy hand-entered data.
+      const sourceKey = SOURCE_KEY_FOR_LABEL[label];
+      if (sourceKey) ovPatch[sourceKey] = null;
     }
   }
   if (Object.keys(update).length === 0 && Object.keys(ovPatch).length === 0) return;
 
   if (Object.keys(ovPatch).length > 0) {
-    const { data: existing } = await db().from("crm_contacts").select("overrides").eq("id", id).maybeSingle();
-    const current = (existing?.overrides ?? {}) as Record<string, unknown>;
-    update.overrides = { ...current, ...ovPatch };
+    // Check the error: without it a failed read yields {} and the spread below replaces
+    // the entire overrides column, destroying every other value on the contact.
+    const { data: existing, error: readErr } = await db().from("crm_contacts").select("overrides").eq("id", id).maybeSingle();
+    if (readErr || !existing) throw new Error(`Could not read overrides for ${id}: ${readErr?.message ?? "no row"}`);
+    const current = (existing.overrides ?? {}) as Record<string, unknown>;
+    const merged = { ...current, ...ovPatch };
+    // null means "remove" (a cleared provenance tag), not "store null".
+    for (const [k, v] of Object.entries(merged)) if (v === null) delete merged[k];
+    update.overrides = merged;
   }
 
   const { error } = await db().from("crm_contacts").update(update).eq("id", id);
   if (error) throw new Error(error.message);
+  // Keep /fit in step with what staff just changed. This edit can touch `company` (firm
+  // de-dup) and every scoring field, and it does NOT move synced_at — so without this the
+  // scheduled rebuild would never notice, and matching would run on the old values
+  // indefinitely with nothing to indicate it was stale. Three background jobs already do
+  // this; the path a human uses every day was the one missing it.
+  await reindexContacts([id]).catch(() => 0);
   const fields = Object.keys(patch).join(", ");
   await logActivity({ kind: "contact_edit", summary: `Edited contact fields: ${fields}`, actorId, contactCrmId: id });
 }
