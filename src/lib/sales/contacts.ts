@@ -14,6 +14,10 @@ export type ContactProfile = {
   language: string | null; created_on: string | null; note: string | null;
   // Full source (Odoo) questionnaire/company fields, label → values, for display.
   extra: Array<{ label: string; values: string[] }>;
+  /** Provenance for values this platform DERIVED rather than received or was told:
+   *  sourceKey → rule id (e.g. "_stage_source" → "derived:angel"). Kept separate from
+   *  `extra` because these are metadata about a field, not a field. */
+  derivedSources: Record<string, string>;
 };
 export type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 
@@ -170,6 +174,11 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
     extra: flattenExtra(raw, ov),
+    // String overrides ending in _source are derivation tags, not user-visible fields —
+    // flattenExtra skips them (it only merges arrays), so surface them here instead.
+    derivedSources: Object.fromEntries(
+      Object.entries(ov).filter(([k, v]) => /^_[a-z]+_source$/.test(k) && typeof v === "string"),
+    ) as Record<string, string>,
   };
   return { contact, opportunities };
 }

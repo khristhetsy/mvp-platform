@@ -103,3 +103,33 @@ describe("operating stage — one row, two possible labels", () => {
     expect(other?.fields.some((f) => f.label.toLowerCase().includes("stage")) ?? false).toBe(false);
   });
 });
+
+describe("derived values are marked as assumptions", () => {
+  const extra = [{ label: "Entrepreneur operating stage?", values: ["Startup", "Prototype"] }];
+  const stage = (sources: Record<string, string> = {}) =>
+    groupContactProfile(extra, "Investor", sources)
+      .sections.flatMap((s) => s.fields).find((f) => f.label === "Operating stage");
+
+  it("marks a value we derived, naming the rule", () => {
+    expect(stage({ _stage_source: "derived:angel" })?.derivedFrom).toBe("derived:angel");
+  });
+  it("leaves a stated value unmarked", () => {
+    // The distinction is the whole point: an assumption must never read as a fact.
+    expect(stage()?.derivedFrom).toBeUndefined();
+  });
+  it("does not mark an empty field, even if a stale tag lingers", () => {
+    const empty = groupContactProfile([], "Investor", { _stage_source: "derived:angel" })
+      .sections.flatMap((s) => s.fields).find((f) => f.label === "Operating stage");
+    expect(empty?.values).toEqual([]);
+    expect(empty?.derivedFrom).toBeUndefined();
+  });
+  it("marks each derivable field from its own tag", () => {
+    const p = groupContactProfile([
+      { label: "Investor investment size?", values: ["$1m - $10m"] },
+      { label: "Investor preferences for company with annual EBITDA range of?", values: ["$1m - $10m"] },
+    ], "Investor", { _size_source: "derived:private_equity" });
+    const f = (l: string) => p.sections.flatMap((s) => s.fields).find((x) => x.label === l);
+    expect(f("Investment size")?.derivedFrom).toBe("derived:private_equity");
+    expect(f("Annual EBITDA range")?.derivedFrom).toBeUndefined();  // no tag for that field
+  });
+});

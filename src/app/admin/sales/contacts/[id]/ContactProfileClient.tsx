@@ -15,6 +15,8 @@ type Contact = {
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
   extra: Array<{ label: string; values: string[] }>;
+  /** sourceKey → rule id for values this platform derived rather than was told. */
+  derivedSources?: Record<string, string>;
 };
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
@@ -146,10 +148,12 @@ function Row({ icon, label, value, link }: { icon: string; label: string; value:
 // (Odoo selection / many2many) show a searchable checkbox dropdown with chips
 // (Option 1); free-text fields fall back to a plain input. Inline save (check) + undo.
 function EditablePrefRow({
-  label, value, changed, editing, rating, options, freeText = false, single = false, onOpen, onChange, onSave, onUndo,
+  label, value, changed, editing, rating, options, freeText = false, single = false, derivedFrom, onOpen, onChange, onSave, onUndo,
 }: {
   label: string; value: string; changed: boolean; editing: boolean; rating: boolean; options: string[];
   freeText?: boolean; single?: boolean;
+  /** Set when we derived this value ourselves rather than being told it. */
+  derivedFrom?: string;
   onOpen: () => void; onChange: (v: string) => void; onSave: () => void; onUndo: () => void;
 }) {
   const [hover, setHover] = useState(false);
@@ -262,6 +266,14 @@ function EditablePrefRow({
         ))}
         <i className="ti ti-pencil" aria-hidden="true" style={{ fontSize: 12.5, color: "var(--muted-foreground)", opacity: hover ? 1 : 0, marginLeft: 2 }} />
         {changed ? <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>edited</span> : null}
+        {/* An assumption we made from the investor's type — not something they told us.
+            Without this a derived stage is indistinguishable from a stated one. */}
+        {derivedFrom && !changed ? (
+          <span
+            title={`Assumed from investor type (${derivedFrom.replace("derived:", "").replace(/_/g, " ")}). Not stated by the investor — edit to confirm.`}
+            style={{ fontSize: 10, color: "#6B3FA0", background: "#F3ECFB", border: "0.5px solid #C9B8E6", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}
+          >assumed</span>
+        ) : null}
       </span>
     </div>
   );
@@ -899,7 +911,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <Row icon="ti-plug" label="Source" value={contact.source} />
             </div>
             {(() => {
-              const profile = groupContactProfile(contact.extra, contact.membership);
+              const profile = groupContactProfile(contact.extra, contact.membership, contact.derivedSources);
               if (profile.sections.length === 0) return null;
               const hasInfoSection = profile.sections.some((s) => s.title.toLowerCase().includes("information"));
               // "Other details" (leftover unmapped fields) is folded into the merged
@@ -997,6 +1009,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               rating={rating}
                               freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
                               single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
+                              derivedFrom={f.derivedFrom}
                               options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
@@ -1014,6 +1027,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               rating={false}
                               freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
                               single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
+                              derivedFrom={f.derivedFrom}
                               options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
@@ -1223,7 +1237,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         )}
 
         {/* Log note + timeline — profile contacts use the Note Log strip above */}
-        {groupContactProfile(contact.extra, contact.membership).sections.length === 0 && (
+        {groupContactProfile(contact.extra, contact.membership, contact.derivedSources).sections.length === 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: "14px 16px" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>

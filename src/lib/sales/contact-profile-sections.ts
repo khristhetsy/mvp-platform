@@ -16,6 +16,9 @@ export type ExtraField = { label: string; values: string[] };
 export type ProfileField = {
   label: string;
   values: string[];
+  /** Rule id when this value was derived by us (e.g. "derived:angel"), else undefined.
+   *  Staff must be able to tell an assumption from something the investor told us. */
+  derivedFrom?: string;
   /** Exact label to save an edit under (the synced label if present, else the
    *  canonical Odoo label) so overrides merge with the questionnaire field. */
   saveKey: string;
@@ -30,7 +33,12 @@ export type ContactProfile = { title: string; type: "investor" | "founder" | "ge
  *  Odoo label — operating stage lives under both an entrepreneur-side and an
  *  investor-side phrasing. Listing both folds them into a single row showing the union,
  *  instead of two rows where a value in one makes the other look empty. */
-export type FieldDef = { display: string; match: string | string[]; odoo: string };
+export type FieldDef = {
+  display: string; match: string | string[]; odoo: string;
+  /** overrides key holding a derivation tag for this field, when one can be derived.
+   *  Present → the row can show that its value is an assumption rather than a fact. */
+  sourceKey?: string;
+};
 type SectionDef = { title: string; fields: FieldDef[] };
 
 const FOUNDER_SCHEMA: SectionDef[] = [
@@ -115,12 +123,12 @@ const INVESTOR_SCHEMA: SectionDef[] = [
       // ("...operational stage?") or the entrepreneur-side one ("Entrepreneur operating
       // stage?") — the matcher unions both, so the profile does too. Edits save to the
       // canonical label when present, which is what enrichment and /fit read.
-      { display: "Operating stage", match: ["operating stage", "operational stage"], odoo: "Entrepreneur operating stage?" },
-      { display: "Investment size", match: "investment size", odoo: "Investor investment size?" },
+      { display: "Operating stage", match: ["operating stage", "operational stage"], odoo: "Entrepreneur operating stage?", sourceKey: "_stage_source" },
+      { display: "Investment size", match: "investment size", odoo: "Investor investment size?", sourceKey: "_size_source" },
       { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },
       { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },
-      { display: "Annual revenue range", match: "revenue range", odoo: "Investor preferences for the company with an annual revenue range of?" },
-      { display: "Annual EBITDA range", match: "ebitda", odoo: "Investor preferences for company with annual EBITDA range of?" },
+      { display: "Annual revenue range", match: "revenue range", odoo: "Investor preferences for the company with an annual revenue range of?", sourceKey: "_revenue_source" },
+      { display: "Annual EBITDA range", match: "ebitda", odoo: "Investor preferences for company with annual EBITDA range of?", sourceKey: "_ebitda_source" },
       // Preferred ranges — mirror the founder's actual ARR/MRR for matching.
       { display: "Preferred ARR range", match: "arr range", odoo: "Investor preferences for the company with an ARR range of?" },
       { display: "Preferred MRR range", match: "mrr range", odoo: "Investor preferences for the company with an MRR range of?" },
@@ -190,6 +198,7 @@ function detectTypeFromLabels(extra: ExtraField[]): "investor" | "founder" | "ge
 export function groupContactProfile(
   extra: ExtraField[],
   membership?: string | null,
+  derivedSources: Record<string, string> = {},
 ): ContactProfile {
   const type = typeFromMembership(membership) ?? detectTypeFromLabels(extra);
   if (type === "generic") {
@@ -230,7 +239,8 @@ export function groupContactProfile(
     title: sec.title,
     fields: sec.fields.map((f) => {
       const { values, saveKey } = take(f);
-      return { label: f.display, values, saveKey };
+      const derivedFrom = f.sourceKey && values.length ? derivedSources[f.sourceKey] : undefined;
+      return { label: f.display, values, saveKey, derivedFrom };
     }),
   }));
 
