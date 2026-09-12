@@ -107,6 +107,11 @@ const INVESTOR_SCHEMA: SectionDef[] = [
     fields: [
       { display: "Industries", match: "industries", odoo: "Industries" },
       { display: "Operational stage", match: "operational stage", odoo: "Investor preferences for type(s) of company operational stage?" },
+      // The same concept also lives under the entrepreneur-side label, which is where the
+      // matcher reads from and where an approved enrichment writes. Without this row an
+      // approved thesis stage was invisible here — the field above reads the other key —
+      // so it looked as though enrichment had done nothing. See OP_STAGE_LABELS.
+      { display: "Operating stage (thesis)", match: "operating stage", odoo: "Entrepreneur operating stage?" },
       { display: "Investment size", match: "investment size", odoo: "Investor investment size?" },
       { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },
       { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },

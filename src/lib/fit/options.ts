@@ -24,6 +24,20 @@
 // to. (It is NOT stored under the older "Investor preferences for … operational stage?"
 // label, which is why stage silently never matched until this was corrected.)
 export const OP_STAGE_LABEL = "Entrepreneur operating stage?";
+/**
+ * The OTHER label the same concept has appeared under — the investor-side phrasing used
+ * by the Investor Profile schema. Two labels for one field is how stage ended up
+ * invisible: enrichment approved values under OP_STAGE_LABEL while the profile row read
+ * this one, so an approved stage showed as "—" and nobody could tell it had worked.
+ *
+ * Rather than pick a winner on incomplete evidence, everything that READS stage reads the
+ * union of both (see OP_STAGE_LABELS). Writes go to OP_STAGE_LABEL. That way no existing
+ * Odoo data is ignored and no approved value is lost, whichever key a contact happens to
+ * carry.
+ */
+export const OP_STAGE_LABEL_ALT = "Investor preferences for type(s) of company operational stage?";
+/** Every label an operating-stage value may be stored under. Read all; write the first. */
+export const OP_STAGE_LABELS = [OP_STAGE_LABEL, OP_STAGE_LABEL_ALT] as const;
 export const INV_SIZE_LABEL = "Investor investment size?";
 export const REVENUE_LABEL = "Investor preferences for the company with an annual revenue range of?";
 

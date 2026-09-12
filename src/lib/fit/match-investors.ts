@@ -18,7 +18,7 @@ import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 import {
-  OP_STAGE_LABEL,
+  OP_STAGE_LABELS,
   INV_SIZE_LABEL,
   REVENUE_LABEL,
   stageStoredFor,
@@ -112,7 +112,9 @@ export type MatchFields = { industries: string[]; stages: string[]; sizes: strin
 export function fieldsOf(row: GatedRow): MatchFields {
   return {
     industries: mergedIndustries(row),
-    stages: mergedExtra(row, OP_STAGE_LABEL),
+    // Union of both stage labels — see OP_STAGE_LABELS. A contact may carry the value
+    // under either, and reading only one is what made approved stages score nothing.
+    stages: [...new Set(OP_STAGE_LABELS.flatMap((label) => mergedExtra(row, label)))],
     sizes: mergedExtra(row, INV_SIZE_LABEL),
     types: mergedInvestorTypes(row),
     revenues: mergedExtra(row, REVENUE_LABEL),

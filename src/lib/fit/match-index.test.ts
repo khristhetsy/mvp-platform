@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { toIndexRow } from "./match-index";
 import { scoreFields, rankScorables, scoreRow, fieldsOf, type GatedRow } from "./match-investors";
-import { OP_STAGE_LABEL, INV_SIZE_LABEL, REVENUE_LABEL, type FitAnswers } from "./options";
+import { OP_STAGE_LABEL, OP_STAGE_LABEL_ALT, INV_SIZE_LABEL, REVENUE_LABEL, type FitAnswers } from "./options";
 
 function row(over: Partial<GatedRow> & { industries?: string[]; extra?: Record<string, unknown>; types?: string[] } = {}): GatedRow {
   const { industries = ["Fintech"], extra = {}, types = [], ...rest } = over;
@@ -49,6 +49,31 @@ describe("toIndexRow", () => {
     } as Partial<GatedRow>))!;
     expect(r.industries).toEqual(["Healthcare"]);
     expect(r.stages).toEqual(["Prototype"]);
+  });
+});
+
+describe("operating stage is read from either label", () => {
+  // Two labels for one concept is why an approved stage scored nothing: enrichment wrote
+  // the entrepreneur-side key, the profile row read the investor-side one.
+  const a = answers({ stage: ["pre_revenue"] });
+
+  // 30 industry + 25 stage + 15 type ("Open to any" imposes no constraint, so it scores).
+  const WITH_STAGE = 70;
+  it("scores a stage stored under the entrepreneur label", () => {
+    expect(scoreRow(row({ extra: { [OP_STAGE_LABEL]: ["Startup"] } }), a)!.fit).toBe(WITH_STAGE);
+  });
+  it("scores a stage stored under the investor-preferences label", () => {
+    expect(scoreRow(row({ extra: { [OP_STAGE_LABEL_ALT]: ["Startup"] } }), a)!.fit).toBe(WITH_STAGE);
+  });
+  it("scores 25 less when neither label carries a stage", () => {
+    expect(scoreRow(row({ extra: {} }), a)!.fit).toBe(WITH_STAGE - 25);
+  });
+  it("unions both without double counting", () => {
+    const f = fieldsOf(row({ extra: { [OP_STAGE_LABEL]: ["Startup"], [OP_STAGE_LABEL_ALT]: ["Startup", "Prototype"] } }));
+    expect(f.stages.sort()).toEqual(["Prototype", "Startup"]);
+  });
+  it("carries both into the index projection", () => {
+    expect(toIndexRow(row({ extra: { [OP_STAGE_LABEL_ALT]: ["Expand Growth"] } }))!.stages).toEqual(["Expand Growth"]);
   });
 });
 

@@ -14,7 +14,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, chunk } from "@/lib/supabase/paged";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
-import { OP_STAGE_LABEL, canonicalInvestorType, INVESTOR_TYPE_VOCAB } from "@/lib/fit/options";
+import { OP_STAGE_LABEL, OP_STAGE_LABELS, canonicalInvestorType, INVESTOR_TYPE_VOCAB } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -128,6 +128,11 @@ function hasType(r: InvestorRow): boolean {
 }
 // Mirrors how the matcher reads stage: overrides win over the Odoo-synced questionnaire.
 function hasStage(r: InvestorRow): boolean {
+  // Checks BOTH stage labels (see OP_STAGE_LABELS): a contact whose stage sits under the
+  // investor-side phrasing already has one, and must not be queued for enrichment.
+  return OP_STAGE_LABELS.some((label) => hasStageUnder(r, label));
+}
+function hasStageUnder(r: InvestorRow, OP_STAGE_LABEL: string): boolean {
   const ov = r.overrides?.[OP_STAGE_LABEL];
   if (Array.isArray(ov) && ov.length) return true;
   const extra = (r.raw?.__profile as { extra?: Record<string, unknown> } | undefined)?.extra;
@@ -288,7 +293,8 @@ export async function applyProposal(id: string, edits: { industries?: string[]; 
   const stages = normalizeStages(edits?.stages ?? (prop.proposed_stage as string[]) ?? []);
   const hasInd = Array.isArray(overrides["Industries"]) && (overrides["Industries"] as unknown[]).length > 0;
   const hasTyp = Array.isArray(overrides["Investor type"]) && (overrides["Investor type"] as unknown[]).length > 0;
-  const hasStg = Array.isArray(overrides[OP_STAGE_LABEL]) && (overrides[OP_STAGE_LABEL] as unknown[]).length > 0;
+  // Don't overwrite a stage the contact already has under EITHER label.
+  const hasStg = OP_STAGE_LABELS.some((l) => Array.isArray(overrides[l]) && (overrides[l] as unknown[]).length > 0);
   if (industries.length && !hasInd) overrides["Industries"] = canonicalizeIndustries(industries);
   if (type && !hasTyp) overrides["Investor type"] = [type];
   if (stages.length && !hasStg) overrides[OP_STAGE_LABEL] = stages;
