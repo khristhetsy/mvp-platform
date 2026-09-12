@@ -90,6 +90,43 @@ export function mergedIndustries(row: GatedRow): string[] {
 export function mergedExtra(row: GatedRow, label: string): string[] {
   return ovList(row.overrides, label) ?? extraValues(row.raw, label);
 }
+
+/**
+ * Find a questionnaire field by keyword when the exact label doesn't hit.
+ *
+ * The matcher looks up `extra["Investor investment size?"]` by exact key. The Investor
+ * Profile finds the same field by SUBSTRING — any synced label containing "investment
+ * size". Those disagree the moment Odoo's real label differs by a word or a question
+ * mark, and then the profile happily displays a value the matcher cannot see. That is
+ * precisely how operating stage came to score zero on every contact.
+ *
+ * So: exact label first (fast, unambiguous), keyword scan only as a fallback. Matching on
+ * a renamed field is strictly better than silently scoring nothing, and the exact-first
+ * order means a correct label is never overridden by a loose keyword hit.
+ */
+export function mergedExtraLoose(row: GatedRow, labels: readonly string[], keywords: readonly string[]): string[] {
+  for (const label of labels) {
+    const exact = mergedExtra(row, label);
+    if (exact.length) return exact;
+  }
+  const needles = keywords.map((k) => k.toLowerCase());
+  const hit = (key: string) => needles.some((n) => key.trim().toLowerCase().includes(n));
+  // Overrides win over the Odoo payload, same precedence as everywhere else.
+  for (const [key, value] of Object.entries(row.overrides ?? {})) {
+    if (hit(key) && Array.isArray(value)) {
+      const vals = asList(value);
+      if (vals.length) return vals;
+    }
+  }
+  const extra = (row.raw?.__profile as { extra?: Record<string, unknown> } | undefined)?.extra ?? {};
+  for (const [key, value] of Object.entries(extra)) {
+    if (hit(key)) {
+      const vals = asList(value);
+      if (vals.length) return vals;
+    }
+  }
+  return [];
+}
 export function mergedInvestorTypes(row: GatedRow): string[] {
   return ovList(row.overrides, "Investor type") ?? asList((row.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes);
 }
@@ -114,10 +151,14 @@ export function fieldsOf(row: GatedRow): MatchFields {
     industries: mergedIndustries(row),
     // Union of both stage labels — see OP_STAGE_LABELS. A contact may carry the value
     // under either, and reading only one is what made approved stages score nothing.
-    stages: [...new Set(OP_STAGE_LABELS.flatMap((label) => mergedExtra(row, label)))],
-    sizes: mergedExtra(row, INV_SIZE_LABEL),
+    // The keyword fallback catches a third spelling we haven't seen yet.
+    stages: [...new Set([
+      ...OP_STAGE_LABELS.flatMap((label) => mergedExtra(row, label)),
+      ...(OP_STAGE_LABELS.some((l) => mergedExtra(row, l).length) ? [] : mergedExtraLoose(row, [], ["operating stage", "operational stage"])),
+    ])],
+    sizes: mergedExtraLoose(row, [INV_SIZE_LABEL], ["investment size", "check size"]),
     types: mergedInvestorTypes(row),
-    revenues: mergedExtra(row, REVENUE_LABEL),
+    revenues: mergedExtraLoose(row, [REVENUE_LABEL], ["annual revenue range"]),
   };
 }
 

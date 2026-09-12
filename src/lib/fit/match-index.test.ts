@@ -77,6 +77,29 @@ describe("operating stage is read from either label", () => {
   });
 });
 
+describe("fields survive an Odoo label rename", () => {
+  // The profile finds these by substring while the matcher used an exact key, so a
+  // renamed label showed a value on screen and scored nothing. Exact still wins.
+  it("finds investment size under a differently-worded label", () => {
+    const f = fieldsOf(row({ extra: { "Investor preferences for investment size?": ["$50k - $100k"] } }));
+    expect(f.sizes).toEqual(["$50k - $100k"]);
+  });
+  it("finds annual revenue range under a differently-worded label", () => {
+    const f = fieldsOf(row({ extra: { "Preferred annual revenue range of the company?": ["$1m - $10m"] } }));
+    expect(f.revenues).toEqual(["$1m - $10m"]);
+  });
+  it("prefers the exact label when both are present", () => {
+    const f = fieldsOf(row({ extra: {
+      [INV_SIZE_LABEL]: ["$500k - $1m"],
+      "Investor preferences for investment size?": ["$50k - $100k"],
+    } }));
+    expect(f.sizes).toEqual(["$500k - $1m"]);
+  });
+  it("does not invent a value when nothing resembles the field", () => {
+    expect(fieldsOf(row({ extra: { "Deals per year?": ["Less than 5 Deals"] } })).sizes).toEqual([]);
+  });
+});
+
 describe("index path scores identically to the wide-scan path", () => {
   // The whole risk of a derived table is drift. Both paths must agree exactly.
   const wide = row({
