@@ -18,8 +18,11 @@ export async function GET(): Promise<Response> {
   return NextResponse.json({ size: await matchIndexSize() });
 }
 
-export async function POST(): Promise<Response> {
+export async function POST(req: Request): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
-  return NextResponse.json(await rebuildMatchIndex());
+  // ?full=1 forces a complete reprojection (needed for the very first build, and after a
+  // bulk change like an enrichment approval sweep). Default is incremental.
+  const full = new URL(req.url).searchParams.get("full") === "1";
+  return NextResponse.json(await rebuildMatchIndex({ full }));
 }

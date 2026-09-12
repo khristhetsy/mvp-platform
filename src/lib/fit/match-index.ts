@@ -65,13 +65,27 @@ export function toIndexRow(row: GatedRow, now = new Date().toISOString()): Index
  * Rebuild the whole index from crm_contacts. Paged and chunked — this is a background job
  * where the wide read is fine, precisely so the request path never has to do it.
  */
-export async function rebuildMatchIndex(): Promise<{ scanned: number; written: number; removed: number }> {
-  const rows = await readAllRows<GatedRow>((from, to) => db().from("crm_contacts")
-    .select("id, company, raw, overrides, inv_source, inv_verified_at")
-    .or("contact_type.eq.investor,module.eq.investor")
-    .not("company", "is", null)
-    .order("id", { ascending: true })
-    .range(from, to));
+export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<{ scanned: number; written: number; removed: number; mode: "full" | "incremental" }> {
+  // Incremental by default. A full reprojection reads every investor's `raw` jsonb, which
+  // is CPU-expensive enough to matter on small compute — and running it on every contacts
+  // sync (six times a day) is pure waste when only a few contacts changed. So unless a
+  // full rebuild is asked for, only reproject contacts touched since the last run.
+  let since: string | null = null;
+  if (!opts.full) {
+    const { data } = await db().from("investor_match_index")
+      .select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    since = (data?.updated_at as string | undefined) ?? null;
+  }
+  const mode: "full" | "incremental" = since ? "incremental" : "full";
+
+  const rows = await readAllRows<GatedRow>((from, to) => {
+    let q = db().from("crm_contacts")
+      .select("id, company, raw, overrides, inv_source, inv_verified_at")
+      .or("contact_type.eq.investor,module.eq.investor")
+      .not("company", "is", null);
+    if (since) q = q.gt("updated_at", since);
+    return q.order("id", { ascending: true }).range(from, to);
+  });
 
   const now = new Date().toISOString();
   const indexRows = rows.map((r) => toIndexRow(r, now)).filter((r): r is IndexRow => r !== null);
@@ -82,11 +96,15 @@ export async function rebuildMatchIndex(): Promise<{ scanned: number; written: n
     if (!error) written += part.length;
   }
 
-  // Drop rows whose contact no longer qualifies (company or industries removed, contact
-  // no longer an investor). Anything this rebuild didn't touch is stale by definition.
-  const { data: removedRows } = await db().from("investor_match_index")
-    .delete().lt("updated_at", now).select("contact_id");
-  return { scanned: rows.length, written, removed: (removedRows ?? []).length };
+  // Prune only on a FULL rebuild. "Anything untouched is stale" is only true when every
+  // contact was reprojected — on an incremental pass it would delete the entire index.
+  let removed = 0;
+  if (mode === "full") {
+    const { data: removedRows } = await db().from("investor_match_index")
+      .delete().lt("updated_at", now).select("contact_id");
+    removed = (removedRows ?? []).length;
+  }
+  return { scanned: rows.length, written, removed, mode };
 }
 
 /**

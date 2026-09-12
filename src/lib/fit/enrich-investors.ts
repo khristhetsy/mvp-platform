@@ -156,27 +156,49 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
 
 /** Run a capped batch: propose for investors missing industry or type, store as pending. */
 export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number }> {
-  // Paged — a single .limit() is truncated at db-max-rows (1000), which capped how much
-  // of the network enrichment could ever see. See @/lib/supabase/paged.
-  const rows = await readAllRows<InvestorRow>((from, to) => db().from("crm_contacts")
-    .select("id, company, email, raw, overrides, inv_source")
+  // IDS ONLY. This used to select the full row — including the fat Odoo `raw` jsonb —
+  // for every investor, on EVERY batch. A "run all" of ~50 batches therefore parsed the
+  // whole network ~50 times over, which is what pinned the database CPU at 97%.
+  // Selecting just the id keeps this pass nearly free; the wide read below is limited to
+  // the handful of contacts actually being processed.
+  const allIds = await readAllRows<{ id: string }>((from, to) => db().from("crm_contacts")
+    .select("id")
     .or("contact_type.eq.investor,module.eq.investor")
     .not("company", "is", null)
     .order("id", { ascending: true })
     .range(from, to));
-  const missing = rows.filter((r) => !hasIndustry(r) || !hasType(r) || !hasStage(r));
 
   // Skip any contact that already has a proposal (pending/approved/rejected) — so a
   // "run all" loop makes forward progress and terminates instead of re-scanning them.
   // Chunked: .in() goes in the URL, and an uncapped id list is long enough to 414.
-  const ids = missing.map((r) => r.id);
   const existing = new Set<string>();
-  for (const part of chunk(ids)) {
+  for (const part of chunk(allIds.map((r) => r.id))) {
     const { data: ex } = await db().from("investor_enrichment").select("contact_id").in("contact_id", part);
     for (const e of (ex ?? []) as { contact_id: string }[]) existing.add(e.contact_id);
   }
-  const pending = missing.filter((r) => !existing.has(r.id));
-  const todo = pending.slice(0, limit);
+  const candidates = allIds.map((r) => r.id).filter((id) => !existing.has(id));
+
+  // Now fetch the wide rows for a slice of candidates only. Over-fetch a little, because
+  // some will turn out to need nothing once their profile is inspected.
+  const slice = candidates.slice(0, limit * 3);
+  const fetched: InvestorRow[] = [];
+  for (const part of chunk(slice, 200)) {
+    const { data } = await db().from("crm_contacts")
+      .select("id, company, email, raw, overrides, inv_source").in("id", part);
+    fetched.push(...((data ?? []) as InvestorRow[]));
+  }
+  const todo = fetched.filter((r) => !hasIndustry(r) || !hasType(r) || !hasStage(r)).slice(0, limit);
+  // Contacts in the slice that need nothing are recorded as rejected, so the next pass
+  // doesn't reconsider them and "run all" keeps making progress.
+  const nothingToDo = fetched.filter((r) => hasIndustry(r) && hasType(r) && hasStage(r)).map((r) => r.id);
+  if (nothingToDo.length > 0) {
+    await db().from("investor_enrichment").upsert(
+      nothingToDo.map((id) => ({
+        contact_id: id, proposed_industries: [], proposed_type: null, proposed_stage: [],
+        confidence: 0, basis: null, rationale: "Already complete — nothing missing.",
+        model: CLAUDE_HAIKU, status: "rejected", updated_at: new Date().toISOString(),
+      })), { onConflict: "contact_id" });
+  }
 
   let proposed = 0, skipped = 0;
   // Process the batch with bounded concurrency so it finishes inside the serverless
@@ -201,8 +223,10 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, () => worker()));
-  // remaining = un-proposed candidates left after this batch (0 → run-all is done).
-  return { scanned: missing.length, proposed, skipped, remaining: Math.max(0, pending.length - todo.length) };
+  // remaining = candidates left after this batch (0 → run-all is done). Both the rows we
+  // processed and the ones recorded as already-complete come off the list.
+  const consumed = todo.length + nothingToDo.length;
+  return { scanned: candidates.length, proposed, skipped, remaining: Math.max(0, candidates.length - consumed) };
 }
 
 export type EnrichmentRow = {
