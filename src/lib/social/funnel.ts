@@ -208,9 +208,18 @@ async function conversionsByTag(tags: string[], start: Date, end: Date): Promise
   const out = new Map<string, { signups: number; members: number; revenueCents: number }>();
   for (const t of tags) out.set(t, { signups: 0, members: 0, revenueCents: 0 });
   if (!tags.length) return out;
-  const { data: contacts } = await db().from("crm_contacts").select("email, overrides, created_at")
-    .in("overrides->>lead_source", tags).gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
-  const rows = (contacts ?? []) as { email: string | null; overrides: Record<string, unknown> | null }[];
+  // One indexed lookup per tag, selecting ONLY email. The previous single query pulled
+  // the whole `overrides` jsonb for every matching row just to read the tag back out —
+  // and since the tag is the thing being filtered on, we already know it. Not selecting
+  // `overrides` avoids detoasting a large column per row. See migration 20260912003.
+  const rows: Array<{ email: string | null; tag: string }> = [];
+  for (const tag of tags) {
+    const { data } = await db().from("crm_contacts").select("email")
+      .eq("overrides->>lead_source", tag)
+      .gte("created_at", start.toISOString()).lt("created_at", end.toISOString())
+      .limit(20000);
+    for (const r of (data ?? []) as { email: string | null }[]) rows.push({ email: r.email, tag });
+  }
   const emails = [...new Set(rows.map((r) => (r.email ?? "").trim().toLowerCase()).filter(Boolean))];
   const emailToPlan = new Map<string, PlanType | null>();
   if (emails.length) {
@@ -227,8 +236,7 @@ async function conversionsByTag(tags: string[], start: Date, end: Date): Promise
     }
   }
   for (const r of rows) {
-    const tag = (r.overrides?.lead_source as string | undefined) ?? "";
-    const b = out.get(tag); if (!b) continue;
+    const b = out.get(r.tag); if (!b) continue;
     b.signups += 1;
     const plan = emailToPlan.get((r.email ?? "").trim().toLowerCase());
     if (plan && PAID_PLANS.has(plan)) { b.members += 1; b.revenueCents += PLAN_PRICES[plan] ?? 0; }
@@ -241,12 +249,18 @@ async function meetingsByTag(tags: string[], start: Date, end: Date): Promise<Ma
   const out = new Map<string, number>();
   if (!tags.length) return out;
   // Contacts attributed to these tags → their emails → bookings in-window by email.
-  const { data: contacts } = await db().from("crm_contacts").select("email, overrides").in("overrides->>lead_source", tags);
+  // One indexed lookup per tag, selecting ONLY email: this query has no date bound (a
+  // contact attributed last year can book today), so it previously scanned every
+  // crm_contacts row and detoasted its `overrides` jsonb — the single most expensive
+  // thing the funnel did. See migration 20260912003.
   const emailToTag = new Map<string, string>();
-  for (const c of (contacts ?? []) as { email: string | null; overrides: Record<string, unknown> | null }[]) {
-    const em = (c.email ?? "").trim().toLowerCase();
-    const tag = (c.overrides?.lead_source as string | undefined) ?? "";
-    if (em && tag) emailToTag.set(em, tag);
+  for (const tag of tags) {
+    const { data } = await db().from("crm_contacts").select("email")
+      .eq("overrides->>lead_source", tag).limit(20000);
+    for (const c of (data ?? []) as { email: string | null }[]) {
+      const em = (c.email ?? "").trim().toLowerCase();
+      if (em) emailToTag.set(em, tag);
+    }
   }
   const emails = [...emailToTag.keys()];
   if (!emails.length) return out;
