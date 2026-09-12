@@ -23,7 +23,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   const [editVal, setEditVal] = useState("");
   const [editStages, setEditStages] = useState<string[]>([]);
   // Step 1 — deterministic job-title backfill (no AI). Preview before applying.
-  const [jt, setJt] = useState<{ changes: JtChange[]; total: number; companies: number; types: number } | null>(null);
+  const [jt, setJt] = useState<{ changes: JtChange[]; total: number; rowsRead: number; companies: number; types: number } | null>(null);
   const [jtMsg, setJtMsg] = useState<string | null>(null);
 
   async function jtPreview() {
@@ -32,7 +32,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       const res = await fetch("/api/admin/investors/job-title-backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "preview" }) });
       if (!res.ok) { setJtMsg("Preview failed."); return; }
       const d = await res.json();
-      setJt(d); setJtMsg(d.total === 0 ? "Nothing to backfill — every job title is already reflected." : null);
+      setJt(d); setJtMsg(d.total === 0 ? `Nothing to backfill — scanned ${d.rowsRead} investor contacts, no job title yielded a change.` : null);
     } finally { setBusy(false); }
   }
   async function jtApply() {
@@ -41,7 +41,10 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       const res = await fetch("/api/admin/investors/job-title-backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "apply" }) });
       if (!res.ok) { setJtMsg("Apply failed."); return; }
       const d = await res.json();
-      setJtMsg(`Applied — ${d.companies} company names, ${d.types} investor types.`); setJt(null);
+      setJtMsg(d.errors > 0
+        ? `Applied ${d.companies} companies, ${d.types} types — but ${d.errors} of ${d.scanned} failed: ${d.firstError ?? "unknown error"}`
+        : `Applied — ${d.companies} company names, ${d.types} investor types (from ${d.rowsRead} contacts scanned).`);
+      setJt(null);
     } finally { setBusy(false); }
   }
 
@@ -115,7 +118,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
           {jt && jt.total > 0 ? (
             <button type="button" onClick={() => void jtApply()} disabled={busy} className="rounded-lg bg-slate-800 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-slate-900 disabled:opacity-50">✓ Apply {jt.total}</button>
           ) : null}
-          {jt ? <span className="text-[11.5px] text-slate-500">{jt.companies} companies · {jt.types} types{jt.total > jt.changes.length ? ` · showing first ${jt.changes.length}` : ""}</span> : null}
+          {jt ? <span className="text-[11.5px] text-slate-500">{jt.companies} companies · {jt.types} types · scanned {jt.rowsRead}{jt.total > jt.changes.length ? ` · showing first ${jt.changes.length}` : ""}</span> : null}
           {jtMsg ? <span className="text-[11.5px] text-slate-500">{jtMsg}</span> : null}
         </div>
         {jt && jt.changes.length > 0 ? (

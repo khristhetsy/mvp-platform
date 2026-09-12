@@ -132,17 +132,37 @@ function hasTypeOf(r: Row): boolean {
   return Array.isArray(t) && t.length > 0;
 }
 
-/** Every change the backfill would make, for the preview list. */
-export async function planBackfill(): Promise<BackfillChange[]> {
-  const { data } = await db().from("crm_contacts")
-    .select("id, name, company, raw, overrides")
-    .or("contact_type.eq.investor,module.eq.investor").limit(20000);
-  const out: BackfillChange[] = [];
-  for (const r of (data ?? []) as Row[]) {
-    const change = planChange({ id: r.id, name: r.name, company: r.company, jobTitle: jobTitleOf(r), hasType: hasTypeOf(r) });
-    if (change) out.push(change);
+/**
+ * Read every investor contact, PAGED. A bare .limit(20000) is silently truncated by
+ * PostgREST's db-max-rows (1000 by default on Supabase), so a single call can miss most
+ * of the table without erroring. Pages until a short page comes back.
+ */
+const PAGE = 1000;
+async function readInvestorRows(): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (let from = 0; from < 50000; from += PAGE) {
+    const { data, error } = await db().from("crm_contacts")
+      .select("id, name, company, raw, overrides")
+      .or("contact_type.eq.investor,module.eq.investor")
+      .order("id", { ascending: true })          // stable order, or pages can repeat/skip
+      .range(from, from + PAGE - 1);
+    if (error) break;
+    const page = (data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < PAGE) break;
   }
-  return out;
+  return rows;
+}
+
+/** Every change the backfill would make, for the preview list. */
+export async function planBackfill(): Promise<{ changes: BackfillChange[]; rowsRead: number }> {
+  const rows = await readInvestorRows();
+  const changes: BackfillChange[] = [];
+  for (const r of rows) {
+    const change = planChange({ id: r.id, name: r.name, company: r.company, jobTitle: jobTitleOf(r), hasType: hasTypeOf(r) });
+    if (change) changes.push(change);
+  }
+  return { changes, rowsRead: rows.length };
 }
 
 /**
@@ -150,9 +170,12 @@ export async function planBackfill(): Promise<BackfillChange[]> {
  * type goes to overrides["Investor type"] so it survives an Odoo re-sync, exactly like
  * an approved enrichment. Best-effort per row — one bad row doesn't stop the rest.
  */
-export async function applyBackfill(): Promise<{ scanned: number; companies: number; types: number }> {
-  const changes = await planBackfill();
-  let companies = 0, types = 0;
+export async function applyBackfill(): Promise<{ rowsRead: number; scanned: number; companies: number; types: number; errors: number; firstError: string | null }> {
+  const { changes, rowsRead } = await planBackfill();
+  let companies = 0, types = 0, errors = 0;
+  // A failing update used to be swallowed, so "applied 0" was indistinguishable from
+  // "nothing to apply". Keep going on error, but count and report the first reason.
+  let firstError: string | null = null;
   const now = new Date().toISOString();
   for (const ch of changes) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,9 +186,13 @@ export async function applyBackfill(): Promise<{ scanned: number; companies: num
       patch.overrides = { ...((c?.overrides as Record<string, unknown> | null) ?? {}), "Investor type": [ch.newType] };
     }
     const { error } = await db().from("crm_contacts").update(patch).eq("id", ch.contactId);
-    if (error) continue;
+    if (error) {
+      errors++;
+      if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
+      continue;
+    }
     if (ch.newCompany) companies++;
     if (ch.newType) types++;
   }
-  return { scanned: changes.length, companies, types };
+  return { rowsRead, scanned: changes.length, companies, types, errors, firstError };
 }

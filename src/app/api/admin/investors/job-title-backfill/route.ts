@@ -22,11 +22,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
   if (parsed.data.op === "preview") {
-    const changes = await planBackfill();
+    const { changes, rowsRead } = await planBackfill();
     return NextResponse.json({
       // Cap the payload — the counts describe the whole plan, the list is a sample.
       changes: changes.slice(0, 300),
       total: changes.length,
+      rowsRead,
       companies: changes.filter((c) => c.newCompany).length,
       types: changes.filter((c) => c.newType).length,
     });
