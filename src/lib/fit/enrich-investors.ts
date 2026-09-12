@@ -1,18 +1,42 @@
 /**
- * AI enrichment for investor contacts missing matching data (industry / type).
+ * AI enrichment for investor contacts missing matching data (industry / type / stage).
  * Proposals are stored in investor_enrichment for review; on approval they're written
  * to crm_contacts.overrides with inv_source='inferred' — never overwriting verified or
- * self_reported data. Stage / check size / revenue are intentionally NOT guessed.
- * Server-only, except the pure parseProposal (unit-tested).
+ * self_reported data. Check size / revenue are intentionally NOT guessed.
+ *
+ * Stage is the investor's THESIS (the stage of company they fund), which firms state
+ * publicly — so it is EXTRACTED from stated text only and left empty otherwise. A wrong
+ * stage actively mis-ranks an investor; a missing one simply doesn't score.
+ *
+ * Server-only, except the pure parseProposal / normalizeStages (unit-tested).
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
+import { OP_STAGE_LABEL } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export type Proposal = { industries: string[]; investorType: string | null; confidence: number; rationale: string };
+/**
+ * The only stage values the matcher compares against (Odoo operating-stage spellings,
+ * mirrored by Q1_STAGE in ./options). Anything outside this set is dropped rather than
+ * stored, so an approved proposal can never write a value that silently never matches.
+ */
+export const STAGE_VOCAB = [
+  "Startup", "Prototype",
+  "Expand Growth", "Small Business",
+  "Midsize Company", "Large Corporation", "Large Company",
+] as const;
+
+/** Keep only exact vocabulary values (case-insensitively), deduped and in vocab order. */
+export function normalizeStages(values: unknown): string[] {
+  const list = Array.isArray(values) ? values : values == null ? [] : [values];
+  const seen = new Set(list.map((v) => String(v).trim().toLowerCase()).filter(Boolean));
+  return STAGE_VOCAB.filter((v) => seen.has(v.toLowerCase()));
+}
+
+export type Proposal = { industries: string[]; investorType: string | null; stages: string[]; confidence: number; rationale: string };
 
 /** Parse Claude's reply into a validated Proposal. Pure + tolerant of prose/fences. */
 export function parseProposal(text: string): Proposal | null {
@@ -30,15 +54,27 @@ export function parseProposal(text: string): Proposal | null {
   if (!Number.isFinite(confidence)) confidence = 0;
   confidence = Math.max(0, Math.min(100, Math.round(confidence)));
   const rationale = typeof raw.rationale === "string" ? raw.rationale.slice(0, 300) : "";
-  return { industries, investorType, confidence, rationale };
+  const stages = normalizeStages(raw.stages ?? raw.stage);
+  return { industries, investorType, stages, confidence, rationale };
 }
 
 const SYSTEM = [
-  "You classify an investment firm from limited signals (company name and email domain).",
-  "Return STRICT JSON only, no prose: {\"industries\": string[], \"investorType\": string|null, \"confidence\": 0-100, \"rationale\": string}.",
+  "You classify an investment firm from limited signals (company name, email domain, and sometimes website text).",
+  "Return STRICT JSON only, no prose: {\"industries\": string[], \"investorType\": string|null, \"stages\": string[], \"confidence\": 0-100, \"rationale\": string}.",
   "industries = the sectors this investor most likely funds (e.g. 'Fintech','SaaS','Healthcare','Real Estate','Deep Tech'); [] if you truly cannot tell.",
   "investorType = one of: 'VC','Angel','Family Office','Private Equity','Corporate VC','Accelerator', or null if unclear.",
-  "confidence reflects how sure you are from the name/domain alone. Be conservative: a generic holding-company name is low confidence. Never invent a sector to be helpful.",
+  // Stage is EXTRACTED, not inferred — see the module header. The vocabulary is closed so
+  // the value lands on something the matcher actually compares.
+  "stages = the stage of company this investor's thesis targets, using ONLY these exact values:",
+  `${STAGE_VOCAB.join(" | ")}.`,
+  "Map stated language onto them: pre-seed/seed/idea/first-cheque -> 'Startup' and/or 'Prototype';",
+  "post-seed/early-revenue/Series A -> 'Expand Growth' and/or 'Small Business';",
+  "growth equity/Series B+/later-stage/buyout -> 'Midsize Company' and/or 'Large Corporation'.",
+  "A thesis may span two bands ('seed to Series A') — return both.",
+  "CRITICAL: return stages ONLY when the provided text explicitly states the stage(s) they invest at.",
+  "If the stage is not stated, return [] — do NOT reason from the firm's type, name, or size. A wrong stage is far worse than no stage.",
+  "In rationale, when you return stages, quote the phrase you took them from.",
+  "confidence reflects how sure you are overall. Be conservative: a generic holding-company name is low confidence. Never invent a sector or a stage to be helpful.",
 ].join(" ");
 
 type InvestorRow = { id: string; company: string | null; email: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; inv_source: string | null };
@@ -50,18 +86,30 @@ function domainOf(email: string | null): string | null {
 // Generic mailbox domains carry no company signal — don't fetch a "website" for them.
 const GENERIC_DOMAINS = new Set(["gmail.com", "googlemail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com", "aol.com", "proton.me", "protonmail.com"]);
 
-/** Best-effort homepage text for a domain (timeout + size capped). Null on any failure. */
-async function fetchSiteText(domain: string | null): Promise<string | null> {
-  if (!domain || GENERIC_DOMAINS.has(domain)) return null;
+/** Strip one page to plain text. Null on any failure (bad status, timeout, non-HTML). */
+async function fetchPageText(url: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://${domain}`, { redirect: "follow", signal: AbortSignal.timeout(4000), headers: { "user-agent": "iCapOS-enrichment/1.0" } });
+    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(4000), headers: { "user-agent": "iCapOS-enrichment/1.0" } });
     if (!res.ok) return null;
     const html = (await res.text()).slice(0, 40000);
     const text = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1500);
+      .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     return text || null;
   } catch { return null; }
+}
+
+// A firm's stage thesis is usually on /about or /portfolio rather than the homepage, so
+// all three are fetched CONCURRENTLY — same wall-clock cost as the single homepage fetch,
+// which matters because the batch runs inside a 60s serverless limit.
+const SITE_PATHS = ["", "/about", "/portfolio"];
+
+/** Best-effort site text for a domain (timeout + size capped). Null when nothing loads. */
+async function fetchSiteText(domain: string | null): Promise<string | null> {
+  if (!domain || GENERIC_DOMAINS.has(domain)) return null;
+  const parts = await Promise.all(SITE_PATHS.map((p) => fetchPageText(`https://${domain}${p}`)));
+  const text = parts.filter(Boolean).join(" \n ").replace(/\s+/g, " ").trim().slice(0, 3000);
+  return text || null;
 }
 function hasIndustry(r: InvestorRow): boolean {
   const ov = r.overrides?.["Industries"];
@@ -74,6 +122,14 @@ function hasType(r: InvestorRow): boolean {
   if (Array.isArray(ov) && ov.length) return true;
   const raw = (r.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes;
   return Array.isArray(raw) && raw.length > 0;
+}
+// Mirrors how the matcher reads stage: overrides win over the Odoo-synced questionnaire.
+function hasStage(r: InvestorRow): boolean {
+  const ov = r.overrides?.[OP_STAGE_LABEL];
+  if (Array.isArray(ov) && ov.length) return true;
+  const extra = (r.raw?.__profile as { extra?: Record<string, unknown> } | undefined)?.extra;
+  const v = extra?.[OP_STAGE_LABEL];
+  return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v.trim() !== "";
 }
 
 /** Propose enrichment for one investor via Claude. Returns null if not configured/failed. */
@@ -101,7 +157,7 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
     .select("id, company, email, raw, overrides, inv_source")
     .or("contact_type.eq.investor,module.eq.investor").not("company", "is", null).limit(20000);
   const rows = (data ?? []) as InvestorRow[];
-  const missing = rows.filter((r) => !hasIndustry(r) || !hasType(r));
+  const missing = rows.filter((r) => !hasIndustry(r) || !hasType(r) || !hasStage(r));
 
   // Skip any contact that already has a proposal (pending/approved/rejected) — so a
   // "run all" loop makes forward progress and terminates instead of re-scanning them.
@@ -123,11 +179,12 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
     while (cursor < todo.length) {
       const r = todo[cursor++];
       const p = await proposeFor(r);
-      const hasSignal = p && (p.industries.length > 0 || p.investorType);
+      const hasSignal = p && (p.industries.length > 0 || p.investorType || p.stages.length > 0);
       // Record no-signal contacts as 'rejected' so they aren't retried on the next pass.
       const { error } = await db().from("investor_enrichment").upsert({
         contact_id: r.id,
         proposed_industries: hasSignal ? p!.industries : [], proposed_type: hasSignal ? p!.investorType : null,
+        proposed_stage: hasSignal ? p!.stages : [],
         confidence: hasSignal ? p!.confidence : 0, basis: p?.basis ?? null,
         rationale: hasSignal ? p!.rationale : "No signal from name/domain/website.", model: CLAUDE_HAIKU,
         status: hasSignal ? "pending" : "rejected", updated_at: new Date().toISOString(),
@@ -142,33 +199,39 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
 
 export type EnrichmentRow = {
   id: string; contact_id: string; company: string | null; proposed_industries: string[]; proposed_type: string | null;
-  confidence: number; basis: string | null; rationale: string | null; status: string;
+  proposed_stage: string[]; confidence: number; basis: string | null; rationale: string | null; status: string;
 };
 
 export async function listProposals(status: "pending" | "approved" | "rejected" = "pending", limit = 200): Promise<EnrichmentRow[]> {
   const { data } = await db().from("investor_enrichment")
-    .select("id, contact_id, proposed_industries, proposed_type, confidence, basis, rationale, status, contact:crm_contacts(company)")
+    .select("id, contact_id, proposed_industries, proposed_type, proposed_stage, confidence, basis, rationale, status, contact:crm_contacts(company)")
     .eq("status", status).order("confidence", { ascending: false }).limit(limit);
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id), contact_id: String(r.contact_id),
     company: ((r.contact as { company?: string } | null)?.company) ?? null,
     proposed_industries: (r.proposed_industries as string[]) ?? [], proposed_type: (r.proposed_type as string) ?? null,
+    proposed_stage: (r.proposed_stage as string[]) ?? [],
     confidence: Number(r.confidence) || 0, basis: (r.basis as string) ?? null, rationale: (r.rationale as string) ?? null, status: String(r.status),
   }));
 }
 
 /** Approve a proposal: fill missing overrides + mark inferred (never overwriting trusted). */
-export async function applyProposal(id: string, edits: { industries?: string[]; type?: string | null } | null, reviewerId?: string | null): Promise<boolean> {
-  const { data: prop } = await db().from("investor_enrichment").select("contact_id, proposed_industries, proposed_type").eq("id", id).maybeSingle();
+export async function applyProposal(id: string, edits: { industries?: string[]; type?: string | null; stages?: string[] } | null, reviewerId?: string | null): Promise<boolean> {
+  const { data: prop } = await db().from("investor_enrichment").select("contact_id, proposed_industries, proposed_type, proposed_stage").eq("id", id).maybeSingle();
   if (!prop) return false;
   const { data: c } = await db().from("crm_contacts").select("overrides, inv_source").eq("id", prop.contact_id).maybeSingle();
   const overrides = { ...((c?.overrides as Record<string, unknown> | null) ?? {}) };
   const industries = edits?.industries ?? (prop.proposed_industries as string[]) ?? [];
   const type = edits?.type !== undefined ? edits.type : (prop.proposed_type as string | null);
+  // Edits go through the same vocabulary clamp as the model's output, so a reviewer
+  // can't hand-type a stage string the matcher would never compare against.
+  const stages = normalizeStages(edits?.stages ?? (prop.proposed_stage as string[]) ?? []);
   const hasInd = Array.isArray(overrides["Industries"]) && (overrides["Industries"] as unknown[]).length > 0;
   const hasTyp = Array.isArray(overrides["Investor type"]) && (overrides["Investor type"] as unknown[]).length > 0;
+  const hasStg = Array.isArray(overrides[OP_STAGE_LABEL]) && (overrides[OP_STAGE_LABEL] as unknown[]).length > 0;
   if (industries.length && !hasInd) overrides["Industries"] = canonicalizeIndustries(industries);
   if (type && !hasTyp) overrides["Investor type"] = [type];
+  if (stages.length && !hasStg) overrides[OP_STAGE_LABEL] = stages;
   // Only mark inferred when the contact isn't already verified/self_reported.
   const trusted = c?.inv_source === "verified" || c?.inv_source === "self_reported";
   const now = new Date().toISOString();

@@ -4,10 +4,14 @@ import { useState } from "react";
 
 type Row = {
   id: string; contact_id: string; company: string | null; proposed_industries: string[]; proposed_type: string | null;
-  confidence: number; basis: string | null; rationale: string | null; status: string;
+  proposed_stage: string[]; confidence: number; basis: string | null; rationale: string | null; status: string;
 };
 
 const HIGH = 85;
+// The closed stage vocabulary the matcher compares against (mirrors STAGE_VOCAB on the
+// server). Editing is a toggle rather than free text so a reviewer can't type a value
+// that would silently never match.
+const STAGES = ["Startup", "Prototype", "Expand Growth", "Small Business", "Midsize Company", "Large Corporation", "Large Company"];
 
 export function EnrichClient({ initial }: { initial: Row[] }) {
   const [rows, setRows] = useState<Row[]>(initial);
@@ -15,6 +19,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
+  const [editStages, setEditStages] = useState<string[]>([]);
 
   async function refresh() {
     const d = await fetch("/api/admin/investors/enrich?status=pending").then((r) => r.json()).catch(() => ({ proposals: [] }));
@@ -62,10 +67,10 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       await refresh();
     } finally { setBusy(false); }
   }
-  async function decide(id: string, action: "approve" | "reject", industries?: string[], type?: string | null) {
+  async function decide(id: string, action: "approve" | "reject", industries?: string[], type?: string | null, stages?: string[]) {
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/investors/enrich/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, industries, type }) });
+      const res = await fetch(`/api/admin/investors/enrich/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, industries, type, stages }) });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || d.ok === false) { setMsg(`Couldn't ${action} — ${d.error ?? "try again"}.`); return; }
       setRows((p) => p.filter((r) => r.id !== id)); setEditId(null);
@@ -102,20 +107,39 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
               <span className="text-[10.5px] text-slate-400">Proposes:</span>
               {r.proposed_industries.map((s) => <span key={s} className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10.5px] text-emerald-700">{s}</span>)}
               {r.proposed_type ? <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10.5px] text-indigo-700">{r.proposed_type}</span> : null}
-              {r.proposed_industries.length === 0 && !r.proposed_type ? <span className="text-[10.5px] text-slate-400">— nothing usable</span> : null}
+              {/* Thesis stage — only present when the source text stated it. */}
+              {r.proposed_stage.length > 0
+                ? <span className="rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10.5px] text-violet-700">◑ {r.proposed_stage.join(" · ")}</span>
+                : <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10.5px] text-slate-400">stage — not stated</span>}
+              {r.proposed_industries.length === 0 && !r.proposed_type && r.proposed_stage.length === 0 ? <span className="text-[10.5px] text-slate-400">— nothing usable</span> : null}
             </div>
             {r.rationale ? <div className="mt-1 text-[10.5px] text-slate-400">{r.rationale}</div> : null}
 
             {editId === r.id ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <input value={editVal} onChange={(e) => setEditVal(e.target.value)} placeholder="Industries, comma-separated" className="min-w-[220px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-[12px]" />
-                <button type="button" disabled={busy} onClick={() => void decide(r.id, "approve", editVal.split(",").map((s) => s.trim()).filter(Boolean), r.proposed_type)} className="rounded-md bg-indigo-600 px-3 py-1.5 text-[11.5px] font-medium text-white">Save &amp; approve</button>
-                <button type="button" onClick={() => setEditId(null)} className="text-[11.5px] text-slate-500">Cancel</button>
+              <div className="mt-2 space-y-2">
+                <input value={editVal} onChange={(e) => setEditVal(e.target.value)} placeholder="Industries, comma-separated" className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-[12px]" />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10.5px] text-slate-400">Stage:</span>
+                  {STAGES.map((s) => {
+                    const on = editStages.includes(s);
+                    return (
+                      <button key={s} type="button"
+                        onClick={() => setEditStages((p) => (on ? p.filter((x) => x !== s) : [...p, s]))}
+                        className={`rounded-md px-2 py-0.5 text-[10.5px] ${on ? "border border-violet-300 bg-violet-100 text-violet-800" : "border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" disabled={busy} onClick={() => void decide(r.id, "approve", editVal.split(",").map((s) => s.trim()).filter(Boolean), r.proposed_type, editStages)} className="rounded-md bg-indigo-600 px-3 py-1.5 text-[11.5px] font-medium text-white">Save &amp; approve</button>
+                  <button type="button" onClick={() => setEditId(null)} className="text-[11.5px] text-slate-500">Cancel</button>
+                </div>
               </div>
             ) : (
               <div className="mt-2 flex gap-2">
                 <button type="button" disabled={busy} onClick={() => void decide(r.id, "approve")} className="rounded-md bg-emerald-600 px-3 py-1 text-[11.5px] font-medium text-white disabled:opacity-50">Approve</button>
-                <button type="button" disabled={busy} onClick={() => { setEditId(r.id); setEditVal(r.proposed_industries.join(", ")); }} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Edit</button>
+                <button type="button" disabled={busy} onClick={() => { setEditId(r.id); setEditVal(r.proposed_industries.join(", ")); setEditStages(r.proposed_stage); }} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Edit</button>
                 <button type="button" disabled={busy} onClick={() => void decide(r.id, "reject")} className="rounded-md border border-rose-200 px-3 py-1 text-[11.5px] text-rose-600">Reject</button>
               </div>
             )}

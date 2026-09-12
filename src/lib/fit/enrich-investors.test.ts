@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { parseProposal } from "./enrich-investors";
+import { parseProposal, normalizeStages, STAGE_VOCAB } from "./enrich-investors";
+import { Q1_STAGE } from "./options";
 
 describe("parseProposal", () => {
   it("parses clean JSON", () => {
@@ -30,5 +31,37 @@ describe("parseProposal", () => {
     expect(parseProposal("no json here")).toBeNull();
     expect(parseProposal("{not valid}")).toBeNull();
     expect(parseProposal("")).toBeNull();
+  });
+
+  it("carries a stated thesis stage through, and defaults to none", () => {
+    const p = parseProposal('{"industries":["SaaS"],"stages":["Startup","Prototype"],"confidence":92,"rationale":"\\"we lead pre-seed and seed rounds\\""}')!;
+    expect(p.stages).toEqual(["Startup", "Prototype"]);
+    expect(parseProposal('{"industries":["SaaS"],"confidence":50}')!.stages).toEqual([]);
+  });
+  it("accepts a singular stage key", () => {
+    expect(parseProposal('{"industries":[],"stage":"Expand Growth","confidence":40}')!.stages).toEqual(["Expand Growth"]);
+  });
+});
+
+describe("normalizeStages", () => {
+  it("drops anything outside the vocabulary", () => {
+    // A model that free-styles ("Seed", "Series A") must not reach the contact — those
+    // strings would be stored and then silently never match.
+    expect(normalizeStages(["Seed", "Series A", "Startup"])).toEqual(["Startup"]);
+    expect(normalizeStages(["pre-seed"])).toEqual([]);
+  });
+  it("is case-insensitive and dedupes, returning vocabulary order", () => {
+    expect(normalizeStages(["prototype", "STARTUP", "Startup"])).toEqual(["Startup", "Prototype"]);
+  });
+  it("handles non-array and empty input", () => {
+    expect(normalizeStages("Small Business")).toEqual(["Small Business"]);
+    expect(normalizeStages(null)).toEqual([]);
+    expect(normalizeStages([])).toEqual([]);
+  });
+  it("covers exactly the values the /fit funnel maps founders onto", () => {
+    // If Q1_STAGE gains an option, the vocabulary must gain it too or that founder
+    // answer can never be filled by enrichment.
+    const fromFunnel = new Set(Q1_STAGE.flatMap((o) => o.stored));
+    for (const s of fromFunnel) expect(STAGE_VOCAB as readonly string[]).toContain(s);
   });
 });
