@@ -13,6 +13,8 @@ create index if not exists crm_contacts_lead_source_idx
   on public.crm_contacts ((overrides->>'lead_source'))
   where overrides->>'lead_source' is not null;
 
+-- created_on, not created_at: crm_contacts has no created_at column. It has created_on,
+-- a generated TEXT column from raw->>'create_date' in "YYYY-MM-DD HH:MM:SS" form.
 create index if not exists crm_contacts_lead_source_created_idx
-  on public.crm_contacts ((overrides->>'lead_source'), created_at)
+  on public.crm_contacts ((overrides->>'lead_source'), created_on)
   where overrides->>'lead_source' is not null;

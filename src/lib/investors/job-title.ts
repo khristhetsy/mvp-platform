@@ -159,10 +159,12 @@ export async function applyBackfill(): Promise<{ rowsRead: number; scanned: numb
   // A failing update used to be swallowed, so "applied 0" was indistinguishable from
   // "nothing to apply". Keep going on error, but count and report the first reason.
   let firstError: string | null = null;
-  const now = new Date().toISOString();
   for (const ch of changes) {
+    // NOTE: no updated_at — crm_contacts does not have that column (it has synced_at,
+    // written by the connector). Including it failed every update, which is exactly the
+    // "Applied — 0 company names" we saw with 73 qualifying rows.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const patch: Record<string, any> = { updated_at: now };
+    const patch: Record<string, any> = {};
     if (ch.newCompany) patch.company = ch.newCompany;
     if (ch.newType) {
       const { data: c } = await db().from("crm_contacts").select("overrides").eq("id", ch.contactId).maybeSingle();

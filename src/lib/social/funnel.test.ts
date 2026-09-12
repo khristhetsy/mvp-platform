@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   periodStart, nextPeriodStart, prevPeriodStart, periodElapsed, periodKey,
-  computeFunnel, blendedPct, pacing, aggregateFunnels,
+  computeFunnel, blendedPct, pacing, aggregateFunnels, odooStamp,
   type StageCounts, type CampaignFunnel,
 } from "./funnel";
 
@@ -105,5 +105,20 @@ describe("aggregateFunnels", () => {
   it("target is null when no campaign set one for a stage", () => {
     const agg = aggregateFunnels([mk("a", 10, 5, null)]);
     expect(agg.find((s) => s.stage === "outreach")!.target).toBeNull();
+  });
+});
+
+describe("odooStamp", () => {
+  it("formats to the Odoo create_date shape stored in created_on", () => {
+    // created_on is TEXT ("YYYY-MM-DD HH:MM:SS"), so a bound must match that exactly or
+    // the lexical comparison is wrong. An ISO string breaks on the "T".
+    expect(odooStamp(new Date("2026-09-12T00:00:00.000Z"))).toBe("2026-09-12 00:00:00");
+    expect(odooStamp(new Date("2026-01-05T23:59:59.999Z"))).toBe("2026-01-05 23:59:59");
+  });
+  it("orders lexically the same way it orders chronologically", () => {
+    const a = odooStamp(new Date("2026-09-01T00:00:00Z"));
+    const b = odooStamp(new Date("2026-09-12T00:00:00Z"));
+    const c = odooStamp(new Date("2026-10-01T00:00:00Z"));
+    expect([c, a, b].sort()).toEqual([a, b, c]);
   });
 });

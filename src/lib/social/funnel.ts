@@ -203,6 +203,19 @@ async function clicksByTag(tags: string[], start: Date, end: Date): Promise<Map<
   return out;
 }
 
+/**
+ * crm_contacts.created_on is a generated TEXT column holding Odoo's create_date as
+ * "YYYY-MM-DD HH:MM:SS" — it sorts correctly as text, but only against the same format.
+ * Comparing it to an ISO string ("2026-09-12T00:00:00.000Z") mis-orders on the "T".
+ *
+ * This function used to filter on `created_at`, which does not exist on the table at all:
+ * the query errored, the error was swallowed as `data ?? []`, and the Conversions stage
+ * silently reported zero for every campaign.
+ */
+export function odooStamp(d: Date): string {
+  return d.toISOString().slice(0, 19).replace("T", " ");
+}
+
 /** Attributed signups + paid members + revenue by tag, filtered to [start,end) by contact creation. */
 async function conversionsByTag(tags: string[], start: Date, end: Date): Promise<Map<string, { signups: number; members: number; revenueCents: number }>> {
   const out = new Map<string, { signups: number; members: number; revenueCents: number }>();
@@ -216,7 +229,7 @@ async function conversionsByTag(tags: string[], start: Date, end: Date): Promise
   for (const tag of tags) {
     const { data } = await db().from("crm_contacts").select("email")
       .eq("overrides->>lead_source", tag)
-      .gte("created_at", start.toISOString()).lt("created_at", end.toISOString())
+      .gte("created_on", odooStamp(start)).lt("created_on", odooStamp(end))
       .limit(20000);
     for (const r of (data ?? []) as { email: string | null }[]) rows.push({ email: r.email, tag });
   }

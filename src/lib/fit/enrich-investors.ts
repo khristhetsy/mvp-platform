@@ -295,14 +295,16 @@ export async function applyProposal(id: string, edits: { industries?: string[]; 
   // Only mark inferred when the contact isn't already verified/self_reported.
   const trusted = c?.inv_source === "verified" || c?.inv_source === "self_reported";
   const now = new Date().toISOString();
-  // Try to also stamp inv_source='inferred'; if that column rejects the value (e.g. a
-  // constrained enum), fall back to writing just the overrides so approval still lands.
+  // NOTE: crm_contacts has no updated_at column (it has synced_at, set by the connector,
+  // and a generated created_on). Writing updated_at failed the whole update, which is why
+  // approvals appeared to succeed while nothing landed.
   let error = null;
   if (!trusted) {
-    ({ error } = await db().from("crm_contacts").update({ overrides, inv_source: "inferred", updated_at: now }).eq("id", prop.contact_id));
+    ({ error } = await db().from("crm_contacts").update({ overrides, inv_source: "inferred" }).eq("id", prop.contact_id));
   }
+  // Fall back to overrides-only if inv_source rejects the value (constrained column).
   if (trusted || error) {
-    ({ error } = await db().from("crm_contacts").update({ overrides, updated_at: now }).eq("id", prop.contact_id));
+    ({ error } = await db().from("crm_contacts").update({ overrides }).eq("id", prop.contact_id));
   }
   if (error) return false;
   await db().from("investor_enrichment").update({ status: "approved", reviewed_by: reviewerId ?? null, reviewed_at: now }).eq("id", id);

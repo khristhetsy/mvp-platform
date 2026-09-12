@@ -83,7 +83,12 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
       .select("id, company, raw, overrides, inv_source, inv_verified_at")
       .or("contact_type.eq.investor,module.eq.investor")
       .not("company", "is", null);
-    if (since) q = q.gt("updated_at", since);
+    // Change detection uses synced_at: crm_contacts has NO updated_at column, and asking
+    // for one made the whole read error out. Caveat worth knowing: synced_at only moves
+    // when the connector re-syncs a contact, so edits made HERE (an approved enrichment,
+    // the job-title backfill) do not bump it. Those need a full rebuild — which is why
+    // the admin card offers one.
+    if (since) q = q.gt("synced_at", since);
     return q.order("id", { ascending: true }).range(from, to);
   });
 
