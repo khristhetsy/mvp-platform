@@ -27,6 +27,10 @@ describe("parseProposal", () => {
   it("accepts snake_case investor_type", () => {
     expect(parseProposal('{"industries":[],"investor_type":"Family Office","confidence":50}')!.investorType).toBe("Family Office");
   });
+  it("clamps the type to a spelling the matcher compares against", () => {
+    expect(parseProposal('{"industries":[],"investorType":"Corporate VC","confidence":50}')!.investorType).toBe("Corporate Venture");
+    expect(parseProposal('{"industries":[],"investorType":"Hedge Fund","confidence":50}')!.investorType).toBeNull();
+  });
   it("returns null on no JSON / bad JSON", () => {
     expect(parseProposal("no json here")).toBeNull();
     expect(parseProposal("{not valid}")).toBeNull();

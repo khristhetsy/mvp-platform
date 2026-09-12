@@ -80,6 +80,35 @@ export const Q5_INVESTOR_TYPE: FitOption[] = [
   { key: "any", label: "Open to any", stored: [] },
 ];
 
+/**
+ * Canonical investor-type spellings — the single place anything that WRITES an investor
+ * type must go through, so a stored value is always one the matcher can compare.
+ *
+ * Q5 matches on exact (case-insensitive) strings, so a plausible-looking value like
+ * "Corporate VC" is silently dead: it is not in Q5_INVESTOR_TYPE.stored, so no founder
+ * answer ever matches it. "Accelerator" is deliberately allowed through even though /fit
+ * does not offer it — it is real information for staff, it just doesn't score.
+ * Ordered most-specific first: "corporate venture" must win before plain "venture".
+ */
+const TYPE_CANON: Array<{ re: RegExp; type: string }> = [
+  { re: /\bfamily office\b/i, type: "Family Office" },
+  { re: /\bcorporate\b|\bstrategic\b|\bcvc\b/i, type: "Corporate Venture" },
+  { re: /\bprivate equity\b|^\s*pe\s*$/i, type: "Private Equity" },
+  { re: /\b(accelerator|incubator)\b/i, type: "Accelerator" },
+  { re: /\bangel\b/i, type: "Angel" },       // \b so "Los Angeles" doesn't match
+  { re: /\bventure(s| capital)?\b|^\s*vc\s*$/i, type: "VC" },
+];
+
+/** Map a free-form investor type onto a canonical spelling. Null when unrecognised. */
+export function canonicalInvestorType(value: string | null | undefined): string | null {
+  const s = (value ?? "").trim();
+  if (!s) return null;
+  return TYPE_CANON.find((r) => r.re.test(s))?.type ?? null;
+}
+
+/** The canonical values, for prompts and pickers. */
+export const INVESTOR_TYPE_VOCAB: string[] = [...new Set(TYPE_CANON.map((r) => r.type))];
+
 const byKey = <T extends { key: string }>(list: T[]) => new Map(list.map((o) => [o.key, o]));
 const Q1_BY_KEY = byKey(Q1_STAGE);
 const Q2_BY_KEY = byKey(Q2_RAISE);

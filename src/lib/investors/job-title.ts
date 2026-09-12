@@ -14,14 +14,17 @@
  * Pure parsing (parseJobTitle, planChange) is unit-tested; the IO helpers are server-only.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { canonicalInvestorType } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
 /**
- * Type values must be spellings the /fit matcher compares against — i.e. present in
- * Q5_INVESTOR_TYPE.stored in ../fit/options. Writing "Corporate VC" instead of
- * "Corporate Venture" would store a value no founder answer can ever match.
+ * Detection rules for a job-title LINE — deliberately stricter than the shared
+ * canonicalInvestorType, which is fed an already-type-ish string. Here a bare
+ * "Corporate Development Manager" must NOT read as Corporate Venture, so the corporate
+ * rule requires the full phrase. The output is passed through canonicalInvestorType
+ * anyway, so these spellings can never drift from what the matcher compares.
  * Ordered most-specific first: "corporate venture" must win before plain "venture".
  */
 const TYPE_RULES: Array<{ re: RegExp; type: string }> = [
@@ -69,7 +72,7 @@ export function parseJobTitle(title: string | null | undefined): JobTitleParse {
 
   // Type is read from the WHOLE line: the giveaway word is as often in the firm name
   // ("Aperture Ventures") as in the role ("Angel Investor").
-  const investorType = TYPE_RULES.find((r) => r.re.test(raw))?.type ?? null;
+  const investorType = canonicalInvestorType(TYPE_RULES.find((r) => r.re.test(raw))?.type ?? null);
   return { firm, investorType };
 }
 

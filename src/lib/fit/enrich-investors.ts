@@ -13,7 +13,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
-import { OP_STAGE_LABEL } from "@/lib/fit/options";
+import { OP_STAGE_LABEL, canonicalInvestorType, INVESTOR_TYPE_VOCAB } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -49,7 +49,9 @@ export function parseProposal(text: string): Proposal | null {
     ? raw.industries.map((x) => String(x).trim()).filter(Boolean)
     : [];
   const t = raw.investorType ?? raw.investor_type ?? raw.type;
-  const investorType = typeof t === "string" && t.trim() && !/^(unknown|n\/a|none)$/i.test(t.trim()) ? t.trim() : null;
+  // Clamped to a canonical spelling for the same reason stages are: an off-vocabulary
+  // value ("Corporate VC") would be stored and then never match any founder answer.
+  const investorType = typeof t === "string" && !/^\s*(unknown|n\/a|none)\s*$/i.test(t) ? canonicalInvestorType(t) : null;
   let confidence = Number(raw.confidence);
   if (!Number.isFinite(confidence)) confidence = 0;
   confidence = Math.max(0, Math.min(100, Math.round(confidence)));
@@ -62,7 +64,7 @@ const SYSTEM = [
   "You classify an investment firm from limited signals (company name, email domain, and sometimes website text).",
   "Return STRICT JSON only, no prose: {\"industries\": string[], \"investorType\": string|null, \"stages\": string[], \"confidence\": 0-100, \"rationale\": string}.",
   "industries = the sectors this investor most likely funds (e.g. 'Fintech','SaaS','Healthcare','Real Estate','Deep Tech'); [] if you truly cannot tell.",
-  "investorType = one of: 'VC','Angel','Family Office','Private Equity','Corporate VC','Accelerator', or null if unclear.",
+  `investorType = EXACTLY one of: ${INVESTOR_TYPE_VOCAB.map((t) => `'${t}'`).join(", ")}, or null if unclear.`,
   // Stage is EXTRACTED, not inferred — see the module header. The vocabulary is closed so
   // the value lands on something the matcher actually compares.
   "stages = the stage of company this investor's thesis targets, using ONLY these exact values:",
@@ -222,7 +224,7 @@ export async function applyProposal(id: string, edits: { industries?: string[]; 
   const { data: c } = await db().from("crm_contacts").select("overrides, inv_source").eq("id", prop.contact_id).maybeSingle();
   const overrides = { ...((c?.overrides as Record<string, unknown> | null) ?? {}) };
   const industries = edits?.industries ?? (prop.proposed_industries as string[]) ?? [];
-  const type = edits?.type !== undefined ? edits.type : (prop.proposed_type as string | null);
+  const type = canonicalInvestorType(edits?.type !== undefined ? edits.type : (prop.proposed_type as string | null));
   // Edits go through the same vocabulary clamp as the model's output, so a reviewer
   // can't hand-type a stage string the matcher would never compare against.
   const stages = normalizeStages(edits?.stages ?? (prop.proposed_stage as string[]) ?? []);
