@@ -118,10 +118,12 @@ export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptio
 
   // 2) Canonical Odoo labels: union values from any exact label matching the keyword.
   for (const f of ALL_SCHEMA_FIELDS) {
-    const key = norm(f.match);
+    // A field may declare several keywords (one concept, two Odoo labels) — union across
+    // all of them so the picker offers every value either label has been seen with.
+    const keys = (Array.isArray(f.match) ? f.match : [f.match]).map(norm);
     const union = new Set<string>();
     for (const [label, set] of byLabel) {
-      if (norm(label).includes(key)) for (const v of set) union.add(v);
+      if (keys.some((k) => norm(label).includes(k))) for (const v of set) union.add(v);
     }
     if (union.size && !out[f.odoo]) out[f.odoo] = sort(union);
   }

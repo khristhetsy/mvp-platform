@@ -23,9 +23,14 @@ export type ProfileField = {
 export type ProfileSection = { title: string; fields: ProfileField[] };
 export type ContactProfile = { title: string; type: "investor" | "founder" | "generic"; sections: ProfileSection[] };
 
-/** display = label shown; match = keyword to find the synced field; odoo = the
- *  canonical Odoo label to save a *blank* field's edit under. */
-export type FieldDef = { display: string; match: string; odoo: string };
+/** display = label shown; match = keyword(s) to find the synced field; odoo = the
+ *  canonical Odoo label to save a *blank* field's edit under.
+ *
+ *  `match` accepts SEVERAL keywords because one concept can arrive under more than one
+ *  Odoo label — operating stage lives under both an entrepreneur-side and an
+ *  investor-side phrasing. Listing both folds them into a single row showing the union,
+ *  instead of two rows where a value in one makes the other look empty. */
+export type FieldDef = { display: string; match: string | string[]; odoo: string };
 type SectionDef = { title: string; fields: FieldDef[] };
 
 const FOUNDER_SCHEMA: SectionDef[] = [
@@ -106,12 +111,11 @@ const INVESTOR_SCHEMA: SectionDef[] = [
     title: "Investor thesis",
     fields: [
       { display: "Industries", match: "industries", odoo: "Industries" },
-      { display: "Operational stage", match: "operational stage", odoo: "Investor preferences for type(s) of company operational stage?" },
-      // The same concept also lives under the entrepreneur-side label, which is where the
-      // matcher reads from and where an approved enrichment writes. Without this row an
-      // approved thesis stage was invisible here — the field above reads the other key —
-      // so it looked as though enrichment had done nothing. See OP_STAGE_LABELS.
-      { display: "Operating stage (thesis)", match: "operating stage", odoo: "Entrepreneur operating stage?" },
+      // ONE row for one concept. The value may arrive under the investor-side phrasing
+      // ("...operational stage?") or the entrepreneur-side one ("Entrepreneur operating
+      // stage?") — the matcher unions both, so the profile does too. Edits save to the
+      // canonical label when present, which is what enrichment and /fit read.
+      { display: "Operating stage", match: ["operating stage", "operational stage"], odoo: "Entrepreneur operating stage?" },
       { display: "Investment size", match: "investment size", odoo: "Investor investment size?" },
       { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },
       { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },
@@ -203,14 +207,22 @@ export function groupContactProfile(
   // Returns the synced values + the label to save under (synced label if the
   // field exists, else the canonical Odoo label so a blank field still saves).
   const take = (f: FieldDef): { values: string[]; saveKey: string } => {
-    const k = norm(f.match);
+    const keys = (Array.isArray(f.match) ? f.match : [f.match]).map(norm);
+    // Consume EVERY synced field matching any keyword and union their values, rather than
+    // stopping at the first. With two labels for one concept, taking only the first left
+    // the other stranded in "Other details" and made the row look wrong.
+    const values: string[] = [];
+    let saveKey: string | null = null;
     for (let i = 0; i < extra.length; i++) {
       if (consumed.has(i)) continue;
-      if (norm(extra[i].label).includes(k)) {
-        consumed.add(i);
-        return { values: extra[i].values, saveKey: extra[i].label };
-      }
+      if (!keys.some((k) => norm(extra[i].label).includes(k))) continue;
+      consumed.add(i);
+      // Save under the canonical label when it is one of the matches, so edits stop
+      // adding to the split; otherwise keep the synced label so the override lines up.
+      if (saveKey === null || extra[i].label === f.odoo) saveKey = extra[i].label;
+      for (const v of extra[i].values) if (!values.includes(v)) values.push(v);
     }
+    if (saveKey !== null) return { values, saveKey };
     return { values: [], saveKey: f.odoo };
   };
 
