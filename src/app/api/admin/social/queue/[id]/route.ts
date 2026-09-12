@@ -11,6 +11,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { syncPostEvent, removePostEvent } from "@/lib/social/gcal-sync";
+import { markVariantPublished } from "@/lib/social/queue";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 function db(): any { return createServiceRoleClient(); }
 
 const patchSchema = z.object({
-  action: z.enum(["edit", "archive", "requeue", "schedule", "unschedule"]),
+  action: z.enum(["edit", "archive", "requeue", "schedule", "unschedule", "mark_published"]),
   body: z.string().max(4000).optional(),
   scheduledAt: z.string().datetime().optional(),
 });
@@ -44,6 +45,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const v = variant as VariantRow;
   if (v.status === "published" && parsed.data.action !== "archive") {
     return NextResponse.json({ error: "Published posts can't be changed — it's already live." }, { status: 409 });
+  }
+
+  // "It did reach the platform after all" — only meaningful for a variant the queue
+  // stranded mid-publish, where we genuinely don't know whether it went out.
+  if (parsed.data.action === "mark_published") {
+    if (v.status !== "interrupted" && v.status !== "failed") {
+      return NextResponse.json({ error: "Only an interrupted or failed post can be marked published." }, { status: 409 });
+    }
+    const ok = await markVariantPublished(id);
+    return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
   }
 
   const now = new Date().toISOString();

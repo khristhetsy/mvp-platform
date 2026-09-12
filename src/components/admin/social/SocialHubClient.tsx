@@ -757,6 +757,21 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                   </div>
                 ) : null}
               </div>
+              {/* Stranded mid-publish: the claim happens before the platform call, so we
+                  genuinely don't know whether it went out. Say so, and make the human
+                  check rather than silently retrying into a possible double-post. */}
+              {q.status === "interrupted" ? (
+                <div className="mb-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5">
+                  <div className="text-[11.5px] font-semibold text-rose-800">⚠ Publishing was interrupted</div>
+                  <p className="mt-0.5 text-[11px] text-rose-700">
+                    This post may or may not have reached {q.platform ?? "the platform"}. Check there first — then requeue it, or mark it published if it did go out.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <DetailBtn icon="ti-refresh" label="Requeue" onClick={() => act(q.id, "requeue")} accent />
+                    <DetailBtn icon="ti-check" label="Mark as published" onClick={() => act(q.id, "mark_published")} />
+                  </div>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-1.5">
                 <DetailBtn icon="ti-eye" label="Preview" onClick={() => setPreview(q)} accent />
                 {!live ? <DetailBtn icon="ti-edit" label="Edit" onClick={() => { setEditing(true); setDraft(q.body); }} /> : null}
@@ -785,7 +800,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
 
       {/* status legend */}
       <div className="mt-4 flex flex-wrap gap-4 text-[11px] text-slate-500">
-        {[["Draft", "#64748B"], ["Parked", "#CA8A04"], ["Scheduled", "#16A34A"], ["Published", "#2563EB"], ["Failed", "#E11D48"]].map(([l, c]) => (
+        {[["Draft", "#64748B"], ["Parked", "#CA8A04"], ["Scheduled", "#16A34A"], ["Published", "#2563EB"], ["Interrupted", "#EA580C"], ["Failed", "#E11D48"]].map(([l, c]) => (
           <span key={l} className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{l}</span>
         ))}
       </div>
