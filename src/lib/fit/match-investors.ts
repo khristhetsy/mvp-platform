@@ -13,7 +13,6 @@
  */
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { readAllRows } from "@/lib/supabase/paged";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
@@ -174,23 +173,30 @@ export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
 /** Distinct sectors offerable at Q3 — the industries that at least one GATED
  *  investor actually covers. Never hardcoded, so a sector with no investor behind
  *  it can't be offered (build-spec §2). */
+let sectorCache: { at: number; sectors: string[] } | null = null;
+const SECTOR_TTL_MS = 10 * 60 * 1000;
+
 export async function offerableSectors(): Promise<string[]> {
+  if (sectorCache && Date.now() - sectorCache.at < SECTOR_TTL_MS) return sectorCache.sectors;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
-  // Paged: a single .limit() is truncated at db-max-rows, which would hide the sectors
-  // that only later investors cover — and an unofferable sector is unmatchable.
-  const data = await readAllRows<{ raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }>(
-    (from, to) => db.from("crm_contacts")
-      .select("raw, overrides")
-      .or("contact_type.eq.investor,module.eq.investor")
-      .order("id", { ascending: true })
-      .range(from, to),
-  );
+  // NOT paged, deliberately. This runs on every /fit page load, and each row carries the
+  // whole Odoo `raw` blob — paging all 7,184 made Q3 hang for tens of seconds. Capped at
+  // db-max-rows the sector list is near-complete anyway (sectors repeat across
+  // investors), and the result is cached. See MATCH_SCAN_NOTE below for the real fix.
+  const { data, error } = await db
+    .from("crm_contacts")
+    .select("raw, overrides")
+    .or("contact_type.eq.investor,module.eq.investor")
+    .limit(20000);
+  if (error || !Array.isArray(data)) return sectorCache?.sectors ?? [];
   const seen = new Set<string>();
-  for (const row of data) {
+  for (const row of data as { raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }[]) {
     for (const v of mergedIndustries({ id: "", company: null, inv_source: null, inv_verified_at: null, ...row })) seen.add(v);
   }
-  return sortSectors([...seen]); // canonical, deduped, "Other" last
+  const sectors = sortSectors([...seen]); // canonical, deduped, "Other" last
+  sectorCache = { at: Date.now(), sectors };
+  return sectors;
 }
 
 export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
@@ -200,20 +206,30 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
   // Gate: any investor contact (open-gate mode — imported/inferred investors are
   // matched, ranked below self_reported/verified). Founders are excluded by the
   // investor scope; the industry hard filter excludes anyone without sector overlap.
-  // Paged — see readAllRows. A single .limit(20000) is capped at db-max-rows (1000),
-  // which meant ranking against a fraction of the network without any error surfacing.
-  const [rows, { count }] = await Promise.all([
-    readAllRows<GatedRow>((from, to) => db.from("crm_contacts")
+  // MATCH_SCAN_NOTE — known limitation, deliberately left in place.
+  //
+  // This read is capped at PostgREST's db-max-rows (1000), so ranking sees ~1,000 of the
+  // 7,184 investors. Paging it (commit 2bc175b) fixed the coverage but made /fit unusable:
+  // every row ships the entire Odoo `raw` jsonb, so eight paged round trips moved tens of
+  // megabytes on each funnel submission and the page hung.
+  //
+  // The fix is NOT to page a wide scan. It is to stop scanning wide: a narrow projection
+  // of the five match fields (industries / stage / size / type / revenue as text[]),
+  // maintained alongside crm_contacts, so matching reads a small table and can apply the
+  // industry filter in SQL instead of in memory. Until that exists, correctness here is
+  // bounded by the cap.
+  const [{ data, error }, { count }] = await Promise.all([
+    db.from("crm_contacts")
       .select("id, company, raw, overrides, inv_source, inv_verified_at, contact_type, source, email")
       .or("contact_type.eq.investor,module.eq.investor")
       .not("company", "is", null)
-      .order("id", { ascending: true })
-      .range(from, to)),
+      .limit(20000),
     db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
   ]);
   const networkTotal = count ?? 0;
 
-  if (rows.length === 0) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
+  if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
+  const rows = data as GatedRow[];
   const ranked = rankRows(rows, answers);
   const byId = new Map(rows.map((r) => [r.id, r]));
 
