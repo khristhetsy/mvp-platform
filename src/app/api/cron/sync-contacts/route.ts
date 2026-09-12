@@ -9,6 +9,7 @@ import {
 import { configuredSources } from "@/lib/crm-connectors/registry";
 import { syncDelta } from "@/lib/crm-connectors/sync-engine";
 import { rebuildMatchIndex } from "@/lib/fit/match-index";
+import { applyStageDerivation } from "@/lib/investors/derive-stage";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,6 +30,14 @@ async function handle(request: Request) {
       });
       results[s.id] = synced;
     }
+    // Fill operating stage from investor type for anything newly synced. Deterministic,
+    // free, and it never overwrites a stated stage — without this, every investor Odoo
+    // sends tomorrow arrives with the 25-point stage weight empty and stays that way.
+    // Runs BEFORE the index rebuild so the derived values are picked up by it.
+    const derived = await applyStageDerivation().catch((err) => {
+      Sentry.captureException(err);
+      return { scanned: 0, filled: 0, byRule: {}, errors: 1, firstError: "derivation failed", reindexed: 0 };
+    });
     // The /fit match index is derived from crm_contacts, so refresh it here rather than
     // on its own schedule — it can only be stale if contacts changed. Best-effort: a
     // failed rebuild leaves the previous index serving and must not fail the sync.
@@ -36,7 +45,7 @@ async function handle(request: Request) {
       Sentry.captureException(err);
       return { scanned: 0, written: 0, removed: 0, error: true };
     });
-    return NextResponse.json({ ok: true, sources: sources.length, results, index });
+    return NextResponse.json({ ok: true, sources: sources.length, results, derived, index });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ ok: false, error: "Sync failed." }, { status: 500 });
