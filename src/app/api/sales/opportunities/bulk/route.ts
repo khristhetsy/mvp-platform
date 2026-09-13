@@ -14,6 +14,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { updateOpportunity, listOpportunities, type UpdateOpportunityPatch } from "@/lib/sales/opportunities";
 import { listAssignableStaff } from "@/lib/sales/settings";
 import { toCsv } from "@/lib/sales/bulk-targets";
+import { enrollOpportunities } from "@/lib/marketing/sequences";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -24,6 +25,7 @@ const schema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("stage"), ids, stageId: z.string().uuid() }),
   z.object({ op: z.literal("owner"), ids, ownerId: z.string().uuid().nullable() }),
   z.object({ op: z.literal("export"), ids }),
+  z.object({ op: z.literal("enroll"), ids, sequenceId: z.string().uuid(), mode: z.enum(["preview", "commit"]) }),
 ]);
 
 const CONCURRENCY = 6;
@@ -36,6 +38,18 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const body = parsed.data;
   const targets = [...new Set(body.ids)];
+
+  if (body.op === "enroll") {
+    const want = new Set(targets);
+    const all = await listOpportunities(true);
+    const picked = all.filter((o) => want.has(o.id)).map((o) => ({ id: o.id, contact_name: o.contact_name, contact_email: o.contact_email }));
+    try {
+      const r = await enrollOpportunities(body.sequenceId, picked, body.mode);
+      return NextResponse.json({ ok: true, ...r });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Enroll failed." }, { status: 500 });
+    }
+  }
 
   if (body.op === "export") {
     if (profile.role !== "admin") return NextResponse.json({ error: "Only an admin can export opportunities." }, { status: 403 });

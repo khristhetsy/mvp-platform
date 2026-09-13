@@ -12,7 +12,7 @@ export type NextActivity = {
   state: "overdue" | "today" | "planned" | "done" | "none";
 };
 
-type TaskRow = { contact_crm_id: string; task_type: string | null; title: string | null; due_date: string | null; status: string; done_at: string | null; created_at: string };
+type TaskRow = { contact_crm_id: string; opportunity_id?: string | null; task_type: string | null; title: string | null; due_date: string | null; status: string; done_at: string | null; created_at: string };
 
 export function classify(due: string | null, today: string): NextActivity["state"] {
   if (!due) return "planned";
@@ -53,6 +53,29 @@ export async function loadNextActivities(db: any, contactIds: string[]): Promise
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(contactIds.length * 20);
     return pickNextActivity((data ?? []) as TaskRow[], new Date().toISOString().slice(0, 10));
+  } catch {
+    return new Map();
+  }
+}
+
+/** Same one-liner keyed by opportunity (sales_tasks.opportunity_id). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function loadNextActivitiesForOpportunities(db: any, oppIds: string[]): Promise<Map<string, NextActivity>> {
+  if (oppIds.length === 0) return new Map();
+  try {
+    const out = new Map<string, NextActivity>();
+    const today = new Date().toISOString().slice(0, 10);
+    for (let i = 0; i < oppIds.length; i += 200) {
+      const part = oppIds.slice(i, i + 200);
+      const { data } = await db.from("sales_tasks")
+        .select("opportunity_id, task_type, title, due_date, status, done_at, created_at")
+        .in("opportunity_id", part)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(part.length * 20);
+      const rows = ((data ?? []) as Array<TaskRow & { opportunity_id: string }>).map((r) => ({ ...r, contact_crm_id: r.opportunity_id }));
+      for (const [k, v] of pickNextActivity(rows, today)) out.set(k, v);
+    }
+    return out;
   } catch {
     return new Map();
   }

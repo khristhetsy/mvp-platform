@@ -17,7 +17,10 @@ type Opp = {
   status: "open" | "won" | "lost" | "archived"; notes: string | null; created_at: string;
   source: string | null; owner_id: string | null; owner_name: string | null;
   expected_close?: string | null; tags?: string[]; updated_at?: string | null;
+  activity?: { type: string; title: string; due: string | null; state: "overdue" | "today" | "planned" | "done" | "none" } | null;
+  sequence?: { name: string; step: number; steps: number } | null;
 };
+type SeqOption = { id: string; name: string; status: string; steps: number };
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
@@ -49,6 +52,8 @@ const OPT_COLS = [
   { key: "owner", label: "Owner", width: "1fr" },
   { key: "source", label: "Source", width: "0.7fr" },
   { key: "created", label: "Created", width: "0.9fr" },
+  { key: "activities", label: "Activities", width: "1.3fr" },
+  { key: "sequence", label: "Sequence", width: "1.1fr" },
 ] as const;
 type ColKey = (typeof OPT_COLS)[number]["key"];
 
@@ -67,6 +72,9 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
   const [opps, setOpps] = useState<Opp[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
+  const [sequences, setSequences] = useState<SeqOption[]>([]);
+  // Enroll in sequence: preview (counts) → confirm → commit.
+  const [enroll, setEnroll] = useState<{ seq: SeqOption; ids: string[]; preview?: { enrolled: number; skippedNoEmail: number; alreadyEnrolled: number; total: number }; error?: string } | null>(null);
   const [actionResult, setActionResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -76,13 +84,13 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
   // Search + filters + grouping live in one Odoo-style bar state (persisted); columns separately.
   const [search, setSearch] = useState<SearchState>(() => loadLS<SearchState>("opps.search.v1", { ...EMPTY_SEARCH, groupBy: "stage" }));
   const groupBy = (search.groupBy || "none") as GroupBy;
-  const [visibleCols, setVisibleCols] = useState<ColKey[]>(() => loadLS<ColKey[]>("opps.cols", ["value", "prob", "mrr"]));
+  const [visibleCols, setVisibleCols] = useState<ColKey[]>(() => loadLS<ColKey[]>("opps.cols.v2", ["value", "prob", "mrr", "activities"]));
   const [collapsed, setCollapsed] = useState<string[]>([]);
 
   const [colsOpen, setColsOpen] = useState(false);
 
   useEffect(() => { try { window.localStorage.setItem("opps.search.v1", JSON.stringify(search)); } catch { /* ignore */ } }, [search]);
-  useEffect(() => { try { window.localStorage.setItem("opps.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("opps.cols.v2", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
 
   // Multi-select + mass email.
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -108,6 +116,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
       setOpps(data.opportunities ?? []);
       setStages(data.stages ?? []);
       setStaff(data.staff ?? []);
+      setSequences(data.sequences ?? []);
     } catch { setOpps([]); }
     setLoading(false);
   }, [viewQ]);
@@ -243,8 +252,27 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
       if (!r.file) { clearSelection(); await load(); }
     } finally { setBusy(false); }
   }
+  async function openEnroll(seqId: string) {
+    const seq = sequences.find((x) => x.id === seqId); const ids = [...selected];
+    if (!seq || !ids.length) return;
+    setEnroll({ seq, ids });
+    const r = await runBulk("/api/sales/opportunities/bulk", { op: "enroll", ids, sequenceId: seq.id, mode: "preview" }) as unknown as { ok: boolean; error?: string; enrolled?: number; skippedNoEmail?: number; alreadyEnrolled?: number; total?: number };
+    if (!r.ok) { setEnroll({ seq, ids, error: r.error ?? "Couldn't check the selection." }); return; }
+    setEnroll({ seq, ids, preview: { enrolled: r.enrolled ?? 0, skippedNoEmail: r.skippedNoEmail ?? 0, alreadyEnrolled: r.alreadyEnrolled ?? 0, total: r.total ?? ids.length } });
+  }
+  async function commitEnroll() {
+    if (!enroll) return;
+    setBusy(true);
+    try {
+      const r = await runBulk("/api/sales/opportunities/bulk", { op: "enroll", ids: enroll.ids, sequenceId: enroll.seq.id, mode: "commit" }) as unknown as { ok: boolean; error?: string; enrolled?: number; skippedNoEmail?: number; alreadyEnrolled?: number };
+      if (!r.ok) { setActionResult(r.error ?? "Enroll failed."); return; }
+      setActionResult(`Enrolled ${r.enrolled ?? 0} contact${r.enrolled === 1 ? "" : "s"} in ${enroll.seq.name}${r.skippedNoEmail ? ` · ${r.skippedNoEmail} skipped (no email)` : ""}${r.alreadyEnrolled ? ` · ${r.alreadyEnrolled} already enrolled` : ""}.`);
+      setEnroll(null); clearSelection(); await load();
+    } finally { setBusy(false); }
+  }
   const selectionActions: SelectionAction[] = [
     { key: "email", icon: "ti-mail", label: "Email", run: () => setEmailOpen(true) },
+    { key: "enroll", icon: "ti-send", label: "Enroll in sequence", options: sequences.map((sq) => ({ value: sq.id, label: `${sq.name}${sq.status !== "active" ? ` (${sq.status})` : ""} · ${sq.steps} step${sq.steps === 1 ? "" : "s"}` })), runWith: (id) => void openEnroll(id) },
     { key: "stage", icon: "ti-arrow-right", label: "Move to stage", options: stages.map((s) => ({ value: s.id, label: s.name })), runWith: (stageId) => void bulk({ op: "stage", stageId }, `Moved`) },
     { key: "owner", icon: "ti-user", label: "Assign owner", options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.id, label: s.name }))], runWith: (ownerId) => void bulk({ op: "owner", ownerId: ownerId || null }, "Reassigned") },
     { key: "won", icon: "ti-check", label: "Mark sold", run: () => void bulk({ op: "status", status: "won" }, "Marked sold") },
@@ -268,6 +296,23 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
       case "owner": return <span style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ownerLabel(o)}</span>;
       case "source": return <span style={{ color: "var(--muted-foreground)" }}>{sourceLabel(o)}</span>;
       case "created": return <span style={{ color: "var(--muted-foreground)" }}>{new Date(o.created_at).toLocaleDateString()}</span>;
+      case "activities": {
+        const a = o.activity;
+        if (!a || a.state === "none") return <span style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>—</span>;
+        const today = new Date().toISOString().slice(0, 10);
+        const when = a.state === "done" ? "Done" : !a.due ? "No date" : a.state === "today" ? "Today" : a.state === "overdue" ? `${Math.round((Date.parse(today) - Date.parse(a.due)) / 86400000)}d overdue` : a.due;
+        const color = a.state === "overdue" ? "#A32D2D" : a.state === "today" ? "#854F0B" : a.state === "done" ? "#0F6E56" : "#3B6D11";
+        return (
+          <span style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, fontSize: 11.5 }} title={`${a.type}: ${a.title}${a.due ? ` · ${a.due}` : ""}`}>
+            <i className={`ti ${a.state === "done" ? "ti-check" : "ti-clock"}`} style={{ color, flexShrink: 0 }} aria-hidden="true" />
+            <span style={{ color, flexShrink: 0 }}>{a.type}</span>
+            <span style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>· {when}{a.title ? ` · ${a.title}` : ""}</span>
+          </span>
+        );
+      }
+      case "sequence": return o.sequence
+        ? <span style={{ fontSize: 11.5, color: "#3C3489", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }} title={o.sequence.name}>{o.sequence.name} · step {o.sequence.step}/{o.sequence.steps}</span>
+        : <span style={{ color: "var(--muted-foreground)" }}>—</span>;
     }
   }
 
@@ -362,6 +407,26 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
               );
             })}
       </div>
+
+      {enroll && (
+        <div onClick={() => { if (!busy) setEnroll(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, background: "#fff", borderRadius: 12, padding: 18, boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Enroll {enroll.ids.length.toLocaleString()} opportunit{enroll.ids.length === 1 ? "y" : "ies"} in {enroll.seq.name}?</div>
+            {enroll.error ? <p style={{ fontSize: 12.5, color: "#A32D2D", margin: "0 0 12px" }}>{enroll.error}</p>
+              : !enroll.preview ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: "0 0 12px" }}>Checking the selection…</p>
+              : (
+                <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: "0 0 12px", lineHeight: 1.6 }}>
+                  <b style={{ color: "#0F6E56" }}>{enroll.preview.enrolled}</b> will be enrolled{enroll.preview.skippedNoEmail ? <> · <b>{enroll.preview.skippedNoEmail}</b> have no email</> : null}{enroll.preview.alreadyEnrolled ? <> · <b>{enroll.preview.alreadyEnrolled}</b> already in this sequence</> : null}.
+                  {enroll.seq.status !== "active" && <> The sequence is <b>{enroll.seq.status}</b> — nothing sends until it&rsquo;s activated.</>} The first step goes out on the next batch run and passes through the approver.
+                </p>
+              )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button type="button" onClick={() => setEnroll(null)} disabled={busy} style={btn("#fff", "var(--muted-foreground)")}>Cancel</button>
+              <button type="button" onClick={() => void commitEnroll()} disabled={busy || !enroll.preview || enroll.preview.enrolled === 0} style={{ ...btn("#2E78F5"), opacity: busy || !enroll.preview || enroll.preview.enrolled === 0 ? 0.5 : 1 }}>{busy ? "Enrolling…" : `Enroll ${enroll.preview?.enrolled ?? ""}`}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {emailOpen && (
         <MassEmailComposer source="opportunities" selection={{ mode: "ids", ids: [...selected], count: selected.size }} onClose={() => setEmailOpen(false)} />

@@ -4,6 +4,9 @@ import { requireRole } from "@/lib/supabase/auth";
 import { listOpportunities, createOpportunity, getDefaultPipeline } from "@/lib/sales/opportunities";
 import { getSalesScope, effectiveSalesOwner } from "@/lib/sales/scope";
 import { listAssignableStaff } from "@/lib/sales/settings";
+import { getSequences, sequenceMembershipByEmail } from "@/lib/marketing/sequences";
+import { loadNextActivitiesForOpportunities } from "@/lib/sales/contact-next-activity";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +19,18 @@ export async function GET(req: NextRequest): Promise<Response> {
   const [opportunities, pipeline, staff] = await Promise.all([listOpportunities(includeArchived, effectiveSalesOwner(scope)), getDefaultPipeline(), listAssignableStaff()]);
   const nameById = new Map(staff.map((s) => [s.id, s.name]));
   for (const o of opportunities) o.owner_name = o.owner_id ? nameById.get(o.owner_id) ?? null : null;
-  return NextResponse.json({ opportunities, stages: pipeline?.stages ?? [], staff });
+  // Activities + Sequence columns and the Enroll-in-sequence menu. Each is best-effort.
+  const [activities, membership, sequences] = await Promise.all([
+    loadNextActivitiesForOpportunities(createServiceRoleClient(), opportunities.map((o) => o.id)),
+    sequenceMembershipByEmail(opportunities.map((o) => o.contact_email ?? "")).catch(() => new Map()),
+    getSequences().then((rows) => rows.map((s) => ({ id: s.id, name: s.name, status: s.status, steps: s.steps?.length ?? 0 }))).catch(() => []),
+  ]);
+  const rows = opportunities.map((o) => ({
+    ...o,
+    activity: activities.get(o.id) ?? null,
+    sequence: o.contact_email ? membership.get(o.contact_email.trim().toLowerCase()) ?? null : null,
+  }));
+  return NextResponse.json({ opportunities: rows, stages: pipeline?.stages ?? [], staff, sequences });
 }
 
 const createSchema = z.object({
