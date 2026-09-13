@@ -41,6 +41,7 @@ const QUICK_FILTERS = [
   { key: "open", label: "Open" }, { key: "won", label: "Won" }, { key: "lost", label: "Lost" }, { key: "archived", label: "Archived" },
   { key: "mine", label: "My opportunities", sep: true }, { key: "unassigned", label: "Unassigned" }, { key: "has_value", label: "Has value" },
   { key: "prob50", label: "Probability ≥ 50%" }, { key: "closing_month", label: "Closing this month" }, { key: "stalled", label: "Stalled (14d)" },
+  { key: "no_stage", label: "No stage", sep: true },
 ];
 const monthOf = (iso: string | null | undefined) => (iso ? iso.slice(0, 7) : "");
 const isStalled = (o: Opp) => o.status === "open" && Date.now() - new Date(o.updated_at ?? o.created_at).getTime() > 14 * 86400000;
@@ -178,7 +179,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
   const tagOptions = useMemo(() => [...new Set(opps.flatMap((o) => o.tags ?? []))].sort(), [opps]);
   const stageNameById = useMemo(() => new Map(stages.map((s) => [s.id, s.name])), [stages]);
   const searchFields = useMemo(() => [
-    { key: "stage", label: "Stage", options: stages.map((s) => s.name) },
+    { key: "stage", label: "Stage", options: [...stages.map((s) => s.name), "No stage"] },
     { key: "owner", label: "Owner", options: ownerOptions },
     { key: "source", label: "Source", options: sourceOptions },
     { key: "tags", label: "Tags", options: tagOptions },
@@ -197,7 +198,8 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
       if (quick.includes("prob50") && (o.probability == null || o.probability < 50)) return false;
       if (quick.includes("closing_month") && monthOf(o.expected_close) !== thisMonth) return false;
       if (quick.includes("stalled") && !isStalled(o)) return false;
-      if (fields.stage?.length && !fields.stage.includes(o.stage_id ? stageNameById.get(o.stage_id) ?? "" : "")) return false;
+      if (quick.includes("no_stage") && o.stage_id && stageNameById.has(o.stage_id)) return false;
+      if (fields.stage?.length && !fields.stage.includes((o.stage_id && stageNameById.get(o.stage_id)) || "No stage")) return false;
       if (fields.owner?.length && !fields.owner.includes(ownerLabel(o))) return false;
       if (fields.source?.length && !fields.source.includes(sourceLabel(o))) return false;
       if (fields.tags?.length && !(o.tags ?? []).some((t) => fields.tags.includes(t))) return false;
@@ -327,7 +329,8 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_email ?? o.contact_name ?? "—"}</div>
         </div>
         <div>
-          <select value={o.stage_id ?? ""} onChange={(e) => patch(o.id, { stageId: e.target.value })} disabled={busy || o.status === "archived"} style={{ ...inp, maxWidth: 140 }}>
+          <select value={o.stage_id && stageNameById.has(o.stage_id) ? o.stage_id : ""} onChange={(e) => patch(o.id, { stageId: e.target.value })} disabled={busy || o.status === "archived"} style={{ ...inp, maxWidth: 140, color: o.stage_id && stageNameById.has(o.stage_id) ? undefined : "#A32D2D" }}>
+            {!(o.stage_id && stageNameById.has(o.stage_id)) && <option value="">— No stage —</option>}
             {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
