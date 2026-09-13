@@ -201,7 +201,10 @@ function money(n: number | null): string {
 function resolveStageId(stages: Stage[], target: StageTarget): string | null {
   if (stages.length === 0) return null;
   if (target.status === "won") return (stages.find((s) => s.is_won) ?? stages[stages.length - 1])?.id ?? null;
-  if (target.status === "lost") return null; // lost opps carry status, not a stage
+  // Lost opps used to get no stage, which left hundreds of rows in a "No stage" bucket whose
+  // row dropdown then LOOKED like "New opportunity". Every opp now lands in a real stage;
+  // lost is carried by status alone.
+  if (target.status === "lost") return (stages.find((s) => !s.is_won) ?? stages[0])?.id ?? null;
   if (target.keyword) {
     const hit = stages.find((s) => !s.is_won && s.name.toLowerCase().includes(target.keyword as string));
     if (hit) return hit.id;
