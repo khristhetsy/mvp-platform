@@ -38,8 +38,8 @@ describe("conditionTerms", () => {
     ]);
   });
   it("date after/before", () => {
-    expect(conditionTerms({ field: "createdAt", op: "after", value: "2026-01-01" })).toEqual(["created_at.gte.2026-01-01"]);
-    expect(conditionTerms({ field: "createdAt", op: "before", value: "2026-06-01" })).toEqual(["created_at.lte.2026-06-01"]);
+    expect(conditionTerms({ field: "createdAt", op: "after", value: "2026-01-01" })).toEqual(["created_on.gte.2026-01-01"]);
+    expect(conditionTerms({ field: "createdAt", op: "before", value: "2026-06-01" })).toEqual(["created_on.lte.2026-06-01"]);
   });
   it("assignee set / not_set", () => {
     expect(conditionTerms({ field: "assignee", op: "not_set" })).toEqual(["assignee_ids.is.null"]);

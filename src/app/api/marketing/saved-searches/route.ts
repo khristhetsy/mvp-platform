@@ -31,10 +31,23 @@ export async function GET(): Promise<Response> {
     .or(`owner_id.eq.${profile.id},is_shared.eq.true`)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const rows = (data ?? []).map((r: Record<string, unknown>) => ({
-    id: r.id, name: r.name, spec: r.spec, groupBy: r.group_by ?? null, columns: r.columns ?? null,
-    isDefault: !!r.is_default, isShared: !!r.is_shared, mine: r.owner_id === profile.id,
-  }));
+  // Owner names, so a shared filter says who made it. Admins may delete any shared one.
+  const ownerIds = [...new Set((data ?? []).map((r: Record<string, unknown>) => String(r.owner_id)))];
+  const nameById = new Map<string, string>();
+  if (ownerIds.length) {
+    const { data: profs } = await db.from("profiles").select("id, full_name, email").in("id", ownerIds);
+    for (const p of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) nameById.set(p.id, p.full_name || p.email || "Staff");
+  }
+  const isAdmin = profile.role === "admin";
+  const rows = (data ?? []).map((r: Record<string, unknown>) => {
+    const mine = r.owner_id === profile.id;
+    return {
+      id: r.id, name: r.name, spec: r.spec, groupBy: r.group_by ?? null, columns: r.columns ?? null,
+      isDefault: !!r.is_default, isShared: !!r.is_shared, mine,
+      ownerName: mine ? "You" : nameById.get(String(r.owner_id)) ?? "Staff",
+      canDelete: mine || isAdmin,
+    };
+  });
   return NextResponse.json({ searches: rows });
 }
 

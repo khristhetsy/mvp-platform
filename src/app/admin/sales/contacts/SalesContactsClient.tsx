@@ -7,7 +7,7 @@ import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-groupin
 import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
 import { MassEmailComposer, type SelectionPayload } from "@/components/marketing/MassEmailComposer";
 
-type SavedSearch = { id: string; name: string; spec: FilterSpec; groupBy: string | null; columns: string[] | null; isDefault: boolean; isShared: boolean; mine: boolean };
+type SavedSearch = { id: string; name: string; spec: FilterSpec; groupBy: string | null; columns: string[] | null; isDefault: boolean; isShared: boolean; mine: boolean; ownerName?: string; canDelete?: boolean };
 
 const GROUP_BY_SECTIONS: { key: GroupSection; label: string }[] = [
   { key: "profile", label: "Profile & role" },
@@ -383,6 +383,18 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     setTyped(""); setSearchOpen(false);
   }
   function removeConditionAt(i: number) { setSpec((s) => ({ ...s, conditions: s.conditions.filter((_, j) => j !== i) })); }
+  // Facet checkbox in the dropdown: one "in" condition per field, values toggled inside it.
+  function toggleFacetValue(field: string, v: string) {
+    setSpec((s) => {
+      const idx = s.conditions.findIndex((c) => c.field === field && c.op === "in");
+      const cur = idx >= 0 && Array.isArray(s.conditions[idx].value) ? (s.conditions[idx].value as string[]) : [];
+      const next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+      const conditions = s.conditions.filter((_, j) => j !== idx);
+      if (next.length) conditions.push({ field, op: "in", value: next });
+      return { ...s, conditions };
+    });
+  }
+  const facetValueActive = (field: string, v: string) => spec.conditions.some((c) => c.field === field && c.op === "in" && Array.isArray(c.value) && c.value.includes(v));
   const quickActive = (cond: Condition) => spec.conditions.some((c) => sameCond(c, cond));
   const firstOfMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; };
 
@@ -412,7 +424,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     if (!saveName.trim()) return;
     try {
       await fetch("/api/marketing/saved-searches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: saveName.trim(), spec, groupBy, columns: visibleCols, isDefault: saveDefault, isShared: saveShared }) });
-      setSaveOpen(false); setSaveName(""); setSaveDefault(false); setSaveShared(false); await fetchSaved();
+      setSaveOpen(false); setSaveName(""); setSaveDefault(false); setSaveShared(false); setSearchOpen(false); await fetchSaved();
     } catch { /* ignore */ }
   }
   function openCustom() { setDraftSpec({ match: spec.match, conditions: spec.conditions.length ? spec.conditions : [{ field: "name", op: "contains", value: "" }] }); setValuePickerAt(null); setCustomOpen(true); setSearchOpen(false); }
@@ -586,8 +598,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             toggleQuick={toggleQuick} quickActive={quickActive} firstOfMonth={firstOfMonth}
             groupBy={groupBy} setGroupBy={setGroupBy} groupByLabel={groupByLabel}
             saved={saved} applySaved={applySaved} deleteSaved={deleteSaved}
-            openCustom={openCustom} openSave={() => { setSaveOpen(true); setSearchOpen(false); }}
+            openCustom={openCustom}
             clearAll={() => setSpec({ match: "all", conditions: [] })}
+            facetOpts={facetOpts} toggleFacetValue={toggleFacetValue} facetValueActive={facetValueActive}
+            save={{ open: saveOpen, setOpen: setSaveOpen, name: saveName, setName: setSaveName, isDefault: saveDefault, setDefault: setSaveDefault, shared: saveShared, setShared: setSaveShared, submit: saveCurrent }}
           />
         ) : (
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
@@ -778,22 +792,6 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             : { mode: "ids", ids: [...selected], count: selected.size }}
           onClose={() => setEmailOpen(false)}
         />
-      )}
-
-      {/* Save current search (Odoo Favorites) */}
-      {saveOpen && (
-        <div onClick={() => setSaveOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: 16, width: 320, boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>Save current search</div>
-            <input value={saveName} onChange={(e) => setSaveName(e.target.value)} autoFocus placeholder="Name this search" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 9 }} />
-            <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--text-secondary)", marginBottom: 6 }}><input type="checkbox" checked={saveDefault} onChange={(e) => setSaveDefault(e.target.checked)} style={{ width: 13, height: 13 }} /> Use by default</label>
-            <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}><input type="checkbox" checked={saveShared} onChange={(e) => setSaveShared(e.target.checked)} style={{ width: 13, height: 13 }} /> Share with all staff</label>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button onClick={() => setSaveOpen(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
-              <button onClick={saveCurrent} disabled={!saveName.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: saveName.trim() ? 1 : 0.5 }}>Save</button>
-            </div>
-          </div>
-        </div>
       )}
 
       {canCreateList && listResult && (
@@ -1088,20 +1086,50 @@ type OdooSearchBarProps = {
   toggleQuick: (c: Condition) => void; quickActive: (c: Condition) => boolean; firstOfMonth: () => string;
   groupBy: string; setGroupBy: (v: string) => void; groupByLabel: string;
   saved: SavedSearch[]; applySaved: (s: SavedSearch) => void; deleteSaved: (id: string) => void;
-  openCustom: () => void; openSave: () => void; clearAll: () => void;
+  openCustom: () => void; clearAll: () => void;
+  facetOpts: Record<string, string[]>; toggleFacetValue: (field: string, v: string) => void; facetValueActive: (field: string, v: string) => boolean;
+  save: { open: boolean; setOpen: (v: boolean) => void; name: string; setName: (v: string) => void; isDefault: boolean; setDefault: (v: boolean) => void; shared: boolean; setShared: (v: boolean) => void; submit: () => void };
 };
 function OdooSearchBar(p: OdooSearchBarProps) {
   const TEXT_FIELDS = [{ f: "name", l: "Name" }, { f: "company", l: "Company" }, { f: "email", l: "Email" }, { f: "phone", l: "Phone" }];
+  // Odoo layout: Type first, then quick filters, then the questionnaire facets as
+  // expandable rows with checkboxes, then Add custom filter.
+  const TYPE_QUICK: { label: string; cond: Condition }[] = [
+    { label: "Investors", cond: { field: "type", op: "in", value: ["investor"] } },
+    { label: "Founders", cond: { field: "type", op: "in", value: ["founder"] } },
+    { label: "Advisors", cond: { field: "type", op: "in", value: ["advisor"] } },
+  ];
   const QUICK: { label: string; cond: Condition }[] = [
     { label: "Has email", cond: { field: "email", op: "set" } },
     { label: "Has phone", cond: { field: "phone", op: "set" } },
     { label: "Unassigned", cond: { field: "assignee", op: "not_set" } },
     { label: "Added this month", cond: { field: "createdAt", op: "after", value: p.firstOfMonth() } },
-    { label: "Investors", cond: { field: "type", op: "in", value: ["investor"] } },
-    { label: "Founders", cond: { field: "type", op: "in", value: ["founder"] } },
   ];
+  const FACET_ROWS: { field: string; label: string; source: string }[] = [
+    { field: "investorTypes", label: "Investor type", source: "investorTypes" },
+    { field: "industries", label: "Industry", source: "industries" },
+    { field: "leadSource", label: "Lead source", source: "leadSource" },
+    { field: "operatingStages", label: "Operating stage", source: "operatingStages" },
+    { field: "fundingStages", label: "Funding stage", source: "fundingStages" },
+    { field: "capital", label: "Amount / type of capital", source: "capital" },
+  ];
+  const [openFacet, setOpenFacet] = useState<string | null>(null);
+  const [facetQ, setFacetQ] = useState("");
   const groupOpts = GROUP_BY_OPTIONS.filter((o) => o.id === "profile" || o.section !== "profile");
   const item = { display: "block", width: "100%", textAlign: "left" as const, padding: "6px 12px 6px 26px", fontSize: 12.5, background: "none", border: "none", cursor: "pointer", color: "var(--foreground)" };
+  const mine = p.saved.filter((s) => s.mine);
+  const shared = p.saved.filter((s) => !s.mine && s.isShared);
+  const activeFacetCount = (field: string) => { const c = p.spec.conditions.find((c) => c.field === field && c.op === "in"); return Array.isArray(c?.value) ? c!.value.length : 0; };
+  const favRow = (s: SavedSearch) => (
+    <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
+      <button onClick={() => p.applySaved(s)} style={{ ...item, flex: 1, paddingRight: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <i className="ti ti-star" style={{ color: "#7A5AA8", marginRight: 4 }} aria-hidden="true" />{s.name}
+        {s.mine && s.isDefault ? <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}> · default</span> : null}
+        {!s.mine ? <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}> · {s.ownerName ?? "Staff"}</span> : s.isShared ? <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}> · shared</span> : null}
+      </button>
+      {(s.canDelete ?? s.mine) && <button onClick={() => { if (window.confirm(`Delete saved search “${s.name}”?`)) p.deleteSaved(s.id); }} aria-label={`Delete ${s.name}`} title="Delete" style={{ border: "none", background: "none", color: "#A32D2D", cursor: "pointer", padding: "0 10px" }}><i className="ti ti-trash" style={{ fontSize: 13 }} aria-hidden="true" /></button>}
+    </div>
+  );
 
   return (
     <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
@@ -1142,34 +1170,79 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                 ))}
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1.2fr", maxHeight: 480, overflowY: "auto" }}>
                 <div style={{ borderRight: "0.5px solid #eef1f5" }}>
-                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#185FA5" }}>▼ FILTERS</div>
+                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#185FA5" }}><i className="ti ti-filter" aria-hidden="true" /> FILTERS</div>
+                  {TYPE_QUICK.map((qf) => {
+                    const on = p.quickActive(qf.cond);
+                    return <button key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
+                  })}
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0" }} />
                   {QUICK.map((qf) => {
                     const on = p.quickActive(qf.cond);
                     return <button key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
                   })}
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0" }} />
+                  {FACET_ROWS.map((f) => {
+                    const isOpen = openFacet === f.field;
+                    const n = activeFacetCount(f.field);
+                    const all = p.facetOpts[f.source] ?? [];
+                    const opts = all.filter((o) => o.toLowerCase().includes(facetQ.toLowerCase()));
+                    return (
+                      <div key={f.field}>
+                        <button onClick={() => { setOpenFacet(isOpen ? null : f.field); setFacetQ(""); }} style={{ ...item, display: "flex", alignItems: "center", gap: 6, color: n ? "#185FA5" : "var(--foreground)" }}>
+                          <span style={{ flex: 1 }}>{f.label}</span>
+                          {n > 0 && <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 10, padding: "0 7px" }}>{n}</span>}
+                          <i className={`ti ti-chevron-${isOpen ? "down" : "right"}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }} aria-hidden="true" />
+                        </button>
+                        {isOpen && (
+                          <div style={{ padding: "2px 8px 8px 26px" }}>
+                            {all.length > 8 && <input value={facetQ} onChange={(e) => setFacetQ(e.target.value)} placeholder="Search…" style={{ width: "100%", boxSizing: "border-box", fontSize: 11.5, padding: "4px 8px", borderRadius: 6, border: "0.5px solid var(--border)", marginBottom: 4 }} />}
+                            <div style={{ maxHeight: 170, overflowY: "auto" }}>
+                              {opts.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "3px 0" }}>{all.length === 0 ? "No options loaded yet." : "No matches."}</div>}
+                              {opts.map((o) => (
+                                <label key={o} style={{ display: "flex", alignItems: "center", gap: 7, padding: "3px 0", fontSize: 12, cursor: "pointer" }}>
+                                  <input type="checkbox" checked={p.facetValueActive(f.field, o)} onChange={() => p.toggleFacetValue(f.field, o)} style={{ width: 13, height: 13 }} />
+                                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
-                  <button onClick={p.openCustom} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Add Custom Filter</button>
+                  <button onClick={p.openCustom} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Add custom filter</button>
                 </div>
                 <div style={{ borderRight: "0.5px solid #eef1f5" }}>
-                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#633806" }}>▤ GROUP BY</div>
+                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#633806" }}><i className="ti ti-layout-list" aria-hidden="true" /> GROUP BY</div>
                   {groupOpts.map((o) => {
                     const on = p.groupBy === o.id;
                     return <button key={o.id} onClick={() => { p.setGroupBy(o.id); }} style={{ ...item, background: on ? "#FBF3E6" : "none", color: on ? "#633806" : "var(--foreground)" }}>{on ? "✓ " : ""}{o.id === "profile" ? "Type" : o.label}</button>;
                   })}
                 </div>
                 <div>
-                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#7A5AA8" }}>★ FAVORITES</div>
-                  {p.saved.length === 0 && <div style={{ padding: "4px 12px 4px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>None yet.</div>}
-                  {p.saved.map((s) => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
-                      <button onClick={() => p.applySaved(s)} style={{ ...item, flex: 1, paddingRight: 4 }}>★ {s.name}{s.isShared ? <span style={{ color: "var(--muted-foreground)" }}> · shared</span> : null}</button>
-                      {s.mine && <button onClick={() => p.deleteSaved(s.id)} aria-label="Delete saved search" style={{ border: "none", background: "none", color: "#A32D2D", cursor: "pointer", padding: "0 10px" }}>×</button>}
-                    </div>
-                  ))}
+                  <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#7A5AA8" }}><i className="ti ti-star" aria-hidden="true" /> FAVORITES</div>
+                  {mine.length === 0 && <div style={{ padding: "4px 12px 4px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>None yet — save one below.</div>}
+                  {mine.map(favRow)}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
-                  <button onClick={p.openSave} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Save current search</button>
+                  <div style={{ padding: "8px 12px 3px", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}><i className="ti ti-users" aria-hidden="true" /> SHARED FILTERS</div>
+                  {shared.length === 0 && <div style={{ padding: "2px 12px 6px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>Nothing shared by the team yet.</div>}
+                  {shared.map(favRow)}
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
+                  <button onClick={() => p.save.setOpen(!p.save.open)} style={{ ...item, display: "flex", alignItems: "center", paddingLeft: 12, color: "var(--foreground)", fontWeight: 500 }}>
+                    <span style={{ flex: 1 }}>Save current search</span>
+                    <i className={`ti ti-chevron-${p.save.open ? "up" : "down"}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }} aria-hidden="true" />
+                  </button>
+                  {p.save.open && (
+                    <div style={{ margin: "2px 12px 8px", background: "var(--muted)", borderRadius: 8, padding: "8px 10px" }}>
+                      <input value={p.save.name} onChange={(e) => p.save.setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") p.save.submit(); }} autoFocus placeholder="Name this search" style={{ width: "100%", boxSizing: "border-box", fontSize: 12, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff", marginBottom: 7 }} />
+                      <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 4, cursor: "pointer" }}><input type="checkbox" checked={p.save.isDefault} onChange={(e) => p.save.setDefault(e.target.checked)} style={{ width: 13, height: 13 }} /> Default filter</label>
+                      <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 8, cursor: "pointer" }}><input type="checkbox" checked={p.save.shared} onChange={(e) => p.save.setShared(e.target.checked)} style={{ width: 13, height: 13 }} /> Shared with team</label>
+                      <button onClick={p.save.submit} disabled={!p.save.name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#7A5AA8", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer", opacity: p.save.name.trim() ? 1 : 0.5 }}>Save</button>
+                    </div>
+                  )}
                   {p.spec.conditions.length > 0 && <button onClick={() => { p.clearAll(); }} style={{ ...item, color: "#A32D2D", paddingLeft: 12 }}>Clear all filters</button>}
                 </div>
               </div>

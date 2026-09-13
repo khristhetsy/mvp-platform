@@ -51,7 +51,9 @@ export const FIELD_REGISTRY: FieldDef[] = [
   { key: "fundingStages", label: "Funding stage", kind: "facet", facetKey: "fundingStages", ops: ["in", "set"], options: "fundingStages" },
   { key: "investorTypes", label: "Investor type", kind: "facet", facetKey: "investorTypes", ops: ["in", "set"], options: "investorTypes" },
   { key: "operatingStages", label: "Operating stage", kind: "facet", facetKey: "operatingStages", ops: ["in", "set"], options: "operatingStages" },
-  { key: "createdAt", label: "Created on", kind: "date", col: "created_at", ops: ["after", "before"] },
+  // crm_contacts has no created_at; created_on is "YYYY-MM-DD HH:MM:SS" text, which compares
+  // correctly against an ISO date string. (Was created_at — every date filter errored.)
+  { key: "createdAt", label: "Created on", kind: "date", col: "created_on", ops: ["after", "before"] },
   { key: "assignee", label: "Lead assignee", kind: "assignee", ops: ["set", "not_set"] },
 ];
 
