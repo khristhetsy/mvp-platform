@@ -33,6 +33,8 @@ export type IndexRow = {
   inv_source: string | null;
   inv_verified_at: string | null;
   updated_at: string;
+  /** The crm_contacts.synced_at this projection was built from — the watermark source. */
+  source_synced_at: string | null;
 };
 
 /**
@@ -59,6 +61,7 @@ export function toIndexRow(row: GatedRow, now = new Date().toISOString()): Index
     inv_source: row.inv_source,
     inv_verified_at: row.inv_verified_at,
     updated_at: now,
+    source_synced_at: row.synced_at ?? null,
   };
 }
 
@@ -73,22 +76,26 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
   // full rebuild is asked for, only reproject contacts touched since the last run.
   let since: string | null = null;
   if (!opts.full) {
-    const { data } = await db().from("investor_match_index")
-      .select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle();
-    since = (data?.updated_at as string | undefined) ?? null;
+    // From source_synced_at, NOT updated_at. updated_at is when WE last projected a row,
+    // and reindexContacts bumps it for single contacts — using it let one approval move
+    // the watermark past contacts Odoo had just synced, which were then never seen again.
+    const { data, error } = await db().from("investor_match_index")
+      .select("source_synced_at").not("source_synced_at", "is", null)
+      .order("source_synced_at", { ascending: false }).limit(1).maybeSingle();
+    if (!reportDbError("rebuildMatchIndex: watermark", error)) {
+      since = (data?.source_synced_at as string | undefined) ?? null;
+    }
   }
   const mode: "full" | "incremental" = since ? "incremental" : "full";
 
   const { rows, complete } = await readAllRowsChecked<GatedRow>((from, to) => {
     let q = db().from("crm_contacts")
-      .select("id, company, raw, overrides, inv_source, inv_verified_at")
+      .select("id, company, raw, overrides, inv_source, inv_verified_at, synced_at")
       .or("contact_type.eq.investor,module.eq.investor")
       .not("company", "is", null);
-    // Change detection uses synced_at: crm_contacts has NO updated_at column, and asking
-    // for one made the whole read error out. Caveat worth knowing: synced_at only moves
-    // when the connector re-syncs a contact, so edits made HERE (an approved enrichment,
-    // the job-title backfill) do not bump it. Those need a full rebuild — which is why
-    // the admin card offers one.
+    // Change detection uses synced_at (crm_contacts has no updated_at column). It only
+    // moves when the connector re-syncs, so in-app edits are covered by reindexContacts
+    // at the point of the edit rather than by this scan.
     if (since) q = q.gt("synced_at", since);
     return q.order("id", { ascending: true }).range(from, to);
   }, { context: "rebuildMatchIndex: crm_contacts" });
@@ -138,7 +145,7 @@ export async function reindexContacts(contactIds: string[]): Promise<number> {
   const now = new Date().toISOString();
   for (const part of chunk(ids)) {   // URL-bound .in() — default 100
     const { data, error } = await db().from("crm_contacts")
-      .select("id, company, raw, overrides, inv_source, inv_verified_at").in("id", part);
+      .select("id, company, raw, overrides, inv_source, inv_verified_at, synced_at").in("id", part);
     if (reportDbError("reindexContacts: read", error)) continue;
     const rows = ((data ?? []) as GatedRow[]).map((r) => toIndexRow(r, now));
     const keep = rows.filter((r): r is IndexRow => r !== null);

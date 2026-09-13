@@ -14,6 +14,7 @@ import { linkedInAdapter } from "@/lib/social/linkedin-adapter";
 import { facebookAdapter } from "@/lib/social/facebook-adapter";
 import { backoffMsFor } from "@/lib/social/rules";
 import { openToken } from "@/lib/social/token-cipher";
+import { reportDbError } from "@/lib/supabase/report";
 
 const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter };
 
@@ -27,6 +28,14 @@ const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, fac
  * the normal retry path.
  */
 const PUBLISH_TIMEOUT_MS = 20_000;
+/**
+ * Wall-clock budget for one pass. The per-call timeout bounds a single platform call, but
+ * the loop is sequential: 20 variants each spending 20s on publish and 20s on the comment
+ * is 800s inside a 60s function. Stop CLAIMING new work once the budget is spent — the
+ * variants left behind are still `queued` and simply go out on the next 5-minute pass,
+ * whereas being killed mid-flight strands whatever was already claimed.
+ */
+const PASS_BUDGET_MS = 40_000;
 /** A claim older than this can't be a live worker (the function is capped at 60s). */
 export const STUCK_CLAIM_MS = 15 * 60 * 1000;
 
@@ -105,24 +114,29 @@ function toAccount(a: AccountRow): Account {
   return { id: a.id, platform: a.platform, externalMemberId: a.external_member_id, accessToken: openToken(a.access_token), refreshToken: openToken(a.refresh_token), tokenExpiresAt: a.token_expires_at };
 }
 
-export type QueueRunResult = { processed: number; published: number; retried: number; failed: number; skipped: number; interrupted: number };
+export type QueueRunResult = { processed: number; published: number; retried: number; failed: number; skipped: number; interrupted: number; deferred: number };
 
 export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
   const supabase = db();
   const now = new Date().toISOString();
   // Free anything a previous pass stranded before looking for new work.
   const interrupted = await sweepStuckPublishing().catch(() => 0);
-  const res: QueueRunResult = { processed: 0, published: 0, retried: 0, failed: 0, skipped: 0, interrupted };
+  const startedAt = Date.now();
+  const res: QueueRunResult = { processed: 0, published: 0, retried: 0, failed: 0, skipped: 0, interrupted, deferred: 0 };
 
-  const { data: due } = await supabase
+  const { data: due, error: dueErr } = await supabase
     .from("social_variants")
     .select("id, account_id, body, comment_text, idempotency_key, attempts, post_id, next_attempt_at, status")
     .eq("status", "queued")
     .or(`next_attempt_at.is.null,next_attempt_at.lte.${now}`)
     .order("next_attempt_at", { ascending: true, nullsFirst: true })
     .limit(limit);
+  // A failed read here would otherwise look exactly like an empty queue.
+  reportDbError("runSocialQueue: due variants", dueErr);
 
   for (const row of (due ?? []) as (VariantRow & { post_id: string })[]) {
+    // Out of budget: leave the rest queued rather than risk being killed mid-publish.
+    if (Date.now() - startedAt > PASS_BUDGET_MS) { res.deferred++; continue; }
     // Claim atomically: only proceed if we flip queued → publishing.
     const { data: claimed } = await supabase
       .from("social_variants")
@@ -163,9 +177,23 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
           commentNote = `Published — first comment skipped: ${ce instanceof Error ? ce.message : "comment failed"}`;
         }
       }
-      await supabase.from("social_variants").update({
+      // If THIS write fails the post is already live but the row stays `publishing`, the
+      // sweep later calls it `interrupted`, and a staff Requeue publishes it a SECOND time
+      // to a real audience. Retry once, and if it still fails make the row say so.
+      const publishedPatch = {
         status: "published", external_id: externalId, url, published_at: new Date().toISOString(), error: commentNote, updated_at: new Date().toISOString(),
-      }).eq("id", row.id);
+      };
+      let { error: markErr } = await supabase.from("social_variants").update(publishedPatch).eq("id", row.id);
+      if (markErr) {
+        ({ error: markErr } = await supabase.from("social_variants").update(publishedPatch).eq("id", row.id));
+      }
+      if (reportDbError("runSocialQueue: mark published", markErr)) {
+        await supabase.from("social_variants").update({
+          status: "published", external_id: externalId, url,
+          error: "Published, but the platform response could not be recorded — do NOT requeue.",
+          updated_at: new Date().toISOString(),
+        }).eq("id", row.id);
+      }
       res.published++;
     } catch (err) {
       if (err instanceof AdapterNotConfiguredError) {
@@ -196,20 +224,25 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
  * they've confirmed on the platform that it did NOT go out — see sweepStuckPublishing.
  */
 export async function requeueVariant(variantId: string): Promise<boolean> {
-  const { error } = await db().from("social_variants")
-    .update({ status: "queued", next_attempt_at: null, error: null, updated_at: new Date().toISOString() })
-    .eq("id", variantId).in("status", ["interrupted", "failed"]);
-  return !error;
+  // attempts is reset too: a variant requeued at attempts=3 would exhaust its backoff on
+  // the first hiccup and go straight to failed with no retries.
+  // .select() so a no-op (wrong status) reports false instead of a hollow success.
+  const { data, error } = await db().from("social_variants")
+    .update({ status: "queued", attempts: 0, next_attempt_at: null, error: null, updated_at: new Date().toISOString() })
+    .eq("id", variantId).in("status", ["interrupted", "failed"]).select("id");
+  if (reportDbError("requeueVariant", error)) return false;
+  return (data ?? []).length > 0;
 }
 
 /** Record that an interrupted variant did reach the platform after all. */
 export async function markVariantPublished(variantId: string, externalId?: string | null, url?: string | null): Promise<boolean> {
-  const { error } = await db().from("social_variants")
+  const { data, error } = await db().from("social_variants")
     .update({
       status: "published", published_at: new Date().toISOString(),
       external_id: externalId ?? null, url: url ?? null,
       error: "Marked published manually after an interrupted run.", updated_at: new Date().toISOString(),
     })
-    .eq("id", variantId).in("status", ["interrupted", "failed"]);
-  return !error;
+    .eq("id", variantId).in("status", ["interrupted", "failed"]).select("id");
+  if (reportDbError("markVariantPublished", error)) return false;
+  return (data ?? []).length > 0;
 }

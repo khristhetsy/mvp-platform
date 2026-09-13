@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canonicalInvestorType, INVESTOR_TYPE_VOCAB, Q5_INVESTOR_TYPE, investorTypeStoredFor } from "./options";
+import { canonicalInvestorType, INVESTOR_TYPE_VOCAB, Q5_INVESTOR_TYPE, investorTypeStoredFor, FIT_WEIGHTS, FIELD_KEYWORDS } from "./options";
 
 describe("canonicalInvestorType", () => {
   it("maps common spellings onto one canonical value", () => {
@@ -48,5 +48,27 @@ describe("canonicalInvestorType", () => {
     for (const [key, canonical] of [["angel", "Angel"], ["vc", "VC"], ["pe", "Private Equity"], ["family_office", "Family Office"], ["corporate", "Corporate Venture"]] as const) {
       expect(lc(investorTypeStoredFor([key]))).toContain(canonical.toLowerCase());
     }
+  });
+});
+
+describe("shared vocabularies cannot drift", () => {
+  it("weights sum to 100", () => {
+    expect(Object.values(FIT_WEIGHTS).reduce((a, b) => a + b, 0)).toBe(100);
+  });
+  it("every keyword is lowercase, since every comparison lowercases the key only", () => {
+    for (const list of Object.values(FIELD_KEYWORDS)) {
+      for (const k of list) expect(k).toBe(k.toLowerCase());
+    }
+  });
+  it("the profile's revenue keywords are the matcher's", () => {
+    // These were two separate arrays: the profile matched "revenue range" while the
+    // matcher wanted "annual revenue range", so a renamed label displayed a value and
+    // scored zero. One list now feeds both.
+    expect(FIELD_KEYWORDS.revenue).toContain("revenue range");
+    expect(FIELD_KEYWORDS.revenue).toContain("annual revenue range");
+  });
+  it("stage keywords cover both Odoo phrasings", () => {
+    expect(FIELD_KEYWORDS.stage).toContain("operating stage");
+    expect(FIELD_KEYWORDS.stage).toContain("operational stage");
   });
 });

@@ -10,6 +10,8 @@
  * trailing "Other details" section so nothing is lost.
  */
 
+import { FIELD_KEYWORDS, OP_STAGE_LABEL, INV_SIZE_LABEL, REVENUE_LABEL } from "@/lib/fit/options";
+
 /** Raw synced field (input). */
 export type ExtraField = { label: string; values: string[] };
 
@@ -123,11 +125,11 @@ const INVESTOR_SCHEMA: SectionDef[] = [
       // ("...operational stage?") or the entrepreneur-side one ("Entrepreneur operating
       // stage?") — the matcher unions both, so the profile does too. Edits save to the
       // canonical label when present, which is what enrichment and /fit read.
-      { display: "Operating stage", match: ["operating stage", "operational stage"], odoo: "Entrepreneur operating stage?", sourceKey: "_stage_source" },
-      { display: "Investment size", match: "investment size", odoo: "Investor investment size?", sourceKey: "_size_source" },
+      { display: "Operating stage", match: [...FIELD_KEYWORDS.stage], odoo: OP_STAGE_LABEL, sourceKey: "_stage_source" },
+      { display: "Investment size", match: [...FIELD_KEYWORDS.size], odoo: INV_SIZE_LABEL, sourceKey: "_size_source" },
       { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },
       { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },
-      { display: "Annual revenue range", match: "revenue range", odoo: "Investor preferences for the company with an annual revenue range of?", sourceKey: "_revenue_source" },
+      { display: "Annual revenue range", match: [...FIELD_KEYWORDS.revenue], odoo: REVENUE_LABEL, sourceKey: "_revenue_source" },
       { display: "Annual EBITDA range", match: "ebitda", odoo: "Investor preferences for company with annual EBITDA range of?", sourceKey: "_ebitda_source" },
       // Preferred ranges — mirror the founder's actual ARR/MRR for matching.
       { display: "Preferred ARR range", match: "arr range", odoo: "Investor preferences for the company with an ARR range of?" },

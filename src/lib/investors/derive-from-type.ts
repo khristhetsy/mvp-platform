@@ -21,7 +21,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, chunk } from "@/lib/supabase/paged";
 import { reportDbError } from "@/lib/supabase/report";
 import { reindexContacts } from "@/lib/fit/match-index";
-import { OP_STAGE_LABEL, OP_STAGE_LABELS, INV_SIZE_LABEL, REVENUE_LABEL } from "@/lib/fit/options";
+import { OP_STAGE_LABEL, OP_STAGE_LABELS, INV_SIZE_LABEL, REVENUE_LABEL, FIT_WEIGHTS, FIELD_KEYWORDS } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -45,8 +45,8 @@ export type FieldFill = {
 export type TypeRule = { id: string; label: string; matches: readonly string[]; fills: FieldFill[] };
 
 const stageFill = (values: string[]): FieldFill => ({
-  field: "stage", labels: OP_STAGE_LABELS, keywords: ["operating stage", "operational stage"],
-  values, sourceKey: "_stage_source", weight: 25,
+  field: "stage", labels: OP_STAGE_LABELS, keywords: FIELD_KEYWORDS.stage,
+  values, sourceKey: "_stage_source", weight: FIT_WEIGHTS.stage,
 });
 
 /**
@@ -72,16 +72,16 @@ export const TYPE_RULES: TypeRule[] = [
     id: "derived:private_equity", label: "Private Equity", matches: ["Private Equity", "PE"],
     fills: [
       stageFill(["Small Business", "Expand Growth", "Midsize Company", "Large Corporation"]),
-      { field: "size", labels: [INV_SIZE_LABEL], keywords: ["investment size", "check size"],
+      { field: "size", labels: [INV_SIZE_LABEL], keywords: FIELD_KEYWORDS.size,
         values: ["$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"],
-        sourceKey: "_size_source", weight: 20 },
+        sourceKey: "_size_source", weight: FIT_WEIGHTS.size },
       // NB "Over $100m" here, "$100m+" above — the two vocabularies genuinely differ, and
       // using the wrong one stores a value that can never match.
-      { field: "revenue", labels: [REVENUE_LABEL], keywords: ["annual revenue range"],
+      { field: "revenue", labels: [REVENUE_LABEL], keywords: FIELD_KEYWORDS.revenue,
         values: ["$1m - $10m", "$10m - $50m", "$50m - $100m", "Over $100m"],
-        sourceKey: "_revenue_source", weight: 10 },
+        sourceKey: "_revenue_source", weight: FIT_WEIGHTS.revenue },
       // EBITDA is displayed on the profile but the matcher never reads it — 0 points.
-      { field: "ebitda", labels: [EBITDA_LABEL], keywords: ["ebitda"],
+      { field: "ebitda", labels: [EBITDA_LABEL], keywords: FIELD_KEYWORDS.ebitda,
         values: ["$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"],
         sourceKey: "_ebitda_source", weight: 0 },
     ],
@@ -120,7 +120,7 @@ export function hasFieldValue(r: Row, fill: FieldFill): boolean {
   for (const label of fill.labels) {
     if (asList(r.overrides?.[label]).length > 0 || asList(extra[label]).length > 0) return true;
   }
-  const hit = (key: string) => fill.keywords.some((k) => key.trim().toLowerCase().includes(k));
+  const hit = (key: string) => fill.keywords.some((k) => key.trim().toLowerCase().includes(k.toLowerCase()));
   for (const [k, v] of Object.entries(r.overrides ?? {})) if (hit(k) && asList(v).length > 0) return true;
   for (const [k, v] of Object.entries(extra)) if (hit(k) && asList(v).length > 0) return true;
   return false;

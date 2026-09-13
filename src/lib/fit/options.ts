@@ -23,6 +23,29 @@
 // ("Startup" / "Prototype" / "Expand Growth" / …) — these are the values Q1_STAGE maps
 // to. (It is NOT stored under the older "Investor preferences for … operational stage?"
 // label, which is why stage silently never matched until this was corrected.)
+/**
+ * FIT WEIGHTS — the single definition. Anything that scores, displays a weight, or
+ * documents one imports from here.
+ *
+ * They had drifted into four copies: the matcher's own header, this file's per-question
+ * comments, and a hand-typed `weight` on every derivation rule. Three of the four were
+ * wrong, and the admin UI was quoting the wrong numbers back at staff.
+ */
+export const FIT_WEIGHTS = { industry: 30, stage: 25, size: 20, type: 15, revenue: 10 } as const;
+
+/**
+ * Keywords that identify each field when Odoo's exact label has drifted. Shared so the
+ * profile and the matcher cannot look for different things — a profile that matches
+ * MORE labels than the matcher is exactly how a field comes to display a value and score
+ * zero, which has now happened three times.
+ */
+export const FIELD_KEYWORDS = {
+  stage: ["operating stage", "operational stage"],
+  size: ["investment size", "check size"],
+  revenue: ["annual revenue range", "revenue range"],
+  ebitda: ["ebitda"],
+} as const;
+
 export const OP_STAGE_LABEL = "Entrepreneur operating stage?";
 /**
  * The OTHER label the same concept has appeared under — the investor-side phrasing used
@@ -51,7 +74,7 @@ export type FitOption = {
   stored: string[];
 };
 
-/** Q1 — Where are you today? → Operational stage (30%). Stored values are the
+/** Q1 — Where are you today? → Operational stage (FIT_WEIGHTS.stage). Stored values are the
  *  Odoo operational-stage dropdown (Startup · Prototype · Expand Growth · Small
  *  Business · Midsize Company · Large Corporation · Large Company · Other). */
 export const Q1_STAGE: FitOption[] = [
@@ -60,7 +83,7 @@ export const Q1_STAGE: FitOption[] = [
   { key: "series_a_plus", label: "Series A and beyond", stored: ["Midsize Company", "Large Corporation", "Large Company"] },
 ];
 
-/** Q2 — How much are you raising? → Investment size (25%). Raise is a $ range;
+/** Q2 — How much are you raising? → Investment size (FIT_WEIGHTS.size). Raise is a $ range;
  *  the matcher overlaps it against the investor's min/max, so these carry the
  *  numeric bounds (USD) rather than stored strings. */
 export type FitRaiseOption = { key: string; label: string; min: number; max: number };
@@ -70,7 +93,7 @@ export const Q2_RAISE: FitRaiseOption[] = [
   { key: "over_10m", label: "Over $10M", min: 10_000_000, max: Number.MAX_SAFE_INTEGER },
 ];
 
-/** Q4 — What is your revenue? → Annual revenue range (10%). */
+/** Q4 — What is your revenue? → Annual revenue range (FIT_WEIGHTS.revenue). */
 // Revenue-range values confirmed against live data (2026-09-07).
 export const Q4_REVENUE: FitOption[] = [
   { key: "pre_revenue", label: "Pre-revenue", stored: ["Less than $50k"] },
@@ -79,7 +102,7 @@ export const Q4_REVENUE: FitOption[] = [
   { key: "over_5m", label: "Over $5M", stored: ["$10m - $50m", "$50m - $100m", "Over $100m"] },
 ];
 
-/** Q3 — What sector? → Industries (35%). Generated at runtime from the distinct
+/** Q3 — What sector? → Industries (FIT_WEIGHTS.industry). Generated at runtime from the distinct
  *  Industries values across gated investors (never hardcoded, so a sector with no
  *  investor behind it is not offerable — build-spec §2). Founder value === stored value. */
 

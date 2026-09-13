@@ -26,6 +26,8 @@ import {
   OP_STAGE_LABELS,
   INV_SIZE_LABEL,
   REVENUE_LABEL,
+  FIT_WEIGHTS,
+  FIELD_KEYWORDS,
   stageStoredFor,
   raiseBoundsFor,
   revenueStoredFor,
@@ -38,7 +40,7 @@ import {
 // so a passing row already fits on sector. Threshold defaults to the industry weight, so
 // a sector-only match still shows even when imported investors carry only industry data.
 // Override with FIT_PASS_THRESHOLD.
-const WEIGHTS = { industry: 30, stage: 25, size: 20, type: 15, revenue: 10 };
+const WEIGHTS = FIT_WEIGHTS;
 const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? WEIGHTS.industry);
 
 export type MatchResult = {
@@ -139,6 +141,8 @@ export type GatedRow = {
   id: string; company: string | null; raw: Record<string, unknown> | null;
   overrides: Record<string, unknown> | null; inv_source: string | null; inv_verified_at: string | null;
   contact_type?: string | null; source?: string | null; email?: string | null;
+  /** crm_contacts.synced_at — carried so the index can record its source watermark. */
+  synced_at?: string | null;
 };
 
 /**
@@ -158,11 +162,11 @@ export function fieldsOf(row: GatedRow): MatchFields {
     // The keyword fallback catches a third spelling we haven't seen yet.
     stages: [...new Set([
       ...OP_STAGE_LABELS.flatMap((label) => mergedExtra(row, label)),
-      ...(OP_STAGE_LABELS.some((l) => mergedExtra(row, l).length) ? [] : mergedExtraLoose(row, [], ["operating stage", "operational stage"])),
+      ...(OP_STAGE_LABELS.some((l) => mergedExtra(row, l).length) ? [] : mergedExtraLoose(row, [], FIELD_KEYWORDS.stage)),
     ])],
-    sizes: mergedExtraLoose(row, [INV_SIZE_LABEL], ["investment size", "check size"]),
+    sizes: mergedExtraLoose(row, [INV_SIZE_LABEL], FIELD_KEYWORDS.size),
     types: mergedInvestorTypes(row),
-    revenues: mergedExtraLoose(row, [REVENUE_LABEL], ["annual revenue range"]),
+    revenues: mergedExtraLoose(row, [REVENUE_LABEL], FIELD_KEYWORDS.revenue),
   };
 }
 
