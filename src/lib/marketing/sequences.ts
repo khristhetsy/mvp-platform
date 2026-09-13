@@ -16,15 +16,46 @@ export async function getSequences(): Promise<MarketingSequence[]> {
   return (data ?? []) as MarketingSequence[];
 }
 
-export async function createSequence(name: string, createdBy?: string): Promise<MarketingSequence> {
+export async function createSequence(name: string, createdBy?: string, department?: string | null): Promise<MarketingSequence> {
   const db = await marketingDb();
   const { data, error } = await db
     .from("marketing_sequences")
-    .insert({ name, ...(createdBy ? { created_by: createdBy } : {}) })
+    .insert({ name, ...(createdBy ? { created_by: createdBy } : {}), ...(department ? { department } : {}) })
     .select()
     .single();
   if (error) throw error;
   return data as MarketingSequence;
+}
+
+/** Rename / move to a department (null = Unassigned). */
+export async function updateSequenceMeta(id: string, patch: { name?: string; department?: string | null }): Promise<void> {
+  const db = await marketingDb();
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.name !== undefined) update.name = patch.name.trim();
+  if (patch.department !== undefined) update.department = patch.department;
+  const { error } = await db.from("marketing_sequences").update(update).eq("id", id);
+  if (error) throw error;
+}
+
+/** "Save as": copy a sequence and its steps under a new name (draft, no enrollments). */
+export async function duplicateSequence(id: string, name: string, createdBy?: string, department?: string | null): Promise<MarketingSequence> {
+  const db = await marketingDb();
+  const { data: src, error: e1 } = await db.from("marketing_sequences").select("*, steps:marketing_sequence_steps(*)").eq("id", id).single();
+  if (e1 || !src) throw e1 ?? new Error("Sequence not found.");
+  const copy = await createSequence(name, createdBy, department === undefined ? (src.department as string | null) : department);
+  const steps = ((src.steps ?? []) as Array<Record<string, unknown>>).map((st) => ({
+    sequence_id: copy.id, step_order: st.step_order, template_id: st.template_id, delay_days: st.delay_days,
+    condition: st.condition, from_name: st.from_name, from_email: st.from_email,
+  }));
+  if (steps.length) { const { error } = await db.from("marketing_sequence_steps").insert(steps); if (error) throw error; }
+  return copy;
+}
+
+/** Active enrollments block a delete (archive instead). */
+export async function activeEnrollmentCount(sequenceId: string): Promise<number> {
+  const db = await marketingDb();
+  const { count } = await db.from("marketing_sequence_enrollments").select("id", { count: "exact", head: true }).eq("sequence_id", sequenceId).eq("status", "active");
+  return count ?? 0;
 }
 
 export async function updateSequenceStatus(

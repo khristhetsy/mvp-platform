@@ -86,6 +86,8 @@ export type MarketingSequence = {
   id: string;
   name: string;
   status: "draft" | "active" | "paused" | "archived";
+  department?: string | null;
+  approver_id?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

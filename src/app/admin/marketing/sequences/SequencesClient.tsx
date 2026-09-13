@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import type { MarketingSequence, MarketingTemplate, MarketingList } from "@/lib/marketing/types";
 import { ApproverPicker } from "./ApproverPicker";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { DEPARTMENTS, UNASSIGNED, departmentOf } from "@/lib/marketing/department-grouping";
 
 type SeqView = "grid" | "list";
 const SEQ_VIEW_KEY = "icapos.sequences.view";
-const STATUS_TABS: Array<{ value: string; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "draft", label: "Draft" },
-  { value: "active", label: "Active" },
-  { value: "paused", label: "Paused" },
-  { value: "archived", label: "Archived" },
+const SEQ_QUICK = [
+  { key: "draft", label: "Draft" }, { key: "active", label: "Active" }, { key: "paused", label: "Paused" }, { key: "archived", label: "Archived" },
+  { key: "has_steps", label: "Has steps", sep: true }, { key: "enrolled", label: "Has enrollments" },
 ];
+const SEQ_GROUPS = [{ id: "none", label: "None" }, { id: "department", label: "Department" }, { id: "status", label: "Status" }];
 
 interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; lists: MarketingList[]; defaultSender?: { name: string; email: string }; }
 
@@ -157,10 +158,10 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
       await fetch("/api/marketing/sequences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName }),
+        body: JSON.stringify({ name: newName, department: newDept || null }),
       });
       setShowCreate(false);
-      setNewName("");
+      setNewName(""); setNewDept("");
       router.refresh();
     } catch (err) {
       console.error("Failed to create sequence:", err);
@@ -200,16 +201,16 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
   async function handleDeleteSequence(sequenceId: string, name: string) {
     if (!(await confirmDialog({ message: `Delete "${name}"? Its steps and enrollments are removed too. This cannot be undone.`, danger: true, confirmLabel: "Delete" }))) return;
     try {
-      await fetch(`/api/marketing/sequences?sequence_id=${sequenceId}`, { method: "DELETE" });
+      const res = await fetch(`/api/marketing/sequences?sequence_id=${sequenceId}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setRowMsg((m) => ({ ...m, [sequenceId]: d.error ?? "Couldn't delete." })); return; }
       router.refresh();
     } catch (err) {
       console.error("Failed to delete sequence:", err);
     }
   }
 
-  // View options: grid/list + status filter (view persists).
+  // View options: grid/list (persists) + the Odoo search bar (filters, group by, favorites).
   const [view, setView] = useState<SeqView>("grid");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   useEffect(() => {
     try {
       const v = localStorage.getItem(SEQ_VIEW_KEY) as SeqView | null;
@@ -218,75 +219,58 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
     } catch { /* ignore */ }
   }, []);
   const pickView = (v: SeqView) => { setView(v); try { localStorage.setItem(SEQ_VIEW_KEY, v); } catch { /* ignore */ } };
-  const visibleSequences = statusFilter === "all" ? sequences : sequences.filter((s) => s.status === statusFilter);
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "department" });
+  const [newDept, setNewDept] = useState<string>("");
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [rowMsg, setRowMsg] = useState<Record<string, string>>({});
+  const deptOf = (s: MarketingSequence) => departmentOf(s.department ?? null);
+  const enrolledOf = (s: MarketingSequence) => s.enrollment_count ?? 0;
+  const visibleSequences = sequences.filter((s) => {
+    const { q, quick, fields } = search;
+    if (!textMatch(q, s.name, s.department)) return false;
+    const statuses = (["draft", "active", "paused", "archived"] as const).filter((st) => quick.includes(st));
+    if (statuses.length && !statuses.includes(s.status)) return false;
+    if (quick.includes("has_steps") && !(s.steps?.length)) return false;
+    if (quick.includes("enrolled") && enrolledOf(s) === 0) return false;
+    if (fields.department?.length && !fields.department.includes(deptOf(s))) return false;
+    return true;
+  });
+  const groupKey = (s: MarketingSequence) => search.groupBy === "department" ? deptOf(s) : search.groupBy === "status" ? s.status.charAt(0).toUpperCase() + s.status.slice(1) : "";
+  const grouped: Array<[string, MarketingSequence[]]> = (() => {
+    if (!search.groupBy || search.groupBy === "none") return [["", visibleSequences]];
+    const order = search.groupBy === "department" ? [...DEPARTMENTS, UNASSIGNED] : ["Draft", "Active", "Paused", "Archived"];
+    const map = new Map<string, MarketingSequence[]>();
+    for (const s of visibleSequences) { const k = groupKey(s); (map.get(k) ?? map.set(k, []).get(k)!).push(s); }
+    return [...map.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+  })();
 
-  return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>Sequences</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{sequences.length} total</div>
-        </div>
-        <button onClick={() => setShowCreate(!showCreate)}
-          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
-          + New sequence
-        </button>
-      </div>
+  async function moveToDepartment(seq: MarketingSequence, dept: string) {
+    try {
+      await fetch("/api/marketing/sequences", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sequence_id: seq.id, department: dept === UNASSIGNED ? null : dept }) });
+      router.refresh();
+    } catch (err) { console.error("Failed to move sequence:", err); }
+  }
+  async function saveAs(seq: MarketingSequence) {
+    const name = window.prompt("Save as — name for the copy", `${seq.name} (copy)`)?.trim();
+    if (!name) return;
+    try {
+      const res = await fetch("/api/marketing/sequences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, duplicate_of: seq.id }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Couldn't copy.");
+      router.refresh();
+    } catch (err) { setRowMsg((m) => ({ ...m, [seq.id]: err instanceof Error ? err.message : "Couldn't copy." })); }
+  }
+  const gearItems: GearItem[] = [
+    { key: "export", icon: "ti-download", label: "Export all", hint: `${visibleSequences.length} matching`, onClick: () => downloadCsv(`sequences-${new Date().toISOString().slice(0, 10)}.csv`, ["Sequence", "Department", "Status", "Steps", "Enrolled", "Created"], visibleSequences.map((s) => [s.name, deptOf(s), s.status, s.steps?.length ?? 0, enrolledOf(s), s.created_at.slice(0, 10)])) },
+    { key: "templates", icon: "ti-template", label: "Templates", href: "/admin/marketing/templates", sep: true },
+    { key: "lists", icon: "ti-list-details", label: "Contact lists", href: "/admin/marketing/lists" },
+  ];
 
-      {/* Create form */}
-      {showCreate && (
-        <div style={{ ...card, padding: "16px 18px", marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>New sequence</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. LP warm-up drip"
-              onKeyDown={(e) => e.key === "Enter" && handleCreateSequence()}
-              style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }} />
-            <button onClick={handleCreateSequence} disabled={saving}
-              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
-              {saving ? "Creating…" : "Create"}
-            </button>
-            <button onClick={() => setShowCreate(false)}
-              style={{ fontSize: 12, padding: "7px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {sequences.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-          <div style={{ display: "flex", gap: 4 }}>
-            {STATUS_TABS.map((t) => (
-              <button key={t.value} onClick={() => setStatusFilter(t.value)}
-                style={{ fontSize: 12, padding: "5px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: statusFilter === t.value ? "#2E78F5" : "transparent", color: statusFilter === t.value ? "#fff" : "var(--muted-foreground)" }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-            <button onClick={() => pickView("grid")} aria-label="Grid view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
-            <button onClick={() => pickView("list")} aria-label="List view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-rows" aria-hidden="true" /></button>
-          </div>
-        </div>
-      )}
-
-      {sequences.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
-          No sequences yet. Create one above.
-        </div>
-      ) : visibleSequences.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "36px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
-          No {statusFilter} sequences.
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: view === "grid" ? "1fr 1fr" : "1fr", gap: 14 }}>
-          {visibleSequences.map((seq) => {
-            const steps = seq.steps ?? [];
-            const sc = statusColors[seq.status] ?? statusColors.draft;
-            return (
-              <div key={seq.id} style={{ ...card, padding: "16px 18px" }}>
+  function renderCard(seq: MarketingSequence) {
+    const steps = seq.steps ?? [];
+    const sc = statusColors[seq.status] ?? statusColors.draft;
+    return (
+              <div style={{ ...card, padding: "16px 18px" }}>
                 {/* Header */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                   <div style={{ fontWeight: 500, fontSize: 14, color: "var(--foreground)" }}>{seq.name}</div>
@@ -488,8 +472,108 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                   </div>
                 ) : null}
               </div>
-            );
-          })}
+    );
+  }
+
+  return (
+    <div style={{ padding: 24 }}>
+      {/* Toolbar — same pattern as every admin list: New, gear, search, view toggle. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+        <NewButton onClick={() => setShowCreate(!showCreate)} />
+        <ToolbarGear items={gearItems} heading="Sequences" />
+        <div>
+          <h1 style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>Sequences</h1>
+          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{sequences.length} total</div>
+        </div>
+        <OdooSearchBar scope="marketing_sequences" state={search} onChange={setSearch} quick={SEQ_QUICK}
+          fields={[{ key: "department", label: "Department", options: [...DEPARTMENTS, UNASSIGNED] }]} groups={SEQ_GROUPS} noGroupId="none" placeholder="Search sequences…" width={440} />
+        <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+          <button onClick={() => pickView("grid")} aria-label="Grid view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
+          <button onClick={() => pickView("list")} aria-label="List view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-list" aria-hidden="true" /></button>
+        </div>
+      </div>
+
+      {/* Create form */}
+      {showCreate && (
+        <div style={{ ...card, padding: "16px 18px", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>New sequence</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+              placeholder="e.g. LP warm-up drip"
+              onKeyDown={(e) => e.key === "Enter" && handleCreateSequence()}
+              style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }} />
+            <select value={newDept} onChange={(e) => setNewDept(e.target.value)} style={{ fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff", color: "var(--foreground)" }}>
+              <option value="">Department…</option>
+              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <button onClick={handleCreateSequence} disabled={saving}
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
+              {saving ? "Creating…" : "Create"}
+            </button>
+            <button onClick={() => setShowCreate(false)}
+              style={{ fontSize: 12, padding: "7px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sequences.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
+          No sequences yet. Create one above.
+        </div>
+      ) : visibleSequences.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "36px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
+          No sequences match these filters.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {grouped.map(([gk, list]) => (
+            <div key={gk || "_all"}>
+              {gk && (
+                <button type="button" onClick={() => setCollapsed((c) => ({ ...c, [gk]: !c[gk] }))} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#E6F1FB", border: "none", borderRadius: 8, cursor: "pointer", marginBottom: 8 }}>
+                  <i className={`ti ti-chevron-${collapsed[gk] ? "right" : "down"}`} style={{ color: "#0C447C", fontSize: 13 }} aria-hidden="true" />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{gk}</span>
+                  <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{list.length}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "#185FA5" }}>{(["active", "draft", "paused", "archived"] as const).map((st) => [st, list.filter((s) => s.status === st).length] as const).filter(([, n]) => n > 0).map(([st, n]) => `${n} ${st}`).join(" · ")}{list.reduce((a, s) => a + enrolledOf(s), 0) ? ` · ${list.reduce((a, s) => a + enrolledOf(s), 0)} enrolled` : ""}</span>
+                </button>
+              )}
+              {!collapsed[gk] && (view === "grid" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>{list.map((seq) => <div key={seq.id}>{renderCard(seq)}</div>)}</div>
+              ) : (
+                <div style={{ ...card, overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.8fr 150px 90px 60px 80px 1fr 150px", gap: 8, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    <span>Sequence</span><span>Department</span><span>Status</span><span>Steps</span><span>Enrolled</span><span>Approver</span><span style={{ textAlign: "right" }}>Actions</span>
+                  </div>
+                  {list.map((seq) => {
+                    const sc = statusColors[seq.status] ?? statusColors.draft;
+                    const open = !!openIds[seq.id];
+                    return (
+                      <div key={seq.id}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1.8fr 150px 90px 60px 80px 1fr 150px", gap: 8, alignItems: "center", padding: "9px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, background: open ? "#F5F9FF" : undefined }}>
+                          <button type="button" onClick={() => setOpenIds((o) => ({ ...o, [seq.id]: !open }))} style={{ textAlign: "left", background: "none", border: "none", cursor: "pointer", fontWeight: 500, color: "var(--foreground)", padding: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{seq.name}</button>
+                          <select value={deptOf(seq)} onChange={(e) => void moveToDepartment(seq, e.target.value)} style={{ fontSize: 11.5, padding: "3px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}>
+                            {[...DEPARTMENTS, UNASSIGNED].map((d) => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                          <span><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>{seq.status.charAt(0).toUpperCase() + seq.status.slice(1)}</span></span>
+                          <span>{seq.steps?.length ?? 0}</span>
+                          <span>{enrolledOf(seq) || "—"}</span>
+                          <span style={{ minWidth: 0 }}><ApproverPicker sequenceId={seq.id} initialApproverId={seq.approver_id ?? null} /></span>
+                          <span style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                            <button type="button" onClick={() => setOpenIds((o) => ({ ...o, [seq.id]: !open }))} title={open ? "Close" : "View"} aria-label="View" style={{ border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "#185FA5", fontSize: 13 }}><i className={`ti ${open ? "ti-eye-off" : "ti-eye"}`} aria-hidden="true" /></button>
+                            <button type="button" onClick={() => void saveAs(seq)} title="Save as…" aria-label="Save as" style={{ border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 13 }}><i className="ti ti-copy" aria-hidden="true" /></button>
+                            <button type="button" onClick={() => void handleDeleteSequence(seq.id, seq.name)} title="Delete" aria-label="Delete" style={{ border: "0.5px solid #F7C1C1", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "#A32D2D", fontSize: 13 }}><i className="ti ti-trash" aria-hidden="true" /></button>
+                          </span>
+                          {rowMsg[seq.id] && <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: "#A32D2D" }}>{rowMsg[seq.id]} <button type="button" onClick={() => setRowMsg((m) => { const n = { ...m }; delete n[seq.id]; return n; })} style={{ border: "none", background: "none", color: "var(--muted-foreground)", cursor: "pointer" }}>×</button></div>}
+                        </div>
+                        {open && <div style={{ padding: "0 14px 14px", borderTop: "0.5px solid #eef1f5", background: "#F5F9FF" }}><div style={{ marginTop: 12 }}>{renderCard(seq)}</div></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>
