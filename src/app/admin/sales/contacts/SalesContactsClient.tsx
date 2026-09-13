@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
 import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
 import { MassEmailComposer, type SelectionPayload } from "@/components/marketing/MassEmailComposer";
+import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 
 type SavedSearch = { id: string; name: string; spec: FilterSpec; groupBy: string | null; columns: string[] | null; isDefault: boolean; isShared: boolean; mine: boolean; ownerName?: string; canDelete?: boolean };
 
@@ -108,6 +110,35 @@ function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort
 
 const LIST_DEPARTMENTS = ["Marketing", "Sales", "Investor Relations", "Administration", "Events"] as const;
 
+type ImportRow = { name: string; email?: string; company?: string; phone?: string; type?: "founder" | "investor" | "advisor" | "other" };
+/** Minimal RFC-4180 CSV → rows keyed by a lenient header match (name / email / company / phone / type). */
+function parseContactsCsv(text: string): { rows: ImportRow[]; skipped: number } {
+  const lines: string[][] = [];
+  let cur: string[] = [], field = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) { if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; } else field += ch; continue; }
+    if (ch === '"') inQ = true;
+    else if (ch === ",") { cur.push(field); field = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; cur.push(field); lines.push(cur); cur = []; field = ""; }
+    else field += ch;
+  }
+  if (field || cur.length) { cur.push(field); lines.push(cur); }
+  const header = (lines.shift() ?? []).map((h) => h.trim().toLowerCase());
+  const col = (...keys: string[]) => header.findIndex((h) => keys.some((k) => h === k || h.includes(k)));
+  const iName = col("name", "contact"), iEmail = col("email"), iCompany = col("company", "firm", "organization"), iPhone = col("phone", "mobile"), iType = col("type", "role");
+  const rows: ImportRow[] = []; let skipped = 0;
+  for (const l of lines) {
+    if (l.every((c) => !c.trim())) continue;
+    const name = (iName >= 0 ? l[iName] : "")?.trim();
+    if (!name) { skipped++; continue; }
+    const t = (iType >= 0 ? l[iType] : "")?.trim().toLowerCase();
+    const type = t.startsWith("found") || t.startsWith("entre") ? "founder" : t.startsWith("inv") ? "investor" : t.startsWith("adv") ? "advisor" : t ? "other" : undefined;
+    rows.push({ name, email: iEmail >= 0 ? l[iEmail]?.trim() || undefined : undefined, company: iCompany >= 0 ? l[iCompany]?.trim() || undefined : undefined, phone: iPhone >= 0 ? l[iPhone]?.trim() || undefined : undefined, type });
+  }
+  return { rows, skipped };
+}
+
 const LEAD_SOURCE_OPTS = ["LinkedIn", "Referral", "Website", "Event", "Conference", "Cold outreach", "Email campaign", "Partner", "Inbound", "Webinar", "Other"];
 
 export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; odooSearch?: boolean; basePath?: string }) {
@@ -153,6 +184,13 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [facetSearch, setFacetSearch] = useState("");
 
   const [adding, setAdding] = useState(false);
+  // Gear menu: Import from Odoo (pull now), Import from CSV (preview → commit), Export all.
+  const [gearMsg, setGearMsg] = useState<string | null>(null);
+  const [gearBusy, setGearBusy] = useState(false);
+  const [csvRows, setCsvRows] = useState<ImportRow[] | null>(null);
+  const [csvPreview, setCsvPreview] = useState<{ total: number; toCreate: number; skippedDupInFile: number; skippedExisting: number; sample: { name: string; email: string; company: string }[]; created?: number } | null>(null);
+  const [csvSkipped, setCsvSkipped] = useState(0);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [addDraft, setAddDraft] = useState({ name: "", email: "", company: "", phone: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -547,6 +585,59 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     } catch (e) { setAssignMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setAssignBusy(false); }
   }
 
+  async function pullFromOdoo() {
+    setGearBusy(true); setGearMsg("Pulling changes from Odoo…");
+    try {
+      const res = await fetch("/api/sales/contacts/sync", { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? "Sync failed.");
+      setGearMsg(`Pulled ${Number(d.synced ?? 0).toLocaleString()} changed contact${d.synced === 1 ? "" : "s"} from Odoo${d.failed ? ` — ${d.failed} source failed` : ""}.`);
+      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+    } catch (e) { setGearMsg(e instanceof Error ? e.message : "Sync failed."); } finally { setGearBusy(false); }
+  }
+  async function onCsvFile(f: File | null) {
+    if (!f) return;
+    const { rows, skipped } = parseContactsCsv(await f.text());
+    setCsvRows(rows); setCsvSkipped(skipped); setCsvPreview(null);
+    if (rows.length === 0) { setGearMsg("No rows with a name found in that file."); setCsvRows(null); return; }
+    setGearBusy(true);
+    try {
+      const res = await fetch("/api/sales/contacts/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "preview", rows }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Couldn't read the file.");
+      setCsvPreview(d);
+    } catch (e) { setGearMsg(e instanceof Error ? e.message : "Couldn't read the file."); setCsvRows(null); } finally { setGearBusy(false); }
+  }
+  async function commitCsv() {
+    if (!csvRows) return;
+    setGearBusy(true);
+    try {
+      const res = await fetch("/api/sales/contacts/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "commit", rows: csvRows }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Import failed.");
+      setCsvPreview(d);
+      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+    } catch (e) { setGearMsg(e instanceof Error ? e.message : "Import failed."); } finally { setGearBusy(false); }
+  }
+  async function exportAll() {
+    setGearBusy(true); setGearMsg("Preparing export…");
+    try {
+      const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "export", mode: "filter", params: paramsStr, group: role || undefined }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Export failed."); }
+      const blob = await res.blob();
+      const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "contacts.csv";
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      setGearMsg(`Exported ${matchingTotal.toLocaleString()} contact${matchingTotal === 1 ? "" : "s"} to ${name}.`);
+    } catch (e) { setGearMsg(e instanceof Error ? e.message : "Export failed."); } finally { setGearBusy(false); }
+  }
+  const gearItems: GearItem[] = [
+    { key: "odoo", icon: "ti-cloud-download", label: gearBusy ? "Working…" : "Import from Odoo", onClick: () => void pullFromOdoo() },
+    { key: "csv", icon: "ti-upload", label: "Import from CSV", onClick: () => csvInputRef.current?.click() },
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${matchingTotal.toLocaleString()} matching`, onClick: () => void exportAll() } as GearItem] : []),
+    { key: "cols", icon: "ti-columns", label: "Columns", sep: true, onClick: () => { setOpenColPicker(true); setFiltersOpen(false); setOpenFilter(null); } },
+    ...(basePath.startsWith("/admin/sales") ? [{ key: "members", icon: "ti-users", label: "Assignable members", href: "/admin/sales/settings" } as GearItem] : []),
+  ];
+
   const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
   const filterBadge = (role ? 1 : 0) + facetCount;
   const roleFacets = FACETS_BY_ROLE[role || "any"];
@@ -608,6 +699,9 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <NewButton onClick={() => setAdding((v) => !v)} />
+        <ToolbarGear items={gearItems} heading="Contacts" />
+        <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={(e) => { void onCsvFile(e.target.files?.[0] ?? null); e.target.value = ""; }} style={{ display: "none" }} />
         {odooSearch ? (
           <OdooSearchBar
             spec={spec} typed={typed} setTyped={setTyped} searchOpen={searchOpen} setSearchOpen={setSearchOpen}
@@ -720,8 +814,48 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             </div>
           )}
         </div>
-        <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>+ Add contact</button>
+        {basePath.startsWith("/admin/sales") && <SalesViewControl />}
       </div>
+
+      {gearMsg && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: gearBusy ? "#E6F1FB" : /fail|couldn|no rows/i.test(gearMsg) ? "#FCEBEB" : "#E1F5EE", border: `0.5px solid ${gearBusy ? "#B5D4F4" : /fail|couldn|no rows/i.test(gearMsg) ? "#F7C1C1" : "#A7E0CE"}`, borderRadius: 10, padding: "9px 13px", marginBottom: 12, fontSize: 12.5, color: gearBusy ? "#0C447C" : /fail|couldn|no rows/i.test(gearMsg) ? "#A32D2D" : "#0F6E56" }}>
+          <span style={{ fontWeight: 500 }}>{gearMsg}</span>
+          {!gearBusy && <button onClick={() => setGearMsg(null)} style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>}
+        </div>
+      )}
+
+      {csvRows && (
+        <div onClick={() => { if (!gearBusy) { setCsvRows(null); setCsvPreview(null); } }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: 16, width: 480, maxWidth: "100%", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Import contacts from CSV</div>
+            {!csvPreview ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>Checking {csvRows.length.toLocaleString()} rows against the book…</p> : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 10 }}>
+                  <div style={{ background: "var(--muted)", borderRadius: 8, padding: 10 }}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{csvPreview.created != null ? "Imported" : "New"}</div><div style={{ fontSize: 22, fontWeight: 600, color: "#0F6E56" }}>{csvPreview.created ?? csvPreview.toCreate}</div></div>
+                  <div style={{ background: "var(--muted)", borderRadius: 8, padding: 10 }}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Already in iCapOS</div><div style={{ fontSize: 22, fontWeight: 600 }}>{csvPreview.skippedExisting}</div></div>
+                  <div style={{ background: "var(--muted)", borderRadius: 8, padding: 10 }}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Skipped</div><div style={{ fontSize: 22, fontWeight: 600, color: "var(--muted-foreground)" }}>{csvPreview.skippedDupInFile + csvSkipped}</div></div>
+                </div>
+                <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>{csvPreview.total.toLocaleString()} rows read · {csvSkipped} without a name · {csvPreview.skippedDupInFile} repeated emails. Columns matched by header: name, email, company, phone, type.</p>
+                {csvPreview.created == null && csvPreview.sample.length > 0 && (
+                  <div style={{ border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden", fontSize: 12, marginBottom: 12 }}>
+                    {csvPreview.sample.map((r, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 10px", borderTop: i ? "0.5px solid #f1f4f8" : "none" }}><span>{r.name}{r.company ? ` · ${r.company}` : ""}</span><span style={{ color: "var(--muted-foreground)" }}>{r.email}</span></div>)}
+                  </div>
+                )}
+              </>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              {csvPreview?.created != null ? (
+                <button onClick={() => { setCsvRows(null); setCsvPreview(null); }} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Done</button>
+              ) : (
+                <>
+                  <button onClick={() => { setCsvRows(null); setCsvPreview(null); }} disabled={gearBusy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => void commitCsv()} disabled={gearBusy || !csvPreview || csvPreview.toCreate === 0} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: gearBusy || !csvPreview || csvPreview.toCreate === 0 ? 0.5 : 1 }}>{gearBusy ? "Importing…" : `Import ${csvPreview?.toCreate ?? 0} contacts`}</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {adding && (
         <div style={{ background: "#F5F9FF", border: "0.5px solid #BFDBFE", borderRadius: 10, padding: 14, marginBottom: 12, display: "grid", gridTemplateColumns: "1.4fr 1.4fr 1fr 1fr auto", gap: 8, alignItems: "center" }}>
@@ -1149,7 +1283,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
   );
 
   return (
-    <div style={{ position: "relative", flex: "0 1 560px", minWidth: 280, marginLeft: "auto" }}>
+    <div style={{ position: "relative", flex: "1 1 360px", minWidth: 280, maxWidth: 640 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
         {p.spec.conditions.map((c, i) => (
           <span key={i} style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #B5D4F4", background: "#E6F1FB", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>

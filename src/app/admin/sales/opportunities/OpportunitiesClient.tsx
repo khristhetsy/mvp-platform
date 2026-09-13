@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -87,6 +89,10 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
   const [emailOpen, setEmailOpen] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
+  // New opportunity (inline, like Add contact on Contacts).
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ name: "", email: "", company: "", value: "" });
+  const [addErr, setAddErr] = useState<string | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ImportSummary | null>(null);
   const [importBusy, setImportBusy] = useState(false);
@@ -121,6 +127,18 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
     finally { setBusy(false); }
   }
 
+  async function addOpportunity() {
+    if (!draft.name.trim()) return;
+    setBusy(true); setAddErr(null);
+    try {
+      const cents = draft.value.trim() ? Math.round(Number(draft.value.replace(/[^0-9.]/g, "")) * 100) : null;
+      const res = await fetch("/api/sales/opportunities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: draft.name.trim(), email: draft.email.trim() || null, company: draft.company.trim() || null, valueCents: Number.isFinite(cents) ? cents : null }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.opportunity) throw new Error(d.error ?? "Couldn't create the opportunity.");
+      setAdding(false); setDraft({ name: "", email: "", company: "", value: "" });
+      await load();
+    } catch (e) { setAddErr(e instanceof Error ? e.message : "Couldn't create the opportunity."); } finally { setBusy(false); }
+  }
   function resetImport() { setImportOpen(false); setImportFile(null); setImportPreview(null); setImportErr(null); setImportDone(null); setImportBusy(false); setImportSource("live"); }
   async function runImport(mode: "preview" | "commit", source: "live" | "file", file: File | null) {
     setImportBusy(true); setImportErr(null);
@@ -177,6 +195,19 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
       return true;
     });
   }, [opps, search, meId, stageNameById]);
+
+  function exportAll() {
+    downloadCsv(`opportunities-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Opportunity", "Contact", "Email", "Stage", "Status", "Owner", "Value", "Billing", "Probability", "Expected close", "Source", "Created"],
+      filtered.map((o) => [o.title, o.contact_name, o.contact_email, o.stage_name, o.status, ownerLabel(o), o.value_cents == null ? "" : (o.value_cents / 100).toFixed(2), o.billing, o.probability ?? "", o.expected_close ?? "", sourceLabel(o), o.created_at.slice(0, 10)]));
+  }
+  const gearItems: GearItem[] = [
+    { key: "odoo", icon: "ti-cloud-download", label: "Import from Odoo", onClick: () => setImportOpen(true) },
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${filtered.length.toLocaleString()} matching`, onClick: exportAll } as GearItem] : []),
+    { key: "cols", icon: "ti-columns", label: "Columns", sep: true, onClick: () => setColsOpen(true) },
+    { key: "kanban", icon: "ti-layout-kanban", label: "Kanban board", href: "/admin/sales/pipeline" },
+    { key: "stages", icon: "ti-adjustments", label: "Edit stages", href: "/admin/sales/pipeline?view=stages" },
+  ];
 
   const groups = useMemo(() => {
     if (groupBy === "none") return null;
@@ -270,10 +301,10 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
     <div>
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "visible" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>Opportunities</span>
+          <NewButton onClick={() => setAdding((v) => !v)} />
+          <ToolbarGear items={gearItems} heading="Opportunities" />
           <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{filtered.length}{filtered.length !== opps.length ? ` / ${opps.length}` : ""}</span>
           <OdooSearchBar scope="opportunities" state={search} onChange={setSearch} quick={QUICK_FILTERS} fields={searchFields} groups={GROUP_OPTIONS} noGroupId="none" placeholder="Search opportunity, contact, or email…" width={520} />
-          <div style={{ flex: 1 }} />
 
           <div style={{ position: "relative" }}>
             <button type="button" onClick={() => setColsOpen((v) => !v)} style={toolBtn()}><i className="ti ti-columns" aria-hidden="true" /> Columns</button>
@@ -289,9 +320,22 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
             </>}
           </div>
 
-          <Link href="/admin/sales/pipeline" style={{ ...toolBtn(), textDecoration: "none" }}><i className="ti ti-layout-kanban" aria-hidden="true" /> Kanban</Link>
-          <button type="button" onClick={() => setImportOpen(true)} style={{ ...toolBtn(), color: "#185FA5" }}><i className="ti ti-download" aria-hidden="true" /> Import from Odoo</button>
+          <SalesViewControl />
         </div>
+
+        {adding && (
+          <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "1.4fr 1.4fr 1fr 0.7fr auto", gap: 8, alignItems: "center" }}>
+            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contact name *" autoFocus style={inp} />
+            <input value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} placeholder="Email" style={inp} />
+            <input value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="Company" style={inp} />
+            <input value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder="Value $" style={inp} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button type="button" onClick={() => void addOpportunity()} disabled={busy || !draft.name.trim()} style={{ ...btn("#0F6E56"), opacity: busy || !draft.name.trim() ? 0.5 : 1 }}>Create</button>
+              <button type="button" onClick={() => { setAdding(false); setAddErr(null); }} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+            </div>
+            {addErr && <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: "#A32D2D" }}>{addErr}</div>}
+          </div>
+        )}
 
         <ActionResult text={actionResult} onClose={() => setActionResult(null)} />
         <SelectionBar count={selectionCount} total={filteredIds.length} onSelectAll={() => setSelected(new Set(filteredIds))} onClear={clearSelection} actions={selectionActions} busy={busy} heading="Selected opportunities" />

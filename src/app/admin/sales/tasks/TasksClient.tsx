@@ -2,6 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -50,7 +52,7 @@ function dueLabel(d: string | null): { text: string; color: string } {
   return { text: d, color: "var(--muted-foreground)" };
 }
 
-export function TasksClient({ staff }: { staff: Staff[] }) {
+export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canExport?: boolean }) {
   const [scope, setScope] = useState<Scope>("my");
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -176,16 +178,19 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
     <div>
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>Tasks &amp; activities</span>
+          <NewButton onClick={() => setAdding((v) => !v)} />
+          <ToolbarGear heading="Tasks" items={[
+            ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${visibleTasks.length.toLocaleString()} matching`, onClick: () => downloadCsv(`tasks-${new Date().toISOString().slice(0, 10)}.csv`, ["Task", "Type", "Due", "Status", "Assignee", "Contact", "Opportunity", "Source"], visibleTasks.map((t) => [t.title, t.task_type, t.due_date ?? "", t.status, t.assignee_name ?? "", t.contact_name ?? "", t.opportunity_name ?? "", t.source ?? "icapos"])) } as GearItem] : []),
+            { key: "settings", icon: "ti-adjustments", label: "Task settings", href: "/admin/sales/settings" },
+          ]} />
           <div style={{ display: "flex", background: "var(--muted)", borderRadius: 7, padding: 2 }}>
             <button onClick={() => setScope("my")} style={scopeTab("my", "My")}>My</button>
             <button onClick={() => setScope("all")} style={scopeTab("all", "All")}>All</button>
             <button onClick={() => setScope("overdue")} style={scopeTab("overdue", "Overdue", true)}>Overdue{scope !== "overdue" && overdueCount ? ` ${overdueCount}` : ""}</button>
           </div>
           {odooCount > 0 && <span style={{ fontSize: 11, color: "#6B3FA0" }}>{odooCount} from Odoo</span>}
-          <div style={{ flex: 1 }} />
           <OdooSearchBar scope="tasks" state={search} onChange={setSearch} quick={TASK_QUICK} fields={searchFields} groups={TASK_GROUPS} noGroupId="none" placeholder="Search task, contact, deal…" width={440} />
-          <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ New task</button>
+          <SalesViewControl />
         </div>
 
         {adding && (

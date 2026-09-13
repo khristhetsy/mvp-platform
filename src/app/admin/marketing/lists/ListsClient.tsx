@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
 import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
@@ -230,19 +231,15 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>Contact lists</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{lists.length} total · group contacts into lists to target campaigns</div>
-        </div>
-        <button onClick={openCreate}
-          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
-          + New list
-        </button>
-      </div>
-
-      {/* Toolbar: group toggle + sort + show archived */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <NewButton onClick={openCreate} />
+        <ToolbarGear heading="Contact lists" items={[
+          { key: "export", icon: "ti-download", label: "Export all", hint: `${visible.length.toLocaleString()} matching`, onClick: () => downloadCsv(`lists-${new Date().toISOString().slice(0, 10)}.csv`, ["List", "Department", "Contacts", "Description", "Archived", "Created"], visible.map((l) => [l.name, deptOf(l), l.contact_count, l.description ?? "", l.archived ? "yes" : "", (l.created_at ?? "").slice(0, 10)])) } as GearItem,
+        ]} />
+        <div>
+          <h1 style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", margin: 0 }}>Contact lists</h1>
+          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{lists.length} total</div>
+        </div>
         <OdooSearchBar scope="marketing_lists" state={search} onChange={setSearch}
           quick={[{ key: "has_contacts", label: "Has contacts" }, { key: "empty", label: "Empty" }, { key: "this_month", label: "Created this month" }, { key: "archived", label: `Archived${archivedCount ? ` (${archivedCount})` : ""}`, sep: true }]}
           fields={[{ key: "department", label: "Department", options: [...DEPARTMENTS, UNASSIGNED] }]}

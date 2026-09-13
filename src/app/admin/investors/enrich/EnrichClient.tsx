@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 
 type Row = {
   id: string; contact_id: string; company: string | null; proposed_industries: string[]; proposed_type: string | null;
@@ -281,7 +282,11 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
         {highCount > 0 ? <button type="button" onClick={() => void bulk()} disabled={busy} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-[13px] font-medium text-emerald-700 disabled:opacity-50">✓ Approve all ≥{HIGH}% ({highCount})</button> : null}
         <span className="ml-auto text-[12px] text-slate-500">{visibleRows.length !== rows.length ? `${visibleRows.length} of ` : ""}{rows.length} pending{msg ? ` · ${msg}` : ""}</span>
       </div>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-center gap-2">
+        <ToolbarGear heading="Enrichment queue" items={[
+          { key: "export", icon: "ti-download", label: "Export queue", hint: `${visibleRows.length.toLocaleString()} matching`, onClick: () => downloadCsv(`enrichment-queue-${new Date().toISOString().slice(0, 10)}.csv`, ["Company", "Proposed type", "Proposed industries", "Proposed stage", "Confidence", "Basis", "Rationale"], visibleRows.map((r) => [r.company ?? "", r.proposed_type ?? "", r.proposed_industries, r.proposed_stage, r.confidence, r.basis ?? "", r.rationale ?? ""])) } as GearItem,
+        ]} />
+        <div className="flex-1" />
         <OdooSearchBar scope="investor_enrichment" state={search} onChange={setSearch}
           quick={[{ key: "high", label: `Confidence ≥ ${HIGH}%` }, { key: "low", label: `Confidence < ${HIGH}%` }, { key: "has_stage", label: "Has stage proposal", sep: true }, { key: "no_stage", label: "No stage proposal" }, { key: "has_type", label: "Has investor type" }]}
           fields={[{ key: "type", label: "Investor type", options: typeOptions }, { key: "industry", label: "Industry", options: industryOptions }, { key: "basis", label: "Basis", options: basisOptions }]}

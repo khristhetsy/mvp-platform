@@ -13,7 +13,7 @@ export default async function BookingsPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <BookingsClient bookings={bookings} />
+      <BookingsClient bookings={bookings} canExport={profile.role === "admin"} />
     </AppShell>
   );
 }

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean; sequence_id: string | null };
 type SeqOption = { id: string; name: string; status: string };
@@ -47,13 +49,19 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
   useEffect(() => { try { window.localStorage.setItem("pipeline.view", JSON.stringify(view)); } catch { /* ignore */ } }, [view]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ name: "", company: "", value: "" });
   const [sequences, setSequences] = useState<SeqOption[]>([]);
   // Delete-stage modal: choose where the stage's deals go, surface guard errors.
   const [delTarget, setDelTarget] = useState<Stage | null>(null);
   const [reassignTo, setReassignTo] = useState<string>("");
   const [delErr, setDelErr] = useState<string | null>(null);
   const [delBusy, setDelBusy] = useState(false);
-  const viewAs = useSearchParams().get("viewAs");
+  const searchParams = useSearchParams();
+  const viewAs = searchParams.get("viewAs");
+  const viewParam = searchParams.get("view");
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- deep link (?view=stages) from the Opportunities gear
+  useEffect(() => { if (viewParam === "stages" || viewParam === "list" || viewParam === "board") setView(viewParam); }, [viewParam]);
   const viewQ = viewAs ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
 
   const load = useCallback(async () => {
@@ -138,6 +146,12 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
 
   const stages = useMemo(() => (pipeline?.stages ?? []).slice().sort((a, b) => a.sort_order - b.sort_order), [pipeline]);
   const stageName = useMemo(() => new Map(stages.map((s) => [s.id, s.name])), [stages]);
+  async function addDeal() {
+    if (!draft.name.trim()) return;
+    const cents = draft.value.trim() ? Math.round(Number(draft.value.replace(/[^0-9.]/g, "")) * 100) : null;
+    await call("/api/sales/opportunities", "POST", { name: draft.name.trim(), company: draft.company.trim() || null, valueCents: Number.isFinite(cents) ? cents : null, pipelineId: pipeline?.id ?? null, stageId: stages[0]?.id ?? null });
+    setAdding(false); setDraft({ name: "", company: "", value: "" });
+  }
 
   // Deals in this pipeline that pass search + filters. Board and List both read this.
   const ownerOptions = useMemo(() => [...new Set(board.map(ownerLabel))].sort(), [board]);
@@ -204,6 +218,12 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
     { key: "archive", icon: "ti-archive", label: "Archive", run: () => void bulk({ op: "status", status: "archived" }, "Archived") },
   ];
 
+  const gearItems: GearItem[] = [
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${filtered.length.toLocaleString()} matching`, onClick: () => downloadCsv(`pipeline-${new Date().toISOString().slice(0, 10)}.csv`, ["Deal", "Contact", "Stage", "Owner", "Value", "Probability", "Expected close", "Source", "Created"], filtered.map((o) => [o.title, o.contact_name, stageName.get(o.stage_id ?? "") ?? "", ownerLabel(o), o.value_cents == null ? "" : (o.value_cents / 100).toFixed(2), o.probability ?? "", o.expected_close ?? "", sourceLabel(o), o.created_at.slice(0, 10)])) } as GearItem] : []),
+    { key: "stages", icon: "ti-adjustments", label: "Edit stages", sep: canExport, onClick: () => setView("stages") },
+    { key: "newp", icon: "ti-plus", label: "New pipeline", onClick: () => void newPipeline() },
+    ...(pipeline ? [{ key: "rename", icon: "ti-pencil", label: "Rename pipeline", onClick: () => void renamePipeline() } as GearItem] : []),
+  ];
   const segBtn = (on: boolean, first = false): React.CSSProperties => ({ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: first ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: on ? 600 : 400, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 });
   const LIST_COLS = "30px 1.8fr 1.1fr 130px 1fr 90px 100px 80px";
 
@@ -217,11 +237,11 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
         </div>
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <NewButton onClick={() => setAdding((v) => !v)} />
+        <ToolbarGear items={gearItems} heading="Pipeline" />
         <select value={selId} onChange={(e) => setSelId(e.target.value)} style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4" }}>
           {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>)}
         </select>
-        <button onClick={newPipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "6px 11px", cursor: "pointer" }}>+ New pipeline</button>
-        {pipeline && <button onClick={renamePipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Rename</button>}
         {view !== "stages" && (
           <OdooSearchBar scope="opportunities" state={search} onChange={setSearch} quick={PIPE_QUICK} fields={searchFields} groups={PIPE_GROUPS} noGroupId="none" placeholder={view === "board" ? "Search cards…" : "Search deals…"} width={480} />
         )}
@@ -230,7 +250,20 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
           <button type="button" onClick={() => setView("list")} style={segBtn(view === "list")}><i className="ti ti-list" aria-hidden="true" /> List</button>
           <button type="button" onClick={() => setView("stages")} style={segBtn(view === "stages")}>Edit stages</button>
         </div>
+        <SalesViewControl />
       </div>
+
+      {adding && (
+        <div style={{ background: "#F5F9FF", border: "0.5px solid #BFDBFE", borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "1.4fr 1fr 0.7fr auto", gap: 8, alignItems: "center" }}>
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contact name *" autoFocus style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff" }} />
+          <input value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="Company" style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff" }} />
+          <input value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder="Value $" style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff" }} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <button type="button" onClick={() => void addDeal()} disabled={busy || !draft.name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.name.trim() ? 0.5 : 1 }}>Create in {stages[0]?.name ?? "first stage"}</button>
+            <button type="button" onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+          </div>
+        </div>
+      )}
 
       {view === "list" ? (
         <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>

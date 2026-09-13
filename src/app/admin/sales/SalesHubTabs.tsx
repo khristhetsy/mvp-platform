@@ -22,7 +22,7 @@ type Member = { id: string; name: string };
 const TABS = SALES_HUB_TABS;
 
 /** `viewOnly`: compact chrome — the tabs live in the top bar, so only the View control renders here. */
-export function SalesHubTabs({ viewOnly = false }: { viewOnly?: boolean } = {}) {
+export function SalesHubTabs({ viewOnly = false, inline = false }: { viewOnly?: boolean; inline?: boolean } = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -68,7 +68,7 @@ export function SalesHubTabs({ viewOnly = false }: { viewOnly?: boolean } = {}) 
   if (viewOnly && !canViewTeam) return null;
   return (
     <div style={viewOnly
-      ? { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 8, flexWrap: "wrap" }
+      ? { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: inline ? 0 : 8, marginLeft: inline ? "auto" : undefined, flexWrap: "wrap" }
       : { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, borderBottom: "0.5px solid var(--border)", marginBottom: 18, flexWrap: "wrap" }}>
       {!viewOnly && <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         {TABS.map((t) => {

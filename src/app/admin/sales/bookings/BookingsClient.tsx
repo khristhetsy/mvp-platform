@@ -2,6 +2,8 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import Link from "next/link";
 import type { Booking } from "@/lib/scheduling/bookings";
 
@@ -39,7 +41,7 @@ function gcalUrl(b: Booking): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
+export function BookingsClient({ bookings: initial, canExport = false }: { bookings: Booking[]; canExport?: boolean }) {
   const [bookings, setBookings] = useState<Booking[]>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
@@ -83,16 +85,21 @@ export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
 
   return (
     <div style={{ padding: "0 24px 24px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
+        <ToolbarGear heading="Bookings" items={[
+          ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${filtered.length.toLocaleString()} matching`, onClick: () => downloadCsv(`bookings-${new Date().toISOString().slice(0, 10)}.csv`, ["Invitee", "Email", "Company", "Event", "Host", "Start", "End", "Status"], filtered.map((b) => [b.booker_name, b.booker_email, b.booker_company, b.event_type, b.host_name ?? b.host_email ?? "", b.start_time, b.end_time, b.status])) } as GearItem] : []),
+          { key: "events", icon: "ti-calendar-event", label: "Event types and scheduling link", href: "/admin/sales/settings" },
+        ]} />
         <div>
-          <h2 style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>Bookings</h2>
-          <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>{bookings.length} total · from your iCapOS scheduler</p>
+          <h2 style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>Bookings</h2>
+          <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "1px 0 0" }}>{bookings.length} total · from your iCapOS scheduler</p>
         </div>
         <OdooSearchBar scope="bookings" state={search} onChange={setSearch}
           quick={[{ key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }, { key: "completed", label: "Completed", sep: true }, { key: "cancelled", label: "Cancelled" }, { key: "no_show", label: "No-show" }]}
           fields={searchFields}
           groups={[{ id: "none", label: "None" }, { id: "host", label: "Host" }, { id: "event", label: "Event type" }, { id: "week", label: "Week" }]}
           noGroupId="none" placeholder="Search invitee, email, event…" width={460} />
+        <SalesViewControl />
       </div>
 
       {bookings.length === 0 ? (
