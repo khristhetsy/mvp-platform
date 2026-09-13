@@ -17,6 +17,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows } from "@/lib/supabase/paged";
 import { canonicalInvestorType } from "@/lib/fit/options";
 import { reindexContacts } from "@/lib/fit/match-index";
+import { mergeOverrides } from "@/lib/sales/overrides";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -165,27 +166,23 @@ export async function applyBackfill(): Promise<{ rowsRead: number; scanned: numb
     // NOTE: no updated_at — crm_contacts does not have that column (it has synced_at,
     // written by the connector). Including it failed every update, which is exactly the
     // "Applied — 0 company names" we saw with 73 qualifying rows.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const patch: Record<string, any> = {};
-    if (ch.newCompany) patch.company = ch.newCompany;
+    // Company is a plain column; investor type lives in overrides and goes through the
+    // atomic merge so nothing here can clobber another writer or wipe the column.
     if (ch.newType) {
-      // The error MUST be checked. Without it a failed read gives c = null, `?? {}`
-      // produces an empty object, and the update below replaces the whole overrides
-      // column — destroying every approved industry, stage, size and provenance tag on
-      // that contact, while still reporting success. There is no backup of overrides.
-      const { data: c, error: readErr } = await db().from("crm_contacts").select("overrides").eq("id", ch.contactId).maybeSingle();
-      if (readErr || !c) {
+      const merged = await mergeOverrides(ch.contactId, { set: { "Investor type": [ch.newType] } }, "applyBackfill");
+      if (merged === null) {
         errors++;
-        if (!firstError) firstError = `read overrides failed: ${readErr?.message ?? "no row"}`;
+        if (!firstError) firstError = "merge_contact_overrides failed (see log)";
         continue;
       }
-      patch.overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}), "Investor type": [ch.newType] };
     }
-    const { error } = await db().from("crm_contacts").update(patch).eq("id", ch.contactId);
-    if (error) {
-      errors++;
-      if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
-      continue;
+    if (ch.newCompany) {
+      const { error } = await db().from("crm_contacts").update({ company: ch.newCompany }).eq("id", ch.contactId);
+      if (error) {
+        errors++;
+        if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
+        continue;
+      }
     }
     if (ch.newCompany) companies++;
     if (ch.newType) types++;

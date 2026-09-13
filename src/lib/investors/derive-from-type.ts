@@ -21,6 +21,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, PAGE_SIZE } from "@/lib/supabase/paged";
 import { reportDbError } from "@/lib/supabase/report";
 import { reindexContacts } from "@/lib/fit/match-index";
+import { mergeOverrides } from "@/lib/sales/overrides";
 import { OP_STAGE_LABEL, OP_STAGE_LABELS, INV_SIZE_LABEL, REVENUE_LABEL, FIT_WEIGHTS, FIELD_KEYWORDS } from "@/lib/fit/options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,25 +244,27 @@ export async function applyDerivation(opts: { afterId?: string | null } = {}): P
         continue;
       }
       const fresh: Row = { id: contactId, company: null, raw: c.raw ?? null, overrides: c.overrides ?? null };
-      const overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}) };
 
+      // Build a PATCH of only the keys we're adding; the merge is atomic in Postgres, so
+      // a concurrent Approve on the same contact keeps its keys and we keep ours.
+      const set: Record<string, unknown> = {};
       let wrote = 0;
       for (const item of items) {
         const rule = TYPE_RULES.find((r) => r.id === item.ruleId);
         const fill = rule?.fills.find((f) => f.field === item.field);
         if (!fill || hasFieldValue(fresh, fill)) continue;   // someone got there first
-        overrides[item.label] = item.values;
-        overrides[item.sourceKey] = item.ruleId;
+        set[item.label] = item.values;
+        set[item.sourceKey] = item.ruleId;
         wrote++;
         byRule[item.ruleId] ??= {};
         byRule[item.ruleId][item.field] = (byRule[item.ruleId][item.field] ?? 0) + 1;
       }
       if (wrote === 0) continue;
 
-      const { error } = await db().from("crm_contacts").update({ overrides }).eq("id", contactId);
-      if (error) {
+      const merged = await mergeOverrides(contactId, { set }, "applyDerivation");
+      if (merged === null) {
         errors++;
-        if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
+        if (!firstError) firstError = "merge_contact_overrides failed (see log)";
         continue;
       }
       contacts++; fields += wrote; touched.push(contactId);
@@ -283,9 +286,9 @@ export async function undoDerivation(ruleId: string, field: string): Promise<num
   if (!fill) return 0;
   // Paged: .limit() does not lift db-max-rows, so this previously removed at most 1,000
   // values and reported success as if it had finished.
-  type Tagged = { id: string; overrides: Record<string, unknown> | null };
+  type Tagged = { id: string };
   const rows = await readAllRows<Tagged>((from, to) => db().from("crm_contacts")
-    .select("id, overrides").eq(`overrides->>${fill.sourceKey}`, ruleId)
+    .select("id").eq(`overrides->>${fill.sourceKey}`, ruleId)
     .order("id", { ascending: true }).range(from, to), { context: "undoDerivation: read" });
 
   // Captured before the closure: narrowing on `fill` doesn't survive into the worker.
@@ -300,11 +303,9 @@ export async function undoDerivation(ruleId: string, field: string): Promise<num
   async function worker() {
     while (cursor < rows.length) {
       const r = rows[cursor++];
-      const overrides = { ...(r.overrides ?? {}) };
-      delete overrides[targetLabel];
-      delete overrides[tagKey];
-      const { error: upErr } = await db().from("crm_contacts").update({ overrides }).eq("id", r.id);
-      if (!reportDbError("undoDerivation: update", upErr)) { n++; touched.push(r.id); }
+      // Atomic key removal — never rewrites the rest of the column.
+      const merged = await mergeOverrides(r.id, { remove: [targetLabel, tagKey] }, "undoDerivation");
+      if (merged !== null) { n++; touched.push(r.id); }
     }
   }
   await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, rows.length) }, () => worker()));

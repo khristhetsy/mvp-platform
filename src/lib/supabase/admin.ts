@@ -1,3 +1,10 @@
+// TODO(server-only): this module should carry `import "server-only"` so that reaching it
+// from a "use client" file fails the build. It can't yet: a static trace found four
+// modules that both import this client AND export a pure constant which client
+// components import (investor/kyc.ts, matching/matching-center.ts,
+// integrations/subscription-presets.ts, icfo-events/gamification.ts). Split those
+// constants into their own files first, then add the guard. The vitest alias for
+// "server-only" is already in place (src/test/server-only-stub.ts).
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseServiceEnv } from "./env";
 import type { Database } from "./types";

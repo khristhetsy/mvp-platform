@@ -186,3 +186,37 @@ describe("de-dup happens AFTER scoring", () => {
     expect(rankScorables(many, answers())).toHaveLength(40);
   });
 });
+
+describe("a stated fact beats a derived assumption", () => {
+  const a = answers({ stage: ["series_a_plus"] });
+
+  it("uses the Odoo value once it arrives, even though the override normally wins", () => {
+    // Derived "Startup" was written when the contact had nothing. Odoo has since delivered
+    // a real "Midsize Company". Without the tag check the guess would outrank the fact
+    // forever, because overrides beat raw.
+    const r = row({
+      extra: { [OP_STAGE_LABEL]: ["Midsize Company"] },
+      overrides: { [OP_STAGE_LABEL]: ["Startup", "Prototype"], _stage_source: "derived:angel" },
+    } as Partial<GatedRow>);
+    expect(fieldsOf(r).stages).toEqual(["Midsize Company"]);
+    expect(scoreRow(r, a)!.fit).toBe(70);   // 30 + 25 stage + 15 any-type
+  });
+  it("keeps a HUMAN override over Odoo — only tagged assumptions yield", () => {
+    const r = row({
+      extra: { [OP_STAGE_LABEL]: ["Midsize Company"] },
+      overrides: { [OP_STAGE_LABEL]: ["Startup"] },   // no tag: a person set this
+    } as Partial<GatedRow>);
+    expect(fieldsOf(r).stages).toEqual(["Startup"]);
+  });
+  it("keeps the derived value while Odoo still has nothing", () => {
+    const r = row({ overrides: { [OP_STAGE_LABEL]: ["Startup"], _stage_source: "derived:angel" } } as Partial<GatedRow>);
+    expect(fieldsOf(r).stages).toEqual(["Startup"]);
+  });
+  it("applies the same rule to investment size", () => {
+    const r = row({
+      extra: { [INV_SIZE_LABEL]: ["$500k - $1m"] },
+      overrides: { [INV_SIZE_LABEL]: ["$1m - $10m"], _size_source: "derived:private_equity" },
+    } as Partial<GatedRow>);
+    expect(fieldsOf(r).sizes).toEqual(["$500k - $1m"]);
+  });
+});

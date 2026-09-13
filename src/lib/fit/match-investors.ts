@@ -110,7 +110,17 @@ export function mergedExtra(row: GatedRow, label: string): string[] {
  * a renamed field is strictly better than silently scoring nothing, and the exact-first
  * order means a correct label is never overridden by a loose keyword hit.
  */
-export function mergedExtraLoose(row: GatedRow, labels: readonly string[], keywords: readonly string[]): string[] {
+export function mergedExtraLoose(row: GatedRow, labels: readonly string[], keywords: readonly string[], sourceKey?: string): string[] {
+  // A derived value is an ASSUMPTION we wrote when the contact had nothing. If Odoo has
+  // since delivered a real, stated value under this field, the fact must win — otherwise a
+  // tier-3 guess would outrank a tier-1 statement forever, because overrides always beat
+  // raw. The provenance tag is what lets us tell the two apart.
+  if (sourceKey && typeof row.overrides?.[sourceKey] === "string") {
+    for (const label of labels) {
+      const stated = extraValues(row.raw, label);
+      if (stated.length) return stated;
+    }
+  }
   for (const label of labels) {
     const exact = mergedExtra(row, label);
     if (exact.length) return exact;
@@ -160,13 +170,16 @@ export function fieldsOf(row: GatedRow): MatchFields {
     // Union of both stage labels — see OP_STAGE_LABELS. A contact may carry the value
     // under either, and reading only one is what made approved stages score nothing.
     // The keyword fallback catches a third spelling we haven't seen yet.
-    stages: [...new Set([
-      ...OP_STAGE_LABELS.flatMap((label) => mergedExtra(row, label)),
-      ...(OP_STAGE_LABELS.some((l) => mergedExtra(row, l).length) ? [] : mergedExtraLoose(row, [], FIELD_KEYWORDS.stage)),
-    ])],
-    sizes: mergedExtraLoose(row, [INV_SIZE_LABEL], FIELD_KEYWORDS.size),
+    // UNION across both stage labels (a contact may carry each), each resolved with the
+    // fact-beats-assumption rule; keyword fallback only when neither label has anything.
+    stages: (() => {
+      const perLabel = OP_STAGE_LABELS.flatMap((l) => mergedExtraLoose(row, [l], [], "_stage_source"));
+      const union = [...new Set(perLabel)];
+      return union.length ? union : mergedExtraLoose(row, [], FIELD_KEYWORDS.stage, "_stage_source");
+    })(),
+    sizes: mergedExtraLoose(row, [INV_SIZE_LABEL], FIELD_KEYWORDS.size, "_size_source"),
     types: mergedInvestorTypes(row),
-    revenues: mergedExtraLoose(row, [REVENUE_LABEL], FIELD_KEYWORDS.revenue),
+    revenues: mergedExtraLoose(row, [REVENUE_LABEL], FIELD_KEYWORDS.revenue, "_revenue_source"),
   };
 }
 

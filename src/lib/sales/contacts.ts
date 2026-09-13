@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/sales/activity";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 import { reindexContacts } from "@/lib/fit/match-index";
+import { mergeOverrides } from "@/lib/sales/overrides";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -245,20 +246,20 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   }
   if (Object.keys(update).length === 0 && Object.keys(ovPatch).length === 0) return;
 
+  // Overrides go through the atomic merge - never read-modify-write. A null value in the
+  // patch means "remove this key" (a cleared provenance tag), not "store null".
   if (Object.keys(ovPatch).length > 0) {
-    // Check the error: without it a failed read yields {} and the spread below replaces
-    // the entire overrides column, destroying every other value on the contact.
-    const { data: existing, error: readErr } = await db().from("crm_contacts").select("overrides").eq("id", id).maybeSingle();
-    if (readErr || !existing) throw new Error(`Could not read overrides for ${id}: ${readErr?.message ?? "no row"}`);
-    const current = (existing.overrides ?? {}) as Record<string, unknown>;
-    const merged = { ...current, ...ovPatch };
-    // null means "remove" (a cleared provenance tag), not "store null".
-    for (const [k, v] of Object.entries(merged)) if (v === null) delete merged[k];
-    update.overrides = merged;
+    const set: Record<string, unknown> = {};
+    const remove: string[] = [];
+    for (const [k, v] of Object.entries(ovPatch)) (v === null ? remove.push(k) : (set[k] = v));
+    const merged = await mergeOverrides(id, { set, remove }, "updateContact");
+    if (merged === null) throw new Error(`Could not update overrides for ${id}`);
   }
 
-  const { error } = await db().from("crm_contacts").update(update).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (Object.keys(update).length > 0) {
+    const { error } = await db().from("crm_contacts").update(update).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
   // Keep /fit in step with what staff just changed. This edit can touch `company` (firm
   // de-dup) and every scoring field, and it does NOT move synced_at — so without this the
   // scheduled rebuild would never notice, and matching would run on the old values

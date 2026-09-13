@@ -13,6 +13,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, chunk } from "@/lib/supabase/paged";
 import { reindexContacts } from "@/lib/fit/match-index";
+import { mergeOverrides } from "@/lib/sales/overrides";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
 import { OP_STAGE_LABEL, OP_STAGE_LABELS, canonicalInvestorType, INVESTOR_TYPE_VOCAB } from "@/lib/fit/options";
@@ -285,39 +286,31 @@ export async function listProposals(status: "pending" | "approved" | "rejected" 
 export async function applyProposal(id: string, edits: { industries?: string[]; type?: string | null; stages?: string[] } | null, reviewerId?: string | null): Promise<boolean> {
   const { data: prop } = await db().from("investor_enrichment").select("contact_id, proposed_industries, proposed_type, proposed_stage").eq("id", id).maybeSingle();
   if (!prop) return false;
-  // The error MUST be checked: on a failed read c is null, `?? {}` yields an empty
-  // object, and the update below would replace the whole overrides column — wiping every
-  // other approved value and provenance tag on this contact while returning true.
+  // Read only to decide WHAT to write (never overwrite a value the contact already has);
+  // the write itself is an atomic merge, so a concurrent writer can't be clobbered.
   const { data: c, error: readErr } = await db().from("crm_contacts").select("overrides, inv_source").eq("id", prop.contact_id).maybeSingle();
   if (readErr || !c) return false;
-  const overrides = { ...((c.overrides as Record<string, unknown> | null) ?? {}) };
+  const current = (c.overrides as Record<string, unknown> | null) ?? {};
   const industries = edits?.industries ?? (prop.proposed_industries as string[]) ?? [];
   const type = canonicalInvestorType(edits?.type !== undefined ? edits.type : (prop.proposed_type as string | null));
   // Edits go through the same vocabulary clamp as the model's output, so a reviewer
   // can't hand-type a stage string the matcher would never compare against.
   const stages = normalizeStages(edits?.stages ?? (prop.proposed_stage as string[]) ?? []);
-  const hasInd = Array.isArray(overrides["Industries"]) && (overrides["Industries"] as unknown[]).length > 0;
-  const hasTyp = Array.isArray(overrides["Investor type"]) && (overrides["Investor type"] as unknown[]).length > 0;
+  const has = (k: string) => Array.isArray(current[k]) && (current[k] as unknown[]).length > 0;
+  const set: Record<string, unknown> = {};
+  if (industries.length && !has("Industries")) set["Industries"] = canonicalizeIndustries(industries);
+  if (type && !has("Investor type")) set["Investor type"] = [type];
   // Don't overwrite a stage the contact already has under EITHER label.
-  const hasStg = OP_STAGE_LABELS.some((l) => Array.isArray(overrides[l]) && (overrides[l] as unknown[]).length > 0);
-  if (industries.length && !hasInd) overrides["Industries"] = canonicalizeIndustries(industries);
-  if (type && !hasTyp) overrides["Investor type"] = [type];
-  if (stages.length && !hasStg) overrides[OP_STAGE_LABEL] = stages;
-  // Only mark inferred when the contact isn't already verified/self_reported.
-  const trusted = c?.inv_source === "verified" || c?.inv_source === "self_reported";
+  if (stages.length && !OP_STAGE_LABELS.some(has)) set[OP_STAGE_LABEL] = stages;
+  if (Object.keys(set).length > 0) {
+    const merged = await mergeOverrides(prop.contact_id as string, { set }, "applyProposal");
+    if (merged === null) return false;
+  }
+  // Only mark inferred when the contact isn't already verified/self_reported. Best-effort:
+  // the column is constrained, and the overrides (the part that matters) already landed.
+  const trusted = c.inv_source === "verified" || c.inv_source === "self_reported";
+  if (!trusted) await db().from("crm_contacts").update({ inv_source: "inferred" }).eq("id", prop.contact_id);
   const now = new Date().toISOString();
-  // NOTE: crm_contacts has no updated_at column (it has synced_at, set by the connector,
-  // and a generated created_on). Writing updated_at failed the whole update, which is why
-  // approvals appeared to succeed while nothing landed.
-  let error = null;
-  if (!trusted) {
-    ({ error } = await db().from("crm_contacts").update({ overrides, inv_source: "inferred" }).eq("id", prop.contact_id));
-  }
-  // Fall back to overrides-only if inv_source rejects the value (constrained column).
-  if (trusted || error) {
-    ({ error } = await db().from("crm_contacts").update({ overrides }).eq("id", prop.contact_id));
-  }
-  if (error) return false;
   await db().from("investor_enrichment").update({ status: "approved", reviewed_by: reviewerId ?? null, reviewed_at: now }).eq("id", id);
   // Push the approved values into the match index now. An in-app edit doesn't move
   // synced_at, so the scheduled incremental rebuild would not notice it and the approval
