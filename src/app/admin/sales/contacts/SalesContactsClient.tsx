@@ -1132,7 +1132,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
   );
 
   return (
-    <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
+    <div style={{ position: "relative", flex: "0 1 560px", minWidth: 280, marginLeft: "auto" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
         {p.spec.conditions.map((c, i) => (
           <span key={i} style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #B5D4F4", background: "#E6F1FB", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>
@@ -1160,7 +1160,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
       {p.searchOpen && (
         <>
           <div onClick={() => p.setSearchOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 25 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0, zIndex: 30, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, width: p.typed.trim() ? "100%" : 640, maxWidth: "calc(100vw - 48px)", zIndex: 30, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", overflow: "hidden" }}>
             {p.typed.trim() ? (
               <div style={{ padding: "4px 0" }}>
                 {TEXT_FIELDS.map(({ f, l }) => (
@@ -1170,7 +1170,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                 ))}
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1.2fr", maxHeight: 480, overflowY: "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.15fr", alignItems: "start" }}>
                 <div style={{ borderRight: "0.5px solid #eef1f5" }}>
                   <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#185FA5" }}><i className="ti ti-filter" aria-hidden="true" /> FILTERS</div>
                   {TYPE_QUICK.map((qf) => {
