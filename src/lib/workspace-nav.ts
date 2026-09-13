@@ -26,20 +26,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       // Universal Contacts — one shared list for every department; each member sees the
       // contacts Lead-assigned to them (admins see all). No permission gate on purpose.
       { href: "/admin/sales/contacts", label: "Contacts" },
-    ],
-  },
-  {
-    title: "Executive",
-    items: [
       { href: "/admin/ceo", label: "CEO Hub", requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/ir-funnel", label: "IR Funnel", requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/fit", label: "Fit funnel", requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/social", label: "Social Media Hub", requiredPermission: "view_admin_dashboard" },
-    ],
-  },
-  {
-    title: "Sales",
-    items: [
       {
         href: "/admin/sales",
         label: "Sales Hub",
@@ -51,54 +38,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/sales/settings",      label: "Settings"      },
         ],
       },
-    ],
-  },
-  {
-    title: "Directory",
-    items: [
-      { href: "/admin/companies",  label: "Companies",  requiredPermission: "manage_companies" },
-      { href: "/admin/investors",  label: "Investors",  requiredPermission: "manage_investors" },
-      { href: "/admin/investors/enrich", label: "Enrich data", requiredPermission: "manage_investors" },
-    ],
-  },
-  {
-    // Founder-facing service functions grouped together, before Investor Relations.
-    title: "Customer Support",
-    items: [
-      { href: "/admin/support",        label: "Support queue",   requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/founders-stuck", label: "Stuck founders",  requiredPermission: "manage_companies"     },
-      { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"     },
-    ],
-  },
-  {
-    title: "Investor Relations",
-    items: [
-      { href: "/admin/playbook", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard" },
-      {
-        href: "/admin/crm",
-        label: "IR CRM",
-        requiredPermission: "manage_crm",
-        children: [
-          { href: "/admin/crm",           label: "Activity"  },
-          { href: "/admin/crm/pipeline",  label: "Pipeline"  },
-          { href: "/admin/crm/messages",  label: "Messages"  },
-          { href: "/admin/crm/outreach",  label: "Outreach"  },
-        ],
-      },
-      { href: "/admin/crm/unclassified", label: "Unclassified",    requiredPermission: "manage_crm"         },
-      { href: "/admin/intro-requests", label: "Intro Requests",  requiredPermission: "manage_matching"    },
-      { href: "/admin/marketplace",    label: "Marketplace Review", requiredPermission: "manage_companies" },
-      { href: "/admin/deal-rooms",     label: "Deal Rooms",      requiredPermission: "manage_deal_rooms" },
-      { href: "/admin/spvs",           label: "SPVs",            requiredPermission: "manage_spvs"       },
-      { href: "/admin/matching",       label: "Matching",        requiredPermission: "manage_matching"   },
-      { href: "/admin/matching/prospects", label: "Prospect Investors", requiredPermission: "manage_matching" },
-      { href: "/admin/outreach-qualification", label: "Outreach Qualification", requiredPermission: "manage_matching" },
-      { href: "/admin/partner-scores", label: "Partner Scores",  requiredPermission: "manage_investors"  },
-    ],
-  },
-  {
-    title: "Marketing",
-    items: [
       {
         href: "/admin/marketing",
         label: "Marketing Hub",
@@ -119,11 +58,8 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/marketing/settings/notifications", label: "Settings"  },
         ],
       },
-    ],
-  },
-  {
-    title: "Events",
-    items: [
+      { href: "/admin/playbook", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/social", label: "Social Media Hub", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/events",
         label: "Event Hub",
@@ -138,11 +74,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/events/gamification", label: "Gamification" },
         ],
       },
-    ],
-  },
-  {
-    title: "Voice",
-    items: [
       {
         href: "/admin/voice",
         label: "Voice Hub",
@@ -155,16 +86,79 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/voice/performance",    label: "Performance"    },
         ],
       },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
-      { href: "/admin/tasks",            label: "Tasks",           requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
-      { href: "/admin/data-room",         label: "Diligence Tracker",requiredPermission: "manage_companies"   },
+      // ── Groups (no permission on the group itself; each page keeps its own) ──
+      {
+        href: "/admin/inbox",
+        label: "Communication",
+        children: [
+          { href: "/admin/inbox",      label: "Inbox",        requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/calendar",   label: "Calendar",     requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/schedule",   label: "Scheduling",   requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/meet",       label: "Meet",         requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/meetings",   label: "Meetings",     requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/signatures", label: "E-Signatures", requiredPermission: "review_documents" },
+          { href: "/admin/tasks",      label: "Tasks",        requiredPermission: "view_admin_dashboard" },
+        ],
+      },
+      {
+        href: "/admin/actions",
+        label: "Operational Tools",
+        children: [
+          { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
+          { href: "/admin/ir-funnel",        label: "IR Funnel",       requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/fit",              label: "Fit funnel",      requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/investors/enrich", label: "Enrich data",     requiredPermission: "manage_investors"     },
+          {
+            href: "/admin/crm",
+            label: "IR CRM",
+            requiredPermission: "manage_crm",
+            children: [
+              { href: "/admin/crm",           label: "Activity"  },
+              { href: "/admin/crm/pipeline",  label: "Pipeline"  },
+              { href: "/admin/crm/messages",  label: "Messages"  },
+              { href: "/admin/crm/outreach",  label: "Outreach"  },
+            ],
+          },
+          { href: "/admin/crm/unclassified",       label: "Unclassified",           requiredPermission: "manage_crm"       },
+          { href: "/admin/spvs",                   label: "SPVs",                   requiredPermission: "manage_spvs"      },
+          { href: "/admin/matching",               label: "Matching",               requiredPermission: "manage_matching"  },
+          { href: "/admin/matching/prospects",     label: "Prospect Investors",     requiredPermission: "manage_matching"  },
+          { href: "/admin/outreach-qualification", label: "Outreach Qualification", requiredPermission: "manage_matching"  },
+          { href: "/admin/portfolio",              label: "Portfolio",              requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/readiness",              label: "Readiness Scores",       requiredPermission: "manage_companies" },
+          { href: "/admin/marketplace",            label: "Marketplace Review",     requiredPermission: "manage_companies" },
+          {
+            href: "/admin/analytics",
+            label: "Analytics",
+            requiredPermission: "view_analytics",
+            children: [
+              { href: "/admin/analytics", label: "Overview" },
+              { href: "/admin/funnels",   label: "Activation funnels" },
+              { href: "/admin/reports",   label: "Reports"   },
+              { href: "/admin/insights",  label: "Insights"  },
+            ],
+          },
+          { href: "/admin/compliance", label: "Compliance", requiredPermission: "manage_compliance" },
+          { href: "/admin/audit",      label: "Audit",      requiredPermission: "manage_compliance" },
+        ],
+      },
+      {
+        href: "/admin/companies",
+        label: "Customer Support",
+        children: [
+          { href: "/admin/companies",       label: "Companies",       requiredPermission: "manage_companies"     },
+          { href: "/admin/investors",       label: "Investors",       requiredPermission: "manage_investors"     },
+          { href: "/admin/support",         label: "Support queue",   requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/founders-stuck",  label: "Stuck founders",  requiredPermission: "manage_companies"     },
+          { href: "/admin/intro-requests",  label: "Intro Requests",  requiredPermission: "manage_matching"      },
+          { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"      },
+        ],
+      },
+      // Kept at the top level, unchanged.
+      { href: "/admin/deal-rooms",     label: "Deal Rooms",        requiredPermission: "manage_deal_rooms" },
+      { href: "/admin/partner-scores", label: "Partner Scores",    requiredPermission: "manage_investors"  },
+      { href: "/admin/data-room",      label: "Diligence Tracker", requiredPermission: "manage_companies"  },
+      { href: "/admin/diligence",      label: "Diligence Review",  requiredPermission: "manage_diligence"  },
       {
         href: "/admin/learning",
         label: "Learning",
@@ -175,75 +169,20 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/learning/founders", label: "Founder roster" },
         ],
       },
-      { href: "/admin/manual",           label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
-    ],
-  },
-  {
-    title: "Reports & Compliance",
-    items: [
+      { href: "/admin/manual", label: "Operations Manual", requiredPermission: "view_admin_dashboard" },
       {
-        href: "/admin/analytics",
-        label: "Analytics",
-        requiredPermission: "view_analytics",
+        href: "/admin/users/manage",
+        label: "Administration",
         children: [
-          { href: "/admin/analytics", label: "Overview" },
-          { href: "/admin/funnels",   label: "Activation funnels" },
-          { href: "/admin/reports",   label: "Reports"   },
-          { href: "/admin/insights",  label: "Insights"  },
+          { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"    },
+          { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"    },
+          { href: "/admin/crm/connectors",    label: "Contact Sync",     requiredPermission: "manage_crm"      },
+          { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"  },
+          { href: "/admin/accounts",          label: "Accounts",         requiredPermission: "manage_accounts" },
+          { href: "/admin/profile",           label: "My Profile",       requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings" },
         ],
       },
-      {
-        href: "/admin/compliance",
-        label: "Compliance",
-        requiredPermission: "manage_compliance",
-        children: [
-          { href: "/admin/compliance",             label: "Compliance"          },
-          { href: "/admin/audit",                  label: "Audit"               },
-        ],
-      },
-      { href: "/admin/diligence",         label: "Diligence Review", requiredPermission: "manage_diligence"     },
-    ],
-  },
-  {
-    title: "Documents & Comms",
-    items: [
-      {
-        href: "/admin/meetings",
-        label: "Meetings",
-        requiredPermission: "view_admin_dashboard",
-        children: [
-          { href: "/admin/meetings",              label: "Meetings"        },
-          { href: "/admin/meetings/kpi",          label: "KPI Dashboard"   },
-          { href: "/admin/meetings/plan",         label: "Plan of Action"  },
-          { href: "/admin/meetings/conferences",  label: "Events"          },
-          { href: "/admin/meetings/onboarding",   label: "Client Onboarding" },
-          { href: "/admin/meetings/campaigns",    label: "Campaigns & ROMI" },
-        ],
-      },
-      { href: "/admin/inbox",     label: "Inbox",        requiredPermission: "view_admin_dashboard" },
-      {
-        href: "/admin/calendar",
-        label: "Calendar",
-        requiredPermission: "view_admin_dashboard",
-        children: [
-          { href: "/admin/calendar", label: "Calendar"   },
-          { href: "/admin/schedule", label: "Scheduling" },
-          { href: "/admin/meet",     label: "Meet"       },
-        ],
-      },
-      { href: "/admin/signatures",        label: "E-Signatures",     requiredPermission: "review_documents"     },
-    ],
-  },
-  {
-    title: "Governance & System",
-    items: [
-      { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"        },
-      { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
-      { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings"      },
-      { href: "/admin/crm/connectors",    label: "Contact Sync",     requiredPermission: "manage_crm"          },
-      { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
-      { href: "/admin/accounts",          label: "Accounts",         requiredPermission: "manage_accounts"     },
-      { href: "/admin/profile",           label: "My Profile",       requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/integrations",
         label: "System",
@@ -643,6 +582,23 @@ export function getInvestorWorkspaceNavSections(): WorkspaceNavSection[] {
 }
 
 export const adminWorkspaceNav: WorkspaceNavItem[] = adminWorkspaceNavSections.flatMap((section) => section.items);
+
+/**
+ * Every admin PAGE (leaf) with the group it sits under — for consumers that list modules
+ * rather than the nav tree (profile module grid, playbook surfaces). Groups such as
+ * "Communication" are containers only; their pages are what these lists care about.
+ */
+export function adminWorkspaceNavLeaves(): Array<{ item: WorkspaceNavItem; group: string }> {
+  const out: Array<{ item: WorkspaceNavItem; group: string }> = [];
+  const walk = (items: WorkspaceNavItem[], group: string) => {
+    for (const it of items) {
+      if (it.children?.length) walk(it.children, it.label);
+      else out.push({ item: it, group });
+    }
+  };
+  for (const section of adminWorkspaceNavSections) walk(section.items, section.title ?? "");
+  return out;
+}
 
 export function getAdminWorkspaceNavSections(): WorkspaceNavSection[] {
   return adminWorkspaceNavSections;

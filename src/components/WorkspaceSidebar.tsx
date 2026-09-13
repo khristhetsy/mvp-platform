@@ -406,24 +406,23 @@ export function WorkspaceSidebar({
     };
   }, [deptAccess, workspace]);
 
-  const items = useMemo(() => {
+  // Recursive gate: permission + feature-control + department at EVERY level, so a group
+  // (e.g. Operational Tools, which carries no permission of its own) shows only the pages
+  // this member may open, and disappears when none are left. Nested groups work the same.
+  const gateItems = useMemo(() => {
     const hidden = new Set(disabledHrefs);
     if (!points.enabled) hidden.add("/credits");
-    return getWorkspaceNav(workspace)
+    const gate = (list: WorkspaceNavItem[]): WorkspaceNavItem[] => list
       .filter(canShowNavItem)
-      .map((item) => {
-        if (item.children?.length) {
-          return { ...item, children: item.children.filter((c) => !hidden.has(c.href) && deptAllows(c.href)) };
-        }
-        return item;
-      })
+      .map((item) => (item.children?.length ? { ...item, children: gate(item.children) } : item))
       .filter((item) => {
-        // Drop leaf items whose href is hidden/out-of-department, and groups whose children are all gone.
-        if (item.children?.length === 0) return false;
-        if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
-        return true;
+        if (item.children) return item.children.length > 0;
+        return !hidden.has(item.href) && deptAllows(item.href);
       });
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled]);
+    return gate;
+  }, [canShowNavItem, deptAllows, disabledHrefs, points.enabled]);
+
+  const items = useMemo(() => gateItems(getWorkspaceNav(workspace)), [gateItems, workspace]);
 
   const sections = useMemo(() => {
     const source =
@@ -433,23 +432,10 @@ export function WorkspaceSidebar({
           ? getFounderWorkspaceNavSections(founderNavV2)
           : getInvestorWorkspaceNavSections();
     if (!source) return null;
-    const hidden = new Set(disabledHrefs);
-    if (!points.enabled) hidden.add("/credits");
     return source
-      .map((section) => ({
-        ...section,
-        items: section.items
-          .filter(canShowNavItem)
-          .map((item) => (item.children?.length ? { ...item, children: item.children.filter((c) => !hidden.has(c.href) && deptAllows(c.href)) } : item))
-          .filter((item) => {
-            // Drop groups whose children are all gone, and hidden/out-of-department leaf items.
-            if (item.children?.length === 0) return false;
-            if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
-            return true;
-          }),
-      }))
+      .map((section) => ({ ...section, items: gateItems(section.items) }))
       .filter((section) => section.items.length > 0);
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled, founderNavV2]);
+  }, [gateItems, workspace, founderNavV2]);
 
   const label = workspaceLabel(workspace);
 
@@ -474,8 +460,8 @@ export function WorkspaceSidebar({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  function isChildActive(item: WorkspaceNavItem) {
-    return item.children?.some((child) => isNavItemActive(child.href)) ?? false;
+  function isChildActive(item: WorkspaceNavItem): boolean {
+    return item.children?.some((child) => (child.children?.length ? isChildActive(child) : isNavItemActive(child.href))) ?? false;
   }
 
   // ── Drill-in sub-menu (Vercel-style) ──────────────────────────────────────
@@ -550,6 +536,16 @@ export function WorkspaceSidebar({
         ) : null}
       </Link>
     );
+  }
+
+  // A group's children, one level deep — nested groups render as a heading + their pages.
+  function renderChildren(children: WorkspaceNavItem[]) {
+    return children.map((child) => child.children?.length ? (
+      <div key={`${child.href}|${child.label}`} className="pt-1">
+        <p className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{tLabel(child.label)}</p>
+        <div className="ml-2 border-l border-slate-200/80 pl-1">{child.children.map((g) => renderLeafLink(g, isLocked(g)))}</div>
+      </div>
+    ) : renderLeafLink(child, isLocked(child)));
   }
 
   function renderTopLevel(item: WorkspaceNavItem, locked = false) {
@@ -643,7 +639,7 @@ export function WorkspaceSidebar({
                 <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                 <span className="truncate">{tLabel(drilledItem.label)}</span>
               </button>
-              {drilledItem.children!.map((child) => renderLeafLink(child, isLocked(child)))}
+              {renderChildren(drilledItem.children!)}
             </nav>
           ) : null}
         </div>
@@ -684,7 +680,7 @@ export function WorkspaceSidebar({
               <span className="truncate">{tLabel(item.label)}</span>
               <ChevronRight className={`ml-auto h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-90" : ""}`} strokeWidth={2} aria-hidden />
             </button>
-            {open && <div className="ml-4 border-l border-slate-200/80 pl-1.5">{item.children!.map((child) => renderLeafLink(child, isLocked(child)))}</div>}
+            {open && <div className="ml-4 border-l border-slate-200/80 pl-1.5">{renderChildren(item.children!)}</div>}
           </div>
         );
       })}
@@ -720,7 +716,7 @@ export function WorkspaceSidebar({
                 <div className="fixed inset-0 z-40" onClick={() => setFlyout(null)} />
                 <div className="absolute left-full top-0 z-50 ml-1 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[var(--shadow-panel)]">
                   <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tLabel(item.label)}</p>
-                  {item.children!.map((child) => renderLeafLink(child, isLocked(child)))}
+                  {renderChildren(item.children!)}
                 </div>
               </>
             )}

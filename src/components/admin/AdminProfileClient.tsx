@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useRef } from "react";
 import { z } from "zod";
-import { adminWorkspaceNavSections } from "@/lib/workspace-nav";
+import { adminWorkspaceNavLeaves } from "@/lib/workspace-nav";
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation } from "@/hooks/useFormValidation";
 
@@ -116,7 +116,16 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
   const initials = getInitials(name, email);
   const memberSince = new Date(createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
-  const allModules = adminWorkspaceNavSections.flatMap((s) => s.items);
+  // Pages grouped by their nav group (Communication, Operational Tools, …) for the module grid.
+  const moduleSections = (() => {
+    const map = new Map<string, { title: string; items: { href: string; label: string }[] }>();
+    for (const { item, group } of adminWorkspaceNavLeaves()) {
+      const key = group || "General";
+      (map.get(key) ?? map.set(key, { title: key, items: [] }).get(key)!).items.push({ href: item.href, label: item.label });
+    }
+    return [...map.values()];
+  })();
+  const allModules = moduleSections.flatMap((s) => s.items);
 
   async function saveName() {
     setNameSaving(true);
@@ -429,7 +438,7 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
             </span>
           </div>
           <div className="p-5">
-            {adminWorkspaceNavSections.map((section, si) => (
+            {moduleSections.map((section, si) => (
               <div key={si} className={si > 0 ? "mt-5" : ""}>
                 {section.title && (
                   <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-slate-400">
