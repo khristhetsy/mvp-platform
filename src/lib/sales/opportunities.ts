@@ -144,6 +144,7 @@ export type UpdateOpportunityPatch = {
   title?: string; stageId?: string | null; valueCents?: number | null; billing?: "yearly" | "monthly";
   probability?: number | null; expectedClose?: string | null; priority?: number; tags?: string[];
   source?: string | null; leadStatus?: string | null; status?: Opportunity["status"]; notes?: string | null;
+  ownerId?: string | null;
 };
 
 export async function updateOpportunity(id: string, patch: UpdateOpportunityPatch, actorId?: string | null): Promise<void> {
@@ -160,6 +161,7 @@ export async function updateOpportunity(id: string, patch: UpdateOpportunityPatc
   if (patch.leadStatus !== undefined) update.lead_status = patch.leadStatus || null;
   if (patch.status !== undefined) update.status = patch.status;
   if (patch.notes !== undefined) update.notes = patch.notes;
+  if (patch.ownerId !== undefined) update.owner_id = patch.ownerId || null;
   const { error } = await db().from("sales_opportunities").update(update).eq("id", id);
   if (error) throw new Error(error.message);
 

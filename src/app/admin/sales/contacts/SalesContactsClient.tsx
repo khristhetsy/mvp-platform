@@ -106,7 +106,9 @@ function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort
 
 const LIST_DEPARTMENTS = ["Marketing", "Sales", "Investor Relations", "Administration", "Events"] as const;
 
-export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; odooSearch?: boolean; basePath?: string }) {
+const LEAD_SOURCE_OPTS = ["LinkedIn", "Referral", "Website", "Event", "Conference", "Cold outreach", "Email campaign", "Partner", "Inbound", "Webinar", "Other"];
+
+export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; odooSearch?: boolean; basePath?: string }) {
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
@@ -154,9 +156,17 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [err, setErr] = useState<string | null>(null);
 
   // Selection (Lead assign is super-admin-only; Create list is enabled per-page).
-  const canSelect = canBulkAssign || canCreateList;
+  const canSelect = canBulkAssign || canCreateList || canBulkEdit || canExport;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
+  // Odoo-style Actions menu over the selection.
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [sourceVal, setSourceVal] = useState<string>(LEAD_SOURCE_OPTS[0]);
+  const [sourceBusy, setSourceBusy] = useState(false);
+  const [sourceMsg, setSourceMsg] = useState<string | null>(null);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [actionResult, setActionResult] = useState<string | null>(null);
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignSel, setAssignSel] = useState<string[]>([]);
@@ -286,7 +296,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   // The matching set changes with the filters — clear any selection so a stale
   // "select all matching" can't apply to a different set.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on filter change
-  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setListOpen(false); setListResult(null); }, [paramsStr, role, groupBy]);
+  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setListOpen(false); setListResult(null); setSourceOpen(false); setActionsOpen(false); }, [paramsStr, role, groupBy]);
 
   // Open/close a group. Opening one that hasn't been loaded yet (or is mid-load)
   // triggers its first fetch — this is what defers the cost off the initial render.
@@ -436,7 +446,48 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const allLoadedSelected = allLoadedIds.length > 0 && allLoadedIds.every((id) => selected.has(id));
   function toggleRow(id: string) { setSelectAllMatching(false); setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   function toggleAllLoaded() { setSelectAllMatching(false); setSelected(allLoadedSelected ? new Set() : new Set(allLoadedIds)); }
-  function clearSelection() { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setAssignMsg(null); setListOpen(false); setListMsg(null); }
+  function clearSelection() { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setAssignMsg(null); setListOpen(false); setListMsg(null); setSourceOpen(false); setSourceMsg(null); setActionsOpen(false); }
+  // Selection → request target. "Select all" carries the filter, not the ids, so the
+  // action touches every matching contact — the number the bar shows.
+  const selectionTarget = () => selectAllMatching
+    ? { mode: "filter" as const, params: paramsStr, group: role || undefined }
+    : { mode: "ids" as const, ids: [...selected] };
+  function closePanels() { setAssignOpen(false); setListOpen(false); setSourceOpen(false); setActionsOpen(false); }
+
+  async function submitSetSource() {
+    setSourceBusy(true); setSourceMsg(null);
+    try {
+      let count = 0, failed = 0;
+      let afterId: string | undefined;
+      // Server writes ≤1,500 per request and hands back a cursor; keep going until done.
+      for (let pass = 0; pass < 40; pass++) {
+        const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "set_lead_source", value: sourceVal, afterId, ...selectionTarget() }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Couldn't set the lead source.");
+        count += data.count; failed += data.failed ?? 0;
+        if (!data.nextCursor) break;
+        afterId = data.nextCursor;
+        setSourceMsg(`Working… ${count.toLocaleString()} done, ${data.remaining.toLocaleString()} to go`);
+      }
+      setActionResult(`Lead source set to “${sourceVal}” on ${count.toLocaleString()} contact${count === 1 ? "" : "s"}${failed ? ` — ${failed} failed` : ""}.`);
+      clearSelection();
+      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+    } catch (e) { setSourceMsg(e instanceof Error ? e.message : "Couldn't set the lead source."); } finally { setSourceBusy(false); }
+  }
+
+  async function exportCsv() {
+    setExportBusy(true); setActionsOpen(false);
+    try {
+      const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "export", ...selectionTarget() }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Export failed."); }
+      const blob = await res.blob();
+      const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "contacts.csv";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      setActionResult(`Exported ${selectionCount.toLocaleString()} contact${selectionCount === 1 ? "" : "s"} to ${name}.`);
+    } catch (e) { setActionResult(e instanceof Error ? e.message : "Export failed."); } finally { setExportBusy(false); }
+  }
 
   // Create a Marketing list from the selection (or append to an existing one).
   function openListPanel() {
@@ -655,7 +706,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         </div>
       )}
 
-      {(openFilter || openColPicker || filtersOpen || groupByOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); setGroupByOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+      {(openFilter || openColPicker || filtersOpen || groupByOpen || actionsOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); setGroupByOpen(false); setActionsOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
       {/* Custom filter builder (Odoo) */}
       {customOpen && (
@@ -754,26 +805,60 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         </div>
       )}
 
+      {actionResult && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#E1F5EE", border: "0.5px solid #A7E0CE", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
+          <i className="ti ti-circle-check" style={{ color: "#0F6E56" }} aria-hidden="true" />
+          <span style={{ fontSize: 12.5, color: "#0F6E56", fontWeight: 500 }}>{actionResult}</span>
+          <button onClick={() => setActionResult(null)} style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+      )}
+
       {canSelect && selectionCount > 0 && (
-        <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
+        <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "8px 13px", marginBottom: 12 }}>
+          {/* Odoo selection bar: "N selected → Select all M ×" then one Actions menu. */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 500 }}>{selectAllMatching ? `All ${matchingTotal.toLocaleString()} matching selected` : `${selected.size.toLocaleString()} selected`}</span>
-            {groupBy === "profile" && !selectAllMatching && allLoadedSelected && matchingTotal > selected.size && (
-              <button onClick={() => setSelectAllMatching(true)} style={{ fontSize: 12.5, color: "#185FA5", background: "none", border: "none", textDecoration: "underline", cursor: "pointer", padding: 0 }}>Select all {matchingTotal.toLocaleString()} matching this filter</button>
+            <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 600, background: "#B5D4F4", borderRadius: 7, padding: "4px 10px" }}>{selectAllMatching ? `All ${matchingTotal.toLocaleString()} selected` : `${selected.size.toLocaleString()} selected`}</span>
+            {!selectAllMatching && matchingTotal > selected.size && (
+              <button onClick={() => setSelectAllMatching(true)} style={{ fontSize: 12.5, fontWeight: 500, color: "#185FA5", background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ti ti-arrow-right" aria-hidden="true" /> Select all {matchingTotal.toLocaleString()}</button>
             )}
-            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-              {canCreateList && (
-                <button onClick={() => { setEmailOpen(true); setListOpen(false); setAssignOpen(false); }} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-mail" aria-hidden="true" /> Email</button>
+            <button onClick={clearSelection} aria-label="Clear selection" style={{ fontSize: 14, color: "#185FA5", background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex" }}><i className="ti ti-x" aria-hidden="true" /></button>
+            <div style={{ marginLeft: "auto", position: "relative" }}>
+              <button onClick={() => setActionsOpen((v) => !v)} disabled={exportBusy} style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <i className="ti ti-settings" aria-hidden="true" /> {exportBusy ? "Exporting…" : "Actions"} <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
+              </button>
+              {actionsOpen && (
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 220, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "6px 0" }}>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>Selected contacts</div>
+                  {([
+                    canCreateList ? { key: "email", icon: "ti-mail", label: "Email", run: () => { closePanels(); setEmailOpen(true); } } : null,
+                    canBulkAssign ? { key: "assign", icon: "ti-user-plus", label: "Lead assign", run: () => { closePanels(); setAssignOpen(true); setAssignMsg(null); } } : null,
+                    canBulkEdit ? { key: "source", icon: "ti-tag", label: "Set lead source", run: () => { closePanels(); setSourceOpen(true); setSourceMsg(null); } } : null,
+                    canCreateList ? { key: "list", icon: "ti-list-details", label: "Create list", run: () => { closePanels(); openListPanel(); } } : null,
+                    canExport ? { key: "export", icon: "ti-download", label: "Export CSV", run: () => void exportCsv() } : null,
+                  ] as Array<{ key: string; icon: string; label: string; run: () => void } | null>).filter((a): a is NonNullable<typeof a> => a !== null).map((a) => (
+                    <button key={a.key} onClick={a.run} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 9, padding: "8px 13px", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
+                      <i className={`ti ${a.icon}`} style={{ fontSize: 15, color: "var(--muted-foreground)" }} aria-hidden="true" />{a.label}
+                    </button>
+                  ))}
+                </div>
               )}
-              {canCreateList && (
-                <button onClick={openListPanel} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-list-details" aria-hidden="true" /> Create list</button>
-              )}
-              {canBulkAssign && (
-                <button onClick={() => { setAssignOpen((v) => !v); setAssignMsg(null); }} style={{ fontSize: 12, fontWeight: 600, color: canCreateList ? "#185FA5" : "#fff", background: canCreateList ? "#fff" : "#2E78F5", border: canCreateList ? "0.5px solid #B5D4F4" : "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-users" aria-hidden="true" /> Lead assign</button>
-              )}
-              <button onClick={clearSelection} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Clear</button>
             </div>
           </div>
+
+          {canBulkEdit && sourceOpen && (
+            <div style={{ marginTop: 10, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Set lead source on {selectionCount.toLocaleString()} contact{selectionCount === 1 ? "" : "s"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <select value={sourceVal} onChange={(e) => setSourceVal(e.target.value)} style={{ ...inp, minWidth: 180 }}>
+                  {LEAD_SOURCE_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <button onClick={submitSetSource} disabled={sourceBusy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: sourceBusy ? 0.55 : 1 }}>{sourceBusy ? "Applying…" : `Apply to ${selectionCount.toLocaleString()}`}</button>
+                <button onClick={() => setSourceOpen(false)} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
+                {sourceMsg && <span style={{ fontSize: 11.5, color: sourceBusy ? "#185FA5" : "#A32D2D" }}>{sourceMsg}</span>}
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 8 }}>Replaces the current lead source. Kept on re-sync from Odoo.</div>
+            </div>
+          )}
 
           {canCreateList && listOpen && (
             <div style={{ marginTop: 10, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, padding: 12 }}>

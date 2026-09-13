@@ -13,7 +13,7 @@ export default async function SalesContactsPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} />
+      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} canBulkEdit canExport={profile.role === "admin"} />
     </AppShell>
   );
 }

@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
+import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -52,9 +53,11 @@ function loadLS<T>(key: string, def: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : def; } catch { return def; }
 }
 
-export function OpportunitiesClient() {
+export function OpportunitiesClient({ canExport = false }: { canExport?: boolean } = {}) {
   const [opps, setOpps] = useState<Opp[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
+  const [actionResult, setActionResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const viewAs = useSearchParams().get("viewAs");
@@ -99,6 +102,7 @@ export function OpportunitiesClient() {
       const data = res.ok ? await res.json() : { opportunities: [], stages: [] };
       setOpps(data.opportunities ?? []);
       setStages(data.stages ?? []);
+      setStaff(data.staff ?? []);
     } catch { setOpps([]); }
     setLoading(false);
   }, [viewQ]);
@@ -185,12 +189,25 @@ export function OpportunitiesClient() {
   function toggleRow(id: string) { setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   function toggleAll() { setSelected(allSelected ? new Set() : new Set(filteredIds)); }
   function clearSelection() { setSelected(new Set()); }
-  async function bulkStatus(status: "won" | "archived") {
+  // One request for the whole selection (was one PATCH per row, serially).
+  async function bulk(body: Record<string, unknown>, verb: string) {
     const ids = [...selected]; if (!ids.length) return;
-    setBusy(true);
-    try { for (const id of ids) await fetch(`/api/sales/opportunities/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); clearSelection(); await load(); }
-    finally { setBusy(false); }
+    setBusy(true); setActionResult(null);
+    try {
+      const r = await runBulk("/api/sales/opportunities/bulk", { ...body, ids });
+      if (!r.ok) { setActionResult(r.error); return; }
+      setActionResult(r.file ? `Exported ${ids.length.toLocaleString()} opportunit${ids.length === 1 ? "y" : "ies"} to ${r.file}.` : `${verb} ${r.count.toLocaleString()} opportunit${r.count === 1 ? "y" : "ies"}${r.failed ? ` — ${r.failed} failed` : ""}.`);
+      if (!r.file) { clearSelection(); await load(); }
+    } finally { setBusy(false); }
   }
+  const selectionActions: SelectionAction[] = [
+    { key: "email", icon: "ti-mail", label: "Email", run: () => setEmailOpen(true) },
+    { key: "stage", icon: "ti-arrow-right", label: "Move to stage", options: stages.map((s) => ({ value: s.id, label: s.name })), runWith: (stageId) => void bulk({ op: "stage", stageId }, `Moved`) },
+    { key: "owner", icon: "ti-user", label: "Assign owner", options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.id, label: s.name }))], runWith: (ownerId) => void bulk({ op: "owner", ownerId: ownerId || null }, "Reassigned") },
+    { key: "won", icon: "ti-check", label: "Mark sold", run: () => void bulk({ op: "status", status: "won" }, "Marked sold") },
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export CSV", run: () => void bulk({ op: "export" }, "Exported") } as SelectionAction] : []),
+    { key: "archive", icon: "ti-archive", label: "Archive", run: () => void bulk({ op: "status", status: "archived" }, "Archived") },
+  ];
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
   const btn = (bg: string, color = "#fff"): React.CSSProperties => ({ fontSize: 11, fontWeight: 600, color, background: bg, border: bg === "#fff" ? "0.5px solid var(--border-strong, #cbd5e1)" : "none", borderRadius: 6, padding: "4px 9px", cursor: "pointer" });
@@ -318,17 +335,8 @@ export function OpportunitiesClient() {
           <button type="button" onClick={() => setImportOpen(true)} style={{ ...toolBtn(), color: "#185FA5" }}><i className="ti ti-download" aria-hidden="true" /> Import from Odoo</button>
         </div>
 
-        {selectionCount > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "#E6F1FB", borderBottom: "0.5px solid #B5D4F4", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 500 }}>{selectionCount.toLocaleString()} selected</span>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-              <button type="button" onClick={() => setEmailOpen(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-mail" aria-hidden="true" /> Email</button>
-              <button type="button" onClick={() => bulkStatus("won")} disabled={busy} style={{ fontSize: 12, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7E0CE", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Mark sold</button>
-              <button type="button" onClick={() => bulkStatus("archived")} disabled={busy} style={{ fontSize: 12, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Archive</button>
-              <button type="button" onClick={clearSelection} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Clear</button>
-            </div>
-          </div>
-        )}
+        <ActionResult text={actionResult} onClose={() => setActionResult(null)} />
+        <SelectionBar count={selectionCount} total={filteredIds.length} onSelectAll={() => setSelected(new Set(filteredIds))} onClear={clearSelection} actions={selectionActions} busy={busy} heading="Selected opportunities" />
 
         <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" style={{ width: 14, height: 14, cursor: "pointer" }} /></div>

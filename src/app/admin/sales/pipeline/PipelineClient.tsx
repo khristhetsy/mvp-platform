@@ -1,25 +1,45 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean; sequence_id: string | null };
 type SeqOption = { id: string; name: string; status: string };
 type Pipeline = { id: string; name: string; is_default: boolean; stages: Stage[] };
-type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null };
+type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null; owner_id: string | null; owner_name: string | null; source: string | null; expected_close: string | null; created_at: string };
 
 const money = (c: number | null) => (c == null ? "" : `$${(c / 100).toLocaleString()}`);
 const moneyShort = (c: number) => (c >= 1000 ? `$${Math.round(c / 100000)}k` : `$${Math.round(c / 100)}`);
 const STAGE_ACCENTS = ["#2E78F5", "#EF9F27", "#639922", "#888780", "#4338CA", "#0F6E56"];
 const isStalled = (o: BoardOpp) => o.updated_at != null && Date.now() - new Date(o.updated_at).getTime() > 14 * 86400000;
+const ownerLabel = (o: BoardOpp) => o.owner_name ?? "Unassigned";
+const sourceLabel = (o: BoardOpp) => (o.source && o.source.toLowerCase() === "odoo" ? "Odoo" : o.source ? o.source : "Manual");
 
-export function PipelineClient() {
+function loadLS<T>(key: string, def: T): T {
+  try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : def; } catch { return def; }
+}
+
+export function PipelineClient({ canExport = false }: { canExport?: boolean } = {}) {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [board, setBoard] = useState<BoardOpp[]>([]);
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
   const [selId, setSelId] = useState<string>("");
-  const [view, setView] = useState<"board" | "stages">("board");
+  // "list" is the line view: same deals as the board, one row each, with selection.
+  const [view, setView] = useState<"board" | "list" | "stages">(() => loadLS<"board" | "list" | "stages">("pipeline.view", "board"));
   const [search, setSearch] = useState("");
+  // Filters (shared by Board and List): stage, owner, source, value.
+  const [fStages, setFStages] = useState<string[]>([]);
+  const [fOwners, setFOwners] = useState<string[]>([]);
+  const [fSources, setFSources] = useState<string[]>([]);
+  const [hasValueOnly, setHasValueOnly] = useState(false);
+  const [stalledOnly, setStalledOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // List view selection + bulk actions.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [actionResult, setActionResult] = useState<string | null>(null);
+  useEffect(() => { try { window.localStorage.setItem("pipeline.view", JSON.stringify(view)); } catch { /* ignore */ } }, [view]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sequences, setSequences] = useState<SeqOption[]>([]);
@@ -37,6 +57,7 @@ export function PipelineClient() {
     const data = await res.json();
     setPipelines(data.pipelines ?? []);
     setBoard(data.board ?? []);
+    setStaff(data.staff ?? []);
     setSelId((cur) => cur || (data.pipelines?.[0]?.id ?? ""));
   }, [viewQ]);
 
@@ -110,7 +131,56 @@ export function PipelineClient() {
     } finally { setDelBusy(false); }
   }
 
-  const stages = (pipeline?.stages ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+  const stages = useMemo(() => (pipeline?.stages ?? []).slice().sort((a, b) => a.sort_order - b.sort_order), [pipeline]);
+  const stageName = useMemo(() => new Map(stages.map((s) => [s.id, s.name])), [stages]);
+
+  // Deals in this pipeline that pass search + filters. Board and List both read this.
+  const ownerOptions = useMemo(() => [...new Set(board.map(ownerLabel))].sort(), [board]);
+  const sourceOptions = useMemo(() => [...new Set(board.map(sourceLabel))].sort(), [board]);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const inPipeline = new Set(stages.map((s) => s.id));
+    return board.filter((o) => {
+      if (!o.stage_id || !inPipeline.has(o.stage_id)) return false;
+      if (q && !o.title.toLowerCase().includes(q) && !(o.contact_name ?? "").toLowerCase().includes(q)) return false;
+      if (fStages.length && !fStages.includes(o.stage_id)) return false;
+      if (fOwners.length && !fOwners.includes(ownerLabel(o))) return false;
+      if (fSources.length && !fSources.includes(sourceLabel(o))) return false;
+      if (hasValueOnly && o.value_cents == null) return false;
+      if (stalledOnly && !isStalled(o)) return false;
+      return true;
+    });
+  }, [board, stages, search, fStages, fOwners, fSources, hasValueOnly, stalledOnly]);
+  const activeFilterCount = (fStages.length ? 1 : 0) + (fOwners.length ? 1 : 0) + (fSources.length ? 1 : 0) + (hasValueOnly ? 1 : 0) + (stalledOnly ? 1 : 0);
+  function clearFilters() { setFStages([]); setFOwners([]); setFSources([]); setHasValueOnly(false); setStalledOnly(false); }
+
+  // Selection lives on the filtered set; a filter change drops anything no longer visible.
+  const filteredIds = useMemo(() => filtered.map((o) => o.id), [filtered]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- prune selection when the visible set changes
+  useEffect(() => { setSelected((s) => { const keep = new Set(filteredIds); const n = new Set([...s].filter((id) => keep.has(id))); return n.size === s.size ? s : n; }); }, [filteredIds]);
+  const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  function toggleRow(id: string) { setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  async function bulk(body: Record<string, unknown>, verb: string) {
+    const ids = [...selected]; if (!ids.length) return;
+    setBusy(true); setActionResult(null);
+    try {
+      const r = await runBulk("/api/sales/opportunities/bulk", { ...body, ids });
+      if (!r.ok) { setActionResult(r.error); return; }
+      setActionResult(r.file ? `Exported ${ids.length.toLocaleString()} deal${ids.length === 1 ? "" : "s"} to ${r.file}.` : `${verb} ${r.count.toLocaleString()} deal${r.count === 1 ? "" : "s"}${r.failed ? ` — ${r.failed} failed` : ""}.`);
+      if (!r.file) { setSelected(new Set()); await load(); }
+    } finally { setBusy(false); }
+  }
+  const selectionActions: SelectionAction[] = [
+    { key: "stage", icon: "ti-arrow-right", label: "Move to stage", options: stages.map((s) => ({ value: s.id, label: s.name })), runWith: (stageId) => void bulk({ op: "stage", stageId }, "Moved") },
+    { key: "owner", icon: "ti-user", label: "Assign owner", options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.id, label: s.name }))], runWith: (ownerId) => void bulk({ op: "owner", ownerId: ownerId || null }, "Reassigned") },
+    { key: "won", icon: "ti-check", label: "Mark sold", run: () => void bulk({ op: "status", status: "won" }, "Marked sold") },
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export CSV", run: () => void bulk({ op: "export" }, "Exported") } as SelectionAction] : []),
+    { key: "archive", icon: "ti-archive", label: "Archive", run: () => void bulk({ op: "status", status: "archived" }, "Archived") },
+  ];
+
+  const chip = (on: boolean): React.CSSProperties => ({ fontSize: 11.5, padding: "3px 9px", borderRadius: 999, cursor: "pointer", border: "0.5px solid var(--border)", background: on ? "#185FA5" : "var(--muted)", color: on ? "#fff" : "var(--muted-foreground)" });
+  const segBtn = (on: boolean, first = false): React.CSSProperties => ({ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: first ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: on ? 600 : 400, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 });
+  const LIST_COLS = "30px 1.8fr 1.1fr 130px 1fr 90px 100px 80px";
 
   return (
     <div>
@@ -127,23 +197,90 @@ export function PipelineClient() {
         </select>
         <button onClick={newPipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "6px 11px", cursor: "pointer" }}>+ New pipeline</button>
         {pipeline && <button onClick={renamePipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Rename</button>}
-        {view === "board" && (
-          <div style={{ position: "relative", marginLeft: 4 }}>
-            <i className="ti ti-search" aria-hidden="true" style={{ position: "absolute", left: 8, top: 8, fontSize: 13, color: "var(--muted-foreground)" }} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search cards…" style={{ fontSize: 12, padding: "6px 9px 6px 26px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", width: 170 }} />
-          </div>
+        {view !== "stages" && (
+          <>
+            <div style={{ position: "relative", marginLeft: 4 }}>
+              <i className="ti ti-search" aria-hidden="true" style={{ position: "absolute", left: 8, top: 8, fontSize: 13, color: "var(--muted-foreground)" }} />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={view === "board" ? "Search cards…" : "Search deals…"} style={{ fontSize: 12, padding: "6px 9px 6px 26px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", width: 170 }} />
+            </div>
+            <div style={{ position: "relative" }}>
+              <button type="button" onClick={() => setFiltersOpen((v) => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 10px", borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: activeFilterCount ? "var(--muted)" : "#fff", color: "var(--foreground)", cursor: "pointer" }}>
+                <i className="ti ti-filter" aria-hidden="true" /> Filters{activeFilterCount > 0 && <span style={{ background: "#185FA5", color: "#fff", borderRadius: 999, padding: "0 6px", fontSize: 10 }}>{activeFilterCount}</span>}
+              </button>
+              {filtersOpen && <>
+                <div onClick={() => setFiltersOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 40, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 12, minWidth: 280, maxHeight: 380, overflowY: "auto" }}>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Stage</div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                    {stages.map((s) => <span key={s.id} onClick={() => setFStages(fStages.includes(s.id) ? fStages.filter((x) => x !== s.id) : [...fStages, s.id])} style={chip(fStages.includes(s.id))}>{s.name}</span>)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Owner</div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                    {ownerOptions.map((o) => <span key={o} onClick={() => setFOwners(fOwners.includes(o) ? fOwners.filter((x) => x !== o) : [...fOwners, o])} style={chip(fOwners.includes(o))}>{o}</span>)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Source</div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                    {sourceOptions.map((o) => <span key={o} onClick={() => setFSources(fSources.includes(o) ? fSources.filter((x) => x !== o) : [...fSources, o])} style={chip(fSources.includes(o))}>{o}</span>)}
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", marginBottom: 6 }}>
+                    <input type="checkbox" checked={hasValueOnly} onChange={(e) => setHasValueOnly(e.target.checked)} /> Has value only
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", marginBottom: 10 }}>
+                    <input type="checkbox" checked={stalledOnly} onChange={(e) => setStalledOnly(e.target.checked)} /> Stalled (no update in 14 days)
+                  </label>
+                  <button type="button" onClick={clearFilters} style={{ width: "100%", fontSize: 11, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 6, padding: 6, cursor: "pointer" }}>Clear all</button>
+                </div>
+              </>}
+            </div>
+          </>
         )}
         <div style={{ marginLeft: "auto", display: "inline-flex", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, overflow: "hidden" }}>
-          <button onClick={() => setView("board")} style={{ fontSize: 12, padding: "6px 12px", border: "none", background: view === "board" ? "#EFF6FF" : "#fff", color: view === "board" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: view === "board" ? 600 : 400, cursor: "pointer" }}>Board</button>
-          <button onClick={() => setView("stages")} style={{ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: "0.5px solid var(--border-strong, #cbd5e1)", background: view === "stages" ? "#EFF6FF" : "#fff", color: view === "stages" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: view === "stages" ? 600 : 400, cursor: "pointer" }}>Edit stages</button>
+          <button type="button" onClick={() => setView("board")} style={segBtn(view === "board", true)}><i className="ti ti-layout-kanban" aria-hidden="true" /> Board</button>
+          <button type="button" onClick={() => setView("list")} style={segBtn(view === "list")}><i className="ti ti-list" aria-hidden="true" /> List</button>
+          <button type="button" onClick={() => setView("stages")} style={segBtn(view === "stages")}>Edit stages</button>
         </div>
       </div>
 
-      {view === "board" ? (
+      {view === "list" ? (
+        <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
+          <ActionResult text={actionResult} onClose={() => setActionResult(null)} />
+          <SelectionBar count={selected.size} total={filteredIds.length} onSelectAll={() => setSelected(new Set(filteredIds))} onClear={() => setSelected(new Set())} actions={selectionActions} busy={busy} heading="Selected deals" />
+          <div style={{ display: "grid", gridTemplateColumns: LIST_COLS, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(filteredIds))} aria-label="Select all" style={{ width: 14, height: 14, cursor: "pointer" }} /></div>
+            <div>Deal</div><div>Contact</div><div>Stage</div><div>Owner</div><div>Value</div><div>Expected close</div><div>Prob.</div>
+          </div>
+          {filtered.length === 0 && <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>{stages.length === 0 ? "No stages. Add some in “Edit stages”." : "No deals match."}</p>}
+          {filtered.map((o) => (
+            <div key={o.id} style={{ display: "grid", gridTemplateColumns: LIST_COLS, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(o.id) ? "#F5F9FF" : undefined }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <input type="checkbox" checked={selected.has(o.id)} onChange={() => toggleRow(o.id)} aria-label={`Select ${o.title}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{o.title}</Link>
+                {isStalled(o) && <span style={{ fontSize: 10, color: "#A32D2D" }}><i className="ti ti-clock" aria-hidden="true" /> stalled</span>}
+              </div>
+              <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_name ?? "—"}</div>
+              <div>
+                <select value={o.stage_id ?? ""} onChange={(e) => moveOpp(o.id, e.target.value)} disabled={busy} style={{ fontSize: 11.5, padding: "4px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", maxWidth: 120 }}>
+                  {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                </select>
+              </div>
+              <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ownerLabel(o)}</div>
+              <div style={{ color: "#185FA5" }}>{o.value_cents != null ? money(o.value_cents) : "—"}</div>
+              <div style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>{o.expected_close ? o.expected_close.slice(0, 10) : "—"}</div>
+              <div style={{ color: "#3B6D11" }}>{o.probability != null ? `${o.probability}%` : "—"}</div>
+            </div>
+          ))}
+          {filtered.length > 0 && (
+            <div style={{ padding: "8px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 11, color: "var(--muted-foreground)" }}>
+              {filtered.length.toLocaleString()} deal{filtered.length === 1 ? "" : "s"} · {money(filtered.reduce((a, o) => a + (o.value_cents ?? 0), 0)) || "$0"} · {stageName.size} stages
+            </div>
+          )}
+        </div>
+      ) : view === "board" ? (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
           {stages.map((s, si) => {
-            const q = search.trim().toLowerCase();
-            const cards = board.filter((o) => o.stage_id === s.id && (!q || o.title.toLowerCase().includes(q) || (o.contact_name ?? "").toLowerCase().includes(q)));
+            const cards = filtered.filter((o) => o.stage_id === s.id);
             const total = cards.reduce((a, o) => a + (o.value_cents ?? 0), 0);
             const accent = s.is_won ? "#0F6E56" : STAGE_ACCENTS[si % STAGE_ACCENTS.length];
             return (

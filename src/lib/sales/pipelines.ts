@@ -6,7 +6,7 @@ function db(): any { return createServiceRoleClient(); }
 
 export type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean; sequence_id: string | null };
 export type Pipeline = { id: string; name: string; is_default: boolean; stages: Stage[] };
-export type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null };
+export type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null; owner_id: string | null; owner_name: string | null; source: string | null; expected_close: string | null; created_at: string };
 
 export async function listPipelines(): Promise<Pipeline[]> {
   const { data: ps } = await db().from("sales_pipelines").select("id, name, is_default").eq("archived", false).order("created_at", { ascending: true });
@@ -18,13 +18,14 @@ export async function listPipelines(): Promise<Pipeline[]> {
 }
 
 export async function listBoardOpportunities(ownerId?: string | null): Promise<BoardOpp[]> {
-  let query = db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at").eq("status", "open").limit(20000);
+  let query = db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at, owner_id, source, expected_close, created_at").eq("status", "open").limit(20000);
   if (ownerId) query = query.eq("owner_id", ownerId);
   const { data } = await query;
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id), title: String(r.title), value_cents: (r.value_cents as number) ?? null,
     billing: (r.billing as "yearly" | "monthly") ?? "yearly", probability: (r.probability as number) ?? null, priority: (r.priority as number) ?? 0,
     stage_id: (r.stage_id as string) ?? null, pipeline_id: (r.pipeline_id as string) ?? null, contact_name: (r.contact_name as string) ?? null, updated_at: (r.updated_at as string) ?? null,
+    owner_id: (r.owner_id as string) ?? null, owner_name: null, source: (r.source as string) ?? null, expected_close: (r.expected_close as string) ?? null, created_at: String(r.created_at),
   }));
 }
 

@@ -10,7 +10,7 @@ export default async function SalesPipelinePage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <PipelineClient />
+      <PipelineClient canExport={profile.role === "admin"} />
     </AppShell>
   );
 }

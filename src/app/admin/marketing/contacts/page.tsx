@@ -22,7 +22,7 @@ export default async function MarketingContactsPage() {
         </div>
         {isSuperAdmin(profile) ? <BackfillInvestorTypeButton /> : null}
       </div>
-      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} canCreateList odooSearch basePath="/admin/marketing/contacts" />
+      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} canCreateList canBulkEdit canExport={profile.role === "admin"} odooSearch basePath="/admin/marketing/contacts" />
     </div>
   );
 }
