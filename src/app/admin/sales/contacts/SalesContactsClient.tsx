@@ -16,7 +16,8 @@ const GROUP_BY_SECTIONS: { key: GroupSection; label: string }[] = [
 ];
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null };
+export type NextActivity = { type: string; title: string; due: string | null; state: "overdue" | "today" | "planned" | "done" | "none" };
+export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null; activity?: NextActivity | null };
 type GroupState = { rows: SalesContact[]; total: number; loading: boolean; loaded: boolean; page: number };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
@@ -40,6 +41,7 @@ const ALL_COLUMNS: ColMeta[] = [
   { key: "phone", label: "Phone", width: "1fr", kind: "text", sortable: false },
   { key: "email", label: "Email", width: "1.4fr", kind: "text", sortable: true },
   { key: "last_message", label: "Last message", width: "1.7fr", kind: "none", sortable: false },
+  { key: "activities", label: "Activities", width: "1.3fr", kind: "none", sortable: false },
   { key: "lead_assign", label: "Lead assign", width: "1.1fr", kind: "none", sortable: false },
   { key: "lead_source", label: "Lead source", width: "120px", kind: "none", sortable: false },
   { key: "country", label: "Country", width: "100px", kind: "country", sortable: true },
@@ -113,9 +115,9 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
-  // v4 key: bumped when the "Lead source" column was added so a stale saved set
-  // (from before that column existed) doesn't hide it. Resets column prefs once.
-  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v4", ALL_COLUMNS.map((c) => c.key)));
+  // v5 key: bumped when the "Activities" column was added (v4 for "Lead source") so a
+  // stale saved set from before the column existed doesn't hide it. Resets prefs once.
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v5", ALL_COLUMNS.map((c) => c.key)));
 
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
@@ -207,7 +209,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canSelect ? `34px ${gridCols}` : gridCols;
 
-  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v4", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v5", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
   // Fetch one group's first page. Groups render collapsed by default, so we only
@@ -570,6 +572,21 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             <span style={{ fontSize: 10.5, color: meta.color, flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3 }}><i className={`ti ${meta.icon}`} aria-hidden="true" />{meta.label}</span>
             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--foreground)" }}>{lm.text}</span>
             {rel && <span style={{ marginLeft: "auto", flexShrink: 0, color: "var(--muted-foreground)", fontSize: 11 }}>{rel}</span>}
+          </div>
+        );
+      }
+      case "activities": {
+        const a = c.activity;
+        if (!a || a.state === "none") return <div style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>—</div>;
+        const today = new Date().toISOString().slice(0, 10);
+        const when = a.state === "done" ? "Done" : !a.due ? "No date" : a.state === "today" ? "Today"
+          : a.state === "overdue" ? `${Math.round((Date.parse(today) - Date.parse(a.due)) / 86400000)}d overdue` : a.due;
+        const color = a.state === "overdue" ? "#A32D2D" : a.state === "today" ? "#854F0B" : a.state === "done" ? "#0F6E56" : "#3B6D11";
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, fontSize: 11.5 }} title={`${a.type}: ${a.title}${a.due ? ` · ${a.due}` : ""}`}>
+            <i className={`ti ${a.state === "done" ? "ti-check" : "ti-clock"}`} style={{ color, flexShrink: 0 }} aria-hidden="true" />
+            <span style={{ color, flexShrink: 0 }}>{a.type}</span>
+            <span style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>· {when}{a.title ? ` · ${a.title}` : ""}</span>
           </div>
         );
       }

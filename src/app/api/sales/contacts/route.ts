@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
 import { applyContactFilters } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
+import { loadNextActivities } from "@/lib/sales/contact-next-activity";
 import { GROUP_DIMS, isGroupBy } from "@/lib/sales/contact-grouping";
 
 export const dynamic = "force-dynamic";
@@ -84,10 +85,11 @@ export async function GET(req: NextRequest): Promise<Response> {
   }
 
   // Latest "message communicated" per contact (notes + sends + replies), bulk.
-  const lastMsg = await loadLastMessages(
-    db(),
-    raw.map((r) => ({ id: r.id, email: r.email ?? null, source: r.source ?? null, external_id: r.external_id ?? null })),
-  );
+  const [lastMsg, nextAct] = await Promise.all([
+    loadLastMessages(db(), raw.map((r) => ({ id: r.id, email: r.email ?? null, source: r.source ?? null, external_id: r.external_id ?? null }))),
+    // "Activities" column: next open task per contact (one query for the page).
+    loadNextActivities(db(), raw.map((r) => r.id)),
+  ]);
 
   const rows = raw.map((r) => ({
     id: r.id,
@@ -105,6 +107,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     leadSource: leadSourceOf(r.overrides, r.raw),
     assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
     lastMessage: lastMsg.get(r.id) ?? null,
+    activity: nextAct.get(r.id) ?? null,
   }));
   return NextResponse.json({ contacts: rows, total: count ?? rows.length });
 }

@@ -25,6 +25,7 @@ import { NotificationBellDropdown } from "@/components/NotificationBellDropdown"
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { workspaceLabel, isFounderNavV2Enabled } from "@/lib/workspace-nav";
+import { readAdminChrome, setAdminChrome } from "@/lib/ui/admin-chrome";
 import type { InternalPermission } from "@/lib/rbac/constants";
 
 type Props = {
@@ -34,11 +35,16 @@ type Props = {
   profileEmail?: string;
   accountSwitcher?: React.ReactNode;
   onMenuClick?: () => void;
+  /** Admin compact chrome: 44px bar, hub tabs inline, no breadcrumbs. */
+  compact?: boolean;
+  /** Rendered after the logo in compact mode (the hub's tabs). */
+  hubTabs?: React.ReactNode;
 };
 
 type MenuItem =
   | { kind: "link"; label: string; href: string; icon: React.ReactNode; perm?: InternalPermission }
   | { kind: "divider" }
+  | { kind: "chrome" }
   | { kind: "signout" };
 
 function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): MenuItem[] {
@@ -78,6 +84,7 @@ function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): M
       { kind: "link", label: "System health", href: "/admin/system-health", icon: <Activity className="h-4 w-4" />, perm: "view_system_health" },
       { kind: "link", label: "Audit log", href: "/admin/audit", icon: <Terminal className="h-4 w-4" />, perm: "view_audit_logs" },
       { kind: "divider" },
+      { kind: "chrome" },
       { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
       { kind: "divider" },
       { kind: "signout" },
@@ -258,6 +265,21 @@ function ProfileDropdown({
               if (item.kind === "divider") {
                 return <div key={i} className="my-1 border-t border-slate-100" />;
               }
+              if (item.kind === "chrome") {
+                const classic = readAdminChrome() === "classic";
+                return (
+                  <button
+                    key="chrome"
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setAdminChrome(classic ? "compact" : "classic"); setOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors"
+                  >
+                    <span className="shrink-0 text-slate-400"><Settings className="h-4 w-4" /></span>
+                    {classic ? "Switch to compact layout" : "Switch to classic layout"}
+                  </button>
+                );
+              }
               if (item.kind === "signout") {
                 return (
                   <button
@@ -293,9 +315,36 @@ function ProfileDropdown({
   );
 }
 
-export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick }: Readonly<Props>) {
+export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick, compact = false, hubTabs }: Readonly<Props>) {
   const t = useTranslations("sharedCmp");
   const companyLabel = profileSubtitle?.trim() || "Select company";
+
+  if (compact) {
+    // Odoo-style: one 44px bar — logo, hub name + tabs, then search / company / bell / user.
+    return (
+      <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white">
+        <div className="flex h-11 items-center gap-3 px-3">
+          <button type="button" className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50 lg:hidden" aria-label="Open workspace menu" onClick={onMenuClick}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          </button>
+          <Link href="/" className="flex shrink-0 items-center"><IcapOSLogo height={20} /></Link>
+          <div className="min-w-0 flex-1">{hubTabs}</div>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <button type="button" aria-label="Open global search (⌘K)" title="Search (⌘K)"
+              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
+              className="hidden h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 md:flex">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            </button>
+            {accountSwitcher ? <div className="hidden xl:block">{accountSwitcher}</div> : (
+              <span className="hidden max-w-[160px] truncate rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700 xl:inline" title={companyLabel}>{companyLabel}</span>
+            )}
+            <NotificationBellDropdown />
+            <ProfileDropdown profileName={profileName} profileEmail={profileEmail} profileSubtitle={profileSubtitle} workspace={workspace} />
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white shadow-[var(--shadow-sticky)]">

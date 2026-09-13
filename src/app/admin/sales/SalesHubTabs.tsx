@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-const TABS: { label: string; href: string }[] = [
+export const SALES_HUB_TABS: { label: string; href: string }[] = [
   { label: "Dashboard", href: "/admin/sales" },
   { label: "Contacts", href: "/admin/sales/contacts" },
   { label: "Opportunities", href: "/admin/sales/opportunities" },
@@ -19,7 +19,10 @@ const TABS: { label: string; href: string }[] = [
 
 type Member = { id: string; name: string };
 
-export function SalesHubTabs() {
+const TABS = SALES_HUB_TABS;
+
+/** `viewOnly`: compact chrome — the tabs live in the top bar, so only the View control renders here. */
+export function SalesHubTabs({ viewOnly = false }: { viewOnly?: boolean } = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,9 +65,12 @@ export function SalesHubTabs() {
     color: active ? "#fff" : "var(--muted-foreground)", background: active ? "#4338CA" : "transparent", border: "none",
   });
 
+  if (viewOnly && !canViewTeam) return null;
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, borderBottom: "0.5px solid var(--border)", marginBottom: 18, flexWrap: "wrap" }}>
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+    <div style={viewOnly
+      ? { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 8, flexWrap: "wrap" }
+      : { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, borderBottom: "0.5px solid var(--border)", marginBottom: 18, flexWrap: "wrap" }}>
+      {!viewOnly && <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         {TABS.map((t) => {
           const active = t.href === "/admin/sales" ? pathname === t.href : pathname.startsWith(t.href);
           const href = t.href === "/admin/sales/settings" ? t.href : `${t.href}${tabSuffix}`;
@@ -78,10 +84,10 @@ export function SalesHubTabs() {
             </Link>
           );
         })}
-      </div>
+      </div>}
 
       {canViewTeam && (
-        <div style={{ position: "relative", paddingBottom: 6 }}>
+        <div style={{ position: "relative", paddingBottom: viewOnly ? 0 : 6 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "3px 4px 3px 9px" }}>
             <i className="ti ti-eye" style={{ fontSize: 14, color: "#4338CA" }} aria-hidden="true" />
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>View</span>

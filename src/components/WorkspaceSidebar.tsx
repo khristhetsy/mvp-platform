@@ -258,13 +258,19 @@ export function WorkspaceSidebar({
   planBadge,
   mobileOpen = false,
   onClose,
+  compact = false,
 }: Readonly<{
   workspace: WorkspaceId;
   planBadge?: ReactNode;
   mobileOpen?: boolean;
   onClose?: () => void;
+  /** Icon rail (44px) with flyouts for groups — admin compact chrome. Desktop only; mobile keeps the full drawer. */
+  compact?: boolean;
 }>) {
   const pathname = usePathname();
+  const [flyout, setFlyout] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- close the flyout after navigating
+  useEffect(() => { setFlyout(null); }, [pathname]);
   const locale = useLocale();
   const adminNav = useAdminNavPermissions(workspace);
   const deptAccess = useDepartmentAccess(workspace);
@@ -639,6 +645,67 @@ export function WorkspaceSidebar({
       </div>
     </>
   );
+
+  // ── Compact icon rail ─────────────────────────────────────────────────────
+  // Same items, same gating; each top-level entry is one icon. Groups open a flyout
+  // with their children instead of the drill-in panel.
+  const railItems = allNavItems;
+  const rail = (
+    <nav aria-label={`${label} navigation`} className="flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2">
+      {railItems.map((item) => {
+        const Icon = getWorkspaceNavIcon(item.href);
+        const hasChildren = !!item.children?.length;
+        const active = hasChildren ? isChildActive(item) : isNavItemActive(item.href);
+        const locked = isLocked(item);
+        const cls = `relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${active ? "bg-[var(--blue-muted)] text-[var(--blue)]" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"} ${locked ? "opacity-55" : ""}`;
+        const badge = item.href.endsWith("/inbox") && unreadEmail > 0 ? (unreadEmail > 99 ? "99+" : String(unreadEmail)) : null;
+        if (!hasChildren) {
+          return (
+            <Link key={item.href} href={item.href} title={locked ? lockHint(item) : tLabel(item.label)} aria-label={tLabel(item.label)} aria-current={active ? "page" : undefined} className={cls}>
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+              {badge && <span className="absolute -right-0.5 -top-0.5 rounded-full bg-[#2E78F5] px-1 text-[9px] font-semibold leading-4 text-white">{badge}</span>}
+            </Link>
+          );
+        }
+        const open = flyout === item.href;
+        return (
+          <div key={item.href} className="relative">
+            <button type="button" title={tLabel(item.label)} aria-label={tLabel(item.label)} aria-haspopup="true" aria-expanded={open}
+              onClick={() => setFlyout(open ? null : item.href)} className={cls}>
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+            </button>
+            {open && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFlyout(null)} />
+                <div className="absolute left-full top-0 z-50 ml-1 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[var(--shadow-panel)]">
+                  <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tLabel(item.label)}</p>
+                  {item.children!.map((child) => renderLeafLink(child, isLocked(child)))}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+
+  if (compact) {
+    return (
+      <>
+        {mobileOpen ? (
+          <button type="button" className="fixed inset-0 z-40 bg-[var(--blue)]/20 lg:hidden" aria-label="Close navigation" onClick={onClose} />
+        ) : null}
+        {/* Mobile: the full drawer. Desktop: the 44px rail. */}
+        <aside aria-label={`${label} sidebar`}
+          className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          {nav}
+        </aside>
+        <aside aria-label={`${label} rail`} className="relative z-30 hidden h-screen w-11 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] lg:flex">
+          {rail}
+        </aside>
+      </>
+    );
+  }
 
   return (
     <>
