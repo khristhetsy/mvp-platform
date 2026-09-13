@@ -362,7 +362,10 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
   ]);
   const networkTotal = count ?? 0;
 
-  if (scorables && scorables.length > 0) {
+  // `null` means the index is unusable; `[]` means it answered and nothing matched. Only
+  // the first justifies the wide fallback — treating an empty result as "index missing"
+  // made every genuinely-no-match search pay for a full table scan.
+  if (scorables !== null) {
     return await finish(db, rankScorables(scorables, answers), networkTotal);
   }
 

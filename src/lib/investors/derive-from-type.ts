@@ -18,7 +18,7 @@
  * tomorrow get the same treatment instead of the fields silently decaying again.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { readAllRows, chunk } from "@/lib/supabase/paged";
+import { readAllRows, PAGE_SIZE } from "@/lib/supabase/paged";
 import { reportDbError } from "@/lib/supabase/report";
 import { reindexContacts } from "@/lib/fit/match-index";
 import { OP_STAGE_LABEL, OP_STAGE_LABELS, INV_SIZE_LABEL, REVENUE_LABEL, FIT_WEIGHTS, FIELD_KEYWORDS } from "@/lib/fit/options";
@@ -154,15 +154,48 @@ export function summarise(plan: PlanItem[]): Record<string, Record<string, numbe
   return out;
 }
 
-/** Everything the pass would change. Paged; reads only what it needs. */
-export async function planDerivation(): Promise<{ plan: PlanItem[]; scanned: number }> {
-  const rows = await readAllRows<Row>((from, to) => db().from("crm_contacts")
-    .select("id, company, raw, overrides")
-    .or("contact_type.eq.investor,module.eq.investor")
-    .not("company", "is", null)
-    .order("id", { ascending: true })
-    .range(from, to), { context: "planDerivation: crm_contacts" });
-  return { plan: rows.flatMap((r) => fillsFor(r)), scanned: rows.length };
+/**
+ * Everything the pass would change, walked by CURSOR rather than re-read from the top.
+ *
+ * Each row carries the whole Odoo `raw` jsonb, so a full plan is a multi-megabyte scan.
+ * Re-running it per apply — inside a loop that can fire 50 times — reproduces exactly the
+ * pattern that pinned the database CPU at 97% earlier. Passing `afterId` means the loop
+ * walks the table ONCE across all its calls instead of once per call.
+ *
+ * Stops as soon as `wanted` contacts have work, and reports the id it stopped at.
+ */
+export async function planDerivation(opts: { afterId?: string | null; wanted?: number } = {}): Promise<{ plan: PlanItem[]; scanned: number; nextCursor: string | null; done: boolean }> {
+  const wanted = opts.wanted ?? Number.POSITIVE_INFINITY;
+  const plan: PlanItem[] = [];
+  const withWork = new Set<string>();
+  let scanned = 0;
+  let cursor: string | null = opts.afterId ?? null;
+  let done = true;
+
+  // Keyset pagination: `id > cursor` rather than an offset, so pages can't shift under us.
+  for (let page = 0; page < 200; page++) {
+    let q = db().from("crm_contacts")
+      .select("id, company, raw, overrides")
+      .or("contact_type.eq.investor,module.eq.investor")
+      .not("company", "is", null);
+    if (cursor) q = q.gt("id", cursor);
+    const { data, error } = await q.order("id", { ascending: true }).limit(PAGE_SIZE);
+    if (reportDbError("planDerivation: crm_contacts", error)) { done = false; break; }
+    const rows = (data ?? []) as Row[];
+    if (rows.length === 0) { done = true; break; }
+
+    for (const r of rows) {
+      scanned++;
+      cursor = r.id;
+      const fills = fillsFor(r);
+      if (fills.length === 0) continue;
+      plan.push(...fills);
+      withWork.add(r.id);
+      if (withWork.size >= wanted) return { plan, scanned, nextCursor: cursor, done: false };
+    }
+    if (rows.length < PAGE_SIZE) { done = true; break; }
+  }
+  return { plan, scanned, nextCursor: done ? null : cursor, done };
 }
 
 /**
@@ -179,15 +212,16 @@ export async function planDerivation(): Promise<{ plan: PlanItem[]; scanned: num
 const WRITE_CONCURRENCY = 6;
 const MAX_PER_RUN = 400;
 
-export async function applyDerivation(): Promise<{ scanned: number; contacts: number; fields: number; byRule: Record<string, Record<string, number>>; errors: number; firstError: string | null; reindexed: number; remaining: number }> {
-  const { plan, scanned } = await planDerivation();
+export async function applyDerivation(opts: { afterId?: string | null } = {}): Promise<{ scanned: number; contacts: number; fields: number; byRule: Record<string, Record<string, number>>; errors: number; firstError: string | null; reindexed: number; nextCursor: string | null; done: boolean }> {
+  // Only plan as much as this pass will actually write, resuming where the last one
+  // stopped — see planDerivation for why re-planning the whole network per call is the
+  // expensive mistake here.
+  const { plan, scanned, nextCursor, done } = await planDerivation({ afterId: opts.afterId, wanted: MAX_PER_RUN });
 
   const byContact = new Map<string, PlanItem[]>();
   for (const p of plan) byContact.set(p.contactId, [...(byContact.get(p.contactId) ?? []), p]);
 
-  const queue = [...byContact.entries()];
-  const remaining = Math.max(0, queue.length - MAX_PER_RUN);
-  const todo = queue.slice(0, MAX_PER_RUN);
+  const todo = [...byContact.entries()];
 
   let contacts = 0, fields = 0, errors = 0;
   let firstError: string | null = null;
@@ -236,7 +270,7 @@ export async function applyDerivation(): Promise<{ scanned: number; contacts: nu
   await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, todo.length) }, () => worker()));
 
   const reindexed = await reindexContacts(touched).catch(() => 0);
-  return { scanned, contacts, fields, byRule, errors, firstError, reindexed, remaining };
+  return { scanned, contacts, fields, byRule, errors, firstError, reindexed, nextCursor, done };
 }
 
 /**
@@ -247,21 +281,33 @@ export async function undoDerivation(ruleId: string, field: string): Promise<num
   const rule = TYPE_RULES.find((r) => r.id === ruleId);
   const fill = rule?.fills.find((f) => f.field === field);
   if (!fill) return 0;
-  const { data, error } = await db().from("crm_contacts")
-    .select("id, overrides").eq(`overrides->>${fill.sourceKey}`, ruleId).limit(20000);
-  if (reportDbError("undoDerivation: read", error)) return 0;
+  // Paged: .limit() does not lift db-max-rows, so this previously removed at most 1,000
+  // values and reported success as if it had finished.
+  type Tagged = { id: string; overrides: Record<string, unknown> | null };
+  const rows = await readAllRows<Tagged>((from, to) => db().from("crm_contacts")
+    .select("id, overrides").eq(`overrides->>${fill.sourceKey}`, ruleId)
+    .order("id", { ascending: true }).range(from, to), { context: "undoDerivation: read" });
 
+  // Captured before the closure: narrowing on `fill` doesn't survive into the worker.
+  const targetLabel = fill.labels[0];
+  const tagKey = fill.sourceKey;
   let n = 0;
   const touched: string[] = [];
-  for (const part of chunk((data ?? []) as Array<{ id: string; overrides: Record<string, unknown> | null }>, 200)) {
-    for (const r of part) {
+  // Concurrent, like applyDerivation: one update per row done serially is ~40s per 1,000
+  // rows of pure round trips, which times out mid-way and reports "Undo failed" having
+  // already undone several hundred.
+  let cursor = 0;
+  async function worker() {
+    while (cursor < rows.length) {
+      const r = rows[cursor++];
       const overrides = { ...(r.overrides ?? {}) };
-      delete overrides[fill.labels[0]];
-      delete overrides[fill.sourceKey];
+      delete overrides[targetLabel];
+      delete overrides[tagKey];
       const { error: upErr } = await db().from("crm_contacts").update({ overrides }).eq("id", r.id);
       if (!reportDbError("undoDerivation: update", upErr)) { n++; touched.push(r.id); }
     }
   }
+  await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, rows.length) }, () => worker()));
   await reindexContacts(touched).catch(() => 0);
   return n;
 }

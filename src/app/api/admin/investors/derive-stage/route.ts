@@ -17,6 +17,8 @@ const schema = z.object({
   op: z.enum(["preview", "apply", "undo"]),
   ruleId: z.string().max(60).optional(),
   field: z.string().max(30).optional(),
+  /** Resume point, so a run walks the table once across all its requests. */
+  afterId: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -42,5 +44,5 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!ruleId || !field) return NextResponse.json({ error: "ruleId and field required." }, { status: 400 });
     return NextResponse.json({ removed: await undoDerivation(ruleId, field) });
   }
-  return NextResponse.json(await applyDerivation());
+  return NextResponse.json(await applyDerivation({ afterId: parsed.data.afterId }));
 }

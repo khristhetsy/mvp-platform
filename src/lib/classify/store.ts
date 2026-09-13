@@ -3,6 +3,7 @@
 // ambiguous rows keep side null but record a `signals.classify` note so they
 // surface in the manual review queue. Manual overrides are logged.
 
+import { reindexContacts } from "@/lib/fit/match-index";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
@@ -58,6 +59,9 @@ export async function classifyBatch(limit = 100): Promise<ClassifyBatchResult> {
           signals: { ...baseSignals, classify: { attempted: true, method: res.method, reason: res.reason, confidence: res.confidence } },
         })
         .eq("id", r.id);
+      // module is half the index-membership predicate, so a reclassification changes
+      // whether this contact belongs in investor_match_index at all.
+      await reindexContacts([r.id]).catch(() => 0);
       resolved++;
     } else {
       await db
@@ -142,6 +146,8 @@ export async function applyOverride(contactId: string, side: Side, adminId: stri
       signals: { ...baseSignals, classify: { ...(baseSignals.classify as object ?? {}), override: true, override_by: adminId, ambiguous: false } },
     })
     .eq("id", contactId);
+  // Same reason as the batch path: module decides index membership.
+  await reindexContacts([contactId]).catch(() => 0);
 
   try {
     await writeAuditLog(createServiceRoleClient(), {
