@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -26,6 +27,14 @@ function addBusinessDays(n: number): string {
 type Scope = "my" | "all" | "overdue";
 type Staff = { id: string; name: string };
 const TASK_TYPES = ["Call", "Email", "Demo", "Follow-up", "Proposal"];
+const TASK_QUICK = [
+  { key: "overdue", label: "Overdue" }, { key: "today", label: "Due today" }, { key: "week", label: "This week" }, { key: "no_date", label: "No due date" },
+  { key: "open", label: "Open", sep: true }, { key: "done", label: "Done" },
+  { key: "icapos", label: "iCapOS", sep: true }, { key: "odoo", label: "Odoo" },
+];
+const TASK_GROUPS = [
+  { id: "none", label: "None" }, { id: "assignee", label: "Assignee" }, { id: "due", label: "Due date" }, { id: "type", label: "Type" }, { id: "contact", label: "Contact" },
+];
 
 const TYPE_COLOR: Record<string, { color: string; bg: string }> = {
   Call: { color: "#185FA5", bg: "#E6F1FB" }, Email: { color: "#4338CA", bg: "#EEF2FF" },
@@ -43,7 +52,7 @@ function dueLabel(d: string | null): { text: string; color: string } {
 
 export function TasksClient({ staff }: { staff: Staff[] }) {
   const [scope, setScope] = useState<Scope>("my");
-  const [srcFilter, setSrcFilter] = useState<"all" | "icapos" | "odoo">("all");
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -125,7 +134,42 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
 
   const overdueCount = tasks.filter((t) => t.status === "open" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10)).length;
   const odooCount = tasks.filter((t) => t.source === "odoo").length;
-  const visibleTasks = tasks.filter((t) => srcFilter === "all" || (srcFilter === "odoo" ? t.source === "odoo" : t.source !== "odoo"));
+  const assigneeOptions = useMemo(() => [...new Set(tasks.map((t) => t.assignee_name ?? "Unassigned"))].sort(), [tasks]);
+  const typeOptions = useMemo(() => [...new Set([...TASK_TYPES, ...tasks.map((t) => t.task_type)])], [tasks]);
+  const searchFields = useMemo(() => [
+    { key: "type", label: "Type", options: typeOptions },
+    { key: "assignee", label: "Assignee", options: assigneeOptions },
+  ], [typeOptions, assigneeOptions]);
+  const visibleTasks = useMemo(() => {
+    const { q, quick, fields } = search;
+    const today = new Date().toISOString().slice(0, 10);
+    const weekEnd = new Date(new Date().getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    return tasks.filter((t) => {
+      if (!textMatch(q, t.title, t.summary, t.contact_name, t.opportunity_name)) return false;
+      if (quick.includes("overdue") && !(t.status === "open" && t.due_date && t.due_date < today)) return false;
+      if (quick.includes("today") && t.due_date !== today) return false;
+      if (quick.includes("week") && !(t.due_date && t.due_date >= today && t.due_date <= weekEnd)) return false;
+      if (quick.includes("no_date") && t.due_date) return false;
+      if (quick.includes("open") && t.status === "done") return false;
+      if (quick.includes("done") && t.status !== "done") return false;
+      if (quick.includes("icapos") && t.source === "odoo") return false;
+      if (quick.includes("odoo") && t.source !== "odoo") return false;
+      if (fields.type?.length && !fields.type.includes(t.task_type)) return false;
+      if (fields.assignee?.length && !fields.assignee.includes(t.assignee_name ?? "Unassigned")) return false;
+      return true;
+    });
+  }, [tasks, search]);
+  const taskGroups = useMemo(() => {
+    const g = search.groupBy || "none";
+    if (g === "none") return null;
+    const keyOf = (t: Task) => g === "assignee" ? (t.assignee_name ?? "Unassigned")
+      : g === "due" ? dueLabel(t.due_date).text.replace(/^\d+d overdue$/, "Overdue")
+      : g === "type" ? t.task_type
+      : (t.contact_name ?? "No contact");
+    const map = new Map<string, Task[]>();
+    for (const t of visibleTasks) { const k = keyOf(t); (map.get(k) ?? map.set(k, []).get(k)!).push(t); }
+    return [...map.entries()];
+  }, [visibleTasks, search.groupBy]);
   const scopeTab = (s: Scope, label: string, danger = false): React.CSSProperties => ({ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 5, padding: "5px 10px", background: scope === s ? "#2E78F5" : "transparent", color: scope === s ? "#fff" : danger ? "#A32D2D" : "var(--muted-foreground)" });
 
   return (
@@ -138,14 +182,9 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
             <button onClick={() => setScope("all")} style={scopeTab("all", "All")}>All</button>
             <button onClick={() => setScope("overdue")} style={scopeTab("overdue", "Overdue", true)}>Overdue{scope !== "overdue" && overdueCount ? ` ${overdueCount}` : ""}</button>
           </div>
-          {odooCount > 0 && (
-            <div style={{ display: "flex", background: "var(--muted)", borderRadius: 7, padding: 2 }}>
-              {(["all", "icapos", "odoo"] as const).map((s) => (
-                <button key={s} onClick={() => setSrcFilter(s)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 5, padding: "5px 10px", background: srcFilter === s ? "#6B3FA0" : "transparent", color: srcFilter === s ? "#fff" : "var(--muted-foreground)", textTransform: "capitalize" }}>{s === "icapos" ? "iCapOS" : s === "odoo" ? "Odoo" : "All"}</button>
-              ))}
-            </div>
-          )}
+          {odooCount > 0 && <span style={{ fontSize: 11, color: "#6B3FA0" }}>{odooCount} from Odoo</span>}
           <div style={{ flex: 1 }} />
+          <OdooSearchBar scope="tasks" state={search} onChange={setSearch} quick={TASK_QUICK} fields={searchFields} groups={TASK_GROUPS} noGroupId="none" placeholder="Search task, contact, deal…" width={440} />
           <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ New task</button>
         </div>
 
@@ -232,7 +271,9 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
 
         {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
           : visibleTasks.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No tasks. Create one, or add tasks from a contact or opportunity.</p>
-          : visibleTasks.map((t) => {
+          : (taskGroups ?? [["", visibleTasks] as [string, Task[]]]).map(([gk, list]) => (<Fragment key={gk || "_all"}>
+            {gk && <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", background: "var(--muted)", borderTop: "0.5px solid #eef1f5", fontSize: 11.5, fontWeight: 600 }}>{gk} <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>{list.length}</span></div>}
+            {list.map((t) => {
               const due = dueLabel(t.due_date);
               const tc = TYPE_COLOR[t.task_type] ?? { color: "#5F5E5A", bg: "#F1EFE8" };
               const done = t.status === "done";
@@ -297,6 +338,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                 </div>
               );
             })}
+          </Fragment>))}
       </div>
     </div>
   );

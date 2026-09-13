@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import Link from "next/link";
 import type { Booking } from "@/lib/scheduling/bookings";
 
@@ -41,13 +42,39 @@ function gcalUrl(b: Booking): string {
 export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
   const [bookings, setBookings] = useState<Booking[]>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
-  const [q, setQ] = useState("");
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
 
+  const hostOptions = useMemo(() => [...new Set(bookings.map((b) => b.host_name ?? b.host_email ?? "Unknown host"))].sort(), [bookings]);
+  const eventOptions = useMemo(() => [...new Set(bookings.map((b) => b.event_type ?? "Meeting"))].sort(), [bookings]);
+  const searchFields = useMemo(() => [
+    { key: "host", label: "Host", options: hostOptions },
+    { key: "event", label: "Event type", options: eventOptions },
+  ], [hostOptions, eventOptions]);
   const filtered = useMemo(() => {
-    const n = q.trim().toLowerCase();
-    if (!n) return bookings;
-    return bookings.filter((b) => `${b.booker_name ?? ""} ${b.booker_email ?? ""} ${b.booker_company ?? ""} ${b.event_type ?? ""}`.toLowerCase().includes(n));
-  }, [bookings, q]);
+    const { q, quick, fields } = search;
+    const now = new Date().getTime();
+    return bookings.filter((b) => {
+      if (!textMatch(q, b.booker_name, b.booker_email, b.booker_company, b.event_type)) return false;
+      const start = new Date(b.start_time).getTime();
+      if (quick.includes("upcoming") && !(start >= now && b.status !== "cancelled")) return false;
+      if (quick.includes("past") && start >= now) return false;
+      if (quick.includes("cancelled") && b.status !== "cancelled") return false;
+      if (quick.includes("no_show") && b.status !== "no_show") return false;
+      if (quick.includes("completed") && b.status !== "completed") return false;
+      if (fields.host?.length && !fields.host.includes(b.host_name ?? b.host_email ?? "Unknown host")) return false;
+      if (fields.event?.length && !fields.event.includes(b.event_type ?? "Meeting")) return false;
+      return true;
+    });
+  }, [bookings, search]);
+  const groupOf = (b: Booking): string => {
+    const g = search.groupBy || "none";
+    if (g === "host") return b.host_name ?? b.host_email ?? "Unknown host";
+    if (g === "event") return b.event_type ?? "Meeting";
+    if (g === "week") { const d = new Date(b.start_time); const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `Week of ${mon.toISOString().slice(0, 10)}`; }
+    return "";
+  };
+  // Grouped: keep rows of one group together (list is otherwise newest-first).
+  const rows = search.groupBy && search.groupBy !== "none" ? [...filtered].sort((a, b) => groupOf(a).localeCompare(groupOf(b))) : filtered;
 
   const selected = bookings.find((b) => b.id === selectedId) ?? null;
   const onUpdated = (b: Booking) => setBookings((prev) => prev.map((x) => (x.id === b.id ? b : x)));
@@ -61,7 +88,11 @@ export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
           <h2 style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>Bookings</h2>
           <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>{bookings.length} total · from your iCapOS scheduler</p>
         </div>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search invitee, email, event…" style={{ fontSize: 12.5, padding: "7px 11px", borderRadius: 8, border: "0.5px solid var(--border)", minWidth: 240 }} />
+        <OdooSearchBar scope="bookings" state={search} onChange={setSearch}
+          quick={[{ key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }, { key: "completed", label: "Completed", sep: true }, { key: "cancelled", label: "Cancelled" }, { key: "no_show", label: "No-show" }]}
+          fields={searchFields}
+          groups={[{ id: "none", label: "None" }, { id: "host", label: "Host" }, { id: "event", label: "Event type" }, { id: "week", label: "Week" }]}
+          noGroupId="none" placeholder="Search invitee, email, event…" width={460} />
       </div>
 
       {bookings.length === 0 ? (
@@ -71,12 +102,16 @@ export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16, alignItems: "start" }}>
           <div style={{ ...card, overflow: "hidden" }}>
-            {filtered.map((b, i) => {
+            {rows.length === 0 && <div style={{ padding: 18, fontSize: 12.5, color: "var(--muted-foreground)", textAlign: "center" }}>No bookings match.</div>}
+            {rows.map((b, i) => {
               const st = STATUS[b.status] ?? STATUS.confirmed;
               const { day } = fmtRange(b.start_time, b.end_time, b.timezone);
               const on = selectedId === b.id;
-              return (
-                <button key={b.id} onClick={() => setSelectedId(b.id)} style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 13px", borderTop: i ? "0.5px solid #eef1f5" : "none", background: on ? "#F5F9FF" : "transparent", border: "none", cursor: "pointer" }}>
+              const gk = groupOf(b);
+              const newGroup = gk && (i === 0 || groupOf(rows[i - 1]) !== gk);
+              return (<Fragment key={b.id}>
+                {newGroup && <div style={{ padding: "6px 13px", background: "var(--muted)", borderTop: i ? "0.5px solid #eef1f5" : "none", fontSize: 11, fontWeight: 600 }}>{gk}</div>}
+                <button onClick={() => setSelectedId(b.id)} style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 13px", borderTop: i ? "0.5px solid #eef1f5" : "none", background: on ? "#F5F9FF" : "transparent", border: "none", cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--foreground)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.booker_name ?? b.booker_email ?? "Invitee"}</span>
                     <span style={{ fontSize: 9.5, background: st.bg, color: st.color, borderRadius: 20, padding: "1px 7px" }}>{st.label}</span>
@@ -84,7 +119,7 @@ export function BookingsClient({ bookings: initial }: { bookings: Booking[] }) {
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.event_type ?? "Meeting"}</div>
                   <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", marginTop: 1 }}>{day}</div>
                 </button>
-              );
+              </Fragment>);
             })}
           </div>
 

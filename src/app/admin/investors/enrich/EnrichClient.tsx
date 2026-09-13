@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 
 type Row = {
   id: string; contact_id: string; company: string | null; proposed_industries: string[]; proposed_type: string | null;
@@ -17,6 +18,36 @@ const STAGES = ["Startup", "Prototype", "Expand Growth", "Small Business", "Mids
 
 export function EnrichClient({ initial }: { initial: Row[] }) {
   const [rows, setRows] = useState<Row[]>(initial);
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
+  const typeOptions = useMemo(() => [...new Set(rows.map((r) => r.proposed_type ?? "(none)"))].sort(), [rows]);
+  const industryOptions = useMemo(() => [...new Set(rows.flatMap((r) => r.proposed_industries))].sort(), [rows]);
+  const basisOptions = useMemo(() => [...new Set(rows.map((r) => r.basis ?? "(none)"))].sort(), [rows]);
+  const visibleRows = useMemo(() => {
+    const { q, quick, fields } = search;
+    return rows.filter((r) => {
+      if (!textMatch(q, r.company, r.rationale)) return false;
+      if (quick.includes("high") && r.confidence < HIGH) return false;
+      if (quick.includes("low") && r.confidence >= HIGH) return false;
+      if (quick.includes("has_stage") && r.proposed_stage.length === 0) return false;
+      if (quick.includes("no_stage") && r.proposed_stage.length > 0) return false;
+      if (quick.includes("has_type") && !r.proposed_type) return false;
+      if (fields.type?.length && !fields.type.includes(r.proposed_type ?? "(none)")) return false;
+      if (fields.industry?.length && !r.proposed_industries.some((i) => fields.industry.includes(i))) return false;
+      if (fields.basis?.length && !fields.basis.includes(r.basis ?? "(none)")) return false;
+      return true;
+    });
+  }, [rows, search]);
+  const rowGroups = useMemo(() => {
+    const g = search.groupBy || "none";
+    if (g === "none") return null;
+    const keyOf = (r: Row) => g === "type" ? (r.proposed_type ?? "No type")
+      : g === "stage" ? (r.proposed_stage.length ? r.proposed_stage.join(", ") : "No stage")
+      : g === "basis" ? (r.basis ?? "No basis")
+      : r.confidence >= HIGH ? `≥${HIGH}%` : `<${HIGH}%`;
+    const map = new Map<string, Row[]>();
+    for (const r of visibleRows) { const k = keyOf(r); (map.get(k) ?? map.set(k, []).get(k)!).push(r); }
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [visibleRows, search.groupBy]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -248,7 +279,14 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
         <button type="button" onClick={() => void run()} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">▷ Run next 40</button>
         <button type="button" onClick={() => void runAll()} disabled={busy} className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700 disabled:opacity-50">▷▷ Run all</button>
         {highCount > 0 ? <button type="button" onClick={() => void bulk()} disabled={busy} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-[13px] font-medium text-emerald-700 disabled:opacity-50">✓ Approve all ≥{HIGH}% ({highCount})</button> : null}
-        <span className="ml-auto text-[12px] text-slate-500">{rows.length} pending{msg ? ` · ${msg}` : ""}</span>
+        <span className="ml-auto text-[12px] text-slate-500">{visibleRows.length !== rows.length ? `${visibleRows.length} of ` : ""}{rows.length} pending{msg ? ` · ${msg}` : ""}</span>
+      </div>
+      <div className="mb-3 flex justify-end">
+        <OdooSearchBar scope="investor_enrichment" state={search} onChange={setSearch}
+          quick={[{ key: "high", label: `Confidence ≥ ${HIGH}%` }, { key: "low", label: `Confidence < ${HIGH}%` }, { key: "has_stage", label: "Has stage proposal", sep: true }, { key: "no_stage", label: "No stage proposal" }, { key: "has_type", label: "Has investor type" }]}
+          fields={[{ key: "type", label: "Investor type", options: typeOptions }, { key: "industry", label: "Industry", options: industryOptions }, { key: "basis", label: "Basis", options: basisOptions }]}
+          groups={[{ id: "none", label: "None" }, { id: "type", label: "Investor type" }, { id: "stage", label: "Proposed stage" }, { id: "confidence", label: "Confidence band" }, { id: "basis", label: "Basis" }]}
+          noGroupId="none" placeholder="Search company or rationale…" width={520} />
       </div>
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
@@ -264,7 +302,11 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
         {rows.length === 0 ? (
           <div className="p-8 text-center text-[13px] text-slate-400">No pending proposals. Click <b>Run enrichment</b> to generate some.</div>
-        ) : rows.map((r) => (
+        ) : visibleRows.length === 0 ? (
+          <div className="p-8 text-center text-[13px] text-slate-400">No proposals match these filters.</div>
+        ) : (rowGroups ?? [["", visibleRows] as [string, Row[]]]).map(([gk, list]) => (<Fragment key={gk || "_all"}>
+          {gk ? <div className="bg-slate-50 px-4 py-1.5 text-[11.5px] font-semibold text-slate-700">{gk} <span className="font-normal text-slate-400">{list.length}</span></div> : null}
+          {list.map((r) => (
           <div key={r.id} className="px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <a href={`/admin/sales/contacts/${r.contact_id}`} className="text-[13px] font-medium text-slate-800 hover:underline">{r.company ?? "(no company)"}</a>
@@ -317,6 +359,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
             )}
           </div>
         ))}
+        </Fragment>))}
       </div>
     </div>
   );

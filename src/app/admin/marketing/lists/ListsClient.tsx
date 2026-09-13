@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
 import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
@@ -28,10 +29,12 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   // Department grouping + archive (mirrors Templates/Campaigns).
-  const [groupByDept, setGroupByDept] = useState(true);
+  // Odoo search bar owns search, quick filters, department filter and group-by.
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "department" });
+  const groupByDept = search.groupBy === "department";
+  const showArchived = search.quick.includes("archived");
   const [openDepts, setOpenDepts] = useState<Record<string, boolean>>({}); // collapsed by default
   const [sortKey, setSortKey] = useState<"name" | "created">("name");
-  const [showArchived, setShowArchived] = useState(false);
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const deptOf = (l: ListWithCount) => departmentOf(l.department);
@@ -212,8 +215,14 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
     </div>
   );
 
+  const thisMonth = new Date().toISOString().slice(0, 7);
   const visible = [...lists]
-    .filter((l) => showArchived || !l.archived)
+    .filter((l) => showArchived ? !!l.archived : !l.archived)
+    .filter((l) => textMatch(search.q, l.name, l.description))
+    .filter((l) => !search.quick.includes("has_contacts") || l.contact_count > 0)
+    .filter((l) => !search.quick.includes("empty") || l.contact_count === 0)
+    .filter((l) => !search.quick.includes("this_month") || (l.created_at ?? "").slice(0, 7) === thisMonth)
+    .filter((l) => !search.fields.department?.length || search.fields.department.includes(deptOf(l)))
     .sort((a, b) => sortKey === "created" ? (b.created_at ?? "").localeCompare(a.created_at ?? "") : a.name.localeCompare(b.name));
   const archivedCount = lists.filter((l) => l.archived).length;
   const grouped = groupByDepartment(visible, deptOf);
@@ -234,21 +243,16 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
 
       {/* Toolbar: group toggle + sort + show archived */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <button onClick={() => setGroupByDept((v) => !v)} title="Group lists under collapsible department headers"
-          style={{ fontSize: 11.5, borderRadius: 6, padding: "5px 11px", border: groupByDept ? "0.5px solid #B5D4F4" : "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "transparent", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <i className="ti ti-layout-list" aria-hidden="true" /> {groupByDept ? "Group: Department" : "Group: Off"}
-        </button>
+        <OdooSearchBar scope="marketing_lists" state={search} onChange={setSearch}
+          quick={[{ key: "has_contacts", label: "Has contacts" }, { key: "empty", label: "Empty" }, { key: "this_month", label: "Created this month" }, { key: "archived", label: `Archived${archivedCount ? ` (${archivedCount})` : ""}`, sep: true }]}
+          fields={[{ key: "department", label: "Department", options: [...DEPARTMENTS, UNASSIGNED] }]}
+          groups={[{ id: "none", label: "None" }, { id: "department", label: "Department" }]}
+          noGroupId="none" placeholder="Search lists…" width={440} />
         <select value={sortKey} onChange={(e) => setSortKey(e.target.value as "name" | "created")}
           style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
           <option value="name">Name A–Z</option>
           <option value="created">Newest</option>
         </select>
-        {archivedCount > 0 && (
-          <button onClick={() => setShowArchived((v) => !v)}
-            style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-            {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
-          </button>
-        )}
       </div>
 
       {/* List rows */}

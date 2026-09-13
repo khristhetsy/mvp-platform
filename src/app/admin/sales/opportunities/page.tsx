@@ -10,7 +10,7 @@ export default async function SalesOpportunitiesPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <OpportunitiesClient canExport={profile.role === "admin"} />
+      <OpportunitiesClient canExport={profile.role === "admin"} meId={profile.id} />
     </AppShell>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -13,6 +14,7 @@ type Opp = {
   billing: "yearly" | "monthly"; probability: number | null; priority: number;
   status: "open" | "won" | "lost" | "archived"; notes: string | null; created_at: string;
   source: string | null; owner_id: string | null; owner_name: string | null;
+  expected_close?: string | null; tags?: string[]; updated_at?: string | null;
 };
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
@@ -24,11 +26,19 @@ function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
 const sourceLabel = (o: Opp) => (o.source && o.source.toLowerCase() === "odoo" ? "Odoo" : o.source ? o.source : "Manual");
 const ownerLabel = (o: Opp) => o.owner_name ?? "Unassigned";
 
-type GroupBy = "none" | "stage" | "owner" | "status" | "source";
+type GroupBy = "none" | "stage" | "owner" | "status" | "source" | "close_month" | "created_month";
 const GROUP_OPTIONS: { id: GroupBy; label: string }[] = [
   { id: "none", label: "None" }, { id: "stage", label: "Stage" }, { id: "owner", label: "Owner" },
   { id: "status", label: "Status" }, { id: "source", label: "Source" },
+  { id: "close_month", label: "Expected close (month)" }, { id: "created_month", label: "Created (month)" },
 ];
+const QUICK_FILTERS = [
+  { key: "open", label: "Open" }, { key: "won", label: "Won" }, { key: "lost", label: "Lost" }, { key: "archived", label: "Archived" },
+  { key: "mine", label: "My opportunities", sep: true }, { key: "unassigned", label: "Unassigned" }, { key: "has_value", label: "Has value" },
+  { key: "prob50", label: "Probability ≥ 50%" }, { key: "closing_month", label: "Closing this month" }, { key: "stalled", label: "Stalled (14d)" },
+];
+const monthOf = (iso: string | null | undefined) => (iso ? iso.slice(0, 7) : "");
+const isStalled = (o: Opp) => o.status === "open" && Date.now() - new Date(o.updated_at ?? o.created_at).getTime() > 14 * 86400000;
 
 const OPT_COLS = [
   { key: "value", label: "Value", width: "0.8fr" },
@@ -39,8 +49,6 @@ const OPT_COLS = [
   { key: "created", label: "Created", width: "0.9fr" },
 ] as const;
 type ColKey = (typeof OPT_COLS)[number]["key"];
-
-const STATUSES: Opp["status"][] = ["open", "won", "lost", "archived"];
 
 type ImportSummary = {
   total: number; toCreate: number; skippedNoEmail: number; skippedDupInFile: number; skippedExisting: number;
@@ -53,7 +61,7 @@ function loadLS<T>(key: string, def: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : def; } catch { return def; }
 }
 
-export function OpportunitiesClient({ canExport = false }: { canExport?: boolean } = {}) {
+export function OpportunitiesClient({ canExport = false, meId = "" }: { canExport?: boolean; meId?: string } = {}) {
   const [opps, setOpps] = useState<Opp[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
@@ -63,24 +71,15 @@ export function OpportunitiesClient({ canExport = false }: { canExport?: boolean
   const viewAs = useSearchParams().get("viewAs");
   const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
 
-  // Search + filters + grouping + columns (persisted).
-  const [q, setQ] = useState("");
-  const [fStatus, setFStatus] = useState<string[]>(() => loadLS<string[]>("opps.status2", []));
-  const [fStages, setFStages] = useState<string[]>([]);
-  const [fOwners, setFOwners] = useState<string[]>([]);
-  const [fSources, setFSources] = useState<string[]>([]);
-  const [minProb, setMinProb] = useState(0);
-  const [hasValueOnly, setHasValueOnly] = useState(false);
-  const [groupBy, setGroupBy] = useState<GroupBy>(() => loadLS<GroupBy>("opps.groupBy", "stage"));
+  // Search + filters + grouping live in one Odoo-style bar state (persisted); columns separately.
+  const [search, setSearch] = useState<SearchState>(() => loadLS<SearchState>("opps.search.v1", { ...EMPTY_SEARCH, groupBy: "stage" }));
+  const groupBy = (search.groupBy || "none") as GroupBy;
   const [visibleCols, setVisibleCols] = useState<ColKey[]>(() => loadLS<ColKey[]>("opps.cols", ["value", "prob", "mrr"]));
   const [collapsed, setCollapsed] = useState<string[]>([]);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [colsOpen, setColsOpen] = useState(false);
-  const [groupOpen, setGroupOpen] = useState(false);
 
-  useEffect(() => { try { window.localStorage.setItem("opps.status2", JSON.stringify(fStatus)); } catch { /* ignore */ } }, [fStatus]);
-  useEffect(() => { try { window.localStorage.setItem("opps.groupBy", JSON.stringify(groupBy)); } catch { /* ignore */ } }, [groupBy]);
+  useEffect(() => { try { window.localStorage.setItem("opps.search.v1", JSON.stringify(search)); } catch { /* ignore */ } }, [search]);
   useEffect(() => { try { window.localStorage.setItem("opps.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
 
   // Multi-select + mass email.
@@ -149,30 +148,43 @@ export function OpportunitiesClient({ canExport = false }: { canExport?: boolean
   // Filter option universes derived from loaded data.
   const ownerOptions = useMemo(() => [...new Set(opps.map(ownerLabel))].sort(), [opps]);
   const sourceOptions = useMemo(() => [...new Set(opps.map(sourceLabel))].sort(), [opps]);
-  const activeFilterCount = (fStatus.length ? 1 : 0) + (fStages.length ? 1 : 0) + (fOwners.length ? 1 : 0) + (fSources.length ? 1 : 0) + (minProb > 0 ? 1 : 0) + (hasValueOnly ? 1 : 0);
+  const tagOptions = useMemo(() => [...new Set(opps.flatMap((o) => o.tags ?? []))].sort(), [opps]);
+  const stageNameById = useMemo(() => new Map(stages.map((s) => [s.id, s.name])), [stages]);
+  const searchFields = useMemo(() => [
+    { key: "stage", label: "Stage", options: stages.map((s) => s.name) },
+    { key: "owner", label: "Owner", options: ownerOptions },
+    { key: "source", label: "Source", options: sourceOptions },
+    { key: "tags", label: "Tags", options: tagOptions },
+  ], [stages, ownerOptions, sourceOptions, tagOptions]);
 
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const { q, quick, fields } = search;
+    const statuses = (["open", "won", "lost", "archived"] as const).filter((st) => quick.includes(st));
+    const thisMonth = new Date().toISOString().slice(0, 7);
     return opps.filter((o) => {
-      if (needle) {
-        const hay = `${o.title} ${o.contact_name ?? ""} ${o.contact_email ?? ""}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      if (fStatus.length && !fStatus.includes(o.status)) return false;
-      if (fStages.length && !(o.stage_id && fStages.includes(o.stage_id))) return false;
-      if (fOwners.length && !fOwners.includes(ownerLabel(o))) return false;
-      if (fSources.length && !fSources.includes(sourceLabel(o))) return false;
-      if (minProb > 0 && (o.probability == null || o.probability < minProb)) return false;
-      if (hasValueOnly && o.value_cents == null) return false;
+      if (!textMatch(q, o.title, o.contact_name, o.contact_email)) return false;
+      if (statuses.length && !statuses.includes(o.status)) return false;
+      if (quick.includes("mine") && o.owner_id !== meId) return false;
+      if (quick.includes("unassigned") && o.owner_id) return false;
+      if (quick.includes("has_value") && o.value_cents == null) return false;
+      if (quick.includes("prob50") && (o.probability == null || o.probability < 50)) return false;
+      if (quick.includes("closing_month") && monthOf(o.expected_close) !== thisMonth) return false;
+      if (quick.includes("stalled") && !isStalled(o)) return false;
+      if (fields.stage?.length && !fields.stage.includes(o.stage_id ? stageNameById.get(o.stage_id) ?? "" : "")) return false;
+      if (fields.owner?.length && !fields.owner.includes(ownerLabel(o))) return false;
+      if (fields.source?.length && !fields.source.includes(sourceLabel(o))) return false;
+      if (fields.tags?.length && !(o.tags ?? []).some((t) => fields.tags.includes(t))) return false;
       return true;
     });
-  }, [opps, q, fStatus, fStages, fOwners, fSources, minProb, hasValueOnly]);
+  }, [opps, search, meId, stageNameById]);
 
   const groups = useMemo(() => {
     if (groupBy === "none") return null;
     const keyOf = (o: Opp) => groupBy === "stage" ? (o.stage_name ?? "No stage")
       : groupBy === "owner" ? ownerLabel(o)
       : groupBy === "status" ? o.status
+      : groupBy === "close_month" ? (monthOf(o.expected_close) || "No close date")
+      : groupBy === "created_month" ? monthOf(o.created_at)
       : sourceLabel(o);
     const map = new Map<string, Opp[]>();
     for (const o of filtered) { const k = keyOf(o); (map.get(k) ?? map.set(k, []).get(k)!).push(o); }
@@ -214,11 +226,7 @@ export function OpportunitiesClient({ canExport = false }: { canExport?: boolean
   const toolBtn = (active = false): React.CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 10px", borderRadius: 7, border: "0.5px solid var(--border-strong, #cbd5e1)", background: active ? "var(--muted)" : "#fff", color: "var(--foreground)", cursor: "pointer" });
   const pop: React.CSSProperties = { position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 40, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 12, minWidth: 240 };
   const backdrop: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 39 };
-  const chip = (on: boolean): React.CSSProperties => ({ fontSize: 11.5, padding: "3px 9px", borderRadius: 999, cursor: "pointer", border: "0.5px solid var(--border)", background: on ? "#185FA5" : "var(--muted)", color: on ? "#fff" : "var(--muted-foreground)" });
 
-  function toggle(list: string[], set: (v: string[]) => void, v: string) {
-    set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  }
   function toggleCol(k: ColKey) { setVisibleCols(visibleCols.includes(k) ? visibleCols.filter((c) => c !== k) : [...visibleCols, k]); }
 
   function cellValue(o: Opp, key: ColKey) {
@@ -264,44 +272,8 @@ export function OpportunitiesClient({ canExport = false }: { canExport?: boolean
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <span style={{ fontSize: 12.5, fontWeight: 600 }}>Opportunities</span>
           <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{filtered.length}{filtered.length !== opps.length ? ` / ${opps.length}` : ""}</span>
-          <div style={{ flex: 1, minWidth: 160, display: "flex", alignItems: "center", gap: 6, border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px" }}>
-            <i className="ti ti-search" style={{ color: "var(--muted-foreground)" }} aria-hidden="true" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search opportunity, contact, or email…" style={{ border: "none", outline: "none", background: "transparent", fontSize: 12.5, flex: 1, color: "var(--foreground)" }} />
-            {q && <button type="button" onClick={() => setQ("")} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-x" aria-hidden="true" /></button>}
-          </div>
-
-          <div style={{ position: "relative" }}>
-            <button type="button" onClick={() => setFiltersOpen((v) => !v)} style={toolBtn(activeFilterCount > 0)}>
-              <i className="ti ti-filter" aria-hidden="true" /> Filters{activeFilterCount > 0 && <span style={{ background: "#185FA5", color: "#fff", borderRadius: 999, padding: "0 6px", fontSize: 10 }}>{activeFilterCount}</span>}
-            </button>
-            {filtersOpen && <>
-              <div style={backdrop} onClick={() => setFiltersOpen(false)} />
-              <div style={{ ...pop, minWidth: 280, maxHeight: 380, overflowY: "auto" }}>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Status</div>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-                  {STATUSES.map((s) => <span key={s} onClick={() => toggle(fStatus, setFStatus, s)} style={chip(fStatus.includes(s))}>{s}</span>)}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Stage</div>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-                  {stages.map((s) => <span key={s.id} onClick={() => toggle(fStages, setFStages, s.id)} style={chip(fStages.includes(s.id))}>{s.name}</span>)}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Owner</div>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-                  {ownerOptions.map((o) => <span key={o} onClick={() => toggle(fOwners, setFOwners, o)} style={chip(fOwners.includes(o))}>{o}</span>)}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Source</div>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-                  {sourceOptions.map((o) => <span key={o} onClick={() => toggle(fSources, setFSources, o)} style={chip(fSources.includes(o))}>{o}</span>)}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Probability ≥ {minProb}%</div>
-                <input type="range" min={0} max={100} step={10} value={minProb} onChange={(e) => setMinProb(Number(e.target.value))} style={{ width: "100%", marginBottom: 10 }} />
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", marginBottom: 10 }}>
-                  <input type="checkbox" checked={hasValueOnly} onChange={(e) => setHasValueOnly(e.target.checked)} /> Has value only
-                </label>
-                <button type="button" onClick={() => { setFStatus([]); setFStages([]); setFOwners([]); setFSources([]); setMinProb(0); setHasValueOnly(false); }} style={{ ...btn("#fff", "var(--muted-foreground)"), width: "100%", padding: "6px" }}>Clear all</button>
-              </div>
-            </>}
-          </div>
+          <OdooSearchBar scope="opportunities" state={search} onChange={setSearch} quick={QUICK_FILTERS} fields={searchFields} groups={GROUP_OPTIONS} noGroupId="none" placeholder="Search opportunity, contact, or email…" width={520} />
+          <div style={{ flex: 1 }} />
 
           <div style={{ position: "relative" }}>
             <button type="button" onClick={() => setColsOpen((v) => !v)} style={toolBtn()}><i className="ti ti-columns" aria-hidden="true" /> Columns</button>
@@ -312,20 +284,6 @@ export function OpportunitiesClient({ canExport = false }: { canExport?: boolean
                   <label key={c.key} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, padding: "4px 0", cursor: "pointer" }}>
                     <input type="checkbox" checked={visibleCols.includes(c.key)} onChange={() => toggleCol(c.key)} /> {c.label}
                   </label>
-                ))}
-              </div>
-            </>}
-          </div>
-
-          <div style={{ position: "relative" }}>
-            <button type="button" onClick={() => setGroupOpen((v) => !v)} style={toolBtn(groupBy !== "none")}>
-              <i className="ti ti-layout-rows" aria-hidden="true" /> Group: {GROUP_OPTIONS.find((g) => g.id === groupBy)?.label} <i className="ti ti-chevron-down" aria-hidden="true" />
-            </button>
-            {groupOpen && <>
-              <div style={backdrop} onClick={() => setGroupOpen(false)} />
-              <div style={pop}>
-                {GROUP_OPTIONS.map((g) => (
-                  <button type="button" key={g.id} onClick={() => { setGroupBy(g.id); setGroupOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", fontSize: 12.5, padding: "6px 8px", borderRadius: 6, border: "none", background: groupBy === g.id ? "var(--muted)" : "transparent", cursor: "pointer", color: "var(--foreground)" }}>{g.label}</button>
                 ))}
               </div>
             </>}

@@ -13,21 +13,26 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   name: z.string().min(1).max(200),
-  spec: z.object({ match: z.enum(["all", "any"]), conditions: z.array(z.any()).max(20) }),
+  // `state` carries the generic search-bar state (quick filters, field values, text) for
+  // pages that filter client-side; the Contacts grids keep using `conditions`.
+  spec: z.object({ match: z.enum(["all", "any"]), conditions: z.array(z.any()).max(20), state: z.any().optional() }),
+  scope: z.string().min(1).max(40).optional(),
   groupBy: z.string().max(60).nullish(),
   columns: z.array(z.string().max(60)).max(40).nullish(),
   isDefault: z.boolean().optional(),
   isShared: z.boolean().optional(),
 });
 
-export async function GET(): Promise<Response> {
+export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
+  const scope = (req.nextUrl.searchParams.get("scope") ?? "contacts").slice(0, 40);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = serviceRoleClientUntyped();
   const { data, error } = await db
     .from("marketing_saved_searches")
     .select("id, owner_id, name, spec, group_by, columns, is_default, is_shared")
+    .eq("scope", scope)
     .or(`owner_id.eq.${profile.id},is_shared.eq.true`)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -61,10 +66,11 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   // A user has at most one default — clear the previous one first.
   if (parsed.data.isDefault) {
-    await db.from("marketing_saved_searches").update({ is_default: false }).eq("owner_id", profile.id).eq("is_default", true);
+    await db.from("marketing_saved_searches").update({ is_default: false }).eq("owner_id", profile.id).eq("scope", parsed.data.scope ?? "contacts").eq("is_default", true);
   }
   const { data, error } = await db.from("marketing_saved_searches").insert({
     owner_id: profile.id,
+    scope: parsed.data.scope ?? "contacts",
     name: parsed.data.name.trim(),
     spec: parsed.data.spec,
     group_by: parsed.data.groupBy ?? null,
