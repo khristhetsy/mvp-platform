@@ -93,12 +93,22 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
   async function jtApply() {
     setBusy(true); setJtMsg("Applying…");
     try {
-      const res = await fetch("/api/admin/investors/job-title-backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "apply" }) });
-      if (!res.ok) { setJtMsg("Apply failed."); return; }
-      const d = await res.json();
-      setJtMsg(d.errors > 0
-        ? `Applied ${d.companies} companies, ${d.types} types — but ${d.errors} of ${d.scanned} failed: ${d.firstError ?? "unknown error"}`
-        : `Applied — ${d.companies} company names, ${d.types} investor types (from ${d.rowsRead} contacts scanned)${d.reindexed ? `, ${d.reindexed} reindexed for /fit` : ""}.`);
+      // The server caps each request so it stays inside the 60s limit; loop until it
+      // reports nothing left. Each pass re-plans from live data, so it can't redo work.
+      let companies = 0, types = 0, errors = 0, reindexed = 0, rowsRead = 0;
+      let firstError: string | null = null;
+      for (let pass = 0; pass < 20; pass++) {
+        const res = await fetch("/api/admin/investors/job-title-backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "apply" }) });
+        if (!res.ok) { setJtMsg(`Apply failed${companies + types ? ` after ${companies} companies, ${types} types` : ""}.`); return; }
+        const d = await res.json();
+        companies += d.companies; types += d.types; errors += d.errors; reindexed += d.reindexed ?? 0; rowsRead = d.rowsRead;
+        firstError ??= d.firstError ?? null;
+        if (!(d.remaining > 0) || d.errors === d.scanned) break;   // done, or every row failing
+        setJtMsg(`Applying… ${companies} companies, ${types} types so far · ${d.remaining} to go`);
+      }
+      setJtMsg(errors > 0
+        ? `Applied ${companies} companies, ${types} types — but ${errors} failed: ${firstError ?? "unknown error"}`
+        : `Applied — ${companies} company names, ${types} investor types (from ${rowsRead} contacts scanned)${reindexed ? `, ${reindexed} reindexed for /fit` : ""}.`);
       setJt(null);
     } finally { setBusy(false); }
   }

@@ -155,42 +155,60 @@ export async function planBackfill(): Promise<{ changes: BackfillChange[]; rowsR
  * type goes to overrides["Investor type"] so it survives an Odoo re-sync, exactly like
  * an approved enrichment. Best-effort per row — one bad row doesn't stop the rest.
  */
-export async function applyBackfill(): Promise<{ rowsRead: number; scanned: number; companies: number; types: number; errors: number; firstError: string | null; reindexed: number }> {
+/**
+ * Same shape as derive-from-type: serial writes are ~1 round trip each and the request
+ * dies at 60s part-way through; bounded concurrency finishes hundreds in seconds, and the
+ * cap keeps one request finite. `remaining` tells the caller to run again — the plan is
+ * recomputed from live data, so a second pass naturally skips what the first one wrote.
+ */
+const WRITE_CONCURRENCY = 6;
+const MAX_PER_RUN = 400;
+
+export async function applyBackfill(): Promise<{ rowsRead: number; scanned: number; companies: number; types: number; errors: number; firstError: string | null; reindexed: number; remaining: number }> {
   const { changes, rowsRead } = await planBackfill();
+  const todo = changes.slice(0, MAX_PER_RUN);
+  const remaining = changes.length - todo.length;
   let companies = 0, types = 0, errors = 0;
   // A failing update used to be swallowed, so "applied 0" was indistinguishable from
   // "nothing to apply". Keep going on error, but count and report the first reason.
   let firstError: string | null = null;
   const touched: string[] = [];
-  for (const ch of changes) {
-    // NOTE: no updated_at — crm_contacts does not have that column (it has synced_at,
-    // written by the connector). Including it failed every update, which is exactly the
-    // "Applied — 0 company names" we saw with 73 qualifying rows.
-    // Company is a plain column; investor type lives in overrides and goes through the
-    // atomic merge so nothing here can clobber another writer or wipe the column.
-    if (ch.newType) {
-      const merged = await mergeOverrides(ch.contactId, { set: { "Investor type": [ch.newType] } }, "applyBackfill");
-      if (merged === null) {
-        errors++;
-        if (!firstError) firstError = "merge_contact_overrides failed (see log)";
-        continue;
+
+  let cursor = 0;
+  async function worker() {
+    while (cursor < todo.length) {
+      const ch = todo[cursor++];
+      // NOTE: no updated_at — crm_contacts does not have that column (it has synced_at,
+      // written by the connector). Including it failed every update, which is exactly the
+      // "Applied — 0 company names" we saw with 73 qualifying rows.
+      // Company is a plain column; investor type lives in overrides and goes through the
+      // atomic merge so nothing here can clobber another writer or wipe the column.
+      if (ch.newType) {
+        const merged = await mergeOverrides(ch.contactId, { set: { "Investor type": [ch.newType] } }, "applyBackfill");
+        if (merged === null) {
+          errors++;
+          if (!firstError) firstError = "merge_contact_overrides failed (see log)";
+          continue;
+        }
       }
-    }
-    if (ch.newCompany) {
-      const { error } = await db().from("crm_contacts").update({ company: ch.newCompany }).eq("id", ch.contactId);
-      if (error) {
-        errors++;
-        if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
-        continue;
+      if (ch.newCompany) {
+        const { error } = await db().from("crm_contacts").update({ company: ch.newCompany }).eq("id", ch.contactId);
+        if (error) {
+          errors++;
+          if (!firstError) firstError = `${error.code ?? ""} ${error.message ?? String(error)}`.trim();
+          continue;
+        }
       }
+      if (ch.newCompany) companies++;
+      if (ch.newType) types++;
+      touched.push(ch.contactId);
     }
-    if (ch.newCompany) companies++;
-    if (ch.newType) types++;
-    touched.push(ch.contactId);
   }
+  await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, todo.length) }, () => worker()));
+
   // Reproject the contacts we changed. These edits don't move synced_at, so the scheduled
   // incremental rebuild would skip them and /fit would keep matching on the old company
   // name. Batched at the end rather than per row. Best-effort.
   const reindexed = await reindexContacts(touched).catch(() => 0);
-  return { rowsRead, scanned: changes.length, companies, types, errors, firstError, reindexed };
+  return { rowsRead, scanned: todo.length, companies, types, errors, firstError, reindexed, remaining };
 }
