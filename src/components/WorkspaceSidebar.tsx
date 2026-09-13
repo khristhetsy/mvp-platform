@@ -269,6 +269,15 @@ export function WorkspaceSidebar({
 }>) {
   const pathname = usePathname();
   const [flyout, setFlyout] = useState<string | null>(null);
+  // Compact rail: folded (icons, flyouts) or unfolded (labels, accordion groups). Remembered.
+  const [unfolded, setUnfolded] = useState(false);
+  const [accordion, setAccordion] = useState<Record<string, boolean>>({});
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- read the remembered state after hydration
+  useEffect(() => { try { setUnfolded(window.localStorage.getItem("admin.sidebar") === "open"); } catch { /* ignore */ } }, []);
+  function toggleUnfolded() {
+    setUnfolded((v) => { const next = !v; try { window.localStorage.setItem("admin.sidebar", next ? "open" : "rail"); } catch { /* ignore */ } return next; });
+    setFlyout(null);
+  }
   // eslint-disable-next-line react-hooks/set-state-in-effect -- close the flyout after navigating
   useEffect(() => { setFlyout(null); }, [pathname]);
   const locale = useLocale();
@@ -650,6 +659,38 @@ export function WorkspaceSidebar({
   // Same items, same gating; each top-level entry is one icon. Groups open a flyout
   // with their children instead of the drill-in panel.
   const railItems = allNavItems;
+  const toggleBtn = (
+    <button type="button" onClick={toggleUnfolded} title={unfolded ? "Collapse sidebar" : "Expand sidebar"} aria-label={unfolded ? "Collapse sidebar" : "Expand sidebar"}
+      className={`mt-auto flex items-center gap-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 ${unfolded ? "px-3 py-2 text-[12.5px]" : "h-9 w-9 justify-center"}`}>
+      {unfolded ? <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> : <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
+      {unfolded && <span>Collapse</span>}
+    </button>
+  );
+  // Unfolded: labels + inline accordion for groups (the group holding the current page opens itself).
+  const wide = (
+    <nav aria-label={`${label} navigation`} className="flex h-full flex-col gap-0.5 overflow-y-auto px-2 py-2">
+      {railItems.map((item) => {
+        const Icon = getWorkspaceNavIcon(item.href);
+        const hasChildren = !!item.children?.length;
+        const active = hasChildren ? isChildActive(item) : isNavItemActive(item.href);
+        const locked = isLocked(item);
+        if (!hasChildren) return renderLeafLink(item, locked);
+        const open = accordion[item.href] ?? active;
+        return (
+          <div key={item.href}>
+            <button type="button" aria-expanded={open} onClick={() => setAccordion((a) => ({ ...a, [item.href]: !open }))}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${active ? "text-[var(--blue-hover)]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"} ${locked ? "opacity-55" : ""}`}>
+              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--blue)]" : "text-slate-400"}`} strokeWidth={1.75} aria-hidden />
+              <span className="truncate">{tLabel(item.label)}</span>
+              <ChevronRight className={`ml-auto h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-90" : ""}`} strokeWidth={2} aria-hidden />
+            </button>
+            {open && <div className="ml-4 border-l border-slate-200/80 pl-1.5">{item.children!.map((child) => renderLeafLink(child, isLocked(child)))}</div>}
+          </div>
+        );
+      })}
+      {toggleBtn}
+    </nav>
+  );
   const rail = (
     <nav aria-label={`${label} navigation`} className="flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2">
       {railItems.map((item) => {
@@ -686,6 +727,7 @@ export function WorkspaceSidebar({
           </div>
         );
       })}
+      {toggleBtn}
     </nav>
   );
 
@@ -700,8 +742,13 @@ export function WorkspaceSidebar({
           className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
           {nav}
         </aside>
-        <aside aria-label={`${label} rail`} className="relative z-30 hidden h-screen w-11 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] lg:flex">
-          {rail}
+        <aside aria-label={`${label} rail`} className={`relative z-30 hidden h-screen shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] transition-[width] duration-150 lg:flex ${unfolded ? "w-56" : "w-11"}`}>
+          {unfolded ? wide : rail}
+          {/* Edge handle — the second way to fold / unfold, always at mid-height. */}
+          <button type="button" onClick={toggleUnfolded} aria-label={unfolded ? "Collapse sidebar" : "Expand sidebar"} title={unfolded ? "Collapse" : "Expand"}
+            className="absolute -right-2.5 top-1/2 z-40 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 shadow-sm hover:text-slate-900">
+            {unfolded ? <ChevronLeft className="h-3 w-3" strokeWidth={2.5} aria-hidden /> : <ChevronRight className="h-3 w-3" strokeWidth={2.5} aria-hidden />}
+          </button>
         </aside>
       </>
     );
