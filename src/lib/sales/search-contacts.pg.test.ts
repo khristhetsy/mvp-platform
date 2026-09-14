@@ -14,6 +14,7 @@ import { join } from "node:path";
 const MIGRATIONS = [
   "supabase/migrations/20260914003_search_contacts.sql",
   "supabase/migrations/20260914004_search_contacts_page_first.sql",
+  "supabase/migrations/20260914005_contact_role_index.sql",
 ].map((f) => join(process.cwd(), f));
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
@@ -102,7 +103,7 @@ describe("search_contacts — every filter kind runs on real Postgres", () => {
     expect((await rows(spec([{ field: "country", op: "not_set" }]))).names).toEqual(["Dan O'Brien"]);
     expect((await rows(spec([{ field: "assignee", op: "not_set" }]))).names).toEqual(["Carol \"CJ\" Jones", "Eve Nobody"]);
   });
-  it("type in → contact_type OR module", async () => {
+  it("type in → role (contact_type, falling back to module)", async () => {
     expect((await rows(spec([{ field: "type", op: "in", value: ["founder"] }]))).names).toEqual(["Carol \"CJ\" Jones"]);
     expect((await rows(spec([{ field: "type", op: "in", value: ["investor", "advisor"] }]))).names).toEqual(["Alice Angel", "Bob Fund", "Dan O'Brien"]);
   });
