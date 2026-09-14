@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
 import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
-import { MassEmailComposer, type SelectionPayload } from "@/components/marketing/MassEmailComposer";
 import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/ToolbarGear";
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import { useContactsQuery, contactsParams, PAGE, type SalesContact, type Sort } from "./useContactsQuery";
+import { ContactsBulkActions, type BulkTarget } from "./ContactsBulkActions";
 
 export type { SalesContact, LastMessage, NextActivity } from "./useContactsQuery";
 
@@ -92,7 +92,6 @@ function loadLS<T>(key: string, fallback: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-const LIST_DEPARTMENTS = ["Marketing", "Sales", "Investor Relations", "Administration", "Events"] as const;
 
 type ImportRow = { name: string; email?: string; company?: string; phone?: string; type?: "founder" | "investor" | "advisor" | "other" };
 /** Minimal RFC-4180 CSV → rows keyed by a lenient header match (name / email / company / phone / type). */
@@ -123,7 +122,6 @@ function parseContactsCsv(text: string): { rows: ImportRow[]; skipped: number } 
   return { rows, skipped };
 }
 
-const LEAD_SOURCE_OPTS = ["LinkedIn", "Referral", "Website", "Event", "Conference", "Cold outreach", "Email campaign", "Partner", "Inbound", "Webinar", "Other"];
 
 export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; odooSearch?: boolean; basePath?: string }) {
   // ONE filter state. The search box, the column filters, the Role/facet dropdown and
@@ -190,33 +188,6 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const canSelect = canBulkAssign || canCreateList || canBulkEdit || canExport;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
-  // Odoo-style Actions menu over the selection.
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const [sourceOpen, setSourceOpen] = useState(false);
-  const [sourceVal, setSourceVal] = useState<string>(LEAD_SOURCE_OPTS[0]);
-  const [sourceBusy, setSourceBusy] = useState(false);
-  const [sourceMsg, setSourceMsg] = useState<string | null>(null);
-  const [exportBusy, setExportBusy] = useState(false);
-  const [actionResult, setActionResult] = useState<string | null>(null);
-  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [assignSel, setAssignSel] = useState<string[]>([]);
-  const [assignBusy, setAssignBusy] = useState(false);
-  const [assignMsg, setAssignMsg] = useState<string | null>(null);
-
-  // Create list from selection (Marketing).
-  const [listOpen, setListOpen] = useState(false);
-  const [listMode, setListMode] = useState<"new" | "existing">("new");
-  const [listName, setListName] = useState("");
-  const [listDept, setListDept] = useState<string>("Marketing");
-  const [listDesc, setListDesc] = useState("");
-  const [existingLists, setExistingLists] = useState<{ id: string; name: string; contact_count?: number }[]>([]);
-  const [addToListId, setAddToListId] = useState("");
-  const [listBusy, setListBusy] = useState(false);
-  const [listMsg, setListMsg] = useState<string | null>(null);
-  const [listResult, setListResult] = useState<string | null>(null);
-  const [emailOpen, setEmailOpen] = useState(false);
-
   // Odoo-style search bar (Marketing) — edits the same spec.
   const [typed, setTyped] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -246,16 +217,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     fetch("/api/sales/contacts/filter-facets").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) setFacetOpts(d as Record<string, string[]>); }).catch(() => {});
   }, []);
 
-  // Members for the mass-assign picker (super admin only).
-  useEffect(() => {
-    if (!canBulkAssign) return;
-    fetch("/api/sales/contacts/assignable-members").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.members) setMembers(d.members); }).catch(() => {});
-  }, [canBulkAssign]);
-
   // The matching set changes with the filters — clear any selection so a stale
   // "select all matching" can't apply to a different set.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on filter change
-  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setListOpen(false); setListResult(null); setSourceOpen(false); setActionsOpen(false); }, [paramsStr, groupBy]);
+  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); }, [paramsStr, groupBy]);
 
   async function addContact() {
     if (!addDraft.name.trim()) return;
@@ -382,92 +347,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const allLoadedSelected = allLoadedIds.length > 0 && allLoadedIds.every((id) => selected.has(id));
   function toggleRow(id: string) { setSelectAllMatching(false); setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   function toggleAllLoaded() { setSelectAllMatching(false); setSelected(allLoadedSelected ? new Set() : new Set(allLoadedIds)); }
-  function clearSelection() { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setAssignMsg(null); setListOpen(false); setListMsg(null); setSourceOpen(false); setSourceMsg(null); setActionsOpen(false); }
-  // Selection → request target. "Select all" carries the filter, not the ids, so the
+  function clearSelection() { setSelected(new Set()); setSelectAllMatching(false); }
+  // Selection → request target. "Select all" carries the filter spec, not the ids, so the
   // action touches every matching contact — the number the bar shows.
-  const selectionTarget = () => selectAllMatching
-    ? { mode: "filter" as const, params: paramsStr }
-    : { mode: "ids" as const, ids: [...selected] };
-  function closePanels() { setAssignOpen(false); setListOpen(false); setSourceOpen(false); setActionsOpen(false); }
-
-  async function submitSetSource() {
-    setSourceBusy(true); setSourceMsg(null);
-    try {
-      let count = 0, failed = 0;
-      let afterId: string | undefined;
-      // Server writes ≤1,500 per request and hands back a cursor; keep going until done.
-      for (let pass = 0; pass < 40; pass++) {
-        const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "set_lead_source", value: sourceVal, afterId, ...selectionTarget() }) });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Couldn't set the lead source.");
-        count += data.count; failed += data.failed ?? 0;
-        if (!data.nextCursor) break;
-        afterId = data.nextCursor;
-        setSourceMsg(`Working… ${count.toLocaleString()} done, ${data.remaining.toLocaleString()} to go`);
-      }
-      setActionResult(`Lead source set to “${sourceVal}” on ${count.toLocaleString()} contact${count === 1 ? "" : "s"}${failed ? ` — ${failed} failed` : ""}.`);
-      clearSelection();
-      reload();
-    } catch (e) { setSourceMsg(e instanceof Error ? e.message : "Couldn't set the lead source."); } finally { setSourceBusy(false); }
-  }
-
-  async function exportCsv() {
-    setExportBusy(true); setActionsOpen(false);
-    try {
-      const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "export", ...selectionTarget() }) });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Export failed."); }
-      const blob = await res.blob();
-      const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "contacts.csv";
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-      setActionResult(`Exported ${selectionCount.toLocaleString()} contact${selectionCount === 1 ? "" : "s"} to ${name}.`);
-    } catch (e) { setActionResult(e instanceof Error ? e.message : "Export failed."); } finally { setExportBusy(false); }
-  }
-
-  // Create a Marketing list from the selection (or append to an existing one).
-  function openListPanel() {
-    setListOpen((v) => !v); setListMsg(null); setAssignOpen(false);
-    if (existingLists.length === 0) {
-      fetch("/api/marketing/lists").then((r) => (r.ok ? r.json() : [])).then((d) => setExistingLists(Array.isArray(d) ? d : [])).catch(() => {});
-    }
-  }
-  async function submitCreateList() {
-    const isNew = listMode === "new";
-    if (isNew && !listName.trim()) { setListMsg("Give the list a name."); return; }
-    if (!isNew && !addToListId) { setListMsg("Pick a list to add to."); return; }
-    setListBusy(true); setListMsg(null);
-    try {
-      const target = selectAllMatching
-        ? { mode: "filter" as const, params: paramsStr }
-        : { mode: "ids" as const, ids: [...selected] };
-      const dest = isNew
-        ? { name: listName.trim(), department: listDept, description: listDesc.trim() || undefined }
-        : { listId: addToListId };
-      const res = await fetch("/api/marketing/lists/from-contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...target, ...dest }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Couldn't create the list.");
-      setListResult(`${data.created ? "Created list" : "Updated list"} “${data.listName}” — ${data.added.toLocaleString()} contact${data.added === 1 ? "" : "s"} added${data.skippedNoEmail ? `, ${data.skippedNoEmail.toLocaleString()} skipped (no email)` : ""}.`);
-      setListName(""); setListDesc(""); setAddToListId("");
-      clearSelection();
-      fetch("/api/marketing/lists").then((r) => (r.ok ? r.json() : [])).then((d) => setExistingLists(Array.isArray(d) ? d : [])).catch(() => {});
-    } catch (e) { setListMsg(e instanceof Error ? e.message : "Couldn't create the list."); } finally { setListBusy(false); }
-  }
-  const assignNames = members.filter((m) => assignSel.includes(m.id)).map((m) => m.name);
-  async function submitAssign() {
-    if (assignSel.length === 0) { setAssignMsg("Pick at least one member."); return; }
-    setAssignBusy(true); setAssignMsg(null);
-    try {
-      const body = selectAllMatching
-        ? { mode: "filter", memberIds: assignSel, params: paramsStr }
-        : { mode: "ids", memberIds: assignSel, ids: [...selected] };
-      const res = await fetch("/api/sales/contacts/bulk-assign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Assign failed.");
-      clearSelection(); setAssignSel([]);
-      reload();
-    } catch (e) { setAssignMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setAssignBusy(false); }
-  }
+  const bulkTarget: BulkTarget = selectAllMatching ? { mode: "filter", params: paramsStr } : { mode: "ids", ids: [...selected] };
 
   async function pullFromOdoo() {
     setGearBusy(true); setGearMsg("Pulling changes from Odoo…");
@@ -756,7 +639,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         </div>
       )}
 
-      {(openFilter || openColPicker || filtersOpen || groupByOpen || actionsOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); setGroupByOpen(false); setActionsOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+      {(openFilter || openColPicker || filtersOpen || groupByOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); setGroupByOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
       {/* Custom filter builder (Odoo) */}
       {customOpen && (
@@ -820,148 +703,12 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         </div>
       )}
 
-      {emailOpen && (
-        <MassEmailComposer
-          source="contacts"
-          selection={selectAllMatching
-            ? { mode: "filter", params: paramsStr, count: matchingTotal }
-            : { mode: "ids", ids: [...selected], count: selected.size }}
-          onClose={() => setEmailOpen(false)}
+      {canSelect && (
+        <ContactsBulkActions
+          target={bulkTarget} count={selectionCount} selectAllMatching={selectAllMatching} matchingTotal={matchingTotal}
+          onSelectAll={() => setSelectAllMatching(true)} onClear={clearSelection} onChanged={reload}
+          can={{ assign: canBulkAssign, list: canCreateList, edit: canBulkEdit, export: canExport }}
         />
-      )}
-
-      {canCreateList && listResult && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#E1F5EE", border: "0.5px solid #A7E0CE", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
-          <i className="ti ti-circle-check" style={{ color: "#0F6E56" }} aria-hidden="true" />
-          <span style={{ fontSize: 12.5, color: "#0F6E56", fontWeight: 500 }}>{listResult}</span>
-          <Link href="/admin/marketing/lists" style={{ fontSize: 12, color: "#185FA5", textDecoration: "underline", marginLeft: 4 }}>View in Lists →</Link>
-          <button onClick={() => setListResult(null)} style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
-        </div>
-      )}
-
-      {actionResult && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#E1F5EE", border: "0.5px solid #A7E0CE", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
-          <i className="ti ti-circle-check" style={{ color: "#0F6E56" }} aria-hidden="true" />
-          <span style={{ fontSize: 12.5, color: "#0F6E56", fontWeight: 500 }}>{actionResult}</span>
-          <button onClick={() => setActionResult(null)} style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
-        </div>
-      )}
-
-      {canSelect && selectionCount > 0 && (
-        <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "8px 13px", marginBottom: 12 }}>
-          {/* Odoo selection bar: "N selected → Select all M ×" then one Actions menu. */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 600, background: "#B5D4F4", borderRadius: 7, padding: "4px 10px" }}>{selectAllMatching ? `All ${matchingTotal.toLocaleString()} selected` : `${selected.size.toLocaleString()} selected`}</span>
-            {!selectAllMatching && matchingTotal > selected.size && (
-              <button onClick={() => setSelectAllMatching(true)} style={{ fontSize: 12.5, fontWeight: 500, color: "#185FA5", background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ti ti-arrow-right" aria-hidden="true" /> Select all {matchingTotal.toLocaleString()}</button>
-            )}
-            <button onClick={clearSelection} aria-label="Clear selection" style={{ fontSize: 14, color: "#185FA5", background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex" }}><i className="ti ti-x" aria-hidden="true" /></button>
-            <div style={{ marginLeft: "auto", position: "relative" }}>
-              <button onClick={() => setActionsOpen((v) => !v)} disabled={exportBusy} style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <i className="ti ti-settings" aria-hidden="true" /> {exportBusy ? "Exporting…" : "Actions"} <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
-              </button>
-              {actionsOpen && (
-                <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 220, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "6px 0" }}>
-                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>Selected contacts</div>
-                  {([
-                    canCreateList ? { key: "email", icon: "ti-mail", label: "Email", run: () => { closePanels(); setEmailOpen(true); } } : null,
-                    canBulkAssign ? { key: "assign", icon: "ti-user-plus", label: "Lead assign", run: () => { closePanels(); setAssignOpen(true); setAssignMsg(null); } } : null,
-                    canBulkEdit ? { key: "source", icon: "ti-tag", label: "Set lead source", run: () => { closePanels(); setSourceOpen(true); setSourceMsg(null); } } : null,
-                    canCreateList ? { key: "list", icon: "ti-list-details", label: "Create list", run: () => { closePanels(); openListPanel(); } } : null,
-                    canExport ? { key: "export", icon: "ti-download", label: "Export CSV", run: () => void exportCsv() } : null,
-                  ] as Array<{ key: string; icon: string; label: string; run: () => void } | null>).filter((a): a is NonNullable<typeof a> => a !== null).map((a) => (
-                    <button key={a.key} onClick={a.run} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 9, padding: "8px 13px", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
-                      <i className={`ti ${a.icon}`} style={{ fontSize: 15, color: "var(--muted-foreground)" }} aria-hidden="true" />{a.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {canBulkEdit && sourceOpen && (
-            <div style={{ marginTop: 10, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, padding: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Set lead source on {selectionCount.toLocaleString()} contact{selectionCount === 1 ? "" : "s"}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <select value={sourceVal} onChange={(e) => setSourceVal(e.target.value)} style={{ ...inp, minWidth: 180 }}>
-                  {LEAD_SOURCE_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <button onClick={submitSetSource} disabled={sourceBusy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: sourceBusy ? 0.55 : 1 }}>{sourceBusy ? "Applying…" : `Apply to ${selectionCount.toLocaleString()}`}</button>
-                <button onClick={() => setSourceOpen(false)} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
-                {sourceMsg && <span style={{ fontSize: 11.5, color: sourceBusy ? "#185FA5" : "#A32D2D" }}>{sourceMsg}</span>}
-              </div>
-              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 8 }}>Replaces the current lead source. Kept on re-sync from Odoo.</div>
-            </div>
-          )}
-
-          {canCreateList && listOpen && (
-            <div style={{ marginTop: 10, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, padding: 12 }}>
-              <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
-                {(["new", "existing"] as const).map((m) => (
-                  <button key={m} onClick={() => { setListMode(m); setListMsg(null); }} style={{ fontSize: 11.5, fontWeight: listMode === m ? 600 : 400, color: listMode === m ? "#fff" : "var(--muted-foreground)", background: listMode === m ? "#2E78F5" : "transparent", border: "none", padding: "5px 13px", cursor: "pointer" }}>{m === "new" ? "New list" : "Add to existing"}</button>
-                ))}
-              </div>
-              {listMode === "new" ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 8, marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>List name</div>
-                    <input value={listName} onChange={(e) => setListName(e.target.value)} autoFocus placeholder="e.g. Investor outreach — Sept" style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Department</div>
-                    <select value={listDept} onChange={(e) => setListDept(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box" }}>
-                      {LIST_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Description (optional)</div>
-                    <input value={listDesc} onChange={(e) => setListDesc(e.target.value)} placeholder="What this segment is for…" style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
-                  </div>
-                </div>
-              ) : (
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Add to list</div>
-                  <select value={addToListId} onChange={(e) => setAddToListId(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box" }}>
-                    <option value="">Choose a list…</option>
-                    {existingLists.map((l) => <option key={l.id} value={l.id}>{l.name}{typeof l.contact_count === "number" ? ` (${l.contact_count})` : ""}</option>)}
-                  </select>
-                  {existingLists.length === 0 && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>No lists yet — switch to “New list”.</div>}
-                </div>
-              )}
-              <div style={{ background: "var(--muted)", borderRadius: 8, padding: "8px 11px", fontSize: 11.5, color: "#185FA5", marginBottom: 10 }}>
-                <i className="ti ti-info-circle" aria-hidden="true" /> Adds <b>{selectionCount.toLocaleString()}</b> selected contact{selectionCount === 1 ? "" : "s"} to the list. Contacts without an email are skipped.
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button onClick={submitCreateList} disabled={listBusy || (listMode === "new" ? !listName.trim() : !addToListId)} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: listBusy || (listMode === "new" ? !listName.trim() : !addToListId) ? 0.55 : 1 }}>{listBusy ? "Working…" : listMode === "new" ? `Create list · ${selectionCount.toLocaleString()}` : `Add ${selectionCount.toLocaleString()} to list`}</button>
-                <button onClick={() => setListOpen(false)} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
-                {listMsg && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{listMsg}</span>}
-              </div>
-            </div>
-          )}
-          {assignOpen && (
-            <div style={{ marginTop: 10, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, padding: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Add members to {selectionCount.toLocaleString()} contact{selectionCount === 1 ? "" : "s"}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 5 }}>Members (lead-assignable only)</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, maxHeight: 132, overflowY: "auto" }}>
-                {members.length === 0 && <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>No assignable members configured.</span>}
-                {members.map((m) => {
-                  const on = assignSel.includes(m.id);
-                  return (
-                    <button key={m.id} onClick={() => setAssignSel((s) => on ? s.filter((x) => x !== m.id) : [...s, m.id])} style={{ fontSize: 11.5, fontWeight: on ? 600 : 400, color: on ? "#185FA5" : "var(--muted-foreground)", background: on ? "#E6F1FB" : "transparent", border: `0.5px solid ${on ? "#B5D4F4" : "var(--border)"}`, borderRadius: 16, padding: "4px 11px", cursor: "pointer" }}>{on ? <><i className="ti ti-check" aria-hidden="true" /> </> : "+ "}{m.name}</button>
-                  );
-                })}
-              </div>
-              <div style={{ background: "var(--muted)", borderRadius: 8, padding: "8px 11px", fontSize: 11.5, color: "#854F0B", marginBottom: 10 }}>
-                <i className="ti ti-alert-triangle" aria-hidden="true" /> Adds {assignNames.length ? assignNames.join(", ") : "the selected members"} to <b>{selectionCount.toLocaleString()}</b> contact{selectionCount === 1 ? "" : "s"}. Existing assignees are kept. Logged to the audit trail.
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button onClick={submitAssign} disabled={assignBusy || assignSel.length === 0} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: assignBusy || assignSel.length === 0 ? 0.55 : 1 }}>{assignBusy ? "Assigning…" : `Add to ${selectionCount.toLocaleString()} contact${selectionCount === 1 ? "" : "s"}`}</button>
-                <button onClick={() => setAssignOpen(false)} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
-                {assignMsg && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{assignMsg}</span>}
-              </div>
-            </div>
-          )}
-        </div>
       )}
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, position: "relative" }}>
