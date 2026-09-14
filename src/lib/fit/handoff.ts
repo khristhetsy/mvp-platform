@@ -47,9 +47,13 @@ export async function handoffFitSession(sessionId: string, booker: { name: strin
   // compare normalised against the small candidate set sharing the domain.
   const norm = normalizeEmail(booker.email);
   const domain = norm.slice(norm.indexOf("@") + 1);
-  const { data: candidates } = await db.from("crm_contacts").select("id, email, raw, overrides").ilike("email", `%@${domain}`).limit(200);
-  const hit = ((candidates ?? []) as { id: string; email: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null }[])
+  // Candidates by domain carry only id + email; the full record is fetched for the one hit.
+  const { data: candidates } = await db.from("crm_contacts").select("id, email").ilike("email", `%@${domain}`).limit(200);
+  const cand = ((candidates ?? []) as { id: string; email: string | null }[])
     .find((c) => c.email && normalizeEmail(c.email) === norm);
+  const hit = cand
+    ? ((await db.from("crm_contacts").select("id, raw, overrides").eq("id", cand.id).maybeSingle()).data as { id: string; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null } | null)
+    : null;
 
   if (hit) {
     // Append the fit answers. Keep any existing lead source (first touch wins), but

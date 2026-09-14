@@ -174,12 +174,12 @@ export async function loadContactPreferences(
   const db = createServiceRoleClient() as any;
   const { data: c } = await db
     .from("crm_contacts")
-    .select("id, name, email, raw, overrides")
+    .select("id, name, email, profile, overrides")
     .eq("id", contactId)
     .maybeSingle();
   if (!c) return null;
 
-  const raw = (c.raw as Record<string, unknown> | null) ?? null;
+  const raw: Record<string, unknown> | null = c.profile ? { __profile: c.profile } : null;
   const overrides = (c.overrides as Record<string, unknown> | null) ?? null;
   const extra = flattenExtra(raw);
   if (overrides) {
@@ -228,14 +228,16 @@ export async function loadInvestorContacts(opts?: {
   const db = createServiceRoleClient() as any;
   const limit = opts?.limit ?? 500;
 
-  let query = db.from("crm_contacts").select("id, name, email, company, raw, overrides").limit(limit);
+  // `profile` (= raw->'__profile', a few hundred bytes) instead of the whole Odoo record:
+  // this loader pulls up to 800 rows per page view, and only ever read raw.__profile.
+  let query = db.from("crm_contacts").select("id, name, email, company, profile, overrides").limit(limit);
   if (opts?.investorsOnly) query = query.eq("module", "investor");
   const { data, error } = await query;
   if (error || !Array.isArray(data)) return [];
 
   const rows: ScoredInvestorContact[] = [];
   for (const c of data as Array<Record<string, unknown>>) {
-    const raw = (c.raw as Record<string, unknown> | null) ?? null;
+    const raw: Record<string, unknown> | null = c.profile ? { __profile: c.profile } : null;
     const overrides = (c.overrides as Record<string, unknown> | null) ?? null;
 
     // Base preferences from the synced questionnaire, then apply any local
