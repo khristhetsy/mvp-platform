@@ -84,6 +84,20 @@ export async function listOpportunities(includeArchived = false, ownerId?: strin
   return rows.map(mapRow);
 }
 
+/**
+ * Just the given opportunities (bulk actions). Throws on a database error — a bulk action
+ * must never quietly run on "no rows" because a lookup timed out.
+ */
+export async function listOpportunitiesByIds(ids: string[]): Promise<Opportunity[]> {
+  const out: Opportunity[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await db().from("sales_opportunities").select(SELECT).in("id", ids.slice(i, i + 200));
+    if (error) throw new Error(`Couldn't load the selected opportunities: ${error.message}`);
+    out.push(...((data ?? []) as Array<Record<string, unknown>>).map(mapRow));
+  }
+  return out;
+}
+
 export async function getOpportunity(id: string): Promise<Opportunity | null> {
   const { data } = await db().from("sales_opportunities").select(SELECT).eq("id", id).maybeSingle();
   if (!data) return null;

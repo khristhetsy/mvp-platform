@@ -419,7 +419,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
               : !enroll.preview ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: "0 0 12px" }}>Checking the selection…</p>
               : (
                 <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: "0 0 12px", lineHeight: 1.6 }}>
-                  <b style={{ color: "#0F6E56" }}>{enroll.preview.enrolled}</b> will be enrolled{enroll.preview.skippedNoEmail ? <> · <b>{enroll.preview.skippedNoEmail}</b> have no email</> : null}{enroll.preview.alreadyEnrolled ? <> · <b>{enroll.preview.alreadyEnrolled}</b> already in this sequence</> : null}.
+                  <b style={{ color: "#0F6E56" }}>{enroll.preview.enrolled}</b> will be enrolled{enroll.preview.skippedNoEmail ? <> · <b>{enroll.preview.skippedNoEmail}</b> have no email</> : null}{enroll.preview.alreadyEnrolled ? <> · <b>{enroll.preview.alreadyEnrolled}</b> already in this sequence</> : null}{enroll.preview.total < enroll.ids.length ? <> · <b>{enroll.ids.length - enroll.preview.total}</b> not found</> : null}.
                   {enroll.seq.status !== "active" && <> The sequence is <b>{enroll.seq.status}</b> — nothing sends until it&rsquo;s activated.</>} The first step goes out on the next batch run and passes through the approver.
                 </p>
               )}

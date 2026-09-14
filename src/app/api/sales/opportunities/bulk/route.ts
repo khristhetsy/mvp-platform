@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { updateOpportunity, listOpportunities, type UpdateOpportunityPatch } from "@/lib/sales/opportunities";
+import { updateOpportunity, listOpportunities, listOpportunitiesByIds, type UpdateOpportunityPatch } from "@/lib/sales/opportunities";
 import { listAssignableStaff } from "@/lib/sales/settings";
 import { toCsv } from "@/lib/sales/bulk-targets";
 import { enrollOpportunities } from "@/lib/marketing/sequences";
@@ -40,10 +40,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   const targets = [...new Set(body.ids)];
 
   if (body.op === "enroll") {
-    const want = new Set(targets);
-    const all = await listOpportunities(true);
-    const picked = all.filter((o) => want.has(o.id)).map((o) => ({ id: o.id, contact_name: o.contact_name, contact_email: o.contact_email }));
     try {
+      const picked = (await listOpportunitiesByIds(targets)).map((o) => ({ id: o.id, contact_name: o.contact_name, contact_email: o.contact_email }));
+      if (picked.length === 0) return NextResponse.json({ error: "None of the selected opportunities could be found." }, { status: 404 });
       const r = await enrollOpportunities(body.sequenceId, picked, body.mode);
       return NextResponse.json({ ok: true, ...r });
     } catch (err) {
