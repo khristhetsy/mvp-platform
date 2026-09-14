@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
-import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
+import { FIELD_REGISTRY, OP_LABEL, fieldDef, isValidCondition, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
 import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/ToolbarGear";
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import { useContactsQuery, contactsParams, PAGE, type SalesContact, type Sort } from "./useContactsQuery";
@@ -128,7 +128,15 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   // the Odoo search bar all read and write conditions on this spec; the server gets it
   // as a single `filter=` param. (Previously five separate states were re-merged on
   // every request, and a role filter lived outside the spec entirely.)
-  const [spec, setSpec] = useState<FilterSpec>(EMPTY_SPEC);
+  const searchParams = useSearchParams();
+  // Deep links (e.g. Social Hub → Conversions) arrive as ?filter=<FilterSpec JSON>.
+  const [spec, setSpec] = useState<FilterSpec>(() => {
+    try {
+      const raw = searchParams.get("filter");
+      const s = raw ? (JSON.parse(raw) as FilterSpec) : null;
+      return s && Array.isArray(s.conditions) && s.conditions.every(isValidCondition) ? { match: s.match === "any" ? "any" : "all", conditions: s.conditions } : EMPTY_SPEC;
+    } catch { return EMPTY_SPEC; }
+  });
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
   // v5 key: bumped when the "Activities" column was added (v4 for "Lead source") so a
   // stale saved set from before the column existed doesn't hide it. Resets prefs once.
@@ -201,7 +209,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [saveShared, setSaveShared] = useState(false);
   const defaultApplied = useRef(false);
 
-  const viewAs = useSearchParams().get("viewAs");
+  const viewAs = searchParams.get("viewAs");
   const paramsStr = contactsParams(spec, sort, viewAs);
   const { groups, expanded, facets, dynGroups, dynLoading, error: queryError, toggleGroup, goPage, reload } =
     useContactsQuery({ spec, groupBy, sort, viewAs, role });

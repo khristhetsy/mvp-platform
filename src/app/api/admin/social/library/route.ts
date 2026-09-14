@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export type LibraryPost = {
   id: string; body: string; archetype: string | null; campaign_id: string | null; campaign_name: string | null;
-  archived: boolean; published: number; clicks: number; created_at: string | null; top: boolean;
+  archived: boolean; published: number; clicks: number; created_at: string | null; last_published_at: string | null; top: boolean;
 };
 
 export async function GET(req: NextRequest): Promise<Response> {
@@ -33,13 +33,17 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const ids = rows.map((r) => String(r.id));
   const publishedByPost = new Map<string, number>();
+  const lastPublishedByPost = new Map<string, string>();
   const clicksByPost = new Map<string, number>();
   if (ids.length) {
     const [{ data: vars }, { data: clicks }] = await Promise.all([
-      db.from("social_variants").select("post_id").eq("status", "published").in("post_id", ids),
+      db.from("social_variants").select("post_id, published_at").eq("status", "published").in("post_id", ids),
       db.from("social_clicks").select("post_id").in("post_id", ids).limit(200000),
     ]);
-    for (const v of (vars ?? []) as { post_id: string }[]) publishedByPost.set(v.post_id, (publishedByPost.get(v.post_id) ?? 0) + 1);
+    for (const v of (vars ?? []) as { post_id: string; published_at: string | null }[]) {
+      publishedByPost.set(v.post_id, (publishedByPost.get(v.post_id) ?? 0) + 1);
+      if (v.published_at && (lastPublishedByPost.get(v.post_id) ?? "") < v.published_at) lastPublishedByPost.set(v.post_id, v.published_at);
+    }
     for (const c of (clicks ?? []) as { post_id: string | null }[]) if (c.post_id) clicksByPost.set(c.post_id, (clicksByPost.get(c.post_id) ?? 0) + 1);
   }
   // Rank "top" by clicks when we have any, else by publish count.
@@ -54,7 +58,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     return {
       id: String(r.id), body: String(r.body ?? ""), archetype: (r.archetype as string) ?? null,
       campaign_id: c?.id ?? null, campaign_name: c?.name ?? null,
-      archived: Boolean(r.archived_at), published, clicks, created_at: (r.created_at as string) ?? null, top,
+      archived: Boolean(r.archived_at), published, clicks, created_at: (r.created_at as string) ?? null,
+      last_published_at: lastPublishedByPost.get(String(r.id)) ?? null, top,
     };
   });
   return NextResponse.json({ posts });

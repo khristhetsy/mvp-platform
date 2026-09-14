@@ -22,10 +22,35 @@ function stepLabel(s: StageResult): string {
   return `${(s.stepFromPrevRatio * 100).toFixed(1)}%`;
 }
 
+/**
+ * Where a stage's number comes from — each stage name (and each campaign under it) opens
+ * that page in a new tab. Outreach → Library (published this period), Clicks → Attribution,
+ * Meetings → Sales Bookings, Conversions → Contacts whose lead source is the campaign tag.
+ */
+function stageHref(stage: StageKey, periodStart: string | null, tags: string[], campaignId?: string): string {
+  const q = (o: Record<string, string | null | undefined>) => {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(o)) if (v) sp.set(k, v);
+    const str = sp.toString();
+    return str ? `?${str}` : "";
+  };
+  switch (stage) {
+    case "outreach":
+    case "clicks":
+      return campaignId ? `/admin/social${q({ tab: "library", campaign: campaignId })}` : stage === "clicks" ? "/admin/social?tab=attribution" : `/admin/social${q({ tab: "library", since: periodStart })}`;
+    case "meetings":
+      return "/admin/sales/bookings";
+    case "conversions":
+      return tags.length ? `/admin/sales/contacts${q({ filter: JSON.stringify({ match: "all", conditions: [{ field: "leadSource", op: "in", value: tags }] }) })}` : "/admin/sales/contacts";
+  }
+}
+const linkCls = "inline-flex items-center gap-1 text-indigo-700 hover:underline";
+const Ext = () => <i className="ti ti-external-link text-[12px] opacity-70" aria-hidden="true" />;
+
 /** Aggregate the per-campaign contributions to one stage. */
 function contributions(funnels: CampaignFunnel[], stage: StageKey) {
   return funnels
-    .map((f) => ({ id: f.campaignId, name: f.name, s: f.stages.find((x) => x.stage === stage)! }))
+    .map((f) => ({ id: f.campaignId, name: f.name, tag: f.sourceTag, s: f.stages.find((x) => x.stage === stage)! }))
     .filter((r) => r.s && (r.s.actual > 0 || r.s.target))
     .sort((a, b) => b.s.actual - a.s.actual);
 }
@@ -112,6 +137,9 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
     setSelected(focus.stage as StageKey);
   }, [focus]);
 
+  const periodStart = funnels[0]?.periodStart ?? null;
+  const allTags = funnels.map((f) => f.sourceTag).filter(Boolean);
+
   const cmoContext = useMemo(() => () => ({ grain, stages: aggregate.map((s) => ({ stage: s.stage, actual: s.actual, target: s.target, pctOfGoal: s.pctOfGoal, deltaPct: s.deltaPct })) }), [grain, aggregate]);
 
   return (
@@ -161,7 +189,8 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
                   <tr key={k} className={`cursor-pointer border-t border-slate-100 ${open ? "bg-indigo-50/50" : "hover:bg-slate-50"}`} onClick={() => setExpanded(open ? null : k)}>
                     <td className="px-4 py-2.5">
                       <span className="mr-1 text-slate-400">{open ? "▾" : "▸"}</span>
-                      <span className="inline-block h-2 w-2 rounded-sm align-middle" style={{ background: STAGE_COLORS[k] }} /> <span className="align-middle">{STAGE_LABELS[k]}</span>
+                      <span className="inline-block h-2 w-2 rounded-sm align-middle" style={{ background: STAGE_COLORS[k] }} />{" "}
+                      <a href={stageHref(k, periodStart, allTags)} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} title="Open in a new tab" className={`${linkCls} align-middle`}>{STAGE_LABELS[k]}<Ext /></a>
                     </td>
                     <td className="px-3 py-2.5">{fmt(s.actual)} / {s.target != null ? fmt(s.target) : "—"}</td>
                     <td className="px-3 py-2.5">
@@ -181,7 +210,7 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
                           const hit = focus?.campaignId === r.id && focus?.stage === k;
                           return (
                             <div key={r.id} className={`flex items-center gap-3 rounded-md px-1 py-1 text-[11.5px] ${hit ? "bg-indigo-100/70 ring-1 ring-indigo-200" : ""}`}>
-                              <span className="min-w-0 flex-1 truncate text-slate-700">{r.name}</span>
+                              <a href={stageHref(k, periodStart, [r.tag], r.id)} target="_blank" rel="noopener" title="Open in a new tab" className={`${linkCls} min-w-0 flex-1 truncate`}>{r.name}<Ext /></a>
                               <span className="text-slate-600">{fmt(r.s.actual)}{r.s.target != null ? ` / ${fmt(r.s.target)}` : ""}</span>
                               <span className="w-10 text-right font-medium text-slate-500">{pct(r.s.pctOfGoal)}</span>
                             </div>

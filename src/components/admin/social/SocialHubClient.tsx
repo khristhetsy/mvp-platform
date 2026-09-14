@@ -58,10 +58,12 @@ function statusMeta(status: string): { label: string; cls: string; dot: string }
   }
 }
 
-export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, googleReady, attribution }: {
+export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, googleReady, attribution, initialTab, libraryCampaign = null, librarySince = null }: {
   accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; googleReady: boolean; attribution: WeekBar[];
+  /** Deep links (?tab=library&campaign=…&since=…) — how Campaigns & Goals opens a stage or campaign in a new tab. */
+  initialTab?: string; libraryCampaign?: string | null; librarySince?: string | null;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => (TAB_ORDER as string[]).includes(initialTab ?? "") ? (initialTab as Tab) : "overview");
   const [goalsFocus, setGoalsFocus] = useState<{ campaignId?: string; stage?: string } | null>(null);
   const failed24 = queue.filter((q) => q.status === "failed").length;
   const topPostBody = queue.find((q) => q.status === "published" && q.body)?.body ?? null;
@@ -82,7 +84,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
         {tab === "goals" ? <CampaignsGoals focus={goalsFocus} /> : null}
         {tab === "composer" ? <Composer accounts={accounts} googleReady={googleReady} /> : null}
         {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
-        {tab === "library" ? <Library /> : null}
+        {tab === "library" ? <Library campaignId={libraryCampaign} publishedSince={librarySince} /> : null}
         {tab === "attribution" ? (
           <div className="space-y-5">
             <AttributionPeriods />

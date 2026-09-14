@@ -28,7 +28,7 @@ function connectNotice(sp: { linkedin?: string; facebook?: string; message?: str
   return undefined;
 }
 
-export default async function AdminSocialPage({ searchParams }: { searchParams: Promise<{ linkedin?: string; facebook?: string; message?: string }> }) {
+export default async function AdminSocialPage({ searchParams }: { searchParams: Promise<{ linkedin?: string; facebook?: string; message?: string; tab?: string; campaign?: string; since?: string }> }) {
   const sp = await searchParams;
   const notice = connectNotice(sp);
   const profile = await requireRole(["admin", "analyst"]);
@@ -59,7 +59,8 @@ export default async function AdminSocialPage({ searchParams }: { searchParams: 
         ) : null}
 
         <div className="mt-5">
-          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} googleReady={isGoogleCalendarConfigured()} attribution={attribution} />
+          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} googleReady={isGoogleCalendarConfigured()} attribution={attribution}
+            initialTab={sp.tab} libraryCampaign={sp.campaign ?? null} librarySince={sp.since ?? null} />
         </div>
       </div>
     </AppShell>
