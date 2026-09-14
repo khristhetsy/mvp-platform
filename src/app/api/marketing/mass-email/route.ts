@@ -15,7 +15,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { resolveContactIds } from "@/lib/sales/bulk-targets";
 import { oppIdsToCrmIds, crmIdsToMarketingContacts, createHiddenList } from "@/lib/marketing/selection";
 import { getTemplate } from "@/lib/marketing/templates";
@@ -38,7 +37,7 @@ const schema = z.object({
   source: z.enum(["contacts", "opportunities"]),
   mode: z.enum(["ids", "filter"]),
   ids: z.array(z.string().uuid()).max(MAX_TARGET).optional(),
-  params: z.string().max(4000).optional(),
+  params: z.string().max(20_000).optional(),
   group: z.string().max(40).optional(),
   action: z.enum(["send", "test", "sequence"]),
   channel: z.enum(["icapos", "gmail"]).optional(),
@@ -59,9 +58,6 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const d = parsed.data;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db: any = serviceRoleClientUntyped();
-
   // ── Resolve the selection to crm_contacts ids ──────────────────────────────
   let crmIds: string[] = [];
   if (d.source === "opportunities") {
@@ -70,7 +66,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     crmIds = [...new Set(d.ids ?? [])];
   } else {
     try {
-      crmIds = await resolveContactIds(db, { mode: "filter", params: d.params, group: d.group });
+      crmIds = await resolveContactIds(profile, { mode: "filter", params: d.params, group: d.group });
     } catch (err) {
       return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
     }

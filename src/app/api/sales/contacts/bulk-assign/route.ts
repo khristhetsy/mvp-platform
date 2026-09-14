@@ -12,7 +12,7 @@ const schema = z.object({
   memberIds: z.array(z.string().uuid()).min(1).max(50),
   mode: z.enum(["ids", "filter"]),
   ids: z.array(z.string().uuid()).max(MAX_TARGET).optional(),
-  params: z.string().max(4000).optional(),
+  params: z.string().max(20_000).optional(),
   group: z.string().max(40).optional(),
 });
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   // Resolve the target contact ids (same predicate as the list, see bulk-targets.ts).
   let ids: string[];
   try {
-    ids = await resolveContactIds(db, mode === "ids"
+    ids = await resolveContactIds(profile, mode === "ids"
       ? { mode, ids: parsed.data.ids }
       : { mode, params: parsed.data.params, group: parsed.data.group });
   } catch (err) {

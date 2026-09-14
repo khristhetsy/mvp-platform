@@ -3,10 +3,12 @@
  *
  * Two modes: an explicit id list (rows the user ticked), or a filter (the user pressed
  * "Select all N" and the action applies to every contact matching the current search).
- * The filter re-runs the same predicate the list itself used, so the count the user saw
- * is the count the action touches. Shared by Lead assign, Set lead source and Export.
+ * The filter re-runs the same predicate the list itself used — same SQL function, same
+ * owner scope (including a manager's `viewAs`) — so the count the user saw is the count
+ * the action touches. Shared by Lead assign, Set lead source, Create list, Email, Export.
  */
 import { parseContactsQuery, searchContactIds } from "@/lib/sales/contacts-search";
+import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
 
 export const CONTACT_GROUPS = ["founder", "investor", "advisor", "other"] as const;
 /** Safety cap on how many contacts one action can touch. */
@@ -16,17 +18,19 @@ export type BulkTarget =
   | { mode: "ids"; ids?: string[] }
   | { mode: "filter"; params?: string; group?: string };
 
+type Caller = { id: string; role?: string | null; is_super_admin?: boolean | null };
+
 /**
- * Filter mode re-runs the exact predicate the list ran (same SQL function), scoped to the
- * caller's owner. Throws on a database error — a bulk action must never quietly run on a
- * partial id set.
+ * Filter mode re-runs the exact predicate the list ran, scoped exactly as the list was
+ * (the caller's contacts scope; `viewAs` travels inside `params`). Throws on a database
+ * error — a bulk action must never quietly run on a partial id set.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolveContactIds(_db: any, target: BulkTarget, owner: string | null = null): Promise<string[]> {
+export async function resolveContactIds(caller: Caller, target: BulkTarget): Promise<string[]> {
   if (target.mode === "ids") return [...new Set(target.ids ?? [])];
   const p = new URLSearchParams(target.params ?? "");
   if (target.group && (CONTACT_GROUPS as readonly string[]).includes(target.group)) p.set("group", target.group);
   const q = parseContactsQuery(p);
+  const owner = effectiveContactsOwner(await getSalesScope(caller, p.get("viewAs")));
   return searchContactIds(q.spec, owner, q.groupBy, q.groupValue, MAX_BULK_TARGET);
 }
 

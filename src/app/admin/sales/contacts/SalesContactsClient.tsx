@@ -202,7 +202,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const defaultApplied = useRef(false);
 
   const viewAs = useSearchParams().get("viewAs");
-  const paramsStr = contactsParams(spec, sort);
+  const paramsStr = contactsParams(spec, sort, viewAs);
   const { groups, expanded, facets, dynGroups, dynLoading, error: queryError, toggleGroup, goPage, reload } =
     useContactsQuery({ spec, groupBy, sort, viewAs, role });
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
@@ -317,7 +317,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     } catch { /* ignore */ }
   }
   function openCustom() { setDraftSpec({ match: spec.match, conditions: spec.conditions.length ? spec.conditions : [{ field: "name", op: "contains", value: "" }] }); setValuePickerAt(null); setCustomOpen(true); setSearchOpen(false); }
-  function applyCustom() { setSpec({ match: draftSpec.match, conditions: draftSpec.conditions.filter((c) => fieldDef(c.field)) }); setCustomOpen(false); }
+  function applyCustom() { setSpec({ match: draftSpec.match, conditions: draftSpec.conditions.filter((c) => c.field === "q" || fieldDef(c.field)) }); setCustomOpen(false); }
   function updateDraftAt(i: number, patch: Partial<Condition>) {
     setDraftSpec((d) => ({ ...d, conditions: d.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
   }

@@ -36,11 +36,15 @@ type Input = {
   role: string;
 };
 
-/** Query-string for the current search. Also what bulk "Select all" hands to the server. */
-export function contactsParams(spec: FilterSpec, sort: Sort): string {
+/**
+ * Query-string for the current search. Also what bulk "Select all" hands to the server,
+ * so it carries `viewAs` too — the action must scope exactly as the list did.
+ */
+export function contactsParams(spec: FilterSpec, sort: Sort, viewAs: string | null = null): string {
   const sp = new URLSearchParams();
   if (spec.conditions.length) sp.set("filter", JSON.stringify(spec));
   if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
+  if (viewAs) sp.set("viewAs", viewAs);
   return sp.toString();
 }
 
@@ -57,8 +61,7 @@ function useDebounced<T>(value: T, ms: number): T {
 }
 
 export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
-  const params = useDebounced(contactsParams(spec, sort), 300);
-  const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
+  const params = useDebounced(contactsParams(spec, sort, viewAs), 300);
 
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -76,7 +79,7 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
     const g = gen.current;
     setGroups((prev) => ({ ...prev, [id]: { rows: prev[id]?.rows ?? [], total: prev[id]?.total ?? 0, loading: true, loaded: prev[id]?.loaded ?? false, page } }));
     try {
-      const res = await fetch(`/api/sales/contacts?${groupFrag(id)}&offset=${page * PAGE}&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
+      const res = await fetch(`/api/sales/contacts?${groupFrag(id)}&offset=${page * PAGE}&limit=${PAGE}${params ? `&${params}` : ""}`);
       const data = await readJson(res, "Couldn't load contacts");
       if (g !== gen.current) return;
       setGroups((prev) => ({ ...prev, [id]: { rows: (data.contacts as SalesContact[] | undefined) ?? [], total: Number(data.total ?? 0), loading: false, loaded: true, page } }));
@@ -85,7 +88,7 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
       setError(e instanceof Error ? e.message : "Couldn't load contacts.");
       setGroups((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { rows: [], total: 0, page }), loading: false, loaded: true } }));
     }
-  }, [groupFrag, params, viewQ]);
+  }, [groupFrag, params]);
 
   // Query changed (or a reload was requested): drop cached rows, refresh the counts.
   // Open groups refetch through the reconciler below.
@@ -95,7 +98,7 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- new query: reset derived state
     setError(null);
     setGroups({});
-    const qs = [params, viewAs ? `viewAs=${encodeURIComponent(viewAs)}` : ""].filter(Boolean).join("&");
+    const qs = params;
     (async () => {
       try {
         if (groupBy === "profile") {
@@ -122,7 +125,7 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
         if (g === gen.current) setDynLoading(false);
       }
     })();
-  }, [params, groupBy, viewAs, version]);
+  }, [params, groupBy, version]);
 
   // Switching the dimension collapses everything (new group ids).
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset open groups when dimension changes

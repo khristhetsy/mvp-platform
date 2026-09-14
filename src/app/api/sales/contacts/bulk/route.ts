@@ -19,7 +19,7 @@ export const maxDuration = 60;
 const target = {
   mode: z.enum(["ids", "filter"]),
   ids: z.array(z.string().uuid()).max(MAX_BULK_TARGET).optional(),
-  params: z.string().max(4000).optional(),
+  params: z.string().max(20_000).optional(),
   group: z.string().max(40).optional(),
 };
 const schema = z.discriminatedUnion("op", [
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const db: any = serviceRoleClientUntyped();
   let ids: string[];
   try {
-    ids = await resolveContactIds(db, body.mode === "ids" ? { mode: "ids", ids: body.ids } : { mode: "filter", params: body.params, group: body.group });
+    ids = await resolveContactIds(profile, body.mode === "ids" ? { mode: "ids", ids: body.ids } : { mode: "filter", params: body.params, group: body.group });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
   }

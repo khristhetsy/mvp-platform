@@ -20,7 +20,7 @@ const MAX_TARGET = 25000;
 const schema = z.object({
   mode: z.enum(["ids", "filter"]),
   ids: z.array(z.string().uuid()).max(MAX_TARGET).optional(),
-  params: z.string().max(4000).optional(),
+  params: z.string().max(20_000).optional(),
   group: z.string().max(40).optional(),
   // Destination: an existing list, or a new one (name required).
   listId: z.string().uuid().optional(),
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   // 1. Resolve the target crm_contacts ids.
   let crmIds: string[] = [];
   try {
-    crmIds = await resolveContactIds(db, mode === "ids"
+    crmIds = await resolveContactIds(profile, mode === "ids"
       ? { mode: "ids", ids: parsed.data.ids }
       : { mode: "filter", params: parsed.data.params, group: parsed.data.group });
   } catch (err) {
