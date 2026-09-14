@@ -111,14 +111,19 @@ export type ContactRow = {
   total: number;
 };
 
-/** One page of contacts + the exact total for the predicate. */
-export async function searchContacts(q: ContactsQuery, owner: string | null): Promise<{ rows: ContactRow[]; total: number }> {
+/**
+ * One page of contacts. `total` is the exact count for the predicate when `count` is
+ * true, else -1 (unknown). The list page passes false: its group headers already carry
+ * the exact count from count_contact_buckets, and counting again per page walks every
+ * matching row (2.6 s for 7k Investors on the production instance).
+ */
+export async function searchContacts(q: ContactsQuery, owner: string | null, count = true): Promise<{ rows: ContactRow[]; total: number }> {
   const rows = await must<ContactRow[] | null>(db().rpc("search_contacts", {
     p_spec: q.spec, p_owner: owner, p_group_by: q.groupBy, p_group_value: q.groupValue,
-    p_sort: q.sort, p_dir: q.dir, p_offset: q.offset, p_limit: q.limit,
+    p_sort: q.sort, p_dir: q.dir, p_offset: q.offset, p_limit: q.limit, p_count: count,
   }), "search_contacts");
   const list = (rows ?? []).map((r) => ({ ...r, total: Number(r.total) }));
-  return { rows: list, total: list[0]?.total ?? 0 };
+  return { rows: list, total: count ? (list[0]?.total ?? 0) : -1 };
 }
 
 /** Bucket counts for one dimension over the same predicate (Unassigned = NONE, last). */

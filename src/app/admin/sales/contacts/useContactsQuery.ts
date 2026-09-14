@@ -13,7 +13,7 @@
  * Errors are state, not silence. A failed request sets `error` (the server's message)
  * and the page renders it where the rows would be; it never shows "no contacts".
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FilterSpec } from "@/lib/sales/contact-filter-spec";
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
@@ -82,7 +82,9 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
       const res = await fetch(`/api/sales/contacts?${groupFrag(id)}&offset=${page * PAGE}&limit=${PAGE}${params ? `&${params}` : ""}`);
       const data = await readJson(res, "Couldn't load contacts");
       if (g !== gen.current) return;
-      setGroups((prev) => ({ ...prev, [id]: { rows: (data.contacts as SalesContact[] | undefined) ?? [], total: Number(data.total ?? 0), loading: false, loaded: true, page } }));
+      // total is -1 for a grouped page (the server skips the per-page count); the group
+      // header count — same predicate — stands in for it, see `groups` below.
+      setGroups((prev) => ({ ...prev, [id]: { rows: (data.contacts as SalesContact[] | undefined) ?? [], total: Number(data.total ?? -1), loading: false, loaded: true, page } }));
     } catch (e) {
       if (g !== gen.current) return;
       setError(e instanceof Error ? e.message : "Couldn't load contacts.");
@@ -149,17 +151,26 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
 
   const toggleGroup = useCallback((id: string) => setExpanded((e) => ({ ...e, [id]: !e[id] })), []);
 
+  // Resolve each group's total: the page's own count when the server gave one, else the
+  // header count for that bucket (facets for the role groups, /groups for the rest).
+  const groupsOut = useMemo(() => {
+    const header = (id: string) => (groupBy === "profile" ? facets.counts[id] : dynGroups.find((g) => g.id === id)?.count) ?? 0;
+    const out: Record<string, GroupState> = {};
+    for (const [id, gs] of Object.entries(groups)) out[id] = gs.total >= 0 ? gs : { ...gs, total: header(id) };
+    return out;
+  }, [groups, groupBy, facets.counts, dynGroups]);
+
   // Odoo-style paging: jump to a page and REPLACE the visible rows (no append).
   const goPage = useCallback((id: string, delta: number) => {
-    const gs = groups[id];
+    const gs = groupsOut[id];
     if (!gs || gs.loading) return;
     const totalPages = Math.max(1, Math.ceil(gs.total / PAGE));
     const next = Math.min(Math.max(0, gs.page + delta), totalPages - 1);
     if (next !== gs.page) void loadGroup(id, next);
-  }, [groups, loadGroup]);
+  }, [groupsOut, loadGroup]);
 
   /** Refetch everything for the current query (after a bulk write, import, sync…). */
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
-  return { params, groups, expanded, facets, dynGroups, dynLoading, error, toggleGroup, goPage, reload };
+  return { params, groups: groupsOut, expanded, facets, dynGroups, dynLoading, error, toggleGroup, goPage, reload };
 }

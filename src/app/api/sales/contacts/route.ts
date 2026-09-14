@@ -25,7 +25,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     const scope = await getSalesScope(profile, p.get("viewAs"));
     // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
     // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
-    const { rows: raw, total } = await searchContacts(q, effectiveContactsOwner(scope));
+    // A grouped page skips the count: the group header already has it (same predicate).
+    const { rows: raw, total } = await searchContacts(q, effectiveContactsOwner(scope), !q.groupBy);
 
     // Resolve assignee names for the Lead assign column in one lookup.
     const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];

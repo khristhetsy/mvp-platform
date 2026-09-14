@@ -15,6 +15,7 @@ const MIGRATIONS = [
   "supabase/migrations/20260914003_search_contacts.sql",
   "supabase/migrations/20260914004_search_contacts_page_first.sql",
   "supabase/migrations/20260914005_contact_role_index.sql",
+  "supabase/migrations/20260914006_search_contacts_optional_count.sql",
 ].map((f) => join(process.cwd(), f));
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
@@ -129,6 +130,13 @@ describe("search_contacts — every filter kind runs on real Postgres", () => {
     const p = await rows(spec([]), { sort: "created_on", dir: "desc", offset: 1, limit: 2 });
     expect(p.total).toBe(5);
     expect(p.names).toEqual(["Alice Angel", "Bob Fund"]);
+  });
+  it("p_count = false skips the count: rows come back, total is -1", async () => {
+    const r = await pg.query<{ name: string; total: number | string }>(
+      "select name, total from public.search_contacts($1::jsonb, null, 'profile', 'investor', 'name', 'asc', 0, 50, false)",
+      [JSON.stringify(spec([]))]);
+    expect(r.rows.map((x) => x.name)).toEqual(["Alice Angel", "Bob Fund"]);
+    expect(Number(r.rows[0].total)).toBe(-1);
   });
   it("group paging: role, facet, lead source, assignees, created month, and the Unassigned bucket", async () => {
     expect((await rows(spec([]), { groupBy: "profile", groupValue: "investor" })).names).toEqual(["Alice Angel", "Bob Fund"]);
