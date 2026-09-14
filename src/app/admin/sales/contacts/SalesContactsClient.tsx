@@ -8,6 +8,9 @@ import { FIELD_REGISTRY, OP_LABEL, fieldDef, type FilterSpec, type Condition, ty
 import { MassEmailComposer, type SelectionPayload } from "@/components/marketing/MassEmailComposer";
 import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/ToolbarGear";
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { useContactsQuery, contactsParams, PAGE, type SalesContact, type Sort } from "./useContactsQuery";
+
+export type { SalesContact, LastMessage, NextActivity } from "./useContactsQuery";
 
 type SavedSearch = { id: string; name: string; spec: FilterSpec; groupBy: string | null; columns: string[] | null; isDefault: boolean; isShared: boolean; mine: boolean; ownerName?: string; canDelete?: boolean };
 
@@ -17,14 +20,6 @@ const GROUP_BY_SECTIONS: { key: GroupSection; label: string }[] = [
   { key: "crm", label: "CRM fields" },
 ];
 
-export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
-export type NextActivity = { type: string; title: string; due: string | null; state: "overdue" | "today" | "planned" | "done" | "none" };
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null; activity?: NextActivity | null };
-type GroupState = { rows: SalesContact[]; total: number; loading: boolean; loaded: boolean; page: number };
-type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
-type TextFilters = { name: string; company: string; email: string; phone: string };
-type Sort = { key: string; dir: "asc" | "desc" };
-
 const GROUP_DEFS = [
   { id: "founder", label: "Founders" },
   { id: "investor", label: "Investors" },
@@ -32,7 +27,8 @@ const GROUP_DEFS = [
   { id: "other", label: "Other" },
 ] as const;
 
-const PAGE = 50;
+const TEXT_COLS = ["name", "company", "email", "phone"] as const;
+const EMPTY_SPEC: FilterSpec = { match: "all", conditions: [] };
 
 type ColKind = "text" | "country" | "none";
 type ColMeta = { key: string; label: string; width: string; kind: ColKind; sortable: boolean; always?: boolean };
@@ -96,18 +92,6 @@ function loadLS<T>(key: string, fallback: T): T {
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>, spec?: FilterSpec): string {
-  const sp = new URLSearchParams();
-  if (q.trim()) sp.set("q", q.trim());
-  (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
-  if (countries.length) sp.set("country", countries.join(","));
-  if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
-  for (const [key, vals] of Object.entries(facetSel)) for (const v of vals) if (v) sp.append(key, v);
-  // Odoo-style custom filter spec (Marketing). Serialized as one `filter` param.
-  if (spec && spec.conditions.length) sp.set("filter", JSON.stringify(spec));
-  return sp.toString();
-}
-
 const LIST_DEPARTMENTS = ["Marketing", "Sales", "Investor Relations", "Administration", "Events"] as const;
 
 type ImportRow = { name: string; email?: string; company?: string; phone?: string; type?: "founder" | "investor" | "advisor" | "other" };
@@ -142,30 +126,21 @@ function parseContactsCsv(text: string): { rows: ImportRow[]; skipped: number } 
 const LEAD_SOURCE_OPTS = ["LinkedIn", "Referral", "Website", "Event", "Conference", "Cold outreach", "Email campaign", "Partner", "Inbound", "Webinar", "Other"];
 
 export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; odooSearch?: boolean; basePath?: string }) {
-  const [q, setQ] = useState("");
-  const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
-  const [countries, setCountries] = useState<string[]>([]);
+  // ONE filter state. The search box, the column filters, the Role/facet dropdown and
+  // the Odoo search bar all read and write conditions on this spec; the server gets it
+  // as a single `filter=` param. (Previously five separate states were re-merged on
+  // every request, and a role filter lived outside the spec entirely.)
+  const [spec, setSpec] = useState<FilterSpec>(EMPTY_SPEC);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
   // v5 key: bumped when the "Activities" column was added (v4 for "Lead source") so a
   // stale saved set from before the column existed doesn't hide it. Resets prefs once.
   const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v5", ALL_COLUMNS.map((c) => c.key)));
 
-  const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
-  const [groups, setGroups] = useState<Record<string, GroupState>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  // Mirror `expanded` into a ref so loadAll can read which groups are open without
-  // re-running the load effect every time a group is toggled.
-  const expandedRef = useRef(expanded);
-  useEffect(() => { expandedRef.current = expanded; }, [expanded]);
-
   // Group by dimension. "profile" keeps the original role-group behaviour; any
   // other dimension uses the dynamic group list from /groups.
   const [groupBy, setGroupBy] = useState<string>(() => loadLS<string>("salesContacts.groupBy", "profile"));
   const [groupByOpen, setGroupByOpen] = useState(false);
-  const [dynGroups, setDynGroups] = useState<{ id: string; label: string; count: number }[]>([]);
-  const [dynLoading, setDynLoading] = useState(false);
-  const groupByRef = useRef(groupBy);
-  useEffect(() => { groupByRef.current = groupBy; try { window.localStorage.setItem("salesContacts.groupBy", JSON.stringify(groupBy)); } catch { /* ignore */ } }, [groupBy]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.groupBy", JSON.stringify(groupBy)); } catch { /* ignore */ } }, [groupBy]);
   const groupByLabel = GROUP_BY_OPTIONS.find((o) => o.id === groupBy)?.label ?? "Profile";
 
   const [openFilter, setOpenFilter] = useState<string | null>(null);
@@ -173,11 +148,27 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [draft, setDraft] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
 
-  // Role + questionnaire facet filters (Odoo-style Filters dropdown).
-  const [role, setRole] = useState<"" | "founder" | "investor" | "advisor">("");
-  const roleRef = useRef(role);
-  useEffect(() => { roleRef.current = role; }, [role]);
-  const [facetSel, setFacetSel] = useState<Record<string, string[]>>({});
+  // Views of the spec used by the classic controls.
+  const condValues = useCallback((field: string, op: Operator = "in"): string[] => {
+    const c = spec.conditions.find((x) => x.field === field && x.op === op);
+    return Array.isArray(c?.value) ? (c.value as string[]) : c?.value != null ? [String(c.value)] : [];
+  }, [spec]);
+  function setCondValues(field: string, op: Operator, values: string[]) {
+    setSpec((s) => {
+      const conditions = s.conditions.filter((c) => !(c.field === field && c.op === op));
+      const keep = values.filter((v) => v.trim() !== "");
+      if (keep.length) conditions.push({ field, op, value: op === "in" ? keep : keep[0] });
+      return { ...s, conditions };
+    });
+  }
+  const q = condValues("q", "contains")[0] ?? "";
+  const setQ = (v: string) => setCondValues("q", "contains", [v]);
+  const countries = condValues("country");
+  const textFilter = (col: string) => condValues(col, "contains")[0] ?? "";
+  // A single Type value is "the role": it opens that group and scopes the facet list.
+  const roleVals = condValues("type");
+  const role = roleVals.length === 1 ? roleVals[0] : "";
+  const setRole = (v: string) => setCondValues("type", "in", v ? [v] : []);
   const [facetOpts, setFacetOpts] = useState<Record<string, string[]>>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openFacetKey, setOpenFacetKey] = useState<string | null>(null);
@@ -226,8 +217,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [listResult, setListResult] = useState<string | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
 
-  // Odoo-style search (Marketing): a field·operator·value spec drives the query.
-  const [spec, setSpec] = useState<FilterSpec>({ match: "all", conditions: [] });
+  // Odoo-style search bar (Marketing) — edits the same spec.
   const [typed, setTyped] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
@@ -241,86 +231,15 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const defaultApplied = useRef(false);
 
   const viewAs = useSearchParams().get("viewAs");
-  const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel, odooSearch ? spec : undefined), [q, textFilters, countries, sort, facetSel, odooSearch, spec]);
+  const paramsStr = contactsParams(spec, sort);
+  const { groups, expanded, facets, dynGroups, dynLoading, error: queryError, toggleGroup, goPage, reload } =
+    useContactsQuery({ spec, groupBy, sort, viewAs, role });
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canSelect ? `34px ${gridCols}` : gridCols;
 
   useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v5", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
-
-  // Fetch one group's first page. Groups render collapsed by default, so we only
-  // pay for a group's rows (its exact count + name-sort + last-message lookups)
-  // once it's actually opened — the header counts come from the cheap facets call.
-  // URL fragment selecting one group: role groups use ?group=, every other
-  // dimension uses ?groupBy=&groupValue=. Reads groupBy from a ref so callbacks
-  // don't need to be re-created when the dimension changes.
-  const groupFrag = (id: string) => groupByRef.current === "profile"
-    ? `group=${id}`
-    : `groupBy=${encodeURIComponent(groupByRef.current)}&groupValue=${encodeURIComponent(id)}${roleRef.current ? `&group=${roleRef.current}` : ""}`;
-
-  const loadGroup = useCallback(async (id: string, params: string) => {
-    setGroups((prev) => ({ ...prev, [id]: { rows: prev[id]?.rows ?? [], total: prev[id]?.total ?? 0, loading: true, loaded: prev[id]?.loaded ?? false, page: 0 } }));
-    try {
-      const res = await fetch(`/api/sales/contacts?${groupFrag(id)}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
-      const data = res.ok ? await res.json() : { contacts: [], total: 0 };
-      setGroups((prev) => ({ ...prev, [id]: { rows: data.contacts ?? [], total: data.total ?? 0, loading: false, loaded: true, page: 0 } }));
-    } catch { setGroups((prev) => ({ ...prev, [id]: { rows: [], total: 0, loading: false, loaded: true, page: 0 } })); }
-  }, [viewQ]);
-
-  // On mount / filter change: only (re)load groups that are currently open (plus the
-  // active role filter). Collapsed groups are reset so re-opening refetches fresh.
-  const loadAll = useCallback(async (params: string, roleFilter: string) => {
-    const isOpen = (id: string) => !!expandedRef.current[id] || id === roleFilter;
-    const willLoad = (id: string) => (!roleFilter || id === roleFilter) && isOpen(id);
-    setGroups((prev) => {
-      const next: Record<string, GroupState> = {};
-      for (const g of GROUP_DEFS) next[g.id] = willLoad(g.id)
-        ? { rows: prev[g.id]?.rows ?? [], total: prev[g.id]?.total ?? 0, loading: true, loaded: false, page: 0 }
-        : { rows: [], total: 0, loading: false, loaded: false, page: 0 };
-      return next;
-    });
-    await Promise.all(GROUP_DEFS.filter((g) => willLoad(g.id)).map((g) => loadGroup(g.id, params)));
-  }, [loadGroup]);
-
-  const loadFacets = useCallback(async (params: string) => {
-    try {
-      const qs = [params, viewAs ? `viewAs=${encodeURIComponent(viewAs)}` : ""].filter(Boolean).join("&");
-      const res = await fetch(`/api/sales/contacts/facets${qs ? `?${qs}` : ""}`);
-      if (res.ok) setFacets(await res.json());
-    } catch { /* ignore */ }
-  }, [viewAs]);
-
-  // Group list for a non-profile dimension (headers + counts). Role, if set, is
-  // passed as ?group= so "Investors grouped by industry" narrows correctly.
-  const loadDynGroups = useCallback(async (params: string, by: string, roleFilter: string) => {
-    setDynLoading(true);
-    try {
-      const qs = [`by=${encodeURIComponent(by)}`, roleFilter ? `group=${roleFilter}` : "", params, viewAs ? `viewAs=${encodeURIComponent(viewAs)}` : ""].filter(Boolean).join("&");
-      const res = await fetch(`/api/sales/contacts/groups?${qs}`);
-      const data = res.ok ? await res.json() : { groups: [] };
-      setDynGroups((data.groups ?? []) as { id: string; label: string; count: number }[]);
-    } catch { setDynGroups([]); } finally { setDynLoading(false); }
-  }, [viewAs]);
-
-  // Filtering to a single role opens that group so its results are visible (and load).
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- open the filtered group
-  useEffect(() => { if (role) setExpanded((e) => (e[role] ? e : { ...e, [role]: true })); }, [role]);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (groupBy === "profile") void loadAll(paramsStr, role);
-      else void loadDynGroups(paramsStr, groupBy, role);
-      void loadFacets(paramsStr);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [paramsStr, role, groupBy, loadAll, loadDynGroups, loadFacets]);
-
-  // Switching the group-by dimension resets open groups + their cached rows so
-  // the new grouping starts clean (all collapsed).
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset groups when dimension changes
-  useEffect(() => { setExpanded({}); setGroups({}); }, [groupBy]);
 
   // Load the questionnaire facet option lists once (universal — same for everyone).
   useEffect(() => {
@@ -336,33 +255,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   // The matching set changes with the filters — clear any selection so a stale
   // "select all matching" can't apply to a different set.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on filter change
-  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setListOpen(false); setListResult(null); setSourceOpen(false); setActionsOpen(false); }, [paramsStr, role, groupBy]);
-
-  // Open/close a group. Opening one that hasn't been loaded yet (or is mid-load)
-  // triggers its first fetch — this is what defers the cost off the initial render.
-  function toggleGroup(id: string) {
-    const opening = !expanded[id];
-    if (opening) {
-      const gs = groups[id];
-      if (!gs?.loaded && !gs?.loading) void loadGroup(id, paramsStr);
-    }
-    setExpanded((e) => ({ ...e, [id]: !e[id] }));
-  }
-
-  // Odoo-style paging: jump to a page and REPLACE the visible rows (no append).
-  async function goPage(groupId: string, delta: number) {
-    const gs = groups[groupId];
-    if (!gs) return;
-    const totalPages = Math.max(1, Math.ceil(gs.total / PAGE));
-    const nextPage = Math.min(Math.max(0, gs.page + delta), totalPages - 1);
-    if (nextPage === gs.page) return;
-    setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: true } }));
-    try {
-      const res = await fetch(`/api/sales/contacts?${groupFrag(groupId)}&offset=${nextPage * PAGE}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
-      const data = res.ok ? await res.json() : { contacts: [], total: gs.total };
-      setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], rows: data.contacts ?? [], total: data.total ?? prev[groupId].total, loading: false, page: nextPage } }));
-    } catch { setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: false } })); }
-  }
+  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setListOpen(false); setListResult(null); setSourceOpen(false); setActionsOpen(false); }, [paramsStr, groupBy]);
 
   async function addContact() {
     if (!addDraft.name.trim()) return;
@@ -372,26 +265,17 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Add failed.");
       setAdding(false); setAddDraft({ name: "", email: "", company: "", phone: "" });
-      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+      reload();
     } catch (e) { setErr(e instanceof Error ? e.message : "Add failed."); } finally { setBusy(false); }
   }
 
-  function openText(col: string) { setDraft(textFilters[col as keyof TextFilters]); setCountrySearch(""); setOpenFilter(openFilter === col ? null : col); }
-  function applyText(col: string) { setTextFilters((f) => ({ ...f, [col]: draft })); setOpenFilter(null); }
-  function clearText(col: string) { setTextFilters((f) => ({ ...f, [col]: "" })); setOpenFilter(null); }
-  function toggleCountry(v: string) { setCountries((c) => c.includes(v) ? c.filter((x) => x !== v) : [...c, v]); }
+  function openText(col: string) { setDraft(textFilter(col)); setCountrySearch(""); setOpenFilter(openFilter === col ? null : col); }
+  function applyText(col: string) { setCondValues(col, "contains", [draft.trim()]); setOpenFilter(null); }
+  function clearText(col: string) { setCondValues(col, "contains", []); setOpenFilter(null); }
+  function toggleCountry(v: string) { toggleFacetValue("country", v); }
   function toggleSort(key: string) { setSort((s) => s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }); }
   function toggleCol(key: string) { setVisibleCols((v) => v.includes(key) ? v.filter((x) => x !== key) : [...v, key]); }
-  function toggleFacet(key: string, v: string) {
-    setFacetSel((s) => {
-      const cur = s[key] ?? [];
-      const next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
-      const copy = { ...s };
-      if (next.length) copy[key] = next; else delete copy[key];
-      return copy;
-    });
-  }
-  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
+  function clearAllFilters() { setSpec(EMPTY_SPEC); setOpenFacetKey(null); }
 
   // ── Odoo-style search helpers ─────────────────────────────────────────────
   const TYPE_OPTIONS: { value: string; label: string }[] = [
@@ -502,7 +386,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   // Selection → request target. "Select all" carries the filter, not the ids, so the
   // action touches every matching contact — the number the bar shows.
   const selectionTarget = () => selectAllMatching
-    ? { mode: "filter" as const, params: paramsStr, group: role || undefined }
+    ? { mode: "filter" as const, params: paramsStr }
     : { mode: "ids" as const, ids: [...selected] };
   function closePanels() { setAssignOpen(false); setListOpen(false); setSourceOpen(false); setActionsOpen(false); }
 
@@ -523,7 +407,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       }
       setActionResult(`Lead source set to “${sourceVal}” on ${count.toLocaleString()} contact${count === 1 ? "" : "s"}${failed ? ` — ${failed} failed` : ""}.`);
       clearSelection();
-      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+      reload();
     } catch (e) { setSourceMsg(e instanceof Error ? e.message : "Couldn't set the lead source."); } finally { setSourceBusy(false); }
   }
 
@@ -555,7 +439,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     setListBusy(true); setListMsg(null);
     try {
       const target = selectAllMatching
-        ? { mode: "filter" as const, params: paramsStr, group: role || undefined }
+        ? { mode: "filter" as const, params: paramsStr }
         : { mode: "ids" as const, ids: [...selected] };
       const dest = isNew
         ? { name: listName.trim(), department: listDept, description: listDesc.trim() || undefined }
@@ -575,13 +459,13 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     setAssignBusy(true); setAssignMsg(null);
     try {
       const body = selectAllMatching
-        ? { mode: "filter", memberIds: assignSel, params: paramsStr, group: role || undefined }
+        ? { mode: "filter", memberIds: assignSel, params: paramsStr }
         : { mode: "ids", memberIds: assignSel, ids: [...selected] };
       const res = await fetch("/api/sales/contacts/bulk-assign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Assign failed.");
       clearSelection(); setAssignSel([]);
-      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+      reload();
     } catch (e) { setAssignMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setAssignBusy(false); }
   }
 
@@ -592,7 +476,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error ?? "Sync failed.");
       setGearMsg(`Pulled ${Number(d.synced ?? 0).toLocaleString()} changed contact${d.synced === 1 ? "" : "s"} from Odoo${d.failed ? ` — ${d.failed} source failed` : ""}.`);
-      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+      reload();
     } catch (e) { setGearMsg(e instanceof Error ? e.message : "Sync failed."); } finally { setGearBusy(false); }
   }
   async function onCsvFile(f: File | null) {
@@ -616,13 +500,13 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Import failed.");
       setCsvPreview(d);
-      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+      reload();
     } catch (e) { setGearMsg(e instanceof Error ? e.message : "Import failed."); } finally { setGearBusy(false); }
   }
   async function exportAll() {
     setGearBusy(true); setGearMsg("Preparing export…");
     try {
-      const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "export", mode: "filter", params: paramsStr, group: role || undefined }) });
+      const res = await fetch("/api/sales/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "export", mode: "filter", params: paramsStr }) });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Export failed."); }
       const blob = await res.blob();
       const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "contacts.csv";
@@ -638,12 +522,13 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     ...(basePath.startsWith("/admin/sales") ? [{ key: "members", icon: "ti-users", label: "Assignable members", href: "/admin/sales/settings" } as GearItem] : []),
   ];
 
-  const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
+  const roleFacets = FACETS_BY_ROLE[role] ?? FACETS_BY_ROLE.any;
+  const facetCount = roleFacets.reduce((a, k) => a + condValues(k).length, 0);
   const filterBadge = (role ? 1 : 0) + facetCount;
-  const roleFacets = FACETS_BY_ROLE[role || "any"];
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
-  const activeFilters = countries.length + (["name", "company", "email", "phone"] as const).filter((k) => textFilters[k]).length;
+  const activeFilters = countries.length + TEXT_COLS.filter((k) => textFilter(k)).length;
+  function clearColumnFilters() { setSpec((s) => ({ ...s, conditions: s.conditions.filter((c) => !(c.field === "country" && c.op === "in") && !(TEXT_COLS.includes(c.field as typeof TEXT_COLS[number]) && c.op === "contains")) })); }
   const visibleCountries = facets.countries.filter((c) => c.value.toLowerCase().includes(countrySearch.toLowerCase()));
 
   function renderCell(key: string, c: SalesContact) {
@@ -718,7 +603,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
         )}
         {!odooSearch && activeFilters > 0 && (
-          <button onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); }} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
+          <button onClick={clearColumnFilters} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}
         <div style={{ position: "relative", display: odooSearch ? "none" : undefined }}>
           <button onClick={() => { setFiltersOpen((v) => !v); setOpenColPicker(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: filterBadge ? "#fff" : "var(--foreground)", background: filterBadge ? "#2E78F5" : "transparent", border: filterBadge ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -738,7 +623,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
               </div>
               <div style={{ maxHeight: 340, overflowY: "auto" }}>
                 {roleFacets.map((key) => {
-                  const sel = facetSel[key] ?? [];
+                  const sel = condValues(key);
                   const allOpts = facetOpts[key] ?? [];
                   const opts = allOpts.filter((o) => o.toLowerCase().includes(facetSearch.toLowerCase()));
                   const isOpen = openFacetKey === key;
@@ -756,7 +641,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                             {opts.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>{allOpts.length === 0 ? "No options loaded yet." : `No matches for "${facetSearch}".`}</div>}
                             {opts.map((o) => (
                               <label key={o} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", fontSize: 12, cursor: "pointer" }}>
-                                <input type="checkbox" checked={sel.includes(o)} onChange={() => toggleFacet(key, o)} style={{ width: 14, height: 14 }} />
+                                <input type="checkbox" checked={sel.includes(o)} onChange={() => toggleFacetValue(key, o)} style={{ width: 14, height: 14 }} />
                                 <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o}</span>
                               </label>
                             ))}
@@ -939,7 +824,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         <MassEmailComposer
           source="contacts"
           selection={selectAllMatching
-            ? { mode: "filter", params: paramsStr, group: role || undefined, count: matchingTotal }
+            ? { mode: "filter", params: paramsStr, count: matchingTotal }
             : { mode: "ids", ids: [...selected], count: selected.size }}
           onClose={() => setEmailOpen(false)}
         />
@@ -1087,7 +972,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             </div>
           )}
           {visibleColumns.map((h) => {
-            const filterActive = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilters[h.key as keyof TextFilters] : false;
+            const filterActive = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilter(h.key) : false;
             const sortActive = sort.key === h.key;
             return (
               <div key={h.key} style={{ position: "relative", display: "flex", alignItems: "center", gap: 5 }}>
@@ -1124,7 +1009,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                         </label>
                       ))}
                     </div>
-                    {countries.length > 0 && <button onClick={() => setCountries([])} style={{ width: "100%", marginTop: 8, fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Clear selection</button>}
+                    {countries.length > 0 && <button onClick={() => setCondValues("country", "in", [])} style={{ width: "100%", marginTop: 8, fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Clear selection</button>}
                   </div>
                 )}
               </div>
@@ -1132,15 +1017,18 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           })}
         </div>
 
-        {/* Active filters as removable chips (Odoo-style) — each × clears just that
-            filter; "Clear all" resets them together. Reads the existing filter state. */}
-        {(() => {
+        {/* Active filters as removable chips (Odoo-style) — one per condition value; each
+            × clears just that value. The Odoo bar (Marketing) shows its own pills. */}
+        {!odooSearch && (() => {
           const chips: { key: string; field: string; value: string; onRemove: () => void }[] = [];
-          if (role) chips.push({ key: "role", field: "Type", value: role.charAt(0).toUpperCase() + role.slice(1), onRemove: () => setRole("") });
-          for (const [fk, vals] of Object.entries(facetSel)) for (const v of vals) chips.push({ key: `f:${fk}:${v}`, field: (FACET_LABEL as Record<string, string>)[fk] ?? fk, value: v, onRemove: () => setFacetSel((s) => ({ ...s, [fk]: (s[fk] ?? []).filter((x) => x !== v) })) });
-          for (const c of countries) chips.push({ key: `c:${c}`, field: "Country", value: c, onRemove: () => setCountries((cs) => cs.filter((x) => x !== c)) });
-          for (const col of ["name", "company", "email", "phone"] as const) if (textFilters[col]) chips.push({ key: `t:${col}`, field: col.charAt(0).toUpperCase() + col.slice(1), value: textFilters[col], onRemove: () => setTextFilters((f) => ({ ...f, [col]: "" })) });
-          if (q.trim()) chips.push({ key: "q", field: "Search", value: q, onRemove: () => setQ("") });
+          spec.conditions.forEach((c, i) => {
+            const name = c.field === "q" ? "Search" : fieldDef(c.field)?.label ?? c.field;
+            if (Array.isArray(c.value)) {
+              for (const v of c.value) chips.push({ key: `${i}:${v}`, field: name, value: c.field === "type" ? TYPE_OPTIONS.find((t) => t.value === v)?.label ?? v : v, onRemove: () => setCondValues(c.field, c.op, (c.value as string[]).filter((x) => x !== v)) });
+            } else {
+              chips.push({ key: `${i}`, field: name, value: c.op === "set" || c.op === "not_set" ? OP_LABEL[c.op] : String(c.value ?? ""), onRemove: () => removeConditionAt(i) });
+            }
+          });
           if (chips.length === 0) return null;
           return (
             <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px" }}>
@@ -1151,10 +1039,18 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   <button type="button" onClick={ch.onRemove} aria-label={`Remove ${ch.field} ${ch.value}`} style={{ width: 16, height: 16, border: "none", background: "#B5D4F4", color: "#0C447C", borderRadius: "50%", fontSize: 10, lineHeight: 1, cursor: "pointer" }}>×</button>
                 </span>
               ))}
-              <button type="button" onClick={() => { setQ(""); setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); setRole(""); setFacetSel({}); }} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "none", textDecoration: "underline", cursor: "pointer", marginLeft: 2 }}>Clear all</button>
+              <button type="button" onClick={() => setSpec(EMPTY_SPEC)} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "none", textDecoration: "underline", cursor: "pointer", marginLeft: 2 }}>Clear all</button>
             </div>
           );
         })()}
+
+        {queryError && (
+          <div role="alert" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#FCEBEB", borderTop: "0.5px solid #F4B5B5", color: "#A32D2D", fontSize: 12.5 }}>
+            <i className="ti ti-alert-triangle" style={{ fontSize: 16 }} aria-hidden="true" />
+            <span style={{ flex: 1 }}><strong>Search failed.</strong> {queryError}</span>
+            <button type="button" onClick={reload} style={{ fontSize: 11.5, fontWeight: 600, color: "#A32D2D", background: "#fff", border: "0.5px solid #F4B5B5", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>Retry</button>
+          </div>
+        )}
 
         {(groupBy === "profile"
           ? GROUP_DEFS.map((g) => ({ id: g.id as string, label: g.label as string, count: facets.counts[g.id] ?? groups[g.id]?.total ?? 0 }))
@@ -1175,7 +1071,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   {(gs?.loading || !gs?.loaded) && (gs?.rows.length ?? 0) === 0 ? (
                     <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
                   ) : (gs?.rows.length ?? 0) === 0 ? (
-                    <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>No matching contacts in this group.</p>
+                    <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>{queryError ? "Couldn't load this group — see the error above." : "No matching contacts in this group."}</p>
                   ) : (
                     <>
                       {gs!.rows.map((c) => canSelect ? (
@@ -1215,7 +1111,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         {groupBy !== "profile" && dynLoading && dynGroups.length === 0 && (
           <p style={{ padding: "16px", fontSize: 12.5, color: "var(--muted-foreground)", borderTop: "0.5px solid #e2e6ed" }}>Computing groups…</p>
         )}
-        {groupBy !== "profile" && !dynLoading && dynGroups.length === 0 && (
+        {groupBy !== "profile" && !dynLoading && !queryError && dynGroups.length === 0 && (
           <p style={{ padding: "16px", fontSize: 12.5, color: "var(--muted-foreground)", borderTop: "0.5px solid #e2e6ed" }}>No contacts match the current filters.</p>
         )}
       </div>
