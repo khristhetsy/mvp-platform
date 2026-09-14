@@ -77,9 +77,20 @@ export function profileContains(key: string, value: string | string[]): string {
 export function overridesContains(key: string, value: unknown): string {
   return JSON.stringify({ [key]: value });
 }
-/** Quote a JSON operand for PostgREST's or() logic-tree parser (double-quote wrap, inner quotes doubled). */
+/**
+ * Quote an operand for PostgREST's or() logic-tree parser. PostgREST's quoted-value
+ * grammar is `"` … `"` with BACKSLASH escapes (pCharOrEscape = '\\' *> anyChar) — the
+ * previous doubled-quote form (`""`) is not valid and made every JSON operand fail to
+ * parse, so the whole request 400'd and the list showed "No matching contacts".
+ */
 export function orOperand(json: string): string {
-  return `"${json.replace(/"/g, '""')}"`;
+  return `"${json.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+/** Lead source is a plain string on both stores; equality uses the expression indexes
+ *  on (overrides->>'lead_source') and (profile->>'leadSource') — no JSON quoting needed. */
+export function leadSourceTerms(v: string): string[] {
+  const safe = v.replace(/["\\]/g, "");
+  return [`overrides->>lead_source.eq."${safe}"`, `profile->>leadSource.eq."${safe}"`];
 }
 // Reject values that would break the or() parser (only relevant to unquoted ilike).
 function ilikeSafe(v: string): boolean {
@@ -139,7 +150,7 @@ export function conditionTerms(cond: Condition): string[] | null {
       if (cond.op === "set") return ["overrides->>lead_source.not.is.null", "profile->>leadSource.not.is.null"];
       // Exact match on both stores via root containment (both GIN-indexed). The option
       // list is built from stored values, so exact is what the user picked.
-      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `profile.cs.${orOperand(profileContains("leadSource", v))}`]) : null;
+      if (cond.op === "in") return vals.length ? vals.flatMap(leadSourceTerms) : null;
       return null;
     }
     case "facet": {
@@ -179,8 +190,24 @@ export function applyFilterSpec(query: any, spec: FilterSpec): any {
   if (spec.match === "any") {
     return query.or(groups.flat().join(","));
   }
-  for (const terms of groups) query = query.or(terms.join(","));
+  for (const terms of groups) {
+    // One term: apply it directly. .filter() passes the operand verbatim, so a JSON
+    // containment never touches the or() parser (the multi-word-facet failure mode).
+    const single = terms.length === 1 ? splitTerm(terms[0]) : null;
+    query = single ? query.filter(single.col, single.op, single.value) : query.or(terms.join(","));
+  }
   return query;
+}
+
+/** "col.op.value" → parts, un-quoting an or()-quoted value back to its raw form. */
+export function splitTerm(term: string): { col: string; op: string; value: string } | null {
+  const m = /^([^.]+(?:->>?[^.]+)*)\.(not\.)?([a-z]+)\.([\s\S]*)$/.exec(term);
+  if (!m) return null;
+  const [, col, not, op, rawValue] = m;
+  const value = rawValue.startsWith('"') && rawValue.endsWith('"')
+    ? rawValue.slice(1, -1).replace(/\\(.)/g, "$1")
+    : rawValue;
+  return { col, op: `${not ?? ""}${op}`, value };
 }
 
 export function isValidCondition(cond: Condition): boolean {

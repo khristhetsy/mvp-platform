@@ -56,14 +56,14 @@ describe("applyContactFilters", () => {
     const { q, calls } = mockQuery();
     applyContactFilters(q, params({ industries: ["FinTech", "Health Care"] }));
     const orCall = calls.find((c) => c.m === "or" && String(c.args[0]).includes("industries"));
-    expect(orCall?.args[0]).toBe('profile.cs."{""industries"":[""FinTech""]}",profile.cs."{""industries"":[""Health Care""]}"');
+    expect(orCall?.args[0]).toBe('profile.cs."{\\"industries\\":[\\"FinTech\\"]}",profile.cs."{\\"industries\\":[\\"Health Care\\"]}"');
   });
 
   it("lead source values are double-quoted across both columns", () => {
     const { q, calls } = mockQuery();
     applyContactFilters(q, params({ leadSource: "SEC Form D" }));
     const orCall = calls.find((c) => c.m === "or" && String(c.args[0]).includes("lead_source"));
-    expect(orCall?.args[0]).toBe('overrides.cs."{""lead_source"":""SEC Form D""}",profile.cs."{""leadSource"":""SEC Form D""}"');
+    expect(orCall?.args[0]).toBe('overrides->>lead_source.eq."SEC Form D",profile->>leadSource.eq."SEC Form D"');
   });
 
   it("does nothing extra when no filters are present", () => {

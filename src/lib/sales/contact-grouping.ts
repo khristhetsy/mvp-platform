@@ -8,7 +8,7 @@
 // Extract and filter are pure — they take a lightweight row / a PostgREST query
 // builder — so there is nothing server-only here and both routes can import it.
 
-import { profileContains, overridesContains, orOperand } from "@/lib/sales/contact-filter-spec";
+import { profileContains, leadSourceTerms } from "@/lib/sales/contact-filter-spec";
 
 export const NONE = "__none__";
 
@@ -104,7 +104,7 @@ export const GROUP_DIMS: Record<string, Dim> = {
       if (value === NONE) return query.is("overrides->lead_source", null).is("profile->leadSource", null);
       // Double-quote the value so spaces/commas (e.g. "SEC Form D") survive the
       // or() logic-tree parser; strip quotes/backslashes that would break it.
-      return query.or(`overrides.cs.${orOperand(overridesContains("lead_source", value))},profile.cs.${orOperand(profileContains("leadSource", value))}`);
+      return query.or(leadSourceTerms(value).join(","));
     },
   },
   country: {

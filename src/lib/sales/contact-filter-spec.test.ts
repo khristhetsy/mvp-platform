@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { conditionTerms, applyFilterSpec, isValidCondition, type FilterSpec } from "./contact-filter-spec";
+import { conditionTerms, applyFilterSpec, splitTerm, isValidCondition, type FilterSpec } from "./contact-filter-spec";
 
 describe("conditionTerms", () => {
   it("text contains → ilike term", () => {
@@ -26,16 +26,23 @@ describe("conditionTerms", () => {
       "module.eq.founder",
     ]);
   });
-  it("lead source spans overrides + profile (ilike, multi-word safe)", () => {
+  it("lead source spans overrides + profile (plain quoted eq — indexed, no JSON)", () => {
     expect(conditionTerms({ field: "leadSource", op: "in", value: "SEC Form D" })).toEqual([
-      `overrides.cs."{""lead_source"":""SEC Form D""}"`,
-      `profile.cs."{""leadSource"":""SEC Form D""}"`,
+      `overrides->>lead_source.eq."SEC Form D"`,
+      `profile->>leadSource.eq."SEC Form D"`,
     ]);
   });
-  it("facet contains → jsonb containment, quoted for or()", () => {
+  it("facet contains → jsonb containment, backslash-quoted for or()", () => {
+    // PostgREST's quoted-value grammar escapes with backslash; `""` is not valid and
+    // made every JSON operand 400 (the list showed "No matching contacts").
     expect(conditionTerms({ field: "fundingStages", op: "in", value: "Seed" })).toEqual([
-      `profile.cs."{""fundingStages"":[""Seed""]}"`,
+      `profile.cs."{\\"fundingStages\\":[\\"Seed\\"]}"`,
     ]);
+  });
+  it("splitTerm un-quotes an or() operand back to the raw value", () => {
+    expect(splitTerm(`profile.cs."{\\"fundingStages\\":[\\"Seed\\"]}"`)).toEqual({ col: "profile", op: "cs", value: '{"fundingStages":["Seed"]}' });
+    expect(splitTerm("email.not.is.null")).toEqual({ col: "email", op: "not.is", value: "null" });
+    expect(splitTerm(`overrides->>lead_source.eq."SEC Form D"`)).toEqual({ col: "overrides->>lead_source", op: "eq", value: "SEC Form D" });
   });
   it("date after/before", () => {
     expect(conditionTerms({ field: "createdAt", op: "after", value: "2026-01-01" })).toEqual(["created_on.gte.2026-01-01"]);
@@ -55,17 +62,26 @@ describe("conditionTerms", () => {
 describe("applyFilterSpec", () => {
   function fakeQuery() {
     const calls: string[] = [];
-    const q = { or: (s: string) => { calls.push(s); return q; }, calls };
+    const q = {
+      or: (s: string) => { calls.push(s); return q; },
+      filter: (col: string, op: string, value: string) => { calls.push(`filter:${col}|${op}|${value}`); return q; },
+      calls,
+    };
     return q;
   }
-  it("all: one .or() per condition (AND between them)", () => {
+  it("all: multi-term conditions use .or(); single terms go through .filter() verbatim", () => {
     const spec: FilterSpec = { match: "all", conditions: [
       { field: "type", op: "in", value: ["investor"] },
       { field: "email", op: "set" },
+      { field: "investorTypes", op: "in", value: ["Angel Investor"] },
     ] };
     const q = fakeQuery();
     applyFilterSpec(q, spec);
-    expect(q.calls).toEqual(["contact_type.eq.investor,module.eq.investor", "email.not.is.null"]);
+    expect(q.calls).toEqual([
+      "contact_type.eq.investor,module.eq.investor",
+      "filter:email|not.is|null",
+      'filter:profile|cs|{"investorTypes":["Angel Investor"]}',
+    ]);
   });
   it("any: single .or() across every term", () => {
     const spec: FilterSpec = { match: "any", conditions: [

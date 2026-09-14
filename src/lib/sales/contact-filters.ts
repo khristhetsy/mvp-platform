@@ -2,7 +2,7 @@
 // facets endpoint, and the bulk-assign endpoint so "select all matching" targets
 // exactly the rows the list shows. Keep this the single source of truth for filters.
 
-import { profileContains, overridesContains, orOperand, applyFilterSpec, type FilterSpec } from "@/lib/sales/contact-filter-spec";
+import { profileContains, orOperand, leadSourceTerms, applyFilterSpec, type FilterSpec } from "@/lib/sales/contact-filter-spec";
 
 // Questionnaire facets stored as jsonb arrays under raw.__profile.<key>; filtered via
 // jsonb containment (@>). Values within a facet are OR'd; different facets are AND'd.
@@ -46,7 +46,7 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
   if (leadSources.length) {
     // Double-quote each value so multi-word sources (e.g. "SEC Form D") survive
     // the or() parser instead of the space breaking the operand.
-    query = query.or(leadSources.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `profile.cs.${orOperand(profileContains("leadSource", v))}`]).join(","));
+    query = query.or(leadSources.flatMap(leadSourceTerms).join(","));
   }
   query = applyFacetFilters(query, p);
   // Odoo-style custom filter spec (field·operator·value, any/all) — additive over the
