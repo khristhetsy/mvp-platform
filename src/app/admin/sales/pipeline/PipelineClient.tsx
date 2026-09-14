@@ -7,6 +7,7 @@ import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/com
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { HScrollBoard } from "@/components/admin/HScrollBoard";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean; sequence_id: string | null };
 type SeqOption = { id: string; name: string; status: string };
@@ -309,13 +310,13 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
           )}
         </div>
       ) : view === "board" ? (
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
+        <HScrollBoard>
           {stages.map((s, si) => {
             const cards = filtered.filter((o) => o.stage_id === s.id);
             const total = cards.reduce((a, o) => a + (o.value_cents ?? 0), 0);
             const accent = s.is_won ? "#0F6E56" : STAGE_ACCENTS[si % STAGE_ACCENTS.length];
             return (
-              <div key={s.id} style={{ minWidth: 220, flex: "0 0 220px", background: "var(--muted)", borderRadius: 12, padding: 10 }}>
+              <div key={s.id} style={{ minWidth: 280, flex: "0 0 280px", background: "var(--muted)", borderRadius: 12, padding: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                   <span style={{ fontSize: 12, fontWeight: 600 }}>{s.name}</span>
                   {s.is_won && <span style={{ fontSize: 9, color: "#0F6E56", background: "#E1F5EE", borderRadius: 4, padding: "0 5px" }}>won</span>}
@@ -347,7 +348,7 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
             );
           })}
           {stages.length === 0 && <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No stages. Add some in “Edit stages”.</p>}
-        </div>
+        </HScrollBoard>
       ) : (
         <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", maxWidth: 620 }}>
           <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center" }}>
