@@ -11,7 +11,10 @@ import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const MIGRATION = join(process.cwd(), "supabase/migrations/20260914003_search_contacts.sql");
+const MIGRATIONS = [
+  "supabase/migrations/20260914003_search_contacts.sql",
+  "supabase/migrations/20260914004_search_contacts_page_first.sql",
+].map((f) => join(process.cwd(), f));
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
 const OWNER_B = "22222222-2222-2222-2222-222222222222";
@@ -48,7 +51,7 @@ beforeAll(async () => {
       if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if;
     end $$;
   `);
-  await pg.exec(readFileSync(MIGRATION, "utf8"));
+  for (const m of MIGRATIONS) await pg.exec(readFileSync(m, "utf8"));
 
   const seed = [
     // name, email, company, phone, contact_type, module, country, created_on, assignees, profile, overrides
