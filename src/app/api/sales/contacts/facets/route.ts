@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { parseContactsQuery, countContactBuckets, must } from "@/lib/sales/contacts-search";
 
 export const dynamic = "force-dynamic";
 
@@ -11,47 +11,34 @@ function db(): any { return createServiceRoleClient(); }
 
 const GROUPS = ["founder", "investor", "advisor", "other"] as const;
 
-// GET /api/sales/contacts/facets — group counts (respecting active filters) + country value list.
+// GET /api/sales/contacts/facets — role group counts for the active filters (one query,
+// same predicate as the list) + the country value list.
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const p = req.nextUrl.searchParams;
-  const scope = await getSalesScope(profile, p.get("viewAs"));
-  const contactsOwner = effectiveContactsOwner(scope);
+  try {
+    const q = parseContactsQuery(p);
+    const scope = await getSalesScope(profile, p.get("viewAs"));
+    const owner = effectiveContactsOwner(scope);
 
-  const countOne = async (group: string): Promise<number> => {
-    // Match contact_type OR module so Form D promotions (keyed by module) are counted.
-    let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).or(`contact_type.eq.${group},module.eq.${group}`);
-    if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
-    q = applyContactFilters(q, p);
-    const { count, error } = await q;
-    // A malformed filter used to be swallowed here, so every group returned 0 and the
-    // grid looked empty rather than broken. Surface it so a bad filter can't hide as
-    // "no results".
-    if (error) throw new Error(`contacts facet count failed: ${error.message}`);
-    return count ?? 0;
-  };
+    const [buckets, countryRows] = await Promise.all([
+      countContactBuckets(q.spec, owner, "profile"),
+      must<Array<{ country: string | null; n: number }> | null>(
+        db().from("crm_country_facets").select("country, n").order("n", { ascending: false }), "contacts: country facets"),
+    ]);
+    const counts: Record<string, number> = { founder: 0, investor: 0, advisor: 0, other: 0 };
+    for (const b of buckets) if (b.value in counts) counts[b.value] = b.count;
+    const total = GROUPS.reduce((a, g) => a + counts[g], 0);
 
-  // Country facet list (top values by frequency), from the pre-aggregated view.
-  const countriesPromise = (async () => {
-    const { data } = await db().from("crm_country_facets").select("country, n").order("n", { ascending: false });
     const totals = new Map<string, number>();
-    for (const r of (data ?? []) as { country: string | null; n: number }[]) {
+    for (const r of countryRows ?? []) {
       if (!r.country) continue;
       totals.set(r.country, (totals.get(r.country) ?? 0) + (r.n ?? 0));
     }
-    return [...totals.entries()].map(([value, n]) => ({ value, n })).sort((a, b) => b.n - a.n).slice(0, 300);
-  })();
-
-  try {
-    const [founder, investor, advisor, other, countries] = await Promise.all([
-      countOne("founder"), countOne("investor"), countOne("advisor"), countOne("other"), countriesPromise,
-    ]);
-    const counts: Record<string, number> = { founder, investor, advisor, other };
-    const total = GROUPS.reduce((a, g) => a + counts[g], 0);
+    const countries = [...totals.entries()].map(([value, n]) => ({ value, n })).sort((a, b) => b.n - a.n).slice(0, 300);
     return NextResponse.json({ counts: { ...counts, total }, countries });
   } catch (err) {
-    // Return a clean error (not silent zeros) so a malformed filter is visible.
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Facet count failed." }, { status: 400 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Facet count failed." }, { status: 500 });
   }
 }

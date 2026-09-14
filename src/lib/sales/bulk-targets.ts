@@ -6,7 +6,7 @@
  * The filter re-runs the same predicate the list itself used, so the count the user saw
  * is the count the action touches. Shared by Lead assign, Set lead source and Export.
  */
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { parseContactsQuery, searchContactIds } from "@/lib/sales/contacts-search";
 
 export const CONTACT_GROUPS = ["founder", "investor", "advisor", "other"] as const;
 /** Safety cap on how many contacts one action can touch. */
@@ -16,22 +16,18 @@ export type BulkTarget =
   | { mode: "ids"; ids?: string[] }
   | { mode: "filter"; params?: string; group?: string };
 
+/**
+ * Filter mode re-runs the exact predicate the list ran (same SQL function), scoped to the
+ * caller's owner. Throws on a database error — a bulk action must never quietly run on a
+ * partial id set.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolveContactIds(db: any, target: BulkTarget): Promise<string[]> {
+export async function resolveContactIds(_db: any, target: BulkTarget, owner: string | null = null): Promise<string[]> {
   if (target.mode === "ids") return [...new Set(target.ids ?? [])];
   const p = new URLSearchParams(target.params ?? "");
-  const PAGE = 1000;
-  const ids: string[] = [];
-  for (let from = 0; from < MAX_BULK_TARGET; from += PAGE) {
-    let q = db.from("crm_contacts").select("id").order("id", { ascending: true }).range(from, from + PAGE - 1);
-    if (target.group && (CONTACT_GROUPS as readonly string[]).includes(target.group)) q = q.or(`contact_type.eq.${target.group},module.eq.${target.group}`);
-    q = applyContactFilters(q, p);
-    const { data, error } = await q;
-    if (error || !data || data.length === 0) break;
-    ids.push(...(data as Array<{ id: string }>).map((r) => r.id));
-    if (data.length < PAGE) break;
-  }
-  return [...new Set(ids)];
+  if (target.group && (CONTACT_GROUPS as readonly string[]).includes(target.group)) p.set("group", target.group);
+  const q = parseContactsQuery(p);
+  return searchContactIds(q.spec, owner, q.groupBy, q.groupValue, MAX_BULK_TARGET);
 }
 
 /** RFC 4180-ish: quote when needed, double embedded quotes. */

@@ -16,7 +16,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { resolveContactIds } from "@/lib/sales/bulk-targets";
 import { oppIdsToCrmIds, crmIdsToMarketingContacts, createHiddenList } from "@/lib/marketing/selection";
 import { getTemplate } from "@/lib/marketing/templates";
 import { createCampaign, sendCampaign } from "@/lib/marketing/campaigns";
@@ -31,7 +31,6 @@ export const dynamic = "force-dynamic";
 // Conservative Gmail daily cap — Workspace allows ~500 external/day (less on consumer
 // accounts). Above this we refuse and steer to iCapOS rather than risk a block.
 const GMAIL_DAILY_LIMIT = 450;
-const GROUPS = ["founder", "investor", "advisor", "other"];
 const MAX_TARGET = 25000;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -70,18 +69,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   } else if (d.mode === "ids") {
     crmIds = [...new Set(d.ids ?? [])];
   } else {
-    const p = new URLSearchParams(d.params ?? "");
-    const PAGE = 1000;
-    for (let from = 0; from < MAX_TARGET; from += PAGE) {
-      let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
-      if (d.group && GROUPS.includes(d.group)) q = q.or(`contact_type.eq.${d.group},module.eq.${d.group}`);
-      q = applyContactFilters(q, p);
-      const { data, error } = await q;
-      if (error || !data || data.length === 0) break;
-      crmIds.push(...(data as { id: string }[]).map((r) => r.id));
-      if (data.length < PAGE) break;
+    try {
+      crmIds = await resolveContactIds(db, { mode: "filter", params: d.params, group: d.group });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
     }
-    crmIds = [...new Set(crmIds)];
   }
 
   // ── Resolve the email content (template or written-fresh) ──────────────────

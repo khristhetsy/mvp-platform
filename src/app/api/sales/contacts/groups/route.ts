@@ -2,22 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
-import { AGG_SELECT, GROUP_DIMS, bucketRows, bucketLabel, isGroupBy, type LiteRow } from "@/lib/sales/contact-grouping";
+import { GROUP_DIMS, bucketLabel, isGroupBy } from "@/lib/sales/contact-grouping";
+import { parseContactsQuery, countContactBuckets, must } from "@/lib/sales/contacts-search";
 
 export const dynamic = "force-dynamic";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-// Rows scanned to compute group counts. Sales contacts are in the low tens of
-// thousands; one lightweight select over the filtered set is cheaper than a
-// count query per bucket, and lets every dimension be grouped in memory.
-const SCAN_CAP = 80000;
-
-// GET /api/sales/contacts/groups?by=<dimension> — group values + counts for the
-// chosen dimension, respecting the active filters. Mirrors the list's filters so
-// the group counts match what expanding a group will show.
+// GET /api/sales/contacts/groups?by=<dimension> — bucket values + counts for the chosen
+// dimension over the active filters. One SQL query (count_contact_buckets) with the same
+// predicate the list uses, so a header count always equals the rows the group expands to.
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
@@ -25,62 +20,25 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const by = p.get("by");
   if (!isGroupBy(by)) return NextResponse.json({ error: "Unknown group-by dimension." }, { status: 400 });
+  try {
+    const q = parseContactsQuery(p);
+    const scope = await getSalesScope(profile, p.get("viewAs"));
+    const buckets = await countContactBuckets(q.spec, effectiveContactsOwner(scope), by);
 
-  const scope = await getSalesScope(profile, p.get("viewAs"));
-  const contactsOwner = effectiveContactsOwner(scope);
-
-  const role = p.get("group");
-  // Discover which bucket VALUES exist. A single capped .range() only returns the
-  // first page (PostgREST row limit), so values that live only in later rows —
-  // e.g. "Fund Manager", carried solely by SEC Form D investors — were never
-  // discovered and their group didn't render. Page through so discovery is complete.
-  const PAGE = 1000;
-  const rows: LiteRow[] = [];
-  for (let from = 0; from < SCAN_CAP; from += PAGE) {
-    let q = db().from("crm_contacts").select(AGG_SELECT);
-    if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
-    if (role && ["founder", "investor", "advisor", "other"].includes(role)) q = q.or(`contact_type.eq.${role},module.eq.${role}`);
-    q = applyContactFilters(q, p).range(from, from + PAGE - 1);
-    const { data, error } = await q;
-    if (error || !data || data.length === 0) break;
-    rows.push(...(data as LiteRow[]));
-    if (data.length < PAGE) break;
-  }
-
-  const buckets = bucketRows(rows, by);
-
-  // The capped in-memory scan is fine for discovering bucket VALUES but under-counts on
-  // a large table (e.g. "Investment Bank" showed 2 when 58 exist). Recompute each visible
-  // bucket's count with a real DB count query using the exact filter the row expansion
-  // uses, so the header count always equals the rows shown. Bounded to the top buckets.
-  const ROLES = ["founder", "investor", "advisor", "other"];
-  const TOP = 80;
-  const counted = await Promise.all(buckets.slice(0, TOP).map(async (b) => {
-    let q = db().from("crm_contacts").select("id", { count: "exact", head: true });
-    if (contactsOwner) q = q.contains("assignee_ids", [contactsOwner]);
-    if (role && ROLES.includes(role)) q = q.or(`contact_type.eq.${role},module.eq.${role}`);
-    q = GROUP_DIMS[by].applyFilter(q, b.value);
-    q = applyContactFilters(q, p);
-    const { count, error } = await q;
-    return { value: b.value, count: error ? b.count : (count ?? b.count) };
-  }));
-  const accurate = [...counted, ...buckets.slice(TOP)]
-    .sort((a, b) => (a.value === "__none__" ? 1 : b.value === "__none__" ? -1 : b.count - a.count));
-
-  // Resolve assignee names for the "Salesperson / owner" dimension.
-  const nameById = new Map<string, string>();
-  if (GROUP_DIMS[by].needsNames) {
-    const ids = accurate.map((b) => b.value).filter((v) => v && v !== "__none__");
-    if (ids.length) {
-      const { data: profs } = await db().from("profiles").select("id, full_name, email").in("id", ids);
-      for (const pr of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
-        nameById.set(pr.id, pr.full_name ?? pr.email ?? "Member");
+    // Resolve assignee names for the "Salesperson / owner" dimension.
+    const nameById = new Map<string, string>();
+    if (GROUP_DIMS[by].needsNames) {
+      const ids = buckets.map((b) => b.value).filter((v) => v && v !== "__none__");
+      if (ids.length) {
+        const profs = await must<Array<{ id: string; full_name: string | null; email: string | null }> | null>(
+          db().from("profiles").select("id, full_name, email").in("id", ids), "contacts groups: assignee names");
+        for (const pr of profs ?? []) nameById.set(pr.id, pr.full_name ?? pr.email ?? "Member");
       }
     }
+    const groups = buckets.map((b) => ({ id: b.value, label: bucketLabel(by, b.value, nameById), count: b.count }));
+    const total = groups.reduce((a, b) => a + b.count, 0);
+    return NextResponse.json({ groups, total, capped: false });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Group counts failed." }, { status: 500 });
   }
-
-  const groups = accurate.map((b) => ({ id: b.value, label: bucketLabel(by, b.value, nameById), count: b.count }));
-  const total = accurate.reduce((a, b) => a + b.count, 0);
-  const capped = rows.length >= SCAN_CAP;
-  return NextResponse.json({ groups, total, capped });
 }

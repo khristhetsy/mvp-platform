@@ -36,9 +36,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   const db: any = serviceRoleClientUntyped();
 
   // Resolve the target contact ids (same predicate as the list, see bulk-targets.ts).
-  const ids = await resolveContactIds(db, mode === "ids"
-    ? { mode, ids: parsed.data.ids }
-    : { mode, params: parsed.data.params, group: parsed.data.group });
+  let ids: string[];
+  try {
+    ids = await resolveContactIds(db, mode === "ids"
+      ? { mode, ids: parsed.data.ids }
+      : { mode, params: parsed.data.params, group: parsed.data.group });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
+  }
   if (ids.length === 0) return NextResponse.json({ error: "No contacts matched." }, { status: 400 });
 
   // Set-based union via the SQL function. Fall back to a bounded per-row union if the

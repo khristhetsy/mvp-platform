@@ -2,11 +2,11 @@
  * Odoo-style custom filter spec for the Contacts grid. A FilterSpec is a set of
  * field·operator·value conditions joined by "all" (AND) or "any" (OR). This module is
  * pure (no server imports) so the client can share the field registry, and it compiles
- * a spec into PostgREST filter terms that applyContactFilters applies to the query.
+ * a spec into SQL — that happens in Postgres (contacts_spec_where, migration 20260914003),
+ * never in TypeScript string-building.
  *
- * Compilation avoids negation operators that would be unsafe inside an OR tree — every
- * condition compiles to positive OR-terms, mirroring the proven quoting used elsewhere
- * in applyContactFilters (facet containment, lead-source, etc.).
+ * The field keys and ops here MUST stay in step with contacts_spec_where; the PGlite test
+ * (search-contacts.pg.test.ts) exercises every one of them against real Postgres.
  */
 
 export type Operator = "contains" | "equals" | "in" | "set" | "not_set" | "after" | "before";
@@ -63,153 +63,11 @@ export function fieldDef(key: string): FieldDef | undefined {
   return FIELD_REGISTRY.find((f) => f.key === key);
 }
 
-/**
- * Index-friendly containment against the `profile` column (= raw->'__profile', a stored
- * generated column, migration 20260914002) with its own jsonb_path_ops GIN. Filtering
- * `raw` itself was index-backed but still ~4s: the GIN recheck detoasted the whole Odoo
- * record per candidate. `profile` is a few hundred bytes, so the recheck is cheap.
- * Overrides use the same shape (crm_contacts_overrides_gin, migration 20260914001).
- */
-export const PROFILE_COL = "profile";
-export function profileContains(key: string, value: string | string[]): string {
-  return JSON.stringify({ [key]: value });
-}
-export function overridesContains(key: string, value: unknown): string {
-  return JSON.stringify({ [key]: value });
-}
-/**
- * Quote an operand for PostgREST's or() logic-tree parser. PostgREST's quoted-value
- * grammar is `"` … `"` with BACKSLASH escapes (pCharOrEscape = '\\' *> anyChar) — the
- * previous doubled-quote form (`""`) is not valid and made every JSON operand fail to
- * parse, so the whole request 400'd and the list showed "No matching contacts".
- */
-export function orOperand(json: string): string {
-  return `"${json.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-/** Lead source is a plain string on both stores; equality uses the expression indexes
- *  on (overrides->>'lead_source') and (profile->>'leadSource') — no JSON quoting needed. */
-export function leadSourceTerms(v: string): string[] {
-  const safe = v.replace(/["\\]/g, "");
-  return [`overrides->>lead_source.eq."${safe}"`, `profile->>leadSource.eq."${safe}"`];
-}
-// Reject values that would break the or() parser (only relevant to unquoted ilike).
-function ilikeSafe(v: string): boolean {
-  return !!v && !v.includes(",") && !v.includes("(") && !v.includes(")");
-}
-/**
- * A PostgREST `ilike` term for use inside an or() logic tree — the construction the
- * working global search uses, which survives multi-word values (a double-quoted `eq.`
- * operand does not reliably survive the or() parser, which silently errored the whole
- * count/list query → every group showed 0). ilike is exact here (no % wildcards) but
- * case-insensitive, which also absorbs casing drift between the facet options and the
- * stored value. Reserved-char values fall back to a quoted operand.
- */
-function ilikeTerm(col: string, v: string): string {
-  const escaped = v.replace(/([%_\\])/g, "\\$1"); // escape ilike wildcards
-  if (/[,()]/.test(v)) return `${col}.ilike."${escaped.replace(/"/g, '""')}"`;
-  return `${col}.ilike.${escaped}`;
-}
-function asArray(value: Condition["value"]): string[] {
-  if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
-  const s = String(value ?? "").trim();
-  return s ? [s] : [];
-}
-
-/**
- * Compile one condition to a list of PostgREST OR-terms (all OR'd together). Returns
- * null when the condition is incomplete/invalid so it can be skipped.
- */
-export function conditionTerms(cond: Condition): string[] | null {
-  const def = fieldDef(cond.field);
-  if (!def || !def.ops.includes(cond.op)) return null;
-  const vals = asArray(cond.value);
-
-  switch (def.kind) {
-    case "text": {
-      const col = def.col!;
-      if (cond.op === "set") return [`${col}.not.is.null`];
-      if (cond.op === "not_set") return [`${col}.is.null`];
-      if (vals.length === 0) return null;
-      if (cond.op === "contains") return ilikeSafe(vals[0]) ? [`${col}.ilike.%${vals[0]}%`] : null;
-      if (cond.op === "equals") return [ilikeTerm(col, vals[0])];
-      return null;
-    }
-    case "enumCol": {
-      const col = def.col!;
-      if (cond.op === "set") return [`${col}.not.is.null`];
-      if (cond.op === "not_set") return [`${col}.is.null`];
-      if (cond.op === "in") return vals.length ? vals.map((v) => ilikeTerm(col, v)) : null;
-      return null;
-    }
-    case "type": {
-      if (cond.op !== "in" || vals.length === 0) return null;
-      // Role lives on contact_type or module (either satisfies the type).
-      return vals.flatMap((v) => [`contact_type.eq.${v}`, `module.eq.${v}`]);
-    }
-    case "leadSource": {
-      if (cond.op === "set") return ["overrides->>lead_source.not.is.null", "profile->>leadSource.not.is.null"];
-      // Exact match on both stores via root containment (both GIN-indexed). The option
-      // list is built from stored values, so exact is what the user picked.
-      if (cond.op === "in") return vals.length ? vals.flatMap(leadSourceTerms) : null;
-      return null;
-    }
-    case "facet": {
-      const fk = def.facetKey!;
-      if (cond.op === "set") return [`profile->${fk}.not.is.null`];
-      if (cond.op === "in") return vals.length ? vals.map((v) => `profile.cs.${orOperand(profileContains(fk, [v]))}`) : null;
-      return null;
-    }
-    case "date": {
-      const col = def.col!;
-      if (vals.length === 0) return null;
-      if (cond.op === "after") return [`${col}.gte.${vals[0]}`];
-      if (cond.op === "before") return [`${col}.lte.${vals[0]}`];
-      return null;
-    }
-    case "assignee": {
-      if (cond.op === "set") return ["assignee_ids.not.is.null"];
-      if (cond.op === "not_set") return ["assignee_ids.is.null"];
-      return null;
-    }
-    default:
-      return null;
-  }
-}
-
-const MAX_CONDITIONS = 20;
-
-/**
- * Apply a FilterSpec to a Supabase query builder. "all" applies each condition as its
- * own OR-group (chained .or() calls AND together); "any" OR's every term into one .or().
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function applyFilterSpec(query: any, spec: FilterSpec): any {
-  if (!spec || !Array.isArray(spec.conditions)) return query;
-  const groups = spec.conditions.slice(0, MAX_CONDITIONS).map(conditionTerms).filter((t): t is string[] => !!t && t.length > 0);
-  if (groups.length === 0) return query;
-  if (spec.match === "any") {
-    return query.or(groups.flat().join(","));
-  }
-  for (const terms of groups) {
-    // One term: apply it directly. .filter() passes the operand verbatim, so a JSON
-    // containment never touches the or() parser (the multi-word-facet failure mode).
-    const single = terms.length === 1 ? splitTerm(terms[0]) : null;
-    query = single ? query.filter(single.col, single.op, single.value) : query.or(terms.join(","));
-  }
-  return query;
-}
-
-/** "col.op.value" → parts, un-quoting an or()-quoted value back to its raw form. */
-export function splitTerm(term: string): { col: string; op: string; value: string } | null {
-  const m = /^([^.]+(?:->>?[^.]+)*)\.(not\.)?([a-z]+)\.([\s\S]*)$/.exec(term);
-  if (!m) return null;
-  const [, col, not, op, rawValue] = m;
-  const value = rawValue.startsWith('"') && rawValue.endsWith('"')
-    ? rawValue.slice(1, -1).replace(/\\(.)/g, "$1")
-    : rawValue;
-  return { col, op: `${not ?? ""}${op}`, value };
-}
-
+/** Structural check used by the client's custom-filter builder (values are validated in SQL). */
 export function isValidCondition(cond: Condition): boolean {
-  return conditionTerms(cond) !== null;
+  const def = fieldDef(cond.field);
+  if (!def || !def.ops.includes(cond.op)) return false;
+  if (cond.op === "set" || cond.op === "not_set") return true;
+  const vals = Array.isArray(cond.value) ? cond.value : cond.value != null ? [String(cond.value)] : [];
+  return vals.some((v) => String(v).trim() !== "");
 }

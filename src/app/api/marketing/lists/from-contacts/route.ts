@@ -4,18 +4,17 @@
  * marketing_contacts mirror (keyed by email), so this endpoint bridges the two:
  * resolve the selection to emails, upsert the marketing_contacts mirror rows, then
  * write list memberships. Supports an explicit id selection or a "select all matching
- * the current filter" set (resolved server-side via applyContactFilters). Staff-only.
+ * the current filter" set (resolved server-side via resolveContactIds → search_contact_ids). Staff-only.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { resolveContactIds } from "@/lib/sales/bulk-targets";
 
 export const dynamic = "force-dynamic";
 
-const GROUPS = ["founder", "investor", "advisor", "other"];
 const MAX_TARGET = 25000;
 
 const schema = z.object({
@@ -53,21 +52,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   // 1. Resolve the target crm_contacts ids.
   let crmIds: string[] = [];
-  if (mode === "ids") {
-    crmIds = [...new Set(parsed.data.ids ?? [])];
-  } else {
-    const p = new URLSearchParams(parsed.data.params ?? "");
-    const PAGE = 1000;
-    for (let from = 0; from < MAX_TARGET; from += PAGE) {
-      let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
-      if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
-      q = applyContactFilters(q, p);
-      const { data, error } = await q;
-      if (error || !data || data.length === 0) break;
-      crmIds.push(...(data as Array<{ id: string }>).map((r) => r.id));
-      if (data.length < PAGE) break;
-    }
-    crmIds = [...new Set(crmIds)];
+  try {
+    crmIds = await resolveContactIds(db, mode === "ids"
+      ? { mode: "ids", ids: parsed.data.ids }
+      : { mode: "filter", params: parsed.data.params, group: parsed.data.group });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
   }
   if (crmIds.length === 0) return NextResponse.json({ error: "No contacts selected." }, { status: 400 });
 

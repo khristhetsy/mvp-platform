@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  GROUP_DIMS,
   bucketRows,
   bucketLabel,
   isGroupBy,
@@ -8,10 +7,9 @@ import {
   type LiteRow,
 } from "./contact-grouping";
 
-// These pin the "Group by" bucketing + filter behaviour that regressed twice
-// (multi-word facet values, and the Unassigned count-vs-rows mismatch). The
-// filter tests assert the exact PostgREST operands so an accidental edit that
-// re-breaks Unassigned or multi-word values fails here rather than in the UI.
+// These pin the "Group by" bucketing behaviour that regressed twice (multi-word
+// facet values, and the Unassigned count-vs-rows mismatch). The matching WHERE
+// clauses now live in SQL — see search-contacts.pg.test.ts for those.
 
 const rows: LiteRow[] = [
   {
@@ -32,17 +30,6 @@ const rows: LiteRow[] = [
     profile: null, lead_override: null, // fully unassigned
   },
 ];
-
-// Records the query-builder method calls so we can assert the operands.
-function mockQuery() {
-  const calls: Array<{ m: string; args: unknown[] }> = [];
-  const q: Record<string, (...a: unknown[]) => unknown> = {};
-  for (const m of ["or", "filter", "is", "eq", "gte", "lt", "contains"]) {
-    q[m] = (...args: unknown[]) => { calls.push({ m, args }); return q; };
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { q: q as any, calls };
-}
 
 const countMap = (dim: string) => Object.fromEntries(bucketRows(rows, dim).map((b) => [b.value, b.count]));
 
@@ -91,54 +78,5 @@ describe("isGroupBy", () => {
     expect(isGroupBy("createdMonth")).toBe(true);
     expect(isGroupBy("bogus")).toBe(false);
     expect(isGroupBy(null)).toBe(false);
-  });
-});
-
-describe("applyGroupFilter operands", () => {
-  it("facet value uses .filter() containment (survives multi-word values)", () => {
-    const { q, calls } = mockQuery();
-    GROUP_DIMS.investorTypes.applyFilter(q, "Venture Capital");
-    expect(calls).toContainEqual({ m: "filter", args: ["profile", "cs", '{"investorTypes":["Venture Capital"]}'] });
-  });
-
-  it("facet Unassigned matches BOTH null and empty array", () => {
-    const { q, calls } = mockQuery();
-    GROUP_DIMS.industries.applyFilter(q, NONE);
-    expect(calls).toContainEqual({ m: "or", args: ["profile->industries.is.null,profile->>industries.eq.[]"] });
-  });
-
-  it("lead-source Unassigned requires override AND profile null", () => {
-    const { q, calls } = mockQuery();
-    GROUP_DIMS.leadSource.applyFilter(q, NONE);
-    expect(calls).toContainEqual({ m: "is", args: ["overrides->lead_source", null] });
-    expect(calls).toContainEqual({ m: "is", args: ["profile->leadSource", null] });
-  });
-
-  it("scalars use eq for a value and is-null for Unassigned", () => {
-    const v = mockQuery(); GROUP_DIMS.country.applyFilter(v.q, "US");
-    expect(v.calls).toContainEqual({ m: "eq", args: ["country", "US"] });
-    const n = mockQuery(); GROUP_DIMS.country.applyFilter(n.q, NONE);
-    expect(n.calls).toContainEqual({ m: "is", args: ["country", null] });
-  });
-
-  it("assignees use contains for an id and or() for Unassigned", () => {
-    const v = mockQuery(); GROUP_DIMS.assignees.applyFilter(v.q, "u1");
-    expect(v.calls).toContainEqual({ m: "contains", args: ["assignee_ids", ["u1"]] });
-    const n = mockQuery(); GROUP_DIMS.assignees.applyFilter(n.q, NONE);
-    expect(n.calls).toContainEqual({ m: "or", args: ["assignee_ids.is.null,assignee_ids.eq.{}"] });
-  });
-
-  it("createdMonth builds a half-open month range, handling December rollover", () => {
-    const a = mockQuery(); GROUP_DIMS.createdMonth.applyFilter(a.q, "2026-09");
-    expect(a.calls).toContainEqual({ m: "gte", args: ["created_on", "2026-09-01"] });
-    expect(a.calls).toContainEqual({ m: "lt", args: ["created_on", "2026-10-01"] });
-    const d = mockQuery(); GROUP_DIMS.createdMonth.applyFilter(d.q, "2026-12");
-    expect(d.calls).toContainEqual({ m: "lt", args: ["created_on", "2027-01-01"] });
-  });
-
-  it("profile matches contact_type OR module", () => {
-    const { q, calls } = mockQuery();
-    GROUP_DIMS.profile.applyFilter(q, "investor");
-    expect(calls).toContainEqual({ m: "or", args: ["contact_type.eq.investor,module.eq.investor"] });
   });
 });

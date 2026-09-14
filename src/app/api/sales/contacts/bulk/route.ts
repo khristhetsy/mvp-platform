@@ -55,7 +55,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = serviceRoleClientUntyped();
-  const ids = await resolveContactIds(db, body.mode === "ids" ? { mode: "ids", ids: body.ids } : { mode: "filter", params: body.params, group: body.group });
+  let ids: string[];
+  try {
+    ids = await resolveContactIds(db, body.mode === "ids" ? { mode: "ids", ids: body.ids } : { mode: "filter", params: body.params, group: body.group });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
+  }
   if (ids.length === 0) return NextResponse.json({ error: "No contacts matched." }, { status: 400 });
 
   if (body.op === "export") {

@@ -1,4 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+const rpc = vi.fn();
+vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: () => ({ rpc }) }));
+
 import { csvCell, toCsv, resolveContactIds } from "./bulk-targets";
 
 describe("csv", () => {
@@ -16,19 +20,34 @@ describe("csv", () => {
 
 describe("resolveContactIds", () => {
   it("de-dups an explicit id list without touching the database", async () => {
-    const db = { from: () => { throw new Error("should not query"); } };
-    expect(await resolveContactIds(db, { mode: "ids", ids: ["a", "b", "a"] })).toEqual(["a", "b"]);
+    rpc.mockClear();
+    expect(await resolveContactIds(null, { mode: "ids", ids: ["a", "b", "a"] })).toEqual(["a", "b"]);
+    expect(rpc).not.toHaveBeenCalled();
   });
-  it("pages a filter until a short page, so more than 1,000 matches are all targeted", async () => {
-    const pages = [Array.from({ length: 1000 }, (_, i) => ({ id: `p1-${i}` })), [{ id: "p2-0" }]];
-    let call = 0;
-    const q = {
-      select: () => q, order: () => q, range: () => q, or: () => q, ilike: () => q, in: () => q, eq: () => q, contains: () => q,
-      then: (res: (v: { data: { id: string }[]; error: null }) => void) => res({ data: pages[call++] ?? [], error: null }),
-    };
-    const db = { from: () => q };
-    const ids = await resolveContactIds(db, { mode: "filter", params: "", group: "investor" });
-    expect(ids).toHaveLength(1001);
-    expect(call).toBe(2);
+
+  it("filter mode runs the same spec as the list through search_contact_ids", async () => {
+    rpc.mockClear();
+    rpc.mockResolvedValueOnce({ data: [{ search_contact_ids: "x" }, { search_contact_ids: "y" }], error: null });
+    const params = new URLSearchParams({ filter: JSON.stringify({ match: "all", conditions: [{ field: "investorTypes", op: "in", value: ["Angel Investor"] }] }) });
+    const ids = await resolveContactIds(null, { mode: "filter", params: params.toString(), group: "investor" }, "owner-1");
+    expect(ids).toEqual(["x", "y"]);
+    expect(rpc).toHaveBeenCalledWith("search_contact_ids", expect.objectContaining({
+      p_owner: "owner-1",
+      p_group_by: "profile",
+      p_group_value: "investor",
+      p_spec: { match: "all", conditions: [{ field: "investorTypes", op: "in", value: ["Angel Investor"] }] },
+    }));
+  });
+
+  it("a database error throws instead of returning a partial set", async () => {
+    rpc.mockClear();
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    await expect(resolveContactIds(null, { mode: "filter", params: "q=acme" })).rejects.toThrow(/boom/);
+  });
+
+  it("a malformed filter throws instead of selecting the whole table", async () => {
+    rpc.mockClear();
+    await expect(resolveContactIds(null, { mode: "filter", params: "filter=%7Bnot-json" })).rejects.toThrow(/Invalid filter/);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

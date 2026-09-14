@@ -3,12 +3,10 @@
 // One source of truth for every group-by dimension, used by:
 //   • the client dropdown (GROUP_BY_OPTIONS — id/label/section only)
 //   • the group-list endpoint (extract() to bucket the filtered set + count)
-//   • the contacts list endpoint (applyGroupFilter() to page within one group)
+//   • the SQL side (contacts_spec_where) pages within one bucket — the dimension ids
+//     here must match the CASE branches there.
 //
-// Extract and filter are pure — they take a lightweight row / a PostgREST query
-// builder — so there is nothing server-only here and both routes can import it.
-
-import { profileContains, leadSourceTerms } from "@/lib/sales/contact-filter-spec";
+// Extract is pure, so the client can import this module too.
 
 export const NONE = "__none__";
 
@@ -59,9 +57,6 @@ type Dim = {
   section: GroupSection;
   /** The bucket value(s) a row belongs to. Empty array → the row is "Unassigned". */
   extract: (r: LiteRow) => string[];
-  /** Narrow a PostgREST query to a single bucket value (or NONE). */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  applyFilter: (query: any, value: string) => any;
   /** Whether bucket values are opaque ids that need a display label (assignees). */
   needsNames?: boolean;
 };
@@ -71,16 +66,6 @@ function facetDim(id: string, key: string, label: string): Dim {
   return {
     id, label, section: "facets",
     extract: (r) => strArray(r.profile?.[key]),
-    // Use .filter() (not .or()) for the containment: multi-word values like
-    // "Venture Capital" carry spaces + quotes that PostgREST's or() logic-tree
-    // parser mangles, returning zero rows even when the group count is > 0. A
-    // plain filter passes the jsonb operand verbatim.
-    applyFilter: (query, value) =>
-      value === NONE
-        // Unassigned = key missing/null OR an empty array (extract() buckets both
-        // as NONE, so the filter must match both or the count won't equal the rows).
-        ? query.or(`profile->${key}.is.null,profile->>${key}.eq.[]`)
-        : query.filter("profile", "cs", profileContains(key, [value])),
   };
 }
 
@@ -88,7 +73,6 @@ export const GROUP_DIMS: Record<string, Dim> = {
   profile: {
     id: "profile", label: "Profile", section: "profile",
     extract: (r) => [roleOf(r)],
-    applyFilter: (query, value) => query.or(`contact_type.eq.${value},module.eq.${value}`),
   },
   industries: facetDim("industries", "industries", "Industry"),
   investorTypes: facetDim("investorTypes", "investorTypes", "Investor type"),
@@ -98,49 +82,26 @@ export const GROUP_DIMS: Record<string, Dim> = {
   leadSource: {
     id: "leadSource", label: "Lead source", section: "facets",
     extract: (r) => { const v = leadSourceOf(r); return v ? [v] : []; },
-    applyFilter: (query, value) => {
-      // Unassigned = BOTH the override and the profile lead source are null
-      // (extract() only buckets a row NONE when neither is set).
-      if (value === NONE) return query.is("overrides->lead_source", null).is("profile->leadSource", null);
-      // Double-quote the value so spaces/commas (e.g. "SEC Form D") survive the
-      // or() logic-tree parser; strip quotes/backslashes that would break it.
-      return query.or(leadSourceTerms(value).join(","));
-    },
   },
   country: {
     id: "country", label: "Country", section: "crm",
     extract: (r) => (r.country ? [r.country] : []),
-    applyFilter: (query, value) => (value === NONE ? query.is("country", null) : query.eq("country", value)),
   },
   company: {
     id: "company", label: "Company", section: "crm",
     extract: (r) => (r.company ? [r.company] : []),
-    applyFilter: (query, value) => (value === NONE ? query.is("company", null) : query.eq("company", value)),
   },
   source: {
     id: "source", label: "Source system", section: "crm",
     extract: (r) => (r.source ? [r.source] : []),
-    applyFilter: (query, value) => (value === NONE ? query.is("source", null) : query.eq("source", value)),
   },
   assignees: {
     id: "assignees", label: "Salesperson / owner", section: "crm", needsNames: true,
     extract: (r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : []),
-    applyFilter: (query, value) =>
-      value === NONE ? query.or("assignee_ids.is.null,assignee_ids.eq.{}") : query.contains("assignee_ids", [value]),
   },
   createdMonth: {
     id: "createdMonth", label: "Added (month)", section: "crm",
     extract: (r) => (r.created_on ? [String(r.created_on).slice(0, 7)] : []),
-    applyFilter: (query, value) => {
-      if (value === NONE) return query.is("created_on", null);
-      const [y, m] = value.split("-").map(Number);
-      if (!y || !m) return query;
-      const start = `${y}-${String(m).padStart(2, "0")}-01`;
-      const ny = m === 12 ? y + 1 : y;
-      const nm = m === 12 ? 1 : m + 1;
-      const end = `${ny}-${String(nm).padStart(2, "0")}-01`;
-      return query.gte("created_on", start).lt("created_on", end);
-    },
   },
 };
 

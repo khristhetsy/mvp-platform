@@ -3,101 +3,70 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
 import { loadNextActivities } from "@/lib/sales/contact-next-activity";
-import { GROUP_DIMS, isGroupBy } from "@/lib/sales/contact-grouping";
+import { parseContactsQuery, searchContacts, must } from "@/lib/sales/contacts-search";
 
 export const dynamic = "force-dynamic";
-
-type Row = { id: string; name: string | null; email: string | null; company: string | null; phone: string | null; source: string | null; contact_type: string | null; country: string | null; created_on: string | null };
-
-const SORTABLE = new Set(["name", "company", "email", "country", "created_on"]);
 
 // crm_contacts has columns not all in the generated types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-const GROUPS = ["founder", "investor", "advisor", "other"] as const;
-
-// GET /api/sales/contacts — grouped, filtered, paginated contact list.
-//   ?group=founder|investor|advisor|other &offset=0&limit=50
-//   filters: q, name, company, email, phone, country (csv)
+// GET /api/sales/contacts — one page of the filtered list + exact total.
+//   filter=<FilterSpec JSON> · groupBy/groupValue (or group=<role>) · sort/dir · offset/limit
+// The predicate is built by the search_contacts SQL function; see contacts-search.ts.
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const p = req.nextUrl.searchParams;
+  try {
+    const q = parseContactsQuery(p);
+    const scope = await getSalesScope(profile, p.get("viewAs"));
+    // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
+    // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
+    const { rows: raw, total } = await searchContacts(q, effectiveContactsOwner(scope));
 
-  const group = p.get("group");
-  const offset = Math.max(0, Number(p.get("offset") ?? 0) || 0);
-  const limit = Math.min(200, Math.max(1, Number(p.get("limit") ?? 50) || 50));
-
-  const sort = p.get("sort") && SORTABLE.has(p.get("sort")!) ? p.get("sort")! : "name";
-  const dir = p.get("dir") === "desc" ? false : true;
-
-  const scope = await getSalesScope(profile, p.get("viewAs"));
-
-  // Only the JSON paths the row needs — not the whole `raw` (the full Odoo record, often
-  // tens of KB) and `overrides`. Fifty rows used to be ~1MB of JSON per page.
-  // Count stays exact: it feeds the per-group pager ("1–50 / 1,234"), and an estimate
-  // there reads as a wrong number. The index + payload changes are the speed-up.
-  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, assignee_ids, raw_phone:raw->>phone, raw_mobile:raw->>mobile, ls_profile:profile->>leadSource, ls_override:overrides->>lead_source";
-  let query = db().from("crm_contacts").select(cols, { count: "exact" });
-  // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
-  // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
-  const contactsOwner = effectiveContactsOwner(scope);
-  if (contactsOwner) query = query.contains("assignee_ids", [contactsOwner]);
-  // Match by contact_type OR module so promoted Form D contacts (which are keyed by
-  // module, like the Founder/Investor CRM pages) always land in the right group.
-  if (group && (GROUPS as readonly string[]).includes(group)) query = query.or(`contact_type.eq.${group},module.eq.${group}`);
-  // Generic "Group by <dimension>": page within one bucket of any dimension
-  // (industry, investor type, country, salesperson, month, …). Same filter the
-  // group-count endpoint used to bucket, so the rows match the header count.
-  const groupBy = p.get("groupBy");
-  const groupValue = p.get("groupValue");
-  if (groupBy && isGroupBy(groupBy) && groupValue != null) query = GROUP_DIMS[groupBy].applyFilter(query, groupValue);
-  query = applyContactFilters(query, p);
-  query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
-
-  const { data, count } = await query;
-  const raw = (data ?? []) as Array<Row & { raw_phone?: string | null; raw_mobile?: string | null; ls_profile?: string | null; ls_override?: string | null; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
-
-  // Resolve assignee names for the Lead assign column in one lookup.
-  const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
-  const nameById = new Map<string, string>();
-  if (ids.length) {
-    const { data: profs } = await db().from("profiles").select("id, full_name, email").in("id", ids);
-    for (const pr of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
-      nameById.set(pr.id, pr.full_name ?? pr.email ?? "Member");
+    // Resolve assignee names for the Lead assign column in one lookup.
+    const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
+    const nameById = new Map<string, string>();
+    if (ids.length) {
+      const profs = await must<Array<{ id: string; full_name: string | null; email: string | null }> | null>(
+        db().from("profiles").select("id, full_name, email").in("id", ids), "contacts: assignee names");
+      for (const pr of profs ?? []) nameById.set(pr.id, pr.full_name ?? pr.email ?? "Member");
     }
+
+    // Latest "message communicated" per contact (notes + sends + replies), bulk.
+    const [lastMsg, nextAct] = await Promise.all([
+      loadLastMessages(db(), raw.map((r) => ({ id: r.id, email: r.email ?? null, source: r.source ?? null, external_id: r.external_id ?? null }))),
+      // "Activities" column: next open task per contact (one query for the page).
+      loadNextActivities(db(), raw.map((r) => r.id)),
+    ]);
+
+    const rows = raw.map((r) => ({
+      id: r.id,
+      name: r.name ?? r.email ?? "Contact",
+      email: r.email ?? "",
+      company: r.company ?? "",
+      phone: r.phone || r.raw_phone || r.raw_mobile || "",
+      source: r.source ?? "crm",
+      type: r.contact_type ?? "other",
+      country: r.country ?? "",
+      // Fall back to the promote/insert date (synced_at) when there's no Odoo
+      // create_date — e.g. SEC Form D promotions, which have no raw.create_date.
+      createdOn: r.created_on ?? (r.synced_at ? String(r.synced_at).slice(0, 10) : ""),
+      // Lead source: the override (Form D + edits) or the Odoo profile value.
+      leadSource: (r.ls_override ?? "").trim() || (r.ls_profile ?? "").trim(),
+      assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
+      lastMessage: lastMsg.get(r.id) ?? null,
+      activity: nextAct.get(r.id) ?? null,
+    }));
+    return NextResponse.json({ contacts: rows, total });
+  } catch (err) {
+    // Surfaced, not swallowed: a bad filter reads as an error on the page, never as
+    // an empty list under a stale count.
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Contacts search failed." }, { status: 500 });
   }
-
-  // Latest "message communicated" per contact (notes + sends + replies), bulk.
-  const [lastMsg, nextAct] = await Promise.all([
-    loadLastMessages(db(), raw.map((r) => ({ id: r.id, email: r.email ?? null, source: r.source ?? null, external_id: r.external_id ?? null }))),
-    // "Activities" column: next open task per contact (one query for the page).
-    loadNextActivities(db(), raw.map((r) => r.id)),
-  ]);
-
-  const rows = raw.map((r) => ({
-    id: r.id,
-    name: r.name ?? r.email ?? "Contact",
-    email: r.email ?? "",
-    company: r.company ?? "",
-    phone: r.phone || r.raw_phone || r.raw_mobile || "",
-    source: r.source ?? "crm",
-    type: r.contact_type ?? "other",
-    country: r.country ?? "",
-    // Fall back to the promote/insert date (synced_at) when there's no Odoo
-    // create_date — e.g. SEC Form D promotions, which have no raw.create_date.
-    createdOn: r.created_on ?? (r.synced_at ? String(r.synced_at).slice(0, 10) : ""),
-    // Lead source: the override (Form D + edits) or the Odoo profile value.
-    leadSource: (r.ls_override ?? "").trim() || (r.ls_profile ?? "").trim(),
-    assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
-    lastMessage: lastMsg.get(r.id) ?? null,
-    activity: nextAct.get(r.id) ?? null,
-  }));
-  return NextResponse.json({ contacts: rows, total: count ?? rows.length });
 }
 
 const addSchema = z.object({
