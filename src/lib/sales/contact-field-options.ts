@@ -132,7 +132,7 @@ export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptio
 
 const PAGE = 1000;
 const MAX_PAGES = 40; // ~40k rows safety cap
-const SELECT = "extra:raw->__profile->extra, industries:raw->__profile->industries, investorTypes:raw->__profile->investorTypes";
+const SELECT = "extra:profile->extra, industries:profile->industries, investorTypes:profile->investorTypes";
 
 /** Curated option lists for fields that have no synced values yet (so the
  *  click-to-edit picker is a select, not a text box). Merged with — never

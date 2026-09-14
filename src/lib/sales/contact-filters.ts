@@ -19,11 +19,11 @@ function applyFacetFilters(query: any, p: URLSearchParams): any {
       // (they read as value delimiters), so a multi-word facet returns zero rows.
       // .filter() passes the jsonb operand verbatim and matches correctly.
       // Root containment so crm_contacts_raw_gin serves it (see profileContains).
-      query = query.filter("raw", "cs", profileContains(key, vals));
+      query = query.filter("profile", "cs", profileContains(key, vals));
     } else {
       // Multiple values OR'd: quote each jsonb operand for the or() parser
       // (double-quote wrap, inner quotes doubled) so multi-word values survive.
-      query = query.or(vals.map((v) => `raw.cs.${orOperand(profileContains(key, [v]))}`).join(","));
+      query = query.or(vals.map((v) => `profile.cs.${orOperand(profileContains(key, [v]))}`).join(","));
     }
   }
   return query;
@@ -46,7 +46,7 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
   if (leadSources.length) {
     // Double-quote each value so multi-word sources (e.g. "SEC Form D") survive
     // the or() parser instead of the space breaking the operand.
-    query = query.or(leadSources.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `raw.cs.${orOperand(profileContains("leadSource", v))}`]).join(","));
+    query = query.or(leadSources.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `profile.cs.${orOperand(profileContains("leadSource", v))}`]).join(","));
   }
   query = applyFacetFilters(query, p);
   // Odoo-style custom filter spec (field·operator·value, any/all) — additive over the

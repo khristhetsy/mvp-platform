@@ -15,7 +15,7 @@ export const NONE = "__none__";
 // PostgREST select for the lightweight aggregation query (group-list endpoint).
 // Only the columns any dimension needs — no full `raw`, no last-message lookups.
 export const AGG_SELECT =
-  "id, contact_type, module, country, company, source, created_on, assignee_ids, profile:raw->__profile, lead_override:overrides->lead_source";
+  "id, contact_type, module, country, company, source, created_on, assignee_ids, profile, lead_override:overrides->lead_source";
 
 export type LiteRow = {
   id: string;
@@ -79,8 +79,8 @@ function facetDim(id: string, key: string, label: string): Dim {
       value === NONE
         // Unassigned = key missing/null OR an empty array (extract() buckets both
         // as NONE, so the filter must match both or the count won't equal the rows).
-        ? query.or(`raw->__profile->${key}.is.null,raw->__profile->>${key}.eq.[]`)
-        : query.filter("raw", "cs", profileContains(key, [value])),
+        ? query.or(`profile->${key}.is.null,profile->>${key}.eq.[]`)
+        : query.filter("profile", "cs", profileContains(key, [value])),
   };
 }
 
@@ -101,10 +101,10 @@ export const GROUP_DIMS: Record<string, Dim> = {
     applyFilter: (query, value) => {
       // Unassigned = BOTH the override and the profile lead source are null
       // (extract() only buckets a row NONE when neither is set).
-      if (value === NONE) return query.is("overrides->lead_source", null).is("raw->__profile->leadSource", null);
+      if (value === NONE) return query.is("overrides->lead_source", null).is("profile->leadSource", null);
       // Double-quote the value so spaces/commas (e.g. "SEC Form D") survive the
       // or() logic-tree parser; strip quotes/backslashes that would break it.
-      return query.or(`overrides.cs.${orOperand(overridesContains("lead_source", value))},raw.cs.${orOperand(profileContains("leadSource", value))}`);
+      return query.or(`overrides.cs.${orOperand(overridesContains("lead_source", value))},profile.cs.${orOperand(profileContains("leadSource", value))}`);
     },
   },
   country: {

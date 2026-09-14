@@ -41,7 +41,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   // tens of KB) and `overrides`. Fifty rows used to be ~1MB of JSON per page.
   // Count stays exact: it feeds the per-group pager ("1–50 / 1,234"), and an estimate
   // there reads as a wrong number. The index + payload changes are the speed-up.
-  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, assignee_ids, raw_phone:raw->>phone, raw_mobile:raw->>mobile, ls_profile:raw->__profile->>leadSource, ls_override:overrides->>lead_source";
+  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, assignee_ids, raw_phone:raw->>phone, raw_mobile:raw->>mobile, ls_profile:profile->>leadSource, ls_override:overrides->>lead_source";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
   // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.

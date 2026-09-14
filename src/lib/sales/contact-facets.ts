@@ -61,7 +61,7 @@ function isNonEmpty(f: ContactFacets | null | undefined): f is ContactFacets {
 
 const PAGE = 1000;
 const MAX_PAGES = 60; // safety cap (~60k rows)
-const SELECT = FACET_KEYS.map((k) => `${k}:raw->__profile->${k}`).join(", ") + ", ls_ov:overrides->>lead_source, ls_pr:raw->__profile->>leadSource";
+const SELECT = FACET_KEYS.map((k) => `${k}:profile->${k}`).join(", ") + ", ls_ov:overrides->>lead_source, ls_pr:profile->>leadSource";
 
 // Module-level cache — facet options change rarely (only when Odoo data re-syncs).
 let cache: { at: number; data: ContactFacets } | null = null;

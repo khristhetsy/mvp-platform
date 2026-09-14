@@ -64,14 +64,15 @@ export function fieldDef(key: string): FieldDef | undefined {
 }
 
 /**
- * Index-friendly containment. `raw->__profile->industries @> '["x"]'` cannot use the GIN
- * on `raw` (the index covers the root column, not a sub-path), so every facet filter was
- * a sequential scan over ~27k rows with a jsonb parse each. `raw @> {"__profile":{...}}`
- * is the same predicate expressed at the root, and the planner uses crm_contacts_raw_gin.
- * Same for overrides (crm_contacts_overrides_gin, migration 20260914001).
+ * Index-friendly containment against the `profile` column (= raw->'__profile', a stored
+ * generated column, migration 20260914002) with its own jsonb_path_ops GIN. Filtering
+ * `raw` itself was index-backed but still ~4s: the GIN recheck detoasted the whole Odoo
+ * record per candidate. `profile` is a few hundred bytes, so the recheck is cheap.
+ * Overrides use the same shape (crm_contacts_overrides_gin, migration 20260914001).
  */
+export const PROFILE_COL = "profile";
 export function profileContains(key: string, value: string | string[]): string {
-  return JSON.stringify({ __profile: { [key]: value } });
+  return JSON.stringify({ [key]: value });
 }
 export function overridesContains(key: string, value: unknown): string {
   return JSON.stringify({ [key]: value });
@@ -135,16 +136,16 @@ export function conditionTerms(cond: Condition): string[] | null {
       return vals.flatMap((v) => [`contact_type.eq.${v}`, `module.eq.${v}`]);
     }
     case "leadSource": {
-      if (cond.op === "set") return ["overrides->>lead_source.not.is.null", "raw->__profile->>leadSource.not.is.null"];
+      if (cond.op === "set") return ["overrides->>lead_source.not.is.null", "profile->>leadSource.not.is.null"];
       // Exact match on both stores via root containment (both GIN-indexed). The option
       // list is built from stored values, so exact is what the user picked.
-      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `raw.cs.${orOperand(profileContains("leadSource", v))}`]) : null;
+      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `profile.cs.${orOperand(profileContains("leadSource", v))}`]) : null;
       return null;
     }
     case "facet": {
       const fk = def.facetKey!;
-      if (cond.op === "set") return [`raw->__profile->${fk}.not.is.null`];
-      if (cond.op === "in") return vals.length ? vals.map((v) => `raw.cs.${orOperand(profileContains(fk, [v]))}`) : null;
+      if (cond.op === "set") return [`profile->${fk}.not.is.null`];
+      if (cond.op === "in") return vals.length ? vals.map((v) => `profile.cs.${orOperand(profileContains(fk, [v]))}`) : null;
       return null;
     }
     case "date": {

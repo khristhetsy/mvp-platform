@@ -98,20 +98,20 @@ describe("applyGroupFilter operands", () => {
   it("facet value uses .filter() containment (survives multi-word values)", () => {
     const { q, calls } = mockQuery();
     GROUP_DIMS.investorTypes.applyFilter(q, "Venture Capital");
-    expect(calls).toContainEqual({ m: "filter", args: ["raw", "cs", '{"__profile":{"investorTypes":["Venture Capital"]}}'] });
+    expect(calls).toContainEqual({ m: "filter", args: ["profile", "cs", '{"investorTypes":["Venture Capital"]}'] });
   });
 
   it("facet Unassigned matches BOTH null and empty array", () => {
     const { q, calls } = mockQuery();
     GROUP_DIMS.industries.applyFilter(q, NONE);
-    expect(calls).toContainEqual({ m: "or", args: ["raw->__profile->industries.is.null,raw->__profile->>industries.eq.[]"] });
+    expect(calls).toContainEqual({ m: "or", args: ["profile->industries.is.null,profile->>industries.eq.[]"] });
   });
 
   it("lead-source Unassigned requires override AND profile null", () => {
     const { q, calls } = mockQuery();
     GROUP_DIMS.leadSource.applyFilter(q, NONE);
     expect(calls).toContainEqual({ m: "is", args: ["overrides->lead_source", null] });
-    expect(calls).toContainEqual({ m: "is", args: ["raw->__profile->leadSource", null] });
+    expect(calls).toContainEqual({ m: "is", args: ["profile->leadSource", null] });
   });
 
   it("scalars use eq for a value and is-null for Unassigned", () => {
