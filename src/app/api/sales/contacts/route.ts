@@ -20,22 +20,6 @@ function db(): any { return createServiceRoleClient(); }
 
 const GROUPS = ["founder", "investor", "advisor", "other"] as const;
 
-function rawPhone(raw: unknown): string {
-  const r = raw as Record<string, unknown> | null;
-  const v = (typeof r?.phone === "string" && r.phone) || (typeof r?.mobile === "string" && r.mobile);
-  return v || "";
-}
-
-// Human-readable lead source: the override wins (Form D promotions set it to
-// "SEC Form D"), else the Odoo profile's leadSource.
-function leadSourceOf(overrides: unknown, raw: unknown): string {
-  const ov = (overrides as Record<string, unknown> | null)?.lead_source;
-  if (typeof ov === "string" && ov.trim()) return ov.trim();
-  const prof = (raw as { __profile?: { leadSource?: unknown } } | null)?.__profile;
-  const ls = prof?.leadSource;
-  return typeof ls === "string" && ls.trim() ? ls.trim() : "";
-}
-
 // GET /api/sales/contacts — grouped, filtered, paginated contact list.
 //   ?group=founder|investor|advisor|other &offset=0&limit=50
 //   filters: q, name, company, email, phone, country (csv)
@@ -53,8 +37,12 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const scope = await getSalesScope(profile, p.get("viewAs"));
 
-  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, overrides, assignee_ids, raw";
-  let query = db().from("crm_contacts").select(cols, { count: "exact" });
+  // Only the JSON paths the row needs — not the whole `raw` (the full Odoo record, often
+  // tens of KB) and `overrides`. Fifty rows used to be ~1MB of JSON per page.
+  // `planned` count: the group headers come from the facets endpoint; an exact count on
+  // a broad filter was the slowest part of every page on the current instance.
+  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, synced_at, assignee_ids, raw_phone:raw->>phone, raw_mobile:raw->>mobile, ls_profile:raw->__profile->>leadSource, ls_override:overrides->>lead_source";
+  let query = db().from("crm_contacts").select(cols, { count: "planned" });
   // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
   const contactsOwner = effectiveContactsOwner(scope);
@@ -72,7 +60,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
-  const raw = (data ?? []) as Array<Row & { raw?: unknown; overrides?: unknown; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
+  const raw = (data ?? []) as Array<Row & { raw_phone?: string | null; raw_mobile?: string | null; ls_profile?: string | null; ls_override?: string | null; assignee_ids?: string[]; external_id?: string | null; synced_at?: string | null }>;
 
   // Resolve assignee names for the Lead assign column in one lookup.
   const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
@@ -96,7 +84,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     name: r.name ?? r.email ?? "Contact",
     email: r.email ?? "",
     company: r.company ?? "",
-    phone: r.phone ?? rawPhone(r.raw),
+    phone: r.phone || r.raw_phone || r.raw_mobile || "",
     source: r.source ?? "crm",
     type: r.contact_type ?? "other",
     country: r.country ?? "",
@@ -104,7 +92,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     // create_date — e.g. SEC Form D promotions, which have no raw.create_date.
     createdOn: r.created_on ?? (r.synced_at ? String(r.synced_at).slice(0, 10) : ""),
     // Lead source: the override (Form D + edits) or the Odoo profile value.
-    leadSource: leadSourceOf(r.overrides, r.raw),
+    leadSource: (r.ls_override ?? "").trim() || (r.ls_profile ?? "").trim(),
     assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
     lastMessage: lastMsg.get(r.id) ?? null,
     activity: nextAct.get(r.id) ?? null,

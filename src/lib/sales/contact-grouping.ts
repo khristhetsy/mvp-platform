@@ -8,6 +8,8 @@
 // Extract and filter are pure — they take a lightweight row / a PostgREST query
 // builder — so there is nothing server-only here and both routes can import it.
 
+import { profileContains, overridesContains, orOperand } from "@/lib/sales/contact-filter-spec";
+
 export const NONE = "__none__";
 
 // PostgREST select for the lightweight aggregation query (group-list endpoint).
@@ -78,7 +80,7 @@ function facetDim(id: string, key: string, label: string): Dim {
         // Unassigned = key missing/null OR an empty array (extract() buckets both
         // as NONE, so the filter must match both or the count won't equal the rows).
         ? query.or(`raw->__profile->${key}.is.null,raw->__profile->>${key}.eq.[]`)
-        : query.filter(`raw->__profile->${key}`, "cs", JSON.stringify([value])),
+        : query.filter("raw", "cs", profileContains(key, [value])),
   };
 }
 
@@ -102,8 +104,7 @@ export const GROUP_DIMS: Record<string, Dim> = {
       if (value === NONE) return query.is("overrides->lead_source", null).is("raw->__profile->leadSource", null);
       // Double-quote the value so spaces/commas (e.g. "SEC Form D") survive the
       // or() logic-tree parser; strip quotes/backslashes that would break it.
-      const safe = value.replace(/["\\]/g, "");
-      return query.or(`overrides->>lead_source.eq."${safe}",raw->__profile->>leadSource.eq."${safe}"`);
+      return query.or(`overrides.cs.${orOperand(overridesContains("lead_source", value))},raw.cs.${orOperand(profileContains("leadSource", value))}`);
     },
   },
   country: {

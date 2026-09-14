@@ -98,7 +98,7 @@ describe("applyGroupFilter operands", () => {
   it("facet value uses .filter() containment (survives multi-word values)", () => {
     const { q, calls } = mockQuery();
     GROUP_DIMS.investorTypes.applyFilter(q, "Venture Capital");
-    expect(calls).toContainEqual({ m: "filter", args: ["raw->__profile->investorTypes", "cs", '["Venture Capital"]'] });
+    expect(calls).toContainEqual({ m: "filter", args: ["raw", "cs", '{"__profile":{"investorTypes":["Venture Capital"]}}'] });
   });
 
   it("facet Unassigned matches BOTH null and empty array", () => {

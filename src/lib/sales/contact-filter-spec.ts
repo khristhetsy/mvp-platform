@@ -63,9 +63,22 @@ export function fieldDef(key: string): FieldDef | undefined {
   return FIELD_REGISTRY.find((f) => f.key === key);
 }
 
-// jsonb containment operand for a single facet value, quoted for or().
-function facetJson(v: string): string {
-  return `"${JSON.stringify([v]).replace(/"/g, '""')}"`;
+/**
+ * Index-friendly containment. `raw->__profile->industries @> '["x"]'` cannot use the GIN
+ * on `raw` (the index covers the root column, not a sub-path), so every facet filter was
+ * a sequential scan over ~27k rows with a jsonb parse each. `raw @> {"__profile":{...}}`
+ * is the same predicate expressed at the root, and the planner uses crm_contacts_raw_gin.
+ * Same for overrides (crm_contacts_overrides_gin, migration 20260914001).
+ */
+export function profileContains(key: string, value: string | string[]): string {
+  return JSON.stringify({ __profile: { [key]: value } });
+}
+export function overridesContains(key: string, value: unknown): string {
+  return JSON.stringify({ [key]: value });
+}
+/** Quote a JSON operand for PostgREST's or() logic-tree parser (double-quote wrap, inner quotes doubled). */
+export function orOperand(json: string): string {
+  return `"${json.replace(/"/g, '""')}"`;
 }
 // Reject values that would break the or() parser (only relevant to unquoted ilike).
 function ilikeSafe(v: string): boolean {
@@ -123,13 +136,15 @@ export function conditionTerms(cond: Condition): string[] | null {
     }
     case "leadSource": {
       if (cond.op === "set") return ["overrides->>lead_source.not.is.null", "raw->__profile->>leadSource.not.is.null"];
-      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [ilikeTerm("overrides->>lead_source", v), ilikeTerm("raw->__profile->>leadSource", v)]) : null;
+      // Exact match on both stores via root containment (both GIN-indexed). The option
+      // list is built from stored values, so exact is what the user picked.
+      if (cond.op === "in") return vals.length ? vals.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `raw.cs.${orOperand(profileContains("leadSource", v))}`]) : null;
       return null;
     }
     case "facet": {
       const fk = def.facetKey!;
       if (cond.op === "set") return [`raw->__profile->${fk}.not.is.null`];
-      if (cond.op === "in") return vals.length ? vals.map((v) => `raw->__profile->${fk}.cs.${facetJson(v)}`) : null;
+      if (cond.op === "in") return vals.length ? vals.map((v) => `raw.cs.${orOperand(profileContains(fk, [v]))}`) : null;
       return null;
     }
     case "date": {

@@ -2,7 +2,7 @@
 // facets endpoint, and the bulk-assign endpoint so "select all matching" targets
 // exactly the rows the list shows. Keep this the single source of truth for filters.
 
-import { applyFilterSpec, type FilterSpec } from "@/lib/sales/contact-filter-spec";
+import { profileContains, overridesContains, orOperand, applyFilterSpec, type FilterSpec } from "@/lib/sales/contact-filter-spec";
 
 // Questionnaire facets stored as jsonb arrays under raw.__profile.<key>; filtered via
 // jsonb containment (@>). Values within a facet are OR'd; different facets are AND'd.
@@ -18,11 +18,12 @@ function applyFacetFilters(query: any, p: URLSearchParams): any {
       // `["Venture Capital"]` are mangled by PostgREST's or() logic-tree parser
       // (they read as value delimiters), so a multi-word facet returns zero rows.
       // .filter() passes the jsonb operand verbatim and matches correctly.
-      query = query.filter(`raw->__profile->${key}`, "cs", JSON.stringify(vals));
+      // Root containment so crm_contacts_raw_gin serves it (see profileContains).
+      query = query.filter("raw", "cs", profileContains(key, vals));
     } else {
       // Multiple values OR'd: quote each jsonb operand for the or() parser
       // (double-quote wrap, inner quotes doubled) so multi-word values survive.
-      query = query.or(vals.map((v) => `raw->__profile->${key}.cs.${`"${JSON.stringify([v]).replace(/"/g, '""')}"`}`).join(","));
+      query = query.or(vals.map((v) => `raw.cs.${orOperand(profileContains(key, [v]))}`).join(","));
     }
   }
   return query;
@@ -45,7 +46,7 @@ export function applyContactFilters(query: any, p: URLSearchParams): any {
   if (leadSources.length) {
     // Double-quote each value so multi-word sources (e.g. "SEC Form D") survive
     // the or() parser instead of the space breaking the operand.
-    query = query.or(leadSources.flatMap((v) => [`overrides->>lead_source.eq."${v}"`, `raw->__profile->>leadSource.eq."${v}"`]).join(","));
+    query = query.or(leadSources.flatMap((v) => [`overrides.cs.${orOperand(overridesContains("lead_source", v))}`, `raw.cs.${orOperand(profileContains("leadSource", v))}`]).join(","));
   }
   query = applyFacetFilters(query, p);
   // Odoo-style custom filter spec (field·operator·value, any/all) — additive over the

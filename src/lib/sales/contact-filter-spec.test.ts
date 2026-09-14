@@ -28,13 +28,13 @@ describe("conditionTerms", () => {
   });
   it("lead source spans overrides + profile (ilike, multi-word safe)", () => {
     expect(conditionTerms({ field: "leadSource", op: "in", value: "SEC Form D" })).toEqual([
-      `overrides->>lead_source.ilike.SEC Form D`,
-      `raw->__profile->>leadSource.ilike.SEC Form D`,
+      `overrides.cs."{""lead_source"":""SEC Form D""}"`,
+      `raw.cs."{""__profile"":{""leadSource"":""SEC Form D""}}"`,
     ]);
   });
   it("facet contains → jsonb containment, quoted for or()", () => {
     expect(conditionTerms({ field: "fundingStages", op: "in", value: "Seed" })).toEqual([
-      `raw->__profile->fundingStages.cs."[""Seed""]"`,
+      `raw.cs."{""__profile"":{""fundingStages"":[""Seed""]}}"`,
     ]);
   });
   it("date after/before", () => {
