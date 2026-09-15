@@ -123,6 +123,16 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
 
 > **Note (from AGENTS.md):** This project uses Next.js 16 App Router, which has breaking changes from earlier versions. Before writing any Next.js-specific code, check `node_modules/next/dist/docs/` for the current API.
 
+## Working with khris
+
+- Mockup first: show a mockup and wait for "build it" before writing code.
+- Don't offer to build. Never end a reply with "say build it" / "want me to build this?".
+  Building happens only when khris says so, or after the plan has been agreed. Until then,
+  answer the question and stop.
+- Only change what khris explicitly asks for — don't touch working code.
+- khris runs all SQL in the Supabase SQL editor himself; no paid upgrades.
+- Never enter credentials or authenticate on anyone's behalf; never store passwords anywhere.
+
 ## Shipping
 
 Claude never runs `git add` / `git commit` / `git push`, `supabase db push`, or a Vercel
