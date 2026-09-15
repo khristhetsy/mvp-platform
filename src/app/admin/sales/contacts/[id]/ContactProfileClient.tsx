@@ -69,7 +69,6 @@ const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadiu
 // Responsive field columns: two-up when there's room, collapsing to one column as
 // the panel narrows (Odoo-style). minmax floor sets the drop-to-one threshold.
 const RESP_COLS = "repeat(auto-fit, minmax(240px, 1fr))";
-const RESP_COLS_SM = "repeat(auto-fit, minmax(150px, 1fr))";
 // Tags: each name maps to a stable color (same tag → same color everywhere), so no
 // per-tag color store is needed. Hash the name into a fixed pastel palette.
 const TAG_PALETTE = [
@@ -148,19 +147,72 @@ const ACTION_META: Record<RowAction, { icon: string; title: string }> = {
   web: { icon: "ti-external-link", title: "Open site" },
 };
 
-function Row({ icon, label, value, link, action }: { icon: string; label: string; value: string | null; link?: boolean; action?: RowAction }) {
+/**
+ * One Details field. Read: label + value; hovering shows a pencil (and, for phone /
+ * email / website, the action icon). Click → that field alone becomes an input (or a
+ * select when it has an option list) with save ✓ / undo ↶; Enter saves, Esc cancels.
+ * `readOnly` rows (synced values) show no pencil and don't react to clicks.
+ */
+function Row({ icon, label, value, link, action, options, placeholder, readOnly = false, onSave, display }: {
+  icon: string; label: string; value: string | null; link?: boolean; action?: RowAction;
+  options?: string[]; placeholder?: string; readOnly?: boolean;
+  /** Persist the new value; resolve with an error message, or null on success. */
+  onSave?: (next: string) => Promise<string | null>;
+  /** Optional custom read rendering (e.g. a badge) — the value is still what gets edited. */
+  display?: React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const editable = !readOnly && !!onSave;
   const act = action && value ? ACTION_META[action] : null;
+
+  function open() { if (!editable) return; setDraft(value ?? ""); setErr(null); setEditing(true); }
+  function cancel() { setEditing(false); setErr(null); }
+  async function commit() {
+    if (!onSave) return;
+    if (draft.trim() === (value ?? "")) { setEditing(false); return; }
+    setSaving(true);
+    const e = await onSave(draft.trim());
+    setSaving(false);
+    if (e) setErr(e); else setEditing(false);
+  }
+  const rowStyle: React.CSSProperties = { display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6 };
+  const iconEl = <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />;
+  const labelEl = <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>;
+
+  if (editing) {
+    const listed = options ? (draft && !options.includes(draft) ? [draft, ...options] : options) : null;
+    const keys = (e: React.KeyboardEvent) => { if (e.key === "Enter") { e.preventDefault(); void commit(); } else if (e.key === "Escape") cancel(); };
+    return (
+      <div className="field-row field-editing" style={rowStyle}>
+        {iconEl}{labelEl}
+        {listed ? (
+          <select autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={keys} disabled={saving} style={{ ...inp, flex: "1 1 160px", minWidth: 0, padding: "4px 8px" }}>
+            <option value="">—</option>
+            {listed.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ) : (
+          <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={keys} disabled={saving} placeholder={placeholder} style={{ ...inp, flex: "1 1 160px", minWidth: 0, padding: "4px 8px" }} />
+        )}
+        <button type="button" onClick={() => void commit()} disabled={saving} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", alignSelf: "center", opacity: saving ? 0.6 : 1 }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+        <button type="button" onClick={cancel} disabled={saving} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", alignSelf: "center" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+        {err && <span style={{ flexBasis: "100%", fontSize: 11, color: "#A32D2D", paddingLeft: 26 }}>{err}</span>}
+      </div>
+    );
+  }
   return (
-    <div className={act ? "field-row" : undefined} style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6 }}>
-      <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
-      <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>
-      <span className={act ? "field-val" : undefined} style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{value || "—"}</span>
+    <div className={editable || act ? "field-row" : undefined} onClick={editable ? open : undefined} title={editable ? "Click to edit" : undefined} style={{ ...rowStyle, cursor: editable ? "pointer" : undefined }}>
+      {iconEl}{labelEl}
+      <span className={act ? "field-val field-link" : "field-val"} style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{display ?? (value || "—")}</span>
       {act && value && (
-        <a href={actionHref(action!, value)} target={action === "tel" ? undefined : "_blank"} rel="noopener noreferrer" title={act.title} aria-label={`${act.title}: ${value}`} className="field-act"
+        <a href={actionHref(action!, value)} target={action === "tel" ? undefined : "_blank"} rel="noopener noreferrer" title={act.title} aria-label={`${act.title}: ${value}`} className="field-act" onClick={(e) => e.stopPropagation()}
           style={{ alignSelf: "center", width: 24, height: 24, borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#185FA5", background: "#E6F1FB", textDecoration: "none", flexShrink: 0 }}>
           <i className={`ti ${act.icon}`} aria-hidden="true" style={{ fontSize: 14 }} />
         </a>
       )}
+      {editable && <i className="ti ti-pencil field-pen" aria-hidden="true" style={{ alignSelf: "center", fontSize: 13, color: "var(--muted-foreground)", flexShrink: 0 }} />}
     </div>
   );
 }
@@ -350,9 +402,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
-  const [editing, setEditing] = useState(false);
-  // Tags edit: a token multi-select over the comma-joined form.tags string.
+  // Details are edited one field at a time (see Row); these hold the two composite editors.
+  const [addrOpen, setAddrOpen] = useState(false);
+  const [addrDraft, setAddrDraft] = useState({ street: "", street2: "", city: "", state: "", zip: "", country: "" });
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [nameOpen, setNameOpen] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
   // Self-contained editor for the structured "Additional details" fields.
   const [prefBusy, setPrefBusy] = useState(false);
   // Click-to-edit: values are staged in prefEdits (keyed by save-label);
@@ -419,19 +476,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [leadSearch, setLeadSearch] = useState("");
   const [leadSaving, setLeadSaving] = useState(false);
   const [leadMsg, setLeadMsg] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: initialContact.name ?? "",
-    lead_status: initialContact.lead_status ?? "new",
-    email: initialContact.email ?? "", company: initialContact.company ?? "",
-    phone: initialContact.phone ?? "", phone2: initialContact.phone2 ?? "",
-    website: initialContact.website ?? "", owner: initialContact.owner ?? "", owner_id: initialContact.owner_id ?? "",
-    assignee_ids: initialContact.assignee_ids ?? [],
-    membership: initialContact.membership ?? "", job_position: initialContact.job_position ?? "",
-    lead_source: initialContact.lead_source ?? "", language: initialContact.language ?? "",
-    street: initialContact.street ?? "", street2: initialContact.street2 ?? "",
-    city: initialContact.city ?? "", state: initialContact.state ?? "", zip: initialContact.zip ?? "", country: initialContact.country ?? "",
-    tags: initialContact.tags.join(", "),
-  });
   const [section, setSection] = useState<"details" | "activity" | "onepager">("details");
   const [actFilter, setActFilter] = useState<"all" | "call" | "note" | "task" | "stage">("all");
   const [acts, setActs] = useState<Activity[]>(activity);
@@ -460,29 +504,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     } finally { setBusy(false); }
   }
 
-  async function saveEdit() {
-    setBusy(true);
-    setActionErr(null);
+  /** Persist one or more Details fields. Returns an error message, or null on success. */
+  async function saveFields(patch: Record<string, unknown>): Promise<string | null> {
     try {
-      const body = {
-        name: form.name.trim() || contact.name,
-        lead_status: form.lead_status,
-        email: form.email || null, company: form.company || null,
-        phone: form.phone || null, phone2: form.phone2 || null,
-        website: form.website || null, owner: form.owner || null, owner_id: form.owner_id || null,
-        membership: form.membership || null, job_position: form.job_position || null,
-        lead_source: form.lead_source || null, language: form.language || null,
-        street: form.street || null, street2: form.street2 || null,
-        city: form.city || null, state: form.state || null, zip: form.zip || null, country: form.country || null,
-        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      };
-      const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
-      else setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t save the contact. Please try again.");
-    } catch {
-      setActionErr("Network error — couldn’t save the contact.");
-    } finally { setBusy(false); }
+      const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      if (res.ok) { setContact((c) => ({ ...c, ...patch })); return null; }
+      return (await res.json().catch(() => ({})))?.error || "Couldn’t save. Please try again.";
+    } catch { return "Network error — couldn’t save."; }
   }
+  const saveText = (key: string) => async (next: string) => saveFields({ [key]: next || null });
 
   async function savePreferences() {
     setPrefBusy(true);
@@ -688,7 +718,17 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#E6F1FB", color: "#185FA5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 600, flex: "0 0 auto" }}>{contact.name.slice(0, 2).toUpperCase()}</div>
             <div style={{ flex: "1 1 240px", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 18, fontWeight: 600 }}>{contact.name}</span>
+                {nameOpen ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} onKeyDown={async (e) => { if (e.key === "Escape") setNameOpen(false); if (e.key === "Enter" && nameDraft.trim()) { const err = await saveFields({ name: nameDraft.trim() }); if (err) setActionErr(err); else setNameOpen(false); } }} style={{ ...inp, fontSize: 16, fontWeight: 600, padding: "3px 8px", minWidth: 220 }} />
+                    <button type="button" onClick={async () => { if (!nameDraft.trim()) return; const err = await saveFields({ name: nameDraft.trim() }); if (err) setActionErr(err); else setNameOpen(false); }} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                    <button type="button" onClick={() => setNameOpen(false)} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                  </span>
+                ) : (
+                  <span className="field-row" title="Click to edit" onClick={() => { setNameDraft(contact.name); setNameOpen(true); }} style={{ fontSize: 18, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6 }}>
+                    {contact.name}<i className="ti ti-pencil field-pen" aria-hidden="true" style={{ fontSize: 13, color: "var(--muted-foreground)" }} />
+                  </span>
+                )}
                 {contact.lead_status ? <StatusPill status={contact.lead_status} /> : null}
               </div>
               <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 2 }}>{subtitle}</div>
@@ -724,151 +764,94 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         </div>
 
         {section === "details" && (<>
-        {/* Field grid */}
-        {editing ? (
-          <div style={{ padding: "14px 16px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: RESP_COLS, gap: "10px 24px" }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Name</label>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" style={{ ...inp, width: "100%", marginTop: 4 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label>
-                <select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                  {(LEAD_STATUSES.includes(form.lead_status) || !form.lead_status ? LEAD_STATUSES : [form.lead_status, ...LEAD_STATUSES]).map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              {isSuperAdmin && staff.length > 0 && (
-                <div>
-                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead owner <span style={{ color: "var(--muted-foreground)" }}>(super admin)</span></label>
-                  <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                    <option value="">Unassigned</option>
-                    {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-              )}
-              {([
-                ["email", "Email", "name@company.com"], ["company", "Company", ""],
-                ["phone", "Phone", "+1 …"], ["phone2", "Phone 2", ""],
-                ["website", "Website", "example.com"], ["owner", "Owner", ""],
-                ["membership", "Membership", ""], ["job_position", "Job position", ""],
-                ["lead_source", "Lead source", ""],
-              ] as const).map(([key, label, ph]) => {
-                const opts =
-                  key === "owner" ? staff.map((s) => s.name)
-                  : key === "membership" ? MEMBERSHIP_OPTS
-                  : key === "job_position" ? JOB_POSITION_OPTS
-                  : key === "lead_source" ? LEAD_SOURCE_OPTS
-                  : null;
-                const cur = form[key];
-                const listed = opts && (cur && !opts.includes(cur) ? [cur, ...opts] : opts);
-                return (
-                  <div key={key}>
-                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
-                    {listed ? (
-                      <select value={cur} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                        <option value="">—</option>
-                        {listed.map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    ) : (
-                      <input value={cur} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Address</div>
-              <div style={{ display: "grid", gridTemplateColumns: RESP_COLS_SM, gap: "10px 16px" }}>
-                {([
-                  ["street", "Street", "1 / -1"], ["street2", "Street 2", "1 / -1"],
-                  ["city", "City", "auto"], ["state", "State", "auto"], ["zip", "ZIP", "auto"], ["country", "Country", "auto"],
-                ] as const).map(([key, label, span]) => (
-                  <div key={key} style={span === "1 / -1" ? { gridColumn: "1 / -1" } : undefined}>
-                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
-                    <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags</label>
-              {(() => {
-                const current = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
-                const addTag = (raw: string) => {
-                  const name = raw.trim();
-                  if (!name || current.some((t) => t.toLowerCase() === name.toLowerCase())) { setTagInput(""); return; }
-                  setForm({ ...form, tags: [...current, name].join(", ") });
-                  setTagInput("");
-                };
-                const removeTag = (tg: string) => setForm({ ...form, tags: current.filter((t) => t !== tg).join(", ") });
-                return (
-                  <div style={{ ...inp, width: "100%", marginTop: 4, display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minHeight: 34 }}>
-                    {current.map((tg) => { const c = tagColor(tg); return (
-                      <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 4px 1px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        {tg}<i className="ti ti-x" aria-hidden="true" style={{ fontSize: 10, cursor: "pointer" }} onClick={() => removeTag(tg)} />
-                      </span>
-                    ); })}
-                    <input
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); } else if (e.key === "Backspace" && !tagInput && current.length) { removeTag(current[current.length - 1]); } }}
-                      onBlur={() => addTag(tagInput)}
-                      placeholder={current.length ? "Add a tag…" : "Type a tag, press Enter…"}
-                      style={{ border: "none", outline: "none", flex: 1, minWidth: 90, fontSize: 12, background: "transparent", color: "var(--foreground)" }}
-                    />
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div style={{ marginTop: 12, display: "flex", gap: 6 }}>
-              <button onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
-              <button onClick={() => setEditing(false)} style={{ ...outlineBtn, padding: "8px 16px" }}>Cancel</button>
-              <span style={{ fontSize: 10.5, color: "var(--muted-foreground)", alignSelf: "center" }}>Edits save to your CRM mirror and persist across Odoo re-syncs.</span>
-            </div>
-          </div>
-        ) : (
+        {/* Field grid — every field is click-to-edit in place (hover shows the pencil). */}
           <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
-            {/* Edit hint for the Details section — opens the edit form (replaces the Edit button). */}
-            <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
-              <button onClick={() => setEditing(true)} style={{ fontSize: 11, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}><i className="ti ti-click" aria-hidden="true" /> Click any field to edit</button>
-            </div>
             {/* LEFT column — Odoo field order */}
             <div>
-              <Row icon="ti-id-badge" label="Membership Type" value={contact.membership} />
+              <Row icon="ti-id-badge" label="Membership Type" value={contact.membership} options={MEMBERSHIP_OPTS} onSave={saveText("membership")} />
               {/* Member Portal Plan — live subscription plan (read-only). */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
                 <i className="ti ti-crown" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
                 <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Member Portal Plan</span>
                 {memberPlan ? <span style={{ fontSize: 11, fontWeight: 600, color: "#3C3489", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>{memberPlan}</span> : <span style={{ color: "var(--muted-foreground)" }}>—</span>}
               </div>
-              <Row icon="ti-flag" label="Lead Status" value={contact.lead_status} />
-              <Row icon="ti-arrow-down-circle" label="Lead Source" value={contact.lead_source} />
-              <Row icon="ti-map-pin" label="Contact" value={address} />
-              <Row icon="ti-hash" label="EIN" value={null} />
-              <Row icon="ti-certificate" label="Operator Licence" value={null} />
-              <Row icon="ti-id" label="CURP" value={null} />
+              <Row icon="ti-flag" label="Lead Status" value={contact.lead_status} options={LEAD_STATUSES} onSave={saveText("lead_status")} />
+              <Row icon="ti-arrow-down-circle" label="Lead Source" value={contact.lead_source} options={LEAD_SOURCE_OPTS} onSave={saveText("lead_source")} />
+              {/* Contact (address) — six parts, edited together in a small inline block. */}
+              {addrOpen ? (
+                <div className="field-row field-editing" style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6 }}>
+                  <i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+                  <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Contact</span>
+                  <div style={{ flex: "1 1 160px", minWidth: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {([["street", "Street", "1 / -1"], ["street2", "Street 2", "1 / -1"], ["city", "City", "auto"], ["state", "State", "auto"], ["zip", "ZIP", "auto"], ["country", "Country", "auto"]] as const).map(([k, ph, span]) => (
+                      <input key={k} value={addrDraft[k]} onChange={(e) => setAddrDraft({ ...addrDraft, [k]: e.target.value })} placeholder={ph} autoFocus={k === "street"}
+                        onKeyDown={(e) => { if (e.key === "Escape") setAddrOpen(false); }}
+                        style={{ ...inp, padding: "4px 8px", gridColumn: span === "1 / -1" ? "1 / -1" : undefined }} />
+                    ))}
+                    <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6, alignItems: "center" }}>
+                      <button type="button" onClick={async () => { const e = await saveFields({ street: addrDraft.street.trim() || null, street2: addrDraft.street2.trim() || null, city: addrDraft.city.trim() || null, state: addrDraft.state.trim() || null, zip: addrDraft.zip.trim() || null, country: addrDraft.country.trim() || null }); if (e) setActionErr(e); else setAddrOpen(false); }} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                      <button type="button" onClick={() => setAddrOpen(false)} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="field-row" title="Click to edit" onClick={() => { setAddrDraft({ street: contact.street ?? "", street2: contact.street2 ?? "", city: contact.city ?? "", state: contact.state ?? "", zip: contact.zip ?? "", country: contact.country ?? "" }); setAddrOpen(true); }}
+                  style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6, cursor: "pointer" }}>
+                  <i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+                  <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Contact</span>
+                  <span className="field-val" style={{ flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{address || "—"}</span>
+                  <i className="ti ti-pencil field-pen" aria-hidden="true" style={{ alignSelf: "center", fontSize: 13, color: "var(--muted-foreground)", flexShrink: 0 }} />
+                </div>
+              )}
+              <Row icon="ti-hash" label="EIN" value={null} readOnly />
+              <Row icon="ti-certificate" label="Operator Licence" value={null} readOnly />
+              <Row icon="ti-id" label="CURP" value={null} readOnly />
             </div>
             {/* RIGHT column — Odoo field order */}
             <div>
-              <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} />
-              <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" />
-              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" />
-              <Row icon="ti-device-mobile" label="Mobile" value={null} action="tel" />
-              <Row icon="ti-mail" label="Email" value={contact.email} link action="email" />
-              <Row icon="ti-world" label="Website" value={contact.website} link action="web" />
-              <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} />
-              {/* Tags — colored pills, auto color per tag name. */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
-                <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 2 }} />
-                <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 2 }}>Tags</span>
-                <span style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 5 }}>
-                  {contact.tags.length === 0 ? <span style={{ color: "var(--muted-foreground)" }}>—</span> : contact.tags.map((tg) => { const c = tagColor(tg); return <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 9px" }}>{tg}</span>; })}
-                </span>
-              </div>
+              <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} options={JOB_POSITION_OPTS} onSave={saveText("job_position")} />
+              <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" placeholder="+1 …" onSave={saveText("phone")} />
+              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" onSave={saveText("phone2")} />
+              <Row icon="ti-device-mobile" label="Mobile" value={null} action="tel" readOnly />
+              <Row icon="ti-mail" label="Email" value={contact.email} link action="email" placeholder="name@company.com" onSave={saveText("email")} />
+              <Row icon="ti-world" label="Website" value={contact.website} link action="web" placeholder="example.com" onSave={saveText("website")} />
+              <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} readOnly />
+              {/* Tags — colored pills; click to edit as chips (Enter / comma adds, Backspace removes). */}
+              {tagsOpen ? (() => {
+                const addTag = (raw: string) => {
+                  const name = raw.trim();
+                  if (name && !tagsDraft.some((t) => t.toLowerCase() === name.toLowerCase())) setTagsDraft([...tagsDraft, name]);
+                  setTagInput("");
+                };
+                return (
+                  <div className="field-row field-editing" style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5, borderRadius: 6 }}>
+                    <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 6 }} />
+                    <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 6 }}>Tags</span>
+                    <div style={{ ...inp, flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minHeight: 30, padding: "3px 8px" }}>
+                      {tagsDraft.map((tg) => { const c = tagColor(tg); return (
+                        <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 4px 1px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {tg}<i className="ti ti-x" aria-hidden="true" style={{ fontSize: 10, cursor: "pointer" }} onClick={() => setTagsDraft(tagsDraft.filter((t) => t !== tg))} />
+                        </span>
+                      ); })}
+                      <input autoFocus value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); } else if (e.key === "Backspace" && !tagInput && tagsDraft.length) setTagsDraft(tagsDraft.slice(0, -1)); else if (e.key === "Escape") setTagsOpen(false); }}
+                        placeholder={tagsDraft.length ? "Add a tag…" : "Type a tag, press Enter…"}
+                        style={{ border: "none", outline: "none", flex: 1, minWidth: 90, fontSize: 12, background: "transparent", color: "var(--foreground)" }} />
+                    </div>
+                    <button type="button" onClick={async () => { const pending = tagInput.trim(); const next = pending && !tagsDraft.some((t) => t.toLowerCase() === pending.toLowerCase()) ? [...tagsDraft, pending] : tagsDraft; const e = await saveFields({ tags: next }); if (e) setActionErr(e); else { setTagsOpen(false); setTagInput(""); } }} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", marginTop: 3 }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                    <button type="button" onClick={() => { setTagsOpen(false); setTagInput(""); }} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", marginTop: 3 }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                  </div>
+                );
+              })() : (
+                <div className="field-row" title="Click to edit" onClick={() => { setTagsDraft(contact.tags); setTagInput(""); setTagsOpen(true); }} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5, borderRadius: 6, cursor: "pointer" }}>
+                  <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 2 }}>Tags</span>
+                  <span style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {contact.tags.length === 0 ? <span style={{ color: "var(--muted-foreground)" }}>—</span> : contact.tags.map((tg) => { const c = tagColor(tg); return <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 9px" }}>{tg}</span>; })}
+                  </span>
+                  <i className="ti ti-pencil field-pen" aria-hidden="true" style={{ alignSelf: "center", fontSize: 13, color: "var(--muted-foreground)", flexShrink: 0 }} />
+                </div>
+              )}
               {/* Lead assign — under Lead source. Editable by super admin only. */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
                 <i className="ti ti-users" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 3 }} />
@@ -927,8 +910,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 </div>
               </div>
               {/* Owner + Source — iCapOS internal, kept below the Odoo fields. */}
-              <Row icon="ti-user-check" label="Owner" value={contact.owner} />
-              <Row icon="ti-plug" label="Source" value={contact.source} />
+              {isSuperAdmin && staff.length > 0
+                ? <Row icon="ti-user-check" label="Owner" value={contact.owner} options={staff.map((s) => s.name)} onSave={async (name) => saveFields({ owner: name || null, owner_id: staff.find((s) => s.name === name)?.id ?? null })} />
+                : <Row icon="ti-user-check" label="Owner" value={contact.owner} readOnly />}
+              <Row icon="ti-plug" label="Source" value={contact.source} readOnly />
             </div>
             {(() => {
               const profile = groupContactProfile(contact.extra, contact.membership, contact.derivedSources);
@@ -1235,7 +1220,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               );
             })()}
           </div>
-        )}
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "12px 16px", borderTop: "0.5px solid #eef1f5", borderBottom: "0.5px solid #eef1f5" }}>

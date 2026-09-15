@@ -303,8 +303,11 @@ select {
 
 /* Contact detail: Odoo-style hover actions on phone / email / website rows. */
 .field-row { padding-left: 6px !important; padding-right: 6px !important; margin: 0 -6px; }
-.field-row .field-act { visibility: hidden; }
+.field-row .field-act, .field-row .field-pen { visibility: hidden; }
 .field-row:hover { background: var(--muted); }
-.field-row:hover .field-val { color: #185FA5; text-decoration: underline; text-decoration-color: #B5D4F4; }
-.field-row:hover .field-act, .field-row:focus-within .field-act { visibility: visible; }
+.field-row:hover .field-val.field-link { color: #185FA5; text-decoration: underline; text-decoration-color: #B5D4F4; }
+.field-row:hover .field-act, .field-row:focus-within .field-act,
+.field-row:hover .field-pen { visibility: visible; }
 .field-row .field-act:hover { background: #B5D4F4; }
+.field-row.field-editing { background: var(--muted); }
+.field-row.field-editing:hover .field-pen { visibility: hidden; }
