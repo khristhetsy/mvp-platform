@@ -19,11 +19,13 @@ import {
   verifyMetaState,
 } from "@/lib/social/meta-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
+import { CONNECT_META_COOKIE, applyConnectMeta, decodeConnectMeta } from "@/lib/social/account-admin";
 
 export const dynamic = "force-dynamic";
 
 function back(origin: string, status: string, message?: string) {
   const url = new URL("/admin/social", origin);
+  url.searchParams.set("tab", "settings");
   url.searchParams.set("facebook", status);
   if (message) url.searchParams.set("message", message);
   return NextResponse.redirect(url);
@@ -39,7 +41,9 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies();
   const storedState = cookieStore.get(META_STATE_COOKIE)?.value;
+  const meta = decodeConnectMeta(cookieStore.get(CONNECT_META_COOKIE)?.value);
   cookieStore.delete(META_STATE_COOKIE);
+  cookieStore.delete(CONNECT_META_COOKIE);
 
   if (oauthError) return back(origin, "error", oauthErrorDesc ?? oauthError);
   if (!code || !state) return back(origin, "error", "missing_code");
@@ -64,7 +68,9 @@ export async function GET(request: Request) {
     const pages = await fetchManagedPages(longLived);
     if (pages.length === 0) return back(origin, "no_pages");
     for (const page of pages) {
-      await upsertFacebookPageAccount({ pageId: page.id, pageName: page.name, pageAccessToken: page.accessToken });
+      const { id } = await upsertFacebookPageAccount({ pageId: page.id, pageName: page.name, pageAccessToken: page.accessToken });
+      // Several Pages may come back; the label only fits one, so it goes on the first.
+      await applyConnectMeta(id, page === pages[0] ? meta : { assignedTo: meta.assignedTo }, user.id);
     }
     return back(origin, "connected", String(pages.length));
   } catch (err) {

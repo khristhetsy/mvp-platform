@@ -5,6 +5,7 @@ import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
 import type { SocialAccount, QueueItem, SocialSettings, SocialSlot } from "@/lib/social/queries";
+import { accountName } from "@/lib/social/account-name";
 import type { WeekBar } from "@/lib/social/attribution";
 import { Overview } from "./Overview";
 import { CampaignsGoals } from "./CampaignsGoals";
@@ -12,12 +13,10 @@ import { Library } from "./Library";
 import { AlertRules } from "./AlertRules";
 import { AttributionPeriods } from "./AttributionPeriods";
 import { AiCmo } from "./AiCmo";
+import { Accounts } from "./Accounts";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const STATUS_STYLE: Record<string, string> = {
-  connected: "bg-emerald-50 text-emerald-700", expiring: "bg-amber-50 text-amber-700", expired: "bg-rose-50 text-rose-700",
-};
 const chip = "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors";
 const card = "rounded-xl border border-slate-200 bg-white";
 
@@ -113,7 +112,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [campaignId, setCampaignId] = useState<string>("");
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [newCampaign, setNewCampaign] = useState<{ open: boolean; name: string; budget: string }>({ open: false, name: "", budget: "" });
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() => accounts.filter((a) => a.is_default).map((a) => a.id));   // default account pre-picked
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
   const [comment, setComment] = useState("");
@@ -137,7 +136,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
     if (r.ok && j.campaign) { setCampaigns((p) => [{ id: j.campaign.id, name: j.campaign.name }, ...p]); setCampaignId(j.campaign.id); setNewCampaign({ open: false, name: "", budget: "" }); }
   }
 
-  const nameOf = (id: string) => accounts.find((a) => a.id === id)?.display_name ?? "Account";
+  const nameOf = (id: string) => { const a = accounts.find((x) => x.id === id); return a ? accountName(a) : "Account"; };
   const platformOf = (id: string) => accounts.find((a) => a.id === id)?.platform ?? "linkedin";
 
   const CTAS = [
@@ -252,7 +251,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
         <div className="mt-2 flex flex-wrap gap-2">
           {accounts.length === 0 ? <span className="text-[12px] text-slate-400">No accounts connected.</span> : accounts.map((a) => {
             const on = selected.includes(a.id);
-            return <button key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{a.display_name ?? a.platform}</button>;
+            return <button key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} inline-flex items-center gap-1.5 ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}{a.is_default ? <span className="text-[10px] opacity-60">default</span> : null}</button>;
           })}
         </div>
         <div className="mt-3 flex items-center gap-3">
@@ -910,72 +909,6 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
   );
 }
 
-const PLATFORM_META: Record<string, { label: string; icon: string; color: string; start: string; kind: string }> = {
-  linkedin: { label: "LinkedIn", icon: "ti-brand-linkedin", color: "#0A66C2", start: "/api/social/linkedin/start", kind: "personal" },
-  facebook: { label: "Facebook", icon: "ti-brand-facebook", color: "#1877F2", start: "/api/social/facebook/start", kind: "Page" },
-};
-
-function Accounts({ accounts, linkedInReady, facebookReady, failed24 }: { accounts: SocialAccount[]; linkedInReady: boolean; facebookReady: boolean; failed24: number }) {
-  const [now] = useState(() => Date.now());
-  const days = (iso: string | null) => iso ? Math.max(0, Math.round((new Date(iso).getTime() - now) / 86400000)) : null;
-  return (
-    <div className="max-w-2xl">
-      <div className="flex items-center justify-between">
-        <p className="text-[13px] font-medium text-slate-700">Accounts</p>
-        <div className="flex flex-wrap justify-end gap-2">
-          {linkedInReady ? (
-            <a href="/api/social/linkedin/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#0A66C2] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</a>
-          ) : (
-            <button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 opacity-50" title="Add LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET to enable"><i className="ti ti-brand-linkedin" aria-hidden="true" /> Connect LinkedIn</button>
-          )}
-          {facebookReady ? (
-            <a href="/api/social/facebook/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#1877F2] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"><i className="ti ti-brand-facebook" aria-hidden="true" /> Connect Facebook</a>
-          ) : (
-            <button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-600 opacity-50" title="Add META_APP_ID / META_APP_SECRET to enable"><i className="ti ti-brand-facebook" aria-hidden="true" /> Connect Facebook</button>
-          )}
-        </div>
-      </div>
-      <div className={`${card} mt-2 divide-y divide-slate-100`}>
-        {accounts.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No accounts connected yet.</p> : accounts.map((a) => {
-          const d = days(a.token_expires_at);
-          const meta = PLATFORM_META[a.platform];
-          return (
-            <div key={a.id} className="flex items-center justify-between px-4 py-3 text-[13px]">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: meta?.color ?? "#64748b" }}><i className={`ti ${meta?.icon ?? "ti-world"}`} aria-hidden="true" /></div>
-                <div>
-                  <p className="font-medium text-slate-900">{a.display_name ?? meta?.label ?? a.platform}</p>
-                  <p className="text-[11px] text-slate-400">{a.platform} · {meta?.kind ?? "account"}{d != null ? ` · token ${d}d` : ""}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {(a.status === "expiring" || a.status === "expired") && meta ? <a href={meta.start} className="text-[11px] text-indigo-600 hover:underline">Reconnect</a> : null}
-                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[a.status] ?? "bg-slate-100 text-slate-600"}`}>{a.status}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="mt-5 text-[13px] font-medium text-slate-700">API health</p>
-      <div className={`${card} mt-2 divide-y divide-slate-100 text-[13px]`}>
-        <HealthRow label="LinkedIn Posts API" value={linkedInReady ? "ok" : "not connected"} ok={linkedInReady} />
-        <HealthRow label="Facebook Graph API" value={facebookReady ? "ok · v21.0" : "not connected"} ok={facebookReady} />
-        <HealthRow label="Failed last 24h" value={String(failed24)} ok={failed24 === 0} />
-      </div>
-      <p className="mt-2 text-[11.5px] text-slate-400">LinkedIn posts as a personal profile; Facebook posts to a Page feed with the tagged link as a comment. Page posting needs Meta App Review to go live — dev mode works on Pages you admin. Instagram is off for now.</p>
-    </div>
-  );
-}
-
-function HealthRow({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
-  return (
-    <div className="flex items-center justify-between px-4 py-2.5">
-      <span className="text-slate-600">{label}</span>
-      <span className={ok === undefined ? "font-mono text-slate-500" : ok ? "text-emerald-600" : "text-rose-600"}>{value}</span>
-    </div>
-  );
-}
 
 function Attribution({ data }: { data: WeekBar[] }) {
   const max = Math.max(1, ...data.map((d) => d.linkedin + d.email + d.website + d.other));

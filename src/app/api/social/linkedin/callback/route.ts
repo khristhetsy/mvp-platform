@@ -19,11 +19,13 @@ import {
   verifyLinkedInState,
 } from "@/lib/social/linkedin-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
+import { CONNECT_META_COOKIE, applyConnectMeta, decodeConnectMeta } from "@/lib/social/account-admin";
 
 export const dynamic = "force-dynamic";
 
 function back(origin: string, status: string, message?: string) {
   const url = new URL("/admin/social", origin);
+  url.searchParams.set("tab", "settings");
   url.searchParams.set("linkedin", status);
   if (message) url.searchParams.set("message", message);
   return NextResponse.redirect(url);
@@ -39,7 +41,9 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies();
   const storedState = cookieStore.get(LINKEDIN_STATE_COOKIE)?.value;
+  const meta = decodeConnectMeta(cookieStore.get(CONNECT_META_COOKIE)?.value);
   cookieStore.delete(LINKEDIN_STATE_COOKIE);
+  cookieStore.delete(CONNECT_META_COOKIE);
 
   // The user denied consent, or LinkedIn returned an error.
   if (oauthError) {
@@ -73,14 +77,15 @@ export async function GET(request: Request) {
   try {
     const token = await exchangeLinkedInCode(env, code);
     const member = await fetchLinkedInMember(token.access_token);
-    await upsertLinkedInAccount({
+    const { id } = await upsertLinkedInAccount({
       memberUrn: member.memberUrn,
       displayName: member.name,
       accessToken: token.access_token,
       refreshToken: token.refresh_token ?? null,
       tokenExpiresAt: tokenExpiresAt(token.expires_in),
     });
-    return back(origin, "connected");
+    await applyConnectMeta(id, meta, user.id);
+    return back(origin, "connected", member.name ?? undefined);
   } catch (err) {
     return back(origin, "error", err instanceof Error ? err.message : "oauth_failed");
   }

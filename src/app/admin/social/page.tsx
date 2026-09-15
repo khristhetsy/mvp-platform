@@ -15,7 +15,8 @@ type Notice = { tone: "ok" | "warn"; text: string };
 
 function connectNotice(sp: { linkedin?: string; facebook?: string; message?: string }): Notice | undefined {
   if (sp.linkedin) {
-    if (sp.linkedin === "connected") return { tone: "ok", text: "LinkedIn account connected. Approved variants will publish through it." };
+    if (sp.linkedin === "connected") return { tone: "ok", text: `LinkedIn account${sp.message ? ` "${sp.message}"` : ""} connected. Approved variants will publish through it.` };
+    if (sp.linkedin === "error" && sp.message === "invite_expired") return { tone: "warn", text: "That connect link has already been used or has expired. Send a new one from Settings › Accounts." };
     if (sp.linkedin === "unconfigured") return { tone: "warn", text: "LinkedIn isn't configured. Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET, then try again." };
     return { tone: "warn", text: `Couldn't connect LinkedIn${sp.message ? `: ${sp.message}` : "."}` };
   }

@@ -5,7 +5,10 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export type SocialAccount = { id: string; platform: string; display_name: string | null; status: string; token_expires_at: string | null };
+export type SocialAccount = {
+  id: string; platform: string; display_name: string | null; status: string; token_expires_at: string | null;
+  label: string | null; assigned_to: string | null; assigned_name: string | null; is_default: boolean; external_member_id: string | null;
+};
 export type QueueItem = {
   id: string; status: string; body: string; comment_text: string | null; url: string | null; error: string | null;
   attempts: number; next_attempt_at: string | null; published_at: string | null; scheduled_at: string | null; gcal_event_id: string | null;
@@ -15,8 +18,19 @@ export type QueueItem = {
 };
 
 export async function listSocialAccounts(): Promise<SocialAccount[]> {
-  const { data } = await db().from("social_accounts").select("id, platform, display_name, status, token_expires_at").order("created_at", { ascending: false }).limit(50);
-  return (data ?? []) as SocialAccount[];
+  const { data, error } = await db().from("social_accounts")
+    .select("id, platform, display_name, status, token_expires_at, label, assigned_to, is_default, external_member_id, assignee:profiles!social_accounts_assigned_to_fkey(full_name, email)")
+    .neq("status", "disconnected")
+    .order("is_default", { ascending: false }).order("created_at", { ascending: true }).limit(50);
+  if (error) throw new Error(`Failed to list accounts: ${error.message}`);   // e.g. migration not applied
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const p = r.assignee as { full_name?: string | null; email?: string | null } | null;
+    return {
+      id: String(r.id), platform: String(r.platform), display_name: (r.display_name as string) ?? null, status: String(r.status),
+      token_expires_at: (r.token_expires_at as string) ?? null, label: (r.label as string) ?? null, assigned_to: (r.assigned_to as string) ?? null,
+      assigned_name: p?.full_name ?? p?.email ?? null, is_default: Boolean(r.is_default), external_member_id: (r.external_member_id as string) ?? null,
+    };
+  });
 }
 
 export async function listQueue(limit = 200): Promise<QueueItem[]> {

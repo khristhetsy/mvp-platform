@@ -16,6 +16,7 @@ import {
   metaStateCookieOptions,
 } from "@/lib/social/meta-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
+import { CONNECT_META_COOKIE, encodeConnectMeta } from "@/lib/social/account-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
   const state = createMetaState(env, profile.id);
   const cookieStore = await cookies();
   cookieStore.set(META_STATE_COOKIE, state, metaStateCookieOptions());
+  // Label / assignee / default chosen in the Add account dialog; applied after connect.
+  const sp = new URL(request.url).searchParams;
+  cookieStore.set(CONNECT_META_COOKIE, encodeConnectMeta({ label: sp.get("label"), assignedTo: sp.get("assign"), isDefault: sp.get("default") === "1" }), metaStateCookieOptions());
 
   return NextResponse.redirect(buildMetaAuthorizeUrl(env, state));
 }

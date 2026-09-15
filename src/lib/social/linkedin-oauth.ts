@@ -51,7 +51,7 @@ export function isLinkedInOAuthConfigured(): boolean {
   return getLinkedInOAuthEnv() !== null;
 }
 
-export function buildAuthorizeUrl(env: LinkedInOAuthEnv, state: string): string {
+export function buildAuthorizeUrl(env: LinkedInOAuthEnv, state: string, opts: { freshLogin?: boolean } = {}): string {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: env.clientId,
@@ -59,6 +59,10 @@ export function buildAuthorizeUrl(env: LinkedInOAuthEnv, state: string): string 
     state,
     scope: LINKEDIN_SCOPES,
   });
+  // Ask LinkedIn to show its sign-in even if a member is already logged in — so a second
+  // staff account can be connected from the same browser. LinkedIn may ignore it; the UI
+  // also tells the user to use a private window.
+  if (opts.freshLogin) params.set("prompt", "login");
   return `${AUTHORIZE_URL}?${params.toString()}`;
 }
 
