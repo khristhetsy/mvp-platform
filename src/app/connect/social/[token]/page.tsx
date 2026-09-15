@@ -23,8 +23,12 @@ export default async function ConnectSocialPage({ params }: Props) {
   if (!invite) {
     return <Shell><p className="text-center text-sm text-slate-700">This connect link is invalid, already used, or has expired. Ask your admin to send a new one.</p></Shell>;
   }
-  const platformName = invite.platform === "linkedin" ? "LinkedIn" : "Facebook";
-  const startHref = `/api/social/${invite.platform}/start?invite=${encodeURIComponent(token)}`;
+  const platformName = invite.platform === "linkedin" ? "LinkedIn" : invite.platform === "instagram" ? "Instagram" : "Facebook";
+  // Instagram authorizes through the Facebook Page it's linked to — same Meta flow.
+  const oauthPlatform = invite.platform === "linkedin" ? "linkedin" : "facebook";
+  const oauthName = oauthPlatform === "linkedin" ? "LinkedIn" : "Facebook";
+  const color = invite.platform === "linkedin" ? "#0A66C2" : invite.platform === "instagram" ? "#E1306C" : "#1877F2";
+  const startHref = `/api/social/${oauthPlatform}/start?invite=${encodeURIComponent(token)}`;
 
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,7 +42,7 @@ export default async function ConnectSocialPage({ params }: Props) {
   return (
     <Shell>
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full text-white" style={{ background: invite.platform === "linkedin" ? "#0A66C2" : "#1877F2" }}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full text-white" style={{ background: color }}>
           <i className={`ti ti-brand-${invite.platform}`} aria-hidden="true" />
         </span>
         <div>
@@ -48,7 +52,7 @@ export default async function ConnectSocialPage({ params }: Props) {
       </div>
       <ol className="mt-5 space-y-2 text-[13px] text-slate-700">
         <li><b className="font-medium">1.</b> {user ? "You're signed in to iCapOS." : "Sign in to iCapOS with your staff login."}</li>
-        <li><b className="font-medium">2.</b> {platformName} opens and asks you to sign in and approve. Your password stays with {platformName}.</li>
+        <li><b className="font-medium">2.</b> {oauthName} opens and asks you to sign in and approve{invite.platform === "instagram" ? " (Instagram connects through the Facebook Page it's linked to)" : ""}. Your password stays with {oauthName}.</li>
         <li><b className="font-medium">3.</b> You land back in the Social Hub with the account connected.</li>
       </ol>
       <div className="mt-6">
@@ -57,7 +61,7 @@ export default async function ConnectSocialPage({ params }: Props) {
         ) : !isStaff ? (
           <p className="text-[13px] text-amber-800">This iCapOS login isn&rsquo;t a staff account ({user.email}). Sign in with your staff login, or ask your admin to add one.</p>
         ) : (
-          <a href={startHref} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white hover:opacity-90" style={{ background: invite.platform === "linkedin" ? "#0A66C2" : "#1877F2" }}>
+          <a href={startHref} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white hover:opacity-90" style={{ background: color }}>
             <i className={`ti ti-brand-${invite.platform}`} aria-hidden="true" /> Connect {platformName}
           </a>
         )}

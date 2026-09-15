@@ -13,6 +13,7 @@ const schema = z.object({
   department: z.string().max(60).nullish(),
   campaignId: z.string().uuid().nullish(),
   linkUrl: z.string().url().max(500).nullish(),
+  imageUrl: z.string().url().max(1000).nullish(),
   comment: z.string().max(1000).nullish(),
   approve: z.boolean().optional(),
   // ISO datetime. When present the post is scheduled (queued to publish at that time)
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     body: parsed.data.variants[0]?.body ?? "",
     comment_text: parsed.data.comment ?? null,
     link_url: parsed.data.linkUrl ?? null,
+    image_url: parsed.data.imageUrl ?? null,
     status: scheduledAt ? "scheduled" : approved ? "approved" : "draft",
     created_by: profile.id,
   }).select("id").single();

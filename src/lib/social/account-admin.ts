@@ -15,7 +15,11 @@ function db(): any { return createServiceRoleClient(); }
 export const CONNECT_META_COOKIE = "social_connect_meta";
 export const INVITE_TTL_DAYS = 7;
 
-export type ConnectMeta = { label?: string | null; assignedTo?: string | null; isDefault?: boolean; inviteId?: string | null };
+export type ConnectMeta = {
+  label?: string | null; assignedTo?: string | null; isDefault?: boolean; inviteId?: string | null;
+  /** Meta flow only: which account the label / default apply to — the Facebook Page or the Instagram account linked to it. */
+  target?: "facebook" | "instagram" | null;
+};
 
 export function encodeConnectMeta(meta: ConnectMeta): string {
   return Buffer.from(JSON.stringify(meta)).toString("base64url");
@@ -29,6 +33,7 @@ export function decodeConnectMeta(raw: string | undefined): ConnectMeta {
       assignedTo: typeof v.assignedTo === "string" ? v.assignedTo : null,
       isDefault: v.isDefault === true,
       inviteId: typeof v.inviteId === "string" ? v.inviteId : null,
+      target: v.target === "instagram" ? "instagram" : v.target === "facebook" ? "facebook" : null,
     };
   } catch { return {}; }
 }
@@ -121,7 +126,7 @@ export function hashInviteToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function createInvite(input: { platform: "linkedin" | "facebook"; label: string | null; assignedTo: string | null; email: string; isDefault: boolean; createdBy: string }): Promise<{ id: string; token: string; expiresAt: string }> {
+export async function createInvite(input: { platform: "linkedin" | "facebook" | "instagram"; label: string | null; assignedTo: string | null; email: string; isDefault: boolean; createdBy: string }): Promise<{ id: string; token: string; expiresAt: string }> {
   const token = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000).toISOString();
   // One open invite per email+platform: replace any earlier unused one.

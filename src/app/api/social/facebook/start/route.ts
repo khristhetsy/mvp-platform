@@ -16,7 +16,7 @@ import {
   metaStateCookieOptions,
 } from "@/lib/social/meta-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
-import { CONNECT_META_COOKIE, encodeConnectMeta } from "@/lib/social/account-admin";
+import { CONNECT_META_COOKIE, encodeConnectMeta, findOpenInvite, type ConnectMeta } from "@/lib/social/account-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,14 @@ export async function GET(request: Request) {
   cookieStore.set(META_STATE_COOKIE, state, metaStateCookieOptions());
   // Label / assignee / default chosen in the Add account dialog; applied after connect.
   const sp = new URL(request.url).searchParams;
-  cookieStore.set(CONNECT_META_COOKIE, encodeConnectMeta({ label: sp.get("label"), assignedTo: sp.get("assign"), isDefault: sp.get("default") === "1" }), metaStateCookieOptions());
+  let meta: ConnectMeta = { label: sp.get("label"), assignedTo: sp.get("assign"), isDefault: sp.get("default") === "1", target: sp.get("target") === "instagram" ? "instagram" : "facebook" };
+  const inviteToken = sp.get("invite");
+  if (inviteToken) {
+    const inv = await findOpenInvite(inviteToken);
+    if (!inv) return NextResponse.redirect(new URL("/admin/social?tab=settings&facebook=error&message=invite_expired", origin));
+    meta = { label: inv.label, assignedTo: inv.assigned_to, isDefault: inv.is_default, inviteId: inv.id, target: inv.platform === "instagram" ? "instagram" : "facebook" };
+  }
+  cookieStore.set(CONNECT_META_COOKIE, encodeConnectMeta(meta), metaStateCookieOptions());
 
   return NextResponse.redirect(buildMetaAuthorizeUrl(env, state));
 }

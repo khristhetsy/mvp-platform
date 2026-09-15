@@ -12,11 +12,12 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { AdapterNotConfiguredError, type Account, type SocialAdapter, type Variant } from "@/lib/social/types";
 import { linkedInAdapter } from "@/lib/social/linkedin-adapter";
 import { facebookAdapter } from "@/lib/social/facebook-adapter";
+import { instagramAdapter } from "@/lib/social/instagram-adapter";
 import { backoffMsFor } from "@/lib/social/rules";
 import { openToken } from "@/lib/social/token-cipher";
 import { reportDbError } from "@/lib/supabase/report";
 
-const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter };
+const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter, instagram: instagramAdapter };
 
 /**
  * Hard ceiling on a single platform call, comfortably inside the function's 60s limit.
@@ -83,8 +84,8 @@ type AccountRow = {
   access_token: string | null; refresh_token: string | null; token_expires_at: string | null;
 };
 
-function toVariant(r: VariantRow, linkUrl: string | null): Variant {
-  return { id: r.id, body: r.body, commentText: r.comment_text, linkUrl, idempotencyKey: r.idempotency_key };
+function toVariant(r: VariantRow, linkUrl: string | null, imageUrl: string | null = null): Variant {
+  return { id: r.id, body: r.body, commentText: r.comment_text, linkUrl, imageUrl, idempotencyKey: r.idempotency_key };
 }
 
 /** Append the campaign attribution tag (?s=<source_tag>) to a link so clicks →
@@ -151,7 +152,7 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
 
     const [{ data: account }, { data: post }] = await Promise.all([
       supabase.from("social_accounts").select("id, platform, external_member_id, access_token, refresh_token, token_expires_at").eq("id", row.account_id).maybeSingle(),
-      supabase.from("social_posts").select("link_url, campaign:social_campaigns(source_tag)").eq("id", row.post_id).maybeSingle(),
+      supabase.from("social_posts").select("link_url, image_url, campaign:social_campaigns(source_tag)").eq("id", row.post_id).maybeSingle(),
     ]);
 
     const adapter = account ? ADAPTERS[(account as AccountRow).platform] : undefined;
@@ -162,8 +163,8 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
     }
 
     try {
-      const p = post as { link_url: string | null; campaign?: { source_tag: string | null } | null } | null;
-      const variant = toVariant(row, trackedLink(row.post_id, p?.link_url ?? null, p?.campaign?.source_tag ?? null));
+      const p = post as { link_url: string | null; image_url?: string | null; campaign?: { source_tag: string | null } | null } | null;
+      const variant = toVariant(row, trackedLink(row.post_id, p?.link_url ?? null, p?.campaign?.source_tag ?? null), p?.image_url ?? null);
       const { externalId, url } = await withTimeout(adapter.publish(variant, toAccount(account as AccountRow)), "publish");
       // The first comment is best-effort: the post is already live, so a comment
       // failure (e.g. LinkedIn's partner-gated comment API returning 403) must never

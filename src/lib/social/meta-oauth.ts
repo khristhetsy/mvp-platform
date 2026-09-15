@@ -18,8 +18,10 @@ import { GRAPH_VERSION } from "@/lib/social/facebook-adapter";
 const DIALOG_URL = `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`;
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
-/** Page management + posting. Ignored when META_LOGIN_CONFIG_ID is set (the config carries them). */
-export const META_SCOPES = "pages_show_list,pages_manage_posts,pages_read_engagement";
+/** Page management + posting, plus Instagram publishing through a linked Page. Ignored when
+ *  META_LOGIN_CONFIG_ID is set (the login configuration in the Meta dashboard carries the
+ *  permissions — instagram_basic + instagram_content_publish must be added there too). */
+export const META_SCOPES = "pages_show_list,pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish";
 
 /**
  * Facebook Login for Business requires a config_id — a plain scope request returns
@@ -129,13 +131,17 @@ export async function exchangeLongLivedUserToken(env: MetaOAuthEnv, shortLivedTo
   return data.access_token;
 }
 
-export type MetaPage = { id: string; name: string; accessToken: string };
+export type MetaPage = { id: string; name: string; accessToken: string; instagram: { id: string; username: string | null } | null };
 
-/** GET /me/accounts → Pages the user manages, each with its own (long-lived) Page token. */
+/** GET /me/accounts → Pages the user manages, each with its own (long-lived) Page token and
+ *  the Instagram Business/Creator account linked to it, if any (needs instagram_basic). */
 export async function fetchManagedPages(userAccessToken: string): Promise<MetaPage[]> {
-  const params = new URLSearchParams({ fields: "id,name,access_token", limit: "100", access_token: userAccessToken });
+  const params = new URLSearchParams({ fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", access_token: userAccessToken });
   const res = await fetch(`${GRAPH_BASE}/me/accounts?${params.toString()}`);
-  const data = (await res.json().catch(() => ({}))) as { data?: { id: string; name: string; access_token: string }[]; error?: { message?: string } };
+  const data = (await res.json().catch(() => ({}))) as { data?: { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }[]; error?: { message?: string } };
   if (!res.ok) throw new Error(`Meta /me/accounts ${res.status}: ${data.error?.message ?? res.statusText}`);
-  return (data.data ?? []).map((p) => ({ id: p.id, name: p.name, accessToken: p.access_token }));
+  return (data.data ?? []).map((p) => ({
+    id: p.id, name: p.name, accessToken: p.access_token,
+    instagram: p.instagram_business_account ? { id: p.instagram_business_account.id, username: p.instagram_business_account.username ?? null } : null,
+  }));
 }

@@ -14,12 +14,15 @@ import { accountName } from "@/lib/social/account-name";
 type Invite = { id: string; platform: string; label: string | null; assigned_to: string | null; email: string; is_default: boolean; expires_at: string };
 type Staff = { id: string; name: string; email: string | null };
 type Activity = { published30: number; queued: number; failed30: number; recent: Array<{ id: string; body: string; status: string; at: string | null; url: string | null }> };
-type Platform = "linkedin" | "facebook";
+type Platform = "linkedin" | "facebook" | "instagram";
+/** Which OAuth flow a platform connects through — Instagram rides the Facebook Page login. */
+const OAUTH_OF: Record<Platform, "linkedin" | "facebook"> = { linkedin: "linkedin", facebook: "facebook", instagram: "facebook" };
 
 const card = "rounded-xl border border-slate-200 bg-white";
 const PLATFORM: Record<string, { label: string; icon: string; color: string; kind: string }> = {
   linkedin: { label: "LinkedIn", icon: "ti-brand-linkedin", color: "#0A66C2", kind: "personal profile" },
   facebook: { label: "Facebook", icon: "ti-brand-facebook", color: "#1877F2", kind: "Page" },
+  instagram: { label: "Instagram", icon: "ti-brand-instagram", color: "#E1306C", kind: "Business account" },
 };
 const STATUS: Record<string, { label: string; cls: string }> = {
   connected: { label: "Connected", cls: "bg-emerald-50 text-emerald-700" },
@@ -35,12 +38,13 @@ const daysUntil = (iso: string | null) => (iso ? Math.round((new Date(iso).getTi
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—");
 function startHref(platform: Platform, opts: { label?: string; assign?: string; isDefault?: boolean; fresh?: boolean }) {
   const p = new URLSearchParams();
+  if (platform === "instagram") p.set("target", "instagram");
   if (opts.label) p.set("label", opts.label);
   if (opts.assign) p.set("assign", opts.assign);
   if (opts.isDefault) p.set("default", "1");
   if (opts.fresh) p.set("fresh", "1");
   const q = p.toString();
-  return `/api/social/${platform}/start${q ? `?${q}` : ""}`;
+  return `/api/social/${OAUTH_OF[platform]}/start${q ? `?${q}` : ""}`;
 }
 
 export function Accounts({ accounts: initial, linkedInReady, facebookReady, failed24 }: { accounts: SocialAccount[]; linkedInReady: boolean; facebookReady: boolean; failed24: number }) {
@@ -52,7 +56,7 @@ export function Accounts({ accounts: initial, linkedInReady, facebookReady, fail
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
-  const ready: Record<Platform, boolean> = { linkedin: linkedInReady, facebook: facebookReady };
+  const ready: Record<Platform, boolean> = { linkedin: linkedInReady, facebook: facebookReady, instagram: facebookReady };
 
   async function reload() {
     const r = await fetch("/api/admin/social/accounts");
@@ -111,7 +115,7 @@ export function Accounts({ accounts: initial, linkedInReady, facebookReady, fail
                     <span className="mr-2 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full align-middle text-[12px] text-white" style={{ background: meta?.color ?? "#64748b" }}><i className={`ti ${meta?.icon ?? "ti-world"}`} aria-hidden="true" /></span>
                     <span className="font-medium text-slate-900">{accountName(a)}</span>
                     {a.is_default ? <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-600">Default</span> : null}
-                    {a.platform === "facebook" ? <span className="ml-2 text-[11px] text-slate-400">Page</span> : null}
+                    {a.platform === "facebook" ? <span className="ml-2 text-[11px] text-slate-400">Page</span> : a.platform === "instagram" ? <span className="ml-2 text-[11px] text-slate-400">Instagram</span> : null}
                   </td>
                   <td className="truncate px-2 py-2.5 text-slate-700">{a.assigned_name ?? "—"}</td>
                   <td className="px-2 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${st.cls}`}>{st.label}</span></td>
@@ -161,9 +165,10 @@ export function Accounts({ accounts: initial, linkedInReady, facebookReady, fail
       <div className={`${card} mt-2 divide-y divide-slate-100 text-[13px]`}>
         <HealthRow label="LinkedIn Posts API" value={linkedInReady ? "ok" : "not connected"} ok={linkedInReady} />
         <HealthRow label="Facebook Graph API" value={facebookReady ? "ok · v21.0" : "not connected"} ok={facebookReady} />
+        <HealthRow label="Instagram Graph API" value={facebookReady ? "ok · via Facebook" : "not connected"} ok={facebookReady} />
         <HealthRow label="Failed last 24h" value={String(failed24)} ok={failed24 === 0} />
       </div>
-      <p className="mt-2 text-[11.5px] text-slate-400">LinkedIn posts as a personal profile; Facebook posts to a Page feed with the tagged link as a comment. Instagram is off for now.</p>
+      <p className="mt-2 text-[11.5px] text-slate-400">LinkedIn posts as a personal profile; Facebook posts to a Page feed; Instagram posts as an image with the caption, through the Facebook Page it&rsquo;s linked to. The tagged link goes in the first comment everywhere. Facebook and Instagram publishing need Meta App Review to go live — dev mode works on Pages you admin.</p>
 
       {adding ? <AddAccountDialog staff={staff} ready={ready} onClose={() => setAdding(false)} onInvited={(msg) => { setNotice(msg); setAdding(false); void reload(); }} /> : null}
       {open ? <AccountDrawer account={open} staff={staff} ready={ready} onClose={() => setOpenId(null)} onPatch={patch} onDisconnected={(n) => { setOpenId(null); setNotice(n); }} /> : null}
@@ -213,14 +218,14 @@ function AddAccountDialog({ staff, ready, onClose, onInvited }: { staff: Staff[]
       <p className="mb-1 text-[11.5px] text-slate-500">Platform</p>
       <div className="mb-3 grid grid-cols-4 gap-1.5">
         {(["linkedin", "facebook", "instagram", "x"] as const).map((p) => {
-          const on = p === platform; const avail = p === "linkedin" || p === "facebook";
-          return <button key={p} type="button" disabled={!avail} title={avail ? undefined : "Not available yet"} onClick={() => avail && setPlatform(p)} className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[12.5px] ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"} disabled:opacity-40`}>
+          const on = p === platform; const avail = p !== "x";
+          return <button key={p} type="button" disabled={!avail} title={avail ? undefined : "X's API is paid — not enabled"} onClick={() => avail && setPlatform(p)} className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[12.5px] ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"} disabled:opacity-40`}>
             <i className={`ti ti-brand-${p}`} aria-hidden="true" />{p === "x" ? "X" : p[0].toUpperCase() + p.slice(1)}
           </button>;
         })}
       </div>
       <p className="mb-1 text-[11.5px] text-slate-500">Label</p>
-      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={platform === "facebook" ? "iCFO Capital Page" : "Jessica Santos"} className={`${inputCls} mb-3`} />
+      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={platform === "facebook" ? "iCFO Capital Page" : platform === "instagram" ? "iCFO Capital Instagram" : "Jessica Santos"} className={`${inputCls} mb-3`} />
       <p className="mb-1 text-[11.5px] text-slate-500">Assign to staff member</p>
       <select value={assign} onChange={(e) => pick(e.target.value)} className={`${inputCls} mb-3`}>
         <option value="">— none —</option>
@@ -230,15 +235,25 @@ function AddAccountDialog({ staff, ready, onClose, onInvited }: { staff: Staff[]
 
       <p className="mb-1 text-[11.5px] text-slate-500">How to authorize</p>
       <ol className="mb-3 space-y-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-[12.5px] text-slate-700">
-        <li><Step n={1} /> Click <b className="font-medium">Connect on {meta.label}</b>. {meta.label} opens its sign-in.</li>
-        <li><Step n={2} /> Sign in as this person there — use a private window if someone else is already signed in to {meta.label}. Their password stays with {meta.label}; a security code, if asked, goes to their email.</li>
-        <li><Step n={3} /> Click Allow. You land back here with the account listed.</li>
+        {platform === "instagram" ? (
+          <>
+            <li><Step n={1} /> The Instagram account must be a <b className="font-medium">Business or Creator</b> account linked to a Facebook Page you manage (Meta Business Suite › Settings › Instagram accounts).</li>
+            <li><Step n={2} /> Click <b className="font-medium">Connect on Facebook</b> and sign in as the Page admin. Facebook lists the Pages and their linked Instagram accounts — approve them.</li>
+            <li><Step n={3} /> You land back here with the Instagram account listed. Posts to it need an image (set in the composer).</li>
+          </>
+        ) : (
+          <>
+            <li><Step n={1} /> Click <b className="font-medium">Connect on {meta.label}</b>. {meta.label} opens its sign-in.</li>
+            <li><Step n={2} /> Sign in as this person there — use a private window if someone else is already signed in to {meta.label}. Their password stays with {meta.label}; a security code, if asked, goes to their email.</li>
+            <li><Step n={3} /> Click Allow. You land back here with the account listed.</li>
+          </>
+        )}
       </ol>
-      {!ready[platform] ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">{meta.label} isn&rsquo;t configured on this environment yet (missing app credentials), so connecting is disabled.</p> : null}
+      {!ready[platform] ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">{platform === "instagram" ? "Facebook (which Instagram connects through)" : meta.label} isn&rsquo;t configured on this environment yet (missing app credentials), so connecting is disabled.</p> : null}
       {err ? <p className="mb-2 text-[12px] text-rose-600">{err}</p> : null}
       <div className="flex flex-wrap items-center gap-2">
         <a href={ready[platform] ? startHref(platform, { label, assign, isDefault, fresh: true }) : undefined} aria-disabled={!ready[platform]} className={`${btnPrimary} inline-flex items-center gap-1.5 ${ready[platform] ? "" : "pointer-events-none opacity-50"}`} style={{ background: meta.color }}>
-          <i className="ti ti-external-link" aria-hidden="true" /> Connect on {meta.label}
+          <i className="ti ti-external-link" aria-hidden="true" /> Connect on {platform === "instagram" ? "Facebook" : meta.label}
         </a>
         <div className="flex flex-1 items-center gap-1.5">
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className={`${inputCls} min-w-0 flex-1`} />

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
   const { data: src } = await db.from("social_posts")
-    .select("body, comment_text, link_url, archetype, brief, department").eq("id", parsed.data.postId).maybeSingle();
+    .select("body, comment_text, link_url, image_url, archetype, brief, department").eq("id", parsed.data.postId).maybeSingle();
   if (!src) return NextResponse.json({ error: "Source post not found." }, { status: 404 });
   const { data: srcVars } = await db.from("social_variants").select("account_id, body, comment_text").eq("post_id", parsed.data.postId);
   const variants = (srcVars ?? []) as { account_id: string; body: string; comment_text: string | null }[];
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const created: { postId: string; campaignId: string }[] = [];
   for (const campaignId of parsed.data.campaignIds) {
     const { data: post, error } = await db.from("social_posts").insert({
-      body: src.body ?? "", comment_text: src.comment_text ?? null, link_url: src.link_url ?? null,
+      body: src.body ?? "", comment_text: src.comment_text ?? null, link_url: src.link_url ?? null, image_url: src.image_url ?? null,
       archetype: src.archetype ?? null, brief: src.brief ?? null, department: src.department ?? null,
       campaign_id: campaignId, status: "draft", created_by: profile.id,
     }).select("id").single();

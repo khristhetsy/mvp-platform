@@ -80,3 +80,33 @@ export async function upsertFacebookPageAccount(input: FacebookPageInput): Promi
   if (error) throw new Error(`Failed to save Facebook Page: ${error.message}`);
   return { id: (data as { id: string }).id };
 }
+
+export type InstagramAccountInput = {
+  igUserId: string;
+  username: string | null;
+  /** Token of the Facebook Page the Instagram account is linked to — that's what the Graph API wants. */
+  pageAccessToken: string;
+  tokenExpiresAt?: string | null;
+};
+
+/** Upsert one Instagram Business/Creator account (keyed on platform + IG user id). */
+export async function upsertInstagramAccount(input: InstagramAccountInput): Promise<{ id: string }> {
+  const expiresAt = input.tokenExpiresAt ?? null;
+  const row = {
+    platform: "instagram",
+    external_member_id: input.igUserId,
+    display_name: input.username ? `@${input.username}` : null,
+    access_token: sealToken(input.pageAccessToken),
+    refresh_token: null,
+    token_expires_at: expiresAt,
+    status: deriveStatus(expiresAt),
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await db()
+    .from("social_accounts")
+    .upsert(row, { onConflict: "platform,external_member_id" })
+    .select("id")
+    .single();
+  if (error) throw new Error(`Failed to save Instagram account: ${error.message}`);
+  return { id: (data as { id: string }).id };
+}

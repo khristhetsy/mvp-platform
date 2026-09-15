@@ -7,14 +7,14 @@ import { buildAuthorizeUrl } from "./linkedin-oauth";
 
 describe("connect metadata cookie", () => {
   it("round-trips label / assignee / default / invite", () => {
-    const meta = { label: "Jessica Santos", assignedTo: "11111111-1111-1111-1111-111111111111", isDefault: true, inviteId: "inv-1" };
+    const meta = { label: "Jessica Santos", assignedTo: "11111111-1111-1111-1111-111111111111", isDefault: true, inviteId: "inv-1", target: "instagram" as const };
     expect(decodeConnectMeta(encodeConnectMeta(meta))).toEqual(meta);
   });
   it("is empty for a missing or garbled cookie, and never trusts odd types", () => {
     expect(decodeConnectMeta(undefined)).toEqual({});
     expect(decodeConnectMeta("not-base64-json")).toEqual({});
     const odd = Buffer.from(JSON.stringify({ label: 42, isDefault: "yes", assignedTo: { x: 1 } })).toString("base64url");
-    expect(decodeConnectMeta(odd)).toEqual({ label: null, assignedTo: null, isDefault: false, inviteId: null });
+    expect(decodeConnectMeta(odd)).toEqual({ label: null, assignedTo: null, isDefault: false, inviteId: null, target: null });
   });
   it("caps the label so a crafted URL can't stuff the cookie", () => {
     const long = "x".repeat(500);

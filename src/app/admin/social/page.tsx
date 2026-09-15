@@ -21,9 +21,11 @@ function connectNotice(sp: { linkedin?: string; facebook?: string; message?: str
     return { tone: "warn", text: `Couldn't connect LinkedIn${sp.message ? `: ${sp.message}` : "."}` };
   }
   if (sp.facebook) {
-    if (sp.facebook === "connected") return { tone: "ok", text: `Facebook connected — ${sp.message ?? "your"} Page(s) linked. Approved variants will publish to the Page feed.` };
+    if (sp.facebook === "connected") return { tone: "ok", text: `Facebook connected — ${sp.message ?? "your Page(s)"} linked. Approved variants will publish through them.` };
     if (sp.facebook === "unconfigured") return { tone: "warn", text: "Facebook isn't configured. Set META_APP_ID and META_APP_SECRET, then try again." };
     if (sp.facebook === "no_pages") return { tone: "warn", text: "No Facebook Pages found on that account. Connect with an account that manages a Page." };
+    if (sp.facebook === "no_instagram") return { tone: "warn", text: "Facebook connected, but none of those Pages has an Instagram Business or Creator account linked. Link the Instagram account to the Page in Meta Business Suite, then connect again." };
+    if (sp.facebook === "error" && sp.message === "invite_expired") return { tone: "warn", text: "That connect link has already been used or has expired. Send a new one from Settings › Accounts." };
     return { tone: "warn", text: `Couldn't connect Facebook${sp.message ? `: ${sp.message}` : "."}` };
   }
   return undefined;

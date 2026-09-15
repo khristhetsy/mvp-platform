@@ -9,7 +9,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { normalizeUserRole } from "@/lib/api/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { upsertFacebookPageAccount } from "@/lib/social/accounts";
+import { upsertFacebookPageAccount, upsertInstagramAccount } from "@/lib/social/accounts";
 import {
   exchangeLongLivedUserToken,
   exchangeMetaCode,
@@ -67,12 +67,25 @@ export async function GET(request: Request) {
     const longLived = await exchangeLongLivedUserToken(env, shortLived);
     const pages = await fetchManagedPages(longLived);
     if (pages.length === 0) return back(origin, "no_pages");
+    // The dialog's label / default go on the platform the user chose (Facebook Page or the
+    // Instagram account linked to it); the assignee goes on everything that came back.
+    const wantIg = meta.target === "instagram";
+    let igCount = 0, labelled = false;
     for (const page of pages) {
       const { id } = await upsertFacebookPageAccount({ pageId: page.id, pageName: page.name, pageAccessToken: page.accessToken });
-      // Several Pages may come back; the label only fits one, so it goes on the first.
-      await applyConnectMeta(id, page === pages[0] ? meta : { assignedTo: meta.assignedTo }, user.id);
+      const fbMeta = !wantIg && !labelled ? meta : { assignedTo: meta.assignedTo };
+      if (fbMeta === meta) labelled = true;
+      await applyConnectMeta(id, fbMeta, user.id);
+      if (page.instagram) {
+        const ig = await upsertInstagramAccount({ igUserId: page.instagram.id, username: page.instagram.username, pageAccessToken: page.accessToken });
+        const igMeta = wantIg && !labelled ? meta : { assignedTo: meta.assignedTo };
+        if (igMeta === meta) labelled = true;
+        await applyConnectMeta(ig.id, igMeta, user.id);
+        igCount++;
+      }
     }
-    return back(origin, "connected", String(pages.length));
+    if (wantIg && igCount === 0) return back(origin, "no_instagram");
+    return back(origin, "connected", igCount ? `${pages.length} Page(s) and ${igCount} Instagram account(s)` : `${pages.length} Page(s)`);
   } catch (err) {
     return back(origin, "error", err instanceof Error ? err.message : "oauth_failed");
   }

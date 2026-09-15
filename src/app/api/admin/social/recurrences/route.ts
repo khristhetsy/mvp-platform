@@ -32,6 +32,7 @@ const schema = z.object({
   body: z.string().max(4000).default(""),
   comment: z.string().max(1000).nullable().optional(),
   linkUrl: z.string().url().max(500).nullable().optional(),
+  imageUrl: z.string().url().max(1000).nullable().optional(),
   variants: z.array(z.object({ accountId: z.string().uuid(), body: z.string().min(1).max(4000) })).default([]),
 });
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ upcoming: upcoming(rule, Date.now(), 6), total: totalCount(rule) });
   }
   if (d.variants.length === 0) return NextResponse.json({ error: "Draft the post first (no variants)." }, { status: 400 });
-  const res = await createRecurrence({ ...rule, campaignId: d.campaignId ?? null, archetype: d.archetype ?? null, department: d.department ?? null, brief: d.brief ?? null, body: d.body, comment: d.comment ?? null, linkUrl: d.linkUrl ?? null, variants: d.variants, createdBy: profile.id });
+  const res = await createRecurrence({ ...rule, campaignId: d.campaignId ?? null, archetype: d.archetype ?? null, department: d.department ?? null, brief: d.brief ?? null, body: d.body, comment: d.comment ?? null, linkUrl: d.linkUrl ?? null, imageUrl: d.imageUrl ?? null, variants: d.variants, createdBy: profile.id });
   if (!res) return NextResponse.json({ error: "Could not create recurrence." }, { status: 400 });
   return NextResponse.json({ ok: true, id: res.id });
 }

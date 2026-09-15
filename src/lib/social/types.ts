@@ -11,6 +11,8 @@ export type Variant = {
   /** First-comment text carrying the tagged link (never in the body). */
   commentText: string | null;
   linkUrl: string | null;
+  /** Public image URL from the post — required by Instagram, ignored by text platforms. */
+  imageUrl?: string | null;
   /** Unique per variant — one publish, ever. */
   idempotencyKey: string;
 };

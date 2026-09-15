@@ -34,7 +34,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
   const { data: post } = await db.from("social_posts")
-    .select("body, comment_text, link_url, archetype, department, campaign_id").eq("id", d.postId).maybeSingle();
+    .select("body, comment_text, link_url, image_url, archetype, department, campaign_id").eq("id", d.postId).maybeSingle();
   if (!post) return NextResponse.json({ error: "Post not found." }, { status: 404 });
   const { data: vars } = await db.from("social_variants").select("account_id, body").eq("post_id", d.postId);
   const variants = ((vars ?? []) as { account_id: string; body: string }[]).map((v) => ({ accountId: v.account_id, body: v.body }));
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const res = await createRecurrence({
     ...rule,
     campaignId: post.campaign_id ?? null, archetype: post.archetype ?? null, department: post.department ?? null, brief: null,
-    body: post.body ?? "", comment: post.comment_text ?? null, linkUrl: post.link_url ?? null, variants,
+    body: post.body ?? "", comment: post.comment_text ?? null, linkUrl: post.link_url ?? null, imageUrl: post.image_url ?? null, variants,
     createdBy: profile.id,
   });
   if (!res) return NextResponse.json({ error: "Could not create the series." }, { status: 400 });

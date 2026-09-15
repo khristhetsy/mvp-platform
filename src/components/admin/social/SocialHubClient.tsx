@@ -115,6 +115,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [selected, setSelected] = useState<string[]>(() => accounts.filter((a) => a.is_default).map((a) => a.id));   // default account pre-picked
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [comment, setComment] = useState("");
   const [schedOn, setSchedOn] = useState(true);
   const [schedDate, setSchedDate] = useState("");
@@ -175,7 +176,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
     if (mode === "schedule" && !scheduledAt) { setMsg("Pick a date and time to schedule."); return; }
     setBusy(true); setMsg(null);
     try {
-      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, campaignId: campaignId || null, linkUrl: linkUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
+      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, campaignId: campaignId || null, linkUrl: linkUrl || null, imageUrl: imageUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
       const j = await res.json();
       if (!res.ok) { setMsg(j.error ?? "Save failed."); return; }
       setMsg(mode === "schedule" ? `Scheduled ${j.queued} post(s) — check the Schedule tab.` : mode === "park" ? `Parked ${j.parked} post(s) in the queue.` : "Saved as draft.");
@@ -299,6 +300,21 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
             <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="CTA link (https://…)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
           </div>
+          {/* Instagram has no text-only posts: a public image URL is required for any Instagram variant. */}
+          {(() => {
+            const hasIg = selected.some((id) => platformOf(id) === "instagram");
+            const badUrl = imageUrl.trim() !== "" && !/^https:\/\/\S+\.(jpe?g|png)(\?\S*)?$/i.test(imageUrl.trim());
+            return (
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder={hasIg ? "Image URL — required for Instagram (public https JPEG/PNG)" : "Image URL (optional; public https JPEG/PNG)"} className={`flex-1 rounded-lg border px-3 py-2 text-[13px] focus:outline-none ${hasIg && !imageUrl.trim() ? "border-amber-300 bg-amber-50/40 focus:border-amber-400" : "border-slate-200 focus:border-indigo-400"}`} />
+                  {imageUrl.trim() && !badUrl ? <img src={imageUrl.trim()} alt="" className="h-9 w-9 rounded-md border border-slate-200 object-cover" /> : null}
+                </div>
+                {badUrl ? <p className="mt-1 text-[11.5px] text-rose-600">Instagram needs a direct https link to a .jpg or .png file.</p>
+                  : hasIg && !imageUrl.trim() ? <p className="mt-1 text-[11.5px] text-amber-700">Instagram only publishes image posts — add an image URL or the Instagram variant will fail.</p> : null}
+              </div>
+            );
+          })()}
 
           {/* schedule row */}
           <div>

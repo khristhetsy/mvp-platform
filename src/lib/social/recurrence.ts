@@ -113,7 +113,7 @@ function db(): any { return createServiceRoleClient(); }
 
 export type RecurrenceTemplate = {
   campaignId?: string | null; archetype?: string | null; department?: string | null; brief?: string | null;
-  body: string; comment?: string | null; linkUrl?: string | null;
+  body: string; comment?: string | null; linkUrl?: string | null; imageUrl?: string | null;
   variants: { accountId: string; body: string }[];
 };
 
@@ -134,7 +134,7 @@ export async function createRecurrence(input: RecurrenceRule & RecurrenceTemplat
     start_date: input.startDate, end_type: input.endType, end_date: input.endDate ?? null, end_count: input.endCount ?? null,
     status: "active", next_run: first ? new Date(first).toISOString() : null, made_count: 0,
     campaign_id: input.campaignId ?? null, archetype: input.archetype ?? null, department: input.department ?? null, brief: input.brief ?? null,
-    body: input.body ?? "", comment_text: input.comment ?? null, link_url: input.linkUrl ?? null,
+    body: input.body ?? "", comment_text: input.comment ?? null, link_url: input.linkUrl ?? null, image_url: input.imageUrl ?? null,
     account_ids: input.variants.map((v) => v.accountId), variants: input.variants, created_by: input.createdBy ?? null,
   }).select("id").single();
   if (error || !data) return null;
@@ -150,7 +150,7 @@ export async function materializeRecurrence(id: string, now = new Date()): Promi
   const rule = ruleFromRow(row);
   const template = {
     campaignId: row.campaign_id as string | null, archetype: row.archetype as string | null, department: row.department as string | null,
-    brief: row.brief as string | null, body: (row.body as string) ?? "", comment: row.comment_text as string | null, linkUrl: row.link_url as string | null,
+    brief: row.brief as string | null, body: (row.body as string) ?? "", comment: row.comment_text as string | null, linkUrl: row.link_url as string | null, imageUrl: (row.image_url as string | null) ?? null,
     variants: ((row.variants as { accountId: string; body: string }[]) ?? []),
   };
   const horizonMs = now.getTime() + MATERIALIZE_HORIZON_DAYS * 86400000;
@@ -175,7 +175,7 @@ async function createOccurrencePost(recurrenceId: string, template: RecurrenceTe
   const { data: post } = await db().from("social_posts").insert({
     archetype: template.archetype ?? null, brief: template.brief ?? null, department: template.department ?? null,
     campaign_id: template.campaignId ?? null, recurrence_id: recurrenceId,
-    body: template.variants[0]?.body ?? template.body ?? "", comment_text: template.comment ?? null, link_url: template.linkUrl ?? null,
+    body: template.variants[0]?.body ?? template.body ?? "", comment_text: template.comment ?? null, link_url: template.linkUrl ?? null, image_url: template.imageUrl ?? null,
     status: "scheduled", scheduled_at: iso, created_by: createdBy,
   }).select("id").single();
   if (!post) return;
