@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase migration up:*)",
+      "Bash(vercel deploy:*)",
+      "Bash(vercel --prod:*)"
+    ],
+    "ask": [
+      "Edit(src/**)",
+      "Write(src/**)"
+    ]
+  }
+}

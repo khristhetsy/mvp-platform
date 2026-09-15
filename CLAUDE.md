@@ -122,3 +122,11 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
 - Test files follow `src/**/*.test.ts` naming; mock Supabase client at `src/test/mock-supabase.ts`
 
 > **Note (from AGENTS.md):** This project uses Next.js 16 App Router, which has breaking changes from earlier versions. Before writing any Next.js-specific code, check `node_modules/next/dist/docs/` for the current API.
+
+## Shipping
+
+Claude never runs `git add` / `git commit` / `git push`, `supabase db push`, or a Vercel
+deploy. Every change ends with a `## Ship it` section that prints the commands for khris
+to run — see the rule below (also available as the `/ship` command).
+
+@.claude/ship-output.md
