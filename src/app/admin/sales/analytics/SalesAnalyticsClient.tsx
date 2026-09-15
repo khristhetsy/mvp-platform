@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { FollowupResults } from "./FollowupResults";
 
 const NAVY = "#04143D", BLUE = "#0056F4", ACCENT = "#0D6BFF", MUTED = "var(--muted-foreground)";
 
@@ -20,6 +21,7 @@ export function SalesAnalyticsClient({ metrics }: { metrics: SalesMetric[] }) {
     <div>
       <h1 style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: "0 0 4px" }}>Sales Analytics</h1>
       <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Click any card for its trend and an AI Sales analyst read. Read-only — current pipeline health.</p>
+      <FollowupResults />
       <Group label="Pipeline & revenue" metrics={pipeline} onOpen={setActive} />
       <Group label="Performance & activity" metrics={performance} onOpen={setActive} />
       {active && <InsightDrawer metricKey={active} label={metrics.find((m) => m.key === active)?.label ?? ""} onClose={() => setActive(null)} />}
