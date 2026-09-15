@@ -127,6 +127,10 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/portfolio",              label: "Portfolio",              requiredPermission: "view_admin_dashboard" },
           { href: "/admin/readiness",              label: "Readiness Scores",       requiredPermission: "manage_companies" },
           { href: "/admin/marketplace",            label: "Marketplace Review",     requiredPermission: "manage_companies" },
+          { href: "/admin/partner-scores",         label: "Partner Scores",         requiredPermission: "manage_investors"  },
+          { href: "/admin/deal-rooms",             label: "Deal Rooms",             requiredPermission: "manage_deal_rooms" },
+          { href: "/admin/data-room",              label: "Diligence Tracker",      requiredPermission: "manage_companies"  },
+          { href: "/admin/diligence",              label: "Diligence Review",       requiredPermission: "manage_diligence"  },
           {
             href: "/admin/analytics",
             label: "Analytics",
@@ -155,10 +159,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       // Kept at the top level, unchanged.
-      { href: "/admin/deal-rooms",     label: "Deal Rooms",        requiredPermission: "manage_deal_rooms" },
-      { href: "/admin/partner-scores", label: "Partner Scores",    requiredPermission: "manage_investors"  },
-      { href: "/admin/data-room",      label: "Diligence Tracker", requiredPermission: "manage_companies"  },
-      { href: "/admin/diligence",      label: "Diligence Review",  requiredPermission: "manage_diligence"  },
       {
         href: "/admin/learning",
         label: "Learning",
