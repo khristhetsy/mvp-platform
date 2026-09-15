@@ -238,12 +238,12 @@ function AddAccountDialog({ staff, ready, onClose, onInvited }: { staff: Staff[]
         {platform === "instagram" ? (
           <>
             <li><Step n={1} /> The Instagram account must be a <b className="font-medium">Business or Creator</b> account linked to a Facebook Page you manage (Meta Business Suite › Settings › Instagram accounts).</li>
-            <li><Step n={2} /> Click <b className="font-medium">Connect on Facebook</b> and sign in as the Page admin. Facebook lists the Pages and their linked Instagram accounts — approve them.</li>
+            <li><Step n={2} /> Click <b className="font-medium">Connect Instagram</b>. Meta opens its sign-in (the Facebook login window &mdash; that&rsquo;s how Instagram Business accounts authorize). Sign in as the Page admin and approve the Page and its linked Instagram account.</li>
             <li><Step n={3} /> You land back here with the Instagram account listed. Posts to it need an image (set in the composer).</li>
           </>
         ) : (
           <>
-            <li><Step n={1} /> Click <b className="font-medium">Connect on {meta.label}</b>. {meta.label} opens its sign-in.</li>
+            <li><Step n={1} /> Click <b className="font-medium">Connect {meta.label}</b>. {meta.label} opens its sign-in.</li>
             <li><Step n={2} /> Sign in as this person there — use a private window if someone else is already signed in to {meta.label}. Their password stays with {meta.label}; a security code, if asked, goes to their email.</li>
             <li><Step n={3} /> Click Allow. You land back here with the account listed.</li>
           </>
@@ -253,7 +253,7 @@ function AddAccountDialog({ staff, ready, onClose, onInvited }: { staff: Staff[]
       {err ? <p className="mb-2 text-[12px] text-rose-600">{err}</p> : null}
       <div className="flex flex-wrap items-center gap-2">
         <a href={ready[platform] ? startHref(platform, { label, assign, isDefault, fresh: true }) : undefined} aria-disabled={!ready[platform]} className={`${btnPrimary} inline-flex items-center gap-1.5 ${ready[platform] ? "" : "pointer-events-none opacity-50"}`} style={{ background: meta.color }}>
-          <i className="ti ti-external-link" aria-hidden="true" /> Connect on {platform === "instagram" ? "Facebook" : meta.label}
+          <i className={`ti ${meta.icon}`} aria-hidden="true" /> Connect {meta.label}
         </a>
         <div className="flex flex-1 items-center gap-1.5">
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className={`${inputCls} min-w-0 flex-1`} />
