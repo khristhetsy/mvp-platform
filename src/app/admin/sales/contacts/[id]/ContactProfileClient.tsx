@@ -135,12 +135,32 @@ function InvestorRatingChip({ score, tier }: { score: number | null; tier: strin
     </div>
   );
 }
-function Row({ icon, label, value, link }: { icon: string; label: string; value: string | null; link?: boolean }) {
+/** Odoo-style field actions: hovering a phone / email / website row reveals the link. */
+type RowAction = "tel" | "email" | "web";
+function actionHref(kind: RowAction, value: string): string {
+  if (kind === "tel") return `tel:${value.replace(/[^+\d]/g, "")}`;
+  if (kind === "email") return `/admin/inbox?compose=1&to=${encodeURIComponent(value.trim())}`;
+  return /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, "")}`;
+}
+const ACTION_META: Record<RowAction, { icon: string; title: string }> = {
+  tel: { icon: "ti-phone-call", title: "Call" },
+  email: { icon: "ti-send", title: "Send email" },
+  web: { icon: "ti-external-link", title: "Open site" },
+};
+
+function Row({ icon, label, value, link, action }: { icon: string; label: string; value: string | null; link?: boolean; action?: RowAction }) {
+  const act = action && value ? ACTION_META[action] : null;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5 }}>
+    <div className={act ? "field-row" : undefined} style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6 }}>
       <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
       <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>
-      <span style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{value || "—"}</span>
+      <span className={act ? "field-val" : undefined} style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{value || "—"}</span>
+      {act && value && (
+        <a href={actionHref(action!, value)} target={action === "tel" ? undefined : "_blank"} rel="noopener noreferrer" title={act.title} aria-label={`${act.title}: ${value}`} className="field-act"
+          style={{ alignSelf: "center", width: 24, height: 24, borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#185FA5", background: "#E6F1FB", textDecoration: "none", flexShrink: 0 }}>
+          <i className={`ti ${act.icon}`} aria-hidden="true" style={{ fontSize: 14 }} />
+        </a>
+      )}
     </div>
   );
 }
@@ -835,11 +855,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             {/* RIGHT column — Odoo field order */}
             <div>
               <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} />
-              <Row icon="ti-phone" label="Phone" value={contact.phone} />
-              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} />
-              <Row icon="ti-device-mobile" label="Mobile" value={null} />
-              <Row icon="ti-mail" label="Email" value={contact.email} link />
-              <Row icon="ti-world" label="Website" value={contact.website} link />
+              <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" />
+              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" />
+              <Row icon="ti-device-mobile" label="Mobile" value={null} action="tel" />
+              <Row icon="ti-mail" label="Email" value={contact.email} link action="email" />
+              <Row icon="ti-world" label="Website" value={contact.website} link action="web" />
               <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} />
               {/* Tags — colored pills, auto color per tag name. */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
