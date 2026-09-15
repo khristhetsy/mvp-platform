@@ -27,7 +27,7 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
-const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Short bio", "Special skills", "Work experience", "Business summary", "Management team"]);
+const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Company Name", "Company name", "Contact preference", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Short bio", "Special skills", "Work experience", "Business summary", "Management team"]);
 // A value that is a URL (the Social section, a website in Other details) renders as a
 // link rather than a chip. Detected from the value, not the label, so it works for any
 // synced field. Requires an alphabetic TLD so numbers like "1.5" aren't caught.
