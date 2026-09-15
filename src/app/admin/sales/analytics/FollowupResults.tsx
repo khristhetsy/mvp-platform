@@ -10,7 +10,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FollowupResults as Results, SequenceDetail, Grain, Compare, Series } from "@/lib/sales/followup-analytics";
 
-const GRAINS: Array<{ id: Grain; label: string }> = [{ id: "week", label: "Week" }, { id: "30d", label: "30d" }, { id: "quarter", label: "Qtr" }, { id: "year", label: "Year" }];
 type MetricKey = "sent" | "opened" | "replied" | "meetings" | "won" | "conversion";
 const METRICS: Array<{ key: MetricKey; label: string; color: string }> = [
   { key: "sent", label: "Sent", color: "#B5D4F4" }, { key: "opened", label: "Opened", color: "#378ADD" },
@@ -31,9 +30,7 @@ function delta(cur: number | null, prev: number | null, unit: "pct" | "n" | "pts
   return { txt: `${d > 0 ? "▲" : d < 0 ? "▼" : ""} ${Math.abs(d)}%`, color: d > 0 ? "#0F6E56" : d < 0 ? "#A32D2D" : MUTED };
 }
 
-export function FollowupResults() {
-  const [grain, setGrain] = useState<Grain>(() => loadLS<Grain>("salesFollowup.grain", "30d"));
-  const [compare, setCompare] = useState<Compare>(() => loadLS<Compare>("salesFollowup.compare", "prev"));
+export function FollowupResults({ grain, compare }: { grain: Grain; compare: Compare }) {
   const [showValues, setShowValues] = useState<boolean>(() => loadLS("salesFollowup.values", true));
   const [metrics, setMetrics] = useState<MetricKey[]>(() => loadLS<MetricKey[]>("salesFollowup.metrics", ["sent", "replied", "won"]));
   const [data, setData] = useState<Results | null>(null);
@@ -43,7 +40,7 @@ export function FollowupResults() {
   const [detail, setDetail] = useState<Record<string, SequenceDetail | { error: string } | undefined>>({});
   const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => { try { localStorage.setItem("salesFollowup.grain", JSON.stringify(grain)); localStorage.setItem("salesFollowup.compare", JSON.stringify(compare)); localStorage.setItem("salesFollowup.values", JSON.stringify(showValues)); localStorage.setItem("salesFollowup.metrics", JSON.stringify(metrics)); } catch { /* ignore */ } }, [grain, compare, showValues, metrics]);
+  useEffect(() => { try { localStorage.setItem("salesFollowup.values", JSON.stringify(showValues)); localStorage.setItem("salesFollowup.metrics", JSON.stringify(metrics)); } catch { /* ignore */ } }, [showValues, metrics]);
 
   useEffect(() => {
     let live = true;
@@ -69,22 +66,13 @@ export function FollowupResults() {
     } catch (e) { setDetail((p) => ({ ...p, [id]: { error: e instanceof Error ? e.message : "Couldn't load this sequence." } })); }
   }
 
-  const seg = (on: boolean): React.CSSProperties => ({ fontSize: 11, padding: "4px 10px", border: "none", cursor: "pointer", background: on ? "var(--foreground)" : "transparent", color: on ? "#fff" : MUTED });
   const t = data?.totals, p = data?.prevTotals;
 
   return (
-    <div style={{ marginBottom: 22 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".4px", color: MUTED, textTransform: "uppercase", marginBottom: 8 }}>Follow-up results</div>
-      <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "12px 14px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>Follow-up over time</span>
-          <span style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
-            {GRAINS.map((g) => <button key={g.id} type="button" onClick={() => setGrain(g.id)} style={seg(grain === g.id)}>{g.label}</button>)}
-          </span>
-          <span style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
-            <button type="button" onClick={() => setCompare("prev")} style={seg(compare === "prev")}>vs previous period</button>
-            <button type="button" onClick={() => setCompare("yoy")} style={seg(compare === "yoy")}>vs same period last year</button>
-          </span>
+    <div>
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+          <span style={{ fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: ".04em" }}>Show on chart</span>
           {METRICS.map((m) => {
             const on = metrics.includes(m.key);
             return <button key={m.key} type="button" onClick={() => setMetrics((cur) => on ? (cur.length > 1 ? cur.filter((k) => k !== m.key) : cur) : [...cur, m.key])}
@@ -93,7 +81,7 @@ export function FollowupResults() {
             </button>;
           })}
           <label style={{ marginLeft: "auto", fontSize: 11, color: MUTED, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            Show values <input type="checkbox" checked={showValues} onChange={(e) => setShowValues(e.target.checked)} />
+            Values on chart <input type="checkbox" checked={showValues} onChange={(e) => setShowValues(e.target.checked)} />
           </label>
         </div>
 
@@ -122,7 +110,8 @@ export function FollowupResults() {
       </div>
 
       {data && !error && (
-        <div style={{ marginTop: 12, background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ marginTop: 12, border: "0.5px solid #e2e6ed", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: ".04em", padding: "8px 10px 0" }}>By sequence</div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed" }}>
             <thead>
               <tr style={{ textAlign: "left", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".04em", color: MUTED }}>
