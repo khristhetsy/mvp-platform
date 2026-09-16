@@ -118,7 +118,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   // Admin match/qualification thresholds.
   const config = await getInvestorMatchConfig();
 
-  // Per-plan distribution cap: Basic reaches up to 5, Professional up to 100,
+  // Per-plan distribution cap: Basic reaches up to 5, Professional up to 50,
   // Managed IR uncapped. Free (0) never enrolls anyone. Capped by MAX_AUDIENCE.
   const founderId = (comp as { founder_id?: string | null }).founder_id ?? null;
   const planCap = founderEntitlements(founderId ? await getUserPlan(founderId) : null).investorCap;

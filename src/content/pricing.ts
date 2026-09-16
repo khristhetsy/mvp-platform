@@ -1,7 +1,7 @@
 /**
  * Pricing page copy. Model: a paid subscription unlocks the tools + investor
  * distribution — Basic $49 (all tools, up to 5, one-pager, conference access, DIY
- * outreach) → Professional $199 (up to 100, live stage, intro requests) → SPV Program
+ * outreach) → Professional $199 (up to 50, live stage, intro requests) → SPV Program
  * (done-for-you, price on request, contact sales).
  */
 export const pricing = {
@@ -32,7 +32,7 @@ export const pricing = {
       desc: "For founders actively in market who want the stage.",
       features: [
         "Everything in Basic",
-        "Up to 100 matched investors",
+        "Up to 50 matched investors",
         "Monthly live presentation slot",
         "Investors intro requests",
       ],
@@ -68,7 +68,7 @@ export const pricing = {
       { k: "All tools (CRR, Due diligence report, Pitch deck analyzer, Valuation, Financial model, Cap table, Data room, Deal room, Market claim grader, Pitch practice simulator, e-learning)", vals: ["Included", "Included"] },
       { k: "See matches (count · sector · fit tier)", vals: ["Included", "Included"] },
       { k: "Investor identities revealed", vals: ["Included", "Included"] },
-      { k: "One-pager to matched investors", vals: ["up to 5", "up to 100"] },
+      { k: "One-pager to matched investors", vals: ["up to 5", "up to 50"] },
       { k: "DIY outreach", vals: ["Included", "Included"] },
       { k: "Investor Conference Virtual Event", vals: ["Attend", "Live presentation slot"] },
       { k: "Investors intro requests", vals: ["—", "Included"] },
@@ -82,8 +82,8 @@ export const pricing = {
     title: "Before you subscribe.",
     items: [
       { q: "Is there a sales call?", a: "Not for Basic or Professional — those are self-serve start to finish. The SPV Program is done-for-you, so it starts with a conversation. You can book a 30-minute walkthrough of the self-serve plans if you'd find it useful, but nothing requires it." },
-      { q: "What's included in a plan?", a: "Every tool — CRR, Due diligence report, Pitch deck analyzer, Valuation, Financial model, Cap table, Data room, Deal room, Market claim grader, Pitch practice simulator, e-learning — plus your matched investors are revealed and your materials are distributed to them. Basic covers up to 5 investors; Professional up to 100 and adds the live stage and intro requests." },
-      { q: "Why “up to” 5 and 100?", a: "Investors set their own monthly acceptance caps. When the right-fit investors for your company have hit their limit that month, your list is shorter — which is what keeps response rates from collapsing." },
+      { q: "What's included in a plan?", a: "Every tool — CRR, Due diligence report, Pitch deck analyzer, Valuation, Financial model, Cap table, Data room, Deal room, Market claim grader, Pitch practice simulator, e-learning — plus your matched investors are revealed and your materials are distributed to them. Basic covers up to 5 investors; Professional up to 50 and adds the live stage and intro requests." },
+      { q: "Why “up to” 5 and 50?", a: "Investors set their own monthly acceptance caps. When the right-fit investors for your company have hit their limit that month, your list is shorter — which is what keeps response rates from collapsing." },
       { q: "Does iCapOS make introductions?", a: "On Professional, iCapOS passes along investor introduction requests. It distributes your materials to matched investors; it does not recommend or vouch for anyone." },
       { q: "Do you take a percentage of what I raise?", a: "Never. The subscription is the entire commercial relationship." },
       { q: "Can I cancel?", a: "Any time, from your account settings. Your rating and materials stay accessible through the end of the paid period." },

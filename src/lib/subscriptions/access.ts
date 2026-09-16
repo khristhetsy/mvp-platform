@@ -155,7 +155,7 @@ export function canAccessFeature(
   if (subscription.plan_type === "founder_basic") {
     return {
       allowed: false,
-      reason: "Upgrade to Professional for more distribution — up to 100 matched investors, brokered intros, and a monthly presentation slot.",
+      reason: "Upgrade to Professional for more distribution — up to 50 matched investors, intro requests, and a monthly presentation slot.",
     };
   }
 

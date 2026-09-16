@@ -8,7 +8,7 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
   description:
-    "Choose a plan to unlock the tools and your investor distribution. Basic $49/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach). Professional $199/mo (up to 100, monthly live presentation slot, intro requests). SPV Program done-for-you, pricing on request. Investor accounts free, no success fees.",
+    "Choose a plan to unlock the tools and your investor distribution. Basic $49/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach). Professional $199/mo (up to 50, monthly live presentation slot, intro requests). SPV Program done-for-you, pricing on request. Investor accounts free, no success fees.",
   alternates: { canonical: "/pricing" },
 };
 

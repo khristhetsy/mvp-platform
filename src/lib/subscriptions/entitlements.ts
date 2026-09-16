@@ -6,7 +6,7 @@ import type { PlanType } from "@/lib/subscriptions/plans";
  *
  *  - Free        sees that matches exist (count/sector/tier) but not WHO; no distribution.
  *  - Basic       reveals identities, DIY outreach + one-pager to up to 5 matches.
- *  - Professional adds up to 100, monthly presentation slot, brokered intros, add-company.
+ *  - Professional adds up to 50, monthly presentation slot, intro requests.
  *  - Managed IR  done-for-you; everything Professional has, uncapped.
  */
 export type FounderEntitlements = {
@@ -48,7 +48,7 @@ const PROFESSIONAL: FounderEntitlements = {
   canBrokerIntros: true,
   canPresentMonthly: true,
   canAddCompany: true,
-  investorCap: 100,
+  investorCap: 50,
 };
 
 const MANAGED_IR: FounderEntitlements = { ...PROFESSIONAL, investorCap: null };

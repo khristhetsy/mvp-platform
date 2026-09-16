@@ -62,7 +62,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     recommended: true,
     features: [
       "Everything in Basic",
-      "Up to 100 investors",
+      "Up to 50 investors",
       "Monthly live presentation slot",
       "Investors intro requests",
       "Self-serve, with a call available",

@@ -154,7 +154,7 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     paidPlan: true,
     features: [
       "Everything in Basic",
-      "Up to 100 investors",
+      "Up to 50 investors",
       "Monthly live presentation slot",
       "Investors intro requests",
       "Self-serve, with a call available",
