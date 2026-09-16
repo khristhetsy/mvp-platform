@@ -130,7 +130,9 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
   Building happens only when khris says so, or after the plan has been agreed. Until then,
   answer the question and stop.
 - Only change what khris explicitly asks for — don't touch working code.
-- khris runs all SQL in the Supabase SQL editor himself; no paid upgrades.
+- khris runs all SQL in the Supabase SQL editor himself; never print `supabase db push`
+  (the CLI's migration history is out of sync with the editor-applied schema and it errors);
+  no paid upgrades.
 - Never enter credentials or authenticate on anyone's behalf; never store passwords anywhere.
 
 ## Shipping
