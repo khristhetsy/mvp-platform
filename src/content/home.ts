@@ -112,8 +112,8 @@ export const home = {
       h: "Founders",
       p: "Get rated, get matched, get your materials in front of investors whose mandate actually fits. Two self-serve plans, no sales call, cancel any time.",
       points: [
-        "Up to 25 or up to 100 matched investors per month",
-        "Spotlight or a live slot at the iCFO Investment Conference",
+        "Up to 5 or up to 100 matched investors per month",
+        "Attend the Investor Conference Virtual Event, or take a live slot",
         "Every iCapOS tool free, forever — plans only add distribution",
       ],
       cta: { label: "For founders", href: "/founders" },

@@ -89,11 +89,11 @@ export const founders = {
         "Switch between DIY and done-for-you at any time",
       ],
     },
-    capTitle: "What “up to 25” actually means",
+    capTitle: "What “up to 5” actually means",
     capParas: [
       "Every investor sets their own monthly limit on how many companies they'll accept. When the right-fit investors for your company have already hit their cap that month, your list is shorter — and that's deliberate.",
       "Capping volume is what keeps the network responsive. A short list of investors who opted in beats a long list of investors who've stopped reading.",
-      "So we say “up to.” 25 matched investors on Basic, 100 on Professional — as availability allows.",
+      "So we say “up to.” 5 matched investors on Basic, 100 on Professional — as availability allows.",
     ],
   },
 

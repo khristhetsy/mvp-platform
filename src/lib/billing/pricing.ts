@@ -40,13 +40,13 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
     planType: "founder_basic",
     title: "Basic",
-    priceLabel: "$499",
+    priceLabel: "$49",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_basic,
     features: [
       "Everything in Free",
-      "Up to 25 matched investors get your one-pager",
-      "Event spotlight",
+      "Up to 5 matched investors get your one-pager",
+      "Attend the Investor Conference Virtual Event",
       "DIY outreach unlocked — you can now reach investors",
       "Fully self-serve",
     ],
@@ -55,7 +55,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
     planType: "founder_professional",
     title: "Professional",
-    priceLabel: "$1,000",
+    priceLabel: "$199",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_professional,
     badge: "Most popular",
@@ -63,9 +63,8 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     features: [
       "Everything in Basic",
       "Up to 100 investors",
-      "Monthly presentation slot",
-      "Brokered intro requests",
-      "Additional company accounts $800/mo",
+      "Monthly live presentation slot",
+      "Investors intro requests",
       "Self-serve, with a call available",
     ],
     paidPlan: true,
@@ -73,8 +72,8 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
     planType: "founder_managed_ir",
     title: "SPV Program",
-    priceLabel: "$3,500",
-    priceSubtext: "/month · 3-month min",
+    priceLabel: "Pricing on request",
+    priceSubtext: "3-month min",
     monthlyPriceCents: PLAN_PRICES.founder_managed_ir,
     contactSales: true,
     features: [

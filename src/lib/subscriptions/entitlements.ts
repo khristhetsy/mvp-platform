@@ -5,7 +5,7 @@ import type { PlanType } from "@/lib/subscriptions/plans";
  * for everyone (see access.ts / featuresForPlan); THIS is the paid layer:
  *
  *  - Free        sees that matches exist (count/sector/tier) but not WHO; no distribution.
- *  - Basic       reveals identities, DIY outreach + one-pager to up to 25 matches.
+ *  - Basic       reveals identities, DIY outreach + one-pager to up to 5 matches.
  *  - Professional adds up to 100, monthly presentation slot, brokered intros, add-company.
  *  - Managed IR  done-for-you; everything Professional has, uncapped.
  */
@@ -39,7 +39,7 @@ const BASIC: FounderEntitlements = {
   canBrokerIntros: false,
   canPresentMonthly: false,
   canAddCompany: false,
-  investorCap: 25,
+  investorCap: 5,
 };
 
 const PROFESSIONAL: FounderEntitlements = {

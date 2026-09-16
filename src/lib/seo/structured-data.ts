@@ -35,7 +35,7 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "How much does iCapOS cost for founders?",
-    a: "Founders choose a plan to unlock the tools and their investor distribution: Basic ($499/mo), Professional ($1,000/mo), or the done-for-you SPV Program ($3,500/mo). Each plan includes every tool — the Capital Readiness Rating, valuation, data room, and e-learning — plus your matched investors are revealed and your materials are distributed to them. Investor accounts are free, and there are no success fees or commissions.",
+    a: "Founders choose a plan to unlock the tools and their investor distribution: Basic ($49/mo), Professional ($199/mo), or the done-for-you SPV Program (pricing on request). Each plan includes every tool — CRR, due diligence report, pitch deck analyzer, valuation, financial model, cap table, data room, deal room, market claim grader, pitch practice simulator, and e-learning — plus your matched investors are revealed and your materials are distributed to them. Investor accounts are free, and there are no success fees or commissions.",
   },
   {
     q: "What do investors get?",

@@ -8,7 +8,7 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
   description:
-    "Choose a plan to unlock the tools and your investor distribution. Basic $499/mo (all tools, up to 25, one-pager, DIY outreach). Professional $1,000/mo (up to 100, live stage, brokered intros). SPV Program $3,500/mo done-for-you. Investor accounts free, no success fees.",
+    "Choose a plan to unlock the tools and your investor distribution. Basic $49/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach). Professional $199/mo (up to 100, monthly live presentation slot, intro requests). SPV Program done-for-you, pricing on request. Investor accounts free, no success fees.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -53,7 +53,7 @@ export default function PricingPage() {
                 <h2 className="font-site-display text-xl font-bold">{t.name}</h2>
                 {"badge" in t && t.badge ? <span className="rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-blue-lt">{t.badge}</span> : null}
               </div>
-              <div className="mt-3 flex items-baseline gap-1"><span className="font-site-display text-4xl font-extrabold">{t.price}</span><span className="text-sm text-white/50">{t.per}</span></div>
+              <div className="mt-3 flex items-baseline gap-1"><span className={`font-site-display font-extrabold ${t.per ? "text-4xl" : "text-2xl"}`}>{t.price}</span>{t.per ? <span className="text-sm text-white/50">{t.per}</span> : null}</div>
               <p className="mt-2 text-sm text-white/65">{t.desc}</p>
               {"features" in t && t.features ? (
                 <ul className="mt-5 space-y-2.5">

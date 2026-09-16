@@ -145,7 +145,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     description: "Single plan card with features and CTA",
     defaultProps: {
       planName: "Growth",
-      priceLabel: "From $499 / month",
+      priceLabel: "From $49 / month",
       features: ["Readiness scoring", "Secure data room", "Investor CRM workspace"],
       ctaLabel: "Request access",
       ctaHref: "/submit-company",
