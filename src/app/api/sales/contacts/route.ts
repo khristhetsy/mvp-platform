@@ -13,6 +13,13 @@ export const dynamic = "force-dynamic";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
+/** Odoo exports an empty field as the boolean `false`; read through `raw->>'…'` that
+ *  arrives as the string "false". Treat it (and "False") as blank, not as a value. */
+function odooText(v: string | null | undefined): string {
+  const s = (v ?? "").trim();
+  return s === "" || s.toLowerCase() === "false" ? "" : s;
+}
+
 // GET /api/sales/contacts — one page of the filtered list + exact total.
 //   filter=<FilterSpec JSON> · groupBy/groupValue (or group=<role>) · sort/dir · offset/limit
 // The predicate is built by the search_contacts SQL function; see contacts-search.ts.
@@ -49,7 +56,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       name: r.name ?? r.email ?? "Contact",
       email: r.email ?? "",
       company: r.company ?? "",
-      phone: r.phone || r.raw_phone || r.raw_mobile || "",
+      phone: r.phone || odooText(r.raw_phone) || odooText(r.raw_mobile) || "",
       source: r.source ?? "crm",
       type: r.contact_type ?? "other",
       country: r.country ?? "",
