@@ -140,7 +140,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       }
       setJtMsg(errors > 0
         ? `Applied ${companies} companies, ${types} types — but ${errors} failed: ${firstError ?? "unknown error"}`
-        : `Applied — ${companies} company names, ${types} investor types (from ${rowsRead} contacts scanned)${reindexed ? `, ${reindexed} reindexed for /fit` : ""}.`);
+        : `Applied — ${companies} company names, ${types} investor profiles (from ${rowsRead} contacts scanned)${reindexed ? `, ${reindexed} reindexed for /fit` : ""}.`);
       setJt(null);
     } finally { setBusy(false); }
   }
@@ -213,7 +213,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       {/* Step 1 — deterministic, free, and it improves the signal Step 2 reads. */}
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
         <div className="text-[13px] font-semibold text-slate-800">Step 1 · Backfill from job title <span className="font-normal text-slate-500">— free, instant, run this first</span></div>
-        <p className="mt-1 text-[11.5px] text-slate-500">Pulls the firm name out of &ldquo;Technology Investor <b>at</b> TA Associates&rdquo; and sets the investor type when the title actually names one. A real company name is never overwritten — only blanks and rows where the company is the contact&rsquo;s own name.</p>
+        <p className="mt-1 text-[11.5px] text-slate-500">Pulls the firm name out of &ldquo;Technology Investor <b>at</b> TA Associates&rdquo; and sets the investor profile when the title actually names one. A real company name is never overwritten — only blanks and rows where the company is the contact&rsquo;s own name.</p>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => void jtPreview()} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">⌕ Preview</button>
           {jt && jt.total > 0 ? (
@@ -244,7 +244,7 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       </div>
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-        <div className="text-[13px] font-semibold text-slate-800">Step 1b · Derive missing fields from investor type <span className="font-normal text-slate-500">— free, no AI</span></div>
+        <div className="text-[13px] font-semibold text-slate-800">Step 1b · Derive missing fields from investor profile <span className="font-normal text-slate-500">— free, no AI</span></div>
         <p className="mt-1 text-[11.5px] text-slate-500">
           Fills missing criteria from what the investor <i>is</i> — stage for every type, plus cheque size, revenue and EBITDA for private equity. Only touches contacts with no stage at all — a stated or AI-extracted stage always wins. Each value is tagged with the rule that wrote it, so it&rsquo;s visible on the profile and reversible per rule. Runs automatically after each contacts sync.
         </p>
@@ -288,9 +288,9 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
         ]} />
         <div className="flex-1" />
         <OdooSearchBar scope="investor_enrichment" state={search} onChange={setSearch}
-          quick={[{ key: "high", label: `Confidence ≥ ${HIGH}%` }, { key: "low", label: `Confidence < ${HIGH}%` }, { key: "has_stage", label: "Has stage proposal", sep: true }, { key: "no_stage", label: "No stage proposal" }, { key: "has_type", label: "Has investor type" }]}
-          fields={[{ key: "type", label: "Investor type", options: typeOptions }, { key: "industry", label: "Industry", options: industryOptions }, { key: "basis", label: "Basis", options: basisOptions }]}
-          groups={[{ id: "none", label: "None" }, { id: "type", label: "Investor type" }, { id: "stage", label: "Proposed stage" }, { id: "confidence", label: "Confidence band" }, { id: "basis", label: "Basis" }]}
+          quick={[{ key: "high", label: `Confidence ≥ ${HIGH}%` }, { key: "low", label: `Confidence < ${HIGH}%` }, { key: "has_stage", label: "Has stage proposal", sep: true }, { key: "no_stage", label: "No stage proposal" }, { key: "has_type", label: "Has investor profile" }]}
+          fields={[{ key: "type", label: "Investor profile", options: typeOptions }, { key: "industry", label: "Industry", options: industryOptions }, { key: "basis", label: "Basis", options: basisOptions }]}
+          groups={[{ id: "none", label: "None" }, { id: "type", label: "Investor profile" }, { id: "stage", label: "Proposed stage" }, { id: "confidence", label: "Confidence band" }, { id: "basis", label: "Basis" }]}
           noGroupId="none" placeholder="Search company or rationale…" width={520} />
       </div>
 

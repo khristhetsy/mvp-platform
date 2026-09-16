@@ -149,7 +149,7 @@ const CURATED_OPTIONS: Record<string, string[]> = {
   "Entrepreneur monthly recurring revenue (MRR)?": MRR_BANDS,
   // Ensure "Fund Manager" is always a selectable investor type (also used by the
   // SEC Form D-only derived defaults).
-  "Investor type": ["Fund Manager"],
+  "Investor profile": ["Fund Manager"],
 };
 
 let cache: { at: number; data: FieldOptions } | null = null;
@@ -180,9 +180,9 @@ export async function getContactFieldOptions(db: any, force = false): Promise<Fi
     for (const row of rows) for (const v of normalizeValues(row.industries)) indSet.add(v);
     if (indSet.size) byLabel.set("Industries", indSet);
 
-    const invTypeSet = byLabel.get("Investor type") ?? new Set<string>();
+    const invTypeSet = byLabel.get("Investor profile") ?? new Set<string>();
     for (const row of rows) for (const v of normalizeValues(row.investorTypes)) invTypeSet.add(v);
-    if (invTypeSet.size) byLabel.set("Investor type", invTypeSet);
+    if (invTypeSet.size) byLabel.set("Investor profile", invTypeSet);
 
     const options = buildFieldOptions(byLabel);
     // Merge curated fallbacks (fields with no synced data yet) without clobbering data.

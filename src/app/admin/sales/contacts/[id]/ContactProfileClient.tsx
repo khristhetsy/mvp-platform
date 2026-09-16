@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
+import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabel } from "@/lib/sales/investor-profile";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
@@ -220,10 +221,12 @@ function Row({ icon, label, value, link, action, options, placeholder, readOnly 
 // (Odoo selection / many2many) show a searchable checkbox dropdown with chips
 // (Option 1); free-text fields fall back to a plain input. Inline save (check) + undo.
 function EditablePrefRow({
-  label, value, changed, editing, rating, options, freeText = false, single = false, derivedFrom, onOpen, onChange, onSave, onUndo,
+  label, value, changed, editing, rating, options, freeText = false, single = false, strict = false, derivedFrom, onOpen, onChange, onSave, onUndo,
 }: {
   label: string; value: string; changed: boolean; editing: boolean; rating: boolean; options: string[];
   freeText?: boolean; single?: boolean;
+  /** The option list is authoritative (e.g. Odoo's Investor Profile): values off the list are flagged "unlisted". */
+  strict?: boolean;
   /** Set when we derived this value ourselves rather than being told it. */
   derivedFrom?: string;
   onOpen: () => void; onChange: (v: string) => void; onSave: () => void; onUndo: () => void;
@@ -234,7 +237,7 @@ function EditablePrefRow({
 
   if (editing && options.length > 0) {
     const selSet = new Set(selected);
-    const allOpts = [...new Set([...options, ...selected])];
+    const allOpts = strict ? [...options] : [...new Set([...options, ...selected])];
     const filtered = allOpts.filter((o) => o.toLowerCase().includes(search.trim().toLowerCase()));
     // Single-select fields (ARR/MRR bands) replace the value; multi-select toggle.
     const toggle = (o: string) => single
@@ -333,16 +336,18 @@ function EditablePrefRow({
           </a>
         ) : values.length === 1 && values[0].length > 40 ? (
           <span style={{ color: "var(--foreground)", overflowWrap: "anywhere" }}>{values[0]}</span>
-        ) : values.map((v) => (
-          <span key={v} style={{ fontSize: 11, background: rating ? "#E1F5EE" : "#EEEDFE", color: rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
-        ))}
+        ) : values.map((v) => {
+          const unlisted = strict && !options.includes(v);
+          return <span key={v} title={unlisted ? "Not one of the Odoo options — open the field and pick the matching one." : undefined}
+            style={{ fontSize: 11, background: unlisted ? "#FAEEDA" : rating ? "#E1F5EE" : "#EEEDFE", color: unlisted ? "#633806" : rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{unlisted ? `Unlisted · ${v}` : v}</span>;
+        })}
         <i className="ti ti-pencil" aria-hidden="true" style={{ fontSize: 12.5, color: "var(--muted-foreground)", opacity: hover ? 1 : 0, marginLeft: 2 }} />
         {changed ? <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>edited</span> : null}
         {/* An assumption we made from the investor's type — not something they told us.
             Without this a derived stage is indistinguishable from a stated one. */}
         {derivedFrom && !changed ? (
           <span
-            title={`Assumed from investor type (${derivedFrom.replace("derived:", "").replace(/_/g, " ")}). Not stated by the investor — edit to confirm.`}
+            title={`Assumed from investor profile (${derivedFrom.replace("derived:", "").replace(/_/g, " ")}). Not stated by the investor — edit to confirm.`}
             style={{ fontSize: 10, color: "#6B3FA0", background: "#F3ECFB", border: "0.5px solid #C9B8E6", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}
           >assumed</span>
         ) : null}
@@ -430,7 +435,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       const fill = (key: string, val: string) => { if (!o[key]?.trim() && val) o[key] = val; };
       fill("Active investor", "5-Excellent");
       fill("Investor investment size?", bands.join(", "));
-      fill("Investor type", "Venture, Hedge Fund, Family Office, Fund Manager, Other");
+      fill(INVESTOR_PROFILE_LABEL, "Venture Capital, Hedge Fund, Family Office, Fund Manager, Other");
       fill("Investor preferences for the number of deals per year?", "5 - 10 Deals");
     }
     return o;
@@ -923,9 +928,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               // overview section, so it never renders as its own block.
               const overviewTitle = profile.type === "investor" ? "Investor overview" : profile.type === "founder" ? "Founder overview" : "Overview";
               const otherDetailsFields = profile.sections.find((s) => s.title === "Other details")?.fields ?? [];
-              // "Investor type" (raw.__profile.investorTypes) — surfaced as an editable
-              // multi-select in Contact & lead; same data the Group-by "Investor type" uses.
-              const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => /investor type/i.test(f.label))?.saveKey ?? "Investor type";
+              // "Investor profile" (profile.investorTypes) — an editable pick from Odoo's option
+              // list; the same value the Group-by "Investor profile" dimension reads.
+              const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => isInvestorProfileLabel(f.label))?.saveKey ?? INVESTOR_PROFILE_LABEL;
               const formdBlock = formdFirm ? (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
@@ -992,9 +997,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               {profile.type === "investor" && (
                                 <div style={{ gridColumn: "1 / -1" }}>
                                   <EditablePrefRow
-                                    label="Investor type"
+                                    label={INVESTOR_PROFILE_LABEL}
                                     rating={false}
-                                    options={fieldOptions[investorProfileKey] ?? []}
+                                    strict
+                                    options={[...INVESTOR_PROFILE_OPTIONS]}
                                     value={prefEdits[investorProfileKey] ?? ""}
                                     changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
                                     editing={editingKey === investorProfileKey}

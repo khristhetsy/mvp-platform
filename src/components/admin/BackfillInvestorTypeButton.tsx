@@ -38,18 +38,18 @@ export function BackfillInvestorTypeButton() {
   return (
     <>
       <button type="button" onClick={() => { setOpen(true); setPreview(null); setApplied(null); setMsg(null); }} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
-        <i className="ti ti-wand" aria-hidden="true" /> Assign investor type
+        <i className="ti ti-wand" aria-hidden="true" /> Assign investor profile
       </button>
 
       {open && (
         <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: 16, width: 560, maxWidth: "100%", maxHeight: "88vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Assign Investor Type</p>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Assign Investor Profile</p>
               <button onClick={() => setOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
             </div>
             <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "0 0 12px" }}>
-              1 · Odoo <b>Investor Profile</b> → Investor Type. &nbsp; 2 · <b>SEC Form D</b> → Venture Capital + Fund Manager. Writes what the grid groups on; preview first.
+              1 · Odoo <b>Investor Profile</b> → Investor profile. &nbsp; 2 · <b>SEC Form D</b> → Venture Capital + Fund Manager. Writes what the grid groups on; preview first.
             </p>
 
             {applied ? (

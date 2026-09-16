@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
+import { INVESTOR_PROFILE_OPTIONS, isListedInvestorProfile } from "@/lib/sales/investor-profile";
 import { FIELD_REGISTRY, OP_LABEL, fieldDef, isValidCondition, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
 import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/ToolbarGear";
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
@@ -77,7 +78,7 @@ const FACET_LABEL: Record<FacetKey, string> = {
   industries: "Type of industries",
   capital: "Amount / type of capital",
   fundingStages: "Funding stage",
-  investorTypes: "Investor type",
+  investorTypes: "Investor profile",
   operatingStages: "Operating stage",
 };
 const FACETS_BY_ROLE: Record<string, FacetKey[]> = {
@@ -222,7 +223,14 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
 
   // Load the questionnaire facet option lists once (universal — same for everyone).
   useEffect(() => {
-    fetch("/api/sales/contacts/filter-facets").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) setFacetOpts(d as Record<string, string[]>); }).catch(() => {});
+    fetch("/api/sales/contacts/filter-facets").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!d) return;
+      const f = d as Record<string, string[]>;
+      // Investor profile is a fixed Odoo list: always offer every option (in Odoo order), then any
+      // unlisted value still present in the data so it can be filtered on and cleaned up.
+      f.investorTypes = [...INVESTOR_PROFILE_OPTIONS, ...(f.investorTypes ?? []).filter((v) => !isListedInvestorProfile(v))];
+      setFacetOpts(f);
+    }).catch(() => {});
   }, []);
 
   // The matching set changes with the filters — clear any selection so a stale
@@ -908,7 +916,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
     { label: "Added this month", cond: { field: "createdAt", op: "after", value: p.firstOfMonth() } },
   ];
   const FACET_ROWS: { field: string; label: string; source: string }[] = [
-    { field: "investorTypes", label: "Investor type", source: "investorTypes" },
+    { field: "investorTypes", label: "Investor profile", source: "investorTypes" },
     { field: "industries", label: "Industry", source: "industries" },
     { field: "leadSource", label: "Lead source", source: "leadSource" },
     { field: "operatingStages", label: "Operating stage", source: "operatingStages" },

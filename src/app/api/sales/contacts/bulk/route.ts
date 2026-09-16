@@ -31,7 +31,7 @@ const schema = z.discriminatedUnion("op", [
 const WRITE_CONCURRENCY = 8;
 const MAX_WRITES_PER_RUN = 1500;
 
-const EXPORT_HEADER = ["Name", "Company", "Type", "Investor type", "Email", "Phone", "Country", "Lead source", "Created on"];
+const EXPORT_HEADER = ["Name", "Company", "Type", "Investor profile", "Email", "Phone", "Country", "Lead source", "Created on"];
 
 function leadSourceOf(overrides: Record<string, unknown> | null, raw: Record<string, unknown> | null): string {
   const ov = overrides?.lead_source;

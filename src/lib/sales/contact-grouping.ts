@@ -75,7 +75,7 @@ export const GROUP_DIMS: Record<string, Dim> = {
     extract: (r) => [roleOf(r)],
   },
   industries: facetDim("industries", "industries", "Industry"),
-  investorTypes: facetDim("investorTypes", "investorTypes", "Investor type"),
+  investorTypes: facetDim("investorTypes", "investorTypes", "Investor profile"),
   capital: facetDim("capital", "capital", "Amount / type of capital"),
   fundingStages: facetDim("fundingStages", "fundingStages", "Funding stage"),
   operatingStages: facetDim("operatingStages", "operatingStages", "Operating stage"),

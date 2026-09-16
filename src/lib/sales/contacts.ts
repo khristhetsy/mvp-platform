@@ -1,5 +1,6 @@
 // Sales contact profile — reads the CRM mirror + annotations + linked opportunities.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OVERRIDE_KEY, isInvestorProfileLabel, normalizeInvestorProfiles } from "@/lib/sales/investor-profile";
 import { logActivity } from "@/lib/sales/activity";
 import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 import { reindexContacts } from "@/lib/fit/match-index";
@@ -99,11 +100,11 @@ function flattenExtra(
   }
   if (industrySet.size) out.push({ label: "Industries", values: sortSectors(canonicalizeIndustries([...industrySet])) });
 
-  // Investor type: the data lives in __profile.investorTypes (semantic key), same
-  // as industries. Surface it as one "Investor type" field, folding in any stray
-  // "Investor profile?" answer, so the contact detail matches the Group-by "Investor
-  // type" dimension. Placed before overrides so a manual edit still wins.
-  const STRAY_INVTYPE_LABELS = new Set(["investor profile?", "investor profile", "investor type"]);
+  // Investor profile: the data lives in __profile.investorTypes (semantic key), same
+  // as industries. Surface it as one "Investor profile" field, folding in any stray
+  // Odoo "Investor profile?" answer, so the contact detail matches the Group-by
+  // "Investor profile" dimension. Placed before overrides so a manual edit still wins.
+  // Values are canonicalised to Odoo's option list (same rules as the SQL merge).
   const invTypes = (raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes;
   const invTypeSet = new Set<string>(
     Array.isArray(invTypes)
@@ -111,19 +112,23 @@ function flattenExtra(
       : [],
   );
   for (let i = out.length - 1; i >= 0; i--) {
-    if (STRAY_INVTYPE_LABELS.has(out[i].label.trim().toLowerCase())) {
+    if (isInvestorProfileLabel(out[i].label)) {
       for (const v of out[i].values) invTypeSet.add(v);
       out.splice(i, 1);
     }
   }
-  if (invTypeSet.size) out.push({ label: "Investor type", values: [...invTypeSet] });
+  const invProfiles = normalizeInvestorProfiles([...invTypeSet]);
+  if (invProfiles.length) out.push({ label: INVESTOR_PROFILE_LABEL, values: invProfiles });
 
   // Apply array-valued overrides (structured "Additional details" edits): replace
   // a matching label, or add it if new. Empty override = remove the field.
   if (overrides) {
-    for (const [label, ov] of Object.entries(overrides)) {
+    for (const [rawLabel, ov] of Object.entries(overrides)) {
       if (!Array.isArray(ov)) continue; // string overrides are first-class fields
-      const values = ov.map((s) => String(s).trim()).filter(Boolean);
+      // A manual pick is stored under the historical key "Investor type"; it displays as Investor profile.
+      const isInv = isInvestorProfileLabel(rawLabel);
+      const label = isInv ? INVESTOR_PROFILE_LABEL : rawLabel;
+      const values = isInv ? normalizeInvestorProfiles(ov.map((s) => String(s))) : ov.map((s) => String(s).trim()).filter(Boolean);
       const idx = out.findIndex((e) => e.label.trim().toLowerCase() === label.trim().toLowerCase());
       if (idx >= 0) {
         if (values.length) out[idx] = { label: out[idx].label, values };
@@ -236,6 +241,12 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   // Structured "Additional details" edits — array-valued overrides keyed by label.
   if (patch.preferences) {
     for (const [label, values] of Object.entries(patch.preferences)) {
+      if (isInvestorProfileLabel(label)) {
+        // Investor profile: one storage key (historical) + Odoo's canonical spellings, so
+        // the profile trigger regroups the contact under the right header on save.
+        ovPatch[INVESTOR_PROFILE_OVERRIDE_KEY] = normalizeInvestorProfiles(values);
+        continue;
+      }
       ovPatch[label] = values.map((s) => s.trim()).filter(Boolean);
       // A human has now stated this value, so it is no longer our assumption. Clearing
       // the provenance tag matters for more than display: undoDerivation() deletes by
