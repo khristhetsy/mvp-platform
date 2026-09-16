@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export type QueueRow = {
   id: string;
@@ -47,13 +47,20 @@ export function SupportQueueClient({
   rows,
   staff,
   currentStaffId,
-}: Readonly<{ rows: QueueRow[]; staff: StaffOption[]; currentStaffId: string }>) {
+  showResolved = false,
+}: Readonly<{ rows: QueueRow[]; staff: StaffOption[]; currentStaffId: string; showResolved?: boolean }>) {
   const router = useRouter();
-  const [selected, setSelected] = useState<QueueRow | null>(null);
+  const params = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Last-seen copy of the selected row, for when it drops out of `rows` (resolved while
+  // "Show resolved" is off) — the thread stays open with its final status.
+  const [lastRow, setLastRow] = useState<QueueRow | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  // Derive from `rows` so router.refresh() after assign / resolve is reflected here.
+  const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? lastRow : null;
 
   async function draftWithAi() {
     if (!selected) return;
@@ -61,18 +68,23 @@ export function SupportQueueClient({
     try {
       const res = await fetch(`/api/admin/support/${selected.id}/draft`, { method: "POST" });
       const json = await res.json().catch(() => ({}));
-      if (json.unavailable) {
+      if (!res.ok) {
+        alert(json.error ?? `Couldn't draft a reply (HTTP ${res.status}).`);
+      } else if (json.unavailable) {
         alert("AI drafting isn't available right now — write your reply directly.");
       } else if (json.draft) {
         setReply(json.draft);
       }
+    } catch {
+      alert("Couldn't reach the server to draft a reply.");
     } finally {
       setDrafting(false);
     }
   }
 
   async function open(row: QueueRow) {
-    setSelected(row);
+    setSelectedId(row.id);
+    setLastRow(row);
     setMessages([]);
     setReply("");
     const res = await fetch(`/api/admin/support/${row.id}`);
@@ -80,6 +92,22 @@ export function SupportQueueClient({
       const json = await res.json();
       setMessages(json.messages ?? []);
     }
+  }
+
+  // A notification deep-link (?request=<id>) lands with that request open.
+  const wanted = params.get("request");
+  useEffect(() => {
+    if (!wanted || selectedId) return;
+    const row = rows.find((r) => r.id === wanted);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- open() sets state to reflect the URL, once
+    if (row) void open(row);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per ?request
+  }, [wanted, rows]);
+
+  function toggleResolved() {
+    const q = new URLSearchParams(params.toString());
+    if (showResolved) q.delete("resolved"); else q.set("resolved", "1");
+    router.push(`/admin/support${q.toString() ? `?${q}` : ""}`);
   }
 
   async function act(body: Record<string, unknown>) {
@@ -100,21 +128,38 @@ export function SupportQueueClient({
         setReply("");
         await open(selected);
       }
+      // Keep the open thread truthful even if the row leaves the list on refresh.
+      if (body.action === "resolve") setLastRow({ ...selected, status: "resolved" });
+      if (body.action === "assign") {
+        const id = (body.assigneeId as string | null) ?? null;
+        setLastRow({ ...selected, assignedTo: id, assigneeName: id ? (id === currentStaffId ? "You" : staff.find((s) => s.id === id)?.name ?? null) : null });
+      }
       router.refresh();
     } finally {
       setBusy(false);
     }
   }
 
+  const toggle = (
+    <label className="mb-3 inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+      <input type="checkbox" checked={showResolved} onChange={toggleResolved} /> Show resolved
+    </label>
+  );
+
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-        No open support requests. Founder help requests and questions land here.
+      <div>
+        {toggle}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+          {showResolved ? "No support requests yet." : "No open support requests. Founder help requests and questions land here."}
+        </div>
       </div>
     );
   }
 
   return (
+    <div>
+    {toggle}
     <div className="grid gap-4 lg:grid-cols-[1.1fr_1.4fr]">
       {/* Queue list */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -231,6 +276,7 @@ export function SupportQueueClient({
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

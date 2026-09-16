@@ -9,12 +9,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminSupportPage() {
+export default async function AdminSupportPage({ searchParams }: { searchParams: Promise<{ resolved?: string; request?: string }> }) {
+  const sp = await searchParams;
+  const showResolved = sp.resolved === "1";
   const profile = await requireRole(["admin", "analyst"]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as unknown as SupabaseClient<any>;
 
-  const queue = await listSupportQueue(admin as unknown as Parameters<typeof listSupportQueue>[0]);
+  const queue = await listSupportQueue(admin as unknown as Parameters<typeof listSupportQueue>[0], { includeResolved: showResolved });
 
   const companyIds = [...new Set(queue.map((q) => q.company_id))];
   const personIds = [...new Set([...queue.map((q) => q.founder_id), ...queue.map((q) => q.assigned_to).filter(Boolean) as string[]])];
@@ -59,9 +61,9 @@ export default async function AdminSupportPage() {
           eyebrow="Support"
           title="Support queue"
           description="Founder help requests and questions — assign, reply, and resolve in one place."
-          metadata={`${rows.length} open`}
+          metadata={`${rows.filter((r) => r.status !== "resolved").length} open`}
         />
-        <SupportQueueClient rows={rows} staff={staffOptions} currentStaffId={profile.id} />
+        <SupportQueueClient rows={rows} staff={staffOptions} currentStaffId={profile.id} showResolved={showResolved} />
       </WorkspacePageContainer>
     </AppShell>
   );

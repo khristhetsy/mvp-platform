@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getSupportThread, setSupportCsat } from "@/lib/support/support";
+import { getSupportThread, setSupportCsat, staffSupportLink } from "@/lib/support/support";
 import { createNotification } from "@/lib/notifications/notifications";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +30,18 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!parsed.success) return NextResponse.json({ error: "A rating is required." }, { status: 400 });
 
   const supabase = await createServerSupabaseClient();
+  // RLS would silently match zero rows for someone else's request; say so instead of "ok".
+  const thread = await getSupportThread(supabase, id);
+  if (!thread || thread.request.founder_id !== profile.id) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   const result = await setSupportCsat(supabase, id, parsed.data.csat);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
   // A thumbs-down flags the handling/assigned staff so they can follow up.
   if (parsed.data.csat === -1) {
     try {
-      const thread = await getSupportThread(supabase, id);
-      if (thread?.request.assigned_to) {
+      if (thread.request.assigned_to) {
         await createNotification({
           recipientUserId: thread.request.assigned_to,
           type: "support_csat_negative",
@@ -45,6 +49,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           message: thread.request.subject,
           entityType: "company",
           entityId: thread.request.company_id,
+          deepLink: staffSupportLink(id),
         });
       }
     } catch {

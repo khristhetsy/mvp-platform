@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { addSupportMessage, getSupportThread } from "@/lib/support/support";
+import { addSupportMessage, getSupportThread, staffSupportLink } from "@/lib/support/support";
 import { createNotification } from "@/lib/notifications/notifications";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         message: thread.request.subject,
         entityType: "company",
         entityId: thread.request.company_id,
+        deepLink: staffSupportLink(id),
       });
     }
   } catch {

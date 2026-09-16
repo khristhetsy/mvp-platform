@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 /**
  * Founder "Request help" entry point. Pre-fills the stage/item so the request
@@ -10,6 +11,7 @@ export function RequestHelpButton({
   contextItem = null,
   contextStage = null,
 }: Readonly<{ contextItem?: string | null; contextStage?: string | null }>) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -36,6 +38,8 @@ export function RequestHelpButton({
         return;
       }
       setSent(true);
+      // The page lists the founder's requests server-side; pull it again so the new one shows.
+      router.refresh();
     } catch {
       setError("Network error. Try again.");
     } finally {
