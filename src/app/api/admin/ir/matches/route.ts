@@ -16,6 +16,8 @@ const schema = z.object({
   milestoneId: z.string().uuid().nullish(),
   investorContactIds: z.array(z.string().uuid()).min(1).max(500),
   assigneeId: z.string().uuid().nullish(),
+  /** From the matching queue: what the engine said about each investor at confirm time. */
+  meta: z.record(z.string().uuid(), z.object({ fitTier: z.enum(["high", "medium", "low"]).nullish(), dataSource: z.string().nullish() })).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -33,7 +35,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       if (!task || task.project_id !== d.projectId) return NextResponse.json({ error: "Task not found on this project." }, { status: 404 });
       milestoneId = milestoneId ?? task.milestone_id;
     }
-    const r = await createMatches({ projectId: d.projectId, taskId: d.taskId ?? null, milestoneId, investorContactIds: d.investorContactIds, assigneeId: d.assigneeId ?? project.owner_id, createdBy: profile.id });
+    const fitTiers: Record<string, "high" | "medium" | "low" | null> = {}, dataSources: Record<string, string | null> = {};
+    for (const [id, m] of Object.entries(d.meta ?? {})) { fitTiers[id] = m.fitTier ?? null; dataSources[id] = m.dataSource ?? null; }
+    const r = await createMatches({ projectId: d.projectId, taskId: d.taskId ?? null, milestoneId, investorContactIds: d.investorContactIds, assigneeId: d.assigneeId ?? project.owner_id, createdBy: profile.id, fitTiers, dataSources });
     return NextResponse.json(r);
   } catch (e) { return failed(e, "Couldn't add the investors."); }
 }
