@@ -58,7 +58,15 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/marketing/settings/notifications", label: "Settings"  },
         ],
       },
-      { href: "/admin/playbook", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard" },
+      {
+        href: "/admin/ir", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/ir",          label: "Dashboard"   },
+          { href: "/admin/ir/projects", label: "Projects"    },
+          { href: "/admin/playbook",    label: "Playbook"    },
+          { href: "/admin/ir/import",   label: "Odoo import" },
+        ],
+      },
       { href: "/admin/social", label: "Social Media Hub", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/events",

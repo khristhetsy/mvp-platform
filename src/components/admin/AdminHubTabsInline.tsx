@@ -8,12 +8,14 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SALES_HUB_TABS } from "@/app/admin/sales/SalesHubTabs";
+import { IR_HUB_TABS } from "@/app/admin/ir/IrHubTabs";
 
 const HUBS: { prefix: string; label: string }[] = [
   { prefix: "/admin/sales", label: "Sales" },
   { prefix: "/admin/marketing", label: "Marketing" },
   { prefix: "/admin/operations-hub", label: "Operations" },
   { prefix: "/admin/investors", label: "Investors" },
+  { prefix: "/admin/ir", label: "Investor relations" },
   { prefix: "/admin/playbook", label: "Investor relations" },
   { prefix: "/admin/ceo", label: "CEO" },
 ];
@@ -26,7 +28,7 @@ export function AdminHubTabsInline() {
 
   const viewAs = searchParams.get("viewAs");
   const suffix = viewAs && viewAs !== "team" ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
-  const tabs = hub.prefix === "/admin/sales" ? SALES_HUB_TABS : [];
+  const tabs = hub.prefix === "/admin/sales" ? SALES_HUB_TABS : hub.label === "Investor relations" ? IR_HUB_TABS : [];
 
   return (
     <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
