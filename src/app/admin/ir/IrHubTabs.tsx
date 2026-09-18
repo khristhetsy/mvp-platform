@@ -15,7 +15,6 @@ export const IR_HUB_TABS: { label: string; href: string }[] = [
   { label: "Share Project", href: "/admin/ir/matches" },
   { label: "Founder report", href: "/admin/ir/report" },
   { label: "Odoo import", href: "/admin/ir/import" },
-  { label: "Playbook", href: "/admin/playbook" },
 ];
 
 /** The active tab is the longest href the path sits under (so /projects/new lights Create project, not Projects); the hub root only when exact. */
