@@ -181,6 +181,13 @@ function computeOverallScore(docs: UploadedDoc[], naTypes: Set<string>): number 
   return Math.min(raw, 100);
 }
 
+/** Active files in a category — a category is satisfied by its first file; extra files add evidence, not points. */
+function fileCount(spec: DocSpec, docs: UploadedDoc[]): number {
+  const aliases: Record<string, string[]> = { FINANCIALS: ["FINANCIAL_STATEMENTS"], LEGAL_DOCUMENT: ["LEGAL_DOCUMENTS"] };
+  const matchCodes = new Set([spec.typeCode, ...(aliases[spec.typeCode] ?? [])]);
+  return docs.filter((d) => d.document_type && matchCodes.has(d.document_type.toUpperCase()) && (d.status ?? "").toLowerCase() !== "archived").length;
+}
+
 function isUploaded(spec: DocSpec, docs: UploadedDoc[]): boolean {
   const aliases: Record<string, string[]> = {
     FINANCIALS: ["FINANCIAL_STATEMENTS"],
@@ -202,7 +209,7 @@ function isUploaded(spec: DocSpec, docs: UploadedDoc[]): boolean {
 // Document card
 // ---------------------------------------------------------------------------
 
-function DocCard({ spec, uploaded, notApplicable }: { spec: DocSpec; uploaded: boolean; notApplicable: boolean }) {
+function DocCard({ spec, uploaded, notApplicable, count = 0 }: { spec: DocSpec; uploaded: boolean; notApplicable: boolean; count?: number }) {
   const t = useTranslations("founderCmp");
   const [expanded, setExpanded] = useState(false);
 
@@ -249,7 +256,7 @@ function DocCard({ spec, uploaded, notApplicable }: { spec: DocSpec; uploaded: b
               {notApplicable
                 ? "Not applicable — excluded from your score"
                 : uploaded
-                ? "Uploaded"
+                ? `${count} file${count === 1 ? "" : "s"}`
                 : spec.critical
                 ? "Missing — critical for investor conversations"
                 : "Not uploaded"}
@@ -396,6 +403,7 @@ export function DocumentQualityPanel({ documents, notApplicableTypes = [] }: Pro
               key={spec.typeCode}
               spec={spec}
               uploaded={isUploaded(spec, documents)}
+              count={fileCount(spec, documents)}
               notApplicable={specIsNotApplicable(spec, naTypes)}
             />
           ))}

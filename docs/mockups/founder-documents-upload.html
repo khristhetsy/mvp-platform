@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Founder documents · upload with type at the point of upload · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+h2{font-size:15px;margin:22px 0 6px}.note{font-size:12px;color:#5B6B86;margin:0 0 8px;max-width:1040px}
+.frame{width:1040px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:18px 20px}
+.frame *{box-sizing:border-box}
+.two{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+.drop{border:2px dashed #C7D2FE;border-radius:12px;padding:26px;text-align:center;background:#F8FAFF}
+.drop b{display:block;font-size:14px}.drop small{display:block;color:#5B6B86;font-size:12px;margin-top:4px}
+.btn{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#0A1A40;border-color:#0A1A40;color:#fff}.btn.ind{background:#4F46E5;border-color:#4F46E5;color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.chip{font-size:11.5px;padding:4px 10px;border-radius:14px;border:1px solid #C9D3E3;background:#fff}.chip.miss{border-color:#FCD34D;background:#FFFBEB;color:#92400E}.chip.ok{border-color:#A7F3D0;background:#ECFDF5;color:#065F46}
+.modal{border:1px solid #D6DDE8;border-radius:12px;box-shadow:0 14px 34px rgba(10,26,64,.16);padding:18px;background:#fff}
+.modal h3{margin:0;font-size:15px}.modal p{margin:4px 0 12px;font-size:12.5px;color:#5B6B86}
+.file{display:flex;align-items:center;gap:10px;border:1px solid #E2E7F0;border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:12px}.file .ic{width:32px;height:32px;border-radius:8px;background:#FEE2E2;color:#B42323;display:grid;place-items:center;font-size:10px;font-weight:700}
+.types{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.t{border:1px solid #E2E7F0;border-radius:9px;padding:9px 10px;font-size:12.5px;display:flex;align-items:center;gap:8px}.t i{font-style:normal;font-size:10.5px;color:#5B6B86;margin-left:auto}
+.t.on{border-color:#4F46E5;background:#EEF2FF;font-weight:500}.t.sug{border-color:#A7F3D0}
+.radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #94A3B8;display:inline-block}.on .radio{border:4px solid #4F46E5}
+.lbl{font-size:11px;color:#5B6B86;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
+.inp{height:34px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;font-size:12.5px;display:flex;align-items:center;color:#8A98B3}
+.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th{text-align:left;font-size:11px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}td{padding:9px 10px;border-bottom:1px solid #EEF1F6;vertical-align:top}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:#EEF1F6;color:#334155}.tag.b{background:#EAF1FD;color:#1A5FC8}.tag.g{background:#E7F7EE;color:#137A3B}.tag.a{background:#FFF4DE;color:#9A5B00}
+.pill{font-size:11px;padding:2px 8px;border-radius:10px;background:#E7F7EE;color:#137A3B}
+</style></head><body>
+
+<h2>1. Upload — pick the file first, then say what it is</h2>
+<p class="note">The type list on the left stops being the way in. One drop zone accepts a PDF (drag or Choose file); a dialog then asks for the document type, pre-selecting a guess from the filename ("Cap table.pdf" → Cap Table). The checklist below the drop zone shows what's still missing and stays clickable as a shortcut that opens the same dialog with the type pre-filled.</p>
+<div class="frame"><div class="two">
+  <div>
+    <div class="drop"><b>Drop a PDF here, or</b><small>up to 25 MB · PDF only · scanned image-only PDFs can't be read</small><div style="margin-top:12px"><span class="btn ind">Choose file</span></div></div>
+    <div class="lbl">Uploading for Cognitive Science &amp; Solutions, Inc</div>
+    <div class="chips"><span class="chip ok">✓ Pitch Deck</span><span class="chip ok">✓ Business Plan</span><span class="chip ok">✓ Financials</span><span class="chip ok">✓ Cap Table</span><span class="chip ok">✓ Team Bios</span><span class="chip ok">✓ Legal Documents</span><span class="chip ok">✓ Corporate Documents</span><span class="chip miss">Customer Contracts · missing</span><span class="chip ok">✓ Market Research</span><span class="chip">Other</span></div>
+    <p class="note" style="margin-top:8px">Missing chips open the dialog with that type selected. "Replace" on an uploaded row does the same and archives the old file.</p>
+  </div>
+  <div class="modal">
+    <h3>What is this document?</h3><p>Pick one — it decides which section of the diligence report reads it.</p>
+    <div class="file"><span class="ic">PDF</span><span><b>Acme MSA — signed.pdf</b><br><span style="color:#5B6B86">1.2 MB · 14 pages · text found ✓</span></span></div>
+    <div class="types">
+      <div class="t"><span class="radio"></span>Pitch Deck<i>uploaded</i></div><div class="t"><span class="radio"></span>Business Plan<i>uploaded</i></div>
+      <div class="t"><span class="radio"></span>Financials<i>uploaded</i></div><div class="t"><span class="radio"></span>Cap Table<i>uploaded</i></div>
+      <div class="t"><span class="radio"></span>Team Bios<i>uploaded</i></div><div class="t"><span class="radio"></span>Legal Documents<i>uploaded</i></div>
+      <div class="t"><span class="radio"></span>Corporate Documents<i>uploaded</i></div><div class="t on sug"><span class="radio"></span>Customer Contracts<i>suggested · missing</i></div>
+      <div class="t"><span class="radio"></span>Market Research<i>uploaded</i></div><div class="t"><span class="radio"></span>Other<i>any count</i></div>
+    </div>
+    <div class="lbl">Label (optional — shown to investors and in the report)</div><div class="inp">e.g. Acme Corp master services agreement</div>
+    <div class="foot"><span class="btn">Cancel</span><span class="btn pri">Upload as Customer Contracts</span></div>
+  </div>
+</div></div>
+
+<h2>2. After upload — same row, same sync, whatever the type</h2>
+<p class="note">Every upload, including Other, goes through the one pipeline: stored → text extracted → AI summary → data layer (documents table, readiness checklist, data room) → diligence report. Nothing is type-gated. The Uploaded files list shows where each file landed.</p>
+<div class="frame">
+  <table><tr><th>File</th><th>Type</th><th>Label</th><th>Status</th><th>Read by</th><th></th></tr>
+    <tr><td>Acme MSA — signed.pdf</td><td><span class="tag b">Customer Contracts</span></td><td>Acme Corp MSA</td><td><span class="pill">summarised · in report</span></td><td>Financial review (traction), risk flags, data room</td><td>Replace · Archive</td></tr>
+    <tr><td>Jane Founders Company Business plan.pdf</td><td><span class="tag b">Business Plan</span></td><td>—</td><td><span class="pill">summarised · in report</span></td><td>Business overview, Market review</td><td>Replace · Archive</td></tr>
+    <tr><td>Board consent — 2026-03.pdf</td><td><span class="tag b">Corporate Documents</span></td><td>Board consent Mar 2026</td><td><span class="pill">summarised · in report</span></td><td>Legal &amp; compliance review</td><td>Replace · Archive</td></tr>
+    <tr><td>Grant award letter.pdf</td><td><span class="tag">Other</span></td><td>NSF SBIR Phase I award</td><td><span class="pill">summarised · in report</span></td><td>Executive summary, risk flags, data room</td><td>Archive</td></tr>
+    <tr><td>Deck v3 (old).pdf</td><td><span class="tag b">Pitch Deck</span></td><td>—</td><td><span class="tag a">archived</span></td><td>—</td><td>Restore</td></tr></table>
+</div>
+
+<h2>3. Where each type feeds the AI diligence report</h2>
+<p class="note">Today the report grounds five sections in five named types and only uses the rest for risk flags. This wires the other five in so every type has a home; "Other" is summarised and offered to every section plus the executive summary.</p>
+<div class="frame">
+  <table><tr><th>Document type</th><th>Report section(s)</th><th>Also feeds</th></tr>
+    <tr><td>Pitch Deck</td><td>Executive summary · Business overview</td><td>Pitch deck analyzer, one-pager</td></tr>
+    <tr><td>Business Plan</td><td>Business overview · Market review</td><td>Readiness checklist</td></tr>
+    <tr><td>Financials</td><td>Financial review</td><td>Valuation Studio, CRR financial dimension</td></tr>
+    <tr><td>Cap Table</td><td>Financial review (ownership) · Legal &amp; compliance</td><td>Cap table module, CRR cap-table dimension</td></tr>
+    <tr><td>Team Bios</td><td>Team review</td><td>CRR team dimension</td></tr>
+    <tr><td>Legal Documents</td><td>Legal &amp; compliance review</td><td>Compliance events</td></tr>
+    <tr><td>Corporate Documents</td><td>Legal &amp; compliance review</td><td>—</td></tr>
+    <tr><td><b>Customer Contracts</b> <span class="tag g">new wiring</span></td><td>Financial review (traction &amp; LOIs) · Business overview</td><td>CRR traction dimension</td></tr>
+    <tr><td><b>Market Research</b> <span class="tag g">new wiring</span></td><td>Market review</td><td>Market claim grader</td></tr>
+    <tr><td><b>Other</b> <span class="tag g">new wiring</span></td><td>Executive summary · any section it supports · risk flags</td><td>Data room only (no score dimension)</td></tr></table>
+</div>
+</body></html>

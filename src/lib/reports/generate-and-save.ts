@@ -83,10 +83,12 @@ export async function generateAndSaveDiligenceReport(
   // of coming back "Not provided." Best-effort: never blocks report generation.
   await ensureCompanyDocumentSummaries(db as unknown as SupabaseClient<Database>, companyId).catch(() => null);
 
+  // Every ACTIVE file in every category is read — several per type is normal now.
   const { data: documents } = await db
     .from("documents")
-    .select("document_type, ai_summary")
-    .eq("company_id", companyId);
+    .select("document_type, ai_summary, file_name, label")
+    .eq("company_id", companyId)
+    .neq("status", "archived");
 
   // Document types the founder marked "not applicable" — excluded from missing.
   const notApplicableDocumentTypes = await loadNotApplicableTypes(db as unknown as SupabaseClient, companyId).catch(() => [] as string[]);
@@ -98,7 +100,7 @@ export async function generateAndSaveDiligenceReport(
     documentSummariesByType:
       documents?.flatMap((d) =>
         d.ai_summary
-          ? [{ type: titleCaseDocumentType((d.document_type as string) ?? ""), summary: d.ai_summary as string }]
+          ? [{ type: titleCaseDocumentType((d.document_type as string) ?? ""), file: ((d.label as string | null) ?? (d.file_name as string | null) ?? "document"), summary: d.ai_summary as string }]
           : [],
       ) ?? [],
     uploadedDocumentTypes:

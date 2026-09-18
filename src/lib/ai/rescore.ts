@@ -22,7 +22,8 @@ export async function rescoreCompanyReadiness(
   const { data: documents } = await supabase
     .from("documents")
     .select("document_type, ai_summary")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .neq("status", "archived");
 
   const documentSummaries = (documents ?? [])
     .filter((d) => d.ai_summary && d.document_type)

@@ -7,7 +7,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { DocumentUploadForm } from "@/components/DocumentUploadForm";
+import { DocumentUploadForm, type CategoryFile } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -56,19 +56,13 @@ export default async function DocumentUploadPage() {
   const uploadLimits = await getUploadLimits();
   const maxUploadBytes = uploadLimits.maxMb * 1024 * 1024;
 
-  const existingByType: Record<string, { fileName?: string | null } | undefined> = {};
+  // Active files per category (newest first). Archived rows stay out of the folders.
+  const filesByType: Record<string, CategoryFile[]> = {};
   for (const type of FOUNDER_DOCUMENT_TYPES) {
     const matchValues = new Set([type.value, ...(type.aliases ?? [])].map((v) => v.toUpperCase()));
-    const latest =
-      (documents ?? []).find(
-        (doc) =>
-          doc.document_type &&
-          matchValues.has(String(doc.document_type).toUpperCase()) &&
-          String(doc.status ?? "").toLowerCase() !== "archived",
-      ) ?? null;
-    if (latest) {
-      existingByType[type.value.toUpperCase()] = { fileName: latest.file_name ?? null };
-    }
+    filesByType[type.value.toUpperCase()] = (documents ?? [])
+      .filter((doc) => doc.document_type && matchValues.has(String(doc.document_type).toUpperCase()) && String(doc.status ?? "").toLowerCase() !== "archived")
+      .map((doc) => ({ id: doc.id, fileName: doc.file_name ?? "document.pdf", label: doc.label ?? null, createdAt: doc.created_at, summarized: Boolean(doc.ai_summary) }));
   }
 
   const debugEnabled = process.env.NODE_ENV !== "production";
@@ -135,7 +129,7 @@ export default async function DocumentUploadPage() {
               companyId={company.id}
               companyName={company.company_name}
               documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value }) => ({ label, value }))}
-              existingByType={existingByType}
+              filesByType={filesByType}
               notApplicableTypes={notApplicableTypes}
               maxUploadBytes={maxUploadBytes}
               maxPages={uploadLimits.maxPages}
@@ -182,7 +176,7 @@ export default async function DocumentUploadPage() {
                   return (
                     <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</p>
+                        <p className="truncate font-medium text-slate-800">{document.label ?? document.file_name ?? document.document_type}</p>
                         {typeLabel && (
                           <p className="text-xs text-slate-400">{typeLabel}</p>
                         )}

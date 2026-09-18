@@ -116,6 +116,9 @@ export async function POST(request: Request) {
   // metadata instead of the file bytes, bypassing the serverless ~4.5 MB request
   // body limit. Small uploads still send the file directly.
   const providedPath = typeof formData.get("storagePath") === "string" ? (formData.get("storagePath") as string) : null;
+  // Many files per category: uploads ADD by default. "Replace" names the one row to archive.
+  const label = typeof formData.get("label") === "string" ? (formData.get("label") as string).trim().slice(0, 160) || null : null;
+  const replaceDocumentId = typeof formData.get("replaceDocumentId") === "string" && /^[0-9a-f-]{36}$/i.test(formData.get("replaceDocumentId") as string) ? (formData.get("replaceDocumentId") as string) : null;
 
   if (!parsed.success || (!(file instanceof File) && !providedPath)) {
     return NextResponse.json(
@@ -281,15 +284,15 @@ export async function POST(request: Request) {
   // After ownership verification, use service role for all writes/reads to avoid RLS flakiness.
   const admin = createServiceRoleClient();
 
-  const { data: existingDocument, error: existingError } = await admin
-    .from("documents")
-    .select("id, document_type, status")
-    .eq("company_id", companyId)
-    .eq("document_type", normalizedDocumentType)
-    .neq("status", "archived")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: existingDocument, error: existingError } = replaceDocumentId
+    ? await admin
+        .from("documents")
+        .select("id, document_type, status")
+        .eq("company_id", companyId)
+        .eq("id", replaceDocumentId)
+        .neq("status", "archived")
+        .maybeSingle()
+    : { data: null, error: null };
 
   if (existingError) {
     return NextResponse.json(
@@ -343,51 +346,11 @@ export async function POST(request: Request) {
   }
   }
 
-  // Replacement behavior:
-  // - For PITCH_DECK: update the existing row to avoid the unique index on (company_id) where document_type = 'PITCH_DECK'.
-  // - For other document types: archive the prior active row (if present) and insert a new row as the latest version.
+  // Add-or-replace: a plain upload adds a file to its category; a replace archives exactly the
+  // named prior file, then inserts the new one as its own row (pitch decks included).
   let documentId: string | null = null;
-  let operation: "insert" | "update" = "insert";
-
-  if (existingDocument?.id && normalizedDocumentType === "PITCH_DECK") {
-    const { data: updated, error: updateError } = await admin
-      .from("documents")
-      .update({
-        uploaded_by: authUserId,
-        document_type: normalizedDocumentType,
-        file_name: uploadName,
-        file_path: filePath,
-        file_url: null,
-        mime_type: uploadType,
-        size_bytes: uploadSize,
-        status: "uploaded",
-      })
-      .eq("id", existingDocument.id)
-      .select("id")
-      .single();
-
-    if (updateError || !updated?.id) {
-      return NextResponse.json(
-        {
-          stage: "documents_update",
-          clientUsed: "service_role",
-          error: updateError?.message ?? "Unable to replace document.",
-          ...(debugRequested
-            ? {
-                debug: await buildDebug({
-                  stage: "documents_update_failed",
-                  supabaseErrorCode: updateError?.code ?? null,
-                  supabaseErrorMessage: (updateError?.message ?? "").slice(0, 300),
-                }),
-              }
-            : {}),
-        },
-        { status: 400 },
-      );
-    }
-    documentId = updated.id;
-    operation = "update";
-  } else {
+  const operation: "insert" | "update" = existingDocument?.id ? "update" : "insert";
+  {
     if (existingDocument?.id) {
       const { error: archiveError } = await admin
         .from("documents")
@@ -423,6 +386,7 @@ export async function POST(request: Request) {
       mime_type: uploadType,
       size_bytes: uploadSize,
       status: "uploaded",
+      label,
     } as const;
 
     const { data: inserted, error: documentError } = await createDocumentRecord(admin, {

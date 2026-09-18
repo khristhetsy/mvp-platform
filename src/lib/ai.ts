@@ -10,7 +10,7 @@ type AnalysisInput = {
   documentSummaries: string[];
   /** Per-document summaries tagged with their document type, so each review
    *  section can be grounded in the right source (business plan, team bios…). */
-  documentSummariesByType?: Array<{ type: string; summary: string }>;
+  documentSummariesByType?: Array<{ type: string; file?: string; summary: string }>;
   uploadedDocumentTypes: string[];
   /** Document types the founder marked "not applicable" (e.g. no customer
    *  contracts for this business) — excluded from the missing list. */
@@ -104,7 +104,7 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
         '{ "executiveSummary": string, "sections": [{ "title": string, "body": string }], "riskFlags": string[] }',
         "The sections array MUST contain exactly these titles, in this order, using these exact strings:",
         '"Business overview", "Financial review", "Market review", "Legal & compliance review", "Team review".',
-        "Each entry in documentsByType has a `type` (the document) and its `summary`. Ground each section in its designated source document:",
+        "Each entry in documentsByType has a `type` (the category), a `file` (the individual document's name) and its `summary`. A category may contain SEVERAL files — read all of them and, when useful, name the file you are drawing from. Ground each section in its designated source category:",
         '"Business overview" and "Market review" come from the "Business Plan" document.',
         '"Financial review" comes from the "Financial Statements" document. Every company needs financial reporting regardless of revenue stage; if no "Financial Statements" document is present, set "Financial review" to exactly "Not provided." and add a risk flag noting financial statements are required.',
         '"Team review" comes from the "Team Bios" document.',

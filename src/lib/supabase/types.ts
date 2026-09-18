@@ -65,6 +65,7 @@ export type DocumentRecord = {
   mime_type: string | null;
   size_bytes: number | null;
   ai_summary: string | null;
+  label: string | null;
   status: string | null;
   is_approved: boolean;
   created_at: string;

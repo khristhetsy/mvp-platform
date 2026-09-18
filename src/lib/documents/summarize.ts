@@ -116,7 +116,7 @@ export async function listDocumentsNeedingSummary(
   let q = admin
     .from("documents")
     .select("id, company_id, ai_summary, file_path")
-    .is("ai_summary", null)
+    .is("ai_summary", null).neq("status", "archived")
     .not("file_path", "is", null)
     .order("created_at", { ascending: false })
     .limit(opts.limit ?? 15);
