@@ -1548,7 +1548,7 @@ export type Database = {
           overridden_at: string | null;
           effective_score: number;
           scored_by: string;
-          score_version: number;
+          score_version: string;
           document_count: number;
           outreach_unlocked: boolean;
           created_at: string;
