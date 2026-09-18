@@ -1,6 +1,17 @@
-import { redirect } from "next/navigation";
+import { AppShell } from "@/components/AppShell";
+import { requireRole } from "@/lib/supabase/auth";
+import { IrHubHeader } from "./IrHubTabs";
+import { DashboardClient } from "./DashboardClient";
 
-/** Dashboard lands in Phase 3 (goals + trend + lifecycle). Until then the hub opens on Projects. */
-export default function IrHubPage() {
-  redirect("/admin/ir/projects");
+export const dynamic = "force-dynamic";
+export const metadata = { title: "IR Dashboard" };
+
+export default async function IrHubPage() {
+  const profile = await requireRole(["admin", "analyst"]);
+  return (
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+      <IrHubHeader />
+      <DashboardClient />
+    </AppShell>
+  );
 }

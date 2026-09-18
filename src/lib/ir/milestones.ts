@@ -43,8 +43,9 @@ export function generateMilestones(startDate: string, termMonths: number): Miles
 }
 
 /** The milestone (of a kind) that contains `date`, or null when outside the term. */
-export function milestoneOn<T extends { startsOn: string; endsOn: string }>(list: T[], date: string): T | null {
-  return list.find((m) => m.startsOn <= date && date < m.endsOn) ?? null;
+export function milestoneOn<T extends { startsOn: string; endsOn: string } | { starts_on: string; ends_on: string }>(list: T[], date: string): T | null {
+  const bounds = (m: T) => ("startsOn" in m ? [m.startsOn, m.endsOn] : [m.starts_on, m.ends_on]);
+  return list.find((m) => { const [s, e] = bounds(m); return s <= date && date < e; }) ?? null;
 }
 
 /** "Apr 22 to May 19, 2026" — last day inclusive. */

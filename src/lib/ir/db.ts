@@ -5,6 +5,7 @@
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { generateMilestones } from "@/lib/ir/milestones";
+import type { GoalMetric, PeriodKind } from "@/lib/ir/metrics";
 import { INTRO_DUE_DAYS, INTRO_SUBJECT, type IrActivity, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrStage, type IrTask, type StaffOption } from "@/lib/ir/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -272,4 +273,80 @@ export async function projectCounts(projectIds: string[]): Promise<Map<string, {
     else if (r.type === "meeting") c.meetingsHeld++;
   }
   return out;
+}
+
+// ── Goals (dashboard) ───────────────────────────────────────────────────────
+export type IrGoal = { id: string; project_id: string | null; assignee_id: string | null; metric: GoalMetric; period_kind: PeriodKind; period_start: string; period_end: string; target: number };
+
+/** Goal rows whose period starts inside [from, to). */
+export async function listGoals(where: { kind?: PeriodKind; from?: string; to?: string; projectIds?: string[] } = {}): Promise<IrGoal[]> {
+  let q = db().from("ir_goals").select("id, project_id, assignee_id, metric, period_kind, period_start, period_end, target");
+  if (where.kind) q = q.eq("period_kind", where.kind);
+  if (where.from) q = q.gte("period_start", where.from);
+  if (where.to) q = q.lt("period_start", where.to);
+  const { data, error } = await q.limit(5000);
+  if (error) throw new Error(`listGoals: ${error.message}`);
+  const rows = (data ?? []) as IrGoal[];
+  return where.projectIds ? rows.filter((g) => g.project_id === null || where.projectIds!.includes(g.project_id)) : rows;
+}
+
+/** Replace the targets for one period: a null/absent target removes the row. Only project-level and firm-wide rows (assignee null). */
+export async function saveGoals(input: { kind: PeriodKind; start: string; end: string; rows: Array<{ projectId: string | null; metric: GoalMetric; target: number | null }>; by: string }): Promise<void> {
+  const client = db();
+  const existing = (await listGoals({ kind: input.kind, from: input.start, to: addDaysIso(input.start, 1) })).filter((g) => g.period_start === input.start && !g.assignee_id);
+  const key = (p: string | null, m: string) => `${p ?? "firm"}:${m}`;
+  const have = new Map(existing.map((g) => [key(g.project_id, g.metric), g]));
+  const inserts: Array<Record<string, unknown>> = [];
+  for (const r of input.rows) {
+    const cur = have.get(key(r.projectId, r.metric));
+    if (r.target == null || Number.isNaN(r.target)) {
+      if (cur) { const { error } = await client.from("ir_goals").delete().eq("id", cur.id); if (error) throw new Error(`saveGoals: ${error.message}`); }
+      continue;
+    }
+    if (cur) {
+      if (Number(cur.target) !== r.target) { const { error } = await client.from("ir_goals").update({ target: r.target }).eq("id", cur.id); if (error) throw new Error(`saveGoals: ${error.message}`); }
+    } else {
+      inserts.push({ project_id: r.projectId, assignee_id: null, metric: r.metric, period_kind: input.kind, period_start: input.start, period_end: input.end, target: r.target, created_by: input.by });
+    }
+  }
+  if (inserts.length) { const { error } = await client.from("ir_goals").insert(inserts); if (error) throw new Error(`saveGoals: ${error.message}`); }
+}
+function addDaysIso(day: string, n: number): string { const d = new Date(`${day}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+
+// ── Reports (founder report snapshots) ─────────────────────────────────────
+export type IrReportRow = { id: string; project_id: string; period_kind: "week" | "month" | "custom"; period_start: string; period_end: string; exec_summary: Record<string, unknown>; metrics: Record<string, unknown>; approved_by: string | null; approved_at: string | null; sent_to: string | null; sent_at: string | null; created_by: string; created_at: string; updated_at: string };
+const REPORT_COLS = "id, project_id, period_kind, period_start, period_end, exec_summary, metrics, approved_by, approved_at, sent_to, sent_at, created_by, created_at, updated_at";
+
+export async function findReport(projectId: string, period: { kind: string; start: string; end: string }): Promise<IrReportRow | null> {
+  const { data } = await db().from("ir_reports").select(REPORT_COLS).eq("project_id", projectId).eq("period_kind", period.kind).eq("period_start", period.start).eq("period_end", period.end).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  return (data as IrReportRow | null) ?? null;
+}
+export async function getReport(id: string): Promise<IrReportRow | null> {
+  const { data } = await db().from("ir_reports").select(REPORT_COLS).eq("id", id).maybeSingle();
+  return (data as IrReportRow | null) ?? null;
+}
+export async function upsertReport(input: { projectId: string; period: { kind: string; start: string; end: string }; execSummary: Record<string, unknown>; metrics: Record<string, unknown>; approve: boolean; by: string }): Promise<IrReportRow> {
+  const cur = await findReport(input.projectId, input.period);
+  const stamp = new Date().toISOString();
+  const patch = { exec_summary: input.execSummary, metrics: input.metrics, approved_by: input.approve ? input.by : null, approved_at: input.approve ? stamp : null, updated_at: stamp };
+  if (cur) return must(await db().from("ir_reports").update(patch).eq("id", cur.id).select(REPORT_COLS).single(), "upsertReport") as IrReportRow;
+  return must(await db().from("ir_reports").insert({ project_id: input.projectId, period_kind: input.period.kind, period_start: input.period.start, period_end: input.period.end, created_by: input.by, ...patch }).select(REPORT_COLS).single(), "upsertReport") as IrReportRow;
+}
+export async function markReportSent(id: string, to: string): Promise<void> {
+  const { error } = await db().from("ir_reports").update({ sent_to: to, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw new Error(`markReportSent: ${error.message}`);
+}
+
+/** Founder's email for the report — from the project's founder contact, else the company's founder profile. Staff-only. */
+export async function founderEmail(project: { founder_contact_id: string | null; company_id: string | null }): Promise<string | null> {
+  if (project.founder_contact_id) {
+    const { data } = await db().from("crm_contacts").select("email").eq("id", project.founder_contact_id).maybeSingle();
+    const e = (data as { email: string | null } | null)?.email; if (e && e.includes("@")) return e;
+  }
+  if (project.company_id) {
+    const { data } = await db().from("companies").select("founder_id").eq("id", project.company_id).maybeSingle();
+    const fid = (data as { founder_id: string | null } | null)?.founder_id;
+    if (fid) { const { data: p } = await db().from("profiles").select("email").eq("id", fid).maybeSingle(); const e = (p as { email: string | null } | null)?.email; if (e && e.includes("@")) return e; }
+  }
+  return null;
 }
