@@ -63,7 +63,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         children: [
           { href: "/admin/ir",          label: "Dashboard"   },
           { href: "/admin/ir/projects", label: "Projects"    },
-          { href: "/admin/playbook",    label: "Playbook"    },
+          { href: "/admin/ir/tasks",    label: "Tasks"       },
           { href: "/admin/ir/import",   label: "Odoo import" },
         ],
       },

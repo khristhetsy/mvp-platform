@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SALES_HUB_TABS } from "@/app/admin/sales/SalesHubTabs";
-import { IR_HUB_TABS } from "@/app/admin/ir/IrHubTabs";
+import { IR_HUB_TABS, activeHubTab } from "@/app/admin/ir/IrHubTabs";
 
 const HUBS: { prefix: string; label: string }[] = [
   { prefix: "/admin/sales", label: "Sales" },
@@ -34,7 +34,7 @@ export function AdminHubTabsInline() {
     <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
       <span className="mr-2 shrink-0 text-[13px] font-semibold text-slate-800">{hub.label}</span>
       {tabs.map((t) => {
-        const active = t.href === hub.prefix ? pathname === t.href : pathname.startsWith(t.href);
+        const active = activeHubTab(tabs, pathname, hub.prefix) === t.href;
         const href = t.href.endsWith("/settings") ? t.href : `${t.href}${suffix}`;
         return (
           <Link key={t.href} href={href} aria-current={active ? "page" : undefined}
