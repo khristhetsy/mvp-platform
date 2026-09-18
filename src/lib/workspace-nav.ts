@@ -220,6 +220,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/founder/journey", label: "My Progress" },
       { href: "/founder/actions", label: "Action Center" },
+      { href: "/founder/outreach-report", label: "Outreach report" },
     ],
   },
   {
