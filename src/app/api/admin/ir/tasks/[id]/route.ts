@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
-import { entrepreneurProfile, getProject, getTask, listActivities, listMatches, listMilestones, listNotes, listStaff, listTasks, updateTask } from "@/lib/ir/db";
+import { db, entrepreneurProfile, getProject, getTask, listActivities, listMatches, listMilestones, listNotes, listStaff, listTasks, updateTask } from "@/lib/ir/db";
 import { sendRecordMessage } from "@/lib/ir/messages";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,15 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const activities = [...taskActs, ...projectActs.filter((a) => a.match_id && matchIds.has(a.match_id) && !taskActs.some((t) => t.id === a.id))];
     const weeks = milestones.filter((m) => m.kind === "week");
     const entrepreneur = project ? await entrepreneurProfile(project) : null;
-    return NextResponse.json({ task, project, entrepreneur, weeks, months: milestones.filter((m) => m.kind === "month"), matches, activities, notes: notes.filter((n) => !n.match_id || matchIds.has(n.match_id)), staff, siblings: siblings.map((t) => ({ id: t.id, title: t.title, milestone_id: t.milestone_id })) });
+    // Odoo's contact columns for the Matching tab: phone, email, country, membership.
+    const ids = matches.map((m) => m.investor_contact_id);
+    const { data: cs } = ids.length ? await db().from("crm_contacts").select("id, email, phone, country, contact_type, raw").in("id", ids) : { data: [] };
+    const contacts: Record<string, { email: string | null; phone: string | null; country: string | null; membership: string | null }> = {};
+    for (const c of (cs ?? []) as Array<{ id: string; email: string | null; phone: string | null; country: string | null; contact_type: string | null; raw: Record<string, unknown> | null }>) {
+      const raw = c.raw ?? {}; const rp = (k: string) => { const v = raw[k]; return typeof v === "string" && v.trim() ? v : null; };
+      contacts[c.id] = { email: c.email, phone: c.phone ?? rp("phone") ?? rp("mobile"), country: c.country, membership: c.contact_type ? c.contact_type[0].toUpperCase() + c.contact_type.slice(1) : null };
+    }
+    return NextResponse.json({ task, project, entrepreneur, contacts, weeks, months: milestones.filter((m) => m.kind === "month"), matches, activities, notes: notes.filter((n) => !n.match_id || matchIds.has(n.match_id)), staff, siblings: siblings.map((t) => ({ id: t.id, title: t.title, milestone_id: t.milestone_id })) });
   } catch (e) { return failed(e, "Couldn't load the task."); }
 }
 

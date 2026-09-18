@@ -85,3 +85,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: true, ...r });
   } catch (e) { return failed(e, "Couldn't complete that."); }
 }
+
+/** DELETE → removes the investor from the project (their activities and stage history go with it). */
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  if (!(await irStaff())) return forbidden();
+  const { id } = await ctx.params;
+  try {
+    const { error } = await db().from("ir_matches").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return NextResponse.json({ ok: true });
+  } catch (e) { return failed(e, "Couldn't remove the investor."); }
+}

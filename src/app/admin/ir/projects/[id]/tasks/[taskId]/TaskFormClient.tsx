@@ -13,10 +13,12 @@ import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL,
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../../../_shared/RecordPanels";
 
-type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
+type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
+type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
 type Tab = "agent" | "subtasks" | "blocked" | "extra" | "founder" | "matching" | "meetings";
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none";
+const STAGE_LABEL: Record<IrTask["status"], string> = { new: "New", in_progress: "In progress", done: "Done" };
 
 export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: string; meId: string; initialTab: string | null; added: number }) {
   const [now] = useState(() => Date.now());
@@ -25,6 +27,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
   const [tab, setTab] = useState<Tab>((["agent", "subtasks", "blocked", "extra", "founder", "matching", "meetings"].includes(initialTab ?? "") ? initialTab : "agent") as Tab);
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
+  const [stageMenu, setStageMenu] = useState(false);
   const [notice, setNotice] = useState<string | null>(added ? `${added} investor${added === 1 ? "" : "s"} added to this week.` : null);
 
   const load = useCallback(async () => {
@@ -41,6 +44,15 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
     try {
       const r = await fetch(`/api/admin/ir/tasks/${taskId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!r.ok) { const j = await r.json().catch(() => ({})); setError(j.error ?? "Couldn't update."); }
+      await load();
+    } finally { setBusy(false); }
+  }
+  async function removeMatch(m: IrMatch) {
+    if (!window.confirm(`Remove ${m.investor_name ?? "this investor"} from ${p?.title ?? "the project"}? Their activities and stage history on this project go too.`)) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/admin/ir/matches/${m.id}`, { method: "DELETE" });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); setError(j.error ?? "Couldn't remove."); }
       await load();
     } finally { setBusy(false); }
   }
@@ -76,18 +88,27 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
           {next ? <Link href={`${base}/${next.id}`} className="rounded border border-slate-200 px-2 py-0.5 hover:bg-slate-50" title={next.title}>Next ›</Link> : <span className="rounded border border-slate-100 px-2 py-0.5 text-slate-300">Next ›</span>}
         </span>
       </div>
+      {/* Stage: big chevron bar, click a step to move; ▾ menu to pick or edit */}
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        <div className="flex" role="group" aria-label="Stage">
+          {(["new", "in_progress", "done"] as const).map((st, i) => {
+            const rank = ["new", "in_progress", "done"].indexOf(t.status); const on = t.status === st; const done = i < rank;
+            return <button key={st} type="button" disabled={busy || on} onClick={() => patch({ status: st })} className={`-ml-1.5 px-5 py-2 text-[13px] font-medium first:ml-0 ${on ? "bg-slate-900 text-white" : done ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`} style={{ clipPath: i === 0 ? "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)" : "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)" }}>{STAGE_LABEL[st]}</button>;
+          })}
+        </div>
+        <div className="relative">
+          <button type="button" onClick={() => setStageMenu((v) => !v)} aria-label="Edit stage" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13px] text-slate-700 hover:bg-slate-50">▾</button>
+          {stageMenu ? <>
+            <div className="fixed inset-0 z-20" onClick={() => setStageMenu(false)} />
+            <div className="absolute right-0 z-30 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white text-[12.5px] shadow-lg">
+              {(["new", "in_progress", "done"] as const).map((st) => <button key={st} type="button" onClick={() => { setStageMenu(false); if (t.status !== st) void patch({ status: st }); }} className={`block w-full px-3 py-2 text-left hover:bg-slate-50 ${t.status === st ? "font-medium text-indigo-700" : "text-slate-700"}`}>{STAGE_LABEL[st]}{t.status === st ? " ✓" : ""}</button>)}
+              <div className="border-t border-slate-100 px-3 py-2 text-[11.5px] text-slate-400">Stages are New → In progress → Done; the week a task sits in is changed at the bottom of the form.</div>
+            </div>
+          </> : null}
+        </div>
+      </div>
       {notice ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" /><span className="flex-1">{notice}</span><button type="button" onClick={() => setNotice(null)} className="text-emerald-800"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
       {error ? <p className="mb-2 text-[12px] text-rose-600">{error}</p> : null}
-
-      {/* Week status bar */}
-      <div className="mb-3 flex flex-wrap gap-0.5">
-        {monthWeeks.map((w, i) => {
-          const active = w.id === t.milestone_id;
-          return <button key={w.id} type="button" disabled={busy || active} onClick={() => patch({ milestoneId: w.id, deadline: w.ends_on })} title={formatRange(w.starts_on, w.ends_on)}
-            className={`px-3 py-1.5 text-[11.5px] font-medium ${active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"} ${i === 0 ? "rounded-l-lg" : ""} ${i === monthWeeks.length - 1 ? "rounded-r-lg" : ""}`}>{w.label}</button>;
-        })}
-        <select value={t.status} disabled={busy} onChange={(e) => patch({ status: e.target.value })} className="ml-2 rounded-md border border-slate-200 px-2 py-1 text-[12px]"><option value="new">New</option><option value="in_progress">In progress</option><option value="done">Done</option></select>
-      </div>
 
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="flex items-start gap-2 border-b border-slate-100 p-4">
@@ -130,14 +151,30 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
                 <p className="text-[12px] text-slate-500">Investors matched in this week. The queue opens in this week&rsquo;s context so new matches land here.</p>
                 <Link href={`${base}/${t.id}/matching`} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Add investors from matching queue</Link>
               </div>
-              {data.matches.length === 0 ? <p className="text-[12.5px] text-slate-400">No investors on this week yet.</p> : (
-                <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1 pr-2 font-medium">Investor</th><th className="py-1 pr-2 font-medium">Firm</th><th className="py-1 pr-2 font-medium">Fit</th><th className="py-1 pr-2 font-medium">Stage</th><th className="py-1 pr-2 font-medium">Next activity</th><th></th></tr></thead>
-                  <tbody className="divide-y divide-slate-100">{data.matches.map((m) => { const nx = open.find((a) => a.match_id === m.id); return (
-                    <tr key={m.id}><td className="py-1.5 pr-2 font-medium text-slate-900">{m.investor_name ?? "—"}</td><td className="py-1.5 pr-2 text-slate-600">{m.investor_firm ?? "—"}</td>
-                      <td className="py-1.5 pr-2">{m.fit_tier ?? "—"}</td><td className="py-1.5 pr-2"><span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700">{IR_STAGE_LABEL[m.stage]}</span></td>
-                      <td className="py-1.5 pr-2 text-slate-600">{nx ? `${nx.subject}${nx.due_at ? ` · ${fmt(nx.due_at)}` : ""}` : "—"}</td>
-                      <td className="py-1.5 text-right"><Link href={`/admin/ir/matches/${m.id}`} className="text-[11.5px] text-indigo-700 hover:underline">Open</Link></td></tr>); })}</tbody></table>
-              )}
+              <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1.5 pr-2 font-medium">Name</th><th className="py-1.5 pr-2 font-medium">Company name</th><th className="py-1.5 pr-2 font-medium">Membership</th><th className="py-1.5 pr-2 font-medium">Phone</th><th className="py-1.5 pr-2 font-medium">Email</th><th className="py-1.5 pr-2 font-medium">Activities</th><th className="py-1.5 pr-2 font-medium">Country</th><th className="py-1.5 font-medium"></th></tr></thead>
+                <tbody className="divide-y divide-slate-100">{data.matches.map((m) => {
+                  const c = data.contacts[m.investor_contact_id];
+                  const nx = open.find((a) => a.match_id === m.id);
+                  const last = done.find((a) => a.match_id === m.id);
+                  const late = nx?.due_at ? nx.due_at < new Date(now).toISOString() : false;
+                  return (
+                    <tr key={m.id} className="hover:bg-slate-50">
+                      <td className="py-2 pr-2"><Link href={`/admin/ir/matches/${m.id}`} className="font-medium text-slate-900 hover:text-indigo-700">{m.investor_name ?? "—"}</Link></td>
+                      <td className="py-2 pr-2 text-slate-700">{m.investor_firm ?? "—"}</td>
+                      <td className="py-2 pr-2 text-slate-600">{c?.membership ?? "Investor"}</td>
+                      <td className="py-2 pr-2 text-slate-600">{c?.phone ?? "—"}</td>
+                      <td className="max-w-[200px] truncate py-2 pr-2 text-slate-600" title={c?.email ?? ""}>{c?.email ?? "—"}</td>
+                      <td className="py-2 pr-2">
+                        {nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
+                          : last ? <span className="inline-flex items-center gap-1 text-emerald-700"><i className="ti ti-check" aria-hidden="true" />{last.subject}{last.done_at ? <span className="text-slate-400"> · {fmt(last.done_at)}</span> : null}</span>
+                          : <span className="text-slate-400">{IR_STAGE_LABEL[m.stage]}</span>}
+                      </td>
+                      <td className="py-2 pr-2 text-slate-600">{c?.country ?? "—"}</td>
+                      <td className="py-2 text-right"><button type="button" disabled={busy} onClick={() => removeMatch(m)} aria-label={`Remove ${m.investor_name ?? "investor"}`} className="text-slate-400 hover:text-rose-600">✕</button></td>
+                    </tr>
+                  ); })}
+                  <tr><td colSpan={8} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
+                </tbody></table>
             </div>
           ) : null}
           {tab === "blocked" ? <BlockersPanel blockers={data.task.blockers ?? []} dealTitle={data.project.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}
@@ -147,6 +184,15 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
             (() => { const ms = data.activities.filter((a) => a.type === "meeting"); return ms.length === 0 ? <p className="text-[12.5px] text-slate-400">No meetings this week.</p> : (
               <ul className="divide-y divide-slate-100 text-[12.5px]">{ms.map((a) => <li key={a.id} className="flex gap-2 py-1.5"><span className="font-medium text-slate-900">{matchName(a.match_id)}</span><span className="flex-1 text-slate-600">{a.subject}</span><span className="text-slate-500">{a.done_at ? `held ${fmt(a.done_at)}` : `booked ${fmt(a.due_at)}`}</span></li>)}</ul>); })()
           ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 px-4 py-3 text-[12.5px]">
+          <span className="mr-1 text-slate-500">Week</span>
+          {monthWeeks.map((w) => {
+            const active = w.id === t.milestone_id;
+            return <button key={w.id} type="button" disabled={busy || active} onClick={() => patch({ milestoneId: w.id, deadline: w.ends_on })} title={formatRange(w.starts_on, w.ends_on)} className={`rounded-lg border px-3 py-1.5 font-medium ${active ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>{w.label}</button>;
+          })}
+          {month ? <span className="ml-1 text-slate-500">· {month.label} of {data.months.length}</span> : null}
+          <Link href={`${base}?month=${week?.parent_id ?? ""}`} className="ml-auto text-indigo-700 hover:underline">Open board</Link>
         </div>
       </div>
 

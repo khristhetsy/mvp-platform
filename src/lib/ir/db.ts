@@ -253,21 +253,22 @@ export async function updateNote(id: string, patch: Partial<{ body: string; foun
 }
 
 // ── Aggregates for cards ────────────────────────────────────────────────────
-export async function projectCounts(projectIds: string[]): Promise<Map<string, { matches: number; tasks: number; openActivities: number; lateActivities: number; meetingsHeld: number; termSheets: number; stages: Partial<Record<IrStage, number>> }>> {
-  const out = new Map<string, { matches: number; tasks: number; openActivities: number; lateActivities: number; meetingsHeld: number; termSheets: number; stages: Partial<Record<IrStage, number>> }>();
+export type ProjectCounts = { matches: number; tasks: number; tasksDone: number; openActivities: number; lateActivities: number; meetingsHeld: number; termSheets: number; stages: Partial<Record<IrStage, number>> };
+export async function projectCounts(projectIds: string[]): Promise<Map<string, ProjectCounts>> {
+  const out = new Map<string, ProjectCounts>();
   if (!projectIds.length) return out;
-  const blank = () => ({ matches: 0, tasks: 0, openActivities: 0, lateActivities: 0, meetingsHeld: 0, termSheets: 0, stages: {} as Partial<Record<IrStage, number>> });
+  const blank = (): ProjectCounts => ({ matches: 0, tasks: 0, tasksDone: 0, openActivities: 0, lateActivities: 0, meetingsHeld: 0, termSheets: 0, stages: {} });
   for (const id of projectIds) out.set(id, blank());
   const now = new Date().toISOString();
   const [{ data: m }, { data: t }, { data: a }] = await Promise.all([
     db().from("ir_matches").select("project_id, stage, term_sheet_received_at").in("project_id", projectIds),
-    db().from("ir_tasks").select("project_id").in("project_id", projectIds),
+    db().from("ir_tasks").select("project_id, status").in("project_id", projectIds),
     db().from("ir_activities").select("project_id, type, due_at, done_at").in("project_id", projectIds),
   ]);
   for (const r of (m ?? []) as Array<{ project_id: string; stage: IrStage; term_sheet_received_at: string | null }>) {
     const c = out.get(r.project_id)!; c.matches++; c.stages[r.stage] = (c.stages[r.stage] ?? 0) + 1; if (r.term_sheet_received_at) c.termSheets++;
   }
-  for (const r of (t ?? []) as Array<{ project_id: string }>) out.get(r.project_id)!.tasks++;
+  for (const r of (t ?? []) as Array<{ project_id: string; status: string }>) { const c = out.get(r.project_id)!; c.tasks++; if (r.status === "done") c.tasksDone++; }
   for (const r of (a ?? []) as Array<{ project_id: string; type: string; due_at: string | null; done_at: string | null }>) {
     const c = out.get(r.project_id)!;
     if (!r.done_at) { c.openActivities++; if (r.due_at && r.due_at < now) c.lateActivities++; }

@@ -113,37 +113,35 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
           const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
           const isNow = currentWeek?.id === w.id;
           return (
-            <div key={w.id} style={{ flex: "0 0 300px", minWidth: 300 }} className={`rounded-xl border bg-slate-50 p-2 ${isNow ? "border-indigo-300" : "border-slate-200"}`}>
-              <div className="mb-1 flex items-center justify-between px-1">
-                <span className="text-[12.5px] font-semibold text-slate-800">{w.label}{isNow ? " · now" : ""}</span>
-                <span className="flex items-center gap-1">
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-600 ring-1 ring-slate-200">{tasks.length}</span>
-                  <button type="button" disabled={busy} onClick={() => newTask(w.id)} aria-label={`New task in ${w.label}`} className="rounded px-1 text-slate-500 hover:bg-white hover:text-indigo-700"><i className="ti ti-plus" aria-hidden="true" /></button>
+            <div key={w.id} style={{ flex: "0 0 270px", minWidth: 270 }} className="px-1">
+              <div className="mb-1 flex items-center justify-between">
+                <span className={`text-[14px] font-semibold ${isNow ? "text-indigo-800" : "text-slate-900"}`}>{w.label}</span>
+                <span className="flex items-center gap-2 text-[12px] text-slate-500">
+                  <span>{formatRange(w.starts_on, w.ends_on)}</span>
+                  <span className="font-medium text-slate-700">{tasks.length}</span>
+                  <button type="button" disabled={busy} onClick={() => newTask(w.id)} aria-label={`New task in ${w.label}`} className="rounded px-1 text-slate-500 hover:bg-slate-100 hover:text-indigo-700"><i className="ti ti-plus" aria-hidden="true" /></button>
                 </span>
               </div>
-              <p className="px-1 text-[10.5px] text-slate-500">{formatRange(w.starts_on, w.ends_on)}</p>
-              <div className="mx-1 my-1.5 h-1 rounded bg-slate-200"><div className="h-1 rounded bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+              <div className="mb-2.5 h-1.5 rounded bg-slate-200"><div className="h-1.5 rounded bg-emerald-500" style={{ width: `${pct}%` }} /></div>
               <div className="flex min-h-[60px] flex-col gap-2">
                 {tasks.map((t) => {
                   const ms = matchesByTask.get(t.id) ?? [];
                   const anyHit = ms.some(hit);
                   if (needle && !anyHit && !t.title.toLowerCase().includes(needle)) return null;
+                  const label = (m: IrMatch) => [m.investor_firm, m.investor_name].filter(Boolean).join(", ") || "Investor";
                   return (
-                    <div key={t.id} className={`rounded-lg border bg-white p-2.5 shadow-sm ${anyHit ? "border-indigo-300" : "border-slate-200"}`}>
-                      <div className="flex items-start gap-1.5">
-                        <button type="button" onClick={() => star(t)} aria-label="Star" className={`mt-0.5 ${t.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}><i className={`ti ${t.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
-                        <Link href={`/admin/ir/projects/${projectId}/tasks/${t.id}`} className="min-w-0 flex-1 text-[13px] font-medium text-slate-900 hover:text-indigo-700">{t.title}</Link>
-                      </div>
+                    <div key={t.id} className={`rounded-lg border bg-white p-2.5 shadow-sm hover:shadow ${anyHit ? "border-indigo-300" : "border-slate-200"}`}>
+                      <Link href={`/admin/ir/projects/${projectId}/tasks/${t.id}`} className="block text-[13px] font-semibold text-slate-900 hover:text-indigo-700">{t.title}</Link>
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {ms.slice(0, 8).map((m) => <span key={m.id} className={`rounded px-1.5 py-0.5 text-[10.5px] ${hit(m) ? "bg-amber-100 text-amber-900" : "bg-blue-50 text-blue-800"}`}>{m.investor_name ?? m.investor_firm ?? "Investor"}</span>)}
-                        {ms.length > 8 ? <span className="text-[10.5px] text-slate-400">+{ms.length - 8}</span> : null}
+                        {ms.map((m) => <span key={m.id} className={`rounded px-1.5 py-0.5 text-[10.5px] ${hit(m) ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700"}`}>{label(m)}</span>)}
                         {ms.length === 0 ? <span className="text-[10.5px] text-slate-400">no investors yet</span> : null}
                       </div>
-                      <div className="mt-2 flex items-center gap-2 text-[10.5px] text-slate-500">
-                        <span><i className="ti ti-users" aria-hidden="true" /> {ms.length}</span>
-                        <span><i className="ti ti-clock" aria-hidden="true" /> {fmtDay(t.created_at)}</span>
-                        <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[9px] font-semibold text-slate-700" title={t.assignee_name ?? ""}>{initials(t.assignee_name)}</span>
-                        <span className="h-2 w-2 rounded-full" style={{ background: STATUS_DOT[t.status] }} title={t.status} />
+                      <p className="mt-2 text-[11.5px] text-slate-600">{t.deadline ? new Date(`${t.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : fmtDay(t.created_at)}</p>
+                      <div className="mt-1.5 flex items-center gap-2 text-[12px] text-slate-400">
+                        <button type="button" onClick={() => star(t)} aria-label="Star" className={t.starred ? "text-amber-500" : "hover:text-amber-400"}><i className={`ti ${t.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
+                        <Link href={`/admin/ir/projects/${projectId}/tasks/${t.id}?tab=meetings`} aria-label="Activities" className="hover:text-indigo-700"><i className="ti ti-clock" aria-hidden="true" /></Link>
+                        <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[9px] font-semibold text-white" title={t.assignee_name ?? ""}>{initials(t.assignee_name)}</span>
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_DOT[t.status] }} title={t.status} />
                       </div>
                     </div>
                   );

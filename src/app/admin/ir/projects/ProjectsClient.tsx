@@ -10,7 +10,7 @@ import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
 import type { IrProject } from "@/lib/ir/types";
 
-type Counts = { matches: number; tasks: number; openActivities: number; lateActivities: number; meetingsHeld: number; termSheets: number };
+type Counts = { matches: number; tasks: number; tasksDone: number; openActivities: number; lateActivities: number; meetingsHeld: number; termSheets: number };
 type Payload = { projects: IrProject[]; counts: Record<string, Counts>; staff: Array<{ id: string; name: string }> };
 
 const STATUS_DOT: Record<string, string> = { active: "#16A34A", paused: "#CA8A04", completed: "#2563EB", cancelled: "#94A3B8" };
@@ -81,8 +81,11 @@ export function ProjectsClient({ meId }: { meId: string }) {
                   </div>
                 </Link>
               </div>
-              <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5 text-[11.5px] text-slate-500">
-                <Link href={`/admin/ir/projects/${p.id}/tasks`} className="hover:text-indigo-700"><i className="ti ti-checklist" aria-hidden="true" /> {c?.tasks ?? 0} tasks</Link>
+              <Link href={`/admin/ir/projects/${p.id}/tasks`} className="mt-3 flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[13px] font-semibold text-indigo-800 hover:bg-indigo-100">
+                <span><i className="ti ti-checklist" aria-hidden="true" /> {c?.tasks ?? 0} task{(c?.tasks ?? 0) === 1 ? "" : "s"}</span>
+                <span className="text-[11.5px] font-normal text-indigo-600">{c?.tasksDone ?? 0} done · open board →</span>
+              </Link>
+              <div className="mt-2.5 flex items-center gap-3 text-[11.5px] text-slate-500">
                 <span><i className="ti ti-users" aria-hidden="true" /> {c?.matches ?? 0} matches</span>
                 <span><i className="ti ti-calendar-check" aria-hidden="true" /> {c?.meetingsHeld ?? 0} held</span>
                 <span className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700" title={p.owner_name ?? ""}>{initials(p.owner_name)}</span>
