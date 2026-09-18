@@ -18,7 +18,7 @@ import { IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL, type IrActivityTy
 type Setup = { configured: boolean; discovery: Discovery; groups: ProjectGroup[]; imported: Record<string, string>; projects: Array<{ id: string; title: string; founder_name: string | null; status: string; start_date: string; term_months: number }>; staff: Array<{ id: string; name: string }> };
 type Entry = ParsedEntry & { investorKey: string | null };
 type TaskRow = OdooTaskLite & { assigneeId: string | null; entries: Entry[]; stages: Record<string, IrStage> };
-type Loaded = { agentField: string | null; investorField: string; tasks: TaskRow[]; resolutions: TagResolution[] };
+type Loaded = { agentField: string | null; investorFields: Array<{ name: string; label: string; stage: IrStage }>; tasks: TaskRow[]; resolutions: TagResolution[] };
 type FounderLink = { kind: "contact" | "company"; id: string; label: string; sub: string | null };
 type Edit = { type: IrActivityType; subject: string; outcome: string; date: string; investorKey: string | null; approved: boolean };
 
@@ -34,7 +34,6 @@ export function ImportClient({ meId }: { meId: string }) {
   const [groupKey, setGroupKey] = useState<string>("");
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [agentField, setAgentField] = useState<string>("");
-  const [investorField, setInvestorField] = useState<string>("tag_ids");
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [busy, setBusy] = useState(false);
   // Step 2
@@ -62,7 +61,7 @@ export function ImportClient({ meId }: { meId: string }) {
   }
   useEffect(() => {
     let live = true;
-    fetch("/api/admin/ir/import").then((r) => r.json()).then((j) => { if (!live) return; if (j.error) { setError(j.error); return; } setSetup(j); setAgentField(j.discovery?.agentField ?? ""); setInvestorField(j.discovery?.investorField ?? "tag_ids"); if (j.groups?.[0]) applyGroup(j, j.groups[0].key); });
+    fetch("/api/admin/ir/import").then((r) => r.json()).then((j) => { if (!live) return; if (j.error) { setError(j.error); return; } setSetup(j); setAgentField(j.discovery?.agentField ?? ""); if (j.groups?.[0]) applyGroup(j, j.groups[0].key); });
     return () => { live = false; };
   }, []);
 
@@ -70,7 +69,7 @@ export function ImportClient({ meId }: { meId: string }) {
 
   async function loadTasks() {
     setBusy(true); setError(null);
-    const r = await fetch("/api/admin/ir/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "tasks", projectIds: [...picked], agentField: agentField || null, investorField }) });
+    const r = await fetch("/api/admin/ir/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "tasks", projectIds: [...picked], agentField: agentField || null }) });
     const j = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setError(j.error ?? "Couldn't read tasks from Odoo."); return; }
@@ -144,10 +143,9 @@ export function ImportClient({ meId }: { meId: string }) {
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <label className="text-[12.5px] text-slate-600">Founder <select value={groupKey} onChange={(e) => applyGroup(setup, e.target.value)} className={`ml-2 ${inp}`}>{setup.groups.map((g) => <option key={g.key} value={g.key}>{g.founder} · {g.projects.length} project{g.projects.length === 1 ? "" : "s"}</option>)}</select></label>
-            <label className="text-[12.5px] text-slate-600">Investors on task <select value={investorField} onChange={(e) => setInvestorField(e.target.value)} className={`ml-2 ${inp}`}><option value="tag_ids">Tags (tag_ids)</option>{setup.discovery.hasPartner ? <option value="partner_id">Customer (partner_id)</option> : null}{setup.discovery.customFields.filter((f) => ["many2many", "one2many", "many2one"].includes(f.type) && f.relation).map((f) => <option key={f.name} value={f.name}>{f.label} ({f.name} → {f.relation})</option>)}</select></label>
             <label className="text-[12.5px] text-slate-600">Agent Field <select value={agentField} onChange={(e) => setAgentField(e.target.value)} className={`ml-2 ${inp}`}><option value="">— none —</option><option value="description">Description (description)</option>{setup.discovery.customFields.filter((f) => ["text", "html", "char"].includes(f.type)).map((f) => <option key={f.name} value={f.name}>{f.label} ({f.name})</option>)}</select></label>
           </div>
-          <p className="mb-3 text-[11.5px] text-slate-400">Investors on task is where each Odoo task names its investors — Odoo tags, the task&rsquo;s Customer, or a Studio contact field. Agent Field is the text the agent logged activities in; pick Description if your team wrote them there.</p>
+          <p className="mb-3 text-[11.5px] text-slate-400">Investors are read from every contact field built on the Odoo task — {setup.discovery.investorFields.map((f) => `${f.label} → ${IR_STAGE_LABEL[f.stage]}`).join(", ") || "Odoo tags"}. An investor in more than one field lands at the furthest stage. Agent Field is the text the agent logged activities in; pick Description if your team wrote them there.</p>
           {group ? (
             <table className="w-full text-[12.5px]">
               <thead><tr className="text-left text-[11px] text-slate-500"><th className="w-8 py-1.5"></th><th className="py-1.5 font-medium">Odoo project</th><th className="py-1.5 font-medium">Tasks</th><th className="py-1.5 font-medium">Maps to</th><th className="py-1.5 font-medium">Owner</th><th className="py-1.5 font-medium"></th></tr></thead>
@@ -220,7 +218,7 @@ export function ImportClient({ meId }: { meId: string }) {
                 <label className="ml-auto text-[12px] text-slate-600">Agent <select value={taskAssignee[t.id] ?? ""} onChange={(e) => setTaskAssignee((s) => ({ ...s, [t.id]: e.target.value || null }))} className={`ml-1 ${inp}`}><option value="">— {t.assignee ?? "unassigned"} —</option>{setup.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
                 <button type="button" onClick={() => approveTask(t.id, !allOk)} disabled={rows.some((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date))} className={`rounded-md px-2.5 py-1 text-[12px] font-medium ${allOk ? "bg-emerald-50 text-emerald-700" : "bg-indigo-600 text-white hover:bg-indigo-700"} disabled:opacity-50`}>{allOk ? "Approved" : "Approve"}</button>
               </div>
-              <div className="mb-2 flex flex-wrap gap-1">{t.tags.map((g) => { const c = chosen[g.name]; return <span key={g.id} className={`rounded px-1.5 py-0.5 text-[11px] ${c ? "bg-blue-50 text-blue-800" : "bg-rose-50 text-rose-700"}`}>{g.name}{c ? ` → ${IR_STAGE_LABEL[stageFor(t, g.name)]}` : " · unmatched"}</span>; })}{t.tags.length === 0 ? <span className="text-[11.5px] text-slate-400">No investors found in the “{loaded.investorField}” field — change “Investors on task” in step 1 if they live elsewhere.</span> : null}</div>
+              <div className="mb-2 flex flex-wrap gap-1">{t.tags.map((g) => { const c = chosen[g.name]; return <span key={g.id} className={`rounded px-1.5 py-0.5 text-[11px] ${c ? "bg-blue-50 text-blue-800" : "bg-rose-50 text-rose-700"}`}>{g.name}{c ? ` → ${IR_STAGE_LABEL[stageFor(t, g.name)]}` : " · unmatched"}</span>; })}{t.tags.length === 0 ? <span className="text-[11.5px] text-slate-400">No investors in {loaded.investorFields.map((f) => f.label).join(" / ") || "Tags"} on this task.</span> : null}</div>
               {t.agentText ? <pre className="mb-2 whitespace-pre-wrap rounded-md bg-slate-50 px-3 py-2 font-mono text-[11.5px] text-slate-700">{t.agentText}</pre> : <p className="mb-2 text-[12px] text-slate-400">No text in the Agent Field{loaded.agentField ? ` (${loaded.agentField})` : ""} — pick Description or the right field in step 1, or the task imports with its investors in Matched and no activities.</p>}
               {rows.length ? <table className="w-full text-[12px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1 font-medium">Investor</th><th className="py-1 font-medium">Type</th><th className="py-1 font-medium">Outcome</th><th className="py-1 font-medium">Date</th><th className="py-1"></th></tr></thead>
                 <tbody className="divide-y divide-slate-100">{rows.map((e, i) => { const set = (patch: Partial<Edit>) => setEdits((s) => ({ ...s, [t.id]: s[t.id].map((x, k) => (k === i ? { ...x, ...patch, approved: false } : x)) })); const bad = !/^\d{4}-\d{2}-\d{2}$/.test(e.date); return <tr key={i}>

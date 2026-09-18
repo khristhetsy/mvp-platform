@@ -1,7 +1,7 @@
 /**
  * Odoo → IR Hub import wizard API. Odoo is read-only here.
  *   GET                                     → { configured, discovery, groups, imported, projects, staff }
- *   POST { action: "tasks", projectIds, agentField?, investorField? } → { tasks: [{ …task, entries, stage }], resolutions: TagResolution[] }
+ *   POST { action: "tasks", projectIds, agentField? } → { tasks: [{ …task, entries, stage }], resolutions: TagResolution[] }
  *   POST { action: "founders", q }           → { contacts, companies }  founder link for a new project (no phone / email returned)
  *   POST { action: "execute", plan }        → ImportResult
  */
@@ -24,7 +24,7 @@ export async function GET(): Promise<Response> {
   } catch (e) { return failed(e, "Couldn't read from Odoo."); }
 }
 
-const tasksSchema = z.object({ action: z.literal("tasks"), projectIds: z.array(z.number().int()).min(1).max(50), agentField: z.string().max(120).nullish(), investorField: z.string().max(120).nullish() });
+const tasksSchema = z.object({ action: z.literal("tasks"), projectIds: z.array(z.number().int()).min(1).max(50), agentField: z.string().max(120).nullish() });
 const foundersSchema = z.object({ action: z.literal("founders"), q: z.string().max(120) });
 const activity = z.object({ type: z.enum(IR_ACTIVITY_TYPES), subject: z.string().min(1).max(200), outcome: z.string().max(2000), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), assigneeId: z.string().uuid().nullable() });
 const planSchema = z.object({
@@ -53,13 +53,12 @@ export async function POST(req: NextRequest): Promise<Response> {
       const d = await discover();
       if (!d.configured) return NextResponse.json({ error: "Odoo isn't configured on this environment." }, { status: 503 });
       const agentField = p.data.agentField === undefined ? d.agentField : p.data.agentField || null;
-      const investorField = p.data.investorField || d.investorField;
-      const tasks = await odooTasks(p.data.projectIds, d, agentField, investorField);
+      const tasks = await odooTasks(p.data.projectIds, d, agentField);
       const { resolve } = await staffByName();
       const resolutions = await matchInvestorTags(tasks.flatMap((t) => t.tags.map((g) => g.name)));
       return NextResponse.json({
-        agentField, investorField,
-        tasks: tasks.map((t) => { const entries = taskEntries(t); return { ...t, assigneeId: resolve(t.assignee), entries, stages: Object.fromEntries(t.tags.map((g) => [g.name, inferStage(entries.filter((e) => e.investorKey === g.name))])) }; }),
+        agentField, investorFields: d.investorFields,
+        tasks: tasks.map((t) => { const entries = taskEntries(t); return { ...t, assigneeId: resolve(t.assignee), entries, stages: Object.fromEntries(t.tags.map((g) => { const fromEntries = inferStage(entries.filter((e) => e.investorKey === g.name)); return [g.name, IR_STAGES.indexOf(fromEntries) > IR_STAGES.indexOf(g.stage) ? fromEntries : g.stage]; })) }; }),
         resolutions,
       });
     }
