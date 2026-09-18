@@ -16,17 +16,20 @@ const m2oId = (v: Many2one) => (v ? v[0] : null);
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
 
 // ── Discovery ────────────────────────────────────────────────────────────────
-export type OdooField = { name: string; label: string; type: string };
-export type Discovery = { configured: boolean; agentField: string | null; customFields: OdooField[]; hasUserIds: boolean; hasTaskCount: boolean };
+export type OdooField = { name: string; label: string; type: string; relation: string | null };
+export type Discovery = { configured: boolean; agentField: string | null; investorField: string; customFields: OdooField[]; hasUserIds: boolean; hasTaskCount: boolean; hasPartner: boolean };
 
 export async function discover(): Promise<Discovery> {
-  if (!odooConfigured()) return { configured: false, agentField: null, customFields: [], hasUserIds: false, hasTaskCount: false };
-  const fields = await executeKw<Record<string, { string: string; type: string }>>("project.task", "fields_get", [], { attributes: ["string", "type"] });
-  const custom = Object.entries(fields).filter(([k]) => k.startsWith("x_")).map(([name, f]) => ({ name, label: f.string, type: f.type }));
+  if (!odooConfigured()) return { configured: false, agentField: null, investorField: "tag_ids", customFields: [], hasUserIds: false, hasTaskCount: false, hasPartner: false };
+  const fields = await executeKw<Record<string, { string: string; type: string; relation?: string }>>("project.task", "fields_get", [], { attributes: ["string", "type", "relation"] });
+  const custom = Object.entries(fields).filter(([k]) => k.startsWith("x_")).map(([name, f]) => ({ name, label: f.string, type: f.type, relation: f.relation ?? null }));
   const textish = custom.filter((f) => ["text", "html", "char"].includes(f.type));
   const agent = process.env.ODOO_IR_AGENT_FIELD?.trim() || textish.find((f) => /agent/i.test(f.label))?.name || textish.find((f) => /note|activity|log|update/i.test(f.label))?.name || textish[0]?.name || null;
+  // Investors on a task: a Studio many2many to contacts labelled "investor" wins; else Odoo tags.
+  const relInv = custom.find((f) => (f.type === "many2many" || f.type === "one2many") && f.relation === "res.partner" && /investor|contact|partner/i.test(f.label)) ?? custom.find((f) => f.type === "many2many" && f.relation === "res.partner");
+  const investorField = process.env.ODOO_IR_INVESTOR_FIELD?.trim() || relInv?.name || "tag_ids";
   const projFields = await executeKw<Record<string, unknown>>("project.project", "fields_get", [], { attributes: ["type"] });
-  return { configured: true, agentField: agent, customFields: custom, hasUserIds: "user_ids" in fields, hasTaskCount: "task_count" in projFields };
+  return { configured: true, agentField: agent, investorField, customFields: custom, hasUserIds: "user_ids" in fields, hasTaskCount: "task_count" in projFields, hasPartner: "partner_id" in fields };
 }
 
 // ── Projects ─────────────────────────────────────────────────────────────────
@@ -47,13 +50,25 @@ export type OdooTaskLite = {
   tags: Array<{ id: number; name: string }>; agentText: string; alreadyImported: boolean;
 };
 
-export async function odooTasks(projectIds: number[], d: Discovery, agentField: string | null): Promise<OdooTaskLite[]> {
+export async function odooTasks(projectIds: number[], d: Discovery, agentField: string | null, investorField: string = d.investorField): Promise<OdooTaskLite[]> {
   if (!projectIds.length) return [];
-  const fields = ["id", "name", "project_id", "tag_ids", "date_deadline", "create_date", "stage_id", d.hasUserIds ? "user_ids" : "user_id", ...(agentField ? [agentField] : []), "description"];
+  const invField = investorField || "tag_ids";
+  const fields = [...new Set(["id", "name", "project_id", invField, "date_deadline", "create_date", "stage_id", d.hasUserIds ? "user_ids" : "user_id", ...(agentField && agentField !== "description" ? [agentField] : []), "description"])];
   const rows = await executeKw<Array<Record<string, unknown>>>("project.task", "search_read", [[["project_id", "in", projectIds]]], { fields, limit: 2000, order: "project_id asc, create_date asc" });
-  const tagIds = [...new Set(rows.flatMap((r) => (r.tag_ids as number[]) ?? []))];
-  const tags = tagIds.length ? await executeKw<Array<{ id: number; name: string }>>("project.tags", "read", [tagIds, ["name"]]) : [];
-  const tagName = new Map(tags.map((t) => [t.id, t.name]));
+  // Investor ids per task: many2many gives number[]; many2one gives [id, name] | false.
+  const invIds = (r: Record<string, unknown>): number[] => { const v = r[invField]; return Array.isArray(v) ? (typeof v[0] === "number" && v.length === 2 && typeof v[1] === "string" ? [v[0] as number] : (v as number[])) : []; };
+  const allIds = [...new Set(rows.flatMap(invIds))];
+  const relation = invField === "tag_ids" ? "project.tags" : invField === "partner_id" ? "res.partner" : d.customFields.find((f) => f.name === invField)?.relation ?? "project.tags";
+  const tagName = new Map<number, string>();
+  if (allIds.length) {
+    if (relation === "res.partner") {
+      const partners = await executeKw<Array<{ id: number; name: string; email: string | false; parent_id: Many2one; company_name?: string | false }>>("res.partner", "read", [allIds, ["name", "email", "parent_id", "company_name"]]);
+      for (const p of partners) { const firm = m2oName(p.parent_id) ?? (p.company_name || null); tagName.set(p.id, `${p.name}${firm ? ` (${firm})` : ""}${p.email ? ` ${p.email}` : ""}`); }
+    } else {
+      const tags = await executeKw<Array<{ id: number; name: string }>>(relation, "read", [allIds, ["name"]]);
+      for (const t of tags) tagName.set(t.id, t.name);
+    }
+  }
   const userIds = [...new Set(rows.flatMap((r) => (d.hasUserIds ? ((r.user_ids as number[]) ?? []) : [])))];
   const users = userIds.length ? await executeKw<Array<{ id: number; name: string }>>("res.users", "read", [userIds, ["name"]]) : [];
   const userName = new Map(users.map((u) => [u.id, u.name]));
@@ -68,7 +83,7 @@ export async function odooTasks(projectIds: number[], d: Discovery, agentField: 
       month: monthIndex(projName), week: weekIndex(String(r.name ?? "")),
       assignee: d.hasUserIds ? (((r.user_ids as number[]) ?? []).map((id) => userName.get(id)).filter(Boolean)[0] ?? null) : m2oName(r.user_id as Many2one),
       createDate: String(r.create_date ?? ""), deadline: (r.date_deadline as string | false) || null, stageName: m2oName(r.stage_id as Many2one),
-      tags: ((r.tag_ids as number[]) ?? []).map((id) => ({ id, name: tagName.get(id) ?? `Tag ${id}` })),
+      tags: invIds(r).map((id) => ({ id, name: tagName.get(id) ?? `Tag ${id}` })),
       agentText: stripHtml(text), alreadyImported: done.has(r.id as number),
     };
   });

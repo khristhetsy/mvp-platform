@@ -1,13 +1,14 @@
 /**
  * Odoo → IR Hub import wizard API. Odoo is read-only here.
  *   GET                                     → { configured, discovery, groups, imported, projects, staff }
- *   POST { action: "tasks", projectIds, agentField? } → { tasks: [{ …task, entries, stage }], resolutions: TagResolution[] }
+ *   POST { action: "tasks", projectIds, agentField?, investorField? } → { tasks: [{ …task, entries, stage }], resolutions: TagResolution[] }
+ *   POST { action: "founders", q }           → { contacts, companies }  founder link for a new project (no phone / email returned)
  *   POST { action: "execute", plan }        → ImportResult
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
-import { listProjects } from "@/lib/ir/db";
+import { db, listProjects } from "@/lib/ir/db";
 import { discover, executeImport, inferStage, matchInvestorTags, odooProjects, odooTasks, staffByName, taskEntries } from "@/lib/ir/odoo-import";
 import { IR_ACTIVITY_TYPES, IR_STAGES } from "@/lib/ir/types";
 
@@ -23,7 +24,8 @@ export async function GET(): Promise<Response> {
   } catch (e) { return failed(e, "Couldn't read from Odoo."); }
 }
 
-const tasksSchema = z.object({ action: z.literal("tasks"), projectIds: z.array(z.number().int()).min(1).max(50), agentField: z.string().max(120).nullish() });
+const tasksSchema = z.object({ action: z.literal("tasks"), projectIds: z.array(z.number().int()).min(1).max(50), agentField: z.string().max(120).nullish(), investorField: z.string().max(120).nullish() });
+const foundersSchema = z.object({ action: z.literal("founders"), q: z.string().max(120) });
 const activity = z.object({ type: z.enum(IR_ACTIVITY_TYPES), subject: z.string().min(1).max(200), outcome: z.string().max(2000), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), assigneeId: z.string().uuid().nullable() });
 const planSchema = z.object({
   action: z.literal("execute"),
@@ -51,14 +53,26 @@ export async function POST(req: NextRequest): Promise<Response> {
       const d = await discover();
       if (!d.configured) return NextResponse.json({ error: "Odoo isn't configured on this environment." }, { status: 503 });
       const agentField = p.data.agentField === undefined ? d.agentField : p.data.agentField || null;
-      const tasks = await odooTasks(p.data.projectIds, d, agentField);
+      const investorField = p.data.investorField || d.investorField;
+      const tasks = await odooTasks(p.data.projectIds, d, agentField, investorField);
       const { resolve } = await staffByName();
       const resolutions = await matchInvestorTags(tasks.flatMap((t) => t.tags.map((g) => g.name)));
       return NextResponse.json({
-        agentField,
+        agentField, investorField,
         tasks: tasks.map((t) => { const entries = taskEntries(t); return { ...t, assigneeId: resolve(t.assignee), entries, stages: Object.fromEntries(t.tags.map((g) => [g.name, inferStage(entries.filter((e) => e.investorKey === g.name))])) }; }),
         resolutions,
       });
+    }
+    if (body?.action === "founders") {
+      const p = foundersSchema.safeParse(body);
+      if (!p.success) return NextResponse.json({ error: "Invalid search." }, { status: 400 });
+      const q = p.data.q.trim(); if (q.length < 2) return NextResponse.json({ contacts: [], companies: [] });
+      const like = `%${q.replace(/[%_,]/g, " ")}%`;
+      const [c, co] = await Promise.all([
+        db().from("crm_contacts").select("id, name, company, contact_type").or(`name.ilike.${like},company.ilike.${like}`).order("name").limit(20),
+        db().from("companies").select("id, company_name").ilike("company_name", like).order("company_name").limit(20),
+      ]);
+      return NextResponse.json({ contacts: (c.data ?? []) as Array<{ id: string; name: string | null; company: string | null; contact_type: string | null }>, companies: (co.data ?? []) as Array<{ id: string; company_name: string }> });
     }
     if (body?.action === "execute") {
       const p = planSchema.safeParse(body);
