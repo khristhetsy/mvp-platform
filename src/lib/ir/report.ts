@@ -11,6 +11,7 @@ import { loadActivities, loadEvents, loadMatches } from "@/lib/ir/dashboard";
 import { formatRange, milestoneOn } from "@/lib/ir/milestones";
 import { countMetrics, inPeriod, isOutreach, periodLabel, pipelineAsOf, previousPeriod, stagesAsOf, toTs, type ActivityLite, type Period, type PeriodKind } from "@/lib/ir/metrics";
 import { INTRO_SUBJECT, IR_STAGE_LABEL, type IrMilestone, type IrProject, type IrStage } from "@/lib/ir/types";
+import { lastSummarySends } from "@/lib/ir/summaries";
 
 export type ReportKind = PeriodKind | "custom";
 export type ReportPeriod = Period & { kind: ReportKind; label: string };
@@ -31,6 +32,7 @@ export type ReportData = {
   options: { weeks: IrMilestone[]; months: IrMilestone[] };
   saved: IrReportRow | null;
   preparedOn: string;
+  schedule: { weekly: boolean; monthly: boolean; sends: Array<{ kind: string; period_start: string; sent_to: string; sent_at: string }> };
 };
 
 const NAMED_STAGES = new Set<IrStage>(["meeting_scheduled", "meeting_held", "follow_up", "committed"]);
@@ -135,6 +137,7 @@ export async function reportData(projectId: string, q: { kind: ReportKind; miles
       trend, upcoming,
       options: { weeks: milestones.filter((m) => m.kind === "week"), months },
       saved, preparedOn: fmtDayYear(toTs(today)),
+      schedule: { weekly: project.weekly_summary, monthly: project.monthly_summary, sends: await lastSummarySends(project.id) },
     },
   };
 }

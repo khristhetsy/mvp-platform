@@ -80,6 +80,13 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
     const j = await post({ action: "save", summary, approve }, approve ? "approve" : "save");
     if (j) { setNotice(approve ? "Executive summary approved and the figures frozen for this period." : "Draft saved."); await load(); }
   }
+  async function toggleSchedule(key: "weeklySummary" | "monthlySummary", on: boolean) {
+    setBusy("schedule"); setError(null);
+    const r = await fetch(`/api/admin/ir/projects/${projectId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: on }) });
+    setBusy(null);
+    if (!r.ok) { const j = await r.json().catch(() => ({})); setError(j.error ?? "Couldn't update the schedule."); return; }
+    await load();
+  }
   async function send() {
     if (!data?.saved?.approved_at) { setError("Approve the executive summary before sending."); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sendTo)) { setError("Enter the founder's email address before sending."); return; }
@@ -153,6 +160,13 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-baseline justify-between"><h3 className="text-[15px] font-semibold text-slate-900">Pipeline at period end</h3><span className="text-[12px] text-slate-500">{data.asOf}</span></div>
                 <ul className="flex flex-col gap-1.5 text-[12.5px]">{data.pipeline.map((p) => <li key={p.stage} className="grid grid-cols-[130px_1fr_32px] items-center gap-2"><span className="text-slate-700">{p.label}</span><span className="h-2 rounded bg-slate-100"><span className="block h-2 rounded" style={{ width: `${total ? (p.count / total) * 100 : 0}%`, background: p.stage === "committed" ? "#1E8A57" : p.stage === "passed" ? "#9AA6BA" : "#1A6CE4" }} /></span><span className="text-right font-medium text-slate-900">{p.count}</span></li>)}</ul>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <h3 className="mb-1 text-[15px] font-semibold text-slate-900">Scheduled summaries</h3>
+                <label className="flex items-center justify-between py-1.5 text-[13px] text-slate-800">Weekly summary every Monday<input type="checkbox" checked={data.schedule.weekly} disabled={busy !== null} onChange={(e) => void toggleSchedule("weeklySummary", e.target.checked)} /></label>
+                <label className="flex items-center justify-between py-1.5 text-[13px] text-slate-800">Monthly summary at each milestone end<input type="checkbox" checked={data.schedule.monthly} disabled={busy !== null} onChange={(e) => void toggleSchedule("monthlySummary", e.target.checked)} /></label>
+                <p className="mt-1 text-[11.5px] text-slate-400">Sends the figures, pipeline, communications log and IR notes for the period just ended — no executive summary, so nothing needs approval. {data.founder.email ? `Goes to ${data.founder.email}.` : "No founder email on file — nothing will send until one is added to the founder contact in Sales Hub."}</p>
+                {data.schedule.sends.length ? <ul className="mt-2 text-[11.5px] text-slate-500">{data.schedule.sends.slice(0, 3).map((s, i) => <li key={i}>{s.kind === "week" ? "Weekly" : "Monthly"} · period from {s.period_start} · sent {new Date(s.sent_at).toLocaleDateString()}</li>)}</ul> : null}
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <h3 className="mb-1 text-[15px] font-semibold text-slate-900">Upcoming meetings</h3>

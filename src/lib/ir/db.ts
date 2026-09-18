@@ -41,7 +41,7 @@ export async function investorMap(ids: string[]): Promise<Map<string, { name: st
 }
 
 // ── Projects ────────────────────────────────────────────────────────────────
-const PROJECT_COLS = "id, company_id, founder_contact_id, title, founder_name, owner_id, source_opportunity_id, start_date, term_months, end_date, status, founder_report_visible, is_spv, starred, created_at";
+const PROJECT_COLS = "id, company_id, founder_contact_id, title, founder_name, owner_id, source_opportunity_id, start_date, term_months, end_date, status, founder_report_visible, is_spv, starred, weekly_summary, monthly_summary, created_at";
 
 async function withOwnerNames(rows: Array<Record<string, unknown>>): Promise<IrProject[]> {
   const names = await nameMap(rows.map((r) => r.owner_id as string));
@@ -92,7 +92,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   return { id: project.id };
 }
 
-export async function updateProject(id: string, patch: Partial<{ status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string }>): Promise<void> {
+export async function updateProject(id: string, patch: Partial<{ status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; weekly_summary: boolean; monthly_summary: boolean }>): Promise<void> {
   const { error } = await db().from("ir_projects").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateProject: ${error.message}`);
 }

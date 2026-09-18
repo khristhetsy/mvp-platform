@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       const r = await getReport(reportId);
       if (!r || r.project_id !== id) return NextResponse.json({ error: "Report not found." }, { status: 404 });
       frozen = r.metrics as unknown as FrozenReport;
-      summary = isExecSummary(r.exec_summary) ? r.exec_summary : fallbackSummary({ ...frozen, summary: "", options: { weeks: [], months: [] }, saved: r });
+      summary = isExecSummary(r.exec_summary) ? r.exec_summary : fallbackSummary({ ...frozen, summary: "", options: { weeks: [], months: [] }, saved: r, schedule: { weekly: false, monthly: false, sends: [] } });
       name = `Investor-Outreach-Report-${frozen.project.title}-${r.period_start}`;
     } else {
       const kind = (sp.get("kind") ?? "week") as ReportKind;

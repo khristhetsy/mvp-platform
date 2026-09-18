@@ -26,6 +26,7 @@ beforeAll(async () => {
     insert into public.crm_contacts values ('${INV}', 'Dan Farrell', 'Farrell Capital'), ('${INV2}', 'Chris Leary', 'Leary Ventures');
   `);
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260917001_ir_deal_flow.sql"), "utf8"));
+  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260918001_ir_scheduled_summaries.sql"), "utf8"));
 });
 afterAll(async () => { await pg.close(); });
 
@@ -55,5 +56,12 @@ describe("ir schema", () => {
   it("an activity must belong to a match or a task", async () => {
     await expect(pg.query(`insert into public.ir_activities (project_id, type, subject, created_by) values ($1, 'call', 'x', $2)`, [projectId, P])).rejects.toThrow();
     await expect(pg.query(`insert into public.ir_activities (project_id, match_id, type, subject, created_by) values ($1, $2, 'call', 'First call', $3)`, [projectId, matchId, P])).resolves.toBeTruthy();
+  });
+  it("scheduled summaries: toggles default off, one send per project + period", async () => {
+    const t = await pg.query<{ weekly_summary: boolean; monthly_summary: boolean }>(`select weekly_summary, monthly_summary from public.ir_projects where id = $1`, [projectId]);
+    expect(t.rows[0]).toEqual({ weekly_summary: false, monthly_summary: false });
+    await pg.query(`insert into public.ir_summary_sends (project_id, kind, period_start, period_end, sent_to) values ($1, 'week', '2026-09-16', '2026-09-23', 'founder@example.com')`, [projectId]);
+    await expect(pg.query(`insert into public.ir_summary_sends (project_id, kind, period_start, period_end, sent_to) values ($1, 'week', '2026-09-16', '2026-09-23', 'founder@example.com')`, [projectId])).rejects.toThrow(/unique|duplicate/i);
+    await expect(pg.query(`insert into public.ir_summary_sends (project_id, kind, period_start, period_end, sent_to) values ($1, 'day', '2026-09-16', '2026-09-17', 'x@y.z')`, [projectId])).rejects.toThrow();
   });
 });
