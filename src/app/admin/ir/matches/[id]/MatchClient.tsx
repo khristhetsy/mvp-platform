@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
+import { MeetingPanel } from "./MeetingPanel";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrMatch, type IrNote, type IrProject, type IrStage } from "@/lib/ir/types";
 
 type Payload = {
@@ -124,8 +125,8 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
           ) : null}
           {tab === "meetings" ? (
             <div>
-              {meetings.length === 0 ? <p className="text-[12.5px] text-slate-400">No meetings yet.</p> : <ul className="divide-y divide-slate-100">{meetings.map((a) => <ActivityRow key={a.id} a={a} onDone={a.done_at ? undefined : () => patchActivity(a.id, { done: true })} onVis={(v) => patchActivity(a.id, { founderVisible: v })} />)}</ul>}
-              <p className="mt-3 text-[11.5px] text-slate-400">Scheduler booking (open slots, Google Calendar, pre-meeting deck task) connects in the next phase. Until then log the meeting as an activity of type Meeting with the date as its due time.</p>
+              <MeetingPanel matchId={matchId} meId={meId} assigneeId={data.match.assignee_id} staff={data.staff} onChanged={load} />
+              {meetings.length ? <><p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Meeting history</p><ul className="divide-y divide-slate-100">{meetings.map((a) => <ActivityRow key={a.id} a={a} onDone={a.done_at || a.calendar_event_id ? undefined : () => patchActivity(a.id, { done: true })} onVis={(v) => patchActivity(a.id, { founderVisible: v })} />)}</ul></> : null}
             </div>
           ) : null}
           {tab === "investor" ? (
