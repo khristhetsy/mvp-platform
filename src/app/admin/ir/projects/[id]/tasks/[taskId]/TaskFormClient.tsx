@@ -9,10 +9,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
-import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
+import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
+import type { EntrepreneurProfile } from "@/lib/ir/db";
+import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../../../_shared/RecordPanels";
 
-type Payload = { task: IrTask; project: IrProject; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
-type Tab = "agent" | "subtasks" | "matching" | "meetings";
+type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
+type Tab = "agent" | "subtasks" | "blocked" | "extra" | "founder" | "matching" | "meetings";
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none";
 
@@ -20,7 +22,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
   const [now] = useState(() => Date.now());
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>((["agent", "subtasks", "matching", "meetings"].includes(initialTab ?? "") ? initialTab : "agent") as Tab);
+  const [tab, setTab] = useState<Tab>((["agent", "subtasks", "blocked", "extra", "founder", "matching", "meetings"].includes(initialTab ?? "") ? initialTab : "agent") as Tab);
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(added ? `${added} investor${added === 1 ? "" : "s"} added to this week.` : null);
@@ -105,7 +107,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
         </div>
 
         <div className="flex gap-1 border-t border-slate-100 px-4">
-          {([["agent", "Agent field"], ["subtasks", `Sub-tasks · ${data.activities.length}`], ["matching", `Matching · ${data.matches.length}`], ["meetings", `Meetings · ${data.activities.filter((a) => a.type === "meeting").length}`]] as const).map(([k, l]) => (
+          {([["agent", "Agent field"], ["subtasks", `Sub-tasks · ${data.activities.length}`], ["blocked", `Blocked by${(data.task.blockers ?? []).filter((b) => !b.cleared_at).length ? ` · ${(data.task.blockers ?? []).filter((b) => !b.cleared_at).length}` : ""}`], ["extra", "Extra info"], ["founder", "Entrepreneur profile"], ["matching", `Matching · ${data.matches.length}`], ["meetings", `Meetings · ${data.activities.filter((a) => a.type === "meeting").length}`]] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 py-2 text-[12.5px] font-medium ${tab === k ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{l}</button>
           ))}
         </div>
@@ -138,6 +140,9 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
               )}
             </div>
           ) : null}
+          {tab === "blocked" ? <BlockersPanel blockers={data.task.blockers ?? []} dealTitle={data.project.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}
+          {tab === "extra" ? <ExtraInfo task={data.task} week={week ?? null} investors={data.matches.length} linked={data.activities.length} busy={busy} onSave={(notes) => patch({ notes })} /> : null}
+          {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} /> : null}
           {tab === "meetings" ? (
             (() => { const ms = data.activities.filter((a) => a.type === "meeting"); return ms.length === 0 ? <p className="text-[12.5px] text-slate-400">No meetings this week.</p> : (
               <ul className="divide-y divide-slate-100 text-[12.5px]">{ms.map((a) => <li key={a.id} className="flex gap-2 py-1.5"><span className="font-medium text-slate-900">{matchName(a.match_id)}</span><span className="flex-1 text-slate-600">{a.subject}</span><span className="text-slate-500">{a.done_at ? `held ${fmt(a.done_at)}` : `booked ${fmt(a.due_at)}`}</span></li>)}</ul>); })()
@@ -145,20 +150,38 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
         </div>
       </div>
 
-      {/* Chatter: planned across the week's investors, then the log */}
+      {/* Chatter: message to followers, planned across the week's investors, then the log */}
       <div className="mt-4 rounded-xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3"><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Send message</p><MessageComposer endpoint={`/api/admin/ir/tasks/${taskId}`} onSent={load} /></div>
         {open.length ? <div className="border-b border-slate-100 px-4 py-3"><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Planned activities</p>
           <ul className="divide-y divide-slate-100 text-[12.5px]">{open.map((a) => <li key={a.id} className="flex items-center gap-2 py-1.5"><input type="checkbox" onChange={() => patchActivity(a.id, { done: true })} aria-label="Mark done" /><span className="font-medium text-slate-900">{matchName(a.match_id)}</span><span className="flex-1 text-slate-700">{a.subject}</span><span className={`text-[11px] ${a.due_at && new Date(a.due_at).getTime() < now ? "text-rose-600" : "text-slate-500"}`}>{a.due_at ? `due ${fmt(a.due_at)}` : ""}</span></li>)}</ul></div> : null}
         <div className="px-4 py-3"><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Log</p>
           {done.length === 0 && data.notes.length === 0 ? <p className="text-[12.5px] text-slate-400">Nothing logged yet.</p> : (
             <ul className="divide-y divide-slate-100 text-[12.5px]">
               {[...done.map((a) => ({ at: a.done_at!, node: <><i className={`ti ${IR_ACTIVITY_ICON[a.type]} text-slate-400`} aria-hidden="true" /> <span className="font-medium text-slate-900">{matchName(a.match_id)}</span> · {a.subject}{a.outcome ? <span className="text-slate-500"> — {a.outcome}</span> : null}</>, who: a.created_by_name })),
-                ...data.notes.map((n) => ({ at: n.created_at, node: <><i className="ti ti-note text-amber-500" aria-hidden="true" /> {n.body}</>, who: n.created_by_name }))]
+                ...data.notes.map((n) => ({ at: n.created_at, node: <><i className={`ti ${n.body.startsWith("Message · ") ? "ti-message-circle text-indigo-500" : "ti-note text-amber-500"}`} aria-hidden="true" /> {n.body.startsWith("Message · ") ? n.body.slice(10) : n.body}</>, who: n.created_by_name }))]
                 .sort((x, y) => y.at.localeCompare(x.at)).map((row, i) => <li key={i} className="flex gap-2 py-1.5"><span className="min-w-0 flex-1">{row.node}</span><span className="shrink-0 text-[11px] text-slate-500">{fmt(row.at)} · {row.who ?? "staff"}</span></li>)}
             </ul>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ExtraInfo({ task, week, investors, linked, busy, onSave }: { task: IrTask; week: IrMilestone | null; investors: number; linked: number; busy: boolean; onSave: (notes: string | null) => Promise<void> }) {
+  const [notes, setNotes] = useState(task.notes ?? "");
+  const dirty = notes !== (task.notes ?? "");
+  return (
+    <div>
+      <div className="grid gap-x-8 gap-y-0 text-[12.5px] sm:grid-cols-2">
+        <Field label="Week range">{week ? `${week.label} · ${formatRange(week.starts_on, week.ends_on)}` : "—"}</Field>
+        <Field label="Created">{new Date(task.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</Field>
+        <Field label="Investors">{investors}</Field>
+        <Field label="Linked records">{linked}</Field>
+      </div>
+      <label className="mt-3 block text-[12px] text-slate-600">Notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder="Anything the team should know about this week" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" /></label>
+      <div className="mt-2 flex justify-end"><button type="button" disabled={busy || !dirty} onClick={() => onSave(notes.trim() || null)} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">Save notes</button></div>
     </div>
   );
 }

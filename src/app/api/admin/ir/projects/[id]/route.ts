@@ -1,12 +1,13 @@
 /**
  * One IR project — the pipeline payload.
- *   GET   → { project, milestones, matches, tasks, openActivities, staff }
+ *   GET   → { project, milestones, matches, tasks, openActivities, staff, stageEvents }
  *   PATCH { status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary? } → { ok }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
 import { getProject, listActivities, listMatches, listMilestones, listStaff, listTasks, updateProject } from "@/lib/ir/db";
+import { loadEvents } from "@/lib/ir/dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +17,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const project = await getProject(id);
     if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
-    const [milestones, matches, tasks, openActivities, staff] = await Promise.all([
-      listMilestones(id), listMatches(id), listTasks(id), listActivities({ projectId: id, openOnly: true }), listStaff(),
+    const [milestones, matches, tasks, openActivities, staff, stageEvents] = await Promise.all([
+      listMilestones(id), listMatches(id), listTasks(id), listActivities({ projectId: id, openOnly: true }), listStaff(), loadEvents([id]),
     ]);
-    return NextResponse.json({ project, milestones, matches, tasks, openActivities, staff });
+    return NextResponse.json({ project, milestones, matches, tasks, openActivities, staff, stageEvents });
   } catch (e) { return failed(e, "Couldn't load the project."); }
 }
 

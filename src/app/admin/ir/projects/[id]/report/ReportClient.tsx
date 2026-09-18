@@ -33,6 +33,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sendTo, setSendTo] = useState(""); const [subject, setSubject] = useState(""); const [message, setMessage] = useState(""); const [attach, setAttach] = useState(true);
+  const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
 
   const query = useCallback(() => {
     const q = new URLSearchParams({ kind, compare: compare ? "1" : "0" });
@@ -87,6 +88,8 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
     if (!r.ok) { const j = await r.json().catch(() => ({})); setError(j.error ?? "Couldn't update the schedule."); return; }
     await load();
   }
+  async function emailMe() { const j = await post({ action: "email_me" }, "email_me"); if (j) setNotice(`Summary emailed to ${j.to}.`); }
+  async function previewEmail() { const j = await post({ action: "preview", message, attachPdf: attach }, "preview"); if (j) setPreview({ subject: j.subject, html: j.html }); }
   async function send() {
     if (!data?.saved?.approved_at) { setError("Approve the executive summary before sending."); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sendTo)) { setError("Enter the founder's email address before sending."); return; }
@@ -108,6 +111,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Report view"><button type="button" className={seg(view === "live")} onClick={() => setView("live")}>Interactive</button><button type="button" className={seg(view === "doc")} onClick={() => setView("doc")}>Send format</button></div>
+          <button type="button" disabled={busy !== null} onClick={emailMe} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">{busy === "email_me" ? "Sending…" : "Email me this summary"}</button>
           <a href={pdfHref} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50">{data.saved?.approved_at ? "Download PDF" : "Download draft PDF"}</a>
         </div>
       </div>
@@ -203,6 +207,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <label className="flex items-center gap-2 text-[12.5px] text-slate-700"><input type="checkbox" checked={attach} onChange={(e) => setAttach(e.target.checked)} /> Attach as PDF</label>
+                <button type="button" disabled={busy !== null} onClick={previewEmail} className="mr-2 rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50 disabled:opacity-60">{busy === "preview" ? "…" : "Preview email"}</button>
                 <button type="button" disabled={busy !== null || !data.saved?.approved_at} title={data.saved?.approved_at ? "" : "Approve the executive summary first"} onClick={send} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy === "send" ? "Sending…" : "Send report"}</button>
               </div>
               {!data.saved?.approved_at ? <p className="mt-2 text-[11.5px] text-amber-700">Sending unlocks once the executive summary is approved.</p> : null}
@@ -211,6 +216,15 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
           <Document d={data} ex={summary} preparedBy={data.project.owner_name ?? meName} />
         </div>
       )}
+      {preview ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-label="Email preview">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-xl">
+            <div className="mb-2 flex items-center justify-between"><h3 className="text-[14px] font-semibold text-slate-900">Email preview</h3><button type="button" onClick={() => setPreview(null)} className="text-[12px] text-slate-500 hover:text-slate-800">Close</button></div>
+            <p className="text-[12px] text-slate-500">To: {sendTo || "—"} · Subject: {preview.subject}</p>
+            <div className="mt-3 max-h-[60vh] overflow-auto rounded-lg border border-slate-200 p-4" dangerouslySetInnerHTML={{ __html: preview.html }} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

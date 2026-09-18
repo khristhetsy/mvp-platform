@@ -4,6 +4,8 @@
  *   POST { action: "draft", ...period }                 → { summary, source }          AI drafts; nothing is written
  *   POST { action: "save", ...period, summary, approve } → { report }                   staff text + frozen metrics
  *   POST { action: "send", ...period, to, subject, message, attachPdf } → { ok, channel } approved report only
+ *   POST { action: "email_me", ...period }                → emails the interactive summary to the signed-in staff member
+ *   POST { action: "preview", ...period, message }        → { html } the email the founder would receive
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,6 +15,7 @@ import { REPORT_SENT_PREFIX } from "@/lib/ir/metrics";
 import { draftExecSummary, freeze, isExecSummary, reportData, type FrozenReport, type ReportKind } from "@/lib/ir/report";
 import { renderReportPdf } from "@/lib/ir/report-pdf";
 import { sendEmail } from "@/lib/email/send-email";
+import { summaryHtml } from "@/lib/ir/summaries";
 
 export const dynamic = "force-dynamic";
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -45,6 +48,8 @@ const postSchema = z.discriminatedUnion("action", [
   periodSchema.extend({ action: z.literal("draft") }),
   periodSchema.extend({ action: z.literal("save"), summary: summarySchema, approve: z.boolean().default(false) }),
   periodSchema.extend({ action: z.literal("send"), to: z.string().email(), subject: z.string().min(1).max(200), message: z.string().max(4000), attachPdf: z.boolean().default(true) }),
+  periodSchema.extend({ action: z.literal("email_me") }),
+  periodSchema.extend({ action: z.literal("preview"), message: z.string().max(4000), attachPdf: z.boolean().default(true) }),
 ]);
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -65,6 +70,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (body.action === "save") {
       const report = await upsertReport({ projectId: id, period: data.period, execSummary: body.summary, metrics: freeze(data), approve: body.approve, by: me.id });
       return NextResponse.json({ report });
+    }
+    if (body.action === "email_me") {
+      if (!me.email) return NextResponse.json({ error: "Your profile has no email address." }, { status: 400 });
+      const mail = summaryHtml(data);
+      const ok = await sendEmail({ to: me.email, subject: `[Copy] ${mail.subject}`, html: mail.html, text: mail.text });
+      if (!ok) return NextResponse.json({ error: "Email isn't configured on this environment (RESEND_API_KEY)." }, { status: 503 });
+      return NextResponse.json({ ok: true, to: me.email });
+    }
+    if (body.action === "preview") {
+      const ex = data.saved && isExecSummary(data.saved.exec_summary) ? data.saved.exec_summary : null;
+      const html = `<div style="font-family:Inter,Helvetica,Arial,sans-serif;max-width:640px;color:#0F1B33;font-size:14px;line-height:1.6"><p>${escapeHtml(body.message).replace(/\n/g, "<br>")}</p>${body.attachPdf ? `<p style="border:1px solid #E2E7F0;border-radius:8px;padding:8px 12px;display:inline-block;font-size:12px;color:#5B6B86">Attachment: Investor-Outreach-Report-${escapeHtml(data.project.title.replace(/[^\w]+/g, "-"))}-${data.period.start}.pdf${ex ? "" : " · not yet approved — attaches once the summary is approved"}</p>` : ""}<p style="color:#5B6B86;font-size:12px">Confidential. Investor names and contact details are held by iCFO Capital Global, Inc. Firms are named once a meeting is booked. This report is not an offer to sell securities.</p></div>`;
+      return NextResponse.json({ html, subject: `${data.project.title} investor outreach report · ${data.period.label}` });
     }
     // send — only an approved snapshot goes out, and only to a real address
     const saved = data.saved;

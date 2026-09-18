@@ -11,16 +11,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
 import { MeetingPanel } from "./MeetingPanel";
-import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrMatch, type IrNote, type IrProject, type IrStage } from "@/lib/ir/types";
+import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../_shared/RecordPanels";
+import type { EntrepreneurProfile } from "@/lib/ir/db";
+import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrNote, type IrProject, type IrStage } from "@/lib/ir/types";
+import { useRouter } from "next/navigation";
 
 type Payload = {
   match: IrMatch; project: IrProject; activities: IrActivity[]; notes: IrNote[];
   stageEvents: Array<{ from_stage: IrStage | null; to_stage: IrStage; changed_by: string | null; changed_at: string }>;
   alsoMatched: Array<{ match_id: string; project_id: string; project_title: string; stage: IrStage }>;
   staff: Array<{ id: string; name: string }>;
+  entrepreneur: EntrepreneurProfile | null;
+  siblings: Array<{ id: string; name: string }>;
   investor: { id: string; name: string | null; firm: string | null; country: string | null; dataSource: string | null; verifiedAt: string | null; investorTypes: string[]; industries: string[] } | null;
 };
-type Tab = "tasks" | "meetings" | "investor" | "history";
+type Tab = "tasks" | "meetings" | "blocked" | "investor" | "founder" | "history";
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const fmtDay = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
@@ -31,6 +36,10 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("tasks");
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [introOpen, setIntroOpen] = useState(false);
+  const [introNote, setIntroNote] = useState("");
+  const router = useRouter();
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/ir/matches/${matchId}`);
@@ -54,6 +63,15 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
     await load();
   }
 
+  async function introSent() {
+    setBusy(true); setError(null);
+    const r = await fetch(`/api/admin/ir/matches/${matchId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "intro_sent", note: introNote.trim() || null }) });
+    setBusy(false);
+    if (!r.ok) { setError((await r.json().catch(() => ({}))).error ?? "Couldn't log the intro email."); return; }
+    setIntroOpen(false); setIntroNote(""); setNotice("Intro email logged as sent — stage is Intro sent.");
+    await load();
+  }
+
   const open = useMemo(() => (data?.activities ?? []).filter((a) => !a.done_at).sort((a, b) => (a.due_at ?? "9").localeCompare(b.due_at ?? "9")), [data]);
   const done = useMemo(() => (data?.activities ?? []).filter((a) => a.done_at).sort((a, b) => (b.done_at ?? "").localeCompare(a.done_at ?? "")), [data]);
   const nextDue = open[0]?.due_at ?? null;
@@ -69,8 +87,25 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
       <div className="mb-1 flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
         <Link href="/admin/ir/projects" className="hover:text-indigo-700">Projects</Link><span>/</span>
         <Link href={`/admin/ir/projects/${p.id}`} className="hover:text-indigo-700">{p.title}</Link><span>/</span><span className="text-slate-800">{m.investor_name ?? "Investor"}</span>
-        {error ? <span className="ml-auto text-rose-600">{error}</span> : null}
+        {error ? <span className="text-rose-600">{error}</span> : null}{notice ? <span className="text-emerald-700">{notice}</span> : null}
+        <span className="ml-auto flex items-center gap-1.5">
+          <button type="button" disabled={busy} onClick={() => setTab("meetings")} className="rounded-md bg-indigo-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">Book meeting</button>
+          <button type="button" disabled={busy} onClick={() => setIntroOpen((v) => !v)} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-60">Send intro email</button>
+          {(() => { const i = data.siblings.findIndex((x) => x.id === matchId); const prev = i > 0 ? data.siblings[i - 1] : null; const next = i >= 0 && i < data.siblings.length - 1 ? data.siblings[i + 1] : null; return <>
+            <span className="ml-2 text-slate-500">{i >= 0 ? i + 1 : "–"} / {data.siblings.length}</span>
+            <button type="button" disabled={!prev} onClick={() => prev && router.push(`/admin/ir/matches/${prev.id}`)} aria-label="Previous record" title={prev?.name} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-40">‹</button>
+            <button type="button" disabled={!next} onClick={() => next && router.push(`/admin/ir/matches/${next.id}`)} aria-label="Next record" title={next?.name} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-40">›</button>
+          </>; })()}
+        </span>
       </div>
+      {introOpen ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[12.5px]">
+          <span className="text-indigo-900">Mark the intro email as sent from your mailbox — the &ldquo;Send intro email&rdquo; to-do is completed and the stage moves to Intro sent.</span>
+          <input value={introNote} onChange={(e) => setIntroNote(e.target.value)} placeholder="Note (optional) — e.g. Sent deck v3" className="min-w-[220px] flex-1 rounded-md border border-indigo-200 bg-white px-2 py-1 text-[12px]" />
+          <button type="button" disabled={busy} onClick={introSent} className="rounded-md bg-indigo-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">Confirm</button>
+          <button type="button" onClick={() => setIntroOpen(false)} className="text-[12px] text-slate-500 hover:text-slate-800">Cancel</button>
+        </div>
+      ) : null}
 
       {/* Status bar */}
       <div className="mb-3 flex flex-wrap gap-0.5 overflow-x-auto">
@@ -113,7 +148,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
         </div>
 
         <div className="flex gap-1 border-t border-slate-100 px-4">
-          {([["tasks", `Tasks · ${open.length}`], ["meetings", `Meetings · ${meetings.length}`], ["investor", "Investor profile"], ["history", "History"]] as const).map(([k, l]) => (
+          {([["tasks", `Tasks · ${open.length}`], ["meetings", `Meetings · ${meetings.length}`], ["blocked", `Blocked by${m.blockers.filter((b) => !b.cleared_at).length ? ` · ${m.blockers.filter((b) => !b.cleared_at).length}` : ""}`], ["investor", "Investor profile"], ["founder", "Entrepreneur profile"], ["history", "History"]] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 py-2 text-[12.5px] font-medium ${tab === k ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{l}</button>
           ))}
         </div>
@@ -129,6 +164,8 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
               {meetings.length ? <><p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Meeting history</p><ul className="divide-y divide-slate-100">{meetings.map((a) => <ActivityRow key={a.id} a={a} onDone={a.done_at || a.calendar_event_id ? undefined : () => patchActivity(a.id, { done: true })} onVis={(v) => patchActivity(a.id, { founderVisible: v })} />)}</ul></> : null}
             </div>
           ) : null}
+          {tab === "blocked" ? <BlockersPanel blockers={m.blockers ?? []} dealTitle={p.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}
+          {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} /> : null}
           {tab === "investor" ? (
             <div className="grid gap-x-8 gap-y-1 text-[12.5px] sm:grid-cols-2">
               <Field label="Name" value={investor?.name ?? "—"} /><Field label="Firm" value={investor?.firm ?? "—"} />
@@ -173,7 +210,7 @@ function ActivityRow({ a, onDone, onVis }: { a: IrActivity; onDone?: () => void;
 }
 
 function Chatter({ projectId, matchId, open, done, notes, staff, meId, onChange, onDone }: { projectId: string; matchId: string; open: IrActivity[]; done: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; meId: string; onChange: () => Promise<void>; onDone: (a: IrActivity) => void }) {
-  const [mode, setMode] = useState<"log" | "schedule" | "note">("log");
+  const [mode, setMode] = useState<"message" | "log" | "schedule" | "note">("log");
   const [type, setType] = useState<IrActivityType>("call");
   const [subject, setSubject] = useState("");
   const [desc, setDesc] = useState("");
@@ -214,12 +251,13 @@ function Chatter({ projectId, matchId, open, done, notes, staff, meId, onChange,
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-white">
       <div className="flex gap-1 border-b border-slate-100 px-4 pt-2">
-        {([["log", "Log activity"], ["schedule", "Schedule activity"], ["note", "Log note"]] as const).map(([k, l]) => (
+        {([["message", "Send message"], ["log", "Log activity"], ["schedule", "Schedule activity"], ["note", "Log note"]] as const).map(([k, l]) => (
           <button key={k} type="button" onClick={() => setMode(k)} className={`-mb-px border-b-2 px-3 py-2 text-[12.5px] font-medium ${mode === k ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{l}</button>
         ))}
       </div>
       <div className="p-4">
-        {mode !== "note" ? (
+        {mode === "message" ? <MessageComposer endpoint={`/api/admin/ir/matches/${matchId}`} onSent={onChange} /> : null}
+        {mode !== "note" && mode !== "message" ? (
           <div className="grid gap-2 sm:grid-cols-[140px_1fr]">
             <select value={type} onChange={(e) => setType(e.target.value as IrActivityType)} className={inp}>{IR_ACTIVITY_TYPES.map((t) => <option key={t} value={t}>{IR_ACTIVITY_LABEL[t]}</option>)}</select>
             <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={mode === "log" ? "What happened — e.g. Second call attempt" : "What to do — e.g. Send deck before meeting"} className={inp} />
@@ -228,16 +266,16 @@ function Chatter({ projectId, matchId, open, done, notes, staff, meId, onChange,
             <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className={inp} title={mode === "log" ? "When it happened (optional)" : "Due"} />
             <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.id === meId ? `${s.name} (me)` : s.name}</option>)}</select>
           </div>
-        ) : (
+        ) : mode === "note" ? (
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Internal note. Tick the box to show it on the founder report." className={inp} />
-        )}
-        <div className="mt-2 flex items-center gap-3">
+        ) : null}
+        {mode !== "message" ? <div className="mt-2 flex items-center gap-3">
           {mode === "note"
             ? <label className="text-[12px] text-slate-600"><input type="checkbox" checked={noteVisible} onChange={(e) => setNoteVisible(e.target.checked)} /> Show on founder report</label>
             : <label className="text-[12px] text-slate-600"><input type="checkbox" checked={founderVisible} onChange={(e) => setFounderVisible(e.target.checked)} /> Founder-visible</label>}
           {err ? <span className="text-[12px] text-rose-600">{err}</span> : null}
           <button type="button" disabled={busy} onClick={submit} className="ml-auto rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Saving…" : mode === "log" ? "Log" : mode === "schedule" ? "Schedule" : "Save note"}</button>
-        </div>
+        </div> : null}
       </div>
 
       {open.length ? (
@@ -258,8 +296,8 @@ function Chatter({ projectId, matchId, open, done, notes, staff, meId, onChange,
               </li>
             ) : (
               <li key={`n-${t.n.id}`} className="flex gap-2 py-2 text-[12.5px]">
-                <i className="ti ti-note mt-0.5 text-amber-500" aria-hidden="true" />
-                <span className="min-w-0 flex-1 whitespace-pre-wrap text-slate-700">{t.n.body}</span>
+                <i className={`ti ${t.n.body.startsWith("Message · ") ? "ti-message-circle text-indigo-500" : "ti-note text-amber-500"} mt-0.5`} aria-hidden="true" />
+                <span className="min-w-0 flex-1 whitespace-pre-wrap text-slate-700">{t.n.body.startsWith("Message · ") ? t.n.body.slice(10) : t.n.body}</span>
                 <span className="shrink-0 text-[11px] text-slate-500">{fmt(t.at)} · {t.n.created_by_name ?? "staff"}{t.n.founder_visible ? " · on report" : ""}</span>
               </li>
             ))}

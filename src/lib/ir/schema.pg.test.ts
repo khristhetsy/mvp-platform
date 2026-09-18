@@ -27,6 +27,7 @@ beforeAll(async () => {
   `);
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260917001_ir_deal_flow.sql"), "utf8"));
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260918001_ir_scheduled_summaries.sql"), "utf8"));
+  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260918002_ir_blockers.sql"), "utf8"));
 });
 afterAll(async () => { await pg.close(); });
 
@@ -63,5 +64,12 @@ describe("ir schema", () => {
     await pg.query(`insert into public.ir_summary_sends (project_id, kind, period_start, period_end, sent_to) values ($1, 'week', '2026-09-16', '2026-09-23', 'founder@example.com')`, [projectId]);
     await expect(pg.query(`insert into public.ir_summary_sends (project_id, kind, period_start, period_end, sent_to) values ($1, 'week', '2026-09-16', '2026-09-23', 'founder@example.com')`, [projectId])).rejects.toThrow(/unique|duplicate/i);
     await expect(pg.query(`insert into public.ir_summary_sends (project_id, kind, period_start, period_end, sent_to) values ($1, 'day', '2026-09-16', '2026-09-17', 'x@y.z')`, [projectId])).rejects.toThrow();
+  });
+  it("blockers default to an empty list on matches and tasks", async () => {
+    const r = await pg.query<{ blockers: unknown }>(`select blockers from public.ir_matches where id = $1`, [matchId]);
+    expect(r.rows[0].blockers).toEqual([]);
+    await pg.query(`update public.ir_matches set blockers = '[{"label":"Data room ready","cleared_at":null}]'::jsonb where id = $1`, [matchId]);
+    const r2 = await pg.query<{ n: number }>(`select jsonb_array_length(blockers) as n from public.ir_matches where id = $1`, [matchId]);
+    expect(Number(r2.rows[0].n)).toBe(1);
   });
 });

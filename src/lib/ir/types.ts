@@ -35,16 +35,19 @@ export type IrMilestone = {
   starts_on: string; ends_on: string; sort_order: number; completed_at: string | null;
 };
 
+export type IrBlocker = { label: string; cleared_at: string | null };
+export const BLOCKER_PRESETS = ["Data room ready", "One pager approved by founder", "Updated deck uploaded"] as const;
+
 export type IrTask = {
   id: string; project_id: string; milestone_id: string; title: string; status: "new" | "in_progress" | "done";
-  assignee_id: string | null; assignee_name?: string | null; starred: boolean; notes: string | null; deadline: string | null; created_at: string;
+  assignee_id: string | null; assignee_name?: string | null; starred: boolean; notes: string | null; deadline: string | null; blockers: IrBlocker[]; created_at: string;
 };
 
 export type IrMatch = {
   id: string; project_id: string; investor_contact_id: string; task_id: string | null; milestone_id: string | null;
   stage: IrStage; assignee_id: string | null; assignee_name?: string | null; fit_tier: "high" | "medium" | "low" | null;
   data_source: string | null; founder_visible: boolean; starred: boolean; stage_changed_at: string;
-  term_sheet_received_at: string | null; meeting_booking_id: string | null; created_at: string;
+  term_sheet_received_at: string | null; meeting_booking_id: string | null; blockers: IrBlocker[]; created_at: string;
   /** From crm_contacts at render time — never stored here. */
   investor_name: string | null; investor_firm: string | null;
 };

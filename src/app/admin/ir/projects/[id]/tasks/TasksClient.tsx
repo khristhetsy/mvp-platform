@@ -25,6 +25,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   const [monthId, setMonthId] = useState<string | null>(initialMonth);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<"kanban" | "list">("kanban");
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/ir/projects/${projectId}`);
@@ -78,7 +79,8 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         <button type="button" disabled={busy || !currentWeek} onClick={() => currentWeek && newTask(currentWeek.id)} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">New</button>
         <h2 className="text-[18px] font-semibold text-slate-900">{p.title} · Tasks</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search investors…" className="ml-2 w-56 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />
-        <label className="ml-auto text-[12px] text-slate-600">Month
+        <span className="ml-auto flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="View"><button type="button" onClick={() => setView("kanban")} aria-pressed={view === "kanban"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "kanban" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Kanban</button><button type="button" onClick={() => setView("list")} aria-pressed={view === "list"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "list" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>List</button></span>
+        <label className="text-[12px] text-slate-600">Month
           <select value={month?.id ?? ""} onChange={(e) => setMonthId(e.target.value)} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
             {months.map((m) => <option key={m.id} value={m.id}>{m.label} · {formatRange(m.starts_on, m.ends_on)}</option>)}
           </select>
@@ -86,6 +88,24 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
       </div>
 
+      {view === "list" ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <table className="w-full text-[12.5px]">
+            <thead><tr className="bg-slate-50 text-left text-[11px] text-slate-500"><th className="px-3 py-2 font-medium">Task</th><th className="py-2 pr-2 font-medium">Week</th><th className="py-2 pr-2 font-medium">Investors</th><th className="py-2 pr-2 font-medium">Assignee</th><th className="py-2 pr-2 font-medium">Status</th><th className="py-2 pr-3 font-medium">Created</th></tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {monthWeeks.flatMap((w) => data.tasks.filter((t) => t.milestone_id === w.id).map((t) => ({ t, w }))).filter(({ t }) => { const ms = matchesByTask.get(t.id) ?? []; return !needle || ms.some(hit) || t.title.toLowerCase().includes(needle); }).map(({ t, w }) => { const ms = matchesByTask.get(t.id) ?? []; return <tr key={t.id} className="hover:bg-slate-50">
+                <td className="px-3 py-2"><Link href={`/admin/ir/projects/${projectId}/tasks/${t.id}`} className="font-medium text-slate-900 hover:text-indigo-700">{t.starred ? <i className="ti ti-star-filled mr-1 text-amber-500" aria-hidden="true" /> : null}{t.title}</Link></td>
+                <td className="py-2 pr-2 text-slate-700">{w.label} <span className="text-slate-400">{formatRange(w.starts_on, w.ends_on)}</span></td>
+                <td className="py-2 pr-2 text-slate-700">{ms.length}{ms.length ? <span className="ml-1 text-slate-400">{ms.slice(0, 3).map((m) => m.investor_name ?? m.investor_firm ?? "Investor").join(", ")}{ms.length > 3 ? ` +${ms.length - 3}` : ""}</span> : null}</td>
+                <td className="py-2 pr-2 text-slate-700">{t.assignee_name ?? "—"}</td>
+                <td className="py-2 pr-2"><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: STATUS_DOT[t.status] }} />{t.status === "in_progress" ? "In progress" : t.status === "done" ? "Done" : "New"}</span></td>
+                <td className="py-2 pr-3 text-slate-500">{fmtDay(t.created_at)}</td>
+              </tr>; })}
+              {monthWeeks.every((w) => data.tasks.filter((t) => t.milestone_id === w.id).length === 0) ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">No tasks in this month yet.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
+      ) : (
       <HScrollBoard>
         {monthWeeks.map((w) => {
           const tasks = data.tasks.filter((t) => t.milestone_id === w.id);
@@ -133,6 +153,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
           );
         })}
       </HScrollBoard>
+      )}
     </div>
   );
 }

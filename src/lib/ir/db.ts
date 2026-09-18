@@ -5,8 +5,9 @@
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { generateMilestones } from "@/lib/ir/milestones";
+import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
 import type { GoalMetric, PeriodKind } from "@/lib/ir/metrics";
-import { INTRO_DUE_DAYS, INTRO_SUBJECT, type IrActivity, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrStage, type IrTask, type StaffOption } from "@/lib/ir/types";
+import { INTRO_DUE_DAYS, INTRO_SUBJECT, type IrActivity, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrStage, type IrTask, type StaffOption } from "@/lib/ir/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function db(): any { return createServiceRoleClient(); }
@@ -132,13 +133,13 @@ export async function getTask(id: string): Promise<IrTask | null> {
 export async function createTask(input: { projectId: string; milestoneId: string; title: string; assigneeId: string | null; deadline?: string | null }): Promise<{ id: string }> {
   return must(await db().from("ir_tasks").insert({ project_id: input.projectId, milestone_id: input.milestoneId, title: input.title, assignee_id: input.assigneeId, deadline: input.deadline ?? null }).select("id").single(), "createTask") as { id: string };
 }
-export async function updateTask(id: string, patch: Partial<{ title: string; status: string; assignee_id: string | null; starred: boolean; notes: string | null; deadline: string | null; milestone_id: string }>): Promise<void> {
+export async function updateTask(id: string, patch: Partial<{ title: string; status: string; assignee_id: string | null; starred: boolean; notes: string | null; deadline: string | null; milestone_id: string; blockers: IrBlocker[] }>): Promise<void> {
   const { error } = await db().from("ir_tasks").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateTask: ${error.message}`);
 }
 
 // ── Matches ─────────────────────────────────────────────────────────────────
-const MATCH_COLS = "id, project_id, investor_contact_id, task_id, milestone_id, stage, assignee_id, fit_tier, data_source, founder_visible, starred, stage_changed_at, term_sheet_received_at, meeting_booking_id, created_at";
+const MATCH_COLS = "id, project_id, investor_contact_id, task_id, milestone_id, stage, assignee_id, fit_tier, data_source, founder_visible, starred, stage_changed_at, term_sheet_received_at, meeting_booking_id, blockers, created_at";
 
 async function decorateMatches(rows: Array<Record<string, unknown>>): Promise<IrMatch[]> {
   const [inv, names] = await Promise.all([investorMap(rows.map((r) => r.investor_contact_id as string)), nameMap(rows.map((r) => r.assignee_id as string | null))]);
@@ -184,7 +185,7 @@ export async function createMatches(input: { projectId: string; taskId: string |
 }
 
 /** Stage / flags on a match. The stage trigger records the event; `actor` is passed so it can attribute it. */
-export async function updateMatch(id: string, patch: Partial<{ stage: IrStage; assignee_id: string | null; starred: boolean; founder_visible: boolean; term_sheet_received_at: string | null; task_id: string | null; milestone_id: string | null; meeting_booking_id: string | null }>, actor: string): Promise<void> {
+export async function updateMatch(id: string, patch: Partial<{ stage: IrStage; assignee_id: string | null; starred: boolean; founder_visible: boolean; term_sheet_received_at: string | null; task_id: string | null; milestone_id: string | null; meeting_booking_id: string | null; blockers: IrBlocker[] }>, actor: string): Promise<void> {
   const client = db();
   const { error } = await client.from("ir_matches").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateMatch: ${error.message}`);
@@ -349,4 +350,34 @@ export async function founderEmail(project: { founder_contact_id: string | null;
     if (fid) { const { data: p } = await db().from("profiles").select("email").eq("id", fid).maybeSingle(); const e = (p as { email: string | null } | null)?.email; if (e && e.includes("@")) return e; }
   }
   return null;
+}
+
+// ── Entrepreneur profile (Share Project + Task form tab) ────────────────────
+export type EntrepreneurProfile = { company: string; founder: string | null; membershipType: string | null; portalPlan: string | null; raise: string | null; stage: string | null; industry: string | null; companyId: string | null; founderContactId: string | null };
+export async function entrepreneurProfile(project: IrProject): Promise<EntrepreneurProfile> {
+  const out: EntrepreneurProfile = { company: project.title, founder: project.founder_name, membershipType: null, portalPlan: null, raise: null, stage: null, industry: null, companyId: project.company_id, founderContactId: project.founder_contact_id };
+  if (project.company_id) {
+    const { data } = await db().from("companies").select("company_name, founder_id, industry, funding_amount, revenue_stage").eq("id", project.company_id).maybeSingle();
+    const c = data as { company_name: string; founder_id: string | null; industry: string | null; funding_amount: number | null; revenue_stage: string | null } | null;
+    if (c) {
+      out.company = c.company_name; out.industry = c.industry; out.stage = c.revenue_stage;
+      out.raise = c.funding_amount != null ? `$${Number(c.funding_amount).toLocaleString()}` : null;
+      if (c.founder_id) {
+        const { data: sub } = await db().from("subscriptions").select("plan_type, subscription_status").eq("profile_id", c.founder_id).maybeSingle();
+        const sp = sub as { plan_type: string | null; subscription_status: string | null } | null;
+        if (sp?.plan_type) out.portalPlan = `${PLAN_LABELS[sp.plan_type as PlanType] ?? sp.plan_type}${sp.subscription_status ? ` · ${sp.subscription_status}` : ""}`;
+      }
+    }
+  }
+  if (project.founder_contact_id) {
+    const { data } = await db().from("crm_contacts").select("profile, company").eq("id", project.founder_contact_id).maybeSingle();
+    const c = data as { profile: Record<string, unknown> | null; company: string | null } | null;
+    const p = c?.profile ?? {};
+    out.membershipType = (p.membershipType as string | undefined) ?? (p.membership_type as string | undefined) ?? null;
+    out.portalPlan = out.portalPlan ?? ((p.plan as string | undefined) ?? null);
+    if (!out.raise && typeof p.raise === "string") out.raise = p.raise;
+    if (!out.stage) { const st = p.operatingStages ?? p.fundingStages; out.stage = Array.isArray(st) ? (st as string[]).join(", ") : typeof st === "string" ? st : null; }
+    if (!out.industry) { const ind = p.industries; out.industry = Array.isArray(ind) ? (ind as string[]).join(", ") : null; }
+  }
+  return out;
 }

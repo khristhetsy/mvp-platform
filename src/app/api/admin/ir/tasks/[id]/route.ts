@@ -1,10 +1,12 @@
 /**
- *   PATCH { title?, status?, assigneeId?, starred?, notes?, deadline?, milestoneId? } → { ok }
+ *   PATCH { title?, status?, assigneeId?, starred?, notes?, deadline?, milestoneId?, blockers? } → { ok }
+ *   POST  { action: "message", body } → message to followers (project owner + task assignee)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
-import { getProject, getTask, listActivities, listMatches, listMilestones, listNotes, listStaff, listTasks, updateTask } from "@/lib/ir/db";
+import { entrepreneurProfile, getProject, getTask, listActivities, listMatches, listMilestones, listNotes, listStaff, listTasks, updateTask } from "@/lib/ir/db";
+import { sendRecordMessage } from "@/lib/ir/messages";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const projectActs = matches.length ? await listActivities({ projectId: task.project_id }) : [];
     const activities = [...taskActs, ...projectActs.filter((a) => a.match_id && matchIds.has(a.match_id) && !taskActs.some((t) => t.id === a.id))];
     const weeks = milestones.filter((m) => m.kind === "week");
-    return NextResponse.json({ task, project, weeks, months: milestones.filter((m) => m.kind === "month"), matches, activities, notes: notes.filter((n) => !n.match_id || matchIds.has(n.match_id)), staff, siblings: siblings.map((t) => ({ id: t.id, title: t.title, milestone_id: t.milestone_id })) });
+    const entrepreneur = project ? await entrepreneurProfile(project) : null;
+    return NextResponse.json({ task, project, entrepreneur, weeks, months: milestones.filter((m) => m.kind === "month"), matches, activities, notes: notes.filter((n) => !n.match_id || matchIds.has(n.match_id)), staff, siblings: siblings.map((t) => ({ id: t.id, title: t.title, milestone_id: t.milestone_id })) });
   } catch (e) { return failed(e, "Couldn't load the task."); }
 }
 
@@ -31,6 +34,7 @@ const schema = z.object({
   title: z.string().min(1).max(160).optional(), status: z.enum(["new", "in_progress", "done"]).optional(),
   assigneeId: z.string().uuid().nullable().optional(), starred: z.boolean().optional(), notes: z.string().max(4000).nullable().optional(),
   deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), milestoneId: z.string().uuid().optional(),
+  blockers: z.array(z.object({ label: z.string().min(1).max(160), cleared_at: z.string().datetime().nullable() })).max(50).optional(),
 });
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -40,7 +44,22 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const d = parsed.data;
   try {
-    await updateTask(id, { title: d.title, status: d.status, assignee_id: d.assigneeId, starred: d.starred, notes: d.notes, deadline: d.deadline, milestone_id: d.milestoneId });
+    await updateTask(id, { title: d.title, status: d.status, assignee_id: d.assigneeId, starred: d.starred, notes: d.notes, deadline: d.deadline, milestone_id: d.milestoneId, blockers: d.blockers });
     return NextResponse.json({ ok: true });
   } catch (e) { return failed(e, "Couldn't update the task."); }
+}
+
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  const me = await irStaff();
+  if (!me) return forbidden();
+  const { id } = await ctx.params;
+  const p = z.object({ action: z.literal("message"), body: z.string().min(1).max(4000) }).safeParse(await req.json().catch(() => ({})));
+  if (!p.success) return NextResponse.json({ error: "Write the message." }, { status: 400 });
+  try {
+    const task = await getTask(id);
+    if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    const project = await getProject(task.project_id);
+    const r = await sendRecordMessage({ projectId: task.project_id, matchId: null, taskId: id, body: p.data.body, followers: [project?.owner_id, task.assignee_id], senderId: me.id, recordLabel: task.title, deepLink: `/admin/ir/projects/${task.project_id}/tasks/${id}` });
+    return NextResponse.json({ ok: true, ...r });
+  } catch (e) { return failed(e, "Couldn't send the message."); }
 }
