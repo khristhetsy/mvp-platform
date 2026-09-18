@@ -28,6 +28,7 @@ beforeAll(async () => {
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260917001_ir_deal_flow.sql"), "utf8"));
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260918001_ir_scheduled_summaries.sql"), "utf8"));
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260918002_ir_blockers.sql"), "utf8"));
+  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20260918003_ir_project_description.sql"), "utf8"));
 });
 afterAll(async () => { await pg.close(); });
 

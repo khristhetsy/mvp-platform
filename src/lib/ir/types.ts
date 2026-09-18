@@ -27,7 +27,7 @@ export type IrProject = {
   id: string; company_id: string | null; founder_contact_id: string | null; title: string; founder_name: string | null;
   owner_id: string; owner_name: string | null; source_opportunity_id: string | null;
   start_date: string; term_months: number; end_date: string; status: IrProjectStatus;
-  founder_report_visible: boolean; is_spv: boolean; starred: boolean; weekly_summary: boolean; monthly_summary: boolean; created_at: string;
+  founder_report_visible: boolean; is_spv: boolean; starred: boolean; weekly_summary: boolean; monthly_summary: boolean; description: string | null; created_at: string;
 };
 
 export type IrMilestone = {

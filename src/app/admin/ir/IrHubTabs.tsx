@@ -6,10 +6,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAdminChrome } from "@/lib/ui/admin-chrome";
 
-/** Hub tabs in the mockup's order. Create project / Projects / Tasks / Share Project / Founder report / Odoo import. */
+/** Hub tabs in the mockup's order. Dashboard / Projects / Tasks / Share Project / Founder report / Odoo import. */
 export const IR_HUB_TABS: { label: string; href: string }[] = [
   { label: "Dashboard", href: "/admin/ir" },
-  { label: "Create project", href: "/admin/ir/projects/new" },
   { label: "Projects", href: "/admin/ir/projects" },
   { label: "Tasks", href: "/admin/ir/tasks" },
   { label: "Share Project", href: "/admin/ir/matches" },
@@ -17,7 +16,7 @@ export const IR_HUB_TABS: { label: string; href: string }[] = [
   { label: "Odoo import", href: "/admin/ir/import" },
 ];
 
-/** The active tab is the longest href the path sits under (so /projects/new lights Create project, not Projects); the hub root only when exact. */
+/** The active tab is the longest href the path sits under (so /projects/new lights Projects); the hub root only when exact. */
 export function activeHubTab(tabs: { href: string }[], pathname: string, root: string): string | null {
   let best: string | null = null;
   for (const t of tabs) {

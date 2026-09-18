@@ -91,7 +91,7 @@ export function PipelineClient({ projectId, meId, openAdd }: { projectId: string
   return (
     <div>
       <div className="mb-1 flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
-        <Link href="/admin/ir/projects" className="hover:text-indigo-700">Projects</Link><span>/</span><span className="text-slate-800">{p.title} · Pipeline</span>
+        <Link href="/admin/ir/projects" className="hover:text-indigo-700">Projects</Link><span>/</span><Link href={`/admin/ir/projects/${projectId}`} className="hover:text-indigo-700">{p.title}</Link><span>/</span><span className="text-slate-800">Pipeline</span>
         <span className="ml-auto flex gap-1">
           <span className="mr-1 flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="View">{(["board", "list", "timeline"] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === v ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>{v === "board" ? "Board" : v === "list" ? "List" : "Timeline"}</button>)}</span>
           <Link href={`/admin/ir/projects/${projectId}/tasks`} className="rounded-md border border-slate-200 px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50">Tasks</Link>

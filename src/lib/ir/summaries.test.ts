@@ -3,7 +3,7 @@ import { dueFor } from "./summaries";
 import { generateMilestones } from "./milestones";
 import type { IrMilestone, IrProject } from "./types";
 
-const project = (o: Partial<IrProject>): IrProject => ({ id: "p", company_id: null, founder_contact_id: null, title: "Doyle Organics", founder_name: "Michael Doyle", owner_id: "u", owner_name: null, source_opportunity_id: null, start_date: "2026-04-22", term_months: 6, end_date: "2026-10-07", status: "active", founder_report_visible: true, is_spv: false, starred: false, weekly_summary: true, monthly_summary: true, created_at: "", ...o });
+const project = (o: Partial<IrProject>): IrProject => ({ id: "p", company_id: null, founder_contact_id: null, title: "Doyle Organics", founder_name: "Michael Doyle", owner_id: "u", owner_name: null, source_opportunity_id: null, start_date: "2026-04-22", term_months: 6, end_date: "2026-10-07", status: "active", founder_report_visible: true, is_spv: false, starred: false, weekly_summary: true, monthly_summary: true, description: null, created_at: "", ...o });
 const milestones: IrMilestone[] = generateMilestones("2026-04-22", 6).map((d, i) => ({ id: `m${i}`, project_id: "p", parent_id: null, kind: d.kind, label: d.label, starts_on: d.startsOn, ends_on: d.endsOn, sort_order: d.sortOrder, completed_at: null }));
 
 describe("scheduled summaries", () => {

@@ -69,7 +69,7 @@ export function AutoImportClient() {
             </div>
           ) : null}
           {result.warnings.length ? <ul className="mt-2 list-disc pl-5 text-[12px] text-amber-800">{result.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul> : null}
-          <div className="mt-3 flex gap-2"><Link href={`/admin/ir/projects/${result.projectId}`} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Open the pipeline</Link><Link href={`/admin/ir/projects/${result.projectId}/tasks`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Tasks</Link></div>
+          <div className="mt-3 flex gap-2"><Link href={`/admin/ir/projects/${result.projectId}`} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Open the project</Link><Link href={`/admin/ir/projects/${result.projectId}/tasks`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Tasks</Link></div>
         </div>
       ) : null}
     </div>

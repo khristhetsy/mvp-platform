@@ -76,7 +76,7 @@ export function NewProjectClient({ meId }: { meId: string }) {
       const j = await r.json().catch(() => ({}));
       if (r.status === 409) { setConflict(j.error ?? "This founder already has an active project."); return; }
       if (!r.ok) { setError(j.error ?? "Couldn't create the project."); return; }
-      router.push(`/admin/ir/projects/${j.id}?add=1`);
+      router.push(`/admin/ir/projects/${j.id}/pipeline?add=1`);
     } finally { setBusy(false); }
   }
 

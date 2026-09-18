@@ -1,7 +1,7 @@
 /**
  * One IR project — the pipeline payload.
  *   GET   → { project, milestones, matches, tasks, openActivities, staff, stageEvents }
- *   PATCH { status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary? } → { ok }
+ *   PATCH { status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary?, description? } → { ok }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -33,6 +33,7 @@ const schema = z.object({
   title: z.string().min(1).max(160).optional(),
   weeklySummary: z.boolean().optional(),
   monthlySummary: z.boolean().optional(),
+  description: z.string().max(20000).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -42,7 +43,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const d = parsed.data;
   try {
-    await updateProject(id, { status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary });
+    await updateProject(id, { status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description });
     return NextResponse.json({ ok: true });
   } catch (e) { return failed(e, "Couldn't update the project."); }
 }
