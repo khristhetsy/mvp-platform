@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>IR Hub · six changes · Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+h2{font-size:15px;margin:22px 0 6px}.note{font-size:12px;color:#5B6B86;margin:0 0 8px;max-width:1100px}
+.frame{width:1100px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:16px 18px}
+.frame *{box-sizing:border-box}
+.btn{font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;color:#0A1A40;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff}.btn.dark{background:#6D28D9;border-color:#6D28D9;color:#fff}
+.pill{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;background:#EEF1F6;color:#334155}
+.chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:12px;background:#EEF1F6;color:#334155;margin:0 4px 4px 0}
+.chip.on{background:#EAF1FD;color:#1A5FC8}.chip.m{background:#E7F7EE;color:#137A3B}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th{text-align:left;font-size:11px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}td{padding:9px 10px;border-bottom:1px solid #EEF1F6;vertical-align:middle}
+/* 1 card */
+.card{width:280px;border:1px solid #E2E7F0;border-radius:12px;padding:14px;font-size:12.5px}.card b{display:block;font-size:14px}.card small{color:#5B6B86;display:block;margin-top:2px}
+.tasksbtn{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:9px 12px;border-radius:9px;background:#EEF2FF;border:1px solid #C7D2FE;color:#3730A3;font-weight:600;font-size:13px}
+.tasksbtn span{font-size:11.5px;font-weight:400;color:#4F46E5}
+/* 2 kanban */
+.kan{display:flex;gap:14px;overflow-x:auto}.col{width:250px;flex-shrink:0}
+.colh{display:flex;align-items:center;justify-content:space-between;font-size:13.5px;font-weight:600;margin-bottom:6px}.colh i{font-style:normal;color:#5B6B86;font-weight:500;font-size:12px}
+.prog{height:5px;background:#E6ECF5;border-radius:3px;margin-bottom:10px;overflow:hidden}.prog i{display:block;height:100%;background:#22C55E}
+.tk{background:#fff;border:1px solid #E2E7F0;border-radius:8px;padding:10px;box-shadow:0 1px 2px rgba(10,26,64,.06);font-size:12.5px}
+.tk b{display:block;font-size:13px;margin-bottom:6px}.tk .foot{display:flex;align-items:center;gap:8px;margin-top:6px;color:#8A98B3;font-size:12px}.tk .foot .av{margin-left:auto;width:20px;height:20px;border-radius:50%;background:#0A1A40;color:#fff;font-size:9.5px;display:grid;place-items:center}
+.tk .date{font-size:11.5px;color:#5B6B86;margin-top:6px}
+/* 3 search */
+.sbar{display:flex;align-items:center;border:1px solid #C9D3E3;border-radius:8px;height:38px;overflow:hidden;background:#fff}
+.sbar .facet{background:#EAF1FD;color:#1A5FC8;font-size:12px;padding:3px 8px;border-radius:6px;margin-left:6px;white-space:nowrap}.sbar .facet b{font-weight:500}
+.sbar input{flex:1;border:0;font:inherit;font-size:13px;padding:0 10px;outline:none}.sbar .dd{border-left:1px solid #C9D3E3;padding:0 12px;height:100%;display:flex;align-items:center;font-size:12.5px;color:#5B6B86}
+.drop{position:relative;width:820px;margin-top:6px;border:1px solid #D6DDE8;border-radius:10px;background:#fff;box-shadow:0 8px 24px rgba(10,26,64,.12);display:grid;grid-template-columns:1.3fr 1fr 1fr;font-size:12.5px}
+.drop>div{padding:12px 14px;border-left:1px solid #EEF1F6}.drop>div:first-child{border-left:0}.drop h4{margin:0 0 8px;font-size:11px;color:#5B6B86;text-transform:uppercase;letter-spacing:.04em}
+.drop label{display:block;padding:4px 0}.drop label.on{color:#1A5FC8;font-weight:500}
+.sugg{border:1px solid #D6DDE8;border-radius:10px;background:#fff;width:520px;margin-top:6px;font-size:12.5px;box-shadow:0 8px 24px rgba(10,26,64,.12)}.sugg div{padding:8px 12px;border-bottom:1px solid #EEF1F6}.sugg div b{color:#1A5FC8;font-weight:500}
+/* 4 */
+.act{display:inline-flex;align-items:center;gap:5px}.act i{font-style:normal}
+.x{color:#94A3B8}
+/* 5-6 */
+.top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.stagebar{margin-left:auto;display:flex}.stagebar span{font-size:13px;padding:9px 18px;background:#F1F5F9;color:#475569;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);margin-left:-7px}
+.stagebar span:first-child{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%);margin-left:0}.stagebar span.on{background:#0A1A40;color:#fff;font-weight:600}.stagebar span.done{background:#DCE7FA;color:#1A5FC8}
+.stagebar span:hover{outline:2px solid #4F46E5}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 40px;font-size:13px;margin:12px 0}.f{display:grid;grid-template-columns:120px 1fr}.f .k{color:#475569;font-weight:500}
+.tabs{display:flex;border-bottom:1px solid #E2E7F0;margin-top:14px}.tabs span{font-size:12.5px;padding:8px 14px;color:#475569}.tabs span.on{color:#0A1A40;font-weight:500;border-bottom:2px solid #4F46E5}
+.pane{padding:12px 4px;font-size:12.5px;color:#334155;min-height:60px}
+.weeks{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid #E2E7F0;font-size:12.5px}.weeks span{padding:6px 12px;border-radius:8px;border:1px solid #C9D3E3}.weeks span.on{background:#4F46E5;color:#fff;border-color:#4F46E5}.weeks .lbl{border:0;color:#5B6B86;padding-left:0}
+.menu{position:absolute;margin-top:6px;border:1px solid #D6DDE8;border-radius:10px;background:#fff;box-shadow:0 8px 24px rgba(10,26,64,.12);font-size:12.5px;width:220px}.menu div{padding:8px 12px;border-bottom:1px solid #EEF1F6}.menu div.on{color:#1A5FC8;font-weight:500}
+</style></head><body>
+
+<h2>1. Projects card — the tasks link becomes the card's main button</h2>
+<p class="note">Bigger, its own row, coloured, with the done count. Matches and meetings stay as small counts below it.</p>
+<div class="frame"><div class="card"><span style="color:#CBD5E1">☆</span> <b style="display:inline">Dorrin Prophet's opportunity</b><small>Dorrin Prophet</small><small>Sep 18 to Mar 4, 2027 · 6 mo</small><span class="chip on" style="margin-top:8px">Khris Thetsy</span>
+  <div class="tasksbtn">1 task · Week 1 <span>0 done · open board →</span></div>
+  <div style="display:flex;gap:12px;margin-top:10px;font-size:12px;color:#5B6B86"><span>👥 0 matches</span><span>📅 0 held</span><span style="margin-left:auto;width:18px;height:18px;border-radius:50%;background:#0A1A40;color:#fff;font-size:9px;display:grid;place-items:center">KT</span></div></div></div>
+
+<h2>2. Tasks view — Odoo kanban</h2>
+<p class="note">One column per week, like Odoo's month columns: title, count, "+" to add, a green progress bar for done tasks. Each card is the task with its investors as grey name chips (firm, name), the deadline, star, clock, and the assignee avatar. Clicking a card opens the task form.</p>
+<div class="frame">
+  <div class="top"><span class="btn pri">New</span><b style="font-size:15px">Dorrin Prophet's opportunity · Tasks</b><div class="sbar" style="flex:1;max-width:360px;margin-left:10px"><input placeholder="Search investors…"></div><span class="pill" style="margin-left:auto">Kanban</span><span class="pill">List</span></div>
+  <div class="kan">
+    <div class="col"><div class="colh">Week 1 <i>Sep 18 – 24 · 1 &nbsp;+</i></div><div class="prog"><i style="width:0%"></i></div>
+      <div class="tk"><b>Dorrin Prophet Week 1</b><span class="chip">21 Warrior Ventures, Zack Matta</span><span class="chip">Marsh Ventures, Elena Marsh</span><span class="chip">BDEV Ventures, Jonathan Wallace</span><div class="date">09/25/2026</div><div class="foot">☆ &nbsp;🕒<span class="av">KT</span></div></div></div>
+    <div class="col"><div class="colh">Week 2 <i>Sep 25 – Oct 1 · 0 &nbsp;+</i></div><div class="prog"><i style="width:0%"></i></div></div>
+    <div class="col"><div class="colh">Week 3 <i>Oct 2 – 8 · 0 &nbsp;+</i></div><div class="prog"><i style="width:0%"></i></div></div>
+    <div class="col"><div class="colh">Week 4 <i>Oct 9 – 15 · 0 &nbsp;+</i></div><div class="prog"><i style="width:0%"></i></div></div>
+  </div></div>
+
+<h2>3. Matching queue — the Contacts search bar</h2>
+<p class="note">Same bar as Sales Hub Contacts: type to get "Search Investor / Firm / Sector for …" suggestions, facets appear as blue chips in the bar, and the ▾ opens Filters (sector, stage, raise, revenue, investor type, data source, fit tier), Group By and Favorites (saved searches, shared or mine). The chip grid goes away; results table stays.</p>
+<div class="frame">
+  <div class="top"><b style="font-size:14px">Matching for Dorrin Prophet's opportunity · Week 1</b><span class="btn" style="margin-left:auto">Run matching again</span><span class="btn">← Back to task</span></div>
+  <div class="sbar"><span class="facet"><b>Sector</b> AI/ML or Fintech ×</span><span class="facet"><b>Stage</b> Pre-revenue ×</span><span class="facet"><b>Fit</b> High ×</span><input value="warr"><span class="dd">▾</span></div>
+  <div class="sugg"><div>Search <b>Investor</b> for: warr</div><div>Search <b>Firm</b> for: warr &nbsp;<span class="x">→ 21 Warrior Ventures</span></div><div>Search <b>Sector</b> for: warr</div></div>
+  <div class="drop"><div><h4>Filters</h4><label class="on">▸ Sector · AI/ML, Fintech</label><label class="on">▸ Operating stage · Pre-revenue</label><label>▸ Raise</label><label>▸ Revenue</label><label>▸ Investor type</label><label>▸ Data source</label><label class="on">▸ Fit tier · High (≥70)</label><label>Not yet on this project</label><label>+ Add custom filter</label></div>
+    <div><h4>Group By</h4><label>Firm</label><label>Fit tier</label><label>Investor type</label><label>Data source</label><label>+ Add custom group</label></div>
+    <div><h4>Favorites</h4><label class="on">★ Dorrin · AI seed high-fit <span class="x">(shared)</span></label><label>Fintech family offices <span class="x">(mine)</span></label><label>Save current search…</label></div></div>
+  <table style="margin-top:10px"><tr><th></th><th>Investor</th><th>Firm</th><th>Fit</th><th>Why</th><th>Data source</th><th>Also matched</th></tr><tr><td>☐</td><td>Zack Matta</td><td>21 Warrior Ventures</td><td><span class="chip m">82% · high</span></td><td>AI/ML · pre-seed · $250k–$1M</td><td>Verified</td><td>—</td></tr><tr><td>☐</td><td>Elena Marsh</td><td>Marsh Ventures</td><td><span class="chip m">76% · high</span></td><td>Fintech · seed</td><td>Self-reported</td><td>Healthfleet</td></tr></table></div>
+
+<h2>4. Task form · Matching tab — Odoo's contact list with an Activities column</h2>
+<p class="note">Columns as in Deals2Match: Name, Company, Membership, Phone, Email, Activities, Country, ×. Activities shows the next planned activity (icon + subject + due) or, if none, the last thing logged. "Add a line" opens the matching queue. Names open the Share Project record.</p>
+<div class="frame">
+  <table><tr><th>Name</th><th>Company name</th><th>Membership</th><th>Phone</th><th>Email</th><th>Activities</th><th>Country</th><th></th></tr>
+    <tr><td><b>Zack Matta</b></td><td>21 Warrior Ventures</td><td>Investor</td><td>(415) 555-0142</td><td>zack@21warrior.vc</td><td><span class="act">📞 <i>Send intro email · Sep 25</i></span></td><td>United States</td><td class="x">✕</td></tr>
+    <tr><td><b>Jonathan Wallace</b></td><td>BDEV Ventures</td><td>Investor</td><td>(530) 524-…</td><td>jonathan.wallace@bdevve…</td><td><span class="act" style="color:#137A3B">✔ <i>Meeting held · Sep 12</i></span></td><td>United States</td><td class="x">✕</td></tr>
+    <tr><td><b>Diego Rivero</b></td><td>Capital Q Ventures</td><td>Investor</td><td>+1 954-7…</td><td>riverodiego530@gmail.com</td><td><span class="act" style="color:#B42323">📞 <i>Call · overdue 2d</i></span></td><td>United States</td><td class="x">✕</td></tr>
+    <tr><td colspan="8" style="color:#1A5FC8">Add a line</td></tr></table></div>
+
+<h2>5 + 6. Task form — tabs at the bottom, stage bar top-right, editable and bigger</h2>
+<p class="note">Top right: the task stage as a big chevron bar (New → In progress → Done) — click a step to change it, or use the ▾ menu next to it to pick a stage or add a custom one. The week switcher that sat at the top moves to the bottom of the sheet, above the chatter, so the record reads title → fields → tabs → week. (If by "tabs" you meant the Agent field / Sub-tasks strip, say so and I'll flip those instead.)</p>
+<div class="frame">
+  <div class="top"><span class="btn pri">New</span><div style="font-size:12px;color:#5B6B86">Projects / Dorrin Prophet's opportunity / Tasks<br><b style="color:#0A1A40;font-size:13.5px">Dorrin Prophet Week 1</b></div>
+    <div class="stagebar"><span class="done">New</span><span class="on">In progress</span><span>Done</span></div><span class="btn" style="height:36px">▾</span></div>
+  <div style="position:relative;height:0"><div class="menu" style="right:0;top:-6px"><div>New</div><div class="on">In progress ✓</div><div>Done</div><div style="color:#1A5FC8">+ Add a stage…</div><div style="color:#5B6B86">Edit stages…</div></div></div>
+  <h1 style="margin:0;font-size:22px">☆ Dorrin Prophet Week 1</h1>
+  <div class="fields"><div class="f"><span class="k">Project</span><span style="color:#1A5FC8">Dorrin Prophet's opportunity</span></div><div class="f"><span class="k">Milestone</span><span>Month 1 · Week 1 · Sep 18 to Sep 24, 2026</span></div><div class="f"><span class="k">Matching</span><span>1 investor this week</span></div><div class="f"><span class="k">Assignee</span><span>Khris Thetsy (me)</span></div><div class="f"><span class="k">Deadline</span><span>09/25/2026</span></div><div class="f"><span class="k">Open activities</span><span>1</span></div></div>
+  <div class="tabs"><span>Agent field</span><span>Sub-tasks · 1</span><span>Blocked by</span><span>Extra info</span><span>Entrepreneur profile</span><span class="on">Matching · 1</span><span>Meetings · 0</span></div>
+  <div class="pane">(the Matching table from section 4)</div>
+  <div class="weeks"><span class="lbl">Week</span><span class="on">Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span><span style="border:0;color:#5B6B86">· Month 1 of 6</span><span style="margin-left:auto;border:0;color:#1A5FC8">+ New task</span></div>
+</div>
+<div class="frame" style="margin-top:10px;background:#F8FAFD"><span class="btn dark">Send message</span> <span class="btn">Log note</span> <span class="btn">Schedule activity</span><span style="float:right;font-size:12px;color:#5B6B86">👤 1 · Follow</span></div>
+</body></html>
