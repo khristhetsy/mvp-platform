@@ -95,7 +95,6 @@ export function ImportClient({ meId }: { meId: string }) {
 
   async function runImport() {
     if (!tasks.length) { setError("Nothing to import — every selected task is already in the IR Hub."); return; }
-    if (unresolved.length) { setError(`${unresolved.length} investor tag${unresolved.length === 1 ? "" : "s"} still unmatched (step 3).`); return; }
     if (badDates) { setError(`${badDates} activit${badDates === 1 ? "y has" : "ies have"} an unreadable date (step 4).`); return; }
     if (target === "new" && (!title.trim() || !start)) { setError("Give the new project a title and a start date (step 2)."); return; }
     if (target === "new" && !founderLink) { setError("Link the founder to a Sales Hub contact or a company (step 2) — a project needs one."); return; }
@@ -193,7 +192,7 @@ export function ImportClient({ meId }: { meId: string }) {
 
       {step === 3 && loaded ? (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="mb-2 flex items-baseline justify-between"><h3 className="text-[15px] font-semibold text-slate-900">Investor tags → Investor Contacts</h3><span className="text-[12px] text-slate-500">{tagsInUse.length - unresolved.length} of {tagsInUse.length} resolved · contacts are never created here</span></div>
+          <div className="mb-2 flex items-baseline justify-between"><h3 className="text-[15px] font-semibold text-slate-900">Investor tags → Investor Contacts</h3><span className="text-[12px] text-slate-500">{tagsInUse.length - unresolved.length} of {tagsInUse.length} resolved · contacts are never created here · unresolved tags are skipped, not blocking</span></div>
           <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1.5 font-medium">Odoo tag</th><th className="py-1.5 font-medium">Investor Contact</th><th className="py-1.5 font-medium">Matched by</th><th className="py-1.5"></th></tr></thead>
             <tbody className="divide-y divide-slate-100">{loaded.resolutions.filter((x) => tagsInUse.includes(x.tag)).map((x) => { const c = chosen[x.tag]; return <tr key={x.tag}>
               <td className="py-1.5 text-slate-800">{x.tag}</td>
@@ -202,7 +201,7 @@ export function ImportClient({ meId }: { meId: string }) {
               <td className="py-1.5 text-right">{c ? <button type="button" onClick={() => setChosen((s) => ({ ...s, [x.tag]: null }))} className="text-[12px] text-slate-500 hover:text-slate-800">Change</button> : x.status === "ambiguous" ? <select defaultValue="" onChange={(e) => { const cand = x.candidates.find((k) => k.id === e.target.value); if (cand) setChosen((s) => ({ ...s, [x.tag]: cand })); }} className={inp}><option value="">Choose…</option>{x.candidates.map((k) => <option key={k.id} value={k.id}>{k.name ?? "—"}{k.firm ? ` · ${k.firm}` : ""}</option>)}</select> : <button type="button" onClick={() => setSearchFor(x.tag)} className="rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50">Search</button>}</td>
             </tr>; })}</tbody></table>
           {searchFor ? <SearchDialog tag={searchFor} onPick={(c) => { setChosen((s) => ({ ...s, [searchFor]: c })); setSearchFor(null); }} onClose={() => setSearchFor(null)} /> : null}
-          <p className="mt-2 text-[11.5px] text-slate-400">A tag with no contact must be resolved (or its investor added in Sales Hub first) before import. Unmatched tags are not imported.</p>
+          <p className="mt-2 text-[11.5px] text-slate-400">Tags with no contact are skipped on import (nothing is created for them). Add the investor in Sales Hub and run the import again to pick them up.</p>
           <Nav onBack={() => setStep(2)} onNext={() => setStep(4)} />
         </div>
       ) : null}
@@ -236,7 +235,8 @@ export function ImportClient({ meId }: { meId: string }) {
           {tasks.length === 0 ? <p className="rounded-xl border border-slate-200 bg-white p-4 text-[12.5px] text-slate-400">Every selected task is already imported.</p> : null}
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-[12.5px] text-slate-600">
             <p>Import writes: 1 project ({target === "new" ? "new" : "existing"}), {tasks.length} task{tasks.length === 1 ? "" : "s"}, {tagsInUse.length - unresolved.length} investor match{tagsInUse.length - unresolved.length === 1 ? "" : "es"} (duplicates on a project are reused), and every approved activity with its date. Stages are set from the activities and their history is backdated so past-period reports read correctly. No intro to-dos are created for imported investors.</p>
-            <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => setStep(3)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">← Back</button><button type="button" disabled={busy || notApproved > 0 || unresolved.length > 0 || !tasks.length} title={notApproved ? "Approve every task first" : unresolved.length ? "Resolve every investor tag first" : ""} onClick={runImport} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Importing…" : "Import into IR Hub"}</button></div>
+            {unresolved.length ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">{unresolved.length} investor tag{unresolved.length === 1 ? "" : "s"} without a Sales Hub contact will be skipped: {unresolved.join("; ")}. Add them in Sales Hub later and run this import again — it only adds what is missing.</p> : null}
+            <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => setStep(3)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">← Back</button><button type="button" disabled={busy || notApproved > 0 || !tasks.length} title={notApproved ? "Approve every task first" : ""} onClick={runImport} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Importing…" : "Import into IR Hub"}</button></div>
           </div>
         </div>
       ) : null}
@@ -252,7 +252,7 @@ export function ImportClient({ meId }: { meId: string }) {
               <tr><td className="py-1">Investor tags</td><td className="py-1 text-right">{tagsInUse.length}</td><td className="py-1 text-right">{result.matchesCreated} matches{result.matchesReused ? ` · ${result.matchesReused} reused` : ""}</td></tr>
               <tr><td className="py-1">Agent Field entries</td><td className="py-1 text-right">{tasks.reduce((n, t) => n + t.entries.length, 0)}</td><td className="py-1 text-right">{result.activitiesCreated} activities · {result.stagesSet} stages set</td></tr>
             </tbody></table>
-          {result.warnings.length ? <ul className="mt-3 list-disc pl-5 text-[12px] text-amber-800">{result.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul> : null}
+          {result.warnings.length || unresolved.length ? <ul className="mt-3 list-disc pl-5 text-[12px] text-amber-800">{unresolved.length ? <li>Skipped (no Sales Hub contact): {unresolved.join("; ")}</li> : null}{result.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul> : null}
           <div className="mt-4 flex gap-2"><Link href={`/admin/ir/projects/${result.projectId}`} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Open the pipeline</Link><Link href={`/admin/ir/projects/${result.projectId}/tasks`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Task board</Link><button type="button" onClick={() => { setStep(1); setLoaded(null); setResult(null); fetch("/api/admin/ir/import").then((r) => r.json()).then(setSetup); }} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Import another founder</button></div>
         </div>
       ) : null}

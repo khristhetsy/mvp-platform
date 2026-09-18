@@ -163,21 +163,27 @@ export async function executeImport(plan: ImportPlan, by: string): Promise<Impor
   };
   const stageRank = (s: IrStage) => IR_STAGES.indexOf(s);
 
-  const { data: doneRows } = await client.from("ir_tasks").select("odoo_task_id").eq("project_id", projectId).not("odoo_task_id", "is", null);
-  const doneTasks = new Set(((doneRows ?? []) as Array<{ odoo_task_id: number }>).map((r) => r.odoo_task_id));
+  const { data: doneRows } = await client.from("ir_tasks").select("id, odoo_task_id").eq("project_id", projectId).not("odoo_task_id", "is", null);
+  const doneTasks = new Map(((doneRows ?? []) as Array<{ id: string; odoo_task_id: number }>).map((r) => [r.odoo_task_id, r.id]));
   const { data: matchRows } = await client.from("ir_matches").select("id, investor_contact_id, stage").eq("project_id", projectId);
   const matchByContact = new Map(((matchRows ?? []) as Array<{ id: string; investor_contact_id: string; stage: IrStage }>).map((m) => [m.investor_contact_id, m]));
 
   const r: ImportResult = { projectId, created, tasksCreated: 0, tasksSkipped: 0, matchesCreated: 0, matchesReused: 0, activitiesCreated: 0, stagesSet: 0, warnings };
   const sorted = [...plan.tasks].sort((a, b) => a.month - b.month || (a.week ?? 0) - (b.week ?? 0) || a.odooId - b.odooId);
   for (const t of sorted) {
-    if (doneTasks.has(t.odooId)) { r.tasksSkipped++; continue; }
     const mo = monthFor(t.month), wk = weekFor(t.month, t.week);
     if (!mo || !wk) { warnings.push(`Task "${t.title}": no milestone for month ${t.month}; skipped.`); r.tasksSkipped++; continue; }
-    const task = await createTask({ projectId, milestoneId: wk.id, title: t.title, assigneeId: t.assigneeId });
-    await client.from("ir_tasks").update({ odoo_task_id: t.odooId, created_at: earliest(t) ?? undefined }).eq("id", task.id);
-    r.tasksCreated++;
+    // Re-runs are additive: an already-imported task keeps its row and only gains investors not yet matched on the project.
+    const doneId = doneTasks.get(t.odooId);
+    let task: { id: string };
+    if (doneId) { task = { id: doneId }; r.tasksSkipped++; }
+    else {
+      task = await createTask({ projectId, milestoneId: wk.id, title: t.title, assigneeId: t.assigneeId });
+      await client.from("ir_tasks").update({ odoo_task_id: t.odooId, created_at: earliest(t) ?? undefined }).eq("id", task.id);
+      r.tasksCreated++;
+    }
     for (const inv of t.investors) {
+      if (doneId && matchByContact.has(inv.contactId)) continue;
       let match = matchByContact.get(inv.contactId); let firstOn = false;
       if (!match) {
         const { data: src } = await client.from("crm_contacts").select("inv_source").eq("id", inv.contactId).maybeSingle();
