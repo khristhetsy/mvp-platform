@@ -11,7 +11,7 @@ export default async function IrImportPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
       <IrHubHeader />
-      <ImportClient meId={profile.id} />
+      <ImportClient />
     </AppShell>
   );
 }
