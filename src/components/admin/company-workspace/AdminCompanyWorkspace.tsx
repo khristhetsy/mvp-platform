@@ -270,8 +270,10 @@ export function AdminCompanyWorkspace({
               delete all live here on the dashboard (were spread across tabs / page). */}
           <WorkspaceSection icon="ti-settings-bolt" tone="red" title="Company controls" subtitle="Review, stage &amp; account — staff only">
             {reviewMarketplace}
-            {data.founder ? (
-              <>
+          </WorkspaceSection>
+          {data.founder ? (
+            <WorkspaceSection icon="ti-adjustments-alt" tone="amber" title="Override settings" subtitle="Staff-only overrides and irreversible actions — every change is recorded with a reason" defaultOpen={false}>
+              <div className="space-y-4">
                 <FounderStageOverride
                   founderId={data.founder.id}
                   founderName={data.founder.full_name ?? data.founder.email ?? null}
@@ -281,9 +283,9 @@ export function AdminCompanyWorkspace({
                   userName={data.founder.full_name ?? null}
                   userEmail={data.founder.email ?? null}
                 />
-              </>
-            ) : null}
-          </WorkspaceSection>
+              </div>
+            </WorkspaceSection>
+          ) : null}
         </div>
       ) : null}
 

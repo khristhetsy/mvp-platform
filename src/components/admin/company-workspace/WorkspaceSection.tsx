@@ -29,6 +29,7 @@ export function WorkspaceSection({
   action,
   children,
   className = "",
+  defaultOpen = true,
 }: Readonly<{
   icon: string;
   tone?: Tone;
@@ -37,16 +38,19 @@ export function WorkspaceSection({
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Initial state when the browser has no remembered choice (default open). */
+  defaultOpen?: boolean;
 }>) {
   const c = TONES[tone];
   const storageKey = `cw.section.${title}`;
-  // Default open; hydrate the remembered choice after mount to avoid SSR mismatch.
-  const [open, setOpen] = useState(true);
+  // Default per prop; hydrate the remembered choice after mount to avoid SSR mismatch.
+  const [open, setOpen] = useState(defaultOpen);
 
   useEffect(() => {
     try {
+      const saved = window.localStorage.getItem(storageKey);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate persisted collapse state after mount
-      if (window.localStorage.getItem(storageKey) === "0") setOpen(false);
+      if (saved === "0") setOpen(false); else if (saved === "1") setOpen(true);
     } catch { /* ignore */ }
   }, [storageKey]);
 
