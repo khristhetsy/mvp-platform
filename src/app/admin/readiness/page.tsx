@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { AdminReadinessDashboard } from "@/components/admin/AdminReadinessDashboard";
+import { CrrWeightsPanel } from "@/components/admin/crr/CrrWeightsPanel";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -113,10 +114,12 @@ export default async function AdminReadinessPage() {
         </p>
       </div>
 
-      <AdminReadinessDashboard
-        rows={rows}
-        metrics={{ totalScored, outreachUnlocked, avgScore, overrideCount, totalCompanies: rows.length }}
-      />
+      <CrrWeightsPanel canEdit={profile.role === "admin"}>
+        <AdminReadinessDashboard
+          rows={rows}
+          metrics={{ totalScored, outreachUnlocked, avgScore, overrideCount, totalCompanies: rows.length }}
+        />
+      </CrrWeightsPanel>
     </AppShell>
   );
 }

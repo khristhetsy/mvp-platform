@@ -4,7 +4,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { scoreCompanyReadiness } from "@/lib/ai/readiness-scoring";
-import { rollupToDimensions, scoreForProfile, SCORE_VERSION } from "@/lib/crr/profiles";
+import { loadActiveSet } from "@/lib/crr/weight-sets-db";
+import { scoreColumnsFor } from "@/lib/crr/weight-sets";
 
 export type RescoreResult = { ok: boolean; totalScore?: number; reason?: string };
 
@@ -40,25 +41,26 @@ export async function rescoreCompanyReadiness(
   });
   if (result.isDemo) return { ok: false, reason: "demo" };
 
-  const dims = rollupToDimensions(result.factorScores);
-  const profileScores = {
-    score_angel: scoreForProfile(dims, "angel"),
-    score_seed_institutional: scoreForProfile(dims, "seed_institutional"),
-    score_seriesa_institutional: scoreForProfile(dims, "seriesA_institutional"),
-    score_growth_institutional: scoreForProfile(dims, "growth_institutional"),
-    score_version: SCORE_VERSION,
-  };
+  // Weighting comes from the active weight set (admin-editable), not constants.
+  const set = await loadActiveSet(supabase);
+  const cols = scoreColumnsFor(result.factorScores, set);
 
   const { error } = await supabase.from("company_readiness_scores").insert({
     company_id: companyId,
-    total_score: result.totalScore,
+    total_score: cols.total_score,
     factor_scores: result.factorScores,
     scored_by: result.generatedBy,
     document_count: documentSummaries.length,
-    outreach_unlocked: result.totalScore >= 65,
-    ...profileScores,
+    outreach_unlocked: cols.outreach_unlocked,
+    score_angel: cols.score_angel,
+    score_seed_institutional: cols.score_seed_institutional,
+    score_seriesa_institutional: cols.score_seriesa_institutional,
+    score_growth_institutional: cols.score_growth_institutional,
+    score_version: cols.score_version,
+    change_kind: "rescored",
+    weight_set_id: set.id,
   } as never);
   if (error) return { ok: false, reason: error.message };
 
-  return { ok: true, totalScore: result.totalScore };
+  return { ok: true, totalScore: cols.total_score };
 }

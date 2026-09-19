@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR weights editor · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+h2{font-size:15px;margin:22px 0 6px}.note{font-size:12px;color:#5B6B86;margin:0 0 8px;max-width:1080px}
+.frame{width:1080px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:18px 22px}
+.frame *{box-sizing:border-box}
+h1{font-family:Inter;font-size:20px;margin:0}
+.sub{font-size:12.5px;color:#5B6B86;margin:4px 0 0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #E2E7F0;margin:14px 0 0}
+.tabs span{font-size:12.5px;padding:8px 14px;color:#5B6B86;cursor:pointer}.tabs span.on{color:#0A1A40;font-weight:600;border-bottom:2px solid #4F46E5}
+.bar{display:flex;align-items:center;gap:10px;margin:14px 0}
+.btn{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff}.btn.ghost{color:#5B6B86}.btn[disabled]{opacity:.45}
+.pill{font-size:11px;padding:3px 9px;border-radius:12px}.ok{background:#E7F7EE;color:#137A3B}.warn{background:#FFF4DE;color:#9A5B00}.bad{background:#FDE8E8;color:#B42323}.gray{background:#EEF1F6;color:#5B6B86}.info{background:#EAF1FD;color:#1A5FC8}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}
+td{padding:7px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.num{width:62px;height:32px;border:1px solid #C9D3E3;border-radius:7px;text-align:right;padding:0 8px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums}
+.num.edited{border-color:#4F46E5;background:#EEF2FF;font-weight:600}
+.track{height:6px;background:#E6ECF5;border-radius:3px;overflow:hidden;min-width:120px}.track i{display:block;height:100%;background:#4F46E5}
+.track.was i{background:#CBD5E1}
+.delta{font-size:11.5px;font-variant-numeric:tabular-nums}.up{color:#137A3B}.down{color:#B42323}
+.total{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;margin-top:10px;font-size:13px;font-weight:600}
+.total.ok{background:#E7F7EE;color:#137A3B}.total.bad{background:#FDE8E8;color:#B42323}
+.split{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;align-items:start}
+.card{border:1px solid #E2E7F0;border-radius:10px;padding:14px}
+.card h3{margin:0 0 3px;font-size:13.5px}.card p{margin:0;font-size:12px;color:#5B6B86}
+.mini{font-size:12.5px;width:100%;border-collapse:collapse}.mini td{padding:5px 0;border-bottom:1px solid #F1F5F9}.mini td.n{text-align:right;font-variant-numeric:tabular-nums}
+.modal{border:1px solid #D6DDE8;border-radius:12px;box-shadow:0 14px 34px rgba(10,26,64,.16);padding:18px;background:#fff;width:520px}
+.inp{width:100%;height:34px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;font-size:12.5px;display:flex;align-items:center;color:#8A98B3;margin-top:4px}
+.lbl{font-size:11px;color:#5B6B86;text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
+.hist td{font-size:12.5px}
+.chip{font-size:11px;background:#EEF1F6;color:#334155;border-radius:6px;padding:2px 7px}
+.warnbox{border:1px solid #FCD34D;background:#FFFBEB;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#92400E;margin-top:12px}
+</style></head><body>
+
+<p class="note"><b>Where it lives:</b> Operational Tools → Readiness Scores → a new <b>Weights</b> tab, beside the company table. Admin only (same gate as Override). Weights move out of <code>profiles.ts</code> / <code>readiness-scoring.ts</code> into a <code>crr_weight_sets</code> table; the code constants become the seed row, so today's numbers are the starting point and nothing changes until you save.</p>
+
+<h2>1. Profile weights — the five dimensions, per audience</h2>
+<div class="frame">
+  <h1>Capital Readiness Rating</h1>
+  <p class="sub">AI-powered readiness scores across all companies. Scores are visible to investors and admins only — founders cannot see their score.</p>
+  <div class="tabs"><span>Companies</span><span class="on">Weights</span><span>History</span></div>
+
+  <div class="bar">
+    <span style="font-size:12.5px;color:#5B6B86">Profile</span>
+    <span class="btn ghost">Angel</span><span class="btn ghost">Seed</span><span class="btn pri">Series A <span class="pill info" style="margin-left:6px">investor-facing</span></span><span class="btn ghost">Growth</span>
+    <span style="margin-left:auto" class="pill gray">Version crr-profiles-v1 · live since Aug 4</span>
+  </div>
+
+  <table>
+    <tr><th>Dimension</th><th>Factors it rolls up</th><th style="width:150px">Now</th><th style="width:86px" class="n">Weight</th><th style="width:150px">Proposed</th><th style="width:72px" class="n">Change</th></tr>
+    <tr><td><b>Narrative</b></td><td class="chip">Pitch quality · Market evidence · Industry alignment · ESG</td><td><div class="track was"><i style="width:10%"></i></div></td><td class="n"><input class="num" value="10"></td><td><div class="track"><i style="width:10%"></i></div></td><td class="n delta">—</td></tr>
+    <tr><td><b>Team</b></td><td class="chip">Founder integrity &amp; team depth</td><td><div class="track was"><i style="width:15%"></i></div></td><td class="n"><input class="num edited" value="10"></td><td><div class="track"><i style="width:10%"></i></div></td><td class="n delta down">−5</td></tr>
+    <tr><td><b>Financial</b></td><td class="chip">Revenue &amp; cash flow · Unit economics · Burn &amp; runway</td><td><div class="track was"><i style="width:25%"></i></div></td><td class="n"><input class="num" value="25"></td><td><div class="track"><i style="width:25%"></i></div></td><td class="n delta">—</td></tr>
+    <tr><td><b>Traction</b></td><td class="chip">Customer traction &amp; LOIs · Exit strategy</td><td><div class="track was"><i style="width:30%"></i></div></td><td class="n"><input class="num edited" value="35"></td><td><div class="track"><i style="width:35%"></i></div></td><td class="n delta up">+5</td></tr>
+    <tr><td><b>Cap table</b></td><td class="chip">Governance &amp; legal · IP &amp; moat · Deal structure</td><td><div class="track was"><i style="width:20%"></i></div></td><td class="n"><input class="num" value="20"></td><td><div class="track"><i style="width:20%"></i></div></td><td class="n delta">—</td></tr>
+  </table>
+  <div class="total ok">✓ Total 100 — ready to save</div>
+
+  <div class="warnbox">Traction floor for this profile: a company scoring under <b>40</b> on Traction is capped at the “Developing” band however high the weighted total. <span style="color:#1A5FC8">Edit floor</span></div>
+
+  <div class="bar" style="margin-top:14px">
+    <span class="btn">Reset to saved</span>
+    <span class="btn">Restore code defaults</span>
+    <span style="margin-left:auto" class="btn">Preview impact</span>
+    <span class="btn pri">Save new version…</span>
+  </div>
+</div>
+
+<h2>2. Factor points — how much each of the 13 can contribute</h2>
+<p class="note">The second layer. These are the maxima the AI scores against before the profile weighting above is applied; they also sum to 100. Same save flow.</p>
+<div class="frame">
+  <div class="tabs"><span>Profile weights</span><span class="on">Factor points</span><span>Bands &amp; floors</span></div>
+  <div class="split" style="margin-top:14px">
+    <div>
+      <table>
+        <tr><th>Factor</th><th>Dimension</th><th style="width:120px">Share</th><th style="width:80px" class="n">Max pts</th></tr>
+        <tr><td>Revenue &amp; cash flow trajectory</td><td class="chip">Financial</td><td><div class="track"><i style="width:75%"></i></div></td><td class="n"><input class="num" value="15"></td></tr>
+        <tr><td>Customer traction &amp; LOIs</td><td class="chip">Traction</td><td><div class="track"><i style="width:65%"></i></div></td><td class="n"><input class="num" value="13"></td></tr>
+        <tr><td>Founder integrity &amp; team depth</td><td class="chip">Team</td><td><div class="track"><i style="width:55%"></i></div></td><td class="n"><input class="num" value="11"></td></tr>
+        <tr><td>Market &amp; competitive evidence</td><td class="chip">Narrative</td><td><div class="track"><i style="width:50%"></i></div></td><td class="n"><input class="num" value="10"></td></tr>
+        <tr><td>Unit economics &amp; scalability</td><td class="chip">Financial</td><td><div class="track"><i style="width:50%"></i></div></td><td class="n"><input class="num" value="10"></td></tr>
+        <tr><td>Governance &amp; legal cleanliness</td><td class="chip">Cap table</td><td><div class="track"><i style="width:45%"></i></div></td><td class="n"><input class="num" value="9"></td></tr>
+        <tr><td>IP protection &amp; competitive moat</td><td class="chip">Cap table</td><td><div class="track"><i style="width:40%"></i></div></td><td class="n"><input class="num" value="8"></td></tr>
+        <tr><td>Burn rate &amp; runway</td><td class="chip">Financial</td><td><div class="track"><i style="width:40%"></i></div></td><td class="n"><input class="num" value="8"></td></tr>
+        <tr><td>Exit strategy &amp; investor returns</td><td class="chip">Traction</td><td><div class="track"><i style="width:35%"></i></div></td><td class="n"><input class="num" value="7"></td></tr>
+        <tr><td>Pitch deck &amp; business plan quality</td><td class="chip">Narrative</td><td><div class="track"><i style="width:20%"></i></div></td><td class="n"><input class="num" value="4"></td></tr>
+        <tr><td>Deal structure &amp; use of funds</td><td class="chip">Cap table</td><td><div class="track"><i style="width:15%"></i></div></td><td class="n"><input class="num" value="3"></td></tr>
+        <tr><td>Industry &amp; stage alignment</td><td class="chip">Narrative</td><td><div class="track"><i style="width:5%"></i></div></td><td class="n"><input class="num" value="1"></td></tr>
+        <tr><td>Impact / ESG alignment</td><td class="chip">Narrative</td><td><div class="track"><i style="width:5%"></i></div></td><td class="n"><input class="num" value="1"></td></tr>
+      </table>
+      <div class="total bad">Total 101 — must be exactly 100. Save is disabled until it balances. <span style="font-weight:400;margin-left:6px">Distribute the extra ▾</span></div>
+    </div>
+    <div>
+      <div class="card"><h3>Dimension totals</h3><p>What the 13 factors add up to per dimension.</p>
+        <table class="mini" style="margin-top:8px">
+          <tr><td>Narrative</td><td class="n">16 pts</td></tr><tr><td>Team</td><td class="n">11 pts</td></tr>
+          <tr><td>Financial</td><td class="n">33 pts</td></tr><tr><td>Traction</td><td class="n">20 pts</td></tr>
+          <tr><td>Cap table</td><td class="n">20 pts</td></tr>
+        </table>
+      </div>
+      <div class="card" style="margin-top:12px"><h3>Bands</h3><p>Where the weighted total lands.</p>
+        <table class="mini" style="margin-top:8px">
+          <tr><td>Strong</td><td class="n"><input class="num" value="75" style="width:52px;height:28px"> +</td></tr>
+          <tr><td>Solid</td><td class="n"><input class="num" value="60" style="width:52px;height:28px"> +</td></tr>
+          <tr><td>Developing</td><td class="n"><input class="num" value="40" style="width:52px;height:28px"> +</td></tr>
+          <tr><td>Early</td><td class="n">below 40</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>3. Preview impact — before you commit</h2>
+<p class="note">Re-runs the arithmetic over the stored factor scores of every scored company. No AI calls, no writes; it just shows you who moves and by how much.</p>
+<div class="frame">
+  <div class="bar"><b style="font-size:14px">Preview · Series A profile</b><span class="pill warn">Draft — not saved</span><span style="margin-left:auto;font-size:12.5px;color:#5B6B86">5 scored companies · avg 26 → 28 (+2)</span></div>
+  <table>
+    <tr><th>Company</th><th class="n">Now</th><th class="n">After</th><th class="n">Change</th><th>Band</th><th>Outreach gate (≥65)</th></tr>
+    <tr><td>Cognitive Science &amp; Solutions</td><td class="n">34</td><td class="n">37</td><td class="n delta up">+3</td><td>Early → Early</td><td>—</td></tr>
+    <tr><td>Impervitex Corp</td><td class="n">62</td><td class="n">66</td><td class="n delta up">+4</td><td>Solid → Solid</td><td><span class="pill ok">unlocks</span></td></tr>
+    <tr><td>Healthfleet</td><td class="n">71</td><td class="n">69</td><td class="n delta down">−2</td><td>Solid → Solid</td><td>—</td></tr>
+    <tr><td>GreenGrid</td><td class="n">48</td><td class="n">47</td><td class="n delta down">−1</td><td>Developing</td><td>—</td></tr>
+    <tr><td>Nimbus Labs</td><td class="n">21</td><td class="n">24</td><td class="n delta up">+3</td><td>Early</td><td>—</td></tr>
+  </table>
+  <p class="note" style="margin-top:10px">Companies with an admin override keep their override — the preview shows the underlying AI score moving beneath it.</p>
+</div>
+
+<h2>4. Saving — a new version, never an edit in place</h2>
+<p class="note">Saving writes a new row in <code>crr_weight_sets</code> and stamps it as the active version. Old scores keep their old stamp, so a score from August stays interpretable. Nothing recalculates until you choose to.</p>
+<div class="frame" style="width:560px">
+  <div class="modal" style="border:0;box-shadow:none;padding:0;width:auto">
+    <h3 style="margin:0;font-size:15px">Save new weight version</h3>
+    <p style="margin:4px 0 0;font-size:12.5px;color:#5B6B86">Series A profile · Team −5, Traction +5</p>
+    <div class="lbl">Version name</div><div class="inp">crr-profiles-v2</div>
+    <div class="lbl">Why (recorded, shown in History)</div><div class="inp">Traction matters more than team pedigree at A — per Sep partner review</div>
+    <div class="lbl">Apply to</div>
+    <div style="font-size:12.5px;margin-top:6px;line-height:1.9">
+      <div>◉ Save only — new scores use it; existing 5 keep their current numbers</div>
+      <div>○ Save and re-score all 5 companies now <span style="color:#5B6B86">(arithmetic only, ~instant, no AI cost)</span></div>
+    </div>
+    <div class="bar" style="margin-top:14px"><span style="margin-left:auto" class="btn">Cancel</span><span class="btn pri">Save version</span></div>
+  </div>
+</div>
+
+<h2>5. History — what changed, who, and what it did</h2>
+<div class="frame">
+  <table class="hist">
+    <tr><th>Version</th><th>Changed</th><th>By</th><th>When</th><th>Reason</th><th class="n">Avg before → after</th><th></th></tr>
+    <tr><td><b>crr-profiles-v2</b> <span class="pill ok">active</span></td><td>Series A: Team 15→10, Traction 30→35</td><td>Khris Thetsy</td><td>Sep 19, 12:20 AM</td><td>Traction matters more than team pedigree at A</td><td class="n">26 → 28</td><td><span style="color:#1A5FC8">Revert</span></td></tr>
+    <tr><td>crr-profiles-v1</td><td>Seeded from code defaults</td><td>System</td><td>Aug 4</td><td>Initial profile weighting</td><td class="n">—</td><td><span style="color:#1A5FC8">View</span></td></tr>
+  </table>
+</div>
+</body></html>
