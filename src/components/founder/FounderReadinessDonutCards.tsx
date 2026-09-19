@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ScoreRing } from "@/components/ui/ScoreRing";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { DocumentChecklistItem, ProfileCompletionItem } from "@/lib/data/founder-readiness";
@@ -21,52 +22,10 @@ interface Props {
   reviewFeedback: string | null;
 }
 
-function DonutChart({
-  pct,
-  color,
-  size = 48,
-}: {
-  pct: number;
-  color: string;
-  size?: number;
-}) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size * 0.375;
-  const sw = size * 0.125;
-  const safeP = Math.max(0.01, Math.min(0.999, pct));
-  const a1 = -Math.PI / 2;
-  const a2 = safeP * 2 * Math.PI - Math.PI / 2;
-  const x1 = (cx + r * Math.cos(a1)).toFixed(2);
-  const y1 = (cy + r * Math.sin(a1)).toFixed(2);
-  const x2 = (cx + r * Math.cos(a2)).toFixed(2);
-  const y2 = (cy + r * Math.sin(a2)).toFixed(2);
-  const large = safeP > 0.5 ? 1 : 0;
-  const d = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      aria-hidden
-    >
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="none"
-        stroke="#EEEDFE"
-        strokeWidth={sw}
-      />
-      <path
-        d={d}
-        fill="none"
-        stroke={color}
-        strokeWidth={sw}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+/** The readiness donut is the shared ScoreRing with the number suppressed —
+ *  these cards print their own figure beside it. */
+function DonutChart({ pct, color, size = 48 }: { pct: number; color: string; size?: number }) {
+  return <ScoreRing score={pct * 100} size={size} color={color} label="" title={`${Math.round(pct * 100)}%`} />;
 }
 
 function StatusBadge({

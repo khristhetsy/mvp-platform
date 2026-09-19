@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Investor Pipeline · match ring on the card · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1040px;line-height:1.55}
+.frame{width:1040px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 8px}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:8px 8px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+/* kanban */
+.board{display:flex;gap:10px;align-items:flex-start}
+.col{width:232px;flex:none}
+.colh{display:flex;justify-content:space-between;align-items:center;padding:0 4px 6px;font-size:13px;font-weight:600}
+.card{border:1px solid #E2E7F0;border-radius:9px;background:#fff;padding:9px 10px;margin-bottom:8px;box-shadow:0 1px 2px rgba(12,35,64,.05)}
+.card .nm{font-size:13px;font-weight:600;line-height:1.25}
+.card .sub{font-size:11px;color:#5B6B86;margin-top:2px}
+.tagp{font-size:9px;font-weight:600;background:#F1F5F9;color:#64748B;border-radius:99px;padding:1px 6px;white-space:nowrap}
+.acts{display:flex;align-items:center;gap:6px;margin-top:8px}
+.mini{border:1px solid #D6DDE8;border-radius:6px;padding:3px 8px;font-size:11px;background:#fff;color:#185FA5;font-weight:500}
+.sel{border:1px solid #D6DDE8;border-radius:6px;padding:3px 6px;font-size:11px;background:#fff;color:#5B6B86;flex:1}
+.old{font-size:11px;text-align:right;margin-top:3px}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.opts{display:flex;gap:14px;flex-wrap:wrap}
+.opt{border:1px solid #E2E7F0;border-radius:10px;padding:12px;width:238px}
+.opt.pick{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE}
+.swatch{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:#5B6B86}
+</style>
+<script>
+// Tiny helper so the mockup draws real arcs rather than fake ones.
+function ring(pct, size, color, label, sub) {
+  const cx = size / 2, cy = size / 2, r = size * 0.375, sw = size * 0.125;
+  const p = Math.max(0.001, Math.min(0.999, pct / 100));
+  const a1 = -Math.PI / 2, a2 = p * 2 * Math.PI - Math.PI / 2;
+  const x1 = (cx + r * Math.cos(a1)).toFixed(2), y1 = (cy + r * Math.sin(a1)).toFixed(2);
+  const x2 = (cx + r * Math.cos(a2)).toFixed(2), y2 = (cy + r * Math.sin(a2)).toFixed(2);
+  const large = p > 0.5 ? 1 : 0;
+  const inner = label === null ? "" :
+    `<text x="${cx}" y="${cy + (sub ? 0 : size * 0.09)}" text-anchor="middle" font-size="${size * (sub ? 0.26 : 0.3)}" font-weight="600" fill="${color}" font-family="Inter,sans-serif">${label}</text>` +
+    (sub ? `<text x="${cx}" y="${cy + size * 0.27}" text-anchor="middle" font-size="${size * 0.15}" fill="#94A3B8" font-family="Inter,sans-serif">${sub}</text>` : "");
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${pct}% match">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#EEEDFE" stroke-width="${sw}"/>
+    <path d="M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>
+    ${inner}</svg>`;
+}
+const band = (n) => n >= 70 ? "#0F6E56" : n >= 40 ? "#BA7517" : "#94A3B8";
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-ring]").forEach((el) => {
+    const n = Number(el.dataset.ring);
+    const size = Number(el.dataset.size || 40);
+    const lbl = el.dataset.label === "none" ? null : (el.dataset.label ?? String(n));
+    el.innerHTML = ring(n, size, el.dataset.color || band(n), lbl, el.dataset.sub || "");
+  });
+});
+</script>
+</head><body>
+
+<p class="note">
+<b>A ring instead of “100% match”.</b> Nothing built. The component already exists — <code>DonutChart</code> inside
+<span style="font-family:ui-monospace,monospace;font-size:11px">FounderReadinessDonutCards.tsx</span> draws exactly this
+arc, and the public profile uses the same shape for the CRR score. This is lifting it into a shared file and putting it
+on the pipeline card.
+</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. The card, before and after</h2>
+<div class="frame">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <p class="lbl">Today</p>
+      <div style="width:232px">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:6px"><span class="nm">Christian Rudder</span><span class="tagp">Prospect</span></div>
+          <p class="sub">Venture fund</p>
+          <p class="old" style="color:#0F6E56;font-weight:600">100% match</p>
+          <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:6px"><span class="nm">Ru Schaefferkoetter</span><span class="tagp">Prospect</span></div>
+          <p class="sub">Venture Capital</p>
+          <p class="old" style="color:#94A3B8;font-weight:600">9% match</p>
+          <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+        </div>
+      </div>
+      <p class="lock" style="margin-top:6px">A right-aligned percentage. Readable, but you have to read every card to compare them.</p>
+    </div>
+
+    <div>
+      <p class="lbl">Proposed</p>
+      <div style="width:232px">
+        <div class="card">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;gap:6px"><span class="nm">Christian Rudder</span><span class="tagp">Prospect</span></div>
+              <p class="sub">Venture fund</p>
+            </div>
+            <div data-ring="100" data-size="42" data-sub="match" style="flex:none;margin-top:1px"></div>
+          </div>
+          <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;gap:6px"><span class="nm">Ru Schaefferkoetter</span><span class="tagp">Prospect</span></div>
+              <p class="sub">Venture Capital</p>
+            </div>
+            <div data-ring="9" data-size="42" data-sub="match" style="flex:none;margin-top:1px"></div>
+          </div>
+          <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+        </div>
+      </div>
+      <p class="lock" style="margin-top:6px">Same information, read at a glance. The arc length does the comparing for you.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. On the board <span>— the point of it</span></h2>
+<p class="note">Six cards down a column, you can see the shape of the column without reading a single number.</p>
+<div class="frame">
+  <div class="board">
+    <div class="col">
+      <div class="colh" style="border-bottom:2px solid #185FA5"><span>New</span><span class="lock">7</span></div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">Christian Rudder</div><p class="sub">Venture fund</p></div><div data-ring="100" data-size="40" data-sub="match"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">Chris Risey</div><p class="sub">Family Office</p></div><div data-ring="100" data-size="40" data-sub="match"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">David Meltzer</div><p class="sub">Venture Capital</p></div><div data-ring="72" data-size="40" data-sub="match"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">Ru Schaefferkoetter</div><p class="sub">Venture Capital</p></div><div data-ring="9" data-size="40" data-sub="match"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">Platform investor</div><p class="sub">Angel</p></div><div data-ring="0" data-size="40" data-label="—" data-color="#CBD5E1" data-sub="no score"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">New ▾</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="colh" style="border-bottom:2px solid #BA7517"><span>Contacted</span><span class="lock">2</span></div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">Khris Investor</div><p class="sub">Angel Syndicate · 1000000</p></div><div data-ring="55" data-size="40" data-sub="match"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">Contacted ▾</span></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;gap:10px"><div style="flex:1"><div class="nm">David L. Hoffmann</div><p class="sub">Venture Capital</p></div><div data-ring="100" data-size="40" data-sub="match"></div></div>
+        <div class="acts"><span class="mini">Open</span><span class="sel">Contacted ▾</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="colh" style="border-bottom:2px solid #534AB7"><span>Interested</span><span class="lock">0</span></div>
+      <div style="border:1px dashed #E2E7F0;border-radius:9px;padding:22px 0;text-align:center;color:#C3CCDA;font-size:12px">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h3 style="font-size:14px;margin:24px 0 4px">3. Three variants — pick one</h3>
+<div class="frame">
+  <div class="opts">
+    <div class="opt pick">
+      <p class="lbl" style="margin-bottom:6px">A · Ring with number inside <span style="text-transform:none;letter-spacing:0;color:#137A3B">recommended</span></p>
+      <div style="display:flex;gap:12px;align-items:center;justify-content:center;padding:6px 0">
+        <div data-ring="100" data-size="44" data-sub="match"></div>
+        <div data-ring="55" data-size="44" data-sub="match"></div>
+        <div data-ring="9" data-size="44" data-sub="match"></div>
+      </div>
+      <p class="lock">Exact figure kept, plus the arc. 44px fits the card without crowding the name. Matches the CRR ring on the public profile, so the two read as one language.</p>
+    </div>
+
+    <div class="opt">
+      <p class="lbl" style="margin-bottom:6px">B · Ring only, number on hover</p>
+      <div style="display:flex;gap:12px;align-items:center;justify-content:center;padding:6px 0">
+        <div data-ring="100" data-size="30" data-label="none"></div>
+        <div data-ring="55" data-size="30" data-label="none"></div>
+        <div data-ring="9" data-size="30" data-label="none"></div>
+      </div>
+      <p class="lock">Cleanest, smallest. But a match score is a number people want to read, and hover does not exist on touch.</p>
+    </div>
+
+    <div class="opt">
+      <p class="lbl" style="margin-bottom:6px">C · Ring + label beneath</p>
+      <div style="display:flex;gap:14px;align-items:center;justify-content:center;padding:6px 0">
+        <div style="text-align:center"><div data-ring="100" data-size="38"></div><div class="lock" style="margin-top:2px">match</div></div>
+        <div style="text-align:center"><div data-ring="55" data-size="38"></div><div class="lock" style="margin-top:2px">match</div></div>
+      </div>
+      <p class="lock">Explicit, but the word repeats on every card and the cards are already tight.</p>
+    </div>
+  </div>
+
+  <div class="infobox">
+    <b>Sizes.</b> 44px on the kanban card, 40px if the card gets busier, 28px in the table row where the existing
+    <code>MatchBar</code> lives — that one can stay a bar if you prefer, since a table already lines numbers up for you.
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. Colour and the edge cases</h2>
+<div class="frame">
+  <p class="lbl">Bands — the same thresholds MatchBar already uses</p>
+  <div class="swatch">
+    <div class="sw"><div data-ring="88" data-size="40"></div><span>≥ 70 · strong</span><span class="lock">#0F6E56</span></div>
+    <div class="sw"><div data-ring="55" data-size="40"></div><span>40–69 · partial</span><span class="lock">#BA7517</span></div>
+    <div class="sw"><div data-ring="22" data-size="40"></div><span>&lt; 40 · weak</span><span class="lock">#94A3B8</span></div>
+    <div class="sw"><div data-ring="0" data-size="40" data-label="—" data-color="#CBD5E1"></div><span>no score</span><span class="lock">empty track</span></div>
+  </div>
+
+  <table style="margin-top:14px">
+    <tr><th style="width:230px">Case</th><th style="width:120px">Shows</th><th>Why</th></tr>
+    <tr><td><code>match_score</code> is null</td><td>empty grey track, “—” inside</td><td>Manually added investors have no score. An empty ring says &ldquo;not scored&rdquo;; a 0% ring would say &ldquo;scored zero&rdquo;, which is a different and wrong claim.</td></tr>
+    <tr><td>Score of 0</td><td>a 1% sliver, grey</td><td>Genuinely scored and genuinely poor. The sliver distinguishes it from null.</td></tr>
+    <tr><td>Score of 100</td><td>full ring</td><td>The arc closes. Several of your current cards sit here.</td></tr>
+    <tr><td>Screen readers</td><td><code>role="img"</code> + <code>aria-label="72% match"</code></td><td>The ring is decorative on its own; the label carries the value.</td></tr>
+    <tr><td>Printing / high contrast</td><td>number stays inside</td><td>Variant A survives a black-and-white print; variant B does not.</td></tr>
+  </table>
+
+  <div class="warnbox">
+    <b>Worth noticing while you are here.</b> Four of the nine cards in your screenshot read <b>100% match</b>. A
+    match score that saturates at 100 for most of a list is the same ceiling problem the CRR factors have — the ring will
+    make it obvious at a glance, which is useful, but the fix is in the matcher rather than the card.
+  </div>
+</div>
+
+<!-- ─────────── 5 ─────────── -->
+<h2>5. What it costs</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Piece</th><th style="width:110px">Cost</th><th>Notes</th></tr>
+    <tr><td><b>Lift <code>DonutChart</code> out</b></td><td><span class="pill grn">small</span></td><td>It is currently private to <span style="font-family:ui-monospace,monospace;font-size:11px">FounderReadinessDonutCards.tsx</span>. Move it to a shared <code>ui/ScoreRing.tsx</code>, add the label/sub-label and the aria-label, and have that file import it back. No behaviour change there.</td></tr>
+    <tr><td><b>Put it on the kanban card</b></td><td><span class="pill grn">small</span></td><td>Replaces the <code>{inv.match_score}% match</code> line in <span style="font-family:ui-monospace,monospace;font-size:11px">InvestorPipelineClient.tsx</span>. Pure render.</td></tr>
+    <tr><td><b>Table row</b></td><td><span class="pill gry">optional</span></td><td><code>MatchBar</code> already works there. Swap it only if you want the two views identical.</td></tr>
+    <tr><td><b>Reuse elsewhere</b></td><td><span class="pill blu">free after</span></td><td>Once it is shared: the matches list, the investor report header, the CRR dimension cards. All currently draw their own.</td></tr>
+  </table>
+  <p class="note" style="margin-top:10px">No migration, no API change, no new data — <code>match_score</code> is already on every card.</p>
+</div>
+
+</body></html>

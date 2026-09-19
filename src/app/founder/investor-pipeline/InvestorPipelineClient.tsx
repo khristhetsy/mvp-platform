@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { INVESTOR_TYPE_OPTIONS, FUNDING_STAGE_OPTIONS } from "@/lib/profile/options";
 import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar";
 import { SelectionBar, type SelectionAction } from "@/components/admin/sales/SelectionBar";
+import { ScoreRing } from "@/components/ui/ScoreRing";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { INDUSTRY_OPTIONS } from "@/lib/industries";
 
@@ -544,18 +545,24 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                         className="cursor-grab rounded-lg border bg-white p-2.5 active:cursor-grabbing"
                         style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", opacity: draggingId === inv.id ? 0.5 : 1 }}
                       >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
-                          {inv.source === "platform_match" && !inv.platform_investor_id && (
-                            <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
-                          )}
+                        <div className="flex items-start gap-2.5">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                              {inv.source === "platform_match" && !inv.platform_investor_id && (
+                                <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                              {inv.investor_type}{inv.investment_size ? ` · ${inv.investment_size}` : ""}
+                            </p>
+                          </div>
+                          {/* Match at a glance. A never-scored investor gets an empty ring
+                              and a dash — "not scored" is not the same claim as "scored 0". */}
+                          <span className="mt-0.5 flex-none">
+                            <ScoreRing score={inv.match_score} size={42} sublabel="match" />
+                          </span>
                         </div>
-                        <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                          {inv.investor_type}{inv.investment_size ? ` · ${inv.investment_size}` : ""}
-                        </p>
-                        {inv.match_score != null && (
-                          <p className="mt-0.5 text-right text-[11px]" style={{ color: inv.match_score >= 70 ? "#0F6E56" : "var(--text-muted)" }}>{inv.match_score}% match</p>
-                        )}
                         <div className="mt-2 flex items-center gap-1.5">
                           <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
                           <select
