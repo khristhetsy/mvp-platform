@@ -4,8 +4,11 @@ import {
   FEATURE_COMPARISON,
   FOUNDER_PRICING_PLANS,
   INVESTOR_PRICING_PLAN,
+  featureComparison,
+  founderPricingPlans,
   type PricingPlanCard,
 } from "@/lib/billing/pricing";
+import { CODE_DEFAULT_PRICING, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 
@@ -76,13 +79,18 @@ export function PlanComparisonSection({
   showComparisonTable = true,
   founderCtaHref = "/auth/sign-up",
   founderCtaLabel = "Get started",
+  pricing = CODE_DEFAULT_PRICING,
 }: Readonly<{
   currentPlan?: PlanType | null;
   showInvestor?: boolean;
   showComparisonTable?: boolean;
   founderCtaHref?: string;
   founderCtaLabel?: string;
+  /** Active pricing, passed by the server page. Defaults to the code constants. */
+  pricing?: PricingCatalog;
 }>) {
+  const founderPlans = founderPricingPlans(pricing);
+  const comparisonRows = featureComparison(pricing);
   const t = useTranslations("sharedCmp");
   return (
     <div className="space-y-12">
@@ -92,7 +100,7 @@ export function PlanComparisonSection({
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{t("choose_the_right_founder_workspace")}</h2>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {FOUNDER_PRICING_PLANS.map((plan) => (
+          {founderPlans.map((plan) => (
             <PlanCard
               key={plan.planType}
               plan={plan}
@@ -152,7 +160,7 @@ export function PlanComparisonSection({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {FEATURE_COMPARISON.map((row) => (
+                {comparisonRows.map((row) => (
                   <tr key={row.label}>
                     <td className="px-6 py-3 font-medium text-slate-800">{row.label}</td>
                     <td className="px-6 py-3 text-slate-600">{row.free ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>

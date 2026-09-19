@@ -1,3 +1,5 @@
+import { priceLabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
+
 const SITE = "https://icapos.com";
 
 export const ORGANIZATION_JSONLD: Record<string, unknown> = {
@@ -57,4 +59,16 @@ export function faqPageJsonLd(items: { q: string; a: string }[]): Record<string,
       acceptedAnswer: { "@type": "Answer", text: it.a },
     })),
   };
+}
+
+/**
+ * FAQ with the pricing answer rebuilt from the active catalogue — the literal
+ * above stays as the fallback for any caller without a catalogue to hand.
+ */
+export function faqItemsFor(catalog: PricingCatalog): { q: string; a: string }[] {
+  return FAQ_ITEMS.map((item) =>
+    item.a.includes("Basic (")
+      ? { ...item, a: item.a.replace(/Basic \([^)]*\), Professional \([^)]*\)/, `Basic (${priceLabel(catalog, "founder_basic")}/mo), Professional (${priceLabel(catalog, "founder_professional")}/mo)`) }
+      : item,
+  );
 }

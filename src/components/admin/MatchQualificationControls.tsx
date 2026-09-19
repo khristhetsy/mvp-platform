@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CODE_DEFAULT_PRICING, priceShort, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
 type EngineWeights = { sector: number; stage: number; checkSize: number; geography: number; investorType: number; capitalType: number; activeRating: number; arr: number; mrr: number };
@@ -50,7 +51,7 @@ const FIELD_LABELS: [keyof MatchConfig["requiredFields"], string][] = [
  * thresholds. Loads/saves the investor match config via the outreach admin API
  * (persisted in platform_settings). Industry is always required (locked).
  */
-export function MatchQualificationControls() {
+export function MatchQualificationControls({ pricing = CODE_DEFAULT_PRICING }: { pricing?: PricingCatalog } = {}) {
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [auto, setAuto] = useState<AutomationConfig | null>(null);
   const [conn, setConn] = useState<ConnectionConfig | null>(null);
@@ -141,7 +142,7 @@ export function MatchQualificationControls() {
           <p className="mt-0.5 text-[11px] leading-5 text-slate-500">Monthly introduction cap by subscription plan. The schedule and pause apply to every founder; per-founder overrides layer on top.</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             <label className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-700">
-              <span>Basic <span className="text-[10px] text-slate-400">$499/mo</span></span>
+              <span>Basic <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_basic")}</span></span>
               <span className="flex items-center gap-1.5">
                 <input type="number" min={0} max={100000} value={auto.monthlyByPlan.basic}
                   onChange={(e) => setAuto({ ...auto, monthlyByPlan: { ...auto.monthlyByPlan, basic: Number(e.target.value) } })}
@@ -150,7 +151,7 @@ export function MatchQualificationControls() {
               </span>
             </label>
             <label className="flex items-center justify-between gap-2 rounded-lg border-2 border-indigo-300 px-3 py-2 text-[13px] text-slate-700">
-              <span>Professional <span className="text-[10px] text-slate-400">$1,000/mo</span></span>
+              <span>Professional <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_professional")}</span></span>
               <span className="flex items-center gap-1.5">
                 <input type="number" min={0} max={100000} value={auto.monthlyByPlan.professional}
                   onChange={(e) => setAuto({ ...auto, monthlyByPlan: { ...auto.monthlyByPlan, professional: Number(e.target.value) } })}
@@ -195,7 +196,7 @@ export function MatchQualificationControls() {
           <p className="mt-0.5 text-[11px] leading-5 text-slate-500">How many investor connection requests a founder can send per month, by subscription plan. Resets on the 1st. When the cap is reached, the founder&rsquo;s request is blocked with an upgrade prompt.</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             <label className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-700">
-              <span>Basic <span className="text-[10px] text-slate-400">$499/mo</span></span>
+              <span>Basic <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_basic")}</span></span>
               <span className="flex items-center gap-1.5">
                 <input type="number" min={0} max={100000} value={conn.monthlyByPlan.basic}
                   onChange={(e) => setConn({ ...conn, monthlyByPlan: { ...conn.monthlyByPlan, basic: Number(e.target.value) } })}
@@ -204,7 +205,7 @@ export function MatchQualificationControls() {
               </span>
             </label>
             <label className="flex items-center justify-between gap-2 rounded-lg border-2 border-indigo-300 px-3 py-2 text-[13px] text-slate-700">
-              <span>Professional <span className="text-[10px] text-slate-400">$1,000/mo</span></span>
+              <span>Professional <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_professional")}</span></span>
               <span className="flex items-center gap-1.5">
                 <input type="number" min={0} max={100000} value={conn.monthlyByPlan.professional}
                   onChange={(e) => setConn({ ...conn, monthlyByPlan: { ...conn.monthlyByPlan, professional: Number(e.target.value) } })}

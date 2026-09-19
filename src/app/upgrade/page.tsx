@@ -23,6 +23,8 @@ import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
+import { priceShort } from "@/lib/subscriptions/pricing-catalog";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -32,6 +34,7 @@ function readParam(value: string | string[] | undefined) {
 
 async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
   const t = await getTranslations("appPages");
+  const pricing = await loadPricing();
   const params = await searchParams;
   const featureKey = parseUpgradeFeature(readParam(params.feature));
   const highlightPlan = parseUpgradePlan(readParam(params.plan));
@@ -129,8 +132,8 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
               Pick a plan and check out securely with Lemon Squeezy. Your access updates immediately after payment.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label={t("founder_basic_499_mo")} />
-              <CheckoutButton planType="founder_professional" label={t("founder_professional_1_000_mo")} recommended />
+              <CheckoutButton planType="founder_basic" label={`Founder Basic — ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
+              <CheckoutButton planType="founder_professional" label={`Founder Professional — ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
             </div>
           </div>
         ) : profile ? (
@@ -150,6 +153,7 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
 
         <div className="mt-14">
           <PlanComparisonSection
+            pricing={pricing}
             currentPlan={subscription?.plan_type ?? null}
             showInvestor={!profile || profile.role !== "founder"}
             founderCtaHref={

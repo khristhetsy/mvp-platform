@@ -1,29 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { pricing } from "@/content/pricing";
+import { pricing, pricingFor, pricingSummary } from "@/content/pricing";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
 import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 
-export const metadata: Metadata = {
-  title: "Pricing — iCapOS",
-  description:
-    "Choose a plan to unlock the tools and your investor distribution. Basic $49/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach). Professional $199/mo (up to 50, monthly live presentation slot, intro requests). SPV Program done-for-you, pricing on request. Investor accounts free, no success fees.",
-  alternates: { canonical: "/pricing" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const catalog = await loadPricing();
+  return {
+    title: "Pricing — iCapOS",
+    description: `Choose a plan to unlock the tools and your investor distribution. ${pricingSummary(catalog)}`,
+    alternates: { canonical: "/pricing" },
+  };
+}
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: pricing.faq.items.map((i) => ({
-    "@type": "Question",
-    name: i.q,
-    acceptedAnswer: { "@type": "Answer", text: i.a },
-  })),
-};
 
-export default function PricingPage() {
-  const p = pricing;
+export default async function PricingPage() {
+  const catalog = await loadPricing();
+  const p = pricingFor(catalog);
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: p.faq.items.map((i) => ({
+      "@type": "Question",
+      name: i.q,
+      acceptedAnswer: { "@type": "Answer", text: i.a },
+    })),
+  };
   const anchor = loadPriceAnchor();
   return (
     <>

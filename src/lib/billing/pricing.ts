@@ -1,5 +1,8 @@
 import type { FeatureKey, PlanType } from "@/lib/subscriptions/plans";
 import { FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES } from "@/lib/subscriptions/plans";
+import {
+  addCompanyLabel, centsFor, isPriced, priceLabel, priceSublabel, type PricingCatalog,
+} from "@/lib/subscriptions/pricing-catalog";
 
 /** LemonSqueezy variant IDs — set in env. */
 export const LS_VARIANT_IDS = {
@@ -148,4 +151,30 @@ export function planIncludesFeature(planType: PlanType, featureKey: FeatureKey) 
   }
 
   return featureKey === "investor_workspace" || featureKey === "settings";
+}
+
+// ─── Live pricing overlay ────────────────────────────────────────────────────
+// The arrays above are the copy (titles, features, badges) and the fallback
+// prices. These functions lay the ACTIVE catalogue over them, so a price change
+// in the admin reaches every card without anyone retyping a label.
+
+export function founderPricingPlans(catalog: PricingCatalog): PricingPlanCard[] {
+  return FOUNDER_PRICING_PLANS.map((card) =>
+    isPriced(card.planType)
+      ? {
+          ...card,
+          priceLabel: priceLabel(catalog, card.planType),
+          priceSubtext: priceSublabel(catalog, card.planType),
+          monthlyPriceCents: centsFor(catalog, card.planType),
+        }
+      : card,
+  );
+}
+
+export function featureComparison(catalog: PricingCatalog): FeatureComparisonRow[] {
+  return FEATURE_COMPARISON.map((row) =>
+    row.label.startsWith("Additional company accounts")
+      ? { ...row, label: `Additional company accounts (${addCompanyLabel(catalog)})` }
+      : row,
+  );
 }

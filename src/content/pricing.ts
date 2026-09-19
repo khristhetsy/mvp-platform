@@ -4,6 +4,8 @@
  * outreach) → Professional $199 (up to 50, live stage, intro requests) → SPV Program
  * (done-for-you, price on request, contact sales).
  */
+import { money, priceLabel, priceSublabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
+
 export const pricing = {
   eyebrow: "Pricing",
   title: "Pick the plan that fits your raise.",
@@ -91,3 +93,28 @@ export const pricing = {
     ],
   },
 } as const;
+
+/**
+ * The page copy with the ACTIVE prices laid over it. The literals above stay as
+ * the fallback (and as the copy), but every figure a visitor reads comes from
+ * the pricing catalogue, so the page can't drift from what we charge.
+ */
+export function pricingFor(catalog: PricingCatalog) {
+  const basic = priceLabel(catalog, "founder_basic");
+  const pro = priceLabel(catalog, "founder_professional");
+  return {
+    ...pricing,
+    tiers: pricing.tiers.map((t) => {
+      if (t.name === "Basic") return { ...t, price: basic, per: priceSublabel(catalog, "founder_basic") };
+      if (t.name === "Professional") return { ...t, price: pro, per: priceSublabel(catalog, "founder_professional") };
+      if (t.name === "SPV Program") return { ...t, price: priceLabel(catalog, "founder_managed_ir"), per: "" };
+      return t;
+    }),
+    comparison: { ...pricing.comparison, cols: [`Basic · ${basic}`, `Professional · ${pro}`] },
+  };
+}
+
+/** One-line summary used in the page description and the FAQ answer. */
+export function pricingSummary(catalog: PricingCatalog) {
+  return `Basic ${priceLabel(catalog, "founder_basic")}/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach), Professional ${priceLabel(catalog, "founder_professional")}/mo (up to 50 matched investors, monthly live presentation slot, investor intro requests), SPV Program done-for-you with pricing on request. Additional company accounts ${money(catalog.addCompanyCents)}/mo.`;
+}

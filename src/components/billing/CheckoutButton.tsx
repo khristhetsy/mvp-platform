@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SIGNUP_FOUNDER_PLANS } from "@/lib/subscriptions/plans";
+import { CODE_DEFAULT_PRICING, priceLabel as labelOf, priceSublabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 // Bumped when the refund-policy wording changes, so each consent record is
 // tied to the exact terms the founder accepted.
@@ -11,10 +12,13 @@ export function CheckoutButton({
   planType,
   label,
   recommended,
+  pricing = CODE_DEFAULT_PRICING,
 }: {
   planType: string;
   label: string;
   recommended?: boolean;
+  /** Active pricing, passed by the server page. Defaults to the code constants. */
+  pricing?: PricingCatalog;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,8 +26,8 @@ export function CheckoutButton({
 
   const plan = SIGNUP_FOUNDER_PLANS.find((p) => p.planType === planType);
   const planTitle = plan?.title ?? label;
-  const priceLabel = plan?.priceLabel;
-  const priceSubtext = plan?.priceSubtext ?? "/month";
+  const priceLabel = labelOf(pricing, planType as never);
+  const priceSubtext = priceSublabel(pricing, planType as never);
 
   function openConfirm() {
     setConsent(false);

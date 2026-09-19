@@ -9,7 +9,7 @@
  * Rules (confirmed with khris):
  *  - Scope: every row (all salespeople).
  *  - Value: left blank — the Odoo amount is only stored as a reference note so the
- *    forecast/MRR stay honest (iCapOS fees are $499–$1,000/mo, not the Odoo figure).
+ *    forecast/MRR stay honest (iCapOS fees come from the pricing catalogue, not the Odoo figure).
  *  - Stages: mapped to the default pipeline; ICAPOS + Won → won, Loss → lost.
  *  - No duplicates: skip any lead whose email already has an opportunity in iCapOS,
  *    collapse repeated emails within the file, skip rows with no email.

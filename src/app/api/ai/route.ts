@@ -3,6 +3,7 @@ import { requestSchema, MAX_TOKENS, JSON_OUTPUT, type AiTask } from "@/lib/ai-si
 import { systemPromptFor } from "@/lib/ai-site/prompts";
 import { violatesGuardrails, GUARDRAIL_FALLBACK } from "@/lib/ai-site/guardrails";
 import { checkRateLimitAsync } from "@/lib/ai-site/ratelimit";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 export const runtime = "edge";
 
@@ -56,7 +57,7 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
-  const system = systemPromptFor(task);
+  const system = systemPromptFor(task, await loadPricing());
   const maxTokens = MAX_TOKENS[task];
   const contract = JSON_OUTPUT[task as AiTask];
 

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pricing admin · one source of truth · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+h2{font-size:15px;margin:22px 0 6px}.note{font-size:12px;color:#5B6B86;margin:0 0 8px;max-width:1060px}
+.frame{width:1060px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:18px 20px}
+.frame *{box-sizing:border-box}
+h1{font-size:20px;margin:0}.sub{font-size:12.5px;color:#5B6B86;margin:4px 0 0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #E2E7F0;margin:14px 0 0}
+.tabs span{font-size:12.5px;padding:8px 14px;color:#5B6B86}.tabs span.on{color:#0A1A40;font-weight:600;border-bottom:2px solid #4F46E5}
+.bar{display:flex;align-items:center;gap:10px;margin:14px 0}
+.btn{font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff}.btn.sm{font-size:11.5px;padding:5px 9px}
+.pill{font-size:11px;padding:3px 9px;border-radius:12px;white-space:nowrap}
+.ok{background:#E7F7EE;color:#137A3B}.warn{background:#FFF4DE;color:#9A5B00}.bad{background:#FDE8E8;color:#B42323}.gray{background:#EEF1F6;color:#5B6B86}.info{background:#EAF1FD;color:#1A5FC8}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:11px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}
+td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.num{width:96px;height:32px;border:1px solid #C9D3E3;border-radius:7px;text-align:right;padding:0 8px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums}
+.num.edited{border-color:#4F46E5;background:#EEF2FF;font-weight:600}
+.txt{width:100%;height:32px;border:1px solid #C9D3E3;border-radius:7px;padding:0 8px;font:inherit;font-size:12.5px}
+.card{border:1px solid #E2E7F0;border-radius:10px;padding:13px 15px}
+.card h4{margin:0 0 3px;font-size:13px}.card p{margin:0;font-size:12px;color:#5B6B86}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.warnbox{border:1px solid #FCD34D;background:#FFFBEB;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#92400E;margin-top:10px}
+.stopbox{border:1px solid #FCA5A5;background:#FEF2F2;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#991B1B;margin-top:10px}
+.okbox{border:1px solid #A7F3D0;background:#ECFDF5;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#065F46;margin-top:10px}
+.lbl{font-size:11px;color:#5B6B86;text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+.g{background:#22C55E}.r{background:#EF4444}.a{background:#F59E0B}
+</style></head><body>
+
+<p class="note"><b>Where it lives:</b> Administration → <b>Pricing</b>. Admin only. Today a price is written in <b>five unrelated places</b> plus LemonSqueezy, which is why <code>/upgrade</code> and two admin screens still say $499 and $1,000. This makes one row the source and everything else read from it.</p>
+
+<h2>1. Plans — the prices</h2>
+<div class="frame">
+  <h1>Pricing</h1>
+  <p class="sub">What each plan costs, what customers are told it costs, and what LemonSqueezy actually charges. Saving writes a new version; nothing is edited in place.</p>
+  <div class="tabs"><span class="on">Plans</span><span>Where it shows</span><span>History</span></div>
+
+  <table style="margin-top:14px">
+    <tr><th>Plan</th><th class="n">Price / mo</th><th>Shown as</th><th>Sub-label</th><th>LemonSqueezy</th><th class="n">On this plan</th></tr>
+    <tr>
+      <td><b>Founder Basic</b><div style="font-size:11px;color:#5B6B86"><code>founder_basic</code></div></td>
+      <td class="n"><input class="num" value="$49.00"></td>
+      <td><input class="txt" value="$49"></td>
+      <td><input class="txt" value="/month"></td>
+      <td><span class="pill ok"><span class="dot g"></span>variant 8842 · $49.00</span></td>
+      <td class="n">14</td>
+    </tr>
+    <tr>
+      <td><b>Founder Professional</b><div style="font-size:11px;color:#5B6B86"><code>founder_professional</code></div></td>
+      <td class="n"><input class="num edited" value="$249.00"></td>
+      <td><input class="txt" style="border-color:#4F46E5;background:#EEF2FF" value="$249"></td>
+      <td><input class="txt" value="/month"></td>
+      <td><span class="pill bad"><span class="dot r"></span>variant 8843 · $199.00</span></td>
+      <td class="n">6</td>
+    </tr>
+    <tr>
+      <td><b>SPV Program</b><div style="font-size:11px;color:#5B6B86"><code>founder_managed_ir</code></div></td>
+      <td class="n"><input class="num" value="$3,500.00"></td>
+      <td><input class="txt" value="Pricing on request"></td>
+      <td><input class="txt" value="3-month minimum"></td>
+      <td><span class="pill gray">no checkout — sales-led</span></td>
+      <td class="n">1</td>
+    </tr>
+    <tr>
+      <td><b>Additional company</b><div style="font-size:11px;color:#5B6B86">add-on · Professional only</div></td>
+      <td class="n"><input class="num" value="$800.00"></td>
+      <td><input class="txt" value="$800"></td>
+      <td><input class="txt" value="/month per company"></td>
+      <td><span class="pill gray">hidden — not sold today</span></td>
+      <td class="n">0</td>
+    </tr>
+    <tr>
+      <td><b>Founder Free</b> · <b>Investor Free</b></td>
+      <td class="n" style="color:#5B6B86">$0.00</td>
+      <td><input class="txt" value="$0" disabled></td>
+      <td><input class="txt" value="Readiness" disabled></td>
+      <td><span class="pill gray">n/a</span></td>
+      <td class="n">37</td>
+    </tr>
+  </table>
+
+  <div class="stopbox"><b>Professional doesn&rsquo;t match LemonSqueezy.</b> You&rsquo;ve set $249 but variant 8843 still charges $199 — new customers would be billed $199 while every screen says $249. LemonSqueezy prices can&rsquo;t be edited through their API, so this has to be done there first.
+    <div style="margin-top:8px"><span class="btn sm">Open variant 8843 in LemonSqueezy ↗</span> <span class="btn sm">Re-check</span> <span class="btn sm">Save anyway (display only)</span></div>
+  </div>
+
+  <div class="bar" style="margin-top:14px">
+    <span class="btn">Reset</span>
+    <span style="margin-left:auto" class="btn">Preview where it shows</span>
+    <span class="btn pri">Save new version…</span>
+  </div>
+</div>
+
+<h2>2. Where it shows — the whole surface, live</h2>
+<p class="note">Every place a price appears, with what it currently renders. Green rows follow the editor automatically. Amber rows are copy a human writes and the editor can only flag. Red rows are stale today.</p>
+<div class="frame">
+  <div class="tabs"><span>Plans</span><span class="on">Where it shows</span><span>History</span></div>
+  <table style="margin-top:14px">
+    <tr><th>Surface</th><th>Who sees it</th><th>Renders</th><th>Status</th></tr>
+    <tr><td>Signup plan picker</td><td>Public</td><td>$49 · $199 /month</td><td><span class="pill ok">follows</span></td></tr>
+    <tr><td>Checkout confirm dialog</td><td>Public</td><td>$49 · $199 /month</td><td><span class="pill ok">follows</span></td></tr>
+    <tr><td>Upgrade page plan grid</td><td>Founder</td><td>$49 · $199 /month</td><td><span class="pill ok">follows</span></td></tr>
+    <tr><td>Public pricing page + SEO + JSON-LD</td><td>Public</td><td>$49 · $199</td><td><span class="pill ok">follows</span></td></tr>
+    <tr><td>Admin billing · plan dropdown</td><td>Staff</td><td><b style="color:#B42323">$499 · $1,000</b></td><td><span class="pill bad">stale today</span></td></tr>
+    <tr><td>Outreach Qualification · plan caps</td><td>Staff</td><td><b style="color:#B42323">$499 · $1,000</b></td><td><span class="pill bad">stale today</span></td></tr>
+    <tr><td>Upgrade &amp; Billing CTA buttons <span style="color:#5B6B86">(en + es)</span></td><td>Founder</td><td><b style="color:#B42323">Founder Basic — $499/mo</b></td><td><span class="pill bad">stale today</span></td></tr>
+    <tr><td>&ldquo;Add a company&rdquo; refusal message</td><td>Founder</td><td>$800/mo</td><td><span class="pill ok">follows</span></td></tr>
+    <tr><td>MRR · campaign ROI · social funnel revenue</td><td>Staff</td><td>computed from price</td><td><span class="pill ok">follows</span> <span style="color:#5B6B86">new rows only</span></td></tr>
+    <tr><td>Sales forecast ARPU <span style="color:#5B6B86">(assumption row, $499)</span></td><td>Staff</td><td><b style="color:#B42323">$499</b></td><td><span class="pill warn">flagged — edit in Forecast</span></td></tr>
+    <tr><td>Site AI + support assistant prompts</td><td>Public / Founder</td><td>quotes $49 / $199</td><td><span class="pill ok">follows</span></td></tr>
+    <tr><td>Page-builder pricing blocks</td><td>Public</td><td>&ldquo;From $49 / month&rdquo;</td><td><span class="pill warn">per-page text — listed, not rewritten</span></td></tr>
+    <tr><td>LemonSqueezy receipts &amp; invoices</td><td>Customer</td><td>the real charge</td><td><span class="pill info">provider-side</span></td></tr>
+  </table>
+  <div class="okbox">Saving fixes the three red rows and keeps them fixed — they stop being hand-typed strings and read the catalogue like everything else.</div>
+</div>
+
+<h2>3. Saving — what happens to people already paying</h2>
+<p class="note">The question a price change really asks. Existing subscriptions keep billing at their LemonSqueezy price until you migrate them there; this only decides what the app shows and what new signups get.</p>
+<div class="frame" style="width:600px">
+  <h3 style="margin:0;font-size:15px">Save new pricing version</h3>
+  <p class="sub">Professional $199 → $249</p>
+  <div class="lbl">Why (recorded)</div><div><input class="txt" value="Oct 2026 list-price increase"></div>
+  <div class="lbl">Existing 6 Professional customers</div>
+  <div style="font-size:12.5px;margin-top:6px;line-height:1.9">
+    <div>◉ Grandfather — they keep $199; the app shows each customer their own price</div>
+    <div>○ Migrate in LemonSqueezy, then mark them moved here</div>
+  </div>
+  <div class="lbl">Takes effect</div>
+  <div style="font-size:12.5px;margin-top:6px;line-height:1.9"><div>◉ Immediately</div><div>○ On <input class="txt" style="width:140px;display:inline-block" value="11/01/2026"></div></div>
+  <div class="warnbox">Historical MRR is not rewritten. Rows already recorded at $199 stay at $199, so past months keep reporting what was actually billed.</div>
+  <div class="bar" style="margin-top:14px"><span style="margin-left:auto" class="btn">Cancel</span><span class="btn pri">Save version</span></div>
+</div>
+
+<h2>4. History</h2>
+<div class="frame">
+  <table>
+    <tr><th>Version</th><th>Change</th><th>By</th><th>When</th><th>Existing customers</th><th class="n">MRR effect</th><th></th></tr>
+    <tr><td><b>pricing-v3</b> <span class="pill ok">active</span></td><td>Professional $199 → $249</td><td>Khris Thetsy</td><td>Sep 19, 9:40 AM</td><td>6 grandfathered at $199</td><td class="n">+$0 now · +$300/mo at renewal</td><td><span class="btn sm">Revert</span></td></tr>
+    <tr><td>pricing-v2</td><td>Basic $499 → $49 · Professional $1,000 → $199</td><td>Khris Thetsy</td><td>Sep 16</td><td>all migrated</td><td class="n">−$2,150/mo</td><td><span class="btn sm">View</span></td></tr>
+    <tr><td>pricing-v1</td><td>Seeded from code</td><td><span class="pill gray">System</span></td><td>on migration</td><td>—</td><td class="n">baseline</td><td><span class="btn sm">View</span></td></tr>
+  </table>
+</div>
+
+<h2>5. What this costs to build, honestly</h2>
+<div class="frame">
+  <div class="grid2">
+    <div class="card"><h4>Straightforward</h4><p>A <code>plan_prices</code> table seeded from today&rsquo;s numbers; one <code>usePricing()</code> read; the three stale surfaces rewired; the two duplicate catalogues (<code>plans.ts</code> and <code>billing/pricing.ts</code>) collapsed into one; the $800 retyped in two places reading the constant that already exists.</p></div>
+    <div class="card"><h4>Needs care</h4><p>The i18n CTA keys are <i>named</i> <code>founder_basic_499_mo</code> — the price is in the key, so both language files change. And the public pricing page is a third hand-written copy that has to start reading the catalogue.</p></div>
+    <div class="card"><h4>Can&rsquo;t be automated</h4><p>LemonSqueezy prices are immutable and not editable through their API. The editor can <b>read</b> the variant price and warn when it disagrees, but changing what is actually charged stays a job in their dashboard.</p></div>
+    <div class="card"><h4>Deliberately out of scope</h4><p>Forecast ARPU (an assumption you tune per scenario, flagged not overwritten), already-published page-builder pages (free text), and historical MRR (must keep reporting what was billed).</p></div>
+  </div>
+</div>
+</body></html>

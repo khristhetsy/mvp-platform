@@ -4,6 +4,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { MatchQualificationControls } from "@/components/admin/MatchQualificationControls";
 import { InvestorOutreachManager } from "@/components/admin/matching/InvestorOutreachManager";
 import { requireRole } from "@/lib/supabase/auth";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function OutreachQualificationPage() {
         />
 
         <div className="space-y-6">
-          <MatchQualificationControls />
+          <MatchQualificationControls pricing={await loadPricing()} />
           <InvestorOutreachManager />
         </div>
       </WorkspacePageContainer>

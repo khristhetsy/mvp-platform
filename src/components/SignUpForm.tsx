@@ -9,10 +9,12 @@ import { createClient } from "@/lib/supabase/client";
 import {
   SIGNUP_FOUNDER_PLANS,
   SIGNUP_INVESTOR_PLAN,
+  type SignupPlanOption,
   type PlanType,
 } from "@/lib/subscriptions/plans";
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { CODE_DEFAULT_PRICING, signupFounderPlans, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 type SignupRole = "founder" | "investor";
 
@@ -30,7 +32,7 @@ function PlanCard({
   selected,
   onSelect,
 }: Readonly<{
-  plan: (typeof SIGNUP_FOUNDER_PLANS)[number] | typeof SIGNUP_INVESTOR_PLAN;
+  plan: SignupPlanOption | typeof SIGNUP_INVESTOR_PLAN;
   selected: boolean;
   onSelect: () => void;
 }>) {
@@ -94,7 +96,15 @@ const signUpSchema = z.object({
 const BASE_INPUT =
   "rounded-xl border px-4 py-3 font-normal text-slate-900 outline-none transition";
 
-export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMode?: boolean }>) {
+export function SignUpForm({
+  privateBetaMode = false,
+  pricing = CODE_DEFAULT_PRICING,
+}: Readonly<{
+  privateBetaMode?: boolean;
+  /** Active pricing, passed by the server page. Defaults to the code constants. */
+  pricing?: PricingCatalog;
+}>) {
+  const founderPlans = signupFounderPlans(pricing);
   const t = useTranslations("sharedCmp");
   const router = useRouter();
   const searchParams = useSearchParams();

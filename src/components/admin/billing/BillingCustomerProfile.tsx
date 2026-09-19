@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/ui/format-display";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
+import { CODE_DEFAULT_PRICING, priceShort, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 const navy = "#0A1A40", blue = "#1A6CE4";
 
@@ -59,7 +60,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function BillingCustomerProfile({ detail }: { detail: Detail }) {
+export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING }: { detail: Detail; pricing?: PricingCatalog }) {
   const router = useRouter();
   const c = detail.customer;
   const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
@@ -219,8 +220,8 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
         <div style={{ fontSize: 13, fontWeight: 600, color: navy, marginBottom: 10 }}>Create checkout link</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
-            <option value="founder_basic">Basic — $499/mo</option>
-            <option value="founder_professional">Professional — $1,000/mo</option>
+            <option value="founder_basic">Basic — {priceShort(pricing, "founder_basic")}</option>
+            <option value="founder_professional">Professional — {priceShort(pricing, "founder_professional")}</option>
           </select>
           <button onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
           <button onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>

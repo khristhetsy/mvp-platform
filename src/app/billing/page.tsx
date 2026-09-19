@@ -16,6 +16,8 @@ import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
+import { priceShort } from "@/lib/subscriptions/pricing-catalog";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -36,6 +38,7 @@ function trialDaysRemaining(trialEndsAt: string | null) {
 export default async function BillingPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
+  const pricing = await loadPricing();
 
   if (profile.role !== "founder") {
     redirect("/upgrade");
@@ -120,8 +123,8 @@ export default async function BillingPage() {
             <h2 className="text-base font-semibold text-slate-950">{t("choose_a_plan")}</h2>
             <p className="mt-1 text-sm text-slate-600">{t("select_a_plan_to_activate_your_subscription")}</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label={t("founder_basic_499_mo")} />
-              <CheckoutButton planType="founder_professional" label={t("founder_professional_1_000_mo")} recommended />
+              <CheckoutButton planType="founder_basic" label={`Founder Basic — ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
+              <CheckoutButton planType="founder_professional" label={`Founder Professional — ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
             </div>
           </div>
         ) : null}

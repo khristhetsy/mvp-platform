@@ -5,6 +5,8 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { userCanAddCompanies } from "@/lib/organizations/organizations";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { addCompanyLabel } from "@/lib/subscriptions/pricing-catalog";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
 
   const admin = createServiceRoleClient();
 
-  // Additional company accounts are a Professional feature ($800/mo). A super-admin
+  // Additional company accounts are a Professional feature (price from the pricing catalogue). A super-admin
   // can also grant it per-account via can_add_companies (Admin → Accounts).
   const [flagged, plan] = await Promise.all([
     userCanAddCompanies(admin, auth.profile.id),
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Additional company accounts are a Professional feature ($800/mo). Upgrade, or ask your iCapOS contact to enable it.",
+          `Additional company accounts are a Professional feature (${addCompanyLabel(await loadPricing())}). Upgrade, or ask your iCapOS contact to enable it.`,
         code: "not_entitled",
       },
       { status: 403 },
