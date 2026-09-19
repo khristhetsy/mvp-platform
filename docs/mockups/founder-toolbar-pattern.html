@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Founder workspace · settings · search · Actions → Email · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1120px;line-height:1.55}
+.frame{width:1120px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:0;overflow:hidden}
+.frame.pad{padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:8px 10px;border-bottom:1px solid #E2E7F0}
+td{padding:8px 10px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.btn.sq{padding:5px 8px}
+/* toolbar */
+.tb{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #EEF1F6;background:#FBFCFE}
+.searchbox{flex:1;max-width:560px;position:relative;display:flex;align-items:center;gap:6px;border:1px solid #C9D3E3;border-radius:9px;background:#fff;padding:5px 9px}
+.searchbox input{border:0;outline:0;font:inherit;font-size:12.5px;flex:1;min-width:60px}
+.fchip{display:inline-flex;align-items:center;border-radius:6px;overflow:hidden;font-size:11px;border:.5px solid #C7D7F0;background:#EAF2FD}
+.fchip span{padding:2px 7px;color:#17518F}
+.fchip b{background:#C7D7F0;color:#17518F;padding:2px 5px;font-weight:500;cursor:pointer}
+/* dropdown */
+.dd{position:relative}
+.panel{border:1px solid #D6DDE8;border-radius:10px;background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.14);display:grid;grid-template-columns:1fr 1fr 1fr;width:660px}
+.col{padding:9px 0;border-right:1px solid #F1F5F9}
+.col:last-child{border:0}
+.colh{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:2px 12px 6px}
+.it{padding:5px 12px 5px 24px;font-size:12.5px;cursor:pointer;position:relative}
+.it:hover{background:#F6F8FC}
+.it.on::before{content:"✓";position:absolute;left:9px;color:#4F46E5;font-size:11px}
+.it .car{float:right;color:#C3CCDA}
+.sep{height:1px;background:#F1F5F9;margin:5px 0}
+/* selection bar */
+.selbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#E6F1FB;border-bottom:.5px solid #B5D4F4;flex-wrap:wrap}
+.selcount{font-size:12.5px;color:#0C447C;font-weight:600;background:#B5D4F4;border-radius:7px;padding:4px 10px}
+.sellink{font-size:12.5px;color:#185FA5;background:none;border:none;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.amenu{border:1px solid #D6DDE8;border-radius:10px;background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.14);width:230px;padding:6px 0}
+.amenu .h{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:5px 12px}
+.amenu .i{padding:6px 12px;font-size:12.5px;display:flex;align-items:center;gap:9px;cursor:pointer}
+.amenu .i:hover{background:#F6F8FC}
+.amenu .i .car{margin-left:auto;color:#C3CCDA}
+.row{display:grid;grid-template-columns:26px 1.6fr 1fr .9fr .8fr .7fr;align-items:center;padding:9px 14px;border-bottom:.5px solid #EEF1F5;font-size:12.5px}
+.row.head{background:#FBFCFE;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600}
+.row.sel{background:#F5F9FF}
+.tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid #EEF1F6}
+.tab{padding:9px 13px;font-size:12.5px;color:#5B6B86;border-bottom:2px solid transparent}
+.tab.on{color:#0A1A40;font-weight:600;border-bottom-color:#4F46E5}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+</style></head><body>
+
+<p class="note">
+<b>The admin toolbar pattern, brought to the Founder workspace.</b> Nothing built. Three pieces, all of which already
+exist and are in use on six admin pages: the <b>gear</b> (view settings), the <b>Odoo search bar</b>
+(Filters / Group by / Favorites), and the <b>selection bar with an Actions menu</b> whose first item is Email.
+</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. The pattern, on a founder list <span>— Investor matches</span></h2>
+<div class="frame">
+  <div class="tabs">
+    <span class="tab on">Matches</span><span class="tab">Shortlist</span><span class="tab">Contacted</span><span class="tab">Passed</span>
+  </div>
+
+  <div class="tb">
+    <button class="btn pri">Find investors</button>
+    <button class="btn sq" title="View settings">⚙</button>
+
+    <div class="searchbox">
+      <span style="color:#94A3B8">🔍</span>
+      <span class="fchip"><span>Stage: Seed</span><b>×</b></span>
+      <span class="fchip"><span>Not yet contacted</span><b>×</b></span>
+      <input placeholder="Search investor, firm, or thesis…">
+      <span style="color:#94A3B8;cursor:pointer">▾</span>
+    </div>
+
+    <span style="flex:1"></span>
+    <button class="btn">Columns</button>
+    <button class="btn">View ▾</button>
+  </div>
+
+  <div class="row head"><div></div><div>Investor</div><div>Firm</div><div>Fit</div><div>Stage</div><div>Last activity</div></div>
+  <div class="row"><div>☐</div><div>Priya Raman</div><div>Northgate Seed</div><div><span class="pill grn">88</span></div><div>Seed</div><div class="lock">viewed 2d ago</div></div>
+  <div class="row"><div>☐</div><div>Daniel Osei</div><div>Ember Capital</div><div><span class="pill grn">84</span></div><div>Seed</div><div class="lock">—</div></div>
+  <div class="row"><div>☐</div><div>Marta Lind</div><div>Castellan Family Office</div><div><span class="pill amb">71</span></div><div>Pre-seed</div><div class="lock">saved you 5d ago</div></div>
+</div>
+
+<div class="infobox" style="width:1120px">
+  Left to right, exactly the admin order: <b>primary action · gear · search · Columns · View</b>. The gear holds the
+  per-page view settings (density, which columns, default sort) — the same menu the admin lists use.
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. Search options — the dropdown <span>Filters · Group by · Favorites</span></h2>
+<p class="note">Clicking the ▾ opens the same three-column panel as admin. Filters are per page; Favorites are saved searches, scoped to the founder so they only see their own.</p>
+<div class="frame pad">
+  <div class="panel">
+    <div class="col">
+      <p class="colh">Filters</p>
+      <div class="it on">Not yet contacted</div>
+      <div class="it">Contacted</div>
+      <div class="it">Replied</div>
+      <div class="it">Meeting booked</div>
+      <div class="sep"></div>
+      <div class="it">Saved me</div>
+      <div class="it">Viewed my profile</div>
+      <div class="it">Indicated interest</div>
+      <div class="sep"></div>
+      <div class="it">Fit ≥ 80</div>
+      <div class="it">Added this month</div>
+      <div class="sep"></div>
+      <div class="it">Stage <span class="car">›</span></div>
+      <div class="it">Sector <span class="car">›</span></div>
+      <div class="it">Check size <span class="car">›</span></div>
+      <div class="it">Geography <span class="car">›</span></div>
+    </div>
+    <div class="col">
+      <p class="colh">Group by</p>
+      <div class="it on">None</div>
+      <div class="it">Stage</div>
+      <div class="it">Sector</div>
+      <div class="it">Fit band</div>
+      <div class="it">Status</div>
+      <div class="it">Last activity (month)</div>
+    </div>
+    <div class="col">
+      <p class="colh">Favorites</p>
+      <div class="it">Warm seed list</div>
+      <div class="it">Family offices to revisit</div>
+      <div class="sep"></div>
+      <div class="it" style="color:#4F46E5">Save current search ▾</div>
+      <p class="lock" style="padding:4px 12px 0;line-height:1.5">Yours only. Founders don&rsquo;t share views with each other.</p>
+    </div>
+  </div>
+
+  <div class="warnbox">
+    <b>One deliberate difference from admin.</b> The admin bar offers shared team favorites and a &ldquo;Someone else&rsquo;s&rdquo;
+    view switcher. Founders are single-tenant on their own data, so the Favorites column is personal only and the
+    View/Me/Team/Someone-else control does not appear.
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. Actions → Email <span>— select rows, act on them</span></h2>
+<div class="frame">
+  <div class="selbar">
+    <span class="selcount">3 selected</span>
+    <button class="sellink">→ Select all 46</button>
+    <span style="color:#94A3B8;cursor:pointer">✕</span>
+    <span style="flex:1"></span>
+    <button class="btn">⚙ Actions ▾</button>
+  </div>
+
+  <div class="row head"><div></div><div>Investor</div><div>Firm</div><div>Fit</div><div>Stage</div><div>Last activity</div></div>
+  <div class="row sel"><div>☑</div><div>Priya Raman</div><div>Northgate Seed</div><div><span class="pill grn">88</span></div><div>Seed</div><div class="lock">viewed 2d ago</div></div>
+  <div class="row sel"><div>☑</div><div>Daniel Osei</div><div>Ember Capital</div><div><span class="pill grn">84</span></div><div>Seed</div><div class="lock">—</div></div>
+  <div class="row sel"><div>☑</div><div>Marta Lind</div><div>Castellan Family Office</div><div><span class="pill amb">71</span></div><div>Pre-seed</div><div class="lock">saved you 5d ago</div></div>
+  <div class="row"><div>☐</div><div>Tom Byrne</div><div>Halyard Ventures</div><div><span class="pill amb">69</span></div><div>Series A</div><div class="lock">—</div></div>
+</div>
+
+<div style="display:flex;gap:16px;align-items:flex-start;margin-top:12px">
+  <div class="amenu">
+    <p class="h">Selected investors</p>
+    <div class="i">✉️ <b style="font-weight:500">Email</b></div>
+    <div class="i">📄 Send my one-pager</div>
+    <div class="i">➜ Enroll in sequence <span class="car">›</span></div>
+    <div class="i">⇢ Move to stage <span class="car">›</span></div>
+    <div class="i">🏷 Add to shortlist</div>
+    <div class="i">📅 Request intro</div>
+    <div class="sep" style="margin:5px 0"></div>
+    <div class="i">⬇ Export CSV</div>
+    <div class="i">🗄 Archive</div>
+  </div>
+
+  <div style="flex:1">
+    <div class="infobox" style="margin:0">
+      <b>Email is the first item, as on Opportunities.</b> It opens the same <code>MassEmailComposer</code> the admin
+      pages use, with the selection passed as ids. The composer already understands two sources
+      (<code>contacts</code>, <code>opportunities</code>); founder lists add their own — a small, typed addition rather
+      than a new component.
+    </div>
+    <div class="warnbox">
+      <b>The one thing to decide before this is built.</b> A founder emailing investors directly from the platform is a
+      different thing from staff doing it: it touches the &ldquo;iCFO is not a broker-dealer, introductions are
+      facilitated&rdquo; line the public profile already carries. Options, cheapest first —
+      <ul class="tight" style="color:#7A4A00">
+        <li><b>Email only contacts the founder already owns</b> (their own CRM, people who contacted them). Investors from the match list get &ldquo;Request intro&rdquo; instead, which routes through iCapOS. Safest, and it matches how the product is described today.</li>
+        <li><b>Email anyone, plan-gated</b> — Professional and above, with a monthly cap, reusing the outreach caps that already exist.</li>
+        <li><b>Email anyone, uncapped.</b> I would not; it turns the marketplace into a cold-outreach list.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. Where it goes <span>— every founder list, same bar</span></h2>
+<div class="frame pad">
+  <table>
+    <tr><th style="width:210px">Page</th><th style="width:74px">Rows?</th><th style="width:270px">Filters worth having</th><th>Actions</th></tr>
+    <tr><td><b>Investor matches</b> <span class="lock">/founder/matches</span></td><td><span class="pill grn">yes</span></td><td class="lock">status · fit band · stage · sector · check size</td><td class="lock">Email · one-pager · sequence · shortlist · request intro · export</td></tr>
+    <tr><td><b>Investor pipeline</b> <span class="lock">/founder/investor-pipeline</span></td><td><span class="pill grn">yes</span></td><td class="lock">stage · owner · stalled · has meeting</td><td class="lock">Email · move to stage · log activity · export</td></tr>
+    <tr><td><b>Investors</b> <span class="lock">/founder/investors</span></td><td><span class="pill grn">yes</span></td><td class="lock">relationship: saved / interested / pledged / intro requested</td><td class="lock">Email · follow up · export</td></tr>
+    <tr><td><b>Documents</b> <span class="lock">/founder/documents</span></td><td><span class="pill grn">yes</span></td><td class="lock">category · status · uploaded this month · missing required</td><td class="lock">Download · replace · archive <span style="color:#B42323">(no email)</span></td></tr>
+    <tr><td><b>Tasks</b> <span class="lock">/founder/tasks</span></td><td><span class="pill grn">yes</span></td><td class="lock">open / done · due this week · overdue · stage</td><td class="lock">Mark done · snooze · assign</td></tr>
+    <tr><td><b>Updates</b> <span class="lock">/founder/updates</span></td><td><span class="pill grn">yes</span></td><td class="lock">sent / draft · period</td><td class="lock">Email to list · duplicate · archive</td></tr>
+    <tr><td><b>Events</b> <span class="lock">/founder/events</span></td><td><span class="pill grn">yes</span></td><td class="lock">upcoming / past · registered</td><td class="lock">Add to calendar · export</td></tr>
+    <tr><td><b>Deploy → Outreach</b> <span class="lock">/founder/deploy</span></td><td><span class="pill grn">yes</span></td><td class="lock">the tab in your screenshot — same bar above its table</td><td class="lock">Email · sequence · export</td></tr>
+    <tr><td class="lock">Dashboard · Journey · Readiness · Valuation · Cap table · Pitch deck</td><td><span class="pill gry">no</span></td><td class="lock">not lists — nothing to filter</td><td class="lock">—</td></tr>
+  </table>
+  <div class="okbox">
+    <b>Nothing new to build underneath.</b> <code>OdooSearchBar</code>, <code>SelectionBar</code>,
+    <code>SelectionAction</code> and <code>MassEmailComposer</code> all exist and are in use. This is wiring them into
+    founder pages, giving each one its filter/group lists, and pointing the bulk actions at founder-scoped endpoints.
+  </div>
+</div>
+
+<!-- ─────────── 5 ─────────── -->
+<h2>5. What it costs, page by page</h2>
+<div class="frame pad">
+  <table>
+    <tr><th style="width:200px">Piece</th><th style="width:110px">Cost</th><th>Notes</th></tr>
+    <tr><td><b>Shared founder toolbar</b></td><td><span class="pill grn">small</span></td><td>One wrapper component holding gear + <code>OdooSearchBar</code> + Columns + View, so all eight pages get the same thing from one place.</td></tr>
+    <tr><td><b>Saved views for founders</b></td><td><span class="pill amb">small + scope</span></td><td><code>marketing_saved_searches</code> already stores by <code>scope</code>; founder scopes need an RLS check so a founder only ever sees their own. Worth doing properly.</td></tr>
+    <tr><td><b>Selection + Actions per page</b></td><td><span class="pill amb">medium</span></td><td>Checkbox column, the bar, and one bulk endpoint per page. The admin ones are the template; each founder endpoint must be ownership-scoped, not role-scoped.</td></tr>
+    <tr><td><b>Email from founder lists</b></td><td><span class="pill red">needs your call</span></td><td>Section 3. The composer is ready; who a founder may email is a product decision, not a technical one.</td></tr>
+  </table>
+  <p class="note" style="margin-top:10px">
+    Suggested order: <b>the toolbar and search first</b> across all eight pages — it is the visible half and carries no
+    policy questions. Then selection + Actions, starting with Matches and Pipeline. Email last, once you have decided
+    which of the three options in section 3 you want.
+  </p>
+</div>
+
+</body></html>

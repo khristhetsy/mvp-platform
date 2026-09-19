@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INVESTOR_TYPE_OPTIONS, FUNDING_STAGE_OPTIONS } from "@/lib/profile/options";
+import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar";
+import { SelectionBar, type SelectionAction } from "@/components/admin/sales/SelectionBar";
+import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { INDUSTRY_OPTIONS } from "@/lib/industries";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
@@ -171,8 +174,7 @@ const EMPTY_FORM = {
 export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
   const router = useRouter();
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
-  const [search, setSearch] = useState("");
-  const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [viewMode, setViewMode] = useState<"table" | "board">("board");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
@@ -195,12 +197,28 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importBusy, setImportBusy] = useState(false);
 
+  // Rows picked for a bulk action. Separate from selectedIds, which the import
+  // modal uses for platform matches.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   // ── Derived ──────────────────────────────────────────────────────────────────
-  const filtered = investors.filter((inv) => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || inv.name.toLowerCase().includes(q) || (inv.location ?? "").toLowerCase().includes(q) || inv.investor_type.toLowerCase().includes(q);
-    const matchOutreach = outreachFilter === "all" || inv.outreach_status === outreachFilter;
-    return matchSearch && matchOutreach;
+  const filtered = applySearch(investors, search, {
+    text: (i) => [i.name, i.location ?? "", i.investor_type, ...(i.focus_sectors ?? [])].join(" "),
+    quick: {
+      interested: (i) => i.interested,
+      has_meeting: (i) => i.meeting_requested !== "none",
+      pledged: (i) => (i.pledge_amount ?? 0) > 0,
+      not_contacted: (i) => i.outreach_status === "not_started",
+      from_matches: (i) => i.source === "platform_match",
+      added_by_me: (i) => i.source === "manual",
+    },
+    field: {
+      stage: (i) => i.pipeline_stage ?? "new",
+      outreach: (i) => i.outreach_status,
+      type: (i) => i.investor_type,
+      sector: (i) => i.focus_sectors ?? [],
+    },
   });
 
   const stats = {
@@ -209,6 +227,41 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
     meetings: investors.filter((i) => i.meeting_requested !== "none").length,
     closed: investors.filter((i) => i.outreach_status === "closed").length,
   };
+
+  // ── Bulk actions ──────────────────────────────────────────────────────────────
+  const pickedIds = () => [...picked];
+  const togglePick = (id: string) => setPicked((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  async function bulkPatch(body: Record<string, unknown>) {
+    const ids = pickedIds();
+    if (!ids.length) return;
+    setBulkBusy(true);
+    // One PATCH per row — the per-row route already checks founder ownership, so
+    // this cannot touch another founder's pipeline even if an id were guessed.
+    await Promise.all(ids.map((id) =>
+      fetch(`/api/founder/investor-pipeline/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }),
+    ));
+    setBulkBusy(false);
+    setPicked(new Set());
+    await refresh();
+  }
+
+  const bulkActions: SelectionAction[] = [
+    {
+      key: "stage", icon: "ti-arrow-right", label: "Move to stage",
+      options: PIPELINE_STAGES.map((s) => ({ value: s.id, label: s.label })),
+      runWith: (v) => void bulkPatch({ pipeline_stage: v }),
+    },
+    {
+      key: "outreach", icon: "ti-progress", label: "Set outreach",
+      options: (Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((k) => ({ value: k, label: OUTREACH_LABELS[k] })),
+      runWith: (v) => void bulkPatch({ outreach_status: v }),
+    },
+    { key: "interested", icon: "ti-star", label: "Mark interested", run: () => void bulkPatch({ interested: true }) },
+    { key: "export", icon: "ti-download", label: "Export CSV", run: () => { exportCSV(); setPicked(new Set()); } },
+  ];
 
   // ── Data actions ──────────────────────────────────────────────────────────────
   async function refresh() {
@@ -395,18 +448,40 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
         ))}
       </div>
 
-      {/* Toolbar */}
+      {/* Toolbar — the shared founder pattern: primary · gear · search · View */}
+      <div className="rounded-xl border bg-white" style={{ borderColor: "var(--border-subtle)" }}>
+        <FounderToolbar
+          scope="investor-pipeline"
+          state={search}
+          onChange={setSearch}
+          count={filtered.length}
+          countLabel="investors"
+          placeholder="Search investor, firm, sector…"
+          primary={<button onClick={openAdd} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">+ Add Investor</button>}
+          quick={[
+            { key: "interested", label: "Interested" },
+            { key: "has_meeting", label: "Meeting requested or booked" },
+            { key: "pledged", label: "Pledged" },
+            { key: "not_contacted", label: "Not yet contacted", sep: true },
+            { key: "from_matches", label: "From platform matches" },
+            { key: "added_by_me", label: "Added by me" },
+          ]}
+          fields={[
+            { key: "stage", label: "Stage", options: PIPELINE_STAGES.map((s) => s.id) },
+            { key: "outreach", label: "Outreach", options: Object.keys(OUTREACH_LABELS) },
+            { key: "type", label: "Investor type", options: [...new Set(investors.map((i) => i.investor_type).filter(Boolean))] },
+            { key: "sector", label: "Sector", options: [...new Set(investors.flatMap((i) => i.focus_sectors ?? []))] },
+          ]}
+          groups={[
+            { id: "none", label: "None" },
+            { id: "stage", label: "Stage" },
+            { id: "outreach", label: "Outreach" },
+            { id: "type", label: "Investor type" },
+          ]}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
-        <input type="text" placeholder="Search investors…" value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-56 rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-          style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} />
-        <select value={outreachFilter} onChange={(e) => setOutreachFilter(e.target.value as OutreachStatus | "all")}
-          className="rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
-          <option value="all">All Outreach</option>
-          {(Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((s) => (
-            <option key={s} value={s}>{OUTREACH_LABELS[s]}</option>
-          ))}
-        </select>
         <div className="flex-1" />
         <div className="inline-flex overflow-hidden rounded-lg border" style={{ borderColor: "var(--border-subtle)" }}>
           {(["board", "table"] as const).map((m) => (
@@ -427,9 +502,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
         </button>
         <button onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
           Import from Matches
-        </button>
-        <button onClick={openAdd} className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
-          + Add Investor
         </button>
       </div>
 
@@ -511,10 +583,28 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
       {/* Table */}
       {viewMode === "table" && (
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
+        <SelectionBar
+          count={picked.size}
+          total={filtered.length}
+          onSelectAll={() => setPicked(new Set(filtered.map((i) => i.id)))}
+          onClear={() => setPicked(new Set())}
+          actions={bulkActions}
+          busy={bulkBusy}
+          heading="Selected investors"
+        />
         <div className="overflow-x-auto">
           <table className="enterprise-table enterprise-table--comfortable w-full min-w-[900px] border-collapse bg-white">
             <thead>
               <tr>
+                <th className="px-3 py-3 w-9">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={filtered.length > 0 && filtered.every((i) => picked.has(i.id))}
+                    onChange={(e) => setPicked(e.target.checked ? new Set(filtered.map((i) => i.id)) : new Set())}
+                    style={{ width: 14, height: 14, cursor: "pointer" }}
+                  />
+                </th>
                 {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3">{h}</th>
                 ))}
@@ -523,12 +613,15 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                  <td colSpan={10} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
                     {investors.length === 0 ? "Add your first investor or import from platform matches." : "No investors match your search."}
                   </td>
                 </tr>
               ) : filtered.map((inv) => (
-                <tr key={inv.id} className="border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                <tr key={inv.id} className="border-t" style={{ borderColor: "var(--border-subtle)", background: picked.has(inv.id) ? "#F5F9FF" : undefined }}>
+                  <td className="px-3 py-3">
+                    <input type="checkbox" checked={picked.has(inv.id)} onChange={() => togglePick(inv.id)} aria-label={`Select ${inv.name}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => setProfileOf(inv)} className="text-sm font-semibold text-left hover:underline" style={{ color: "var(--blue)" }}>

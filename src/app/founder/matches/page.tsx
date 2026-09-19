@@ -152,6 +152,7 @@ export default async function FounderMatchesPage() {
 
         {/* Investor search — the full named directory with per-investor actions. */}
         <MatchingCenterList
+          scope="matches"
           cards={cards}
           introEndpoint="/api/founder/matching/intro"
           followUpEndpoint="/api/founder/matching/follow-up"

@@ -47,6 +47,13 @@ type Props = {
   applyDefault?: boolean;
   /** Width of the bar; the dropdown anchors to its right edge. */
   width?: number | string;
+  /**
+   * Where favorites live. Founders use a founder-scoped endpoint that only ever
+   * touches the caller's own rows — one founder must never see another's views.
+   */
+  api?: string;
+  /** Hide the shared-filters section and the "share with team" box (founder lists). */
+  personalOnly?: boolean;
 };
 
 const chipBase: React.CSSProperties = { display: "inline-flex", alignItems: "center", borderRadius: 6, overflow: "hidden", fontSize: 11.5 };
@@ -61,7 +68,7 @@ function Chip({ text, color, bg, border, onRemove, icon }: { text: string; color
   );
 }
 
-export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, noGroupId = "", placeholder = "Search…", applyDefault = true, width = 560 }: Props) {
+export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, noGroupId = "", placeholder = "Search…", applyDefault = true, width = 560, api = "/api/marketing/saved-searches", personalOnly = false }: Props) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [openField, setOpenField] = useState<string | null>(null);
@@ -76,7 +83,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
 
   const fetchSaved = useCallback(async () => {
     try {
-      const r = await fetch(`/api/marketing/saved-searches?scope=${encodeURIComponent(scope)}`);
+      const r = await fetch(`${api}?scope=${encodeURIComponent(scope)}`);
       if (!r.ok) return;
       const rows = ((await r.json()).searches ?? []) as Array<Record<string, unknown>>;
       setSaved(rows.map((s) => ({
@@ -85,7 +92,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
         state: { ...EMPTY_SEARCH, ...(((s.spec as { state?: Partial<SearchState> } | null)?.state) ?? {}) },
       })));
     } catch { /* ignore */ }
-  }, [scope]);
+  }, [scope, api]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch sets state later
   useEffect(() => { void fetchSaved(); }, [fetchSaved]);
   useEffect(() => {
@@ -113,7 +120,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
   async function saveCurrent() {
     if (!saveName.trim()) return;
     try {
-      await fetch("/api/marketing/saved-searches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         scope, name: saveName.trim(), spec: { match: "all", conditions: [], state }, groupBy: state.groupBy || null, isDefault: saveDefault, isShared: saveShared,
       }) });
       setSaveOpen(false); setSaveName(""); setSaveDefault(false); setSaveShared(false); setOpen(false);
@@ -122,7 +129,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
   }
   async function deleteSaved(s: SavedView) {
     if (!window.confirm(`Delete saved search “${s.name}”?`)) return;
-    try { await fetch(`/api/marketing/saved-searches/${s.id}`, { method: "DELETE" }); if (applied?.id === s.id) setApplied(null); await fetchSaved(); } catch { /* ignore */ }
+    try { await fetch(`${api}/${s.id}`, { method: "DELETE" }); if (applied?.id === s.id) setApplied(null); await fetchSaved(); } catch { /* ignore */ }
   }
   function applySaved(s: SavedView) { setApplied(s); onChange({ ...EMPTY_SEARCH, ...s.state }); setOpen(false); }
 
@@ -228,10 +235,14 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
                   <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#7A5AA8" }}><i className="ti ti-star" aria-hidden="true" /> FAVORITES</div>
                   {mine.length === 0 && <div style={{ padding: "4px 12px 4px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>None yet — save one below.</div>}
                   {mine.map(favRow)}
-                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
-                  <div style={{ padding: "8px 12px 3px", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}><i className="ti ti-users" aria-hidden="true" /> SHARED FILTERS</div>
-                  {shared.length === 0 && <div style={{ padding: "2px 12px 6px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>Nothing shared by the team yet.</div>}
-                  {shared.map(favRow)}
+                  {!personalOnly && (
+                    <>
+                      <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
+                      <div style={{ padding: "8px 12px 3px", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}><i className="ti ti-users" aria-hidden="true" /> SHARED FILTERS</div>
+                      {shared.length === 0 && <div style={{ padding: "2px 12px 6px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>Nothing shared by the team yet.</div>}
+                      {shared.map(favRow)}
+                    </>
+                  )}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
                   <button type="button" onClick={() => setSaveOpen((v) => !v)} style={{ ...item, display: "flex", alignItems: "center", paddingLeft: 12, fontWeight: 500 }}>
                     <span style={{ flex: 1 }}>Save current search</span>
@@ -241,7 +252,9 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
                     <div style={{ margin: "2px 12px 8px", background: "var(--muted)", borderRadius: 8, padding: "8px 10px" }}>
                       <input value={saveName} onChange={(e) => setSaveName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void saveCurrent(); }} autoFocus placeholder="Name this search" style={{ width: "100%", boxSizing: "border-box", fontSize: 12, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff", marginBottom: 7 }} />
                       <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 4, cursor: "pointer" }}><input type="checkbox" checked={saveDefault} onChange={(e) => setSaveDefault(e.target.checked)} style={{ width: 13, height: 13 }} /> Default filter</label>
-                      <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 8, cursor: "pointer" }}><input type="checkbox" checked={saveShared} onChange={(e) => setSaveShared(e.target.checked)} style={{ width: 13, height: 13 }} /> Shared with team</label>
+                      {!personalOnly && (
+                        <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 8, cursor: "pointer" }}><input type="checkbox" checked={saveShared} onChange={(e) => setSaveShared(e.target.checked)} style={{ width: 13, height: 13 }} /> Shared with team</label>
+                      )}
                       <button type="button" onClick={() => void saveCurrent()} disabled={!saveName.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#7A5AA8", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer", opacity: saveName.trim() ? 1 : 0.5 }}>Save</button>
                     </div>
                   )}

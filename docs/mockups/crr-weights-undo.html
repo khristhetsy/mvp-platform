@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR Weights · undo · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1020px;line-height:1.55}
+.frame{width:1020px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:6px 8px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.btn.off{opacity:.38;cursor:default}
+.kbd{font-size:10px;border:1px solid #D6DDE8;border-bottom-width:2px;border-radius:4px;padding:0 4px;color:#64748B;background:#FBFCFE}
+.inp{display:inline-block;width:52px;border:1px solid #C9D3E3;border-radius:6px;padding:3px 7px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;background:#fff}
+.inp.dirty{border-color:#4F46E5;background:#EEF0FE;font-weight:600}
+.undo1{border:0;background:none;color:#4F46E5;cursor:pointer;font-size:13px;margin-left:5px;padding:0 2px}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid #E2E7F0;border-radius:10px;padding:8px 10px;background:#FBFCFE}
+.toast{display:flex;align-items:center;gap:12px;border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#12693A}
+.toast b{font-weight:600}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.stack{font-size:11.5px;color:#64748B}
+.stack div{padding:3px 0;border-bottom:1px solid #F5F7FA}
+.stack div:last-child{border:0}
+.stack b{color:#0A1A40;font-weight:600}
+.now{background:#EEF0FE;border-radius:5px;padding:2px 6px !important;color:#4F46E5;font-weight:600}
+.ahead{color:#B6C0D0}
+.ahead b{color:#B6C0D0 !important;font-weight:500}
+.chain{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-top:8px}
+.node{border:1px solid #D6DDE8;border-radius:9px;padding:7px 11px;font-size:11.5px;background:#fff;min-width:150px}
+.node b{display:block;font-size:12.5px}
+.node.on{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE}
+.node.ghost{opacity:.45;border-style:dashed}
+.arw{color:#94A3B8;padding:0 9px;font-size:13px}
+</style></head><body>
+
+<p class="note"><b>Three kinds of undo, because they are three different problems.</b> Nothing built. What exists today: <b>Reset</b> (throw away all unsaved edits), <b>Reset to code defaults</b>, and <b>Revert</b> in History. What is missing is stepwise undo while typing, a one-click undo on a single number, and a way to take back a save you have just made.</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. Undo / Redo while editing <span>— the one you asked for</span></h2>
+<p class="note">A stack of drafts held in the browser. Every change to a factor point, a band or a floor pushes a step. The label says what it would undo, so you are never guessing.</p>
+<div class="frame">
+  <div class="bar">
+    <button class="btn">↶ Undo <span class="kbd">⌘Z</span></button>
+    <button class="btn off">↷ Redo <span class="kbd">⇧⌘Z</span></button>
+    <span class="lock">Undo · Pre-seed &middot; Pitch Deck &amp; Plan 30 → 14</span>
+    <span style="flex:1"></span>
+    <span class="pill blu">6 unsaved changes</span>
+    <button class="btn">Reset all</button>
+    <button class="btn">Reset to defaults</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;margin-top:12px">
+    <div>
+      <p class="lbl">Factor points · Pre-seed</p>
+      <table>
+        <tr><th style="width:230px">Factor</th><th style="width:96px">Dimension</th><th style="width:130px">Points</th><th style="width:70px">Active</th></tr>
+        <tr><td>Founder Integrity &amp; Team Depth</td><td class="lock">Team</td><td><span class="inp dirty">24</span><button class="undo1" title="Back to 30">↺</button></td><td class="lock">30</td></tr>
+        <tr><td>Pitch Deck &amp; Business Plan Quality</td><td class="lock">Narrative</td><td><span class="inp dirty">14</span><button class="undo1" title="Back to 30">↺</button></td><td class="lock">30</td></tr>
+        <tr><td>Customer Traction &amp; LOIs</td><td class="lock">Traction</td><td><span class="inp dirty">16</span><button class="undo1" title="Back to 8">↺</button></td><td class="lock">8</td></tr>
+        <tr><td>Market &amp; Competitive Evidence</td><td class="lock">Traction</td><td><span class="inp dirty">12</span><button class="undo1" title="Back to 7">↺</button></td><td class="lock">7</td></tr>
+        <tr><td>Revenue &amp; Cash Flow Trajectory</td><td class="lock">Financial</td><td><span class="inp">6</span></td><td class="lock">6</td></tr>
+        <tr><td>Governance &amp; Legal Cleanliness</td><td class="lock">Cap table</td><td><span class="inp dirty">6</span><button class="undo1" title="Back to 4">↺</button></td><td class="lock">4</td></tr>
+        <tr><td colspan="4" class="lock" style="border:0;padding-top:5px">…the remaining seven unchanged…</td></tr>
+      </table>
+      <p style="margin:8px 0 0"><span class="pill grn">✓ 100 of 100 allocated</span> <span class="lock" style="margin-left:6px">Pre-seed</span> <span class="pill gry" style="margin-left:8px">Seed 100</span> <span class="pill gry">Series A 100</span> <span class="pill gry">Growth 100</span></p>
+      <p class="lock" style="margin-top:6px">The <b>↺</b> appears only on a number that differs from the saved version, and returns just that one — without disturbing the other five edits.</p>
+    </div>
+
+    <div>
+      <p class="lbl">Edit history <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#94A3B8">this session</span></p>
+      <div class="stack" style="border:1px solid #E2E7F0;border-radius:10px;padding:8px 10px">
+        <div><b>Pre-seed</b> Governance 4 → 6</div>
+        <div class="now">↑ you are here</div>
+        <div><b>Pre-seed</b> Market 7 → 12</div>
+        <div><b>Pre-seed</b> Traction 8 → 16</div>
+        <div><b>Pre-seed</b> Pitch 30 → 14</div>
+        <div><b>Pre-seed</b> Team 30 → 24</div>
+        <div><b>Seed</b> Pitch 10 → 12</div>
+        <div class="lock">— loaded crr-profiles-v1 —</div>
+      </div>
+      <p class="lock" style="margin-top:6px">Spans all four stages, bands and floors — one stack, because one Save commits all of it. Cleared when you save or reload. Capped at 50 steps.</p>
+    </div>
+  </div>
+
+  <div class="infobox">
+    <b>Typing a number counts as one step, not six.</b> Edits to the same input inside two seconds collapse into a single
+    undo step, so pressing ⌘Z after typing &ldquo;14&rdquo; takes you back to 30 rather than to &ldquo;1&rdquo;.
+  </div>
+</div>
+
+<!-- ─────────── 1b · FORWARD ─────────── -->
+<h2>1b. And forward — Redo <span>after pressing ⌘Z twice</span></h2>
+<p class="note">Same screen, two steps back. Undo is still live; Redo is now live too and says what it would put back. The undone steps stay visible in the list, greyed, so you can see where forward leads.</p>
+<div class="frame">
+  <div class="bar">
+    <button class="btn">↶ Undo <span class="kbd">⌘Z</span></button>
+    <button class="btn" style="border-color:#4F46E5;color:#4F46E5;font-weight:600">↷ Redo <span class="kbd">⇧⌘Z</span></button>
+    <span class="lock">Undo · Pre-seed &middot; Traction 8 → 16 &nbsp;|&nbsp; Redo · Pre-seed &middot; Market 7 → 12</span>
+    <span style="flex:1"></span>
+    <span class="pill blu">4 unsaved changes</span>
+    <button class="btn">Reset all</button>
+    <button class="btn">Reset to defaults</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;margin-top:12px">
+    <div>
+      <p class="lbl">Factor points · Pre-seed</p>
+      <table>
+        <tr><th style="width:230px">Factor</th><th style="width:96px">Dimension</th><th style="width:130px">Points</th><th style="width:70px">Active</th></tr>
+        <tr><td>Founder Integrity &amp; Team Depth</td><td class="lock">Team</td><td><span class="inp dirty">24</span><button class="undo1" title="Back to 30">↺</button></td><td class="lock">30</td></tr>
+        <tr><td>Pitch Deck &amp; Business Plan Quality</td><td class="lock">Narrative</td><td><span class="inp dirty">14</span><button class="undo1" title="Back to 30">↺</button></td><td class="lock">30</td></tr>
+        <tr><td>Customer Traction &amp; LOIs</td><td class="lock">Traction</td><td><span class="inp dirty">16</span><button class="undo1" title="Back to 8">↺</button></td><td class="lock">8</td></tr>
+        <tr style="background:#FAFBFD"><td>Market &amp; Competitive Evidence</td><td class="lock">Traction</td><td><span class="inp">7</span> <span class="lock">← undone</span></td><td class="lock">7</td></tr>
+        <tr><td>Revenue &amp; Cash Flow Trajectory</td><td class="lock">Financial</td><td><span class="inp">6</span></td><td class="lock">6</td></tr>
+        <tr style="background:#FAFBFD"><td>Governance &amp; Legal Cleanliness</td><td class="lock">Cap table</td><td><span class="inp">4</span> <span class="lock">← undone</span></td><td class="lock">4</td></tr>
+        <tr><td colspan="4" class="lock" style="border:0;padding-top:5px">…the remaining seven unchanged…</td></tr>
+      </table>
+      <p style="margin:8px 0 0"><span class="pill red">Total 93 — must be exactly 100</span> <span class="lock" style="margin-left:6px">undoing can leave a stage unbalanced; Save stays disabled until it is 100 again</span></p>
+    </div>
+
+    <div>
+      <p class="lbl">Edit history</p>
+      <div class="stack" style="border:1px solid #E2E7F0;border-radius:10px;padding:8px 10px">
+        <div class="ahead"><b>Pre-seed</b> Governance 4 → 6 <span style="float:right">↷</span></div>
+        <div class="ahead"><b>Pre-seed</b> Market 7 → 12 <span style="float:right">↷</span></div>
+        <div class="now">↑ you are here</div>
+        <div><b>Pre-seed</b> Traction 8 → 16</div>
+        <div><b>Pre-seed</b> Pitch 30 → 14</div>
+        <div><b>Pre-seed</b> Team 30 → 24</div>
+        <div><b>Seed</b> Pitch 10 → 12</div>
+        <div class="lock">— loaded crr-profiles-v1 —</div>
+      </div>
+      <p class="lock" style="margin-top:6px">Greyed steps are ahead of you. Click one to jump straight there, or ⇧⌘Z one at a time.</p>
+      <div class="warnbox" style="margin-top:10px">
+        <b>Editing while there are steps ahead drops them.</b> Standard behaviour, but the list shows it: the greyed rows
+        disappear the moment you type a new value, and nothing is silently lost because you can see them go.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. Undo a save <span>— the one that actually matters</span></h2>
+<p class="note">Saving appends a version and, if you ticked re-score, rewrites every company&rsquo;s score. This is the case where an undo is worth real money.</p>
+<div class="frame">
+  <p class="lbl">Immediately after saving</p>
+  <div class="toast">
+    <span>✓</span>
+    <span style="flex:1">Saved <b>crr-profiles-v2</b> · Pre-seed Pitch 30 → 14, Team 30 → 24 · <b>22 companies re-scored</b>, average 17 → 21</span>
+    <button class="btn">View impact</button>
+    <button class="btn" style="border-color:#137A3B;color:#137A3B;font-weight:600">↶ Undo this save</button>
+    <button class="btn">✕</button>
+  </div>
+  <p class="lock" style="margin-top:8px">Stays until you leave the tab. After that, History &rsquo;s <b>Revert</b> does the same job for any version, forever.</p>
+
+  <div style="margin-top:14px">
+    <p class="lbl">What Undo this save does</p>
+    <table>
+      <tr><th style="width:44px">Step</th><th style="width:250px">Action</th><th>Detail</th></tr>
+      <tr><td>1</td><td>Copies <code>crr-profiles-v1</code> forward</td><td>Saves it as <b>v3</b> with the reason &ldquo;Undo of v2&rdquo; and makes it active. v1 and v2 are both left intact.</td></tr>
+      <tr><td>2</td><td>Re-scores the 22 companies</td><td>Arithmetic over stored factor scores — no AI, no cost, a few seconds. Scores land back exactly where they were.</td></tr>
+      <tr><td>3</td><td>Records it</td><td>History shows v3 &ldquo;Undo of v2&rdquo;, and the audit log carries who and when.</td></tr>
+    </table>
+  </div>
+
+  <div style="margin-top:16px">
+    <p class="lbl">And forward again — Redo the save</p>
+    <p class="note" style="margin-bottom:8px">Undoing leaves its own banner. Changed your mind twice? Redo puts v2&rsquo;s numbers back as v4 and re-scores again.</p>
+    <div class="toast" style="border-color:#CFD8EA;background:#F8FAFD;color:#334155">
+      <span>↶</span>
+      <span style="flex:1">Undone. <b>crr-profiles-v3</b> is active with v1&rsquo;s numbers · 22 companies re-scored back, average 21 → 17</span>
+      <button class="btn">View impact</button>
+      <button class="btn" style="border-color:#4F46E5;color:#4F46E5;font-weight:600">↷ Redo this save</button>
+      <button class="btn">✕</button>
+    </div>
+
+    <p class="lbl" style="margin-top:14px">The version chain, both directions</p>
+    <div class="chain">
+      <div class="node"><b>v1</b>seeded from code</div>
+      <span class="arw">→</span>
+      <div class="node"><b>v2</b>Pitch 30 → 14 <span class="lock">your save</span></div>
+      <span class="arw">→</span>
+      <div class="node on"><b>v3</b>undo of v2 <span class="lock">= v1&rsquo;s numbers</span></div>
+      <span class="arw">→</span>
+      <div class="node ghost"><b>v4</b>redo of v2 <span class="lock">= v2&rsquo;s numbers</span></div>
+    </div>
+    <p class="lock" style="margin-top:7px">Nothing is deleted. Undo and redo both move the chain forward; the active flag moves with them. History reads as a story rather than a set of holes.</p>
+  </div>
+
+  <div class="warnbox">
+    <b>It undoes forward, not backward — and that is deliberate.</b> The version list and
+    <code>company_readiness_scores</code> are append-only: they are the audit trail for why a company scored what it
+    scored on a given day. So an undo adds a corrective version rather than deleting the mistake. A company&rsquo;s score
+    timeline will show the spike and the return, which is the truth of what happened.
+    <br><br>
+    If you would rather a mistaken save vanish entirely, that is a different feature — a hard delete of a version and its
+    score rows — and I would argue against it for a number investors read.
+  </div>
+
+  <div class="okbox">
+    <b>Most of this already exists.</b> Revert in History does exactly steps 1–3 today. The new part is the banner: it
+    pre-fills the target version and the reason, so undoing is one click rather than finding the right row.
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. Before the save — the safety net that is already there</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:190px">Control</th><th style="width:96px">Status</th><th>What it does</th></tr>
+    <tr><td><b>Preview impact</b></td><td><span class="pill grn">exists</span></td><td>Re-runs every company under the candidate set — who moves, by how much, band changes, gate crossings. No writes. The best undo is not needing one.</td></tr>
+    <tr><td><b>Reset all</b></td><td><span class="pill grn">exists</span></td><td>Throws away every unsaved edit and returns to the active version.</td></tr>
+    <tr><td><b>Reset to defaults</b></td><td><span class="pill grn">exists</span></td><td>Loads the four seeded stage sets from code.</td></tr>
+    <tr><td><b>Revert</b> (History)</td><td><span class="pill grn">exists</span></td><td>Copies any past version forward as a new active one.</td></tr>
+    <tr><td><b>Save without re-scoring</b></td><td><span class="pill grn">exists</span></td><td>Records the version but leaves stored scores alone until you choose to re-score. The gentlest way to try something.</td></tr>
+    <tr style="background:#FBFBFF"><td><b>Undo / Redo</b></td><td><span class="pill blu">new</span></td><td>Stepwise, client-side, ⌘Z / ⇧⌘Z. Section 1.</td></tr>
+    <tr style="background:#FBFBFF"><td><b>↺ on one number</b></td><td><span class="pill blu">new</span></td><td>Returns a single factor to its saved value.</td></tr>
+    <tr style="background:#FBFBFF"><td><b>Undo this save</b></td><td><span class="pill blu">new</span></td><td>The banner in section 2 — a pre-filled revert to the version that was active before.</td></tr>
+    <tr style="background:#FBFBFF"><td><b>Redo this save</b></td><td><span class="pill blu">new</span></td><td>The forward banner — reapplies the version you just undid. Same mechanism, other direction.</td></tr>
+  </table>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. What it costs</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:200px">Piece</th><th style="width:110px">Cost</th><th>Notes</th></tr>
+    <tr><td><b>Undo / Redo stack</b></td><td><span class="pill grn">small</span></td><td>Two arrays of draft snapshots in the panel&rsquo;s state, plus a keydown handler and the two-second coalescing. No server, no migration.</td></tr>
+    <tr><td><b>↺ per row</b></td><td><span class="pill grn">tiny</span></td><td>The panel already compares each input to the active version to colour it — the button reuses that comparison.</td></tr>
+    <tr><td><b>Undo / Redo a save</b></td><td><span class="pill grn">small</span></td><td>Remember two version ids — the one active before the save, and the one you just undid — then call the existing revert action with whichever direction you pressed. The API needs nothing new.</td></tr>
+    <tr><td><b>Edit-history list</b></td><td><span class="pill amb">optional</span></td><td>Nice for confidence, not required. Say if you want it or just the two buttons.</td></tr>
+  </table>
+  <p class="note" style="margin-top:10px">One question for you: <b>do you want the edit-history list, or just Undo/Redo and the ↺?</b> Everything else I would build as drawn.</p>
+</div>
+
+</body></html>

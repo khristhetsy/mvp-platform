@@ -6,6 +6,8 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
 import { MetricGrid, PageSection } from "@/components/ui/workspace-layout";
 import type { FounderInvestorCrmView, FounderInvestorRelationRow } from "@/lib/data/investor-crm";
+import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar";
+import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
 // ─── Pipeline donut chart ─────────────────────────────────────────────────────
@@ -150,17 +152,6 @@ function collectAllRows(crmView: FounderInvestorCrmView): FounderInvestorRelatio
   return rows;
 }
 
-function filterRows(rows: FounderInvestorRelationRow[], query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter(
-    (row) =>
-      row.investorName.toLowerCase().includes(q) ||
-      (row.investorEmail?.toLowerCase().includes(q) ?? false) ||
-      row.actionLabel.toLowerCase().includes(q) ||
-      (row.status?.toLowerCase().includes(q) ?? false),
-  );
-}
 
 const PIPELINE_GROUPS = [
   { id: "interested", title: "Interested", actionTypes: ["interested", "saved_deal"] },
@@ -426,12 +417,27 @@ function FounderInvestorsModuleViewsInner({
   companyName,
 }: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
   const t = useTranslations("founderCmp");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [view, setView] = useState<ViewMode>("kanban");
   const [drawerGroup, setDrawerGroup] = useState<DrawerGroup | null>(null);
 
   const allRows = useMemo(() => collectAllRows(crmView), [crmView]);
-  const filteredRows = useMemo(() => filterRows(allRows, query), [allRows, query]);
+  const filteredRows = useMemo(() => applySearch(allRows, query, {
+    text: (r) => [r.investorName, r.investorEmail ?? "", r.actionLabel, r.status ?? "", r.notes ?? ""].join(" "),
+    quick: {
+      interested: (r) => r.actionType === "interested" || r.actionType === "saved_deal",
+      pledged: (r) => r.actionType === "pledged" || r.actionType === "indicative_interest",
+      intro_requested: (r) => r.actionType === "intro_requested",
+      follow_up: (r) => r.actionType === "follow_up",
+      has_email: (r) => !!r.investorEmail,
+      has_amount: (r) => (r.pledgeAmount ?? r.interestAmount ?? 0) > 0,
+    },
+    field: {
+      relationship: (r) => r.actionType,
+      stage: (r) => r.pipelineStage ?? "",
+      status: (r) => r.status ?? "",
+    },
+  }), [allRows, query]);
 
   const donutCounts = useMemo<[number, number, number, number]>(() => {
     const interested = allRows.filter((r) => r.actionType === "interested" || r.actionType === "saved_deal").length;
@@ -499,15 +505,33 @@ function FounderInvestorsModuleViewsInner({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+      <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <FounderToolbar
+          scope="investors"
+          state={query}
+          onChange={setQuery}
+          count={filteredRows.length}
+          countLabel="investors"
           placeholder={t("search_investors_status_or_activity")}
-          className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-        />
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          quick={[
+            { key: "interested", label: "Interested or saved" },
+            { key: "pledged", label: "Pledged or indicated" },
+            { key: "intro_requested", label: "Intro requested" },
+            { key: "follow_up", label: "Follow-up" },
+            { key: "has_email", label: "Has an email", sep: true },
+            { key: "has_amount", label: "Has an amount" },
+          ]}
+          fields={[
+            { key: "relationship", label: "Relationship", options: [...new Set(allRows.map((r) => r.actionType))] },
+            { key: "stage", label: "Pipeline stage", options: [...new Set(allRows.map((r) => r.pipelineStage ?? "").filter(Boolean))] },
+            { key: "status", label: "Status", options: [...new Set(allRows.map((r) => r.status ?? "").filter(Boolean))] },
+          ]}
+          groups={[
+            { id: "none", label: "None" },
+            { id: "relationship", label: "Relationship" },
+            { id: "stage", label: "Pipeline stage" },
+          ]}
+          right={<div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {(["kanban", "grid", "list"] as const).map((v) => (
             <button
               key={v}
@@ -522,7 +546,8 @@ function FounderInvestorsModuleViewsInner({
               {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
             </button>
           ))}
-        </div>
+        </div>}
+        />
       </div>
 
       <PageSection title={t("pipeline_summary")} subtitle={companyName}>
