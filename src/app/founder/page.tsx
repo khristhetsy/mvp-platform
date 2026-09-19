@@ -11,7 +11,8 @@ import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingPro
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
-import { computeInvestableCrr, OUTREACH_THRESHOLD } from "@/lib/crr/investable-score";
+import { investableCrrFrom, OUTREACH_THRESHOLD } from "@/lib/crr/investable-score";
+import { crrFor } from "@/lib/crr/crr-for";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
@@ -153,7 +154,7 @@ export default async function FounderDashboardPage() {
   };
   if (company) {
     const journeyState = await evaluateFounderJourney(supabase, profile.id);
-    crrResult = computeInvestableCrr(journeyState, company);
+    crrResult = investableCrrFrom(await crrFor(company.id), journeyState, company);
     crrSubtitle = `Readiness ${crrResult.readiness} · Profile ${crrResult.profilePercent}%`;
     crrParts = {
       readiness: crrResult.readiness,

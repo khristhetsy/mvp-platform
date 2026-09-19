@@ -1,5 +1,5 @@
 import { listMarketplaceListings } from "@/lib/data/marketplace";
-import { computeReadinessScore } from "@/lib/data/founder-readiness";
+import { crrScoresFor } from "@/lib/crr/crr-for";
 import {
   countHighMatches,
   matchInvestorToCompany,
@@ -144,30 +144,10 @@ export async function loadAdminCompanyMatchProfiles() {
   const readinessByCompany = new Map<string, number>();
 
   if (companyIds.length > 0) {
-    const { data: reports } = await admin
-      .from("diligence_reports")
-      .select("company_id, readiness_score, created_at")
-      .in("company_id", companyIds)
-      .order("created_at", { ascending: false });
-
-    for (const report of reports ?? []) {
-      if (!readinessByCompany.has(report.company_id) && report.readiness_score != null) {
-        readinessByCompany.set(report.company_id, report.readiness_score);
-      }
-    }
-
-    const { data: documents } = await admin
-      .from("documents")
-      .select("company_id, document_type")
-      .in("company_id", companyIds);
-
-    for (const company of companies ?? []) {
-      if (!readinessByCompany.has(company.id)) {
-        const docs = (documents ?? []).filter((doc) => doc.company_id === company.id);
-        const types = docs.flatMap((doc) => (doc.document_type ? [doc.document_type] : []));
-        readinessByCompany.set(company.id, computeReadinessScore(types));
-      }
-    }
+    // The CRR engine score — the same number the founder, the admin and the
+    // investor see. This used to read diligence_reports with a document-type
+    // count as fallback, so matching ran on a figure nothing else agreed with.
+    for (const [id, score] of await crrScoresFor(companyIds)) readinessByCompany.set(id, score);
   }
 
   return (companies ?? []).map((company) =>
@@ -178,24 +158,8 @@ export async function loadAdminCompanyMatchProfiles() {
 }
 
 export async function loadFounderCompanyMatchContext(company: Company) {
-  const admin = createServiceRoleClient();
-  const { data: report } = await admin
-    .from("diligence_reports")
-    .select("readiness_score")
-    .eq("company_id", company.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let readinessScore = report?.readiness_score ?? null;
-  if (readinessScore == null) {
-    const { data: documents } = await admin
-      .from("documents")
-      .select("document_type")
-      .eq("company_id", company.id);
-    const types = (documents ?? []).flatMap((doc) => (doc.document_type ? [doc.document_type] : []));
-    readinessScore = computeReadinessScore(types);
-  }
+  // Same engine score the rest of the platform reads.
+  const readinessScore = (await crrScoresFor([company.id])).get(company.id) ?? null;
 
   const profile = companyToMatchProfile(company, { readinessScore });
   const [investors, cfg] = await Promise.all([

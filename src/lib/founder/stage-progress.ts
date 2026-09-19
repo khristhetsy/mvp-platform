@@ -3,6 +3,7 @@
 // score, a diligence report, outreach/CRM/deal activity, milestones). Equal-weight
 // roll-up over the measured steps.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { crrScoresFor } from "@/lib/crr/crr-for";
 import type { Company, Database } from "@/lib/supabase/types";
 import { buildProfileCompletion, buildDocumentChecklist, getLatestDiligenceReport, computeReadinessScore } from "@/lib/data/founder-readiness";
 import { listCompanyDocuments } from "@/lib/data/documents";
@@ -92,7 +93,10 @@ export async function computeStageProgress(
     // toward the institutional target, instead of a binary total_score check that
     // this flow never writes. Done once readiness clears the target.
     const uploadedTypeCodes = documents.flatMap((d) => (d.document_type ? [d.document_type] : []));
-    const readiness = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes, undefined, notApplicableCodes);
+    // The CRR engine score — one number across the platform. The old expression
+    // survives only as a last resort for a company the engine has never scored.
+    const readiness = (await crrScoresFor([company.id])).get(company.id)
+      ?? diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes, undefined, notApplicableCodes);
     const READINESS_TARGET = 80;
     const readinessStep = readiness >= READINESS_TARGET ? step(100) : step(readiness);
 
