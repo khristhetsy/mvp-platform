@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR · Factor points per stage, dimensions derived · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1080px;line-height:1.55}
+.frame{width:1080px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.dim{opacity:.55}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 8px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 9px;border-bottom:1px solid #E2E7F0}
+td{padding:7px 9px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tab{font-size:12.5px;padding:5px 12px;border-radius:8px;border:1px solid #D6DDE8;color:#334155;background:#fff}
+.tab.on{background:#4F46E5;color:#fff;font-weight:600;border-color:#4F46E5}
+inp,.inp{display:inline-block;width:54px;border:1px solid #C9D3E3;border-radius:6px;padding:3px 7px;text-align:right;font:inherit;font-size:12.5px;font-variant-numeric:tabular-nums;background:#fff}
+.inp.ro{border:0;background:transparent;color:#334155;font-weight:600;padding-right:14px}
+.bar{display:inline-block;height:5px;border-radius:99px;background:#F1F5F9;width:110px;overflow:hidden;vertical-align:middle}
+.bar i{display:block;height:100%;border-radius:99px;background:#4F46E5}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:600}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.two{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.badbox{border:1px solid #F5C2C2;background:#FEF6F6;border-radius:10px;padding:10px 12px;font-size:12px;color:#8F2020;margin-top:12px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.ai{border:1px solid #DCDCFB;background:linear-gradient(180deg,#FBFBFF,#F6F6FE);border-radius:11px;padding:12px 14px}
+.aihead{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:#4F46E5;text-transform:uppercase;letter-spacing:.05em}
+.delta{font-size:11px;font-variant-numeric:tabular-nums}
+.up{color:#137A3B}.down{color:#B42323}.same{color:#C3CCDA}
+</style></head><body>
+
+<p class="note"><b>Nothing built.</b> Two changes here: dimension weights stop being a second, independent knob and become derived from the factor points; and the factor points themselves get a per-stage recommendation you can apply instead of typing thirteen numbers from intuition.</p>
+
+<!-- ─────────────── 1. the problem ─────────────── -->
+<h2>1. Why the Weights tab currently says two different things</h2>
+<p class="note">Today the tab has two editable tables. They both look like an answer to “how much does Narrative count?”, and they disagree by a factor of seven.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:130px">Dimension</th><th style="width:220px">Factor points (bottom table)</th><th style="width:200px">Profile weight (top table, Pre-seed)</th><th>What a reader concludes</th></tr>
+    <tr><td><b>Narrative</b></td><td>4 of 100 pts <span class="lock">— one factor: Pitch Deck &amp; Business Plan</span></td><td>30 of 100</td><td><span class="pill red">contradiction</span> the deck is either trivial or a third of everything</td></tr>
+    <tr><td><b>Team</b></td><td>11 pts</td><td>30</td><td><span class="pill amb">unclear</span></td></tr>
+    <tr><td><b>Financial</b></td><td>36 pts</td><td>15</td><td><span class="pill red">inverted</span></td></tr>
+    <tr><td><b>Traction</b></td><td>23 pts</td><td>15</td><td><span class="pill amb">unclear</span></td></tr>
+    <tr><td><b>Cap table</b></td><td>26 pts</td><td>10</td><td><span class="pill red">inverted</span></td></tr>
+  </table>
+  <p class="note" style="margin:10px 0 0">Both are doing real work — factor points decide the raw 0–100 total, profile weights decide the audience score — but nothing on screen says which number answers which question, and an operator editing one has no idea they have just contradicted the other. Your instruction is the fix: <b>keep factor points as the thing you edit, and let the dimension row report what those points add up to.</b></p>
+</div>
+
+<!-- ─────────────── 2. option A ─────────────── -->
+<h2>2. Recommended — factor points per stage, dimensions derived</h2>
+<p class="note">One editable table instead of two. The thirteen factor maxima become <b>per stage</b>, so a pre-seed founder is scored on a rubric that values the team and the story, and a Series A founder on one that values revenue and traction. The dimension row above becomes a read-only readout of the points below it — it can never disagree again, because it is the same arithmetic.</p>
+<div class="frame">
+  <div class="tabs">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Stage</span>
+    <span class="tab on">Pre-seed</span><span class="tab">Seed</span>
+    <span class="tab">Series A <span style="font-size:10px;opacity:.7">investor-facing</span></span><span class="tab">Growth</span>
+    <span style="margin-left:auto" class="lock">Active <code>crr-profiles-v1</code> · 6 companies on this stage</span>
+  </div>
+
+  <p class="lbl" style="margin:14px 0 6px">Dimensions <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#94A3B8">— derived from the points below. Not editable.</span></p>
+  <table>
+    <tr><th style="width:120px">Dimension</th><th>Factors it rolls up</th><th style="width:150px">Share of the score</th><th style="width:90px" class="lock">Was</th></tr>
+    <tr><td><b>Narrative</b></td><td class="lock">Pitch Deck &amp; Business Plan Quality</td>
+      <td><span class="bar"><i style="width:14%"></i></span> <b>14</b> <span class="lock">pts</span></td><td class="delta up">4 → 14</td></tr>
+    <tr><td><b>Team</b></td><td class="lock">Founder Integrity &amp; Team Depth</td>
+      <td><span class="bar"><i style="width:22%"></i></span> <b>22</b> <span class="lock">pts</span></td><td class="delta up">11 → 22</td></tr>
+    <tr><td><b>Financial</b></td><td class="lock">Revenue &amp; Cash Flow · Unit Economics · Burn &amp; Runway · Deal Structure</td>
+      <td><span class="bar"><i style="width:25%"></i></span> <b>25</b> <span class="lock">pts</span></td><td class="delta down">36 → 25</td></tr>
+    <tr><td><b>Traction</b></td><td class="lock">Customer Traction &amp; LOIs · Market &amp; Competitive Evidence</td>
+      <td><span class="bar"><i style="width:20%"></i></span> <b>20</b> <span class="lock">pts</span></td><td class="delta down">23 → 20</td></tr>
+    <tr><td><b>Cap table</b></td><td class="lock">Governance · IP &amp; Moat · Exit Strategy · Industry Fit · Impact / ESG</td>
+      <td><span class="bar"><i style="width:19%"></i></span> <b>19</b> <span class="lock">pts</span></td><td class="delta down">26 → 19</td></tr>
+  </table>
+  <p style="margin:8px 0 0"><span class="pill grn">✓ Total 100 — balanced</span> <span class="lock" style="margin-left:6px">the dimension row is the sum of its factors; it cannot be edited, so it cannot drift</span></p>
+
+  <div class="two" style="margin-top:16px">
+    <div>
+      <p class="lbl" style="margin-bottom:6px">Factor points — Pre-seed <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#94A3B8">the only thing you edit</span></p>
+      <table>
+        <tr><th>Factor</th><th style="width:100px">Dimension</th><th style="width:120px">Points</th><th style="width:96px" class="lock">Shared&nbsp;default</th></tr>
+        <tr><td>Founder Integrity &amp; Team Depth</td><td class="lock">Team</td><td><span class="bar"><i style="width:22%"></i></span> <span class="inp">22</span></td><td class="delta up">11 ↑</td></tr>
+        <tr><td>Pitch Deck &amp; Business Plan Quality</td><td class="lock">Narrative</td><td><span class="bar"><i style="width:14%"></i></span> <span class="inp">14</span></td><td class="delta up">4 ↑</td></tr>
+        <tr><td>Market &amp; Competitive Evidence</td><td class="lock">Traction</td><td><span class="bar"><i style="width:12%"></i></span> <span class="inp">12</span></td><td class="delta up">10 ↑</td></tr>
+        <tr><td>Customer Traction &amp; LOIs</td><td class="lock">Traction</td><td><span class="bar"><i style="width:8%"></i></span> <span class="inp">8</span></td><td class="delta down">13 ↓</td></tr>
+        <tr><td>Burn Rate &amp; Runway</td><td class="lock">Financial</td><td><span class="bar"><i style="width:8%"></i></span> <span class="inp">8</span></td><td class="delta same">8 —</td></tr>
+        <tr><td>Governance &amp; Legal Cleanliness</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:7%"></i></span> <span class="inp">7</span></td><td class="delta down">9 ↓</td></tr>
+        <tr><td>Revenue &amp; Cash Flow Trajectory</td><td class="lock">Financial</td><td><span class="bar"><i style="width:6%"></i></span> <span class="inp">6</span></td><td class="delta down">15 ↓</td></tr>
+        <tr><td>Unit Economics &amp; Scalability</td><td class="lock">Financial</td><td><span class="bar"><i style="width:6%"></i></span> <span class="inp">6</span></td><td class="delta down">10 ↓</td></tr>
+        <tr><td>IP Protection &amp; Competitive Moat</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:6%"></i></span> <span class="inp">6</span></td><td class="delta down">8 ↓</td></tr>
+        <tr><td>Deal Structure &amp; Use of Funds</td><td class="lock">Financial</td><td><span class="bar"><i style="width:5%"></i></span> <span class="inp">5</span></td><td class="delta up">3 ↑</td></tr>
+        <tr><td>Exit Strategy &amp; Investor Returns</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:3%"></i></span> <span class="inp">3</span></td><td class="delta down">7 ↓</td></tr>
+        <tr><td>Industry &amp; Stage Alignment</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:2%"></i></span> <span class="inp">2</span></td><td class="delta up">1 ↑</td></tr>
+        <tr><td>Impact / ESG Alignment</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:1%"></i></span> <span class="inp">1</span></td><td class="delta same">1 —</td></tr>
+      </table>
+      <p style="margin:8px 0 0"><span class="pill grn">✓ 100 of 100 allocated</span></p>
+    </div>
+
+    <div>
+      <div class="ai">
+        <div class="aihead"><span>✦</span> Recommended for Pre-seed</div>
+        <p style="font-size:12px;line-height:1.6;margin:8px 0 0;color:#334155">
+          At pre-seed there is usually no revenue and no cohort data to read, so a rubric that puts 15 points on Revenue is
+          mostly measuring whether a company is <i>later-stage</i>, not whether it is ready. Weight moves to what does exist
+          at this stage: who the founders are, whether the story holds up, and whether the market claim is evidenced.
+        </p>
+        <ul class="tight" style="color:#334155">
+          <li><b>Founder &amp; Team 11 → 22.</b> The most-cited kill reason pre-seed.</li>
+          <li><b>Pitch &amp; plan 4 → 14.</b> At this stage the deck <i>is</i> the evidence.</li>
+          <li><b>Revenue 15 → 6.</b> Scoring absent revenue punishes every pre-seed company equally, which tells you nothing.</li>
+          <li><b>Exit strategy 7 → 3.</b> An exit plan written pre-seed is a guess.</li>
+        </ul>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn pri">Apply to Pre-seed</button>
+          <button class="btn">Apply to all four stages</button>
+          <button class="btn">Dismiss</button>
+        </div>
+        <p class="lock" style="margin:8px 0 0">Loads the numbers into the editor. Nothing is saved until you save a version, and Preview impact still shows you who moves first.</p>
+      </div>
+
+      <div class="warnbox" style="margin-top:12px">
+        <b>Narrative is one factor carrying 14 points.</b> Giving the story real weight at pre-seed means one question —
+        “is the deck any good?” — decides 14% of the score on its own. If that is the intent, fine. If not, Narrative needs
+        splitting into two or three factors before it can hold that much. Worth deciding before you apply this.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── 3. option B ─────────────── -->
+<h2>3. The literal reading — and why I don&rsquo;t recommend it <span>one shared set of points, profiles deleted</span></h2>
+<p class="note">Read strictly, “dimensions reflect the factor points and are not adjustable” could mean: keep one set of thirteen maxima for everybody, derive the five dimensions from them, and delete the four profiles. Simpler — but it throws away stage sensitivity entirely.</p>
+<div class="frame dim">
+  <table>
+    <tr><th style="width:150px">Company</th><th style="width:130px">Stage</th><th>Scored against</th><th style="width:180px">Consequence</th></tr>
+    <tr><td>CCREP F1</td><td>Pre-seed</td><td class="lock">Revenue 15 · Traction 13 · Team 11 …</td><td><span class="pill red">unfair</span> judged on revenue it cannot have</td></tr>
+    <tr><td>Cognitive Science</td><td>Series A</td><td class="lock">the same thirteen numbers</td><td><span class="pill gry">fine</span></td></tr>
+  </table>
+  <div class="badbox">
+    Every pre-seed company would score low for the same structural reason, the bands would stop meaning anything at the
+    early end, and the four tabs you just asked to rename would have nothing left to hold. This also contradicts the
+    stage mapping we added yesterday. Showing it so the trade-off is on the record — not proposing it.
+  </div>
+</div>
+
+<!-- ─────────────── 4. where the number comes from ─────────────── -->
+<h2>4. “Industry norm” — the honest answer about where a recommended number can come from</h2>
+<p class="note">You asked for industry norms <i>or</i> AI recommendations. Those are not the same thing, and only one of them is available today. This matters because a number labelled &ldquo;industry norm&rdquo; carries authority it may not have earned.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:150px">Source</th><th style="width:110px">Available?</th><th>What it really is</th></tr>
+    <tr>
+      <td><b>A published industry norm</b></td>
+      <td><span class="pill red">no</span></td>
+      <td>There is no public dataset of readiness-factor weights by stage. These thirteen factors are <b>iCapOS&rsquo;s own rubric</b> — nobody else scores against them, so there is nothing to benchmark against. Labelling anything here &ldquo;industry standard&rdquo; would be inventing authority. This is the same rule the AI guardrails already enforce: no fabricated statistics.</td>
+    </tr>
+    <tr>
+      <td><b>AI judgement, labelled as judgement</b></td>
+      <td><span class="pill grn">yes, today</span></td>
+      <td>Claude reasons from what is generally understood about what investors weigh at each stage, and — usefully — from <b>your own scored companies</b>: which factors are flat across everyone at a stage (measuring nothing), which spread the field. Presented as &ldquo;Recommended for Pre-seed&rdquo; with its reasoning shown, never as a benchmark.</td>
+    </tr>
+    <tr>
+      <td><b>Derived from iCapOS outcomes</b></td>
+      <td><span class="pill amb">not yet</span></td>
+      <td>The real prize. <code>ir_matches</code> already records the stage each investor reached — matched → intro_sent → contacted → meeting_scheduled → meeting_held → committed / passed. Once enough of those exist, you can ask which factors actually separated the companies that got meetings, and set the weights from that. That is a genuine, defensible benchmark — and it is yours, not the industry&rsquo;s. Needs volume first; worth designing the question now so the data is there when it is.</td>
+    </tr>
+  </table>
+  <div class="okbox">
+    <b>Suggested wording on screen:</b> &ldquo;Recommended for Pre-seed&rdquo; with the reasoning visible and an explicit
+    &ldquo;This is a judgement, not a measured benchmark&rdquo; line — the same honesty the score panel already uses.
+    When outcome data can support it, the same card gains a second source: &ldquo;From your own results — 43 investor
+    outcomes across 9 pre-seed companies.&rdquo;
+  </div>
+</div>
+
+<!-- ─────────────── 5. cost ─────────────── -->
+<h2>5. What this costs</h2>
+<div class="frame">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <p class="lbl">Straightforward</p>
+      <ul class="tight">
+        <li>Dimension row becomes read-only — delete the inputs, print the sum. The arithmetic (<code>rollupWith</code>) already exists.</li>
+        <li>The recommendation card, and Apply loading numbers into the editor. No new save path.</li>
+        <li>Because factor points are stored as data already, changing them re-scores without re-running the AI — each factor contributes its <i>ratio</i>, which is why the CRR weights build worked.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="lbl">Needs care</p>
+      <ul class="tight">
+        <li><b>Factor points become per-stage.</b> Today <code>crr_weight_sets.factors</code> is one object; it becomes four. That is a migration and a change to <code>scoreColumnsFor</code>, which currently rolls up once and weights four ways — it would roll up four times instead.</li>
+        <li><b>Every stored score shifts</b> the first time you save. Preview impact will show exactly who, before you commit.</li>
+        <li><b>Narrative at 14+ points rests on one question.</b> Decide whether to split it first.</li>
+        <li><b>The profile weight table disappears.</b> Its job moves into the per-stage points. Saved versions keep their old shape, so History stays readable.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:12px">Open question for you: <b>do factor points go per-stage (section 2), or stay shared with the profile weights kept as they are?</b> Everything else follows from that answer.</p>
+</div>
+
+</body></html>

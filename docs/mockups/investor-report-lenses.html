@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Investor company report · four lenses · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1120px;line-height:1.55}
+.frame{width:1120px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:7px 8px;border-bottom:1px solid #F5F7FA;vertical-align:top}
+.lens{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chip{font-size:12.5px;padding:5px 13px;border-radius:99px;border:1px solid #D6DDE8;color:#334155;background:#fff;cursor:pointer}
+.chip.on{background:#0A1A40;color:#fff;font-weight:600;border-color:#0A1A40}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.card{border:1px solid #E2E7F0;border-radius:11px;padding:12px 14px;background:#fff}
+.card h4{margin:0 0 3px;font-size:13px}
+.card .sub{font-size:11px;color:#94A3B8;margin:0 0 9px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3.5px 0;border-bottom:1px solid #F7F9FC}
+.kv:last-child{border:0}
+.kv b{font-variant-numeric:tabular-nums}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:1px solid #EEF1F6;padding-bottom:12px;margin-bottom:12px}
+.big{font-size:20px;font-weight:600}
+.docbar{display:flex;gap:3px;margin-top:6px}
+.docbar i{height:7px;flex:1;border-radius:2px;background:#E2E7F0;display:block}
+.docbar i.ok{background:#1D9E75}.docbar i.no{background:#E6B0B0}
+.miss{display:inline-block;font-size:11px;border:1px dashed #E6B0B0;color:#B42323;border-radius:6px;padding:1px 7px;margin:2px 3px 0 0}
+.have{display:inline-block;font-size:11px;border:1px solid #BFE8D2;color:#137A3B;border-radius:6px;padding:1px 7px;margin:2px 3px 0 0}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+.badbox{border:1px solid #F5C2C2;background:#FEF6F6;border-radius:10px;padding:10px 12px;font-size:12px;color:#8F2020;margin-top:12px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:6px 12px;font-size:12px;background:#fff;cursor:pointer}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.dim{opacity:.5}
+.spark{display:inline-flex;gap:2px;align-items:flex-end;height:20px}
+.spark i{width:5px;background:#CBD5E1;border-radius:1px;display:block}
+.spark i.last{background:#4F46E5}
+.why{border-left:3px solid #4F46E5;background:#FBFBFF;padding:8px 11px;border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.55}
+</style></head><body>
+
+<p class="note">
+<b>One report, four lenses.</b> Same page, same data — the lens changes what is at the top, which numbers are shown, and
+what the primary action is. Nothing new is computed except the lens switch itself: the four CRR profile columns already
+exist, and <code>load-company-report.ts</code> already assembles the overview, capital raise, readiness history, document
+checklist with missing items, investor signals, risk factors and the diligence summary.
+</p>
+
+<!-- ─────────── 0 ─────────── -->
+<h2>0. What changes at the top of the page <span>— for every lens</span></h2>
+<div class="frame">
+  <div class="grid2">
+    <div>
+      <p class="lbl">Today</p>
+      <div class="card dim">
+        <div class="hdr" style="margin:0;border:0;padding:0">
+          <div>
+            <h4>Brainiest AI Technology</h4>
+            <p class="sub">SaaS / B2B Software · Seed · Austin, TX</p>
+          </div>
+          <div style="text-align:right">
+            <div class="big" style="color:#B42323">17</div>
+            <p class="sub" style="margin:0">Investable Readiness</p>
+          </div>
+        </div>
+      </div>
+      <div class="badbox">
+        An investor sees <b>17 / 100</b> and closes the tab. It is also the wrong number for three of the four readers —
+        it is the Series A weighting, shown to everyone for comparability.
+      </div>
+    </div>
+    <div>
+      <p class="lbl">Proposed</p>
+      <div class="card">
+        <div class="hdr" style="margin:0;border:0;padding:0">
+          <div>
+            <h4>Brainiest AI Technology</h4>
+            <p class="sub">SaaS / B2B Software · Seed · Austin, TX · listed 4 Sep</p>
+            <div style="margin-top:7px">
+              <span class="pill grn">9 of 11 required documents</span>
+              <span class="pill amb" style="margin-left:4px">2 missing</span>
+              <span class="pill gry" style="margin-left:4px">Diligence-ready in ~1 week</span>
+            </div>
+          </div>
+          <div style="text-align:right;min-width:130px">
+            <p class="sub" style="margin:0 0 3px">Preparation trend</p>
+            <span class="spark"><i style="height:4px"></i><i style="height:6px"></i><i style="height:5px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:14px"></i><i class="last" style="height:18px"></i></span>
+            <p class="sub" style="margin:3px 0 0">improving · 7 weeks</p>
+          </div>
+        </div>
+      </div>
+      <div class="okbox">
+        Leads with <b>completeness and direction</b>, not a verdict. Both are true, both are useful, and neither implies
+        an endorsement — which keeps it inside the guardrails (not a broker-dealer, no predicted outcome).
+        The score still appears, lower down, under the reader&rsquo;s own lens.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. The lens switch</h2>
+<p class="note">Defaults to the investor&rsquo;s own type from their profile; they can change it. It re-orders the page and swaps which CRR column is shown — all four are already stored per company, so nothing is recomputed.</p>
+<div class="frame">
+  <div class="lens">
+    <span style="font-size:12px;color:#5B6B86;margin-right:4px">Reading as</span>
+    <span class="chip on">Angel</span><span class="chip">Family office</span><span class="chip">VC</span><span class="chip">Institutional</span>
+    <span style="margin-left:auto" class="lock">your profile says Angel · $25k–$100k · SaaS, fintech</span>
+  </div>
+  <table style="margin-top:12px">
+    <tr><th style="width:130px">Lens</th><th style="width:150px">Leads with</th><th style="width:170px">CRR column shown</th><th style="width:200px">Sections promoted</th><th>Primary action</th></tr>
+    <tr><td><b>Angel</b></td><td>Founder &amp; the ask</td><td class="lock"><code>score_angel</code> · Pre-seed weighting</td><td class="lock">Founder · Why you&rsquo;re seeing this · Minimum check · Who else is in</td><td>Book 20 minutes with the founder</td></tr>
+    <tr><td><b>Family office</b></td><td>Cap table &amp; structure</td><td class="lock"><code>score_seed_institutional</code></td><td class="lock">Governance · Cap table · Structure (direct / SPV) · Use of funds · Risk</td><td>Request the cap table &amp; structure call</td></tr>
+    <tr><td><b>VC</b></td><td>Market &amp; traction</td><td class="lock"><code>score_seriesa_institutional</code></td><td class="lock">Traction · Market evidence · Round &amp; availability · Competitive set</td><td>Add to pipeline · request metrics</td></tr>
+    <tr><td><b>Institutional</b></td><td>Diligence completeness</td><td class="lock"><code>score_growth_institutional</code></td><td class="lock">Document checklist · Unit economics · Compliance · Evidence provenance</td><td>Open the data room</td></tr>
+  </table>
+  <div class="infobox">
+    <b>One number stays comparable.</b> Sorting and ranking anywhere in the marketplace keeps using the Series A column, so
+    lists remain apples-to-apples. The lens changes what <i>this</i> reader sees on <i>this</i> company, and the page says
+    which weighting it is using.
+  </div>
+</div>
+
+<!-- ─────────── 2 · ANGEL ─────────── -->
+<h2>2. Angel <span>— personal money, small check, decides this week</span></h2>
+<div class="frame">
+  <div class="lens" style="margin-bottom:12px"><span class="chip on">Angel</span><span class="chip">Family office</span><span class="chip">VC</span><span class="chip">Institutional</span></div>
+
+  <div class="why" style="margin-bottom:12px">
+    <b>Why you&rsquo;re seeing this.</b> B2B SaaS, seed, Austin — matches your stated sectors and stage. Minimum investment
+    <b>$25,000</b>, inside your typical range. <span class="lock">Matched 12 Sep · you can mute this sector any time.</span>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h4>Founders</h4>
+      <p class="sub">The thing you are actually backing</p>
+      <div class="kv"><span>Team depth score</span><b>7 / 11</b></div>
+      <div class="kv"><span>Prior operating history</span><b>documented</b></div>
+      <div class="kv"><span>Full-time founders</span><b>2 of 3</b></div>
+      <div class="kv"><span>Key gap</span><b class="lock">no technical co-founder named</b></div>
+      <p class="lock" style="margin:8px 0 0">From the founder background factor and the uploaded business plan.</p>
+    </div>
+    <div class="card">
+      <h4>The ask</h4>
+      <p class="sub">What they want and on what terms</p>
+      <div class="kv"><span>Raising</span><b>$1.5M</b></div>
+      <div class="kv"><span>Minimum investment</span><b>$25,000</b></div>
+      <div class="kv"><span>Instrument</span><b>SAFE</b></div>
+      <div class="kv"><span>Use of funds</span><b class="lock">see below</b></div>
+    </div>
+    <div class="card">
+      <h4>Who else is looking</h4>
+      <p class="sub">Indicated interest only — never a commitment</p>
+      <div class="kv"><span>Investors viewing</span><b>6</b></div>
+      <div class="kv"><span>Indicated interest</span><b>3</b></div>
+      <div class="kv"><span>Meetings held</span><b>2</b></div>
+      <div class="kv"><span>Intro requests</span><b>1</b></div>
+      <p class="lock" style="margin:8px 0 0">Counts only. No names, no amounts, no implication that anyone has committed.</p>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h4>Readiness under a pre-seed / angel weighting <span class="pill gry" style="margin-left:4px">your lens</span></h4>
+      <p class="sub">The same evidence, weighted the way an angel reads it</p>
+      <div class="kv"><span>Team</span><b>64</b></div>
+      <div class="kv"><span>Narrative</span><b>100</b></div>
+      <div class="kv"><span>Traction</span><b>17</b></div>
+      <div class="kv"><span>Financial</span><b>36</b></div>
+      <div class="kv"><span>Cap table</span><b>42</b></div>
+      <p class="lock" style="margin:8px 0 0">Angel weighting · not a recommendation, not a prediction of outcome.</p>
+    </div>
+    <div class="card">
+      <h4>What to ask on the call</h4>
+      <p class="sub">Generated from the gaps in their materials</p>
+      <ul class="tight" style="color:#334155">
+        <li>No customer contracts or pilot LOIs in the room — ask what is actually signed.</li>
+        <li>Revenue is claimed in the deck with no cohort or churn figure behind it.</li>
+        <li>No technical co-founder named — ask who builds it.</li>
+      </ul>
+      <div style="margin-top:10px;display:flex;gap:6px"><button class="btn pri">Book 20 minutes</button><button class="btn">View pitch deck</button><button class="btn">Pass</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 3 · FAMILY OFFICE ─────────── -->
+<h2>3. Family office <span>— own capital, no clock, downside first</span></h2>
+<div class="frame">
+  <div class="lens" style="margin-bottom:12px"><span class="chip">Angel</span><span class="chip on">Family office</span><span class="chip">VC</span><span class="chip">Institutional</span></div>
+
+  <div class="grid3">
+    <div class="card">
+      <h4>Cap table &amp; governance</h4>
+      <p class="sub">Promoted out of the “Cap table” bucket, on its own</p>
+      <div class="kv"><span>Governance &amp; legal</span><b>7 / 9</b></div>
+      <div class="kv"><span>Cap table uploaded</span><b class="pill red" style="font-weight:600">no</b></div>
+      <div class="kv"><span>Incorporation docs</span><b class="pill grn">Delaware C-Corp</b></div>
+      <div class="kv"><span>Prior rounds on file</span><b>1 · SAFE</b></div>
+      <div class="kv"><span>Founder vesting documented</span><b class="pill amb">not found</b></div>
+      <p class="lock" style="margin:8px 0 0">The two unknowns here are the usual reason a family office walks. Both are askable.</p>
+    </div>
+    <div class="card">
+      <h4>Structure available</h4>
+      <p class="sub">How you could take this</p>
+      <div class="kv"><span>Direct on the SAFE</span><b class="pill grn">yes</b></div>
+      <div class="kv"><span>Through an iCapOS SPV</span><b class="pill grn">yes</b></div>
+      <div class="kv"><span>SPV minimum</span><b>$100,000</b></div>
+      <div class="kv"><span>Board / observer seat</span><b class="lock">not offered</b></div>
+      <p class="lock" style="margin:8px 0 0">Reads the SPV module. iCFO is not a broker-dealer; structure is arranged, never recommended.</p>
+    </div>
+    <div class="card">
+      <h4>Downside &amp; disclosures</h4>
+      <p class="sub">Stated risk, not inferred risk</p>
+      <div class="kv"><span>Open risk flags</span><b>4</b></div>
+      <div class="kv"><span>Public risk disclosures</span><b class="pill grn">provided</b></div>
+      <div class="kv"><span>Runway documented</span><b class="pill amb">no</b></div>
+      <div class="kv"><span>Litigation disclosed</span><b>none</b></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h4>Fit with what you know</h4>
+      <p class="sub">Your operating history, from your profile</p>
+      <div class="kv"><span>Your sectors</span><b class="lock">industrial software, logistics</b></div>
+      <div class="kv"><span>This company</span><b class="lock">B2B SaaS — adjacent</b></div>
+      <div class="kv"><span>Fit</span><b class="pill amb">partial</b></div>
+      <p class="lock" style="margin:8px 0 0">Stated overlap only — we do not score how well you would understand a business.</p>
+    </div>
+    <div class="card">
+      <h4>Use of funds</h4>
+      <p class="sub">As written in the campaign</p>
+      <p style="font-size:12.5px;line-height:1.6;margin:0;color:#334155">
+        18 months of runway: two engineering hires, SOC 2 certification, and a first outbound sales motion.
+        No acquisition or debt repayment.
+      </p>
+      <div style="margin-top:10px;display:flex;gap:6px"><button class="btn pri">Request cap table</button><button class="btn">Structure call</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 4 · VC ─────────── -->
+<h2>4. VC <span>— thesis fit, velocity, ownership</span></h2>
+<div class="frame">
+  <div class="lens" style="margin-bottom:12px"><span class="chip">Angel</span><span class="chip">Family office</span><span class="chip on">VC</span><span class="chip">Institutional</span></div>
+  <div class="grid3">
+    <div class="card">
+      <h4>Traction — the evidence</h4>
+      <p class="sub">What is documented, not what is claimed</p>
+      <div class="kv"><span>Customer traction</span><b>3 / 13</b></div>
+      <div class="kv"><span>Signed contracts on file</span><b class="pill red">0</b></div>
+      <div class="kv"><span>LOIs / pilots on file</span><b>1</b></div>
+      <div class="kv"><span>Retention / usage data</span><b class="pill red">none</b></div>
+      <div class="kv"><span>Revenue claimed in deck</span><b class="pill amb">unevidenced</b></div>
+    </div>
+    <div class="card">
+      <h4>Market</h4>
+      <p class="sub">Market &amp; competitive evidence factor</p>
+      <div class="kv"><span>Market size stated</span><b class="pill amb">no source</b></div>
+      <div class="kv"><span>Competitors named</span><b class="pill red">0</b></div>
+      <div class="kv"><span>Why now</span><b class="pill red">not stated</b></div>
+      <p class="lock" style="margin:8px 0 0">Three of the first questions any partner meeting asks. None are answered in the room today.</p>
+    </div>
+    <div class="card">
+      <h4>Round</h4>
+      <p class="sub">What is left and who is moving</p>
+      <div class="kv"><span>Target</span><b>$1.5M</b></div>
+      <div class="kv"><span>Instrument</span><b>SAFE</b></div>
+      <div class="kv"><span>Indicated interest</span><b>3 investors</b></div>
+      <div class="kv"><span>Lead identified</span><b class="pill amb">no</b></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h4>Preparation velocity <span class="pill blu" style="margin-left:4px">nobody else publishes this</span></h4>
+    <p class="sub">CRR over the last seven weeks — how fast this founder responds to being told what is missing</p>
+    <div style="display:flex;align-items:flex-end;gap:14px;margin-top:4px">
+      <span class="spark" style="height:34px"><i style="height:6px"></i><i style="height:9px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:20px"></i><i style="height:25px"></i><i class="last" style="height:32px"></i></span>
+      <div style="font-size:12.5px;line-height:1.6;color:#334155">
+        <b>+19 points in 7 weeks.</b> Four documents added after the first gap report. That is a behavioural signal about
+        the founder, and it is a by-product of the readiness history you already store.
+      </div>
+    </div>
+    <p class="lock" style="margin:9px 0 0">Preparation velocity, not business growth — the page says so in those words.</p>
+  </div>
+  <div class="warnbox">
+    <b>What a VC wants that you do not have.</b> Growth rate, cohorts, burn multiple, a named competitive set, and why-now.
+    Some of it could be asked for at campaign publication; some is simply not there at seed. Better to show the gap than
+    to fill it with a score.
+  </div>
+</div>
+
+<!-- ─────────── 5 · INSTITUTIONAL ─────────── -->
+<h2>5. Institutional <span>— will diligence complete?</span></h2>
+<div class="frame">
+  <div class="lens" style="margin-bottom:12px"><span class="chip">Angel</span><span class="chip">Family office</span><span class="chip">VC</span><span class="chip on">Institutional</span></div>
+  <div class="grid2">
+    <div class="card">
+      <h4>Data room completeness</h4>
+      <p class="sub">The checklist you already build — promoted to the top for this reader</p>
+      <div class="docbar">
+        <i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="no"></i><i class="no"></i>
+      </div>
+      <p style="margin:8px 0 4px;font-size:12px"><b>9 of 11 required present</b></p>
+      <div>
+        <span class="have">Pitch deck</span><span class="have">Business plan</span><span class="have">Incorporation</span>
+        <span class="have">Financial model</span><span class="have">Customer list</span><span class="have">Team bios</span>
+        <span class="have">IP filings</span><span class="have">Risk disclosures</span><span class="have">Use of funds</span>
+        <span class="miss">Cap table</span><span class="miss">Audited financials</span>
+      </div>
+      <p class="lock" style="margin:9px 0 0">Plus 6 optional documents. Every item links to the file, with who uploaded it and when.</p>
+    </div>
+    <div class="card">
+      <h4>Evidence provenance</h4>
+      <p class="sub">Where each scored claim came from</p>
+      <div class="kv"><span>Claims read from documents</span><b>31</b></div>
+      <div class="kv"><span>Claims asserted, unevidenced</span><b class="pill amb">7</b></div>
+      <div class="kv"><span>Documents scanned but unreadable</span><b>1</b> </div>
+      <div class="kv"><span>Last scored</span><b>18 Sep</b></div>
+      <p class="lock" style="margin:8px 0 0">An institutional reader wants to know what the number rests on. This is the audit trail.</p>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h4>Unit economics</h4>
+      <div class="kv"><span>Unit economics factor</span><b class="pill red">1 / 10</b></div>
+      <div class="kv"><span>CAC documented</span><b class="pill red">no</b></div>
+      <div class="kv"><span>Gross margin documented</span><b class="pill red">no</b></div>
+      <div class="kv"><span>Burn &amp; runway</span><b>4 / 8</b></div>
+    </div>
+    <div class="card">
+      <h4>Compliance</h4>
+      <div class="kv"><span>Open compliance events</span><b>0</b></div>
+      <div class="kv"><span>KYC status</span><b class="pill grn">verified</b></div>
+      <div class="kv"><span>Escalations</span><b>none</b></div>
+      <div style="margin-top:10px;display:flex;gap:6px"><button class="btn pri">Open data room</button><button class="btn">Request the 2 missing items</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 6 ─────────── -->
+<h2>6. The rules this has to live inside</h2>
+<div class="frame">
+  <ul class="tight">
+    <li><b>Never a recommendation.</b> iCFO Capital Global is not a broker-dealer, funding portal, adviser or placement agent. Every panel reads as <i>evidence and completeness</i>. No ranking that implies endorsement, no &ldquo;top pick&rdquo;, no predicted outcome.</li>
+    <li><b>&ldquo;Indicated interest&rdquo;, never a commitment.</b> The who-else-is-looking card shows counts, no names, no amounts.</li>
+    <li><b>No invented figures.</b> Every number on every lens traces to a document, a stored score, or a count of real records. Where something is not there, the page says <i>not found</i> rather than estimating it.</li>
+    <li><b>Founders still cannot see their score.</b> Nothing here changes that; the gap list is what reaches them, via the suggestions we already built.</li>
+    <li><b>One comparable number survives.</b> Marketplace sorting keeps using the Series A column so lists stay apples-to-apples; the lens only changes this reader&rsquo;s view of this company.</li>
+  </ul>
+</div>
+
+<!-- ─────────── 7 ─────────── -->
+<h2>7. What exists, what is new</h2>
+<div class="frame">
+  <div class="grid2">
+    <div>
+      <p class="lbl">Already in load-company-report.ts</p>
+      <ul class="tight">
+        <li>Overview, capital raise, use of funds</li>
+        <li>Readiness score + <b>history</b> (the velocity spark)</li>
+        <li>Document checklist + <code>missingRequiredLabels</code> (the completeness header)</li>
+        <li>Investor signals: views, interest, pledges, intros, meetings</li>
+        <li>Risk factors and public disclosures</li>
+        <li>Per-factor scores with sub-scores, evidence and flags</li>
+        <li>All four CRR columns, stored per company</li>
+      </ul>
+    </div>
+    <div>
+      <p class="lbl">New</p>
+      <ul class="tight">
+        <li>The lens switch, and a default from the investor&rsquo;s own type</li>
+        <li>A header that leads with completeness + trend instead of the score</li>
+        <li>Per-lens section ordering and which CRR column is shown</li>
+        <li>&ldquo;Why you&rsquo;re seeing this&rdquo; — from the match record</li>
+        <li>&ldquo;What to ask on the call&rdquo; — the gap list, pointed at the investor instead of the founder</li>
+        <li>Cap table &amp; governance pulled out as its own card for the family-office lens</li>
+        <li>Evidence provenance counts for the institutional lens</li>
+      </ul>
+      <div class="infobox" style="margin-top:10px">
+        No migration. The heavy lifting is section ordering and choosing a column; the only genuinely new computation is
+        counting evidenced vs. asserted claims, which reads the factor evidence already stored.
+      </div>
+    </div>
+  </div>
+</div>
+
+</body></html>

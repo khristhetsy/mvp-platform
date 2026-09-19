@@ -13,6 +13,8 @@ import { scoreCompanyReadiness } from "@/lib/ai/readiness-scoring";
 import { loadActiveSet } from "@/lib/crr/weight-sets-db";
 import { scoreColumnsFor } from "@/lib/crr/weight-sets";
 import { writeAuditLog } from "@/lib/data/audit";
+import { stageToProfile } from "@/lib/crr/profiles";
+import { normalizeFundingStage } from "@/lib/crr/select-score";
 
 const schema = z.object({
   companyId: z.string().uuid(),
@@ -82,9 +84,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // The company's own stage decides which of the four point sets scores it — and
+  // therefore what total_score and the outreach gate mean for this company.
+  // funding_stage is on the table (migration 20260803002) but not in the generated types.
+  const { data: stageRow } = await auth.supabase
+    .from("companies").select("funding_stage").eq("id", companyId).maybeSingle();
+  const stageProfile = stageToProfile(
+    normalizeFundingStage((stageRow as unknown as { funding_stage?: string | null } | null)?.funding_stage),
+  );
+
   // Weighting comes from the active weight set (admin-editable), not constants.
   const set = await loadActiveSet(auth.supabase);
-  const cols = scoreColumnsFor(result.factorScores, set);
+  const cols = scoreColumnsFor(result.factorScores, set, stageProfile);
   const outreachUnlocked = cols.outreach_unlocked;
 
   // Re-weight the 13 factors into the audience profiles (single source of truth:

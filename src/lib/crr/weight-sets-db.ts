@@ -123,7 +123,8 @@ export async function rescoreAllUnder(db: Db, set: WeightSet, reason: string): P
   const latest = await latestScores(db);
   let updated = 0, failed = 0;
   for (const c of latest) {
-    const cols = scoreColumnsFor(c.factors, set);
+    // Each company is scored under ITS OWN stage's points; the gate reads that.
+    const cols = scoreColumnsFor(c.factors, set, c.profile);
     const { error } = await db.from("company_readiness_scores").insert({
       company_id: c.companyId,
       total_score: cols.total_score,

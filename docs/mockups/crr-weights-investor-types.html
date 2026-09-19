@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR Weights · four investor types · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1060px;line-height:1.55}
+.frame{width:1060px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:7px 8px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tab{font-size:12.5px;padding:5px 12px;border-radius:8px;border:1px solid #D6DDE8;color:#334155;background:#fff}
+.tab.on{background:#4F46E5;color:#fff;font-weight:600;border-color:#4F46E5}
+.inp{display:inline-block;width:50px;border:1px solid #C9D3E3;border-radius:6px;padding:3px 7px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;background:#fff}
+.bar{display:inline-block;height:6px;border-radius:99px;background:#F1F5F9;width:96px;overflow:hidden;vertical-align:middle}
+.bar i{display:block;height:100%;border-radius:99px;background:#4F46E5}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.delta{font-size:11px;font-variant-numeric:tabular-nums}
+.up{color:#137A3B}.down{color:#B42323}.same{color:#C3CCDA}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+</style></head><body>
+
+<p class="note"><b>Weights tab only.</b> Nothing else changes — no investor report, no new pages. The question is what the four profiles should be keyed on, and what numbers they should hold.</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. First, the fork <span>— the four profiles are keyed on stage today; you described investor types</span></h2>
+<div class="frame">
+  <div class="two">
+    <div>
+      <p class="lbl">Today — keyed on the company&rsquo;s stage</p>
+      <table>
+        <tr><th>Profile</th><th>Picked by</th></tr>
+        <tr><td>Pre-seed</td><td class="lock">the company&rsquo;s funding stage</td></tr>
+        <tr><td>Seed</td><td class="lock">the company&rsquo;s funding stage</td></tr>
+        <tr><td>Series A</td><td class="lock">the company&rsquo;s funding stage</td></tr>
+        <tr><td>Growth</td><td class="lock">the company&rsquo;s funding stage</td></tr>
+      </table>
+      <p class="note" style="margin-top:8px">A company has <b>one</b> applicable profile. Everyone reading that company sees the same number.</p>
+    </div>
+    <div>
+      <p class="lbl">What you described — keyed on who is reading</p>
+      <table>
+        <tr><th>Profile</th><th>Picked by</th></tr>
+        <tr><td>Angel</td><td class="lock">the reader&rsquo;s investor type</td></tr>
+        <tr><td>Family office</td><td class="lock">the reader&rsquo;s investor type</td></tr>
+        <tr><td>VC</td><td class="lock">the reader&rsquo;s investor type</td></tr>
+        <tr><td>Institutional</td><td class="lock">the reader&rsquo;s investor type</td></tr>
+      </table>
+      <p class="note" style="margin-top:8px">A company has <b>four</b> scores at once. Which one you see depends on who you are.</p>
+    </div>
+  </div>
+  <div class="warnbox">
+    <b>These are different axes, and only one can key the four columns.</b> Stage is a property of the company; investor
+    type is a property of the reader. A family office invests at every stage, so it is not a substitute for &ldquo;seed&rdquo;.
+    Doing both properly would be sixteen profiles, which nobody can maintain.
+    <br><br>
+    <b>Note the current names already lean your way.</b> <code>angel</code> is an investor type wearing a stage label, and
+    its weighting — Team 30, Narrative 30 — is an <i>angel&rsquo;s</i> priorities, not a pre-seed company&rsquo;s. The tab has been
+    half-way to what you described from the start. Yesterday we renamed it &ldquo;Pre-seed&rdquo; and wired stage → profile, which
+    pushed it the other way.
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. The weights, if the four are investor types</h2>
+<p class="note">Same five dimensions, same editor, same validation, same versioning. Only the four column meanings and their numbers change.</p>
+<div class="frame">
+  <div class="tabs" style="margin-bottom:12px">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Reader</span>
+    <span class="tab on">Angel</span><span class="tab">Family office</span><span class="tab">VC</span>
+    <span class="tab">Institutional <span style="font-size:10px;opacity:.7">comparable default</span></span>
+  </div>
+  <table>
+    <tr>
+      <th style="width:118px">Dimension</th>
+      <th style="width:150px">Angel</th><th style="width:150px">Family office</th><th style="width:150px">VC</th><th style="width:150px">Institutional</th>
+      <th>The difference in one line</th>
+    </tr>
+    <tr>
+      <td><b>Team</b></td>
+      <td><span class="bar"><i style="width:32%"></i></span> <b>32</b></td>
+      <td><span class="bar"><i style="width:24%"></i></span> <b>24</b></td>
+      <td><span class="bar"><i style="width:22%"></i></span> <b>22</b></td>
+      <td><span class="bar"><i style="width:12%"></i></span> <b>12</b></td>
+      <td class="lock">an angel is backing a person; an institution is buying a process</td>
+    </tr>
+    <tr>
+      <td><b>Narrative</b></td>
+      <td><span class="bar"><i style="width:26%"></i></span> <b>26</b></td>
+      <td><span class="bar"><i style="width:10%"></i></span> <b>10</b></td>
+      <td><span class="bar"><i style="width:10%"></i></span> <b>10</b></td>
+      <td><span class="bar"><i style="width:4%"></i></span> <b>4</b></td>
+      <td class="lock">the story is the evidence only when there is no other evidence</td>
+    </tr>
+    <tr>
+      <td><b>Traction</b></td>
+      <td><span class="bar"><i style="width:16%"></i></span> <b>16</b></td>
+      <td><span class="bar"><i style="width:16%"></i></span> <b>16</b></td>
+      <td><span class="bar"><i style="width:32%"></i></span> <b>32</b></td>
+      <td><span class="bar"><i style="width:28%"></i></span> <b>28</b></td>
+      <td class="lock">a VC needs the power-law outcome; that requires demand</td>
+    </tr>
+    <tr>
+      <td><b>Cap table</b></td>
+      <td><span class="bar"><i style="width:14%"></i></span> <b>14</b></td>
+      <td><span class="bar"><i style="width:30%"></i></span> <b>30</b></td>
+      <td><span class="bar"><i style="width:14%"></i></span> <b>14</b></td>
+      <td><span class="bar"><i style="width:22%"></i></span> <b>22</b></td>
+      <td class="lock">a family office has no fund clock, so governance and downside dominate</td>
+    </tr>
+    <tr>
+      <td><b>Financial</b></td>
+      <td><span class="bar"><i style="width:12%"></i></span> <b>12</b></td>
+      <td><span class="bar"><i style="width:20%"></i></span> <b>20</b></td>
+      <td><span class="bar"><i style="width:22%"></i></span> <b>22</b></td>
+      <td><span class="bar"><i style="width:34%"></i></span> <b>34</b></td>
+      <td class="lock">institutional capital underwrites numbers, not intent</td>
+    </tr>
+    <tr style="background:#FBFBFF">
+      <td class="lock">Total</td>
+      <td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td>
+      <td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td>
+      <td></td>
+    </tr>
+  </table>
+
+  <div class="infobox">
+    <b>Why the family office column is the most different from what you have today.</b> Nothing in the current four
+    profiles weights Cap table above 20. A family office&rsquo;s first two questions are &ldquo;is the cap table clean&rdquo; and
+    &ldquo;is founder vesting documented&rdquo; — and one of those is not even a scored item. Raising Cap table to 30 makes
+    the weighting honest about that reader; it also exposes that the dimension is a grab-bag of governance, IP, exit
+    strategy, industry fit and ESG. For this reader it should probably be governance-led.
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. Against what you have now</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:118px">Dimension</th>
+      <th style="width:170px">Pre-seed → Angel</th><th style="width:170px">Seed → Family office</th>
+      <th style="width:170px">Series A → VC</th><th style="width:170px">Growth → Institutional</th></tr>
+    <tr><td><b>Team</b></td>
+      <td>30 → <b>32</b> <span class="delta up">+2</span></td><td>30 → <b>24</b> <span class="delta down">−6</span></td>
+      <td>15 → <b>22</b> <span class="delta up">+7</span></td><td>10 → <b>12</b> <span class="delta up">+2</span></td></tr>
+    <tr><td><b>Narrative</b></td>
+      <td>30 → <b>26</b> <span class="delta down">−4</span></td><td>10 → <b>10</b> <span class="delta same">—</span></td>
+      <td>10 → <b>10</b> <span class="delta same">—</span></td><td>5 → <b>4</b> <span class="delta down">−1</span></td></tr>
+    <tr><td><b>Traction</b></td>
+      <td>15 → <b>16</b> <span class="delta up">+1</span></td><td>25 → <b>16</b> <span class="delta down">−9</span></td>
+      <td>30 → <b>32</b> <span class="delta up">+2</span></td><td>30 → <b>28</b> <span class="delta down">−2</span></td></tr>
+    <tr><td><b>Cap table</b></td>
+      <td>10 → <b>14</b> <span class="delta up">+4</span></td><td>20 → <b>30</b> <span class="delta up">+10</span></td>
+      <td>20 → <b>14</b> <span class="delta down">−6</span></td><td>20 → <b>22</b> <span class="delta up">+2</span></td></tr>
+    <tr><td><b>Financial</b></td>
+      <td>15 → <b>12</b> <span class="delta down">−3</span></td><td>15 → <b>20</b> <span class="delta up">+5</span></td>
+      <td>25 → <b>22</b> <span class="delta down">−3</span></td><td>35 → <b>34</b> <span class="delta down">−1</span></td></tr>
+  </table>
+  <div class="okbox">
+    <b>The Angel and Institutional columns barely move.</b> They were already investor-type weightings in all but name.
+    The real work is the middle two — turning &ldquo;Seed&rdquo; into a family office and &ldquo;Series A&rdquo; into a VC.
+  </div>
+  <div class="warnbox">
+    <b>Preview impact will tell you the truth before you save.</b> With every company currently scoring under 40, these
+    moves are worth a point or two each — the weighting is not what is holding the scores down. Worth running the preview
+    and looking at the number before committing to any of this.
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. What switching the key costs</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Piece</th><th style="width:110px">Effect</th><th>Detail</th></tr>
+    <tr><td><b>The four stored columns</b></td><td><span class="pill grn">no change</span></td><td><code>score_angel</code> … <code>score_growth_institutional</code> keep their names; only what they mean changes. No migration.</td></tr>
+    <tr><td><b>The editor, validation, versioning, history, preview</b></td><td><span class="pill grn">no change</span></td><td>Four columns summing to 100 each, exactly as now.</td></tr>
+    <tr><td><b>Labels</b></td><td><span class="pill blu">one line</span></td><td><code>PROFILE_LABEL</code> — the same map we edited yesterday.</td></tr>
+    <tr><td><b>The stage mapping strip</b></td><td><span class="pill red">comes out</span></td><td>We added it yesterday. If profiles are reader types, a company no longer &ldquo;has&rdquo; a profile, so the strip and the company counts are wrong and would be removed.</td></tr>
+    <tr><td><b>Which column a reader sees</b></td><td><span class="pill amb">new, small</span></td><td>Picked from <code>investor_profiles.investor_type</code> instead of <code>companies.funding_stage</code>. Both are one lookup; <code>select-score.ts</code> already has the column map.</td></tr>
+    <tr><td><b>Marketplace sorting</b></td><td><span class="pill grn">no change</span></td><td>Keeps using one canonical column so lists stay comparable — Institutional becomes that column instead of Series A.</td></tr>
+    <tr><td><b>Founder-facing</b></td><td><span class="pill grn">no change</span></td><td>Founders still cannot see their score. <code>founderFacingScore()</code> is dead code either way.</td></tr>
+  </table>
+  <div class="infobox">
+    <b>Cheap either way.</b> The expensive thing is not the switch — it is deciding which axis the four columns mean,
+    because everything downstream reads that decision. Stage and investor type are both defensible; they just cannot
+    both be the key.
+  </div>
+</div>
+
+<!-- ─────────── 5 ─────────── -->
+<h2>5. The question back to you</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:160px">Option</th><th style="width:130px">A company has…</th><th>Best when</th></tr>
+    <tr><td><b>A · Stage</b> <span class="lock">(today)</span></td><td>one score</td><td>The score is mainly an <b>internal triage tool</b> — who is ready, who to chase. One number per company, comparable, no ambiguity.</td></tr>
+    <tr><td><b>B · Investor type</b> <span class="lock">(what you described)</span></td><td>four scores</td><td>The score is mainly something <b>investors read</b>. Each reader sees the company through their own priorities, which is a real product difference.</td></tr>
+    <tr><td><b>C · Stage, with type as a second lens later</b></td><td>one score + a view</td><td>You want B eventually but not the ambiguity yet. Keep stage as the stored key; add investor-type weighting as a display-only overlay on the investor report when that page gets built.</td></tr>
+  </table>
+  <p class="note" style="margin-top:10px">
+    My read: you have been describing <b>B</b> since the beginning — the profiles were named after investor types before
+    they were named after stages. But <b>B only pays off once investors are actually reading these pages</b>, and today
+    the score&rsquo;s main job is internal triage. <b>C</b> gets you there without having to choose now.
+  </p>
+</div>
+
+</body></html>

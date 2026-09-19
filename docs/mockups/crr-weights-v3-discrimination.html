@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR Weights · discrimination first · Mockup v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1120px;line-height:1.55}
+.frame{width:1120px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:6px 8px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tab{font-size:12.5px;padding:5px 12px;border-radius:8px;border:1px solid #D6DDE8;color:#334155;background:#fff}
+.tab.on{background:#4F46E5;color:#fff;font-weight:600;border-color:#4F46E5}
+.inp{display:inline-block;width:50px;border:1px solid #C9D3E3;border-radius:6px;padding:3px 7px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;background:#fff}
+.ro{display:inline-block;width:46px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:#334155}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.badbox{border:1px solid #F5C2C2;background:#FEF6F6;border-radius:10px;padding:10px 12px;font-size:12px;color:#8F2020;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stat{display:flex;gap:22px;flex-wrap:wrap}
+.stat div span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8}
+.stat div b{font-size:19px;font-variant-numeric:tabular-nums}
+/* spread strip: where the 22 companies sit within a factor's 0..max range */
+.spread{position:relative;height:16px;width:150px;background:#F4F7FB;border-radius:4px;overflow:hidden}
+.spread i{position:absolute;top:3px;height:10px;width:2px;background:#4F46E5;opacity:.55;border-radius:1px}
+.spread u{position:absolute;top:0;bottom:0;width:2px;background:#0A1A40;opacity:.35}
+.zero{position:absolute;left:0;top:0;bottom:0;background:#FDE8E8}
+.full{position:absolute;right:0;top:0;bottom:0;background:#E7F7EE}
+</style></head><body>
+
+<p class="note">
+<b>What changes from what we have.</b> The Weights tab keeps everything it does today — the profile tabs, the factor points, the dimension weights, the bands, the floors, Preview impact, Save, History. One section goes <i>above</i> them and changes what you look at first: whether the rubric is separating your companies at all. The numbers in the header strip below are read from your own screenshot; the per-factor rows are illustrative shape, and will say whatever your data says.
+</p>
+
+<!-- ─────────── 0 ─────────── -->
+<h2>0. The fact that reframes the whole tab</h2>
+<div class="frame">
+  <div class="stat">
+    <div><span>Companies scored</span><b>22 / 22</b></div>
+    <div><span>Average score</span><b>17</b></div>
+    <div><span>Highest score</span><b>36</b></div>
+    <div><span>Reaching Developing (40)</span><b>0</b></div>
+    <div><span>Reaching Solid (60)</span><b>0</b></div>
+    <div><span>Outreach unlocked (65)</span><b>0</b></div>
+  </div>
+  <div class="badbox">
+    <b>Every company is in the bottom band, and the outreach gate has never fired.</b> When the whole population sits in
+    the bottom third, changing how the dimensions are weighted moves everybody by a point or two and changes no decision.
+    The binding constraint is not the weighting — it is that most factors score zero for most companies. That is what the
+    new section measures, and it is why I would put it above the weight editors rather than beside them.
+  </div>
+</div>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. New — Discrimination <span>does each factor actually separate your companies?</span></h2>
+<p class="note">
+This is the check a scorecard analyst runs before touching a weight. For each factor: where the 22 companies fall inside
+its 0–max range, how many score zero, how many score full marks, and a verdict. A factor everyone scores the same on
+carries no information no matter what weight you give it.
+</p>
+<div class="frame">
+  <div class="tabs" style="margin-bottom:10px">
+    <span class="tab on">Discrimination</span><span class="tab">Factor points</span><span class="tab">Dimension weights</span><span class="tab">Bands &amp; floors</span>
+    <span style="margin-left:auto" class="lock">22 scored companies · <code>crr-profiles-v1</code> · illustrative rows</span>
+  </div>
+  <table>
+    <tr>
+      <th style="width:212px">Factor</th><th style="width:44px">Max</th>
+      <th style="width:162px">Where the 22 companies fall</th>
+      <th style="width:54px">Avg</th><th style="width:66px">At zero</th><th style="width:66px">At full</th>
+      <th style="width:150px">Verdict</th><th>What it means</th>
+    </tr>
+
+    <tr><td>Governance &amp; Legal Cleanliness</td><td>9</td>
+      <td><div class="spread"><i style="left:4%"></i><i style="left:9%"></i><i style="left:14%"></i><i style="left:22%"></i><i style="left:30%"></i><i style="left:38%"></i><i style="left:44%"></i><i style="left:52%"></i><i style="left:58%"></i><i style="left:66%"></i><i style="left:74%"></i><i style="left:88%"></i></div></td>
+      <td>2.6</td><td>6 of 22</td><td>0</td>
+      <td><span class="pill grn">discriminating</span></td>
+      <td class="lock">widest spread you have — this factor is doing real work</td></tr>
+
+    <tr><td>Revenue &amp; Cash Flow Trajectory</td><td>15</td>
+      <td><div class="spread"><span class="zero" style="width:12%"></span><i style="left:2%"></i><i style="left:3%"></i><i style="left:4%"></i><i style="left:5%"></i><i style="left:6%"></i><i style="left:7%"></i><i style="left:8%"></i><i style="left:9%"></i><i style="left:10%"></i><i style="left:26%"></i><i style="left:40%"></i><i style="left:78%"></i></div></td>
+      <td>2.2</td><td><b>9 of 22</b></td><td>0</td>
+      <td><span class="pill amb">floor-heavy</span></td>
+      <td class="lock">15 pts — the largest factor — and 9 companies score nothing on it</td></tr>
+
+    <tr><td>Founder Integrity &amp; Team Depth</td><td>11</td>
+      <td><div class="spread"><span class="zero" style="width:6%"></span><i style="left:3%"></i><i style="left:8%"></i><i style="left:14%"></i><i style="left:19%"></i><i style="left:24%"></i><i style="left:28%"></i><i style="left:33%"></i><i style="left:40%"></i><i style="left:48%"></i><i style="left:62%"></i><i style="left:80%"></i></div></td>
+      <td>2.4</td><td>4 of 22</td><td>0</td>
+      <td><span class="pill amb">coarse</span></td>
+      <td class="lock">two questions in one number — see section 2</td></tr>
+
+    <tr><td>Burn Rate &amp; Runway</td><td>8</td>
+      <td><div class="spread"><span class="zero" style="width:20%"></span><i style="left:4%"></i><i style="left:6%"></i><i style="left:8%"></i><i style="left:10%"></i><i style="left:24%"></i><i style="left:34%"></i><i style="left:50%"></i></div></td>
+      <td>1.6</td><td><b>11 of 22</b></td><td>0</td>
+      <td><span class="pill amb">floor-heavy</span></td>
+      <td class="lock">half the list has no runway documentation at all</td></tr>
+
+    <tr><td>Customer Traction &amp; LOIs</td><td>13</td>
+      <td><div class="spread"><span class="zero" style="width:30%"></span><i style="left:3%"></i><i style="left:5%"></i><i style="left:7%"></i><i style="left:9%"></i><i style="left:36%"></i><i style="left:52%"></i></div></td>
+      <td>1.4</td><td><b>15 of 22</b></td><td>0</td>
+      <td><span class="pill red">floor</span></td>
+      <td class="lock">13 pts allocated; almost nobody scores any of them</td></tr>
+
+    <tr><td>Market &amp; Competitive Evidence</td><td>10</td>
+      <td><div class="spread"><span class="zero" style="width:30%"></span><i style="left:4%"></i><i style="left:6%"></i><i style="left:10%"></i><i style="left:30%"></i><i style="left:44%"></i></div></td>
+      <td>1.1</td><td><b>13 of 22</b></td><td>0</td>
+      <td><span class="pill red">floor</span></td>
+      <td class="lock">same story</td></tr>
+
+    <tr><td>IP Protection &amp; Competitive Moat</td><td>8</td>
+      <td><div class="spread"><span class="zero" style="width:36%"></span><i style="left:6%"></i><i style="left:14%"></i><i style="left:40%"></i><i style="left:62%"></i></div></td>
+      <td>0.9</td><td><b>16 of 22</b></td><td>0</td>
+      <td><span class="pill red">floor</span></td>
+      <td class="lock">8 pts doing almost nothing</td></tr>
+
+    <tr><td>Exit Strategy &amp; Investor Returns</td><td>7</td>
+      <td><div class="spread"><span class="zero" style="width:42%"></span><i style="left:8%"></i><i style="left:20%"></i><i style="left:46%"></i></div></td>
+      <td>0.7</td><td><b>17 of 22</b></td><td>0</td>
+      <td><span class="pill red">floor</span></td>
+      <td class="lock">rarely documented at these stages</td></tr>
+
+    <tr><td>Unit Economics &amp; Scalability</td><td>10</td>
+      <td><div class="spread"><span class="zero" style="width:46%"></span><i style="left:10%"></i><i style="left:28%"></i><i style="left:52%"></i></div></td>
+      <td>0.6</td><td><b>18 of 22</b></td><td>0</td>
+      <td><span class="pill red">floor</span></td>
+      <td class="lock">10 pts, four companies score anything</td></tr>
+
+    <tr><td>Deal Structure &amp; Use of Funds</td><td>3</td>
+      <td><div class="spread"><span class="zero" style="width:24%"></span><i style="left:6%"></i><i style="left:20%"></i><i style="left:36%"></i><i style="left:60%"></i></div></td>
+      <td>0.9</td><td>8 of 22</td><td>1</td>
+      <td><span class="pill gry">thin</span></td>
+      <td class="lock">only 3 pts to give</td></tr>
+
+    <tr style="background:#FFFBF2"><td>Pitch Deck &amp; Business Plan Quality</td><td>4</td>
+      <td><div class="spread"><span class="full" style="width:22%"></span><i style="left:14%"></i><i style="left:40%"></i><i style="left:66%"></i><i style="left:92%"></i><i style="left:94%"></i><i style="left:96%"></i><i style="left:98%"></i></div></td>
+      <td>3.2</td><td>2 of 22</td><td><b>14 of 22</b></td>
+      <td><span class="pill red">ceiling</span></td>
+      <td class="lock">most companies max it out — and it is the <i>only</i> Narrative factor, weighted 30 at pre-seed</td></tr>
+
+    <tr style="background:#FEF6F6"><td>Industry &amp; Stage Alignment</td><td>1</td>
+      <td><div class="spread"><span class="full" style="width:96%"></span><i style="left:97%"></i></div></td>
+      <td>0.95</td><td>1 of 22</td><td><b>21 of 22</b></td>
+      <td><span class="pill red">no variance</span></td>
+      <td class="lock">everyone scores the same — contributes nothing at any weight</td></tr>
+
+    <tr style="background:#FEF6F6"><td>Impact / ESG Alignment</td><td>1</td>
+      <td><div class="spread"><span class="full" style="width:82%"></span><i style="left:88%"></i><i style="left:4%"></i></div></td>
+      <td>0.82</td><td>4 of 22</td><td><b>18 of 22</b></td>
+      <td><span class="pill red">no variance</span></td>
+      <td class="lock">same</td></tr>
+  </table>
+
+  <div class="warnbox">
+    <b>Read the shape, not the rows.</b> 63 of the 100 available points sit in factors that more than half your companies
+    score <i>zero</i> on. The rubric is currently measuring, more than anything, whether a company has uploaded documents.
+    That is a legitimate thing to measure — but it is not what the weight editor is for, and no weighting change fixes it.
+  </div>
+
+  <div class="okbox">
+    <b>What this section is for.</b> Not to change anything automatically. To tell you which of three different problems
+    you are looking at before you edit a number: <b>floor</b> (the evidence is not in the data room — a founder-chasing
+    problem), <b>ceiling</b> (the question is too easy — a rubric problem), <b>no variance</b> (the factor is dead weight —
+    delete it or make it harder).
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. Factor points — unchanged, with the verdict carried into the row</h2>
+<p class="note">Same editable table as today. The only addition is the verdict chip, so when you reach for a number you can see why. Still totals 100; Preview impact, Save and History all behave exactly as they do now.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:250px">Factor</th><th style="width:110px">Dimension</th><th style="width:100px">Points</th><th style="width:150px">Discrimination</th><th>Suggested read</th></tr>
+    <tr><td>Revenue &amp; Cash Flow Trajectory</td><td class="lock">Financial</td><td><span class="inp">15</span></td><td><span class="pill amb">floor-heavy</span></td><td class="lock">keep — it should be hard at these stages</td></tr>
+    <tr><td>Customer Traction &amp; LOIs</td><td class="lock">Traction</td><td><span class="inp">13</span></td><td><span class="pill red">floor</span></td><td class="lock">keep — this is a real gap, not a rubric fault</td></tr>
+    <tr><td>Founder Integrity &amp; Team Depth</td><td class="lock">Team</td><td><span class="inp">11</span></td><td><span class="pill amb">coarse</span></td><td class="lock"><b>split into two factors</b></td></tr>
+    <tr style="background:#FFFBF2"><td>Pitch Deck &amp; Business Plan Quality</td><td class="lock">Narrative</td><td><span class="inp">4</span></td><td><span class="pill red">ceiling</span></td><td class="lock"><b>split into three, harder questions</b></td></tr>
+    <tr style="background:#FEF6F6"><td>Industry &amp; Stage Alignment</td><td class="lock">Cap table</td><td><span class="inp">1</span></td><td><span class="pill red">no variance</span></td><td class="lock">delete, or make it a real fit test</td></tr>
+    <tr style="background:#FEF6F6"><td>Impact / ESG Alignment</td><td class="lock">Cap table</td><td><span class="inp">1</span></td><td><span class="pill red">no variance</span></td><td class="lock">delete, or make it a real test</td></tr>
+    <tr><td colspan="5" class="lock" style="border:0;padding-top:6px">…the remaining seven factors unchanged…</td></tr>
+  </table>
+  <p style="margin:8px 0 0"><span class="pill grn">✓ 100 of 100 allocated</span> <span class="lock" style="margin-left:6px">unchanged rule — the raw total and the 65 gate keep meaning what they mean</span></p>
+
+  <div class="infobox">
+    <b>The one structural fix I would still make:</b> split Narrative into three factors (deck · business plan · raise &amp; use of
+    funds, 10 pts) and Team into two (founder background · team depth, 12 pts), paid for by trimming Exit 7→4, IP 8→6,
+    Governance 9→8, Deal structure 3→2. Narrative currently has <b>five possible values</b> and 14 of 22 companies sit at the top
+    of them, while carrying 30% of the pre-seed score. That is the ceiling row above, and it is the only defect on this tab
+    that weighting cannot reach.
+    <br><br>
+    Cost: new factor keys mean old score rows read Narrative <b>0</b>, not &ldquo;unchanged&rdquo; — so it needs a compatibility map
+    (old <code>pitch_quality</code> ratio stands in until a company is re-scored) and then Re-score All.
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. Dimension weights — kept, relabelled, and honest about what they are</h2>
+<p class="note">
+Still four stage profiles, still editable, still versioned. Two changes: the raw share sits alongside so the two layers stop
+looking like rivals, and the panel says in plain words whose judgement these numbers are.
+</p>
+<div class="frame">
+  <div class="tabs">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Stage</span>
+    <span class="tab on">Pre-seed</span><span class="tab">Seed</span><span class="tab">Series A <span style="font-size:10px;opacity:.7">investor-facing</span></span><span class="tab">Growth</span>
+  </div>
+  <table style="margin-top:10px">
+    <tr><th style="width:120px">Dimension</th><th>Factors it rolls up</th><th style="width:140px">Raw share <span class="lock" style="text-transform:none">derived</span></th><th style="width:120px">Weight · Pre-seed</th><th style="width:150px">Discrimination</th></tr>
+    <tr><td><b>Narrative</b></td><td class="lock">Pitch deck &amp; business plan</td><td><span class="ro">4</span> <span class="lock">pts</span></td><td><span class="inp">30</span></td><td><span class="pill red">ceiling</span></td></tr>
+    <tr><td><b>Team</b></td><td class="lock">Founder integrity &amp; team depth</td><td><span class="ro">11</span> <span class="lock">pts</span></td><td><span class="inp">30</span></td><td><span class="pill amb">coarse</span></td></tr>
+    <tr><td><b>Financial</b></td><td class="lock">Revenue · Unit economics · Burn · Deal structure</td><td><span class="ro">36</span> <span class="lock">pts</span></td><td><span class="inp">15</span></td><td><span class="pill amb">floor-heavy</span></td></tr>
+    <tr><td><b>Traction</b></td><td class="lock">Customer traction · Market evidence</td><td><span class="ro">23</span> <span class="lock">pts</span></td><td><span class="inp">15</span></td><td><span class="pill red">floor</span></td></tr>
+    <tr><td><b>Cap table</b></td><td class="lock">Governance · IP · Exit · Industry fit · Impact</td><td><span class="ro">26</span> <span class="lock">pts</span></td><td><span class="inp">10</span></td><td><span class="pill grn">discriminating</span></td></tr>
+  </table>
+  <p style="margin:8px 0 0"><span class="pill grn">✓ Raw share 100</span> <span class="pill grn" style="margin-left:6px">✓ Pre-seed weights 100</span></p>
+
+  <div class="infobox">
+    <p style="margin:0"><b>Raw share</b> — how many of the 100 engine points live here. Read-only; it is the sum of the factor points.<br>
+    <b>Weight</b> — how much a pre-seed reader should care about the dimension once scored. This is the number you edit.</p>
+    <p style="margin:8px 0 0"><b>These weights are a stated judgement.</b> There is no industry standard for them — these
+    factors are iCapOS&rsquo;s own rubric, so there is nothing external to benchmark against. Record why you set them in the
+    save reason; that is what the History tab is for.</p>
+  </div>
+
+  <div class="warnbox">
+    <b>What I am NOT proposing any more, and why.</b> I previously offered an AI card that recommends weight numbers per
+    stage. I would drop the numbers and keep the diagnosis. The established finding is that with no outcome data, elaborate
+    weights do not beat simple ones — so a generated set of twenty weights adds precision you cannot cash, dressed up with
+    authority it has not earned. The useful half of that card is already above, as the Discrimination column.
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. New, small — Validation <span>the honest footer</span></h2>
+<div class="frame">
+  <div class="two">
+    <div>
+      <p class="lbl">Has this score been checked against anything?</p>
+      <table>
+        <tr><td>Companies scored</td><td style="text-align:right"><b>22</b></td></tr>
+        <tr><td>Investor outcomes recorded</td><td style="text-align:right"><b>—</b></td></tr>
+        <tr><td>Correlation of CRR with meetings held</td><td style="text-align:right"><span class="pill gry">not yet measurable</span></td></tr>
+        <tr><td>Last validated</td><td style="text-align:right"><span class="pill red">never</span></td></tr>
+      </table>
+      <p class="note" style="margin-top:8px">One line, always visible. It stops the tab implying an accuracy nobody has established.</p>
+    </div>
+    <div>
+      <p class="lbl">What would make it measurable</p>
+      <ul class="tight">
+        <li><code>ir_matches</code> already records how far each investor got: matched → intro_sent → contacted → meeting_scheduled → meeting_held → committed / passed.</li>
+        <li>Once there is volume, the question is simple: <b>did companies with higher CRR get more meetings?</b> and <b>which factors separated them?</b></li>
+        <li>That is the point at which weights stop being opinion and get fitted — and the point at which this panel gains a real number.</li>
+        <li>With 22 companies and no recorded outcomes yet, anything computed today is directional at best. Worth instrumenting now, not analysing now.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 5 ─────────── -->
+<h2>5. What actually changes, and what it costs</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Change</th><th style="width:110px">Cost</th><th style="width:120px">Risk</th><th>Notes</th></tr>
+    <tr><td><b>Discrimination section</b></td><td>a read over the score rows you already store</td><td><span class="pill grn">none</span></td><td>Pure display. No migration, no AI, no writes. Highest information per hour of anything on this list.</td></tr>
+    <tr><td><b>Raw share + verdict columns on the existing tables</b></td><td>display only</td><td><span class="pill grn">none</span></td><td>The arithmetic (<code>rollupWith</code>) exists.</td></tr>
+    <tr><td><b>Validation footer</b></td><td>two counts</td><td><span class="pill grn">none</span></td><td>Says &ldquo;never&rdquo; until it can say something better.</td></tr>
+    <tr><td><b>Split Narrative &amp; Team</b></td><td>scorer changes + compatibility map + Re-score All</td><td><span class="pill amb">medium</span></td><td>The one structural fix. Old rows must be mapped or they read 0.</td></tr>
+    <tr><td><b>Delete or harden the two no-variance factors</b></td><td>small</td><td><span class="pill amb">medium</span></td><td>Frees 2 pts and removes two rows that flatter everyone equally.</td></tr>
+    <tr><td style="color:#94A3B8"><s>AI weight recommendations</s></td><td class="lock">—</td><td><span class="pill gry">dropped</span></td><td class="lock">Replaced by the Discrimination column, which is the part that was doing the work.</td></tr>
+  </table>
+  <p class="note" style="margin-top:12px">
+    Suggested order: <b>the three zero-risk display pieces first</b> — they cost little and they tell you whether the
+    split is even the right next move. Then the split. Nothing here touches the score until you choose to.
+  </p>
+</div>
+
+</body></html>

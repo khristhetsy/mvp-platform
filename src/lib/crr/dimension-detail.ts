@@ -10,10 +10,16 @@
  */
 import { FACTOR_TO_DIMENSION, CRR_DIMENSIONS, type Dimension, type ProfileKey } from "@/lib/crr/profiles";
 import {
-  DIMENSION_LABEL, FACTOR_KEYS, FACTOR_LABEL, rollupWith, scoreWith,
-  type StoredFactor, type WeightSet,
+  DIMENSION_LABEL, FACTOR_KEYS, FACTOR_LABEL, rollupWith, totalWith,
+  type FactorPoints, type StoredFactor, type WeightSet,
 } from "@/lib/crr/weight-sets";
+
 import type { FactorKey } from "@/lib/ai/readiness-scoring";
+
+/** The thirteen maxima in force for one stage. Factor points drive everything. */
+function pointsFor(set: WeightSet, profile: ProfileKey): FactorPoints {
+  return set.factors[profile] ?? set.factors.seriesA_institutional;
+}
 
 /** Which factors roll into which dimension, under the active set's maxima. */
 export function factorsIn(dimension: Dimension): FactorKey[] {
@@ -48,11 +54,12 @@ export function dimensionCards(
   set: WeightSet,
   profile: ProfileKey,
 ): DimensionCard[] {
-  const dims = rollupWith(factors, set.factors);
-  const weights = set.profiles[profile] ?? set.profiles.seriesA_institutional;
+  const points = pointsFor(set, profile);
+  const dims = rollupWith(factors, points);
   return CRR_DIMENSIONS.map((d) => {
     const score = dims[d] ?? 0;
-    const weight = weights?.[d] ?? 0;
+    // The dimension's weight IS the points its factors carry at this stage.
+    const weight = FACTOR_KEYS.filter((k) => FACTOR_TO_DIMENSION[k] === d).reduce((s, k) => s + (points[k] ?? 0), 0);
     return {
       key: d,
       label: DIMENSION_LABEL[d],
@@ -89,21 +96,22 @@ export function dimensionDetail(
 ): DimensionDetail {
   const cards = dimensionCards(factors, set, profile);
   const card = cards.find((c) => c.key === dimension)!;
-  const dims = rollupWith(factors, set.factors);
-  const weights = set.profiles[profile] ?? set.profiles.seriesA_institutional;
+  const points = pointsFor(set, profile);
+  const dims = rollupWith(factors, points);
 
   const rows: FactorRow[] = factorsIn(dimension).map((key) => {
     const stored = factors[key];
-    const max = set.factors[key] ?? 0;
+    const max = points[key] ?? 0;
     // Stored points are rescaled to the active maxima, the same way rollupWith does
     // it, so the rows always add up to the dimension score above them.
     const ratio = stored && stored.max > 0 ? stored.pts / stored.max : 0;
     return { key, label: FACTOR_LABEL[key], pts: round1(ratio * max), max, ratio };
   });
 
-  const scoreNow = scoreWith(dims, weights);
-  const lifted = { ...dims, [dimension]: Math.max(dims[dimension] ?? 0, target) };
-  const scoreAtTarget = scoreWith(lifted, weights);
+  // The stage score is the raw points total under this stage's maxima.
+  const scoreNow = totalWith(factors, points);
+  const headroomToTarget = Math.max(0, target - (dims[dimension] ?? 0));
+  const scoreAtTarget = Math.round(scoreNow + (headroomToTarget * card.weight) / 100);
 
   return {
     ...card,
@@ -122,16 +130,18 @@ export type Gap = {
   label: string;
   pts: number;
   max: number;
-  /** Points of the company's profile score that are lost because this factor
-   *  is not full marks — what makes one gap worth more than another. */
+  /** Points of the company's score going unearned on this factor at this stage —
+   *  what makes one gap worth more than another. */
   lost: number;
 };
 
 /**
- * The factors inside a dimension, worst first, measured in points of the
- * company's own profile score rather than raw factor points. A 3-point deal-terms
- * gap in a heavily-weighted dimension can outrank a 10-point market gap in a
- * light one, which is the whole reason for weighting by stage.
+ * The factors inside a dimension, worst first, measured in the points of the
+ * company's score that are going unearned.
+ *
+ * Since factor points became the driver, a factor's influence IS its points at
+ * that stage, so "lost" is simply what it did not earn — and the same gap costs
+ * more at a stage that allocates more points to it.
  */
 export function rankedGaps(
   dimension: Dimension,
@@ -139,24 +149,21 @@ export function rankedGaps(
   set: WeightSet,
   profile: ProfileKey,
 ): Gap[] {
-  const weights = set.profiles[profile] ?? set.profiles.seriesA_institutional;
-  const weight = weights?.[dimension] ?? 0;
+  const points = pointsFor(set, profile);
   const rows = factorsIn(dimension);
-  const dimMax = rows.reduce((s, k) => s + (set.factors[k] ?? 0), 0);
-  if (dimMax <= 0) return [];
+  if (rows.reduce((s, k) => s + (points[k] ?? 0), 0) <= 0) return [];
 
   return rows
     .map((key) => {
       const stored = factors[key];
-      const max = set.factors[key] ?? 0;
+      const max = points[key] ?? 0;
       const ratio = stored && stored.max > 0 ? stored.pts / stored.max : 0;
-      const missing = (1 - ratio) * max; // raw factor points not earned
       return {
         key,
         label: FACTOR_LABEL[key],
         pts: round1(ratio * max),
         max,
-        lost: round1((missing / dimMax) * weight),
+        lost: round1((1 - ratio) * max),
       };
     })
     .sort((a, b) => b.lost - a.lost);

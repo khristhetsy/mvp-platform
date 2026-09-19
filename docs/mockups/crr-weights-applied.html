@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR · weights applied, factor points aligned · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1040px;line-height:1.55}
+.frame{width:1040px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:6px 8px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:11px 13px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:11px 13px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.badbox{border:1px solid #F5C2C2;background:#FEF6F6;border-radius:10px;padding:11px 13px;font-size:12px;color:#8F2020;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:11px 13px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+.val{display:inline-block;min-width:34px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.delta{font-size:10.5px;font-variant-numeric:tabular-nums;margin-left:4px}
+.up{color:#137A3B}.down{color:#B42323}.same{color:#C3CCDA}
+.bar{display:inline-block;height:6px;border-radius:99px;background:#F1F5F9;width:86px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.bar i{display:block;height:100%;border-radius:99px;background:#4F46E5}
+.step{display:inline-flex;width:20px;height:20px;border-radius:99px;background:#4F46E5;color:#fff;font-size:11px;font-weight:600;align-items:center;justify-content:center;margin-right:7px}
+</style></head><body>
+
+<p class="note">
+<b>The complete applied set — both tables.</b> Dimension weights from the four rounds, and factor points aligned to them.
+Nothing needs building: the Weights tab already lets you type these in and save a version. This is the numbers and the
+consequences.
+</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. How factor points can &ldquo;reflect&rdquo; four different weightings</h2>
+<div class="frame">
+  <p class="note" style="margin:0 0 8px">
+    There is one set of thirteen factor maxima and four sets of weights, so the raw share cannot equal all four columns at
+    once. It can equal exactly one thing coherently: <b>the average of the four</b>. That is the right answer, because
+    <code>total_score</code> — the raw 0–100 the factor points produce — is the <i>stage-neutral</i> number, and it is what
+    the 65 outreach gate reads. A stage-neutral total should be shaped by the stage-neutral average.
+  </p>
+  <table>
+    <tr><th style="width:120px">Dimension</th><th style="width:80px">Pre-seed</th><th style="width:70px">Seed</th><th style="width:80px">Series A</th><th style="width:70px">Growth</th><th style="width:130px">Average = raw share</th><th>Today&rsquo;s raw share</th></tr>
+    <tr><td><b>Team</b></td><td>32</td><td>28</td><td>20</td><td>12</td><td><span class="bar"><i style="width:23%"></i></span><span class="val">23</span></td><td>11 <span class="delta up">+12</span></td></tr>
+    <tr><td><b>Traction</b></td><td>16</td><td>26</td><td>32</td><td>30</td><td><span class="bar"><i style="width:26%"></i></span><span class="val">26</span></td><td>23 <span class="delta up">+3</span></td></tr>
+    <tr><td><b>Financial</b></td><td>12</td><td>14</td><td>24</td><td>34</td><td><span class="bar"><i style="width:21%"></i></span><span class="val">21</span></td><td>36 <span class="delta down">−15</span></td></tr>
+    <tr><td><b>Cap table</b></td><td>14</td><td>18</td><td>16</td><td>20</td><td><span class="bar"><i style="width:17%"></i></span><span class="val">17</span></td><td>26 <span class="delta down">−9</span></td></tr>
+    <tr><td><b>Narrative</b></td><td>26</td><td>14</td><td>8</td><td>4</td><td><span class="bar"><i style="width:13%"></i></span><span class="val">13</span></td><td>4 <span class="delta up">+9</span></td></tr>
+    <tr style="background:#FBFBFF"><td class="lock">Total</td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td><td class="lock">100</td></tr>
+  </table>
+  <div class="okbox">
+    The two tables now agree by construction, and they agree in the only way that is arithmetically possible with one
+    shared set of maxima. Both still validate at exactly 100 independently, so nothing about the editor changes.
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. Factor points — the thirteen numbers to type</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:250px">Factor</th><th style="width:110px">Dimension</th><th style="width:130px">New max</th><th style="width:80px">Today</th><th>Note</th></tr>
+    <tr><td>Founder Integrity &amp; Team Depth</td><td class="lock">Team</td><td><span class="bar"><i style="width:23%"></i></span><span class="val">23</span></td><td>11 <span class="delta up">+12</span></td><td class="lock">the whole Team dimension</td></tr>
+    <tr><td>Customer Traction &amp; LOIs</td><td class="lock">Traction</td><td><span class="bar"><i style="width:15%"></i></span><span class="val">15</span></td><td>13 <span class="delta up">+2</span></td><td class="lock"></td></tr>
+    <tr style="background:#FFFBF2"><td>Pitch Deck &amp; Business Plan Quality</td><td class="lock">Narrative</td><td><span class="bar"><i style="width:13%"></i></span><span class="val">13</span></td><td>4 <span class="delta up">+9</span></td><td class="lock"><b>see the warning below</b></td></tr>
+    <tr><td>Market &amp; Competitive Evidence</td><td class="lock">Traction</td><td><span class="bar"><i style="width:11%"></i></span><span class="val">11</span></td><td>10 <span class="delta up">+1</span></td><td class="lock"></td></tr>
+    <tr><td>Revenue &amp; Cash Flow Trajectory</td><td class="lock">Financial</td><td><span class="bar"><i style="width:9%"></i></span><span class="val">9</span></td><td>15 <span class="delta down">−6</span></td><td class="lock">no longer the largest factor</td></tr>
+    <tr><td>Unit Economics &amp; Scalability</td><td class="lock">Financial</td><td><span class="bar"><i style="width:6%"></i></span><span class="val">6</span></td><td>10 <span class="delta down">−4</span></td><td class="lock"></td></tr>
+    <tr><td>Governance &amp; Legal Cleanliness</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:6%"></i></span><span class="val">6</span></td><td>9 <span class="delta down">−3</span></td><td class="lock">your best discriminator — see note</td></tr>
+    <tr><td>Burn Rate &amp; Runway</td><td class="lock">Financial</td><td><span class="bar"><i style="width:4%"></i></span><span class="val">4</span></td><td>8 <span class="delta down">−4</span></td><td class="lock"></td></tr>
+    <tr><td>IP Protection &amp; Competitive Moat</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:4%"></i></span><span class="val">4</span></td><td>8 <span class="delta down">−4</span></td><td class="lock"></td></tr>
+    <tr><td>Exit Strategy &amp; Investor Returns</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:3%"></i></span><span class="val">3</span></td><td>7 <span class="delta down">−4</span></td><td class="lock">rarely documented this early</td></tr>
+    <tr><td>Deal Structure &amp; Use of Funds</td><td class="lock">Financial</td><td><span class="bar"><i style="width:2%"></i></span><span class="val">2</span></td><td>3 <span class="delta down">−1</span></td><td class="lock"></td></tr>
+    <tr><td>Industry &amp; Stage Alignment</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:2%"></i></span><span class="val">2</span></td><td>1 <span class="delta up">+1</span></td><td class="lock"></td></tr>
+    <tr><td>Impact / ESG Alignment</td><td class="lock">Cap table</td><td><span class="bar"><i style="width:2%"></i></span><span class="val">2</span></td><td>1 <span class="delta up">+1</span></td><td class="lock"></td></tr>
+    <tr style="background:#FBFBFF"><td class="lock">Total</td><td></td><td><span class="pill grn">100</span></td><td class="lock">100</td><td></td></tr>
+  </table>
+
+  <div class="okbox">
+    <b>A useful side-effect.</b> Narrative goes from 5 possible values to 14, and Team from 12 to 24. The granularity
+    problem — a dimension carrying 30% of the pre-seed score while moving in quarters — largely solves itself, without
+    splitting any factors.
+  </div>
+
+  <div class="badbox">
+    <b>And the reason I would NOT type the factor points in yet.</b> 14 of 22 companies already max out Pitch Deck at 4/4.
+    Raising it to 13 hands roughly <b>nine free points to two-thirds of your list</b> — the average would jump from 17 to
+    somewhere near 26 with nothing having improved. That is score inflation, and it makes the 65 outreach gate mean less,
+    not more.
+    <br><br>
+    The fix is the one from the discrimination mockup: <b>split Narrative into three harder questions first</b> (deck ·
+    business plan · raise &amp; use of funds), so 13 points has to be earned rather than handed over. Then these factor
+    points are safe.
+  </div>
+
+  <div class="warnbox">
+    Second, smaller flag: <b>Governance drops 9 → 6</b>, and it is currently the widest-spread factor you have — the one
+    doing the most real discriminating. Following the average mechanically demotes your best signal. Worth overriding to
+    8 and taking the 2 points off IP, if you want to protect it.
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. Dimension weights — the four columns to type</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:120px">Dimension</th><th style="width:150px">Pre-seed</th><th style="width:150px">Seed</th><th style="width:150px">Series A</th><th style="width:150px">Growth</th></tr>
+    <tr><td><b>Narrative</b></td><td><span class="val">26</span> <span class="delta down">from 30</span></td><td><span class="val">14</span> <span class="delta up">from 10</span></td><td><span class="val">8</span> <span class="delta down">from 10</span></td><td><span class="val">4</span> <span class="delta down">from 5</span></td></tr>
+    <tr><td><b>Team</b></td><td><span class="val">32</span> <span class="delta up">from 30</span></td><td><span class="val">28</span> <span class="delta down">from 30</span></td><td><span class="val">20</span> <span class="delta up">from 15</span></td><td><span class="val">12</span> <span class="delta up">from 10</span></td></tr>
+    <tr><td><b>Financial</b></td><td><span class="val">12</span> <span class="delta down">from 15</span></td><td><span class="val">14</span> <span class="delta down">from 15</span></td><td><span class="val">24</span> <span class="delta down">from 25</span></td><td><span class="val">34</span> <span class="delta down">from 35</span></td></tr>
+    <tr><td><b>Traction</b></td><td><span class="val">16</span> <span class="delta up">from 15</span></td><td><span class="val">26</span> <span class="delta up">from 25</span></td><td><span class="val">32</span> <span class="delta up">from 30</span></td><td><span class="val">30</span> <span class="delta same">from 30</span></td></tr>
+    <tr><td><b>Cap table</b></td><td><span class="val">14</span> <span class="delta up">from 10</span></td><td><span class="val">18</span> <span class="delta down">from 20</span></td><td><span class="val">16</span> <span class="delta down">from 20</span></td><td><span class="val">20</span> <span class="delta same">from 20</span></td></tr>
+    <tr style="background:#FBFBFF"><td class="lock">Total</td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td></tr>
+  </table>
+  <div class="okbox">
+    <b>These are safe to apply on their own.</b> Weights never touch <code>total_score</code> or the 65 gate — they only
+    change the four audience columns. No inflation risk, no re-score of the AI needed: saving recomputes the columns from
+    the factor scores already stored.
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. What I would actually do</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:44px"></th><th style="width:280px">Step</th><th style="width:110px">Effect on scores</th><th>Why in this order</th></tr>
+    <tr>
+      <td><span class="step">1</span></td>
+      <td><b>Apply the dimension weights now</b><div class="lock">section 3 · Weights tab · Save version</div></td>
+      <td><span class="pill grn">a point or two</span></td>
+      <td>Fixes the two cliffs. Cannot inflate anything. Run Preview impact first — expect it to be small, and that is fine.</td>
+    </tr>
+    <tr>
+      <td><span class="step">2</span></td>
+      <td><b>Split Narrative into three factors</b><div class="lock">deck · business plan · raise &amp; use of funds</div></td>
+      <td><span class="pill amb">needs a re-score</span></td>
+      <td>Makes 13 points earnable rather than automatic. Needs a compatibility map so old rows do not read 0.</td>
+    </tr>
+    <tr>
+      <td><span class="step">3</span></td>
+      <td><b>Then apply the factor points</b><div class="lock">section 2, with Governance held at 8</div></td>
+      <td><span class="pill amb">moves everyone</span></td>
+      <td>Safe once Narrative is hard to max out. Preview impact will show the real distribution before you commit.</td>
+    </tr>
+  </table>
+  <div class="infobox">
+    <b>Nothing here needs code.</b> Steps 1 and 3 are typing numbers into the Weights tab and saving a version — the
+    editor, validation, preview, history and revert all already work. Only step 2 is a build.
+  </div>
+</div>
+
+</body></html>

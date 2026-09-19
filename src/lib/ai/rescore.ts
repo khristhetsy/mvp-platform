@@ -6,6 +6,8 @@ import type { Database } from "@/lib/supabase/types";
 import { scoreCompanyReadiness } from "@/lib/ai/readiness-scoring";
 import { loadActiveSet } from "@/lib/crr/weight-sets-db";
 import { scoreColumnsFor } from "@/lib/crr/weight-sets";
+import { stageToProfile } from "@/lib/crr/profiles";
+import { normalizeFundingStage } from "@/lib/crr/select-score";
 
 export type RescoreResult = { ok: boolean; totalScore?: number; reason?: string };
 
@@ -41,9 +43,18 @@ export async function rescoreCompanyReadiness(
   });
   if (result.isDemo) return { ok: false, reason: "demo" };
 
+  // The company's own stage decides which of the four point sets scores it — and
+  // therefore what total_score and the outreach gate mean for this company.
+  // funding_stage is on the table (migration 20260803002) but not in the generated types.
+  const { data: stageRow } = await supabase
+    .from("companies").select("funding_stage").eq("id", companyId).maybeSingle();
+  const stageProfile = stageToProfile(
+    normalizeFundingStage((stageRow as unknown as { funding_stage?: string | null } | null)?.funding_stage),
+  );
+
   // Weighting comes from the active weight set (admin-editable), not constants.
   const set = await loadActiveSet(supabase);
-  const cols = scoreColumnsFor(result.factorScores, set);
+  const cols = scoreColumnsFor(result.factorScores, set, stageProfile);
 
   const { error } = await supabase.from("company_readiness_scores").insert({
     company_id: companyId,

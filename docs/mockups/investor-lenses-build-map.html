@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Investor lenses · assembled from what exists · Build map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1140px;line-height:1.55}
+.frame{width:1140px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:6px 8px;border-bottom:1px solid #F5F7FA;vertical-align:top}
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600;white-space:nowrap}
+.have{background:#E7F7EE;color:#137A3B}.wire{background:#EEF0FE;color:#4F46E5}.newp{background:#FFF4DE;color:#9A5B00}.none{background:#FDE8E8;color:#B42323}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+.badbox{border:1px solid #F5C2C2;background:#FEF6F6;border-radius:10px;padding:10px 12px;font-size:12px;color:#8F2020;margin-top:12px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#5B6B86;margin:8px 0 12px}
+.stepno{display:inline-flex;width:20px;height:20px;border-radius:99px;background:#4F46E5;color:#fff;font-size:11px;font-weight:600;align-items:center;justify-content:center;margin-right:7px}
+.file{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#334155}
+</style></head><body>
+
+<p class="note">
+<b>Same four lenses, mapped to the code that already exists.</b> Nothing built. Every row names the exact field,
+component or table the panel would be assembled from, so you can see how much of this is wiring versus new work
+before deciding. Read the <a href="crr-... ">previous mockup</a> for the visual; this one is the parts list.
+</p>
+
+<div class="legend">
+  <span><span class="pill have">exists</span> already computed and already on the page</span>
+  <span><span class="pill wire">wire</span> exists in the data, not yet shown here</span>
+  <span><span class="pill newp">new</span> genuinely new code</span>
+  <span><span class="pill none">absent</span> the data does not exist — show the gap, do not invent it</span>
+</div>
+
+<!-- ─────────── header ─────────── -->
+<h2>Header — completeness and trend instead of “17”</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">What it shows</th><th style="width:100px">Status</th><th>Comes from</th></tr>
+    <tr><td>9 of 11 required documents</td><td><span class="pill wire">wire</span></td><td><code>report.documents.checklist</code> and <code>missingRequiredLabels</code> — built by <span class="file">buildDocumentChecklist()</span>, already loaded, currently shown far down the page</td></tr>
+    <tr><td>Named missing items</td><td><span class="pill wire">wire</span></td><td><code>report.documents.missingRequiredLabels</code></td></tr>
+    <tr><td>Preparation trend sparkline</td><td><span class="pill wire">wire</span></td><td><code>report.investableReadiness.scoreHistory</code> — array of <code>{score, scoredAt}</code>, already loaded, currently unused in the header</td></tr>
+    <tr><td>“Diligence-ready in ~1 week”</td><td><span class="pill newp">new</span></td><td>One derived line: items missing × the founder&rsquo;s recent upload rate. Small, pure, testable. Omit it if you&rsquo;d rather not estimate.</td></tr>
+    <tr><td>Score moved out of the header</td><td><span class="pill have">exists</span></td><td>Re-order only — <span class="file">InvestableReadinessPanel</span> stays, it moves below the fold and gains the lens label</td></tr>
+  </table>
+  <div class="okbox">The header is the single highest-value change and it is <b>entirely re-ordering data already on the page</b>.</div>
+</div>
+
+<!-- ─────────── lens switch ─────────── -->
+<h2>The lens switch</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">What it needs</th><th style="width:100px">Status</th><th>Comes from</th></tr>
+    <tr><td>Default lens from the reader</td><td><span class="pill wire">wire</span></td><td><code>investor_profiles.investor_type</code> — already selected by <span class="file">matching/engine.ts</span>. Map: angel→Angel, family office→Family office, VC/fund→VC, everything else→Institutional</td></tr>
+    <tr><td>Which CRR column to show</td><td><span class="pill have">exists</span></td><td>All four are stored per company: <code>score_angel</code>, <code>score_seed_institutional</code>, <code>score_seriesa_institutional</code>, <code>score_growth_institutional</code>. <span class="file">select-score.ts</span> already has <code>PROFILE_COLUMN</code>; it needs a third reader alongside founder-facing and investor-facing</td></tr>
+    <tr><td>Section ordering per lens</td><td><span class="pill newp">new</span></td><td>A table of five lens → section-order arrays. Pure data, no logic</td></tr>
+    <tr><td>Sorting stays comparable</td><td><span class="pill have">exists</span></td><td><code>investorFacingScore()</code> keeps returning Series A for every list and ranking — untouched</td></tr>
+  </table>
+  <div class="infobox">
+    The lens is a <b>URL parameter with a profile-derived default</b> (<code>?lens=angel</code>), so it is shareable and
+    testable, and the server component can read it without client state.
+  </div>
+</div>
+
+<!-- ─────────── angel ─────────── -->
+<h2>Angel lens</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Panel</th><th style="width:100px">Status</th><th>Comes from</th></tr>
+    <tr><td>Why you&rsquo;re seeing this</td><td><span class="pill wire">wire</span></td><td><code>matchReasons: string[]</code> — already produced by <span class="file">matching/investor-company-matching.ts</span> line 294. Computed today and thrown away at render</td></tr>
+    <tr><td>Minimum vs your check size</td><td><span class="pill wire">wire</span></td><td><code>report.capitalRaise.minimumInvestment</code> × <code>investor_profiles.check_size_min/max</code></td></tr>
+    <tr><td>Founders</td><td><span class="pill have">exists</span></td><td><code>factorScores.founder_team</code> — sub-scores and evidence already stored</td></tr>
+    <tr><td>The ask</td><td><span class="pill have">exists</span></td><td><code>report.capitalRaise</code> — target, minimum, use of funds</td></tr>
+    <tr><td>Who else is looking</td><td><span class="pill have">exists</span></td><td><code>report.investorSignals</code> — interest, pledges, intros, meetings, threads. Counts only, no names</td></tr>
+    <tr><td>Readiness under the angel weighting</td><td><span class="pill wire">wire</span></td><td><code>score_angel</code> + <span class="file">dimensionCards()</span> — the function we shipped yesterday, reused as-is</td></tr>
+    <tr><td>What to ask on the call</td><td><span class="pill wire">wire</span></td><td><span class="file">dimension-advice.ts</span> — already generates ranked actions from the gaps. Same generator, second audience: it currently writes “upload X”, this needs “ask them about X”. One prompt variant, cached alongside the founder one</td></tr>
+    <tr><td>Book 20 minutes</td><td><span class="pill have">exists</span></td><td><span class="file">InvestorDealActions</span> + the scheduler</td></tr>
+  </table>
+  <div class="okbox">Seven of eight panels are wiring. The only new thinking is the second prompt variant for the ask-list.</div>
+</div>
+
+<!-- ─────────── family office ─────────── -->
+<h2>Family office lens</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Panel</th><th style="width:100px">Status</th><th>Comes from</th></tr>
+    <tr><td>Governance &amp; legal</td><td><span class="pill have">exists</span></td><td><code>factorScores.governance_legal</code> with its sub-scores</td></tr>
+    <tr><td>Cap table present / absent</td><td><span class="pill wire">wire</span></td><td>The document checklist already knows. Today it is one row among eleven; here it is promoted to a headline</td></tr>
+    <tr><td>Founder vesting documented</td><td><span class="pill none">absent</span></td><td>Not a checked item today. Either add it to the checklist and the scorer, or show “not assessed” — do not infer it</td></tr>
+    <tr><td>Structure: direct or SPV</td><td><span class="pill wire">wire</span></td><td>The <span class="file">spv/</span> module — lifecycle, participations, minimums already modelled</td></tr>
+    <tr><td>Downside &amp; disclosures</td><td><span class="pill have">exists</span></td><td><code>report.riskFactors</code> — missing items, flag count, public disclosures</td></tr>
+    <tr><td>Fit with what you know</td><td><span class="pill wire">wire</span></td><td><code>investor_profiles.preferred_sectors</code> vs <code>companies.industry</code>. State the overlap; do not score how well someone understands a business</td></tr>
+  </table>
+  <div class="warnbox">
+    <b>The one honest gap.</b> A family office&rsquo;s first two questions — is the cap table clean, is founder vesting
+    documented — are the two things least covered today. Cap table is a checklist row; vesting is not assessed at all.
+    Worth adding both to the scorer rather than dressing up what is there.
+  </div>
+</div>
+
+<!-- ─────────── vc ─────────── -->
+<h2>VC lens</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Panel</th><th style="width:100px">Status</th><th>Comes from</th></tr>
+    <tr><td>Traction — documented vs claimed</td><td><span class="pill wire">wire</span></td><td><code>factorScores.customer_traction</code>. The evidence array already distinguishes pass / warn / fail, which is exactly documented vs asserted</td></tr>
+    <tr><td>Market evidence</td><td><span class="pill have">exists</span></td><td><code>factorScores.market_evidence</code> — its flags already say “market size stated, no source”</td></tr>
+    <tr><td>Round &amp; availability</td><td><span class="pill have">exists</span></td><td><code>report.capitalRaise</code> + <code>investorSignals</code></td></tr>
+    <tr><td>Preparation velocity</td><td><span class="pill wire">wire</span></td><td><code>scoreHistory</code> again, this time as the feature rather than a footnote. Label it <i>preparation</i> velocity, never growth</td></tr>
+    <tr><td>Growth rate · cohorts · burn multiple</td><td><span class="pill none">absent</span></td><td>Not collected anywhere. Show the gap</td></tr>
+    <tr><td>Named competitive set · why-now</td><td><span class="pill none">absent</span></td><td>Could be added as campaign publication fields. Until then the flag “0 competitors named” is itself the useful signal</td></tr>
+  </table>
+  <div class="infobox">
+    Preparation velocity is the one thing on any of these four lenses that no competitor can show, because it is a
+    by-product of scoring the same company repeatedly over weeks. It costs nothing — the history is already stored.
+  </div>
+</div>
+
+<!-- ─────────── institutional ─────────── -->
+<h2>Institutional lens</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:230px">Panel</th><th style="width:100px">Status</th><th>Comes from</th></tr>
+    <tr><td>Data-room completeness</td><td><span class="pill have">exists</span></td><td>The checklist, promoted to the top. Best-served lens already</td></tr>
+    <tr><td>Evidence provenance counts</td><td><span class="pill newp">new</span></td><td>Count across <code>factorScores[*].evidence</code>: pass = read from a document, warn = asserted, fail = absent. Roughly ten lines of pure code over data already stored</td></tr>
+    <tr><td>Unit economics</td><td><span class="pill have">exists</span></td><td><code>factorScores.unit_economics</code>, <code>burn_runway</code></td></tr>
+    <tr><td>Compliance</td><td><span class="pill wire">wire</span></td><td>The <span class="file">compliance/</span> module — events, escalations — plus KYC status</td></tr>
+    <tr><td>Documents scanned but unreadable</td><td><span class="pill wire">wire</span></td><td>The scorer already records “download failed” / “no text”; the admin page surfaces it, the investor page does not</td></tr>
+  </table>
+</div>
+
+<!-- ─────────── tally ─────────── -->
+<h2>The tally</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:130px">Category</th><th style="width:70px">Panels</th><th>What it means</th></tr>
+    <tr><td><span class="pill have">exists</span></td><td><b>11</b></td><td>On the page today. Moves position only.</td></tr>
+    <tr><td><span class="pill wire">wire</span></td><td><b>13</b></td><td>Already computed or already in the database, not yet rendered here. This is the bulk of the work and none of it is hard.</td></tr>
+    <tr><td><span class="pill newp">new</span></td><td><b>4</b></td><td>Lens ordering table · evidence provenance counts · the ask-list prompt variant · the ready-in estimate.</td></tr>
+    <tr><td><span class="pill none">absent</span></td><td><b>5</b></td><td>Founder vesting · growth rate · cohorts · competitive set · why-now. Shown as gaps, not filled in.</td></tr>
+  </table>
+  <div class="okbox">
+    <b>No migration.</b> Everything reads tables that exist. The four CRR columns are stored, the score history is stored,
+    the factor evidence is stored, <code>matchReasons</code> is computed and discarded.
+  </div>
+</div>
+
+<!-- ─────────── order ─────────── -->
+<h2>If you say go, the order I&rsquo;d do it in</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:44px"></th><th style="width:250px">Step</th><th style="width:110px">Risk</th><th>Why this order</th></tr>
+    <tr><td><span class="stepno">1</span></td><td><b>Header: completeness + trend</b></td><td><span class="pill have">none</span></td><td>Pure re-order of loaded data. Biggest single improvement, nothing can break. Usable on its own even if you stop here.</td></tr>
+    <tr><td><span class="stepno">2</span></td><td><b>Lens switch + per-lens ordering</b></td><td><span class="pill have">none</span></td><td>URL param, profile default, a section-order table, and the CRR column reader. Sorting elsewhere keeps using Series A.</td></tr>
+    <tr><td><span class="stepno">3</span></td><td><b>Surface what is already computed</b></td><td><span class="pill wire">low</span></td><td><code>matchReasons</code>, the angel dimension cards, preparation velocity, unreadable-document counts, the SPV structure card.</td></tr>
+    <tr><td><span class="stepno">4</span></td><td><b>Ask-list for investors</b></td><td><span class="pill wire">low</span></td><td>Second prompt variant on the advice generator we shipped yesterday. Cached the same way. Falls back to the flags.</td></tr>
+    <tr><td><span class="stepno">5</span></td><td><b>Evidence provenance</b></td><td><span class="pill wire">low</span></td><td>Counting pass/warn/fail across stored evidence.</td></tr>
+    <tr><td><span class="stepno">6</span></td><td><b>Close the real gaps</b></td><td><span class="pill newp">medium</span></td><td>Founder vesting into the checklist and the scorer; competitive set and why-now as campaign fields. This one changes the scorer, so it needs a re-score — do it last, or separately.</td></tr>
+  </table>
+  <div class="badbox">
+    <b>One thing to settle before step 2.</b> Showing an investor the company under <i>their</i> weighting means two
+    investors can see different numbers for the same company. That is the point — but the page has to say which weighting
+    it is using, every time, or it looks like a bug. Marketplace lists stay on the single Series A column so rankings
+    remain apples-to-apples.
+  </div>
+</div>
+
+</body></html>

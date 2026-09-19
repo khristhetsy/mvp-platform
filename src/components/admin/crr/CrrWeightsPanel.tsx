@@ -23,7 +23,8 @@ type Shape = {
 };
 type HistoryEntry = WeightSet & { diff: DiffRow[]; summary: string };
 type Payload = { active: WeightSet; sets: HistoryEntry[]; scoreCounts: Record<string, number>; companiesByProfile: Record<string, number>; shape: Shape };
-type Draft = { profiles: Record<ProfileKey, Record<Dimension, number>>; factors: Record<string, number>; bands: Bands; floors: Partial<Record<ProfileKey, Floor>> };
+/** Factor points are the only thing edited. Dimension shares are derived from them. */
+type Draft = { factors: Record<ProfileKey, Record<string, number>>; bands: Bands; floors: Partial<Record<ProfileKey, Floor>> };
 type Tab = "companies" | "weights" | "history";
 
 const card = "rounded-xl border border-slate-200 bg-white";
@@ -32,7 +33,7 @@ const btnPri = "rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibo
 const num = "w-[62px] rounded-md border px-2 py-1 text-right text-[13px] tabular-nums focus:outline-none";
 const fmtAt = (s: string | null) => (s ? new Date(s).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
-const draftOf = (s: WeightSet): Draft => JSON.parse(JSON.stringify({ profiles: s.profiles, factors: s.factors, bands: s.bands, floors: s.floors }));
+const draftOf = (s: WeightSet): Draft => JSON.parse(JSON.stringify({ factors: s.factors, bands: s.bands, floors: s.floors }));
 
 function Delta({ n }: { n: number | null }) {
   if (n === null || n === 0) return <span className="text-slate-400">—</span>;
@@ -66,15 +67,14 @@ export function CrrWeightsPanel({ children, canEdit }: { children: ReactNode; ca
   useEffect(() => { void load(); }, [load]);
 
   const dirty = useMemo(() => Boolean(data && draft && JSON.stringify(draft) !== JSON.stringify(draftOf(data.active))), [data, draft]);
-  const profileTotal = draft ? sum(Object.values(draft.profiles[profile] ?? {})) : 0;
-  const factorTotal = draft ? sum(Object.values(draft.factors)) : 0;
-  const balanced = profileTotal === 100 && factorTotal === 100 && data ? data.shape.profiles.every((p) => sum(Object.values(draft!.profiles[p.key] ?? {})) === 100) : false;
+  const factorTotal = draft ? sum(Object.values(draft.factors[profile] ?? {})) : 0;
+  // Every stage must allocate exactly 100 points before anything can be saved.
+  const balanced = Boolean(draft && data) && data!.shape.profiles.every((p) => sum(Object.values(draft!.factors[p.key] ?? {})) === 100);
 
-  function setWeight(p: ProfileKey, d: Dimension, v: number) {
-    setDraft((s) => (s ? { ...s, profiles: { ...s.profiles, [p]: { ...s.profiles[p], [d]: v } } } : s));
+  function setFactor(p: ProfileKey, k: string, v: number) {
+    setDraft((s) => (s ? { ...s, factors: { ...s.factors, [p]: { ...s.factors[p], [k]: v } } } : s));
     setPreview(null);
   }
-  function setFactor(k: string, v: number) { setDraft((s) => (s ? { ...s, factors: { ...s.factors, [k]: v } } : s)); setPreview(null); }
   function setBand(k: keyof Bands, v: number) { setDraft((s) => (s ? { ...s, bands: { ...s.bands, [k]: v } } : s)); setPreview(null); }
   function setFloor(p: ProfileKey, v: number) {
     setDraft((s) => (s ? { ...s, floors: { ...s.floors, [p]: { minTraction: v, cap: s.floors[p]?.cap ?? "Developing" } } } : s));
@@ -124,8 +124,8 @@ export function CrrWeightsPanel({ children, canEdit }: { children: ReactNode; ca
         <WeightsTab
           shape={data.shape} active={data.active} draft={draft} profile={profile} onProfile={setProfile}
           counts={data.companiesByProfile ?? {}}
-          onWeight={setWeight} onFactor={setFactor} onBand={setBand} onFloor={setFloor}
-          profileTotal={profileTotal} factorTotal={factorTotal} balanced={balanced} dirty={dirty} canEdit={canEdit} busy={busy}
+          onFactor={setFactor} onBand={setBand} onFloor={setFloor}
+          factorTotal={factorTotal} balanced={balanced} dirty={dirty} canEdit={canEdit} busy={busy}
           preview={preview} onPreview={runPreview}
           onReset={() => { setDraft(draftOf(data.active)); setPreview(null); }}
           onDefaults={() => { setDraft(draftOf(data.shape.codeDefaults)); setPreview(null); }}
@@ -153,16 +153,21 @@ export function CrrWeightsPanel({ children, canEdit }: { children: ReactNode; ca
 
 function WeightsTab(p: {
   shape: Shape; active: WeightSet; draft: Draft; profile: ProfileKey; onProfile: (k: ProfileKey) => void;
-  /** Companies per profile — who a weight change would actually reach. */
+  /** Companies per profile — who a change would actually reach. */
   counts: Record<string, number>;
-  onWeight: (p: ProfileKey, d: Dimension, v: number) => void; onFactor: (k: string, v: number) => void;
+  onFactor: (p: ProfileKey, k: string, v: number) => void;
   onBand: (k: keyof Bands, v: number) => void; onFloor: (p: ProfileKey, v: number) => void;
-  profileTotal: number; factorTotal: number; balanced: boolean; dirty: boolean; canEdit: boolean; busy: boolean;
+  factorTotal: number; balanced: boolean; dirty: boolean; canEdit: boolean; busy: boolean;
   preview: { impact: ImpactSnapshot | null; errors: string[]; diff: DiffRow[] } | null;
   onPreview: () => void; onReset: () => void; onDefaults: () => void; onSave: () => void;
 }) {
-  const dimTotals = Object.fromEntries(p.shape.dimensions.map((d) => [d.key, sum(p.shape.factors.filter((f) => f.dimension === d.key).map((f) => p.draft.factors[f.key] ?? 0))])) as Record<Dimension, number>;
-  const was = p.active.profiles[p.profile] ?? {};
+  // Both tables read the SAME numbers now: the dimension row is the sum of the
+  // factor points below it, so they can never disagree.
+  const points = p.draft.factors[p.profile] ?? {};
+  const activePoints = (p.active.factors[p.profile] ?? {}) as Record<string, number>;
+  const shareOf = (src: Record<string, number>, dim: string) =>
+    sum(p.shape.factors.filter((f) => f.dimension === dim).map((f) => src[f.key] ?? 0));
+  const dimTotals = Object.fromEntries(p.shape.dimensions.map((d) => [d.key, shareOf(points, d.key)])) as Record<Dimension, number>;
 
   return (
     <div className="flex flex-col gap-4">
@@ -210,18 +215,21 @@ function WeightsTab(p: {
       </div>
 
       <div className={card}>
+        <p className="border-b border-slate-100 px-4 py-2.5 text-[12.5px] font-semibold text-slate-900">
+          Dimensions <span className="font-normal text-slate-500">— derived from the factor points below. Not editable, so the two can never disagree.</span>
+        </p>
         <table className="w-full text-[13px]">
-          <thead><tr className="text-left text-[11px] text-slate-500"><th className="px-4 py-2 font-medium">Dimension</th><th className="py-2 font-medium">Factors it rolls up</th><th className="py-2 font-medium">Now</th><th className="py-2 text-right font-medium">Weight</th><th className="py-2 font-medium">Proposed</th><th className="py-2 pr-4 text-right font-medium">Change</th></tr></thead>
+          <thead><tr className="text-left text-[11px] text-slate-500"><th className="px-4 py-2 font-medium">Dimension</th><th className="py-2 font-medium">Factors it rolls up</th><th className="py-2 font-medium">Now</th><th className="py-2 text-right font-medium">Share</th><th className="py-2 font-medium">Proposed</th><th className="py-2 pr-4 text-right font-medium">Change</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
             {p.shape.dimensions.map((d) => {
-              const before = (was as Record<string, number>)[d.key] ?? 0;
-              const after = p.draft.profiles[p.profile]?.[d.key] ?? 0;
+              const before = shareOf(activePoints, d.key);
+              const after = dimTotals[d.key] ?? 0;
               return (
                 <tr key={d.key}>
                   <td className="px-4 py-2 font-medium text-slate-900">{d.label}</td>
                   <td className="py-2 text-[11.5px] text-slate-500">{p.shape.factors.filter((f) => f.dimension === d.key).map((f) => f.label).join(" · ") || "—"}</td>
                   <td className="py-2"><Bar pct={before} muted /></td>
-                  <td className="py-2 text-right"><input type="number" min={0} max={100} disabled={!p.canEdit} value={after} onChange={(e) => p.onWeight(p.profile, d.key, Number(e.target.value))} className={`${num} ${after !== before ? "border-indigo-500 bg-indigo-50 font-semibold" : "border-slate-300"}`} aria-label={`${d.label} weight`} /></td>
+                  <td className="py-2 pr-1 text-right tabular-nums font-semibold text-slate-900">{after} <span className="text-[11px] font-normal text-slate-400">pts</span></td>
                   <td className="py-2"><Bar pct={after} /></td>
                   <td className="py-2 pr-4 text-right tabular-nums"><Delta n={after - before} /></td>
                 </tr>
@@ -229,25 +237,28 @@ function WeightsTab(p: {
             })}
           </tbody>
         </table>
-        <div className={`m-3 rounded-lg px-3 py-2 text-[13px] font-semibold ${p.profileTotal === 100 ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>
-          {p.profileTotal === 100 ? "✓ Total 100 — balanced" : `Total ${p.profileTotal} — must be exactly 100`}
+        <div className={`m-3 rounded-lg px-3 py-2 text-[13px] font-semibold ${p.factorTotal === 100 ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>
+          {p.factorTotal === 100 ? "✓ Total 100 — balanced" : `Total ${p.factorTotal} — the factor points below must total exactly 100`}
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className={card}>
-          <p className="border-b border-slate-100 px-4 py-2.5 text-[12.5px] font-semibold text-slate-900">Factor points <span className="font-normal text-slate-500">— the maxima the engine scores against, before profile weighting</span></p>
+          <p className="border-b border-slate-100 px-4 py-2.5 text-[12.5px] font-semibold text-slate-900">
+            Factor points · {p.shape.profiles.find((x) => x.key === p.profile)?.label}
+            <span className="font-normal text-slate-500"> — the maxima the engine scores this stage against. The only thing you edit; everything above is their sum.</span>
+          </p>
           <table className="w-full text-[13px]">
             <tbody className="divide-y divide-slate-100">
               {p.shape.factors.map((f) => {
-                const before = p.active.factors[f.key as keyof WeightSet["factors"]] ?? 0;
-                const after = p.draft.factors[f.key] ?? 0;
+                const before = activePoints[f.key] ?? 0;
+                const after = points[f.key] ?? 0;
                 return (
                   <tr key={f.key}>
                     <td className="px-4 py-1.5">{f.label}</td>
                     <td className="py-1.5 text-[11px] text-slate-500">{p.shape.dimensions.find((d) => d.key === f.dimension)?.label}</td>
                     <td className="py-1.5"><Bar pct={after * 5} /></td>
-                    <td className="py-1.5 pr-4 text-right"><input type="number" min={0} max={100} disabled={!p.canEdit} value={after} onChange={(e) => p.onFactor(f.key, Number(e.target.value))} className={`${num} ${after !== before ? "border-indigo-500 bg-indigo-50 font-semibold" : "border-slate-300"}`} aria-label={f.label} /></td>
+                    <td className="py-1.5 pr-4 text-right"><input type="number" min={0} max={100} disabled={!p.canEdit} value={after} onChange={(e) => p.onFactor(p.profile, f.key, Number(e.target.value))} className={`${num} ${after !== before ? "border-indigo-500 bg-indigo-50 font-semibold" : "border-slate-300"}`} aria-label={f.label} /></td>
                   </tr>
                 );
               })}
@@ -260,7 +271,7 @@ function WeightsTab(p: {
 
         <div className="flex flex-col gap-4">
           <div className={`${card} p-4`}>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Dimension totals</p>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Dimension totals · {p.shape.profiles.find((x) => x.key === p.profile)?.label}</p>
             <table className="w-full text-[12.5px]"><tbody>{p.shape.dimensions.map((d) => <tr key={d.key}><td className="py-1">{d.label}</td><td className="py-1 text-right tabular-nums text-slate-600">{dimTotals[d.key]} pts</td></tr>)}</tbody></table>
           </div>
           <div className={`${card} p-4`}>
@@ -431,9 +442,13 @@ function diffLocal(a: WeightSet, b: WeightSet): DiffRow[] {
       if (before !== after) rows.push({ section: `Profile · ${p}`, setting: d, before, after, delta: after - before });
     }
   }
-  for (const k of Object.keys(a.factors) as Array<keyof WeightSet["factors"]>) {
-    const before = a.factors[k] ?? 0, after = b.factors[k] ?? 0;
-    if (before !== after) rows.push({ section: "Factor points", setting: String(k), before, after, delta: after - before });
+  for (const p of Object.keys(a.factors) as ProfileKey[]) {
+    const aP = (a.factors[p] ?? {}) as Record<string, number>;
+    const bP = (b.factors[p] ?? {}) as Record<string, number>;
+    for (const k of Object.keys(aP)) {
+      const before = aP[k] ?? 0, after = bP[k] ?? 0;
+      if (before !== after) rows.push({ section: `${p} · factor points`, setting: k, before, after, delta: after - before });
+    }
   }
   for (const k of ["strong", "solid", "developing"] as const) {
     if (a.bands[k] !== b.bands[k]) rows.push({ section: "Bands", setting: k, before: a.bands[k], after: b.bands[k], delta: b.bands[k] - a.bands[k] });

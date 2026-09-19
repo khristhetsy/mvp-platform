@@ -14,17 +14,20 @@ import { writeAuditLog } from "@/lib/data/audit";
 import { CRR_DIMENSIONS, FACTOR_TO_DIMENSION } from "@/lib/crr/profiles";
 import {
   CODE_DEFAULT_SET, DIMENSION_LABEL, FACTOR_KEYS, FACTOR_LABEL, PROFILE_KEYS, PROFILE_LABEL, PROFILE_ROUND,
-  diffSets, nextVersionName, summarizeDiff, validateSet, type WeightSet,
+  diffSets, nextVersionName, sharesForAll, summarizeDiff, validateSet, type WeightSet,
 } from "@/lib/crr/weight-sets";
+
+/** Dimension shares are never sent by the client — they are the sum of the points. */
+const withDerivedShares = (set: WeightSet): WeightSet => ({ ...set, profiles: sharesForAll(set.factors) });
 import { getSet, listSets, loadActiveSet, previewImpact, profileCounts, rescoreAllUnder, saveSet, scoreCountsByVersion } from "@/lib/crr/weight-sets-db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-const dims = z.object({ narrative: z.number(), team: z.number(), financial: z.number(), traction: z.number(), capTable: z.number() });
+// Factor points are the only thing the editor sends now — one set of thirteen
+// per stage. Dimension weights are derived from them server-side.
 const setSchema = z.object({
-  profiles: z.record(z.string(), dims),
-  factors: z.record(z.string(), z.number()),
+  factors: z.record(z.string(), z.record(z.string(), z.number())),
   bands: z.object({ strong: z.number(), solid: z.number(), developing: z.number() }),
   floors: z.record(z.string(), z.object({ minTraction: z.number(), cap: z.enum(["Strong", "Solid", "Developing", "Early"]) })),
 });
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest) {
     if (body?.action === "preview") {
       const parsed = setSchema.safeParse(body.set);
       if (!parsed.success) return NextResponse.json({ error: "Invalid weights." }, { status: 400 });
-      const candidate = { ...current, ...parsed.data } as WeightSet;
+      const candidate = withDerivedShares({ ...current, ...parsed.data } as WeightSet);
       const errors = validateSet(candidate);
       const impact = errors.length ? null : await previewImpact(db, candidate, current);
       return NextResponse.json({ errors, impact, diff: diffSets(current, candidate) });
@@ -79,11 +82,11 @@ export async function POST(req: NextRequest) {
       if (body.action === "revert") {
         const source = typeof body.id === "string" ? await getSet(db, body.id) : null;
         if (!source) return NextResponse.json({ error: "That version no longer exists." }, { status: 404 });
-        candidate = { ...current, profiles: source.profiles, factors: source.factors, bands: source.bands, floors: source.floors };
+        candidate = withDerivedShares({ ...current, factors: source.factors, bands: source.bands, floors: source.floors });
       } else {
         const parsed = setSchema.safeParse(body.set);
         if (!parsed.success) return NextResponse.json({ error: "Invalid weights." }, { status: 400 });
-        candidate = { ...current, ...parsed.data } as WeightSet;
+        candidate = withDerivedShares({ ...current, ...parsed.data } as WeightSet);
       }
 
       const errors = validateSet(candidate);

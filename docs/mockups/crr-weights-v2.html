@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR Weights · two layers explained, Narrative split, per-stage recommendation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1100px;line-height:1.55}
+.frame{width:1100px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.dim{opacity:.55}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 9px;border-bottom:1px solid #E2E7F0}
+td{padding:7px 9px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tab{font-size:12.5px;padding:5px 12px;border-radius:8px;border:1px solid #D6DDE8;color:#334155;background:#fff}
+.tab.on{background:#4F46E5;color:#fff;font-weight:600;border-color:#4F46E5}
+.inp{display:inline-block;width:52px;border:1px solid #C9D3E3;border-radius:6px;padding:3px 7px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;background:#fff}
+.ro{display:inline-block;width:52px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:#334155}
+.bar{display:inline-block;height:5px;border-radius:99px;background:#F1F5F9;width:78px;overflow:hidden;vertical-align:middle}
+.bar i{display:block;height:100%;border-radius:99px;background:#4F46E5}
+.bar.g i{background:#94A3B8}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:600}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.ai{border:1px solid #DCDCFB;background:linear-gradient(180deg,#FBFBFF,#F6F6FE);border-radius:11px;padding:12px 14px}
+.aihead{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:#4F46E5;text-transform:uppercase;letter-spacing:.05em}
+.delta{font-size:11px;font-variant-numeric:tabular-nums}
+.up{color:#137A3B}.down{color:#B42323}.same{color:#C3CCDA}
+.new{background:#EEF0FE;color:#4F46E5;font-size:9.5px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:5px;letter-spacing:.04em}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ticks{display:flex;gap:2px;align-items:center}
+.ticks i{width:5px;height:11px;border-radius:1px;background:#CBD5E1;display:block}
+.ticks i.on{background:#4F46E5}
+</style></head><body>
+
+<p class="note"><b>Revised plan.</b> The previous mockup proposed collapsing the two layers into per-stage factor points. I talked myself out of it — that breaks the stage-neutral total the outreach gate hangs on, and it makes the real defect worse. This version fixes the two things that are actually wrong and puts the per-stage recommendation where it belongs.</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. The two layers, explained on screen <span>— they aren&rsquo;t rivals, nothing says so</span></h2>
+<p class="note">Factor points and profile weights answer different questions. Nothing on the tab says which is which, so &ldquo;Narrative 4&rdquo; sitting near &ldquo;Narrative 30&rdquo; reads as a bug. One explanatory line each, and a dimension table that shows <b>both</b> numbers side by side instead of only one.</p>
+<div class="frame">
+  <div class="tabs">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Stage</span>
+    <span class="tab on">Pre-seed</span><span class="tab">Seed</span>
+    <span class="tab">Series A <span style="font-size:10px;opacity:.7">investor-facing</span></span><span class="tab">Growth</span>
+    <span style="margin-left:auto" class="lock">Active <code>crr-profiles-v1</code></span>
+  </div>
+
+  <p class="lbl" style="margin-top:14px">Dimensions</p>
+  <p class="note" style="margin-bottom:8px">
+    <b>Raw share</b> is how many of the 100 engine points live in this dimension — read-only, it is the sum of the factor points below.
+    <b>Weight</b> is how much a <i>pre-seed investor</i> cares about the dimension once it has been scored — that is the number you edit here.
+    A dimension can be a small share of the evidence and still matter enormously to a reader; that is the whole point of having both.
+  </p>
+  <table>
+    <tr>
+      <th style="width:110px">Dimension</th>
+      <th>Factors it rolls up</th>
+      <th style="width:150px">Raw share <span class="lock" style="text-transform:none;letter-spacing:0">derived</span></th>
+      <th style="width:120px">Weight · Pre-seed</th>
+      <th style="width:120px">Granularity</th>
+    </tr>
+    <tr>
+      <td><b>Narrative</b></td>
+      <td class="lock">Pitch deck · Business plan · Raise &amp; use of funds <span class="new">3 factors</span></td>
+      <td><span class="bar g"><i style="width:10%"></i></span> <span class="ro">10</span> <span class="lock">pts</span></td>
+      <td><span class="inp">22</span></td>
+      <td><span class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="lock">11 steps</span></td>
+    </tr>
+    <tr>
+      <td><b>Team</b></td>
+      <td class="lock">Founder background &amp; integrity · Team depth &amp; key gaps <span class="new">2 factors</span></td>
+      <td><span class="bar g"><i style="width:12%"></i></span> <span class="ro">12</span> <span class="lock">pts</span></td>
+      <td><span class="inp">32</span></td>
+      <td><span class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="lock">13 steps</span></td>
+    </tr>
+    <tr>
+      <td><b>Financial</b></td>
+      <td class="lock">Revenue &amp; cash flow · Unit economics · Burn &amp; runway · Deal structure</td>
+      <td><span class="bar g"><i style="width:35%"></i></span> <span class="ro">35</span> <span class="lock">pts</span></td>
+      <td><span class="inp">12</span></td>
+      <td><span class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="lock">fine</span></td>
+    </tr>
+    <tr>
+      <td><b>Traction</b></td>
+      <td class="lock">Customer traction &amp; LOIs · Market &amp; competitive evidence</td>
+      <td><span class="bar g"><i style="width:23%"></i></span> <span class="ro">23</span> <span class="lock">pts</span></td>
+      <td><span class="inp">20</span></td>
+      <td><span class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="lock">fine</span></td>
+    </tr>
+    <tr>
+      <td><b>Cap table</b></td>
+      <td class="lock">Governance · IP &amp; moat · Exit strategy · Industry fit · Impact / ESG</td>
+      <td><span class="bar g"><i style="width:20%"></i></span> <span class="ro">20</span> <span class="lock">pts</span></td>
+      <td><span class="inp">14</span></td>
+      <td><span class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="lock">fine</span></td>
+    </tr>
+  </table>
+  <p style="margin:8px 0 0">
+    <span class="pill grn">✓ Raw share totals 100</span>
+    <span class="pill grn" style="margin-left:6px">✓ Pre-seed weights total 100</span>
+    <span class="lock" style="margin-left:8px">two separate checks, each shown next to the table it governs</span>
+  </p>
+  <div class="infobox">
+    <b>Granularity</b> is the new column, and it is the reason for section 2. It shows how many distinct values a dimension can take.
+    A dimension carrying 30% of the score should not move in quarters.
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. Split Narrative and Team <span>— the defect that actually matters</span></h2>
+<p class="note">Narrative is one factor with a maximum of 4. So the Narrative dimension can only ever be 0, 25, 50, 75 or 100 — and at pre-seed it carries about a third of the score. One yes/no-ish judgement on the deck swings a pre-seed founder&rsquo;s rating by 7½ points at a time. Team has the same shape: one factor, one question, 30% of the weight.</p>
+<div class="frame">
+  <div class="two">
+    <div>
+      <p class="lbl">Before</p>
+      <table>
+        <tr><th>Factor</th><th style="width:60px">Max</th><th style="width:110px">Dimension can be</th></tr>
+        <tr><td>Pitch Deck &amp; Business Plan Quality</td><td><b>4</b></td><td><span class="pill red">5 values</span></td></tr>
+        <tr><td colspan="3" class="lock" style="border:0;padding-top:2px">↳ Narrative = 0 · 25 · 50 · 75 · 100, weighted 30 at pre-seed</td></tr>
+        <tr><td style="padding-top:14px">Founder Integrity &amp; Team Depth</td><td style="padding-top:14px"><b>11</b></td><td style="padding-top:14px"><span class="pill amb">12 values</span></td></tr>
+        <tr><td colspan="3" class="lock" style="border:0;padding-top:2px">↳ two different questions — is the founder credible, and is the team complete — answered as one number</td></tr>
+      </table>
+      <div class="warnbox">
+        Between them, Narrative and Team are <b>60% of a pre-seed founder&rsquo;s score</b>, resting on two questions.
+        That is why pre-seed scores jump around and why the band a company lands in feels arbitrary at the early end.
+      </div>
+    </div>
+    <div>
+      <p class="lbl">After — 16 factors, still totalling 100</p>
+      <table>
+        <tr><th>Factor</th><th style="width:60px">Max</th><th style="width:70px">Was</th></tr>
+        <tr><td>Pitch deck quality <span class="lock">— story, problem, solution, ask</span></td><td><b>4</b></td><td class="delta same">from 4</td></tr>
+        <tr><td>Business plan depth <span class="new">new</span></td><td><b>4</b></td><td class="delta up">split</td></tr>
+        <tr><td>Raise &amp; use of funds clarity <span class="new">new</span></td><td><b>2</b></td><td class="delta up">from Deal structure</td></tr>
+        <tr style="background:#FBFBFF"><td class="lock" style="padding-left:16px">= Narrative</td><td><b>10</b></td><td class="delta up">4 → 10</td></tr>
+        <tr><td style="padding-top:12px">Founder background &amp; integrity</td><td style="padding-top:12px"><b>8</b></td><td style="padding-top:12px" class="delta down">from 11</td></tr>
+        <tr><td>Team depth &amp; key gaps <span class="new">new</span></td><td><b>4</b></td><td class="delta up">split</td></tr>
+        <tr style="background:#FBFBFF"><td class="lock" style="padding-left:16px">= Team</td><td><b>12</b></td><td class="delta up">11 → 12</td></tr>
+        <tr><td class="lock" style="padding-top:12px" colspan="3">Paid for by: Exit strategy 7→4, IP &amp; moat 8→6, Governance 9→8, Deal structure 3→2. Nothing else moves.</td></tr>
+      </table>
+      <div class="okbox">
+        Narrative now takes <b>11 distinct values instead of 5</b> and Team 13. The same weight, carried by evidence
+        fine-grained enough to hold it. Factor points still total exactly 100, so the raw score and the 65 outreach gate
+        keep meaning what they meant.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. The per-stage recommendation — on the weights, where stage belongs</h2>
+<p class="note">Profile weights are already per stage, so this needs no migration and does not touch <code>total_score</code> or the outreach gate. Apply loads the numbers into the editor; Preview impact still tells you who moves before anything is saved.</p>
+<div class="frame">
+  <div class="two" style="grid-template-columns:1fr 420px">
+    <div>
+      <p class="lbl">Pre-seed weights</p>
+      <table>
+        <tr><th style="width:110px">Dimension</th><th style="width:90px">Now</th><th style="width:110px">Recommended</th><th>Why</th></tr>
+        <tr><td><b>Team</b></td><td><span class="ro">30</span></td><td><b class="up">32</b></td><td class="lock">the most-cited kill reason at this stage</td></tr>
+        <tr><td><b>Narrative</b></td><td><span class="ro">30</span></td><td><b class="down">22</b></td><td class="lock">still high — but see the data note</td></tr>
+        <tr><td><b>Traction</b></td><td><span class="ro">15</span></td><td><b class="up">20</b></td><td class="lock">even pre-seed, <i>some</i> demand evidence separates companies</td></tr>
+        <tr><td><b>Cap table</b></td><td><span class="ro">10</span></td><td><b class="up">14</b></td><td class="lock">messy founder splits kill pre-seed rounds</td></tr>
+        <tr><td><b>Financial</b></td><td><span class="ro">15</span></td><td><b class="down">12</b></td><td class="lock">little to read before revenue</td></tr>
+        <tr style="background:#FBFBFF"><td class="lock">Total</td><td class="lock">100</td><td><span class="pill grn">100</span></td><td></td></tr>
+      </table>
+
+      <p class="lbl" style="margin-top:16px">Series A weights</p>
+      <table>
+        <tr><th style="width:110px">Dimension</th><th style="width:90px">Now</th><th style="width:110px">Recommended</th><th>Why</th></tr>
+        <tr><td><b>Traction</b></td><td><span class="ro">30</span></td><td><b class="same">30</b></td><td class="lock">already right</td></tr>
+        <tr><td><b>Financial</b></td><td><span class="ro">25</span></td><td><b class="up">28</b></td><td class="lock">unit economics is the Series A question</td></tr>
+        <tr><td><b>Cap table</b></td><td><span class="ro">20</span></td><td><b class="same">20</b></td><td class="lock">—</td></tr>
+        <tr><td><b>Team</b></td><td><span class="ro">15</span></td><td><b class="same">15</b></td><td class="lock">—</td></tr>
+        <tr><td><b>Narrative</b></td><td><span class="ro">10</span></td><td><b class="down">7</b></td><td class="lock">the deck stops being the evidence once there is data</td></tr>
+        <tr style="background:#FBFBFF"><td class="lock">Total</td><td class="lock">100</td><td><span class="pill grn">100</span></td><td></td></tr>
+      </table>
+    </div>
+
+    <div>
+      <div class="ai">
+        <div class="aihead"><span>✦</span> Recommended for Pre-seed</div>
+        <p style="font-size:12px;line-height:1.6;margin:8px 0 0;color:#334155">
+          The largest change is Narrative down from 30. Not because the story does not matter pre-seed — it does — but
+          because of what your own scored companies show:
+        </p>
+        <div style="margin-top:8px;border:1px solid #E2E7F0;border-radius:8px;background:#fff;padding:9px 11px">
+          <p style="margin:0;font-size:11.5px;color:#334155;line-height:1.6">
+            <b>14 of your 22 scored companies score Narrative at 100.</b> At weight 30 that is 30 points handed to two
+            thirds of the list — it lifts the average and separates nobody. Traction, at weight 15, has a spread of 0 to 62
+            across the same companies and is doing most of the actual discriminating already.
+          </p>
+          <p class="lock" style="margin:6px 0 0">Read from your scores under <code>crr-profiles-v1</code>. Recomputed each time this card opens.</p>
+        </div>
+        <p style="font-size:12px;line-height:1.6;margin:9px 0 0;color:#334155">
+          Splitting Narrative into three factors (section 2) will lower those 100s on its own, since a company with a good
+          deck and no written plan can no longer score full marks. <b>Do that first, re-score, then look at this card again</b> —
+          the recommendation may shrink once the evidence is finer.
+        </p>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn pri">Apply to Pre-seed</button>
+          <button class="btn">Apply to all four stages</button>
+          <button class="btn">Dismiss</button>
+        </div>
+        <p class="lock" style="margin:8px 0 0">
+          Loads into the editor only. Nothing saves until you save a version.
+        </p>
+      </div>
+
+      <div class="warnbox">
+        <b>This is a judgement, not a benchmark.</b> There is no published industry standard for these weights — the
+        thirteen (soon sixteen) factors are iCapOS&rsquo;s own rubric, so there is nothing external to compare against.
+        What the card can honestly do is reason about <i>your</i> scored companies: which dimensions are flat across
+        everyone, which spread the field. The screen says so in those words rather than claiming an industry norm.
+      </div>
+      <div class="infobox">
+        <b>The benchmark that will be real, later.</b> <code>ir_matches</code> already records how far each investor got —
+        matched → intro_sent → contacted → meeting_scheduled → meeting_held → committed / passed. With enough of those,
+        the card gains a second, defensible source: &ldquo;from your own results — which factors separated the companies
+        that got meetings.&rdquo; Worth shaping the question now so the data is usable when the volume arrives.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. What it costs, and the one hazard</h2>
+<div class="frame">
+  <div class="two">
+    <div>
+      <p class="lbl">Small</p>
+      <ul class="tight">
+        <li>The explanatory lines and the Raw-share / Granularity columns — display only, the arithmetic exists.</li>
+        <li>The recommendation card and Apply — loads numbers into the editor, no new save path, no migration. Profile weights are already per stage and already versioned.</li>
+        <li>The &ldquo;flat across everyone&rdquo; reasoning is a read over the scores you already store.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="lbl">The hazard — splitting factors needs a re-score</p>
+      <ul class="tight">
+        <li>New factor keys mean old score rows have no value for them. The rollup skips factors with no stored score, so an un-re-scored company would read <b>Narrative 0</b>, not &ldquo;unchanged&rdquo;.</li>
+        <li>Fix: a compatibility map — until a company is re-scored, the old <code>pitch_quality</code> ratio stands in for the three new narrative factors, and <code>founder_team</code> for the two team ones. Old rows keep reading correctly; new rows use the real split.</li>
+        <li>Then Re-score All, which already exists. 22 companies.</li>
+        <li>The AI scorer needs the two new questions written — business-plan depth and team gaps — and a use-of-funds check moved out of Deal structure.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:12px">
+    Suggested order: <b>(1)</b> the explanation and the two new columns — zero risk, and it makes the rest legible.
+    <b>(2)</b> the recommendation card — no migration. <b>(3)</b> the factor split with the compatibility map and a re-score.
+    Each is useful on its own; you can stop after any of them.
+  </p>
+</div>
+
+</body></html>

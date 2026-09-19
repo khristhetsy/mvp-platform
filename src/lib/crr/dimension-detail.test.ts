@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { FactorKey } from "@/lib/ai/readiness-scoring";
-import { CODE_DEFAULT_SET, rollupWith, scoreWith, type StoredFactor } from "@/lib/crr/weight-sets";
+import { BASE_FACTOR_MAX, CODE_DEFAULT_SET, totalWith, type StoredFactor } from "@/lib/crr/weight-sets";
 import {
   allGaps, dimensionCards, dimensionDetail, factorsIn, rankedGaps,
 } from "@/lib/crr/dimension-detail";
 
-/** Every factor at half marks against the code maxima. */
+/** Every factor at half marks against the engine's own maxima. */
 function halfMarks(): Record<FactorKey, StoredFactor> {
   return Object.fromEntries(
-    Object.entries(CODE_DEFAULT_SET.factors).map(([k, max]) => [k, { pts: max / 2, max }]),
+    Object.entries(BASE_FACTOR_MAX).map(([k, max]) => [k, { pts: max / 2, max }]),
   ) as Record<FactorKey, StoredFactor>;
 }
 const full = (): Record<FactorKey, StoredFactor> =>
   Object.fromEntries(
-    Object.entries(CODE_DEFAULT_SET.factors).map(([k, max]) => [k, { pts: max, max }]),
+    Object.entries(BASE_FACTOR_MAX).map(([k, max]) => [k, { pts: max, max }]),
   ) as Record<FactorKey, StoredFactor>;
 
 describe("factorsIn", () => {
@@ -28,6 +28,7 @@ describe("dimensionCards", () => {
   it("returns the five dimensions with the stage profile's weights", () => {
     const cards = dimensionCards(halfMarks(), CODE_DEFAULT_SET, "angel");
     expect(cards.map((c) => c.key)).toEqual(["narrative", "team", "financial", "traction", "capTable"]);
+    // The weight IS the points the stage allocates, apportioned from the code profiles.
     expect(cards.find((c) => c.key === "narrative")?.weight).toBe(30); // pre-seed leans on narrative
     expect(cards.find((c) => c.key === "traction")?.weight).toBe(15);
   });
@@ -53,11 +54,10 @@ describe("dimensionCards", () => {
     }
   });
 
-  it("the contributions add up to the profile score", () => {
+  it("the contributions add up to the stage score", () => {
     const factors = halfMarks();
     const total = dimensionCards(factors, CODE_DEFAULT_SET, "angel").reduce((s, c) => s + c.contributes, 0);
-    const expected = scoreWith(rollupWith(factors, CODE_DEFAULT_SET.factors), CODE_DEFAULT_SET.profiles.angel);
-    expect(Math.round(total)).toBe(expected);
+    expect(Math.round(total)).toBe(totalWith(factors, CODE_DEFAULT_SET.factors.angel));
   });
 });
 
@@ -65,8 +65,9 @@ describe("dimensionDetail", () => {
   it("lists the factors inside and they sum to the dimension's points", () => {
     const d = dimensionDetail("traction", halfMarks(), CODE_DEFAULT_SET, "seed_institutional");
     expect(d.factors.map((f) => f.key).sort()).toEqual(["customer_traction", "market_evidence"]);
-    expect(d.ptsMax).toBe(23); // 13 + 10
-    expect(d.pts).toBeCloseTo(11.5, 1);
+    // Seed allocates 25 points to Traction, so its two factors share exactly that.
+    expect(d.ptsMax).toBe(25);
+    expect(d.pts).toBeCloseTo(12.5, 1);
     expect(d.score).toBe(50);
   });
 
@@ -121,10 +122,9 @@ describe("allGaps", () => {
     for (let i = 1; i < gaps.length; i++) expect(gaps[i - 1].lost).toBeGreaterThanOrEqual(gaps[i].lost);
   });
 
-  it("the total lost plus the score is 100 for a fully-weighted profile", () => {
+  it("the total lost plus the score is 100", () => {
     const factors = halfMarks();
     const lost = allGaps(factors, CODE_DEFAULT_SET, "angel").reduce((s, g) => s + g.lost, 0);
-    const score = scoreWith(rollupWith(factors, CODE_DEFAULT_SET.factors), CODE_DEFAULT_SET.profiles.angel);
-    expect(Math.round(lost + score)).toBe(100);
+    expect(Math.round(lost + totalWith(factors, CODE_DEFAULT_SET.factors.angel))).toBe(100);
   });
 });
