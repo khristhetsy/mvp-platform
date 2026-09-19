@@ -1551,6 +1551,7 @@ export type Database = {
           score_version: string;
           document_count: number;
           outreach_unlocked: boolean;
+          dimension_advice: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };

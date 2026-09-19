@@ -4,7 +4,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FactorKey } from "@/lib/ai/readiness-scoring";
-import { investorFacingScore } from "@/lib/crr/select-score";
+import { investorFacingScore, normalizeFundingStage } from "@/lib/crr/select-score";
 import { stageToProfile, type ProfileKey } from "@/lib/crr/profiles";
 import {
   CODE_DEFAULT_SET, fromRow, impactOf, scoreColumnsFor,
@@ -44,6 +44,21 @@ export async function scoreCountsByVersion(db: Db): Promise<Record<string, numbe
   return out;
 }
 
+/**
+ * How many companies each profile actually covers — every company, not only the
+ * scored ones, so the Weights tab says who a change would reach.
+ */
+export async function profileCounts(db: Db): Promise<Record<ProfileKey, number>> {
+  const out: Record<ProfileKey, number> = {
+    angel: 0, seed_institutional: 0, seriesA_institutional: 0, growth_institutional: 0,
+  };
+  const { data } = await db.from("companies").select("id, funding_stage");
+  for (const c of (data ?? []) as Array<{ funding_stage: string | null }>) {
+    out[stageToProfile(normalizeFundingStage(c.funding_stage))] += 1;
+  }
+  return out;
+}
+
 export type LatestScore = {
   id: string; companyId: string; company: string; version: string | null;
   factors: Partial<Record<FactorKey, StoredFactor>>;
@@ -67,10 +82,10 @@ export async function latestScores(db: Db): Promise<LatestScore[]> {
 
   return latest.map((r) => {
     const c = meta.get(r.company_id);
-    const stage = String(c?.funding_stage ?? "").toLowerCase();
-    const profile: ProfileKey = stageToProfile(
-      stage.includes("pre") ? "pre-seed" : stage.includes("seed") ? "seed" : stage.includes("a") ? "series-a" : stage ? "later" : "series-a",
-    );
+    // One mapping for the whole app: normalizeFundingStage knows the synonyms
+    // ("angel", "preseed", "series-b", "expansion", "bridge", "pre-IPO"). A local
+    // copy of this used to bucket a company whose stage read "Angel" as Series A.
+    const profile: ProfileKey = stageToProfile(normalizeFundingStage(c?.funding_stage as string | null));
     return {
       id: r.id as string,
       companyId: r.company_id as string,

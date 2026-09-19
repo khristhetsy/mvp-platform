@@ -13,10 +13,10 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { CRR_DIMENSIONS, FACTOR_TO_DIMENSION } from "@/lib/crr/profiles";
 import {
-  CODE_DEFAULT_SET, DIMENSION_LABEL, FACTOR_KEYS, FACTOR_LABEL, PROFILE_KEYS, PROFILE_LABEL,
+  CODE_DEFAULT_SET, DIMENSION_LABEL, FACTOR_KEYS, FACTOR_LABEL, PROFILE_KEYS, PROFILE_LABEL, PROFILE_ROUND,
   diffSets, nextVersionName, summarizeDiff, validateSet, type WeightSet,
 } from "@/lib/crr/weight-sets";
-import { getSet, listSets, loadActiveSet, previewImpact, rescoreAllUnder, saveSet, scoreCountsByVersion } from "@/lib/crr/weight-sets-db";
+import { getSet, listSets, loadActiveSet, previewImpact, profileCounts, rescoreAllUnder, saveSet, scoreCountsByVersion } from "@/lib/crr/weight-sets-db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -32,7 +32,7 @@ const setSchema = z.object({
 /** The fixed shape the editor renders: which factors belong to which dimension. */
 const SHAPE = {
   dimensions: CRR_DIMENSIONS.map((d) => ({ key: d, label: DIMENSION_LABEL[d] })),
-  profiles: PROFILE_KEYS.map((p) => ({ key: p, label: PROFILE_LABEL[p] })),
+  profiles: PROFILE_KEYS.map((p) => ({ key: p, label: PROFILE_LABEL[p], round: PROFILE_ROUND[p] })),
   factors: FACTOR_KEYS.map((k) => ({ key: k, label: FACTOR_LABEL[k], dimension: FACTOR_TO_DIMENSION[k] })),
   codeDefaults: CODE_DEFAULT_SET,
 };
@@ -42,13 +42,15 @@ export async function GET() {
   if ("error" in auth) return auth.error;
   const db = createServiceRoleClient();
   try {
-    const [active, sets, scoreCounts] = await Promise.all([loadActiveSet(db), listSets(db), scoreCountsByVersion(db)]);
+    const [active, sets, scoreCounts, companiesByProfile] = await Promise.all([
+      loadActiveSet(db), listSets(db), scoreCountsByVersion(db), profileCounts(db),
+    ]);
     const withDiff = sets.map((s, i) => {
       const prev = sets[i + 1];
       const rows = prev ? diffSets(prev, s) : [];
       return { ...s, diff: rows, summary: prev ? summarizeDiff(rows) : "Seeded from the code defaults" };
     });
-    return NextResponse.json({ active, sets: withDiff, scoreCounts, shape: SHAPE });
+    return NextResponse.json({ active, sets: withDiff, scoreCounts, companiesByProfile, shape: SHAPE });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't load weights." }, { status: 500 });
   }

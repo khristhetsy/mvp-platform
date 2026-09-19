@@ -33,11 +33,25 @@ export type WeightSet = {
 };
 
 export const PROFILE_KEYS = Object.keys(PROFILES) as ProfileKey[];
+/**
+ * Display names only. The KEYS never change: `angel` is the name of a database
+ * column (score_angel), it is written into every saved weight-set version, and
+ * it is stamped on every historical score row — renaming it would mean a
+ * migration plus rewriting history. Renaming the label costs one line.
+ */
 export const PROFILE_LABEL: Record<ProfileKey, string> = {
-  angel: "Angel",
+  angel: "Pre-seed",
   seed_institutional: "Seed",
   seriesA_institutional: "Series A",
   growth_institutional: "Growth",
+};
+/** Which round each profile is for — shown on the Weights tab so the four tabs
+ *  read as real cohorts rather than abstract presets. */
+export const PROFILE_ROUND: Record<ProfileKey, string> = {
+  angel: "Angel round — friends & family, angels, pre-seed funds",
+  seed_institutional: "Seed round — institutional seed funds",
+  seriesA_institutional: "Series A round",
+  growth_institutional: "Expansion, Series B or Series C",
 };
 export const DIMENSION_LABEL: Record<Dimension, string> = {
   narrative: "Narrative", team: "Team", financial: "Financial", traction: "Traction", capTable: "Cap table",

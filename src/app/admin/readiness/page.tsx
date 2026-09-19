@@ -4,18 +4,29 @@ import { AdminReadinessDashboard } from "@/components/admin/AdminReadinessDashbo
 import { CrrWeightsPanel } from "@/components/admin/crr/CrrWeightsPanel";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { stageToProfile } from "@/lib/crr/profiles";
+import { normalizeFundingStage } from "@/lib/crr/select-score";
+import { loadActiveSet } from "@/lib/crr/weight-sets-db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminReadinessPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const admin = createServiceRoleClient();
+  // The weighting in force right now — the dimension cards are computed against it.
+  const weightSet = await loadActiveSet(admin);
 
   // All companies with their latest readiness score
-  const { data: companies } = await admin
+  // funding_stage is on the table (migration 20260803002) but not in the generated
+  // types yet — cast, the same way weight-sets-db.ts does.
+  const { data: companyRows } = await admin
     .from("companies")
-    .select("id, company_name, industry, status, updated_at")
+    .select("id, company_name, industry, status, updated_at, funding_stage")
     .order("company_name", { ascending: true });
+  const companies = companyRows as unknown as Array<{
+    id: string; company_name: string; industry: string | null; status: string | null;
+    updated_at: string | null; funding_stage: string | null;
+  }> | null;
 
   // Latest readiness score per company
   const { data: allScores } = await admin
@@ -62,6 +73,9 @@ export default async function AdminReadinessPage() {
       companyName: c.company_name,
       industry: c.industry,
       status: c.status,
+      // Which audience profile this company is scored against — its own funding
+      // stage, not a global default. Pre-seed → Angel round, Seed → Seed, and so on.
+      profile: stageToProfile(normalizeFundingStage(c.funding_stage)),
       score: score
         ? {
             id: score.id,
@@ -118,6 +132,7 @@ export default async function AdminReadinessPage() {
         <AdminReadinessDashboard
           rows={rows}
           metrics={{ totalScored, outreachUnlocked, avgScore, overrideCount, totalCompanies: rows.length }}
+          weightSet={weightSet}
         />
       </CrrWeightsPanel>
     </AppShell>

@@ -22,7 +22,7 @@ describe("validateSet", () => {
   it("rejects a profile that doesn't total 100", () => {
     const set = clone(CODE_DEFAULT_SET);
     set.profiles.angel.team += 5;
-    expect(validateSet(set).some((e) => e.includes("Angel") && e.includes("105"))).toBe(true);
+    expect(validateSet(set).some((e) => e.includes("Pre-seed") && e.includes("105"))).toBe(true);
   });
 
   it("rejects factor points that don't total 100", () => {

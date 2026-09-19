@@ -17,12 +17,12 @@ import type { Bands, DiffRow, Floor, ImpactSnapshot, WeightSet } from "@/lib/crr
 
 type Shape = {
   dimensions: Array<{ key: Dimension; label: string }>;
-  profiles: Array<{ key: ProfileKey; label: string }>;
+  profiles: Array<{ key: ProfileKey; label: string; round: string }>;
   factors: Array<{ key: string; label: string; dimension: Dimension }>;
   codeDefaults: WeightSet;
 };
 type HistoryEntry = WeightSet & { diff: DiffRow[]; summary: string };
-type Payload = { active: WeightSet; sets: HistoryEntry[]; scoreCounts: Record<string, number>; shape: Shape };
+type Payload = { active: WeightSet; sets: HistoryEntry[]; scoreCounts: Record<string, number>; companiesByProfile: Record<string, number>; shape: Shape };
 type Draft = { profiles: Record<ProfileKey, Record<Dimension, number>>; factors: Record<string, number>; bands: Bands; floors: Partial<Record<ProfileKey, Floor>> };
 type Tab = "companies" | "weights" | "history";
 
@@ -123,6 +123,7 @@ export function CrrWeightsPanel({ children, canEdit }: { children: ReactNode; ca
       {tab === "weights" && data && draft ? (
         <WeightsTab
           shape={data.shape} active={data.active} draft={draft} profile={profile} onProfile={setProfile}
+          counts={data.companiesByProfile ?? {}}
           onWeight={setWeight} onFactor={setFactor} onBand={setBand} onFloor={setFloor}
           profileTotal={profileTotal} factorTotal={factorTotal} balanced={balanced} dirty={dirty} canEdit={canEdit} busy={busy}
           preview={preview} onPreview={runPreview}
@@ -152,6 +153,8 @@ export function CrrWeightsPanel({ children, canEdit }: { children: ReactNode; ca
 
 function WeightsTab(p: {
   shape: Shape; active: WeightSet; draft: Draft; profile: ProfileKey; onProfile: (k: ProfileKey) => void;
+  /** Companies per profile — who a weight change would actually reach. */
+  counts: Record<string, number>;
   onWeight: (p: ProfileKey, d: Dimension, v: number) => void; onFactor: (k: string, v: number) => void;
   onBand: (k: keyof Bands, v: number) => void; onFloor: (p: ProfileKey, v: number) => void;
   profileTotal: number; factorTotal: number; balanced: boolean; dirty: boolean; canEdit: boolean; busy: boolean;
@@ -171,6 +174,39 @@ function WeightsTab(p: {
           </button>
         ))}
         <span className="ml-auto rounded-full bg-slate-100 px-3 py-1 text-[11.5px] text-slate-600">Active {p.active.version}{p.active.createdAt ? ` · ${fmtAt(p.active.createdAt)}` : ""}</span>
+      </div>
+
+      {/* Which founders are scored with which profile — the mapping is what the
+          code already does (companies.funding_stage → normalizeFundingStage →
+          stageToProfile); saying it out loud is what was missing. */}
+      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo-600">Which founders are scored with which profile</p>
+        <table className="w-full text-[12.5px]">
+          <tbody className="divide-y divide-slate-100">
+            {p.shape.profiles.map((x) => (
+              <tr key={x.key} className={x.key === p.profile ? "bg-indigo-50/40" : undefined}>
+                <td className="w-[120px] py-1.5 pl-1 font-semibold text-slate-900">{x.label}</td>
+                <td className="w-[22px] py-1.5 text-center text-slate-400">→</td>
+                <td className="py-1.5 text-slate-700">
+                  {x.round}
+                  {x.key === "seriesA_institutional" ? (
+                    <span className="text-slate-400"> · also the single profile every investor-facing screen uses, so companies stay comparable</span>
+                  ) : null}
+                </td>
+                <td className="w-[110px] py-1.5 pr-1 text-right">
+                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                    {p.counts[x.key] ?? 0} {(p.counts[x.key] ?? 0) === 1 ? "company" : "companies"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-2 text-[11.5px] text-slate-500">
+          Taken from each company&rsquo;s <b>Funding stage</b>. A founder who has not set one is scored as Seed.
+          Change a company&rsquo;s stage and its score moves to that profile at the next re-score. Founders see their own
+          stage profile; investor-facing screens read Series A for everyone.
+        </p>
       </div>
 
       <div className={card}>
