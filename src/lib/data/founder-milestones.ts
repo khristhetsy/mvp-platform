@@ -164,7 +164,7 @@ export function computeFounderMilestones(input: FounderMilestoneInput): Mileston
     {
       id: "readiness_60",
       category: "readiness",
-      label: "60% readiness score",
+      label: "60% Preparation complete",
       description: "Reach 60% to be considered for initial investor conversations.",
       status: readinessScore >= 60 ? "achieved" : "not_started",
       achievedAt: readinessScore >= 60 ? (company?.updated_at ?? null) : null,
@@ -173,7 +173,7 @@ export function computeFounderMilestones(input: FounderMilestoneInput): Mileston
     {
       id: "readiness_75",
       category: "readiness",
-      label: "75% readiness score",
+      label: "75% Preparation complete",
       description: "75% puts you in the investor-ready tier for institutional conversations.",
       status: readinessScore >= 75 ? "achieved" : "not_started",
       achievedAt: readinessScore >= 75 ? (company?.updated_at ?? null) : null,
@@ -182,7 +182,7 @@ export function computeFounderMilestones(input: FounderMilestoneInput): Mileston
     {
       id: "readiness_90",
       category: "readiness",
-      label: "90% readiness score",
+      label: "90% Preparation complete",
       description: "Top 10% of founders on the platform — maximises your match quality.",
       status: readinessScore >= 90 ? "achieved" : "not_started",
       achievedAt: readinessScore >= 90 ? (company?.updated_at ?? null) : null,
@@ -288,7 +288,7 @@ export function computeFounderMilestones(input: FounderMilestoneInput): Mileston
   return [
     { id: "profile", label: "Company profile", milestones: profileMilestones },
     { id: "documents", label: "Documents & data room", milestones: documentMilestones },
-    { id: "readiness", label: "Readiness score", milestones: readinessMilestones },
+    { id: "readiness", label: "Preparation complete", milestones: readinessMilestones },
     { id: "investors", label: "Investor pipeline", milestones: investorMilestones },
     { id: "fundraising", label: "Fundraising", milestones: fundraisingMilestones },
   ];

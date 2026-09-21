@@ -112,7 +112,7 @@ export function buildLearningRecommendations(input: {
   }
 
   if (input.readinessScore != null && input.readinessScore < 75) {
-    add("due-diligence-preparation", "Readiness score is below institutional threshold (75).", "high");
+    add("due-diligence-preparation", "Preparation complete is below the institutional threshold (75%).", "high");
   }
 
   if (input.reviewStatus === "changes_requested") {

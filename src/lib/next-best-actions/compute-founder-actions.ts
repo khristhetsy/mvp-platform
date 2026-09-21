@@ -311,8 +311,8 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
       createNextBestAction({
         id: buildActionId(["founder", "readiness_score", company.id]),
         role: "founder",
-        title: "Improve completion",
-        description: `Your completion is ${ctx.readinessScore}%. Target ${READINESS_SCORE_THRESHOLD}%+ for stronger investor confidence.`,
+        title: "Improve your Capital Readiness Rating",
+        description: `Your CRR is ${ctx.readinessScore}. Target ${READINESS_SCORE_THRESHOLD}+ for stronger investor confidence.`,
         priority: "high",
         category: "readiness",
         entityType: "company",
@@ -320,7 +320,7 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
         companyId: company.id,
         href: "/founder/readiness",
         sourceModule: "diligence",
-        reason: "Completion is below the institutional threshold.",
+        reason: "CRR is below the institutional threshold.",
         createdFrom: "founder_nba",
       }),
     );

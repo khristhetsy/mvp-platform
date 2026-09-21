@@ -25,7 +25,7 @@ const STEPS = [
     step: 1,
     icon: "ti-file-text",
     title: "Upload your first document",
-    description: "Start with your pitch deck or financial model. Documents build your completion and unlock investor data rooms.",
+    description: "Start with your pitch deck or financial model. Documents build your Preparation completeness and unlock investor data rooms.",
     action: { label: "Go to Documents", href: "/founder/documents" },
   },
   {

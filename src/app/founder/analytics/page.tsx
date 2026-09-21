@@ -87,7 +87,7 @@ export default async function FounderAnalyticsPage() {
                   Your analytics are ready — now generate some activity
                 </p>
                 <p style={{ fontSize: 13, color: "#2E78F5", margin: "0 0 12px", lineHeight: 1.6 }}>
-                  Charts and metrics populate as you upload documents, add investors, and build your completion. Here&apos;s what to do first:
+                  Charts and metrics populate as you upload documents, add investors, and build your Preparation completeness. Here&apos;s what to do first:
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   <a href="/founder/documents" style={{
