@@ -19,6 +19,10 @@ export type FieldKind = RegistrationField["kind"];
  * A field as stored. `optionsFrom` names a shared list instead of copying it:
  * sectors are the same vocabulary events are tagged with, so duplicating them
  * into this table would let the two drift apart silently.
+ *
+ * `include` narrows a linked list to a subset, by stable value (a sector slug).
+ * Absent means all of them — so a set saved before this existed still offers
+ * everything, which is why it is optional rather than defaulted on write.
  */
 export type StoredField = {
   key: string;
@@ -26,6 +30,7 @@ export type StoredField = {
   kind: FieldKind;
   options?: string[];
   optionsFrom?: "sectors" | "countries";
+  include?: string[];
   required?: boolean;
 };
 
@@ -38,11 +43,36 @@ export type FieldSet = {
   byType: Record<string, StoredField[]>;
 };
 
-/** Lists a field can borrow rather than copy. */
-export function sharedOptions(name: StoredField["optionsFrom"]): string[] {
-  if (name === "sectors") return EVENT_SECTORS.map((s) => s.label);
-  if (name === "countries") return [...REGISTRATION_COUNTRIES];
+/**
+ * One entry of a shared list. `value` is what `include` stores and must stay
+ * stable; `label` is what a registrant reads and is free to be reworded.
+ * Countries have no slug of their own, so there the two are the same string.
+ */
+export type SharedOption = { value: string; label: string };
+
+/** Lists a field can borrow rather than copy, with their stable values. */
+export function sharedOptionList(name: StoredField["optionsFrom"]): SharedOption[] {
+  if (name === "sectors") return EVENT_SECTORS.map((s) => ({ value: s.slug, label: s.label }));
+  if (name === "countries") return REGISTRATION_COUNTRIES.map((c) => ({ value: c, label: c }));
   return [];
+}
+
+/** The labels of a shared list, in order. */
+export function sharedOptions(name: StoredField["optionsFrom"]): string[] {
+  return sharedOptionList(name).map((o) => o.label);
+}
+
+/**
+ * The options a field actually offers: a linked field narrowed by `include`,
+ * or its own copied list. Keeps the shared list's order rather than the order
+ * the values were ticked in.
+ */
+export function resolvedOptionsFor(f: StoredField): string[] {
+  if (!f.optionsFrom) return f.options ?? [];
+  const all = sharedOptionList(f.optionsFrom);
+  if (!f.include) return all.map((o) => o.label);
+  const wanted = new Set(f.include);
+  return all.filter((o) => wanted.has(o.value)).map((o) => o.label);
 }
 
 /** A stored field resolved for rendering — options filled in from the shared list. */
@@ -51,7 +81,7 @@ export function resolveField(f: StoredField): RegistrationField {
     key: f.key,
     label: f.label,
     kind: f.kind,
-    options: f.optionsFrom ? sharedOptions(f.optionsFrom) : f.options,
+    options: f.optionsFrom ? resolvedOptionsFor(f) : f.options,
     required: f.required,
   };
 }
@@ -96,8 +126,11 @@ export function validateFieldSet(set: FieldSet): string[] {
       seen.add(f.key);
 
       if (NEEDS_OPTIONS.includes(f.kind)) {
-        const count = f.optionsFrom ? sharedOptions(f.optionsFrom).length : (f.options?.length ?? 0);
-        if (count === 0) errors.push(`${where}: a ${f.kind} field needs at least one option.`);
+        // Counts what the field would actually render, so switching every
+        // linked option off is caught here rather than by an empty form.
+        if (resolvedOptionsFor(f).length === 0) {
+          errors.push(`${where}: a ${f.kind} field needs at least one option.`);
+        }
       }
 
       // A single yes/no can't sensibly be mandatory, and the forms never
@@ -165,10 +198,20 @@ export function diffFieldSets(before: FieldSet, after: FieldSet, usage: KeyUsage
       if (Boolean(prev.required) !== Boolean(f.required)) {
         out.push({ kind: "changed", group: label, label: f.label, what: f.required ? "now required" : "now optional" });
       }
-      const pOpts = (prev.options ?? []).join("|");
-      const nOpts = (f.options ?? []).join("|");
-      if (pOpts !== nOpts) {
-        out.push({ kind: "changed", group: label, label: f.label, what: "options changed" });
+      // Compares what the field renders, so narrowing a linked list shows up
+      // as an option change the same way editing a copied list does.
+      const pOpts = resolvedOptionsFor(prev);
+      const nOpts = resolvedOptionsFor(f);
+      if (pOpts.join("|") !== nOpts.join("|")) {
+        const dropped = pOpts.filter((o) => !nOpts.includes(o));
+        out.push({
+          kind: "changed",
+          group: label,
+          label: f.label,
+          what: dropped.length
+            ? `options changed — no longer offers ${dropped.join(", ")}`
+            : "options changed",
+        });
       }
     }
 

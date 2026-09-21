@@ -7,7 +7,7 @@ import {
   loadRegistrationFieldSet,
   saveFieldSet,
 } from "@/lib/icfo-events/registration-field-sets-server";
-import { sharedOptions, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import { sharedOptionList, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export async function GET(): Promise<Response> {
   return NextResponse.json({
     set,
     usage,
-    linked: { sectors: sharedOptions("sectors"), countries: sharedOptions("countries") },
+    linked: { sectors: sharedOptionList("sectors"), countries: sharedOptionList("countries") },
     versions: versions.map((v) => ({
       id: v.id, version: v.version, isActive: v.isActive,
       reason: v.reason, createdAt: v.createdAt, createdByName: v.createdByName,

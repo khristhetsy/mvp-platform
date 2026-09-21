@@ -3,6 +3,8 @@ import {
   diffFieldSets,
   keyIsLocked,
   resolveField,
+  resolvedOptionsFor,
+  sharedOptionList,
   sharedOptions,
   validateFieldSet,
   type FieldSet,
@@ -34,6 +36,63 @@ describe("options that are linked, not copied", () => {
       byType: { investor: [{ key: "sectors", label: "Sectors", kind: "chips", optionsFrom: "sectors" }] },
     });
     expect(validateFieldSet(set)).toEqual([]);
+  });
+
+  it("exposes a stable value beside each label, so a reworded label keeps its selection", () => {
+    const sectors = sharedOptionList("sectors");
+    expect(sectors).toContainEqual({ value: "fintech", label: "FinTech" });
+    expect(sectors).toContainEqual({ value: "ai-ml", label: "AI / ML" });
+    // Countries have no slug of their own; value and label are the same string.
+    expect(sharedOptionList("countries").every((o) => o.value === o.label)).toBe(true);
+  });
+});
+
+describe("a linked list can be narrowed without being copied", () => {
+  const sectors: StoredField = { key: "sectors", label: "Sectors", kind: "chips", optionsFrom: "sectors" };
+
+  it("offers everything when nothing is included — an untouched set is unchanged", () => {
+    expect(resolvedOptionsFor(sectors)).toEqual(sharedOptions("sectors"));
+  });
+
+  it("offers only what is included", () => {
+    const f: StoredField = { ...sectors, include: ["fintech", "ai-ml"] };
+    expect(resolvedOptionsFor(f)).toEqual(["FinTech", "AI / ML"]);
+  });
+
+  it("keeps the shared list's order, not the order values were ticked in", () => {
+    const f: StoredField = { ...sectors, include: ["other", "fintech", "healthtech"] };
+    expect(resolvedOptionsFor(f)).toEqual(["FinTech", "HealthTech", "Other"]);
+  });
+
+  it("ignores a value that has left the shared list rather than inventing an option", () => {
+    const f: StoredField = { ...sectors, include: ["fintech", "web3"] };
+    expect(resolvedOptionsFor(f)).toEqual(["FinTech"]);
+  });
+
+  it("renders the narrowed list, so the form shows what the editor promised", () => {
+    const f: StoredField = { ...sectors, include: ["cleantech"] };
+    expect(resolveField(f).options).toEqual(["CleanTech"]);
+  });
+
+  it("rejects switching every option off — that would render an unanswerable question", () => {
+    const set = base({ byType: { investor: [{ ...sectors, include: [], required: true }] } });
+    expect(validateFieldSet(set).join(" ")).toMatch(/at least one option/i);
+  });
+
+  it("names what a narrowed field stopped offering", () => {
+    const before = base({ byType: { investor: [sectors] } });
+    const after = base({ byType: { investor: [{ ...sectors, include: ["fintech"] }] } });
+    const what = diffFieldSets(before, after).map((c) => ("what" in c ? c.what : "")).join(" ");
+    expect(what).toMatch(/options changed/);
+    expect(what).toMatch(/no longer offers/);
+    expect(what).toMatch(/HealthTech/);
+  });
+
+  it("reports nothing when a full include list says what no include list already said", () => {
+    const before = base({ byType: { investor: [sectors] } });
+    const every = sharedOptionList("sectors").map((o) => o.value);
+    const after = base({ byType: { investor: [{ ...sectors, include: every }] } });
+    expect(diffFieldSets(before, after)).toEqual([]);
   });
 });
 

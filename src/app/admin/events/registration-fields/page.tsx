@@ -7,7 +7,7 @@ import {
   listFieldSetVersions,
   loadRegistrationFieldSet,
 } from "@/lib/icfo-events/registration-field-sets-server";
-import { sharedOptions } from "@/lib/icfo-events/registration-field-sets";
+import { sharedOptionList } from "@/lib/icfo-events/registration-field-sets";
 import { RegistrationFieldsEditor } from "@/components/admin-events/RegistrationFieldsEditor";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function RegistrationFieldsPage() {
           <RegistrationFieldsEditor
             initialSet={set}
             usage={usage}
-            linked={{ sectors: sharedOptions("sectors"), countries: sharedOptions("countries") }}
+            linked={{ sectors: sharedOptionList("sectors"), countries: sharedOptionList("countries") }}
             versions={versions.map((v) => ({
               id: v.id, version: v.version, isActive: v.isActive,
               reason: v.reason, createdAt: v.createdAt, createdByName: v.createdByName,

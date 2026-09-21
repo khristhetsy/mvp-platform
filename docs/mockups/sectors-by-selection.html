@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sectors of interest — by selection</title>
+<style>
+  :root{ --navy:#0f2544; --border:#e2e8f0; --muted:#64748b; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:780px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .panel{border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;
+         box-shadow:0 1px 2px rgba(15,23,42,.06)}
+  .note{font-size:12.5px;color:#475569;max-width:840px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  /* field row, matching the live editor */
+  .rowhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;background:#eef2ff66}
+  .arrows{display:flex;flex-direction:column;line-height:.8;color:#cbd5e1;font-size:9px;flex:none}
+  .fl{min-width:150px;flex:none;font-size:12.4px;font-weight:500;color:#1e293b}
+  .fk{min-width:100px;flex:none;font:10.4px ui-monospace,Menlo,monospace;color:#94a3b8}
+  .kind{background:#eef2ff;color:#4338ca;border-radius:999px;padding:2px 8px;font-size:10.2px;font-weight:700}
+  .summ{min-width:0;flex:1;font-size:11px;color:#64748b}
+  .chip{background:#f1f5f9;color:#475569;border-radius:999px;padding:2px 8px;font-size:10.2px;font-weight:700}
+  .chip.link{border:1px solid var(--border);background:#f8fafc;color:#64748b}
+  .chip.sel{border:1px solid #bae6fd;background:#f0f9ff;color:#0369a1}
+  .ebtn{border:1px solid var(--border);border-radius:6px;background:#fff;padding:2px 8px;
+        font-size:11px;font-weight:500;color:#475569}
+
+  .body{border-top:1px solid #f1f5f9;background:#f8fafc99;padding:14px 14px 14px 40px}
+  .lbl{display:block;font-size:10.6px;font-weight:700;color:#475569;margin-bottom:6px}
+
+  /* the selection grid */
+  .optsbox{border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden}
+  .optsbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 11px;
+           border-bottom:1px solid #f1f5f9;background:#fafcff}
+  .optsbar .t{font-size:11.5px;color:#475569}
+  .optsbar .t b{color:var(--navy)}
+  .lnk{font-size:11px;font-weight:600;color:#0369a1;text-decoration:underline;cursor:pointer}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#f1f5f9}
+  @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .opt{display:flex;align-items:center;gap:8px;background:#fff;padding:8px 11px;font-size:12px;color:#334155}
+  .opt .bx{width:14px;height:14px;border-radius:4px;border:1.5px solid #cbd5e1;flex:none;
+           display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+  .opt.on .bx{background:#0f2544;border-color:#0f2544}
+  .opt.on .bx::after{content:"✓"}
+  .opt.off{color:#94a3b8}
+  .opt .slug{margin-left:auto;font:9.5px ui-monospace,Menlo,monospace;color:#cbd5e1}
+  .optsfoot{padding:8px 11px;border-top:1px solid #f1f5f9;font-size:10.6px;color:#64748b;background:#fafcff}
+
+  /* before/after */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:900px){.ba{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+       text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.now{background:#f1f5f9;color:#475569;border:1px solid var(--border)}
+  .tag.after{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+  .dead{border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px 11px;
+        font-size:11.5px;color:#991b1b;margin-top:9px}
+
+  /* public form preview */
+  .form{border:1px solid var(--border);border-radius:10px;background:#fff;padding:14px;max-width:560px}
+  .form .q{font-size:12px;font-weight:600;color:#334155;margin:0 0 3px}
+  .form .h{font-size:11px;color:#94a3b8;margin:0 0 9px}
+  .pills{display:flex;flex-wrap:wrap;gap:6px}
+  .pill{border:1px solid var(--border);border-radius:999px;padding:4px 11px;font-size:11.5px;color:#475569;background:#fff}
+  .pill.dim{opacity:.32;text-decoration:line-through}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:10px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Sectors of interest — by selection</h1>
+  <p class="sub">The 14 sectors become visible and tickable in the editor, instead of a count you can&rsquo;t open. The list itself stays shared, so it can&rsquo;t fork away from event tracks and matching.</p>
+
+  <!-- BEFORE / AFTER of the row -->
+  <h2>The row, before and after</h2>
+  <div class="ba">
+    <div>
+      <span class="tag now">Now</span>
+      <div class="panel">
+        <div class="rowhead" style="background:#fff">
+          <span class="arrows">▲<br/>▼</span>
+          <span class="fl">Sectors of interest</span>
+          <span class="fk">sectors</span>
+          <span class="kind">Chips (many)</span>
+          <span class="summ">14 — from the shared sectors list</span>
+          <span class="chip link">Options linked</span>
+          <span class="chip">Required</span>
+          <span class="ebtn">Edit</span>
+        </div>
+      </div>
+      <div class="dead">
+        Opening it says: &ldquo;Edit that list in its own settings.&rdquo; <b>There are no such settings</b> — the list is a
+        code constant. The editor sends you somewhere that doesn&rsquo;t exist.
+      </div>
+    </div>
+
+    <div>
+      <span class="tag after">After</span>
+      <div class="panel">
+        <div class="rowhead" style="background:#fff">
+          <span class="arrows">▲<br/>▼</span>
+          <span class="fl">Sectors of interest</span>
+          <span class="fk">sectors</span>
+          <span class="kind">Chips (many)</span>
+          <span class="summ">FinTech · HealthTech · SaaS / B2B Software · EdTech · CleanTech · E-commerce · AI / ML …</span>
+          <span class="chip sel">All 14</span>
+          <span class="chip">Required</span>
+          <span class="ebtn">Edit</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">The summary names the sectors it actually offers. The badge reads
+        <b>All 14</b>, or <b>9 of 14</b> when some are switched off.</p>
+    </div>
+  </div>
+
+  <!-- THE EDITOR -->
+  <h2>Opened — the selection</h2>
+  <div class="panel">
+    <div class="rowhead">
+      <span class="arrows">▲<br/>▼</span>
+      <span class="fl">Sectors of interest</span>
+      <span class="fk">sectors</span>
+      <span class="kind">Chips (many)</span>
+      <span class="summ">shown to investors at registration</span>
+      <span class="chip sel">All 14</span>
+      <span class="chip">Required</span>
+      <span class="ebtn">Close</span>
+    </div>
+    <div class="body">
+      <span class="lbl">Options — which sectors this question offers</span>
+      <div class="optsbox">
+        <div class="optsbar">
+          <span class="t">Shared sectors list · <b>14 values</b></span>
+          <span style="flex:1"></span>
+          <span class="lnk">Select all</span>
+          <span style="color:#cbd5e1">·</span>
+          <span class="lnk">Clear</span>
+        </div>
+        <div class="grid">
+          <span class="opt on"><span class="bx"></span>FinTech<span class="slug">fintech</span></span>
+          <span class="opt on"><span class="bx"></span>HealthTech<span class="slug">healthtech</span></span>
+          <span class="opt on"><span class="bx"></span>SaaS / B2B Software<span class="slug">saas</span></span>
+          <span class="opt on"><span class="bx"></span>EdTech<span class="slug">edtech</span></span>
+          <span class="opt on"><span class="bx"></span>CleanTech<span class="slug">cleantech</span></span>
+          <span class="opt on"><span class="bx"></span>E-commerce<span class="slug">ecommerce</span></span>
+          <span class="opt on"><span class="bx"></span>AI / ML<span class="slug">ai-ml</span></span>
+          <span class="opt on"><span class="bx"></span>Real Estate<span class="slug">real-estate</span></span>
+          <span class="opt on"><span class="bx"></span>Consumer<span class="slug">consumer</span></span>
+          <span class="opt on"><span class="bx"></span>Deep Tech<span class="slug">deep-tech</span></span>
+          <span class="opt on"><span class="bx"></span>Marketplace<span class="slug">marketplace</span></span>
+          <span class="opt on"><span class="bx"></span>Logistics<span class="slug">logistics</span></span>
+          <span class="opt on"><span class="bx"></span>Hardware<span class="slug">hardware</span></span>
+          <span class="opt on"><span class="bx"></span>Other<span class="slug">other</span></span>
+        </div>
+        <p class="optsfoot">
+          Labels come from the shared list and can&rsquo;t be retyped here — event tracks, company industries and
+          matching all read the same 14, and a copy would let them drift apart. Ticking only changes which ones
+          <em>this question</em> offers.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- A SUBSET -->
+  <h2>What switching some off looks like</h2>
+  <div class="ba">
+    <div>
+      <div class="panel">
+        <div class="rowhead" style="background:#fff">
+          <span class="fl">Sectors of interest</span>
+          <span class="fk">sectors</span>
+          <span class="kind">Chips (many)</span>
+          <span class="summ">FinTech · HealthTech · SaaS / B2B Software · AI / ML …</span>
+          <span class="chip sel">9 of 14</span>
+          <span class="chip">Required</span>
+        </div>
+        <div class="body" style="padding-left:14px">
+          <div class="optsbox">
+            <div class="grid">
+              <span class="opt on"><span class="bx"></span>FinTech</span>
+              <span class="opt on"><span class="bx"></span>HealthTech</span>
+              <span class="opt on"><span class="bx"></span>SaaS / B2B</span>
+              <span class="opt off"><span class="bx"></span>EdTech</span>
+              <span class="opt on"><span class="bx"></span>CleanTech</span>
+              <span class="opt off"><span class="bx"></span>E-commerce</span>
+              <span class="opt on"><span class="bx"></span>AI / ML</span>
+              <span class="opt off"><span class="bx"></span>Real Estate</span>
+              <span class="opt on"><span class="bx"></span>Consumer</span>
+              <span class="opt on"><span class="bx"></span>Deep Tech</span>
+              <span class="opt off"><span class="bx"></span>Marketplace</span>
+              <span class="opt on"><span class="bx"></span>Logistics</span>
+              <span class="opt on"><span class="bx"></span>Hardware</span>
+              <span class="opt off"><span class="bx"></span>Other</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="note" style="margin:0 0 9px"><b>And on the public form:</b></p>
+      <div class="form">
+        <p class="q">Sectors of interest <span style="color:#dc2626">*</span></p>
+        <p class="h">Pick the sectors you invest in.</p>
+        <div class="pills">
+          <span class="pill">FinTech</span><span class="pill">HealthTech</span>
+          <span class="pill">SaaS / B2B Software</span>
+          <span class="pill dim">EdTech</span>
+          <span class="pill">CleanTech</span><span class="pill dim">E-commerce</span>
+          <span class="pill">AI / ML</span><span class="pill dim">Real Estate</span>
+          <span class="pill">Consumer</span><span class="pill">Deep Tech</span>
+          <span class="pill dim">Marketplace</span><span class="pill">Logistics</span>
+          <span class="pill">Hardware</span><span class="pill dim">Other</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">The struck-through ones simply aren&rsquo;t rendered. Shown faded here only
+        so you can see what was dropped.</p>
+    </div>
+  </div>
+
+  <!-- SCOPE -->
+  <h2>Which fields this covers</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:20%">Tab</th><th style="width:30%">Field</th><th>Today → after</th></tr></thead>
+      <tbody>
+        <tr><td>Investor</td><td><b>Sectors of interest</b> <code>sectors</code></td><td>Chips · &ldquo;14 — from the shared sectors list&rdquo; → 14 tickable options, all on</td></tr>
+        <tr><td>Founder</td><td><b>Sector</b> <code>sector</code></td><td>Select (one) · same opaque count → the same 14 tickable options</td></tr>
+        <tr><td>Everyone</td><td><b>Country</b> <code>country</code></td><td>Linked to the countries list — same treatment, so the two behave alike</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What it costs</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>One new stored field.</b> <code>optionsFrom: "sectors"</code> stays, and an optional
+    <code>include: string[]</code> of slugs joins it. Absent means all of them, so the current active version
+    <code>reg-fields-v1</code> needs no migration and behaves identically.</p>
+    <p style="margin:0 0 8px"><b>Untick ≠ delete.</b> Turning off a sector stops it being offered from that moment.
+    Registrations that already chose it keep their answer, in the database and in exports — same rule as removing a
+    plain option today. The save dialog will say so.</p>
+    <p style="margin:0"><b>The dead link goes.</b> &ldquo;Edit that list in its own settings&rdquo; is removed rather than
+    fixed: the 14 labels stay in code on purpose, because matching and event tracks read them too. This page chooses
+    <em>which</em> are asked for, not what they&rsquo;re called.</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import {
   diffFieldSets,
   keyIsLocked,
+  resolvedOptionsFor,
   validateFieldSet,
   type FieldKind,
   type FieldSet,
   type KeyUsage,
+  type SharedOption,
   type StoredField,
 } from "@/lib/icfo-events/registration-field-sets";
 
@@ -41,7 +43,8 @@ function fmt(iso: string): string {
  *   · a key that has been answered cannot be renamed — answers live in
  *     registrations.answers keyed by it, so a rename strands them;
  *   · a field whose options are linked to a shared list (sectors, countries)
- *     can't have them edited here, or that list would fork.
+ *     can't have those labels retyped here, or that list would fork. Which of
+ *     them the question offers is a separate choice, and that one is editable.
  */
 export function RegistrationFieldsEditor({
   initialSet,
@@ -51,7 +54,7 @@ export function RegistrationFieldsEditor({
 }: Readonly<{
   initialSet: FieldSet;
   usage: KeyUsage;
-  linked: { sectors: string[]; countries: string[] };
+  linked: { sectors: SharedOption[]; countries: SharedOption[] };
   versions: VersionRow[];
 }>) {
   const [set, setSet] = useState<FieldSet>(initialSet);
@@ -83,6 +86,20 @@ export function RegistrationFieldsEditor({
     if (to < 0 || to >= next.length) return;
     [next[index], next[to]] = [next[to], next[index]];
     writeFields(next);
+  }
+
+  /**
+   * Turn one linked option on or off. All-on is stored as no `include` at all
+   * rather than a list of every value, so a set that offers everything reads
+   * the same as one saved before this existed.
+   */
+  function toggleIncluded(index: number, all: SharedOption[], value: string) {
+    const f = fields[index];
+    const current = f.include ?? all.map((o) => o.value);
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    patchField(index, { include: next.length === all.length ? undefined : next });
   }
 
   function addField() {
@@ -163,7 +180,8 @@ export function RegistrationFieldsEditor({
           {fields.map((f, i) => {
             const locked = keyIsLocked(f.key, usage);
             const isLinked = Boolean(f.optionsFrom);
-            const opts = isLinked ? linked[f.optionsFrom as "sectors" | "countries"] ?? [] : f.options ?? [];
+            const all = isLinked ? linked[f.optionsFrom as "sectors" | "countries"] ?? [] : [];
+            const opts = resolvedOptionsFor(f);
             const open = editing === f.key;
             return (
               <li key={`${f.key}-${i}`}>
@@ -180,11 +198,11 @@ export function RegistrationFieldsEditor({
                     {KINDS.find((k) => k.value === f.kind)?.label ?? f.kind}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[11px] text-slate-500">
-                    {isLinked ? `${opts.length} — from the shared ${f.optionsFrom} list` : opts.join(" · ") || "—"}
+                    {opts.join(" · ") || "—"}
                   </span>
                   {isLinked ? (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10.2px] font-semibold text-slate-500">
-                      Options linked
+                    <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10.2px] font-semibold text-sky-700">
+                      {opts.length === all.length ? `All ${all.length}` : `${opts.length} of ${all.length}`}
                     </span>
                   ) : null}
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10.2px] font-semibold text-slate-600">
@@ -227,12 +245,50 @@ export function RegistrationFieldsEditor({
 
                     {(f.kind === "select" || f.kind === "chips") ? (
                       <div className="mt-3">
-                        <span className={lbl}>Options</span>
+                        <span className={lbl}>Options — which {f.optionsFrom ?? "values"} this question offers</span>
                         {isLinked ? (
-                          <p className="text-[11.3px] text-slate-600">
-                            Linked to the shared <b>{f.optionsFrom}</b> list ({opts.length} values), so it can
-                            never drift from the rest of the platform. Edit that list in its own settings.
-                          </p>
+                          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                            <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50/70 px-3 py-2">
+                              <span className="text-[11.4px] text-slate-600">
+                                Shared <b className="text-slate-800">{f.optionsFrom}</b> list · {all.length} values
+                              </span>
+                              <span className="flex-1" />
+                              <button type="button" onClick={() => patchField(i, { include: undefined })}
+                                className="text-[11px] font-semibold text-sky-700 underline hover:text-sky-900">
+                                Select all
+                              </button>
+                              <span className="text-slate-300">·</span>
+                              <button type="button" onClick={() => patchField(i, { include: [] })}
+                                className="text-[11px] font-semibold text-sky-700 underline hover:text-sky-900">
+                                Clear
+                              </button>
+                            </div>
+                            <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-4">
+                              {all.map((o) => {
+                                const on = opts.includes(o.label);
+                                return (
+                                  <label key={o.value}
+                                    className={`flex cursor-pointer items-center gap-2 bg-white px-3 py-2 text-[12px] ${
+                                      on ? "text-slate-700" : "text-slate-400"
+                                    }`}>
+                                    <input type="checkbox" checked={on}
+                                      onChange={() => toggleIncluded(i, all, o.value)}
+                                      className="h-3.5 w-3.5 flex-none accent-[var(--navy)]" />
+                                    <span className="min-w-0 truncate">{o.label}</span>
+                                    {o.value !== o.label ? (
+                                      <code className="ml-auto font-mono text-[9.5px] text-slate-300">{o.value}</code>
+                                    ) : null}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <p className="border-t border-slate-100 bg-slate-50/70 px-3 py-2 text-[10.4px] text-slate-500">
+                              Labels come from the shared list and can&rsquo;t be retyped here — event tracks, company
+                              industries and matching read the same values, and a copy would let them drift apart.
+                              Unticking one stops it being offered from the moment you save; registrations that
+                              already chose it keep their answer.
+                            </p>
+                          </div>
                         ) : (
                           <>
                             <textarea
