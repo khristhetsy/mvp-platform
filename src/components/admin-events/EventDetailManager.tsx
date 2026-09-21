@@ -745,15 +745,6 @@ export function EventDetailManager({
         <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
       )}
 
-      {/* Invitations — outbound, as against speaker_applications which are inbound. */}
-      <div className="mt-4">
-        <EventInvitesPanel
-          eventId={event.id}
-          canEdit={canEdit}
-          sessions={sessions.map((s) => ({ id: s.id, title: s.title }))}
-        />
-      </div>
-
       {/* Event details */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
         <h2 className="font-semibold text-[var(--navy)]">{t("eventDetails")}</h2>
@@ -1154,6 +1145,17 @@ export function EventDetailManager({
           </form>
         )}
       </section>
+
+      {/* Invitations — outbound, as against speaker_applications which are inbound.
+          Last on the page because it attaches people to the event, like Sessions
+          and Sponsors above it. */}
+      <div className="mt-6">
+        <EventInvitesPanel
+          eventId={event.id}
+          canEdit={canEdit}
+          sessions={sessions.map((s) => ({ id: s.id, title: s.title }))}
+        />
+      </div>
 
       {removedSession && (
         <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg bg-[var(--navy)] px-4 py-2.5 text-sm text-white shadow-lg">
