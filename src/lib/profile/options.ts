@@ -124,3 +124,20 @@ export function splitProfileCsv(value: unknown): string[] {
     ? value.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 }
+
+/**
+ * Last-12-months revenue, as a band.
+ *
+ * Bands, not exact figures: this is how investors filter, and a band gets an
+ * honest answer where a precise number gets a rounded guess. Distinct from
+ * OPERATING_STAGE_OPTIONS, which describes the company's phase rather than its
+ * revenue.
+ */
+export const REVENUE_SIZE_OPTIONS = [
+  "Pre-revenue",
+  "Under $100k",
+  "$100k – $500k",
+  "$500k – $1M",
+  "$1M – $5M",
+  "$5M+",
+] as const;

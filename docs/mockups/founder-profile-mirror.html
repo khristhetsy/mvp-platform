@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Founder Profile — mirror the founder's own data</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:26px 0 9px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #DC2626;border-radius:8px;padding:13px 15px;margin-bottom:10px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 7px;font-size:12.5px;color:var(--s600)}
+  .why p:last-child{margin-bottom:0}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .why b{color:var(--ink)}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4F46E5;margin:14px 0 8px}
+  .sec:first-child{margin-top:0}
+  .f{display:flex;gap:14px;padding:6px 0;border-bottom:1px solid var(--l100);font-size:12.5px;align-items:flex-start}
+  .f:last-child{border-bottom:none}
+  .f .k{width:190px;flex:none;color:var(--s600)}
+  .f .v{flex:1;color:var(--ink)}
+  .f .v.empty{color:var(--s400)}
+  .src{font-size:9.5px;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap;margin-left:6px}
+  .src.own{background:#EEF2FF;color:#3730A3}
+  .src.odoo{background:#F1F5F9;color:#64748B}
+  .src.ai{background:#FDF4FF;color:#86198F}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--s500);margin-top:12px;padding-top:11px;border-top:1px solid var(--l100)}
+  .legend span{display:flex;align-items:center;gap:5px}
+
+  .banner{display:flex;align-items:flex-start;gap:9px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#312E81;line-height:1.55;margin-bottom:14px}
+  .banner b{color:#1E1B4B}
+  .b2{background:#FFFBEB;border-color:#FDE68A;color:#78350F}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #059669;border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:18px}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Founder Profile — mirror the founder&apos;s own data</h1>
+<p class="sub">Sales → Contacts → Martin Goldberg · Founder Profile tab</p>
+
+<div class="why">
+  <h2>Why it&apos;s all dashes</h2>
+  <p><b>Two records, never connected.</b> The founder&apos;s onboarding writes to <code>companies</code> —
+    <code>industry</code>, <code>business_description</code>, <code>revenue_stage</code>,
+    <code>funding_stage</code>. That&apos;s why the admin workspace correctly says <i>Onboarding complete</i>.</p>
+  <p>This panel reads <code>crm_contacts</code>. Every field in
+    <code>contact-profile-sections.ts</code> carries an <code>odoo:</code> key —
+    <code>"Entrepreneur funding stage?"</code>, <code>"Entrepreneur business summary"</code> — so it&apos;s filled by
+    the <b>Odoo import or AI enrichment</b>, never by the founder. Martin&apos;s contact says
+    <code>Source: odoo</code>, and Odoo carried nothing for these.</p>
+  <p>Both screens are telling the truth about different tables.</p>
+</div>
+
+<div class="lbl">Now</div>
+<div class="card">
+  <div class="sec">Company &amp; stage</div>
+  <div class="f"><span class="k">Business summary</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">Industries</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">Funding stage</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">Operating stage</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">Annual revenue size</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">ARR</span><span class="v empty">—</span></div>
+</div>
+
+<div class="lbl">Proposed — fall back to the linked company, labelled</div>
+<div class="card">
+  <div class="banner">
+    <span>ⓘ</span>
+    <span>Fields the founder filled in on <b>Tinski Tech</b> are shown here when the CRM record is empty.
+      They are read live from the company — nothing is copied, so they can&apos;t drift.
+      <b>Editing here writes to the CRM record</b> and it stops mirroring.</span>
+  </div>
+
+  <div class="sec">Company &amp; stage</div>
+  <div class="f"><span class="k">Business summary</span><span class="v">Deep-tech materials for industrial coatings; pilot line running in Rochester.<span class="src own">From founder</span></span></div>
+  <div class="f"><span class="k">Industries</span><span class="v">Deep Tech<span class="src own">From founder</span></span></div>
+  <div class="f"><span class="k">Funding stage</span><span class="v">Pre-seed<span class="src own">From founder</span></span></div>
+  <div class="f"><span class="k">Operating stage</span><span class="v">Pre-revenue<span class="src own">From founder</span></span></div>
+  <div class="f"><span class="k">Annual revenue size</span><span class="v empty">— <span style="font-size:11px">not captured in onboarding</span></span></div>
+  <div class="f"><span class="k">Annual EBITDA</span><span class="v empty">— <span style="font-size:11px">not captured in onboarding</span></span></div>
+  <div class="f"><span class="k">ARR</span><span class="v empty">— <span style="font-size:11px">not captured in onboarding</span></span></div>
+  <div class="f"><span class="k">MRR</span><span class="v empty">— <span style="font-size:11px">not captured in onboarding</span></span></div>
+  <div class="f"><span class="k">Management team</span><span class="v empty">—</span></div>
+
+  <div class="sec">Seeking</div>
+  <div class="f"><span class="k">Type of investor(s)</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">Amount of capital</span><span class="v">$750,000<span class="src own">From founder</span></span></div>
+  <div class="f"><span class="k">Use of funds</span><span class="v empty">—</span></div>
+
+  <div class="legend">
+    <span><i class="src own">From founder</i> the founder&apos;s own onboarding, read live</span>
+    <span><i class="src odoo">Odoo</i> imported</span>
+    <span><i class="src ai">Enriched</i> AI-inferred, staff-approved</span>
+  </div>
+</div>
+
+<div class="lbl">When there&apos;s no linked company</div>
+<div class="card">
+  <div class="banner b2">
+    <span>⚠</span>
+    <span>This contact isn&apos;t linked to a company on the platform, so there&apos;s nothing to mirror.
+      <b>Link a company</b> to pull the founder&apos;s own answers through.</span>
+  </div>
+  <div class="f"><span class="k">Funding stage</span><span class="v empty">—</span></div>
+  <div class="f"><span class="k">Business summary</span><span class="v empty">—</span></div>
+</div>
+
+<div class="note">
+  <b>Read-through, not a copy.</b> The contact page already receives a <code>company</code> prop, so the link exists —
+  the panel just never uses it. Falling back on read means nothing to sync, nothing to drift, and no migration.
+  <br><br>
+  <b>Every mirrored value is labelled.</b> "From founder" matters because these fields feed matching: staff need to
+  know whether a funding stage came from the founder, from an Odoo import, or from AI inference. An unlabelled
+  mirror would quietly make the founder&apos;s answer indistinguishable from an enrichment guess.
+  <br><br>
+  <b>Four fields stay empty, honestly.</b> Annual revenue, EBITDA, ARR and MRR aren&apos;t asked during onboarding, so
+  there is nothing to mirror — the panel says <i>not captured in onboarding</i> rather than leaving a bare dash that
+  looks like a bug. Adding them to onboarding is a separate decision.
+  <br><br>
+  <b>Editing stops the mirror.</b> Once staff type a value into the CRM field, that field is the CRM&apos;s own and no
+  longer follows the company — otherwise a staff correction would silently revert.
+</div>
+
+</div>
+</body>
+</html>

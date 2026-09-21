@@ -14,6 +14,7 @@ import {
   BUSINESS_ENTITY_OPTIONS as BUSINESS_ENTITY_OPTS,
   FUNDING_STAGE_OPTIONS as FUNDING_STAGE_OPTS,
   OPERATING_STAGE_OPTIONS as OPERATING_STAGE_OPTS,
+  REVENUE_SIZE_OPTIONS,
 } from "@/lib/profile/options";
 
 /* ─────────────────────────── data ─────────────────────────── */
@@ -218,8 +219,18 @@ function ScoreRing({ score }: { score: number }) {
 
 /* ─────────────────────────── main ─────────────────────────── */
 
-type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-const TOTAL = 7;
+type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+// 8 is Traction (the last question); 9 is the done screen, which is why TOTAL
+// stops at 8 — the progress bar should never count the confirmation as a step.
+const TOTAL = 8;
+
+const HIGHLIGHT_PLACEHOLDERS = [
+  "Pilot line running at 400 units/month",
+  "Two LOIs signed with tier-1 manufacturers",
+  "US patent granted",
+  "",
+  "",
+];
 
 export function FounderConversationalOnboarding({
   company,
@@ -267,6 +278,16 @@ export function FounderConversationalOnboarding({
   const [bizEntity, setBizEntity]     = useState<string | null>(typeof cx.business_entity === "string" ? cx.business_entity : null);
   const [ebitda, setEbitda]           = useState(typeof cx.annual_ebitda === "string" ? cx.annual_ebitda : "");
   const [mgmtTeam, setMgmtTeam]       = useState(typeof cx.management_team === "string" ? cx.management_team : "");
+  // Traction (step 8). All optional: forcing a number here would make
+  // pre-revenue founders invent one, and the CRR engine would then score fiction.
+  const [revSize, setRevSize]         = useState<string | null>(typeof cx.annual_revenue_size === "string" && cx.annual_revenue_size ? cx.annual_revenue_size : null);
+  const [arr, setArr]                 = useState(typeof cx.arr === "string" ? cx.arr : "");
+  const [mrr, setMrr]                 = useState(typeof cx.mrr === "string" ? cx.mrr : "");
+  const [highlights, setHighlights]   = useState<string[]>(() => {
+    const raw = typeof cx.key_highlights === "string" ? cx.key_highlights : "";
+    const rows = raw.split("\n").map((r) => r.trim());
+    return [0, 1, 2, 3, 4].map((i) => rows[i] ?? "");
+  });
 
   function toggleFund(label: string) {
     setUseOfFunds((prev) =>
@@ -290,6 +311,8 @@ export function FounderConversationalOnboarding({
           Boolean(bizEntity) && fundingStage.length > 0 && opStage.length > 0 &&
           ebitda.trim().length > 0 && mgmtTeam.trim().length > 0
         );
+      // Step 8 is skippable by design — see the note on the traction state above.
+      case 8: return true;
       default: return true;
     }
   }
@@ -337,11 +360,16 @@ export function FounderConversationalOnboarding({
           business_entity: bizEntity ?? "",
           annual_ebitda: ebitda.trim(),
           management_team: mgmtTeam.trim(),
+          // Traction (step 8)
+          annual_revenue_size: revSize ?? "",
+          arr: arr.trim(),
+          mrr: mrr.trim(),
+          key_highlights: highlights.map((h) => h.trim()).filter(Boolean).join("\n"),
         }),
       });
       if (!r2.ok) throw new Error("Could not save funding information.");
 
-      setStep(8);
+      setStep(9);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -354,7 +382,7 @@ export function FounderConversationalOnboarding({
   const score      = computeScore({ name: companyName, industry, stage, amount, description, useOfFunds });
 
   /* ─── Done screen ─── */
-  if (step === 8) {
+  if (step === 9) {
     return (
       <>
         <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -704,6 +732,84 @@ export function FounderConversationalOnboarding({
 
               <ContextCard>
                 Investors filter hard on these. Getting your capital type, stage, and entity right means we only surface investors whose mandate actually fits — fewer, better conversations.
+              </ContextCard>
+            </>
+          ) : step === 8 ? (
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-slate-900">Your numbers</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Investors look at these first. Leave anything blank if it doesn&apos;t apply — a blank is better than a guess.
+              </p>
+
+              {/* Say what's public before they type it, not after. */}
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-[12.5px] leading-relaxed text-emerald-900">
+                <i className="ti ti-eye mt-0.5" aria-hidden="true" />
+                <span>
+                  Revenue and highlights appear on your <b>investor one-pager</b>.{" "}
+                  <b>EBITDA and your team summary stay internal</b> — staff and your own dashboard only.
+                </span>
+              </div>
+
+              <label className="mt-6 block text-sm font-medium text-slate-700">
+                Annual revenue size <span className="font-normal text-slate-400">· last 12 months</span>
+              </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {REVENUE_SIZE_OPTIONS.map((o) => (
+                  <Chip key={o} selected={revSize === o} onClick={() => setRevSize(revSize === o ? null : o)}>{o}</Chip>
+                ))}
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    ARR <span className="font-normal text-slate-400">· optional</span>
+                  </label>
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    placeholder="e.g. $240,000"
+                    value={arr}
+                    onChange={(e) => setArr(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-slate-400">Subscription or contracted revenue only.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    MRR <span className="font-normal text-slate-400">· optional</span>
+                  </label>
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    placeholder="e.g. $20,000"
+                    value={mrr}
+                    onChange={(e) => setMrr(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-slate-400">Leave blank if you have no recurring revenue.</p>
+                </div>
+              </div>
+
+              <label className="mt-5 block text-sm font-medium text-slate-700">
+                Five key highlights <span className="font-normal text-slate-400">· what makes this fundable</span>
+              </label>
+              <div className="mt-2 space-y-2">
+                {highlights.map((h, i) => (
+                  <div key={`hl-${i}`} className="flex items-center gap-2.5">
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-indigo-50 text-[11px] font-bold text-indigo-600">
+                      {i + 1}
+                    </span>
+                    <input
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                      placeholder={HIGHLIGHT_PLACEHOLDERS[i]}
+                      value={h}
+                      onChange={(e) => setHighlights((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">These become the bullet list on your one-pager. Three is enough to start.</p>
+
+              <ContextCard>
+                These are the numbers the readiness engine scores your Traction and Revenue on. Leaving them blank
+                doesn&apos;t hurt your score any more than a low number would — but an invented one will, once an
+                investor asks about it.
               </ContextCard>
             </>
           ) : null}

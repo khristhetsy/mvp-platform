@@ -23,6 +23,10 @@ const PUBLIC_FIELDS = [
   "funding_amount",
   "use_of_funds",
   "revenue_stage",
+  // Traction (20260921002). annual_ebitda and management_team stay OUT of this
+  // list on purpose — the onboarding step tells founders those are internal.
+  "annual_revenue_size",
+  "key_highlights",
   "founder_goals",
   "is_published",
   "slug",
@@ -42,6 +46,8 @@ type PublicCompany = {
   funding_amount: number | null;
   use_of_funds: string | null;
   revenue_stage: string | null;
+  annual_revenue_size: string | null;
+  key_highlights: string | null;
   founder_goals: string | null;
   is_published: boolean;
   slug: string | null;
@@ -106,6 +112,13 @@ export default async function InvestorOnePagerPage({
   if (!company) notFound();
 
   const geography = [company.state, company.country].filter(Boolean).join(", ") || null;
+  // Up to five, newline-separated as written at onboarding step 8.
+  const highlightLines = (company.key_highlights ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
   const stageLabel = company.revenue_stage
     ? (STAGE_LABELS[company.revenue_stage] ?? company.revenue_stage)
     : null;
@@ -233,6 +246,24 @@ export default async function InvestorOnePagerPage({
               {company.business_description}
             </p>
           )}
+
+          {/* Founder's own highlights — the bullets they wrote at onboarding. */}
+          {highlightLines.length > 0 && (
+            <ul style={{
+              margin: "18px 0 0", padding: 0, listStyle: "none",
+              borderTop: "1px solid #f3f4f6", paddingTop: 18,
+            }}>
+              {highlightLines.map((line) => (
+                <li key={line} style={{
+                  display: "flex", gap: 9, alignItems: "flex-start",
+                  fontSize: 14, color: "#374151", lineHeight: 1.6, marginBottom: 7,
+                }}>
+                  <span style={{ color: ACCENT, fontWeight: 700, lineHeight: 1.5 }}>•</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Key metrics */}
@@ -247,8 +278,8 @@ export default async function InvestorOnePagerPage({
             accent
           />
           <MetricCard
-            label={t("revenue_stage")}
-            value={stageLabel ?? "—"}
+            label={company.annual_revenue_size ? "Revenue" : t("revenue_stage")}
+            value={company.annual_revenue_size ?? stageLabel ?? "—"}
           />
           {geography && (
             <MetricCard label={t("location")} value={geography} />

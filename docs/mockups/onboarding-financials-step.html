@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding step 8 — financials, and where they surface</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:26px 0 9px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #4F46E5;border-radius:8px;padding:13px 15px;margin-bottom:10px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#4338CA}
+  .why p{margin:0 0 7px;font-size:12.5px;color:var(--s600)}
+  .why p:last-child{margin-bottom:0}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .why b{color:var(--ink)}
+
+  /* wizard */
+  .wz{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 28px}
+  .prog{font-size:11px;color:var(--s400);font-weight:600}
+  .dots{display:flex;gap:5px;margin:8px 0 20px}
+  .dots i{height:3px;border-radius:99px;background:#E2E8F0;flex:1}
+  .dots i.on{background:#4F46E5}
+  .wz h2{margin:0 0 5px;font-size:22px;font-weight:650;letter-spacing:-.01em}
+  .wz .hint{margin:0 0 20px;font-size:13px;color:var(--s500)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .fld{margin-bottom:15px}
+  .fld label{display:block;font-size:12px;font-weight:600;color:var(--s600);margin-bottom:5px}
+  .fld .opt{font-weight:400;color:var(--s400)}
+  .fld input,.fld textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px;color:var(--ink);background:#fff}
+  .fld .help{font-size:11px;color:var(--s400);margin-top:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1px solid var(--line);border-radius:99px;padding:6px 13px;font-size:12.5px;color:var(--s600);cursor:pointer;background:#fff}
+  .chip.on{border-color:#4F46E5;background:#EEF2FF;color:#3730A3;font-weight:600}
+  .hl{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+  .hl span{width:18px;height:18px;border-radius:50%;background:#EEF2FF;color:#4F46E5;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .hl input{flex:1}
+  .nav{display:flex;gap:9px;margin-top:22px;padding-top:18px;border-top:1px solid var(--l100)}
+  .btn{border-radius:9px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:#334155}
+  .btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff}
+  .btn.sp{margin-left:auto}
+  .skip{align-self:center;font-size:12px;color:var(--s400)}
+
+  .vis{display:flex;align-items:flex-start;gap:8px;background:#F0FDF9;border:1px solid #A7F3D0;border-radius:9px;padding:9px 12px;font-size:12px;color:#065F46;line-height:1.55;margin-bottom:18px}
+  .vis b{color:#064E3B}
+
+  /* surfaces */
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px}
+  .sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4F46E5;margin:0 0 9px}
+  .f{display:flex;gap:14px;padding:6px 0;border-bottom:1px solid var(--l100);font-size:12.5px}
+  .f:last-child{border-bottom:none}
+  .f .k{width:180px;flex:none;color:var(--s600)}
+  .f .v{flex:1;color:var(--ink)}
+  .src{font-size:9.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px;background:#EEF2FF;color:#3730A3}
+  .priv{font-size:9.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px;background:#FEF2F2;color:#B91C1C}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #B45309;border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:18px}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Onboarding — the four missing fields</h1>
+<p class="sub">Founder wizard gains a step 8; the answers surface on the founder profile, the CRM panel and the investor view.</p>
+
+<div class="why">
+  <h2>What&apos;s actually missing</h2>
+  <p>The wizard is <b><code>TOTAL = 7</code></b> steps and already captures twelve of the CRM panel&apos;s nineteen
+    fields — <code>seeking_investor_types</code>, <code>funding_stage</code>, <code>operating_stage</code>,
+    <code>business_entity</code>, <code>annual_ebitda</code>, <code>management_team</code> and the rest.</p>
+  <p>Only four have no source at all: <b>Annual revenue size</b>, <b>ARR</b>, <b>MRR</b> and
+    <b>Five key highlights</b>. (<code>revenue_stage</code> exists but it&apos;s a band like "Pre-revenue", not a
+    figure — mapping it to "Annual revenue size" would be wrong.)</p>
+  <p>These four are also the ones the CRR engine&apos;s <b>Traction</b> and <b>Revenue</b> factors need. Today those
+    factors score zero for want of evidence, not performance.</p>
+</div>
+
+<div class="lbl">New step 8 — Traction</div>
+<div class="wz">
+  <div class="prog">Step 8 of 8</div>
+  <div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+
+  <h2>Your numbers</h2>
+  <p class="hint">Investors look at these first. Leave anything blank if it doesn&apos;t apply — a blank is better than a guess.</p>
+
+  <div class="vis">
+    <span>👁</span>
+    <span>Revenue figures appear on your <b>investor one-pager</b> and to matched investors.
+      <b>EBITDA and the team summary stay internal</b> — staff and your own dashboard only.</span>
+  </div>
+
+  <div class="fld">
+    <label>Annual revenue size <span class="opt">· last 12 months</span></label>
+    <div class="chips">
+      <span class="chip on">Pre-revenue</span><span class="chip">Under $100k</span><span class="chip">$100k – $500k</span>
+      <span class="chip">$500k – $1M</span><span class="chip">$1M – $5M</span><span class="chip">$5M+</span>
+    </div>
+    <p class="help">A band, not an exact figure — matches how investors filter.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="fld">
+      <label>ARR <span class="opt">· optional</span></label>
+      <input value="" placeholder="e.g. $240,000">
+      <p class="help">Annual recurring revenue. Subscription or contracted only.</p>
+    </div>
+    <div class="fld">
+      <label>MRR <span class="opt">· optional</span></label>
+      <input value="" placeholder="e.g. $20,000">
+      <p class="help">Leave blank if you don&apos;t have recurring revenue.</p>
+    </div>
+  </div>
+
+  <div class="fld">
+    <label>Five key highlights <span class="opt">· what makes this fundable</span></label>
+    <div class="hl"><span>1</span><input value="" placeholder="Pilot line running at 400 units/month"></div>
+    <div class="hl"><span>2</span><input value="" placeholder="Two LOIs signed with tier-1 coatings manufacturers"></div>
+    <div class="hl"><span>3</span><input value="" placeholder="Patent granted US 11,xxx,xxx"></div>
+    <div class="hl"><span>4</span><input value="" placeholder=""></div>
+    <div class="hl"><span>5</span><input value="" placeholder=""></div>
+    <p class="help">These become the bullet list on your one-pager. Three is enough to start.</p>
+  </div>
+
+  <div class="nav">
+    <button class="btn">← Back</button>
+    <span class="skip btn sp" style="border:none;background:none">Skip for now</span>
+    <button class="btn pri">Finish</button>
+  </div>
+</div>
+
+<div class="lbl">Where it surfaces — founder&apos;s own profile</div>
+<div class="card">
+  <p class="sec">Company &amp; stage · /founder/settings</p>
+  <div class="f"><span class="k">Annual revenue size</span><span class="v">Pre-revenue</span></div>
+  <div class="f"><span class="k">ARR</span><span class="v">—<span style="font-size:11px;color:#94A3B8"> not yet added</span></span></div>
+  <div class="f"><span class="k">MRR</span><span class="v">—<span style="font-size:11px;color:#94A3B8"> not yet added</span></span></div>
+  <div class="f"><span class="k">Five key highlights</span><span class="v">3 of 5 added</span></div>
+  <p style="margin:11px 0 0;font-size:11.5px;color:var(--s500)">Editable here after onboarding — same fields, same columns.</p>
+</div>
+
+<div class="lbl">Where it surfaces — admin CRM (Founder Profile tab)</div>
+<div class="card">
+  <p class="sec">Company &amp; stage</p>
+  <div class="f"><span class="k">Business summary</span><span class="v">Deep-tech materials for industrial coatings.<span class="src">From founder</span></span></div>
+  <div class="f"><span class="k">Funding stage</span><span class="v">Pre-seed<span class="src">From founder</span></span></div>
+  <div class="f"><span class="k">Annual revenue size</span><span class="v">Pre-revenue<span class="src">From founder</span></span></div>
+  <div class="f"><span class="k">Annual EBITDA</span><span class="v">−$180,000<span class="src">From founder</span><span class="priv">Internal</span></span></div>
+  <div class="f"><span class="k">ARR</span><span class="v">—</span></div>
+  <div class="f"><span class="k">MRR</span><span class="v">—</span></div>
+  <div class="f"><span class="k">Five key highlights</span><span class="v">Pilot line at 400 units/month · 2 LOIs signed · US patent granted<span class="src">From founder</span></span></div>
+</div>
+
+<div class="lbl">Where it surfaces — investor view (one-pager &amp; matched deal)</div>
+<div class="card">
+  <p class="sec">Tinski Tech · Deep Tech · Pre-seed</p>
+  <div class="f"><span class="k">Revenue</span><span class="v">Pre-revenue</span></div>
+  <div class="f"><span class="k">Raising</span><span class="v">$750,000</span></div>
+  <div class="f"><span class="k">Highlights</span><span class="v">Pilot line at 400 units/month · 2 LOIs signed with tier-1 manufacturers · US patent granted</span></div>
+  <p style="margin:11px 0 0;font-size:11.5px;color:#B91C1C">EBITDA, management-team notes and the founder&apos;s goals are <b>not</b> shown to investors.</p>
+</div>
+
+<div class="note">
+  <b>Three decisions worth your eye.</b>
+  <br><br>
+  <b>1 · Revenue is a band, not a figure.</b> Investors filter by range, and a band is far likelier to be answered
+  honestly than an exact number. It also matches <code>revenue_stage</code>, which already exists — so the two need
+  reconciling rather than sitting side by side meaning almost the same thing.
+  <br><br>
+  <b>2 · The step is skippable.</b> Making ARR mandatory would push pre-revenue founders to invent one, and the CRR
+  engine would then score fiction. "Skip for now" keeps the field empty and honest — the readiness drawer already
+  tells them what it costs them in points.
+  <br><br>
+  <b>3 · Not everything is investor-facing.</b> EBITDA and the team summary are internal; revenue band and highlights
+  are public on the one-pager. The step states this up front rather than surprising them later, and the columns need
+  a visibility rule in code, not just a label here.
+  <br><br>
+  <b>Also:</b> these columns went in with migration <code>20260803002</code> but <code>db:types</code> hasn&apos;t been
+  run since, so the wizard and route reach them through a <code>Record&lt;string, unknown&gt;</code> cast. Adding four
+  more the same way works, but regenerating the types would remove the casts everywhere.
+</div>
+
+</div>
+</body>
+</html>

@@ -13,6 +13,7 @@ import {
   INVESTOR_PREFERENCE_OPTIONS,
   FUNDING_STAGE_OPTIONS,
   OPERATING_STAGE_OPTIONS,
+  REVENUE_SIZE_OPTIONS,
   BUSINESS_ENTITY_OPTIONS,
   splitProfileCsv,
 } from "@/lib/profile/options";
@@ -140,6 +141,12 @@ const FIELDS: FieldDef[] = [
   { key: "annual_ebitda", label: "Annual EBITDA", type: "text", placeholder: "e.g. -$120,000 (0 if pre-revenue)", section: "Investor fit profile" },
   { key: "operating_stage", label: "Operating stage", type: "chips-multi", options: OPERATING_STAGE_OPTIONS, section: "Investor fit profile" },
   { key: "management_team", label: "Management team", type: "textarea", placeholder: "e.g. 2 co-founders, 3 full-time", section: "Investor fit profile" },
+  // Traction — asked at onboarding step 8, editable here afterwards. Revenue
+  // size and highlights are investor-facing; EBITDA above is not.
+  { key: "annual_revenue_size", label: "Annual revenue size", type: "chips-single", options: REVENUE_SIZE_OPTIONS, section: "Investor fit profile" },
+  { key: "arr", label: "ARR", type: "text", placeholder: "e.g. $240,000 (blank if none)", section: "Investor fit profile" },
+  { key: "mrr", label: "MRR", type: "text", placeholder: "e.g. $20,000 (blank if none)", section: "Investor fit profile" },
+  { key: "key_highlights", label: "Five key highlights", type: "textarea", placeholder: "One per line — these become the bullets on your one-pager", section: "Investor fit profile" },
   { key: "business_entity", label: "Business entity", type: "chips-single", options: BUSINESS_ENTITY_OPTIONS, section: "Investor fit profile" },
 ];
 
@@ -191,6 +198,10 @@ export function CompanySettingsForm({ company }: Props) {
     business_entity: str(cx.business_entity),
     annual_ebitda: str(cx.annual_ebitda),
     management_team: str(cx.management_team),
+    annual_revenue_size: str(cx.annual_revenue_size),
+    arr: str(cx.arr),
+    mrr: str(cx.mrr),
+    key_highlights: str(cx.key_highlights),
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [company]);
 

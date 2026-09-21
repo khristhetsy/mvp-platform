@@ -52,6 +52,13 @@ export const companyUpdateSchema = z.object({
   business_entity: z.string().max(120).optional(),
   annual_ebitda: z.string().max(200).optional(),
   management_team: z.string().max(1000).optional(),
+  // Traction (onboarding step 8). Text, not numeric: founders write "$240k" or
+  // "~20,000/mo", and coercing that loses the nuance and rejects honest answers.
+  annual_revenue_size: z.string().max(120).optional(),
+  arr: z.string().max(120).optional(),
+  mrr: z.string().max(120).optional(),
+  /** Up to five one-line highlights, newline-separated. */
+  key_highlights: z.string().max(1000).optional(),
 });
 
 export const founderOnboardingStepSchema = z.object({
@@ -94,6 +101,10 @@ export const founderOnboardingStepSchema = z.object({
   business_entity: z.string().optional(),
   annual_ebitda: z.string().optional(),
   management_team: z.string().optional(),
+  annual_revenue_size: z.string().optional(),
+  arr: z.string().optional(),
+  mrr: z.string().optional(),
+  key_highlights: z.string().optional(),
 });
 
 export const documentUploadSchema = z.object({
