@@ -9,6 +9,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEffectivePermissions, loadRbacCatalog } from "@/lib/rbac/effective-permissions";
+import type {
+  StaffMember,
+  StageAssignment,
+  StageAssignmentBoard,
+} from "@/lib/activity/assignment-types";
 import {
   ALL_ACTIVITY_STAGES,
   type ActivityAudience,
@@ -30,28 +35,14 @@ function untyped(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
 }
 
-export type StaffMember = {
-  id: string;
-  name: string;
-  email: string | null;
-  role: string;
-  isSuperAdmin: boolean;
-  initials: string;
-};
-
-export type StageAssignment = {
-  audience: ActivityAudience;
-  stage: ActivityStage;
-  userIds: string[];
-  leadUserId: string | null;
-  escalateAfterMinutes: number | null;
-  escalateToUserId: string | null;
-};
-
-export type StageAssignmentBoard = {
-  staff: StaffMember[];
-  stages: StageAssignment[];
-};
+// The shapes live in `assignment-types.ts` so the client components can import
+// them without reaching this server-only module. Re-exported so server callers
+// keep one import path.
+export type {
+  StaffMember,
+  StageAssignment,
+  StageAssignmentBoard,
+} from "@/lib/activity/assignment-types";
 
 function initialsOf(name: string, email: string | null): string {
   const source = name.trim() || (email ?? "").split("@")[0] || "?";

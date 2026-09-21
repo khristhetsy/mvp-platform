@@ -19,7 +19,7 @@ import {
   effectiveClassPref,
 } from "@/lib/activity/preferences";
 import type { NotificationPrefs } from "@/lib/notifications/preferences";
-import type { StageAssignmentBoard } from "@/lib/activity/assignments";
+import type { StageAssignmentBoard } from "@/lib/activity/assignment-types";
 
 type Channel = "in_app" | "email" | "digest";
 

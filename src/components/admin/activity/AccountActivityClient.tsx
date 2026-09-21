@@ -6,8 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MetricCard } from "@/components/MetricCard";
 import { SearchCount, Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
 import { matchRows } from "@/lib/ui/live-search";
-import type { ActivityFeedItem, ActivityStageGroup, DateRangeKey } from "@/lib/activity/feed";
-import { DATE_RANGES, DATE_RANGE_LABEL } from "@/lib/activity/feed";
+// feed-types, not feed: `feed.ts` is server-only and importing a VALUE from it
+// here pulls that guard into the browser bundle and fails the build.
+import type {
+  ActivityFeedItem,
+  ActivityStageGroup,
+  DateRangeKey,
+} from "@/lib/activity/feed-types";
+import { DATE_RANGES, DATE_RANGE_LABEL } from "@/lib/activity/feed-types";
 import {
   ACTIVITY_CLASSES,
   type ActivityAudience,
@@ -18,7 +24,7 @@ import {
   audienceOfStage,
   isFounderStage,
 } from "@/lib/activity/stages";
-import type { StageAssignmentBoard } from "@/lib/activity/assignments";
+import type { StageAssignmentBoard } from "@/lib/activity/assignment-types";
 
 const SEVERITY_DOT: Record<string, string> = {
   critical: "#DC2626",

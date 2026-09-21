@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { StageAssignment, StageAssignmentBoard, StaffMember } from "@/lib/activity/assignments";
+import type { StageAssignment, StageAssignmentBoard, StaffMember } from "@/lib/activity/assignment-types";
 import {
   type ActivityAudience,
   type ActivityStage,

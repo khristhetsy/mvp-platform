@@ -7,14 +7,13 @@
  * beside them cannot disturb it, and quiet hours / pause-all / critical-override
  * keep applying to both without a second implementation.
  *
- * Pure except for `loadActivityChannelPrefs`, which is a thin wrapper over the
- * existing loader.
+ * Pure — no Supabase, no fetch. The settings screen is a client component and
+ * imports these directly, so this module must stay free of server code.
  */
-import {
-  type EventChannelPref,
-  type NotificationPrefs,
-  loadNotificationPrefs,
-} from "@/lib/notifications/preferences";
+// Type-only on purpose. `notifications/preferences` reaches the service-role
+// client, and this module is imported by the settings screen, which is a client
+// component. A value import here would drag server code into the browser bundle.
+import type { EventChannelPref, NotificationPrefs } from "@/lib/notifications/preferences";
 import {
   ACTIVITY_CLASSES,
   type ActivityClassKey,
@@ -41,10 +40,6 @@ export function activityPrefsFrom(prefs: NotificationPrefs): ActivityChannelPref
     classes[classKey] = value;
   }
   return { classes };
-}
-
-export async function loadActivityChannelPrefs(userId: string): Promise<ActivityChannelPrefs> {
-  return activityPrefsFrom(await loadNotificationPrefs(userId));
 }
 
 /**
