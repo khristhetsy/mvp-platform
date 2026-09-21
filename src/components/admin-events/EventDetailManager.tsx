@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import { BannerEditor } from "@/components/admin-events/BannerEditor";
+import { EventInvitesPanel } from "@/components/admin-events/EventInvitesPanel";
 import type {
   EventWithDetail,
   EventSession,
@@ -743,6 +744,15 @@ export function EventDetailManager({
       {error && (
         <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
       )}
+
+      {/* Invitations — outbound, as against speaker_applications which are inbound. */}
+      <div className="mt-4">
+        <EventInvitesPanel
+          eventId={event.id}
+          canEdit={canEdit}
+          sessions={sessions.map((s) => ({ id: s.id, title: s.title }))}
+        />
+      </div>
 
       {/* Event details */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">

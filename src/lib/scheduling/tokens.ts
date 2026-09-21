@@ -1,42 +1,20 @@
 /**
- * Signed, single-purpose action tokens for the public booking-management links
- * (Cancel / Reschedule) that ride in confirmation emails. No login: possession of
- * the emailed link is the authorization, so tokens are HMAC-signed (the secret is
- * never in the payload), scoped to one booking id, bound to a single action, and
- * expire. Server-only.
+ * Booking cancel/reschedule links.
+ *
+ * The signing itself now lives in `@/lib/signed-links/tokens` so event
+ * invitations share one implementation; this module keeps the booking-shaped
+ * API its four callers already use, and pins the token kind.
  */
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { makeToken, verifyToken } from "@/lib/signed-links/tokens";
 
 export type BookingAction = "cancel" | "reschedule";
 
-function secret(): string {
-  return process.env.TOKEN_ENCRYPTION_SECRET || process.env.MARKETING_UNSUBSCRIBE_SECRET || "default-secret";
-}
-
-function sign(payload: string): string {
-  return createHmac("sha256", secret()).update(payload).digest("base64url");
-}
-
-/** `base64url({id,action,exp}).sig`. exp is a unix-ms expiry (default: 60 days). */
+/** `base64url({k,id,a,n,exp}).sig`. exp is a unix-ms expiry (default: 60 days). */
 export function makeBookingToken(bookingId: string, action: BookingAction, expiresAt?: number): string {
-  const exp = expiresAt ?? Date.now() + 60 * 24 * 60 * 60 * 1000;
-  const body = Buffer.from(JSON.stringify({ id: bookingId, a: action, exp })).toString("base64url");
-  return `${body}.${sign(body)}`;
+  return makeToken({ kind: "booking", id: bookingId, action, expiresAt });
 }
 
 /** Returns the booking id when the token is valid for `action` and unexpired, else null. */
 export function verifyBookingToken(token: string, action: BookingAction, now: number = Date.now()): string | null {
-  try {
-    const [body, sig] = token.split(".");
-    if (!body || !sig) return null;
-    const expected = sign(body);
-    if (sig.length !== expected.length) return null;
-    if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as { id?: string; a?: string; exp?: number };
-    if (!parsed.id || parsed.a !== action) return null;
-    if (typeof parsed.exp !== "number" || parsed.exp < now) return null;
-    return parsed.id;
-  } catch {
-    return null;
-  }
+  return verifyToken({ token, kind: "booking", action, now });
 }

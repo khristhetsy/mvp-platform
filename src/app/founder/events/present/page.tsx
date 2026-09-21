@@ -15,6 +15,9 @@ import {
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
 import { presentTierForPlan } from "@/lib/icfo-events/present-tiers";
+import { getMaterials, listInvitesForProfile, stageLink } from "@/lib/icfo-events/invites";
+import { INVITE_ROLES } from "@/lib/icfo-events/invite-rules";
+import { FounderEventInvitations, type FounderInvite } from "@/components/founder/FounderEventInvitations";
 import type { EventRecord } from "@/lib/icfo-events/types";
 import { PresentAtEventClient, type PresentEventOption, type ExistingApplication } from "./PresentAtEventClient";
 
@@ -60,6 +63,36 @@ export default async function PresentAtEventPage() {
     existing = [];
   }
 
+  // Invitations the founder has been sent. An invitation is not an application:
+  // they were asked, so the plan tiers below don't gate it.
+  let invites: FounderInvite[] = [];
+  try {
+    const rows = await listInvitesForProfile(profile.id);
+    invites = await Promise.all(
+      rows.map(async (i) => {
+        const spec = INVITE_ROLES[i.role];
+        const materials = i.presenterId ? await getMaterials(i.presenterId) : null;
+        return {
+          id: i.id,
+          role: i.role,
+          roleLabel: spec.label,
+          status: i.status,
+          note: i.note,
+          materialsDue: i.materialsDue,
+          eventTitle: i.eventTitle ?? "an iCFO event",
+          wantsVideo: spec.wantsVideo,
+          wantsDeck: spec.wantsDeck,
+          videoUrl: materials?.videoUrl ?? null,
+          deckFilename: materials?.deckFilename ?? null,
+          deckBytes: materials?.deckBytes ?? null,
+          stage: i.status === "accepted" ? await stageLink(i.sessionId) : null,
+        };
+      }),
+    );
+  } catch {
+    invites = [];
+  }
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -81,6 +114,7 @@ export default async function PresentAtEventPage() {
         />
 
         <div className="mt-8">
+          <FounderEventInvitations invites={invites} />
           <PresentAtEventClient
             tier={tier}
             planLabel={PLAN_LABELS[sub.plan_type]}
