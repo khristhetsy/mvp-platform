@@ -7,6 +7,7 @@ import { BrochurePublishToggle } from "@/components/admin-events/BrochurePublish
 import { BrochureImportButton } from "@/components/admin-events/BrochureImportButton";
 import { BrochureDeleteButton } from "@/components/admin-events/BrochureDeleteButton";
 import { BrochureDistribute } from "@/components/admin-events/BrochureDistribute";
+import { NewBrochureDialog } from "@/components/admin-events/NewBrochureDialog";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event Brochure — editions" };
@@ -15,6 +16,9 @@ export default async function BrochureLibraryPage() {
   const { profile } = await requirePermissionPage("manage_events");
   const admin = createServiceRoleClient();
   const editions = await listEditions(admin).catch(() => []);
+  // Every existing name, so the create dialog can check a collision as it's
+  // typed rather than only when the insert is refused.
+  const naming = editions.map((e) => ({ id: e.id, title: e.title, eventId: e.eventId }));
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Event Brochure">
@@ -26,7 +30,7 @@ export default async function BrochureLibraryPage() {
           </div>
           <div className="flex items-center gap-2">
             <BrochureImportButton />
-            <Link href="/admin/events/brochure/new" className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium">New booklet</Link>
+            <NewBrochureDialog existing={naming} label="New booklet" />
           </div>
         </div>
 
@@ -60,7 +64,7 @@ export default async function BrochureLibraryPage() {
                     )}
                     {!isArchive && (
                       <>
-                        <Link href={`/admin/events/brochure/new?baseEditionId=${e.id}`} className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--blue)] hover:underline">Start from this</Link>
+                        <NewBrochureDialog existing={naming} baseEditionId={e.id} label="Start from this" />
                         <Link href={`/admin/events/brochure/new?editionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Open →</Link>
                       </>
                     )}

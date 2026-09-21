@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { defaultPageConfig, type BrochureEdition, type BrochurePage, type BrochureSize } from "./types";
+import { isTitleTaken, normalizeTitle } from "./naming";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
@@ -62,6 +63,35 @@ export async function publishedBookletUrl(
   return `${baseUrl.replace(/\/$/, "")}/events/brochure/${(data as { id: string }).id}`;
 }
 
+/**
+ * Is this name already used by another booklet for the same event?
+ *
+ * The unique index is what actually holds — this exists so the UI can say
+ * which name is taken and suggest a free one, instead of surfacing a raw
+ * constraint violation.
+ */
+export async function titleTakenForEvent(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  title: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const { data } = await raw(supabase)
+    .from("event_brochures")
+    .select("id, title")
+    .eq("event_id", eventId);
+  return isTitleTaken(title, ((data ?? []) as Row[]).map((r) => ({ id: String(r.id), title: String(r.title) })), exceptId);
+}
+
+/** Every name already used for an event — what the naming helpers work from. */
+export async function editionTitlesForEvent(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+): Promise<{ id: string; title: string }[]> {
+  const { data } = await raw(supabase).from("event_brochures").select("id, title").eq("event_id", eventId);
+  return ((data ?? []) as Row[]).map((r) => ({ id: String(r.id), title: String(r.title) }));
+}
+
 export async function getEdition(supabase: SupabaseClient<Database>, id: string): Promise<BrochureEdition | null> {
   const { data } = await raw(supabase).from("event_brochures").select("*").eq("id", id).maybeSingle();
   return data ? mapEdition(data as Row) : null;
@@ -95,7 +125,7 @@ export async function createEdition(
     .insert({
       event_id: input.eventId,
       base_edition_id: input.baseEditionId ?? null,
-      title: input.title,
+      title: normalizeTitle(input.title),
       page_config: pageConfig,
       size,
       theme,
@@ -144,7 +174,7 @@ export async function updateEdition(
   patch: { title?: string; pageConfig?: BrochurePage[]; overrides?: Record<string, Record<string, string>>; size?: BrochureSize; theme?: BrochureEdition["theme"] },
 ): Promise<BrochureEdition> {
   const p: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (patch.title !== undefined) p.title = patch.title;
+  if (patch.title !== undefined) p.title = normalizeTitle(patch.title);
   if (patch.pageConfig !== undefined) p.page_config = patch.pageConfig;
   if (patch.overrides !== undefined) p.overrides = patch.overrides;
   if (patch.size !== undefined) p.size = patch.size;

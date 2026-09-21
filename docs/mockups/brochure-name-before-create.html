@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brochure — name it before it exists</title>
+<style>
+  :root{ --navy:#0f2544; --blue:#185FA5; --border:#e2e8f0; --muted:#64748b; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1020px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:820px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .panel{border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;
+         box-shadow:0 1px 2px rgba(15,23,42,.06)}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  .btn{border-radius:7px;padding:6px 13px;font-size:12.4px;font-weight:600;
+       border:1px solid var(--border);background:#fff;color:#334155;white-space:nowrap;
+       display:inline-flex;align-items:center;gap:6px}
+  .btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn.dngr{border-color:#fecaca;color:#b91c1c}
+  .btn.off{opacity:.45}
+  .btn.sm{padding:4px 10px;font-size:11.7px}
+
+  /* today's library */
+  .lib li{display:flex;align-items:center;gap:14px;padding:11px 15px;border-bottom:1px solid #f1f5f9;list-style:none}
+  .lib ul{margin:0;padding:0}
+  .lib li:last-child{border-bottom:0}
+  .lib .t{min-width:0;flex:1}
+  .lib .t b{display:block;font-size:12.8px;color:var(--navy);font-weight:600}
+  .lib .t span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  .lnk{font-size:11.5px;font-weight:600;color:var(--blue)}
+  .lnk.grey{color:var(--muted)}
+  .lnk.red{color:#b91c1c}
+  .dupe{background:#fef2f2}
+  .dupeflag{border:1px solid #fecaca;background:#fef2f2;border-radius:9px;padding:10px 13px;
+            font-size:12.2px;color:#991b1b;margin:12px 15px 14px}
+
+  /* dialog */
+  .dlg{max-width:470px;border:1px solid var(--border);border-radius:13px;background:#fff;
+       box-shadow:0 16px 40px rgba(15,23,42,.16);overflow:hidden}
+  .dlg .h{padding:13px 16px;border-bottom:1px solid #f1f5f9}
+  .dlg .h b{font-size:14px;color:var(--navy)}
+  .dlg .h p{margin:3px 0 0;font-size:11.8px;color:var(--muted)}
+  .dlg .b{padding:14px 16px}
+  .f{margin-bottom:12px}
+  .f label{display:block;font-size:10.6px;font-weight:700;color:#475569;margin-bottom:5px}
+  .inp{width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;
+       font-size:12.6px;color:#334155;background:#fff}
+  .inp.bad{border-color:#fca5a5;background:#fff8f8}
+  .inp.good{border-color:#a7f3d0}
+  .hint{margin:5px 0 0;font-size:11px;color:#94a3b8}
+  .hint.err{color:#b91c1c}
+  .hint.ok{color:#047857}
+  .dlg .f2{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid #f1f5f9;background:#fafcff}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:880px){.two{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+       text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.now{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .tag.after{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+
+  /* flow */
+  .flow{display:flex;flex-direction:column}
+  .step{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start}
+  .rail{display:flex;flex-direction:column;align-items:center}
+  .dot{width:23px;height:23px;border-radius:50%;background:var(--navy);color:#fff;flex:none;
+       display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .dot.red{background:#b91c1c}
+  .line{width:2px;flex:1;background:#e2e8f0;min-height:16px}
+  .sb{padding-bottom:16px}
+  .sb b{display:block;font-size:13px;color:var(--navy)}
+  .sb p{margin:2px 0 0;font-size:12.3px;color:#475569}
+  .sb .src{margin-top:4px;font:10.6px ui-monospace,Menlo,monospace;color:#94a3b8}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#f8fafc;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Booklet — named before it exists</h1>
+  <p class="sub">Three separate faults produced those two identical drafts. The row is written the moment you pick an event, the title is generated with no uniqueness check, and <b>Open →</b> doesn&rsquo;t open anything.</p>
+
+  <!-- TODAY -->
+  <h2>What happened</h2>
+  <div class="panel lib">
+    <ul>
+      <li class="dupe">
+        <span class="t"><b>iCFO PE Expo — Las Vegas | Sept 22 — Issue 2026</b><span>draft · 9/21/2026</span></span>
+        <span class="lnk grey">Start from this</span><span class="lnk">Open →</span><span class="lnk red">Delete</span>
+      </li>
+      <li class="dupe">
+        <span class="t"><b>iCFO PE Expo — Las Vegas | Sept 22 — Issue 2026</b><span>draft · 9/21/2026</span></span>
+        <span class="lnk grey">Start from this</span><span class="lnk">Open →</span><span class="lnk red">Delete</span>
+      </li>
+      <li>
+        <span class="t"><b>iCFO PE Expo — Newport Beach | Aug 25 — Issue 2026</b><span>generated · 8/24/2026 · Published</span></span>
+        <span class="lnk">Download PDF</span><span class="lnk">QR</span><span class="lnk grey">Unpublish</span><span class="lnk">Open →</span>
+      </li>
+    </ul>
+    <p class="dupeflag">
+      Two rows, same title, same day. Clicking <b>Open →</b> on the first one is what made the second.
+    </p>
+  </div>
+
+  <div class="flow" style="margin-top:16px">
+    <div class="step">
+      <div class="rail"><div class="dot red">1</div><div class="line"></div></div>
+      <div class="sb">
+        <b>&ldquo;Open →&rdquo; doesn&rsquo;t open</b>
+        <p>The link carries <code>?editionId=…</code>, but the builder page only reads <code>eventId</code> and
+          <code>baseEditionId</code>. The id is dropped on the floor and the wizard starts empty.</p>
+        <p class="src">admin/events/brochure/new/page.tsx — searchParams never destructures editionId</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="rail"><div class="dot red">2</div><div class="line"></div></div>
+      <div class="sb">
+        <b>Picking an event writes a row immediately</b>
+        <p>Choosing the event calls <code>createEdition</code> straight away — before you have named anything,
+          arranged a page or seen a preview. Leaving the page leaves the row behind.</p>
+        <p class="src">BrochureWizard.tsx — createEdition() fires on event select</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="rail"><div class="dot red">3</div></div>
+      <div class="sb">
+        <b>The title is generated, never checked</b>
+        <p><code>`${event.title} — Issue ${year}`</code>, with no uniqueness constraint in the table and no check in
+          the route. Two bookings of the same event in the same year are always identical.</p>
+        <p class="src">api/admin/events/brochure/route.ts — title built, inserted, done</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE DIALOG -->
+  <h2>New booklet — nothing is written until you confirm</h2>
+  <div class="two">
+    <div>
+      <div class="dlg">
+        <div class="h">
+          <b>New booklet</b>
+          <p>Nothing is saved until you press Create.</p>
+        </div>
+        <div class="b">
+          <div class="f">
+            <label>Event</label>
+            <select class="inp"><option>iCFO PE Expo — Las Vegas | Sept 22</option></select>
+          </div>
+          <div class="f" style="margin-bottom:0">
+            <label>Booklet name</label>
+            <input class="inp good" value="iCFO PE Expo — Las Vegas | Sept 22 — Issue 2026" />
+            <p class="hint ok">✓ Available. Suggested from the event — change it to anything you like.</p>
+          </div>
+        </div>
+        <div class="f2">
+          <span style="flex:1"></span>
+          <span class="btn sm">Cancel</span>
+          <span class="btn pri sm">Create booklet</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">Name first, row second. Cancel closes and leaves nothing behind.</p>
+    </div>
+
+    <div>
+      <div class="dlg">
+        <div class="h">
+          <b>New booklet</b>
+          <p>Nothing is saved until you press Create.</p>
+        </div>
+        <div class="b">
+          <div class="f">
+            <label>Event</label>
+            <select class="inp"><option>iCFO PE Expo — Newport Beach | Aug 25</option></select>
+          </div>
+          <div class="f" style="margin-bottom:0">
+            <label>Booklet name</label>
+            <input class="inp bad" value="iCFO PE Expo — Newport Beach | Aug 25 — Issue 2026" />
+            <p class="hint err">A booklet with this name already exists. Try <b>… — Issue 2026 (2)</b>.</p>
+          </div>
+        </div>
+        <div class="f2">
+          <span style="flex:1"></span>
+          <span class="btn sm">Cancel</span>
+          <span class="btn pri sm off">Create booklet</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">Checked as you type and again on the server, where a unique index makes
+        it true rather than likely. Create stays disabled until the name is free.</p>
+    </div>
+  </div>
+
+  <!-- LEAVING -->
+  <h2>Leaving a draft you never finished</h2>
+  <div class="dlg" style="max-width:500px">
+    <div class="h">
+      <b>Leave without generating?</b>
+      <p>iCFO PE Expo — Las Vegas | Sept 22 — Issue 2026</p>
+    </div>
+    <div class="b">
+      <p class="note" style="margin:0">
+        This booklet has never been generated — no PDF, no pages arranged beyond the defaults. Keep it in the
+        library to finish later, or discard it now.
+      </p>
+    </div>
+    <div class="f2">
+      <span class="btn dngr sm">Discard booklet</span>
+      <span style="flex:1"></span>
+      <span class="btn sm">Stay here</span>
+      <span class="btn navy sm">Keep draft &amp; leave</span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:9px">Only shown for a draft that has never been generated — once a PDF exists,
+    leaving is just leaving. Everything you arranged is already saved as you work; this asks about the booklet, not
+    the edits.</p>
+
+  <!-- AND OPEN WORKS -->
+  <h2>And Open → opens</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:24%">Action</th><th style="width:38%">Today</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td><b>Open →</b></td><td>Ignores the id, starts a blank wizard, creates a second row</td><td>Loads that edition — its pages, overrides, theme and size</td></tr>
+        <tr><td><b>Start from this</b></td><td>Copies structure into a new row, name auto-generated and colliding</td><td>Same copy, but the name dialog opens first, prefilled <code>… (2)</code></td></tr>
+        <tr><td><b>New booklet</b></td><td>Row written when you pick the event</td><td>Row written when you press Create</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>Uniqueness is per event, not global.</b> Two different events may both want
+    &ldquo;Issue 2026&rdquo;; two booklets for the <em>same</em> event may not share a name. That is the collision
+    you actually hit.</p>
+    <p style="margin:0 0 8px"><b>Renaming stays possible.</b> The name is editable in the builder afterwards, and
+    the same check applies there — so you can&rsquo;t rename one booklet into another&rsquo;s name.</p>
+    <p style="margin:0"><b>The two drafts already there aren&rsquo;t cleaned up by this.</b> They are real rows;
+    delete whichever you don&rsquo;t want with the Delete button. Nothing here removes data on your behalf.</p>
+  </div>
+
+</div>
+</body>
+</html>
