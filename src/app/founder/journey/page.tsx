@@ -4,7 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
-import { OUTREACH_THRESHOLD, computeInvestableCrr } from "@/lib/crr/investable-score";
+import { OUTREACH_THRESHOLD, investableCrrFrom } from "@/lib/crr/investable-score";
+import { crrFor } from "@/lib/crr/crr-for";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FounderStageBanner } from "@/components/founder/FounderStageBanner";
@@ -245,10 +246,11 @@ export default async function FounderJourneyPage() {
   const currentIndex = state.stageIndex;
   const qualifyRequirements = getQualifyRequirements(state);
 
-  // Capital Readiness Rating (CRR): the single canonical score, shared with the
-  // dashboard via computeInvestableCrr. Gates automated outreach.
-  const { crr: investableScore, readiness, profilePercent, outreachReady } = computeInvestableCrr(state, company);
-  const outreachGap = OUTREACH_THRESHOLD - investableScore;
+  // Capital Readiness Rating: the engine score for this company's own stage —
+  // the same number admin and investors see, and the same gate.
+  const engineCrr = await crrFor(company?.id ?? null);
+  const { crr: investableScore, readiness, profilePercent, outreachReady } = investableCrrFrom(engineCrr, state, company);
+  const outreachGap = engineCrr.pointsToGate;
 
   return (
     <FounderAppShell

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { crrScoresFor } from "@/lib/crr/crr-for";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import {
   buildDocumentChecklist,
@@ -89,7 +90,10 @@ export async function loadFounderAssistantContext(
     summary.documentsUploadedCount = checklist.filter((item) => item.status !== "missing").length;
     summary.documentsRequiredCount = checklist.length;
     summary.documentsMissingCount = checklist.filter((item) => item.status === "missing").length;
-    summary.readinessScore = diligenceReport?.readiness_score ?? computedScore;
+    // The CRR engine score — one number across the platform. The old expression
+    // survives only as a last resort for a company the engine has never scored.
+    summary.readinessScore = (await crrScoresFor([company.id])).get(company.id)
+      ?? diligenceReport?.readiness_score ?? computedScore;
     summary.remediationActiveCount = remediation.summary.active;
     summary.remediationHighPriorityCount = remediation.tasks.filter((task) => task.priority === "high" && task.status !== "completed" && task.status !== "dismissed").length;
     summary.isPublished = Boolean(company.is_published);

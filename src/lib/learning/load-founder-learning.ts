@@ -1,4 +1,5 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
+import { crrScoresFor } from "@/lib/crr/crr-for";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { applyLearningReadinessBonus } from "@/lib/learning/progress-utils";
 import { computeStageAccess, computeStageCompletionPercent } from "@/lib/learning/stage-access";
@@ -138,7 +139,11 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
     .select("id", { count: "exact", head: true })
     .eq("company_id", company.id);
   const hasCompanyUpdates = (companyUpdatesCount ?? 0) > 0;
-  const baseReadinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
+  // The CRR engine score — one number across the platform. The old expression
+  // (diligence score, falling back to a document-type count) survives only as a
+  // last resort for a company the engine has never scored.
+  const baseReadinessScore = (await crrScoresFor([company.id])).get(company.id)
+    ?? diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
   const readinessScore = applyLearningReadinessBonus(
     baseReadinessScore,
     company.learning_readiness_bonus ?? 0,
