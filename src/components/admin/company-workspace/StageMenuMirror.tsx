@@ -1,6 +1,5 @@
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { getStageMirror, stageLabel, type MirrorItemStatus } from "@/lib/admin/stage-menu-mirror";
-import { OpenFounderItem } from "@/components/admin/company-workspace/OpenFounderItem";
 import { ReachOutPanel } from "@/components/admin/company-workspace/ReachOutPanel";
 import { StageItemDrawer } from "@/components/admin/company-workspace/StageItemDrawer";
 import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
@@ -16,14 +15,17 @@ const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon:
 
 /**
  * Founder-menu mirror for one stage tab: a recommendation strip plus the founder's
- * own menu for that stage with per-item status. "Open" links to the founder route;
- * Phase 3 upgrades it to permission-gated act-on-behalf.
+ * own menu for that stage with per-item status. Each row expands into its
+ * diagnosis — what is wrong, what is missing, how to solve it.
+ *
+ * There is no per-row "Open as founder" control. The act-on-behalf session never
+ * worked reliably from here, and a button that dead-ends is worse than no button
+ * (see the house rule: never render a control that cannot run). The resolver
+ * itself is untouched — the founder pages still honour an acting session.
  */
 export function StageMenuMirror({
   journey,
   stage,
-  founderId = null,
-  canActOnBehalf = false,
   companyId = null,
   founderName = "the founder",
   founderEmail = null,
@@ -32,8 +34,6 @@ export function StageMenuMirror({
 }: Readonly<{
   journey: FounderJourneyState;
   stage: JourneyStage;
-  founderId?: string | null;
-  canActOnBehalf?: boolean;
   companyId?: string | null;
   founderName?: string;
   founderEmail?: string | null;
@@ -108,12 +108,7 @@ export function StageMenuMirror({
               <li key={item.label}>
                 {/* Row contents are unchanged — the drawer only adds the caret and
                     the panel beneath, and keeps the Open controls outside the toggle. */}
-                <StageItemDrawer
-                  diagnosis={byHref[item.href] ?? null}
-                  actions={
-                    <OpenFounderItem href={item.href} founderId={founderId} canActOnBehalf={canActOnBehalf} actable={item.actable} />
-                  }
-                >
+                <StageItemDrawer diagnosis={byHref[item.href] ?? null}>
                   <i className={`ti ${meta.icon} ${meta.iconColor} text-[17px]`} aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{item.label}</span>
                   {byHref[item.href]?.measured ? (

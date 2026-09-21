@@ -18,8 +18,10 @@ export function StageItemDrawer({
   children,
 }: Readonly<{
   diagnosis: ItemDiagnosis | null;
-  /** The Open / Open as founder / Soon controls — never inside the toggle button. */
-  actions: React.ReactNode;
+  /** Trailing row controls — never inside the toggle button. */
+  /** Trailing controls for the row, kept outside the toggle button. Optional —
+   *  rows currently have none since "Open as founder" was removed. */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }>) {
   const [open, setOpen] = useState(false);

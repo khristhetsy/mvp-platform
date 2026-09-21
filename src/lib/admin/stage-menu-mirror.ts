@@ -8,32 +8,11 @@ import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 
 export type MirrorItemStatus = "done" | "attention" | "missing" | "todo" | "locked" | "partial";
 
-// Founder routes that have adopted the act-on-behalf resolver end-to-end, so
-// "Open as founder" actually renders as the founder. Others would just redirect
-// staff, so their Open control is shown as not-yet-available. Grow this set as
-// pages adopt resolveActingFounderScope.
-const ACT_ON_BEHALF_WIRED = new Set<string>([
-  // Preparation — all nine adopted the resolver. The four that read
-  // founder-scoped rows (readiness, wizard, data room, documents) also route
-  // those reads through `acting.supabase`; the rest only read global config.
-  "/founder/readiness/wizard",
-  "/founder/readiness",
-  "/founder/readiness/data-room",
-  "/founder/documents",
-  "/founder/business-plan",
-  "/founder/pitch-deck",
-  "/founder/financial-model",
-  "/founder/cap-table",
-  "/founder/valuation",
-]);
-
 export type MirrorItem = {
   label: string;
   /** Founder route this item lives at. */
   href: string;
   status: MirrorItemStatus;
-  /** True when the founder page honors act-on-behalf (Open renders as founder). */
-  actable: boolean;
 };
 
 export type StageMirror = {
@@ -138,22 +117,21 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
   const defs = STAGE_MENU[stage] ?? [];
 
   const items: MirrorItem[] = defs.map((d) => {
-    const actable = ACT_ON_BEHALF_WIRED.has(d.href);
-    if (!reached) return { label: d.label, href: d.href, status: "locked", actable };
+    if (!reached) return { label: d.label, href: d.href, status: "locked" };
     if (d.condition) {
-      return { label: d.label, href: d.href, status: conditionMet(journey, d.condition) ? "done" : "attention", actable };
+      return { label: d.label, href: d.href, status: conditionMet(journey, d.condition) ? "done" : "attention" };
     }
     // Partially gated: the page is usable, one action inside it is held. Shown as
     // "Browse only" and deliberately NOT counted as blocking — the row the gate
     // belongs to carries that, and counting it here would say the same thing three
     // times in one header.
     if (d.partialCondition) {
-      return { label: d.label, href: d.href, status: conditionMet(journey, d.partialCondition) ? "done" : "partial", actable };
+      return { label: d.label, href: d.href, status: conditionMet(journey, d.partialCondition) ? "done" : "partial" };
     }
     // No signal wired for this item. It is NOT done just because the founder
     // moved past the stage — marking it done was a fake pass that produced
     // "9 of 9 done" on a company with no documents uploaded at all.
-    return { label: d.label, href: d.href, status: "todo", actable };
+    return { label: d.label, href: d.href, status: "todo" };
   });
 
   // Only measured passes count. An item nobody checks can never be "done".

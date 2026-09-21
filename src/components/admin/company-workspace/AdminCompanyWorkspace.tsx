@@ -60,7 +60,6 @@ export function AdminCompanyWorkspace({
   adminRole = "admin",
   riskSignals = [],
   founderContactId = null,
-  canActOnBehalf = false,
   founderCanDistribute = false,
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
@@ -69,10 +68,8 @@ export function AdminCompanyWorkspace({
   adminRole?: NextBestActionRole;
   riskSignals?: RiskSignal[];
   founderContactId?: string | null;
-  canActOnBehalf?: boolean;
   founderCanDistribute?: boolean;
 }>) {
-  const founderId = data.founder?.id ?? null;
   const founderName = data.founder?.full_name ?? data.founder?.email ?? "the founder";
   const founderEmail = data.founder?.email ?? null;
   const companyId = data.company.id;
@@ -276,7 +273,7 @@ export function AdminCompanyWorkspace({
       {tab === "initialize" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="initialize" />
-          <StageMenuMirror journey={data.journey} stage="initialize" diagnosis={data.stageDiagnosis?.initialize ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="initialize" diagnosis={data.stageDiagnosis?.initialize ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
         </div>
       ) : null}
 
@@ -284,7 +281,7 @@ export function AdminCompanyWorkspace({
       {tab === "qualify" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="qualify" />
-          <StageMenuMirror journey={data.journey} stage="qualify" diagnosis={data.stageDiagnosis?.qualify ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="qualify" diagnosis={data.stageDiagnosis?.qualify ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
             <WorkspaceSection icon="ti-chart-line" tone="blue" title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
@@ -313,7 +310,7 @@ export function AdminCompanyWorkspace({
       {tab === "deploy" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="deploy" />
-          <StageMenuMirror journey={data.journey} stage="deploy" diagnosis={data.stageDiagnosis?.deploy ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="deploy" diagnosis={data.stageDiagnosis?.deploy ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investablePanel}
           {investorActivity}
@@ -325,7 +322,7 @@ export function AdminCompanyWorkspace({
       {tab === "optimize" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="optimize" />
-          <StageMenuMirror journey={data.journey} stage="optimize" diagnosis={data.stageDiagnosis?.optimize ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="optimize" diagnosis={data.stageDiagnosis?.optimize ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investorActivity}
           {spvOperations}
