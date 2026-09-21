@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary";
 import { useAdminActionHealthSafe } from "@/components/AdminActionHealthProvider";
 import { CompanyStatusBadge } from "@/components/CompanyStatusBadge";
@@ -11,6 +11,7 @@ import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import { formatApiError } from "@/lib/api/errors";
 import { adminDebug } from "@/lib/debug/admin-debug";
 import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
+import { useDismiss } from "@/lib/ui/use-dismiss";
 
 export type AdminCompanyCardData = {
   id: string;
@@ -58,6 +59,49 @@ type Props = {
   company: AdminCompanyCardData;
 };
 
+const MENU_ITEM =
+  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12.8px] font-medium";
+
+/**
+ * One row of the More menu. An action that can't run in the company's current
+ * state stays listed — hiding it would leave a reviewer wondering where it went
+ * — but is dimmed and carries the reason, so it never has to be clicked to
+ * find out.
+ */
+function MenuItem({
+  label,
+  reason,
+  danger,
+  onClick,
+}: Readonly<{ label: string; reason?: string; danger?: boolean; onClick: () => void }>) {
+  const blocked = Boolean(reason);
+  return (
+    <button
+      type="button"
+      disabled={blocked}
+      onClick={onClick}
+      className={`${MENU_ITEM} ${
+        blocked
+          ? "cursor-not-allowed text-slate-400"
+          : danger
+            ? "text-red-700 hover:bg-red-50"
+            : "text-slate-700 hover:bg-slate-50"
+      }`}
+    >
+      <span>{label}</span>
+      {reason ? <span className="ml-auto text-[10.5px] text-slate-400">{reason}</span> : null}
+    </button>
+  );
+}
+
+function MenuCaption({ children }: Readonly<{ children: string }>) {
+  return (
+    <p className="px-2.5 pb-1 pt-2 text-[9.8px] font-bold uppercase tracking-[0.07em] text-slate-400">
+      {children}
+    </p>
+  );
+}
+
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("en-US", {
@@ -81,6 +125,7 @@ export function AdminCompanyCard({ company }: Props) {
   const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
   const [showFeedbackForm, setShowFeedbackForm] = useState<"reject" | "changes_requested" | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reviewStatus, setReviewStatus] = useState(company.review_status);
   const [isPublished, setIsPublished] = useState(company.is_published);
   const [marketplaceVisible, setMarketplaceVisible] = useState(company.marketplace_visible);
@@ -374,6 +419,44 @@ export function AdminCompanyCard({ company }: Props) {
 
   const isBusy = Boolean(loading);
 
+  // What the company's current state permits. The card used to draw every
+  // action at full strength and let the API refuse; these decide it up front.
+  const isApproved = reviewStatus === "approved";
+  const isLiveOnMarketplace = isPublished && marketplaceVisible;
+  const hasPitchDeck = Boolean(company.pitch_deck_url || company.pitch_deck_id);
+
+  const approveBlockedBy = isApproved ? "already approved" : undefined;
+  const publishBlockedBy = !isApproved
+    ? "needs approval"
+    : isLiveOnMarketplace
+      ? "already live"
+      : undefined;
+  const unpublishBlockedBy = isLiveOnMarketplace ? undefined : "not live";
+  const rejectBlockedBy = reviewStatus === "rejected" ? "already rejected" : undefined;
+
+  /** The one move this state actually calls for. */
+  const primary = !isApproved
+    ? { label: loading === "approve" ? "Approving…" : "Approve", run: () => void submitReview("approve") }
+    : isLiveOnMarketplace
+      ? {
+          label: loading === "unpublish" ? "Unpublishing…" : "Unpublish from Marketplace",
+          run: () => void toggleMarketplace("unpublish"),
+        }
+      : {
+          label: loading === "publish" ? "Publishing…" : "Publish to Marketplace",
+          run: () => void toggleMarketplace("publish"),
+        };
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const menuRef = useDismiss<HTMLDivElement>(menuOpen, closeMenu);
+
+  function fromMenu(fn: () => void) {
+    return () => {
+      setMenuOpen(false);
+      fn();
+    };
+  }
+
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
@@ -513,96 +596,107 @@ export function AdminCompanyCard({ company }: Props) {
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            /* One primary — the move this state calls for — plus everything
+               else behind More, so the row never wraps and no action that
+               would be refused is drawn at full prominence. */
+            <div className="flex flex-wrap items-start justify-end gap-2">
+              {hasPitchDeck ? (
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => void viewPitchDeck()}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold whitespace-nowrap text-slate-700 disabled:opacity-50"
+                >
+                  {loading?.startsWith("view_doc") ? "Opening..." : "View Pitch Deck"}
+                </button>
+              ) : null}
+
               <button
                 type="button"
                 disabled={isBusy}
-                onClick={() => setShowFeedbackForm("reject")}
-                className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50"
+                onClick={primary.run}
+                className="rounded-full bg-[var(--navy)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-white disabled:opacity-50"
               >
-                Reject
+                {primary.label}
               </button>
-              <button
-                type="button"
-                disabled={isBusy}
-                onClick={() => setShowFeedbackForm("changes_requested")}
-                className="rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800 disabled:opacity-50"
-              >
-                Request Changes
-              </button>
-              <button
-                type="button"
-                disabled={isBusy}
-                onClick={() => void submitReview("approve")}
-                className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {loading === "approve" ? "Approving..." : "Approve"}
-              </button>
+
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((open) => !open)}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold whitespace-nowrap text-slate-700 disabled:opacity-50"
+                >
+                  More ▾
+                </button>
+
+                {menuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+6px)] z-20 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                  >
+                    <MenuCaption>Review</MenuCaption>
+                    <MenuItem
+                      label="Reject"
+                      danger
+                      reason={rejectBlockedBy}
+                      onClick={fromMenu(() => setShowFeedbackForm("reject"))}
+                    />
+                    <MenuItem
+                      label="Request changes"
+                      onClick={fromMenu(() => setShowFeedbackForm("changes_requested"))}
+                    />
+                    {isApproved ? (
+                      <MenuItem label="Approve" reason={approveBlockedBy} onClick={() => undefined} />
+                    ) : null}
+
+                    <div className="my-1 h-px bg-slate-100" />
+                    <MenuCaption>Marketplace</MenuCaption>
+                    {isLiveOnMarketplace || publishBlockedBy ? (
+                      <MenuItem
+                        label="Publish to Marketplace"
+                        reason={publishBlockedBy}
+                        onClick={fromMenu(() => void toggleMarketplace("publish"))}
+                      />
+                    ) : null}
+                    {isLiveOnMarketplace ? null : (
+                      <MenuItem
+                        label="Unpublish from Marketplace"
+                        reason={unpublishBlockedBy}
+                        onClick={fromMenu(() => void toggleMarketplace("unpublish"))}
+                      />
+                    )}
+                    <MenuItem
+                      label={
+                        loading === "toggle_sample"
+                          ? "Saving…"
+                          : isSample
+                            ? "Sample · hidden from public"
+                            : "Mark as sample"
+                      }
+                      onClick={fromMenu(() => void toggleSample())}
+                    />
+
+                    <div className="my-1 h-px bg-slate-100" />
+                    <MenuCaption>Open</MenuCaption>
+                    <MenuItem
+                      label={showCompanyDetails ? "Hide company details" : "Company details"}
+                      onClick={fromMenu(() => setShowCompanyDetails((open) => !open))}
+                    />
+                    <MenuItem
+                      label={showDocuments ? "Hide documents" : `Documents (${company.documents.length})`}
+                      onClick={fromMenu(() => setShowDocuments((open) => !open))}
+                    />
+                    {hasPitchDeck ? null : (
+                      <MenuItem label="Pitch deck" reason="none uploaded" onClick={() => undefined} />
+                    )}
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => void toggleMarketplace("publish")}
-              className="rounded-full bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {loading === "publish" ? "Publishing..." : "Publish to Marketplace"}
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => void toggleMarketplace("unpublish")}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
-            >
-              {loading === "unpublish" ? "Unpublishing..." : "Unpublish from Marketplace"}
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => void toggleSample()}
-              className={`rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
-                isSample
-                  ? "bg-amber-100 text-amber-800 border border-amber-300"
-                  : "border border-slate-300 text-slate-700"
-              }`}
-              title={t("sample_companies_are_hidden_from_all_public")}
-            >
-              {loading === "toggle_sample"
-                ? "Saving..."
-                : isSample
-                  ? "Sample · hidden from public"
-                  : "Mark as sample"}
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => setShowCompanyDetails((open) => !open)}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
-            >
-              {showCompanyDetails ? "Hide Company" : "View Company"}
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => setShowDocuments((open) => !open)}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
-            >
-              {showDocuments ? "Hide Documents" : "View Documents"}
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => void viewPitchDeck()}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
-            >
-              {loading?.startsWith("view_doc") ? "Opening..." : "View Pitch Deck"}
-            </button>
-          </div>
         </div>
       </div>
 
