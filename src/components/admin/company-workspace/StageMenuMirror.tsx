@@ -52,45 +52,53 @@ export function StageMenuMirror({
   const summary = diagnosis?.summary ?? "";
   const facts = diagnosis?.facts ?? [];
 
+  // One action, in this card's own header. It used to sit inside the strip while
+  // a second, fuller "Reach out" card rendered above the same menu — two entry
+  // points to the same email.
+  const reachOut = companyId ? (
+    reachOutHref ? (
+      <a
+        href={reachOutHref}
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        <i className="ti ti-mail" aria-hidden="true" /> Reach out to founder
+      </a>
+    ) : (
+      <ReachOutPanel
+        companyId={companyId}
+        founderName={founderName}
+        founderEmail={founderEmail}
+        stageLabel={stageLabel(stage)}
+        pendingItems={pendingItems}
+        facts={facts}
+        situation={situation}
+      />
+    )
+  ) : null;
+
   return (
     <div className="space-y-3">
-      {/* Recommendation strip */}
+      {/* Recommendation strip — text only now; the action lives in the card header. */}
       <div className="flex items-start gap-2.5 rounded-lg bg-indigo-50 px-3 py-2.5">
         <i className="ti ti-sparkles mt-0.5 text-indigo-600" aria-hidden="true" />
         <p className="flex-1 text-[12.5px] leading-relaxed text-indigo-900">{summary || mirror.recommendation}</p>
-        {/* Every stage can reach out — a cleared stage and a stage locked three
-            gates back both have something worth saying, they just say it differently. */}
-        {companyId ? (
-          reachOutHref ? (
-            <a
-              href={reachOutHref}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <i className="ti ti-mail" aria-hidden="true" /> Reach out to founder
-            </a>
-          ) : (
-            <ReachOutPanel
-              companyId={companyId}
-              founderName={founderName}
-              founderEmail={founderEmail}
-              stageLabel={stageLabel(stage)}
-              pendingItems={pendingItems}
-              facts={facts}
-              situation={situation}
-            />
-          )
-        ) : null}
       </div>
 
       {/* Founder-menu mirror */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 bg-slate-50 px-3.5 py-2">
-          <p className="text-[11px] font-semibold text-slate-600">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50 px-3.5 py-2">
+          <p className="min-w-0 flex-1 text-[11px] font-semibold text-slate-600">
             Founder&apos;s {stageLabel(stage)} menu
             <span className="font-normal text-slate-400">
               {" "}· {mirror.reached ? `${mirror.doneCount} of ${mirror.measuredCount} measured items done · ${mirror.total - mirror.measuredCount} not tracked` : "not reached"}
             </span>
           </p>
+          {pendingItems.length > 0 ? (
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold text-amber-800">
+              {pendingItems.length} blocking
+            </span>
+          ) : null}
+          {reachOut}
         </div>
         <ul className="divide-y divide-slate-100">
           {mirror.items.map((item) => {

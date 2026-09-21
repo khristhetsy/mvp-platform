@@ -4,6 +4,12 @@ import { useState } from "react";
 
 type Via = "icapos" | "gmail";
 
+// Carried over from ReachOutCard, which this panel replaced: being investor-ready
+// and having investor access are different things, and staff need to be able to
+// say so without writing it out each time.
+const UPGRADE_LINE =
+  "\n\nWhen you're ready to reach investors, investor access is available on a paid plan — reply and we'll walk you through the options.";
+
 /**
  * "Reach out to founder" — drafts an email from the stage's DIAGNOSIS (not just
  * the item labels, which is why the old drafts could only say "these are still
@@ -21,6 +27,7 @@ export function ReachOutPanel({
   pendingItems,
   facts = [],
   situation = "blocking",
+  founderCanDistribute = true,
 }: Readonly<{
   companyId: string;
   founderName: string;
@@ -30,12 +37,16 @@ export function ReachOutPanel({
   /** The stage's diagnosis as plain lines — score, gaps, ranked fixes. */
   facts?: string[];
   situation?: "blocking" | "cleared" | "locked-near" | "locked-far";
+  /** False when the founder's plan doesn't include investor access — offers the
+   *  upgrade mention. */
+  founderCanDistribute?: boolean;
 }>) {
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [appendSignature, setAppendSignature] = useState(true);
   const [alsoNudge, setAlsoNudge] = useState(false);
+  const [includeUpgrade, setIncludeUpgrade] = useState(false);
   const [via, setVia] = useState<Via>("icapos");
   const [busy, setBusy] = useState<null | "draft" | "save" | "send">(null);
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -92,6 +103,14 @@ export function ReachOutPanel({
     } finally {
       setBusy(null);
     }
+  }
+
+  function toggleUpgrade(next: boolean) {
+    setIncludeUpgrade(next);
+    setBody((b) => {
+      const stripped = b.replace(UPGRADE_LINE, "");
+      return next ? stripped + UPGRADE_LINE : stripped;
+    });
   }
 
   async function openPanel() {
@@ -162,6 +181,18 @@ export function ReachOutPanel({
                     <i className="ti ti-brand-google" aria-hidden="true" /> Connect Google (with Gmail)
                   </a>
                 ) : null}
+              </div>
+            ) : null}
+
+            {!founderCanDistribute ? (
+              <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5">
+                <i className="ti ti-lock mt-0.5 text-sky-700" aria-hidden="true" />
+                <div className="text-[11.5px] leading-relaxed text-sky-900">
+                  <span className="font-semibold">Investor access is a separate step on a paid plan.</span> Becoming investor-ready doesn&apos;t grant it.
+                  <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-sky-800">
+                    <input type="checkbox" checked={includeUpgrade} onChange={(e) => toggleUpgrade(e.target.checked)} /> Include an upgrade-to-access mention in the email
+                  </label>
+                </div>
               </div>
             ) : null}
 
