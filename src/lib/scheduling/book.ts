@@ -7,6 +7,7 @@ import { configFromSettings, expandWindows } from "./availability";
 import { createBooking } from "./bookings";
 import { logActivity } from "@/lib/sales/activity";
 import type { CalendarEventRecord, TimeInterval } from "./types";
+import type { SourceConfidence } from "@/lib/attribution/source";
 
 export interface BookSlotInput {
   hostId: string;
@@ -18,6 +19,13 @@ export interface BookSlotInput {
   title?: string;
   note?: string | null;
   answers?: Array<{ label: string; value: string }>;
+  /**
+   * Campaign this meeting is attributed to, already resolved by the caller
+   * against the precedence ladder in `@/lib/attribution/source`. The route
+   * decides the winner because only it can see the cookie; this function just
+   * records what it is told.
+   */
+  source?: { tag: string; confidence: SourceConfidence } | null;
 }
 
 export interface BookSlotResult {
@@ -154,6 +162,11 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
       contact_crm_id: contactCrmId,
       start_time: input.startTime, end_time: input.endTime, timezone: input.timezone,
       meet_url: hostEvent.meet_url, note: input.note ?? null, answers,
+      // The booking is now the attributed record. Attribution used to be
+      // inferred through the contact, which for a cold lead does not exist —
+      // that is why meetings booked outside the /fit funnel counted as zero.
+      source_tag: input.source?.tag ?? null,
+      source_confidence: input.source?.confidence ?? null,
     });
 
     if (contactCrmId) {

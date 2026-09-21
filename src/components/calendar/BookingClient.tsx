@@ -37,6 +37,7 @@ export function BookingClient({
   viewerName,
   viewerEmail,
   rescheduleToken,
+  sourceTag,
 }: {
   hostId: string;
   hostName: string;
@@ -49,6 +50,10 @@ export function BookingClient({
   /** When set, this booking replaces an existing one — sent so the book route
    *  cancels the old booking after the new slot is confirmed. */
   rescheduleToken?: string;
+  /** Campaign tag off the scheduler link (?src=…). Sent with the booking so a
+   *  meeting booked straight from a post can be attributed; the server ranks it
+   *  below a /fit session and above the first-touch cookie. */
+  sourceTag?: string | null;
 }) {
   const durations = slotDurations && slotDurations.length > 0 ? slotDurations : [30];
   const cf = contactFields;
@@ -167,6 +172,7 @@ export function BookingClient({
           note: note.trim() || undefined,
           answers: answerPayload,
           rescheduleToken: rescheduleToken || undefined,
+          sourceTag: sourceTag || undefined,
         }),
       });
       const data = await res.json();
@@ -182,7 +188,7 @@ export function BookingClient({
     } finally {
       setBooking(false);
     }
-  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, load]);
+  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, sourceTag, load]);
 
   if (confirmed) {
     return (

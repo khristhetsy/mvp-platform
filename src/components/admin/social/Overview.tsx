@@ -7,22 +7,48 @@ import {
 } from "./funnel-types";
 import { AiCmo } from "./AiCmo";
 
+/** How much of the meeting picture the platform can actually see. */
+type MeetingCoverage = {
+  total: number;
+  attributed: number;
+  unattributed: number;
+  selfReported: number;
+  anyCaptured: boolean;
+};
+
 const C = 2 * Math.PI * 32; // ring circumference (r=32)
 
-function Ring({ s }: { s: StageResult }) {
+/**
+ * `unmeasured` draws a dashed ring and a dash instead of a number.
+ *
+ * "0 meetings" and "no meeting could be attributed" are different facts and
+ * only one of them is alarming. Until a booking actually carries a source, the
+ * Meetings ring has nothing to report and says so, rather than showing a zero
+ * that reads as "nobody booked".
+ */
+function Ring({ s, unmeasured, note }: { s: StageResult; unmeasured?: boolean; note?: string | null }) {
   const p = Math.min(100, s.pctOfGoal ?? 0);
   const off = C * (1 - p / 100);
   const color = STAGE_COLORS[s.stage];
   return (
     <div className="w-[92px] flex-none text-center">
-      <svg viewBox="0 0 80 80" className="mx-auto h-[74px] w-[74px]" role="img" aria-label={`${STAGE_LABELS[s.stage]} ${s.pctOfGoal ?? 0}% of goal`}>
-        <circle cx="40" cy="40" r="32" fill="none" stroke="#eef2f7" strokeWidth="7" />
-        <circle cx="40" cy="40" r="32" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off} transform="rotate(-90 40 40)" />
-        <text x="40" y="37" fontSize={s.actual >= 1000 ? "14" : "16"} fontWeight="700" fill="#0f172a" textAnchor="middle">{fmt(s.actual)}</text>
-        <text x="40" y="51" fontSize="9" fill="#94a3b8" textAnchor="middle">{s.pctOfGoal === null ? "no goal" : `${s.pctOfGoal}%`}</text>
+      <svg viewBox="0 0 80 80" className="mx-auto h-[74px] w-[74px]" role="img"
+           aria-label={unmeasured ? `${STAGE_LABELS[s.stage]} unmeasured` : `${STAGE_LABELS[s.stage]} ${s.pctOfGoal ?? 0}% of goal`}>
+        <circle cx="40" cy="40" r="32" fill="none" stroke="#eef2f7" strokeWidth="7"
+                strokeDasharray={unmeasured ? "4 6" : undefined} />
+        {!unmeasured && (
+          <circle cx="40" cy="40" r="32" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off} transform="rotate(-90 40 40)" />
+        )}
+        <text x="40" y="37" fontSize={unmeasured ? "16" : s.actual >= 1000 ? "14" : "16"} fontWeight="700"
+              fill={unmeasured ? "#94a3b8" : "#0f172a"} textAnchor="middle">{unmeasured ? "—" : fmt(s.actual)}</text>
+        <text x="40" y="51" fontSize="9" fill="#94a3b8" textAnchor="middle">
+          {unmeasured ? "unmeasured" : s.pctOfGoal === null ? "no goal" : `${s.pctOfGoal}%`}
+        </text>
       </svg>
       <div className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{STAGE_LABELS[s.stage]}</div>
-      <div className="text-[10px] text-slate-500">{s.target != null ? `of ${fmt(s.target)}` : "—"}</div>
+      <div className="text-[10px] text-slate-500">
+        {note ?? (s.target != null ? `of ${fmt(s.target)}` : "—")}
+      </div>
     </div>
   );
 }
@@ -40,6 +66,7 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [loading, setLoading] = useState(true);
   const [moverMetric, setMoverMetric] = useState<StageKey>("conversions");
+  const [meetingCoverage, setMeetingCoverage] = useState<MeetingCoverage | null>(null);
 
   // Remember the Top-movers metric choice across sessions.
   useEffect(() => {
@@ -53,8 +80,10 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
   useEffect(() => {
     let live = true;
     fetch(`/api/admin/social/goals?grain=${grain}`).then((r) => r.json()).then((d) => {
-      if (!live) return; setAggregate(d.aggregate ?? []); setFunnels(d.funnels ?? []); setLoading(false);
-    }).catch(() => { if (live) { setAggregate([]); setFunnels([]); setLoading(false); } });
+      if (!live) return;
+      setAggregate(d.aggregate ?? []); setFunnels(d.funnels ?? []);
+      setMeetingCoverage(d.meetingCoverage ?? null); setLoading(false);
+    }).catch(() => { if (live) { setAggregate([]); setFunnels([]); setMeetingCoverage(null); setLoading(false); } });
     return () => { live = false; };
   }, [grain]);
 
@@ -77,6 +106,25 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
   const movers = useMemo(() =>
     [...funnels].map((f) => ({ f, m: f.stages.find((s) => s.stage === moverMetric) }))
       .sort((a, b) => (b.m?.actual ?? 0) - (a.m?.actual ?? 0)).slice(0, 4), [funnels, moverMetric]);
+
+  /**
+   * The line under the Meetings ring.
+   *
+   * Unattributed meetings stay visible rather than folding into the count —
+   * hiding them is what let "0" read as "nobody booked" when the truth was
+   * "nothing could be attributed". Self-reported is called out separately
+   * because an answer to "how did you hear" is weaker evidence than a click.
+   */
+  const meetingsNote = useMemo(() => {
+    if (!meetingCoverage) return null;
+    if (!meetingCoverage.anyCaptured) {
+      return meetingCoverage.total > 0 ? `${meetingCoverage.total} unattributed` : "no bookings yet";
+    }
+    const bits = [`${meetingCoverage.attributed} tagged`];
+    if (meetingCoverage.selfReported > 0) bits.push(`${meetingCoverage.selfReported} self-rep.`);
+    if (meetingCoverage.unattributed > 0) bits.push(`${meetingCoverage.unattributed} unattrib.`);
+    return bits.join(" · ");
+  }, [meetingCoverage]);
 
   const cmoContext = useMemo(() => () => ({ grain, blended, stages: aggregate.map((s) => ({ stage: s.stage, actual: s.actual, target: s.target, pctOfGoal: s.pctOfGoal, deltaPct: s.deltaPct })) }), [grain, blended, aggregate]);
 
@@ -102,7 +150,13 @@ export function Overview({ failedCount, topPostBody, onNavigate }: {
             const next = aggregate.find((x) => x.stage === STAGES[i + 1]);
             return (
               <div key={k} className="flex items-center">
-                {s ? <Ring s={s} /> : <div className="w-[92px]" />}
+                {s ? (
+                  <Ring
+                    s={s}
+                    unmeasured={k === "meetings" && meetingCoverage !== null && !meetingCoverage.anyCaptured}
+                    note={k === "meetings" ? meetingsNote : null}
+                  />
+                ) : <div className="w-[92px]" />}
                 {i < STAGES.length - 1 ? (
                   <div className="flex-none px-1 text-center text-slate-400">
                     <div className="text-[10px]">{step(next)}</div>

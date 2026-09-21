@@ -6,6 +6,8 @@ import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/Tool
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import Link from "next/link";
 import type { Booking } from "@/lib/scheduling/bookings";
+import { SOURCE_CONFIDENCE_LABEL, isHighConfidence } from "@/lib/attribution/source";
+import type { CampaignOption } from "@/lib/attribution/resolve";
 
 const STATUS: Record<string, { label: string; bg: string; color: string }> = {
   confirmed: { label: "Confirmed", bg: "#E8F5F1", color: "#0F6E56" },
@@ -41,7 +43,7 @@ function gcalUrl(b: Booking): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-export function BookingsClient({ bookings: initial, canExport = false }: { bookings: Booking[]; canExport?: boolean }) {
+export function BookingsClient({ bookings: initial, campaigns = [], canExport = false }: { bookings: Booking[]; campaigns?: CampaignOption[]; canExport?: boolean }) {
   const [bookings, setBookings] = useState<Booking[]>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
@@ -130,14 +132,14 @@ export function BookingsClient({ bookings: initial, canExport = false }: { booki
             })}
           </div>
 
-          {selected ? <BookingDetail key={selected.id} b={selected} onUpdated={onUpdated} /> : <div style={{ ...card, padding: 24, fontSize: 13, color: "var(--muted-foreground)" }}>Select a booking.</div>}
+          {selected ? <BookingDetail key={selected.id} b={selected} campaigns={campaigns} onUpdated={onUpdated} /> : <div style={{ ...card, padding: 24, fontSize: 13, color: "var(--muted-foreground)" }}>Select a booking.</div>}
         </div>
       )}
     </div>
   );
 }
 
-function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) => void }) {
+function BookingDetail({ b, campaigns, onUpdated }: { b: Booking; campaigns: CampaignOption[]; onUpdated: (b: Booking) => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -163,6 +165,28 @@ function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) =
       const j = await res.json().catch(() => ({}));
       if (res.ok && j.booking) { onUpdated(j.booking as Booking); setNoteEditing(false); }
     } finally { setNoteBusy(false); }
+  }
+
+  /**
+   * The manual attribution override.
+   *
+   * Last rung of the ladder and the only one that beats a machine: you sat in
+   * the meeting, so you know where they came from. Recorded with who set it,
+   * which is why the funnel can still separate "we tracked this" from
+   * "somebody told us".
+   */
+  async function setSource(tag: string | null) {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(`/api/scheduling/bookings/${b.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceTag: tag }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.booking) { setMsg(j.error ?? "Couldn’t set the source."); return; }
+      onUpdated(j.booking as Booking);
+      setMsg(tag ? "Source set." : "Source cleared.");
+    } catch { setMsg("Network error — not updated."); } finally { setBusy(false); }
   }
 
   async function setStatus(status: "completed" | "cancelled" | "no_show" | "confirmed") {
@@ -221,6 +245,54 @@ function BookingDetail({ b, onUpdated }: { b: Booking; onUpdated: (b: Booking) =
                 <a href={b.meet_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 6, fontSize: 10.5, fontWeight: 500, color: "#fff", background: "#2E78F5", borderRadius: 6, padding: "4px 10px", textDecoration: "none" }}>Join</a>
               </>
             ) : <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: 0 }}>No meeting link</p>}
+          </div>
+        </div>
+
+        {/* Where this meeting came from */}
+        <div style={{ background: "var(--muted)", borderRadius: 10, padding: "10px 12px" }}>
+          <p style={lbl}><i className="ti ti-target-arrow" aria-hidden="true" /> Source</p>
+          {b.source_tag ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+                {campaigns.find((c) => c.sourceTag === b.source_tag)?.name ?? b.source_tag}
+              </span>
+              {b.source_confidence ? (
+                <span
+                  title={SOURCE_CONFIDENCE_LABEL[b.source_confidence]}
+                  style={{
+                    fontSize: 10, borderRadius: 20, padding: "2px 8px",
+                    // Tracked and self-reported are not the same evidence, and
+                    // the badge says which so a soft number is never read as hard.
+                    background: isHighConfidence(b.source_confidence) ? "#ECFDF5" : "#FFF7ED",
+                    color: isHighConfidence(b.source_confidence) ? "#065F46" : "#9A3412",
+                  }}
+                >
+                  {SOURCE_CONFIDENCE_LABEL[b.source_confidence]}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: 0 }}>
+              Unattributed — nothing was captured when this was booked.
+            </p>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 7, flexWrap: "wrap" }}>
+            <select
+              value={b.source_tag ?? ""}
+              disabled={busy}
+              onChange={(e) => void setSource(e.target.value || null)}
+              style={{ fontSize: 11.5, padding: "5px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", maxWidth: 230 }}
+            >
+              <option value="">Unattributed</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.sourceTag}>{c.name}</option>
+              ))}
+            </select>
+            <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>
+              {b.source_confidence === "manual" && b.source_set_at
+                ? `Set by hand ${new Date(b.source_set_at).toLocaleDateString()}`
+                : "Setting this by hand overrides what was captured"}
+            </span>
           </div>
         </div>
 

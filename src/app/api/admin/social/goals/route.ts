@@ -6,7 +6,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { campaignFunnels, aggregateFunnels, type Grain } from "@/lib/social/funnel";
+import {
+  campaignFunnels,
+  aggregateFunnels,
+  meetingAttributionCoverage,
+  nextPeriodStart,
+  periodStart,
+  type Grain,
+} from "@/lib/social/funnel";
 import { setCampaignGoals } from "@/lib/social/goals-io";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +25,22 @@ export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
   const grain = grainOf(new URL(req.url).searchParams.get("grain"));
-  const funnels = await campaignFunnels(grain);
-  return NextResponse.json({ grain, periodStart: funnels[0]?.periodStart ?? null, funnels, aggregate: aggregateFunnels(funnels) });
+  const now = new Date();
+  const start = periodStart(grain, now);
+  const [funnels, meetingCoverage] = await Promise.all([
+    campaignFunnels(grain),
+    // How much of the meeting picture is visible at all. The tile needs this to
+    // tell "no meetings happened" apart from "no meeting could be attributed" —
+    // reporting the second as a zero is what made the number misleading.
+    meetingAttributionCoverage(start, nextPeriodStart(grain, start)),
+  ]);
+  return NextResponse.json({
+    grain,
+    periodStart: funnels[0]?.periodStart ?? null,
+    funnels,
+    aggregate: aggregateFunnels(funnels),
+    meetingCoverage,
+  });
 }
 
 const postSchema = z.object({

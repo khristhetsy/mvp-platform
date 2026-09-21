@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Meeting attribution — the flow, today and proposed</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .cb{padding:16px}
+
+  /* ── flow ─────────────────────────────────────────────── */
+  .lane{display:grid;grid-template-columns:104px 1fr;gap:12px;align-items:center;padding:13px 0;border-bottom:1px dashed var(--line)}
+  .lane:last-child{border-bottom:none}
+  .lane .who{font-size:11.5px;font-weight:650;color:var(--s600);line-height:1.35}
+  .lane .who small{display:block;font-weight:400;color:var(--s400);font-size:10.5px;margin-top:2px}
+  .chain{display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+
+  .node{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 10px;min-width:104px;flex:none}
+  .node .t{font-size:11.5px;font-weight:600;line-height:1.3}
+  .node .d{font-size:9.8px;color:var(--s500);margin-top:2px;line-height:1.35}
+  .node.store{background:#F8FAFC;border-style:dashed}
+  .node.ok{border-color:#A7F3D0;background:#F0FDF9}
+  .node.ok .t{color:#065F46}
+  .node.dead{border-color:#FECACA;background:#FEF2F2}
+  .node.dead .t{color:#991B1B}
+  .node.new{border-color:#C7D2FE;background:#EEF2FF}
+  .node.new .t{color:#3730A3}
+  .node.count{border-color:#4F46E5;background:#4F46E5}
+  .node.count .t{color:#fff}
+  .node.count .d{color:#C7D2FE}
+
+  .arrow{flex:none;width:26px;height:2px;background:#CBD5E1;position:relative;margin:0 1px}
+  .arrow::after{content:"";position:absolute;right:-1px;top:-3px;border:4px solid transparent;border-left-color:#CBD5E1}
+  .arrow.bad{background:#FCA5A5}.arrow.bad::after{border-left-color:#FCA5A5}
+  .arrow.ok{background:#6EE7B7}.arrow.ok::after{border-left-color:#6EE7B7}
+  .arrow.new{background:#A5B4FC}.arrow.new::after{border-left-color:#A5B4FC}
+  .arrow.cut{background:repeating-linear-gradient(90deg,#FCA5A5 0 4px,transparent 4px 8px)}
+  .arrow.cut::after{display:none}
+
+  .xcut{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:34px}
+  .xcut .x{width:19px;height:19px;border-radius:99px;background:#DC2626;color:#fff;font-size:12px;font-weight:700;
+           display:flex;align-items:center;justify-content:center;line-height:1}
+  .xcut .cap{font-size:8.5px;color:#B91C1C;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:3px;white-space:nowrap}
+
+  .badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+         border-radius:99px;padding:1px 6px;margin-left:4px;vertical-align:middle}
+  .b-new{background:#4F46E5;color:#fff}
+  .b-has{background:#E2E8F0;color:#475569}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--s500);margin-top:12px;padding-top:11px;border-top:1px solid var(--l100)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:26px;height:16px;border-radius:5px;border:1px solid var(--line)}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:13px 15px;margin-bottom:12px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0;font-size:12.6px;color:var(--s600);line-height:1.6}
+  .why b{color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.2px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:8px 8px 8px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .yes{color:#059669;font-weight:700}.no2{color:#DC2626;font-weight:700}
+
+  .tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:13px;align-items:flex-start}
+  .tile .tt{font-size:10.5px;font-weight:650;color:var(--s500);text-transform:uppercase;letter-spacing:.05em}
+  .tile .tv{font-size:22px;font-weight:700;line-height:1.15;margin-top:3px}
+  .tile .tu{font-size:11px;color:var(--s500)}
+  .tile .fl{font-size:11.2px;margin-top:6px;font-weight:600}
+  .fl.bad{color:var(--bad)}.fl.warn{color:var(--warn)}.fl.good{color:var(--good)}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+
+  /* the decision callout + the locked lane */
+  .keep{display:flex;gap:11px;align-items:flex-start;background:#F0FDF9;border:1px solid #A7F3D0;
+        border-radius:9px;padding:11px 14px;font-size:12.5px;color:#065F46;line-height:1.6;margin-bottom:11px}
+  .keep b{color:#022C22}
+  .keeptag{flex:none;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+           background:#059669;color:#fff;border-radius:99px;padding:3px 9px;margin-top:1px}
+  .lane.locked{background:#F0FDF9;border-radius:9px;padding-left:9px;padding-right:9px;
+               border:1px solid #A7F3D0;border-bottom:1px solid #A7F3D0;margin-bottom:4px}
+  .lockpill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+            background:#059669;color:#fff;border-radius:99px;padding:2px 7px;margin-top:3px}
+
+  /* precedence ladder */
+  .prec{display:flex;flex-direction:column;gap:7px}
+  .prow{display:grid;grid-template-columns:24px 150px 1fr 118px;gap:11px;align-items:center;
+        border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.3px}
+  .prow.first{border-color:#A7F3D0;background:#F0FDF9}
+  .prow .rank{width:20px;height:20px;border-radius:6px;background:var(--ind);color:#fff;font-size:10.5px;
+              font-weight:700;display:flex;align-items:center;justify-content:center}
+  .prow.first .rank{background:#059669}
+  .prow .src{font-weight:650}
+  .prow .conf{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;text-align:right}
+  .c-high{color:#059669}.c-mid{color:#B45309}.c-low{color:#64748B}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Meeting attribution — the flow</h1>
+<p class="sub">Where a meeting is born, and where the trail goes cold · traced through the code · mockup</p>
+
+<div class="why">
+  <h2>The single point of failure</h2>
+  <p>Everything hangs on <code>book/route.ts:99</code>. It reads an <code>fs_session</code> cookie, and
+     <b>only if it finds one</b> calls <code>handoffFitSession</code> — the only code anywhere that writes
+     <code>lead_source</code> from a campaign tag. The cookie is set by <code>/fit</code> and nothing else.
+     So the question &ldquo;was this meeting from social?&rdquo; is really &ldquo;did this person go through
+     /fit in this browser first?&rdquo; For your meetings, the answer is no.</p>
+</div>
+
+<!-- ══════════ TODAY ══════════ -->
+<div class="lbl">Today — three real paths, two of them dead</div>
+<div class="card">
+  <div class="ch"><h3>Current flow</h3><span class="sp"></span>
+    <span style="font-size:11px;color:#64748B">Only path 1 can ever reach the counter</span></div>
+  <div class="cb">
+
+    <!-- path 1 -->
+    <div class="lane">
+      <div class="who">1 · Full funnel<small>the only counted path</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">LinkedIn post</div><div class="d">tagged link</div></div>
+        <span class="arrow ok"></span>
+        <div class="node ok"><div class="t">/fit?src=…</div><div class="d">lands on the funnel</div></div>
+        <span class="arrow ok"></span>
+        <div class="node store ok"><div class="t">fit_sessions</div><div class="d">source_tag saved<br>fs_session cookie set</div></div>
+        <span class="arrow ok"></span>
+        <div class="node ok"><div class="t">Books</div><div class="d">same browser</div></div>
+        <span class="arrow ok"></span>
+        <div class="node store ok"><div class="t">handoffFitSession</div><div class="d">writes contact<br>lead_source = tag</div></div>
+        <span class="arrow ok"></span>
+        <div class="node count"><div class="t">Meetings +1</div><div class="d">counted</div></div>
+      </div>
+    </div>
+
+    <!-- path 2 -->
+    <div class="lane">
+      <div class="who">2 · Straight to the scheduler<small>your link in a bio, a post CTA, a signature</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">LinkedIn post</div><div class="d">link to scheduler</div></div>
+        <span class="arrow bad"></span>
+        <div class="node dead"><div class="t">/schedule/khris</div><div class="d">reads no ?src, no utm</div></div>
+        <span class="arrow bad"></span>
+        <div class="node"><div class="t">Books</div><div class="d">fills the form</div></div>
+        <span class="arrow bad"></span>
+        <div class="node store dead"><div class="t">scheduling_bookings</div><div class="d">no source column<br>exists at all</div></div>
+        <span class="xcut"><span class="x">✕</span><span class="cap">no cookie</span></span>
+        <div class="node dead"><div class="t">handoffFitSession</div><div class="d">never runs</div></div>
+        <span class="arrow cut"></span>
+        <div class="node dead"><div class="t">Meetings +0</div><div class="d">invisible</div></div>
+      </div>
+    </div>
+
+    <!-- path 3 -->
+    <div class="lane">
+      <div class="who">3 · DM or word of mouth<small>Johnny mentions us; they email</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">Sees the post</div><div class="d">never clicks</div></div>
+        <span class="arrow bad"></span>
+        <div class="node"><div class="t">DM / email</div><div class="d">you send a link</div></div>
+        <span class="arrow bad"></span>
+        <div class="node dead"><div class="t">/schedule/khris</div><div class="d">no source</div></div>
+        <span class="arrow bad"></span>
+        <div class="node dead"><div class="t">&ldquo;How did you hear?&rdquo;</div><div class="d">free text → &ldquo;LinkedIn&rdquo;</div></div>
+        <span class="xcut"><span class="x">✕</span><span class="cap">never equals</span></span>
+        <div class="node dead"><div class="t">source_tag</div><div class="d">linkedin-icapos-sept</div></div>
+        <span class="arrow cut"></span>
+        <div class="node dead"><div class="t">Meetings +0</div><div class="d">invisible</div></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="sw" style="background:#F0FDF9;border-color:#A7F3D0"></span> reaches the counter</span>
+      <span><span class="sw" style="background:#FEF2F2;border-color:#FECACA"></span> trail goes cold</span>
+      <span><span class="sw" style="background:#F8FAFC;border-style:dashed"></span> stored data</span>
+      <span><span class="x" style="width:15px;height:15px;font-size:10px;display:inline-flex;align-items:center;justify-content:center;border-radius:99px;background:#DC2626;color:#fff">✕</span> the break</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PROPOSED ══════════ -->
+<div class="lbl">Proposed — path 1 kept exactly as it is, the rest added around it</div>
+
+<div class="keep">
+  <span class="keeptag">Decided</span>
+  <span><b>The /fit funnel path is not touched.</b> It already works, it is the highest-confidence signal you
+    have, and it stays the winner whenever it fires. Everything below is <b>additive</b>: new capture for the
+    paths that currently record nothing. No existing code path changes behaviour.</span>
+</div>
+
+<div class="card">
+  <div class="ch"><h3>Proposed flow</h3><span class="sp"></span>
+    <span class="badge b-new">new</span>
+    <span style="font-size:11px;color:#64748B;margin-left:6px">one new column, four capture points, path 1 untouched</span></div>
+  <div class="cb">
+
+    <div class="lane locked">
+      <div class="who">1 · Full funnel
+        <small><span class="lockpill">🔒 Keep as-is</span></small></div>
+      <div class="chain">
+        <div class="node ok"><div class="t">Tagged link</div><div class="d">any campaign</div></div>
+        <span class="arrow ok"></span>
+        <div class="node ok"><div class="t">/fit?src=…</div><div class="d">unchanged</div></div>
+        <span class="arrow ok"></span>
+        <div class="node store ok"><div class="t">fit_sessions</div><div class="d">unchanged</div></div>
+        <span class="arrow ok"></span>
+        <div class="node ok"><div class="t">Books</div><div class="d">unchanged</div></div>
+        <span class="arrow ok"></span>
+        <div class="node store ok"><div class="t">handoffFitSession</div><div class="d">unchanged —<br>still writes the contact</div></div>
+        <span class="arrow ok"></span>
+        <div class="node count"><div class="t">Meetings +1</div><div class="d">highest confidence</div></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="who">2 · Straight to the scheduler<small>now the main counted path</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">LinkedIn post</div><div class="d">link to scheduler</div></div>
+        <span class="arrow new"></span>
+        <div class="node new"><div class="t">/schedule/khris<br>?src=linkedin-sept<span class="badge b-new">A</span></div><div class="d">page reads src</div></div>
+        <span class="arrow new"></span>
+        <div class="node new"><div class="t">Books</div><div class="d">src carried in the form</div></div>
+        <span class="arrow new"></span>
+        <div class="node store new"><div class="t">bookings.source_tag<span class="badge b-new">new</span></div><div class="d">linkedin-sept</div></div>
+        <span class="arrow new"></span>
+        <div class="node count"><div class="t">Meetings +1</div><div class="d">counted</div></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="who">2b · Landed anywhere first<small>homepage from a post, books days later</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">Any page</div><div class="d">?src / utm_*</div></div>
+        <span class="arrow new"></span>
+        <div class="node new"><div class="t">Source cookie<span class="badge b-new">B</span></div><div class="d">set site-wide,<br>not only /fit</div></div>
+        <span class="arrow new"></span>
+        <div class="node"><div class="t">Browses, leaves,<br>comes back</div><div class="d">days later</div></div>
+        <span class="arrow new"></span>
+        <div class="node new"><div class="t">Books</div><div class="d">cookie still there</div></div>
+        <span class="arrow new"></span>
+        <div class="node store new"><div class="t">bookings.source_tag</div><div class="d">only when no<br>fit session exists</div></div>
+        <span class="arrow new"></span>
+        <div class="node count"><div class="t">Meetings +1</div><div class="d">counted</div></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="who">3 · DM or word of mouth<small>no click to capture</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">Sees the post</div><div class="d">never clicks</div></div>
+        <span class="arrow new"></span>
+        <div class="node"><div class="t">/schedule/khris</div><div class="d">no src available</div></div>
+        <span class="arrow new"></span>
+        <div class="node new"><div class="t">&ldquo;How did you hear?&rdquo;<span class="badge b-new">C</span></div><div class="d">picklist mapped<br>to campaigns</div></div>
+        <span class="arrow new"></span>
+        <div class="node store new"><div class="t">bookings.source_tag</div><div class="d">self-reported,<br>flagged as such</div></div>
+        <span class="arrow new"></span>
+        <div class="node count"><div class="t">Meetings +1</div><div class="d">counted, lower confidence</div></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="who">4 · Nothing captured<small>the honest remainder</small></div>
+      <div class="chain">
+        <div class="node"><div class="t">Books somehow</div><div class="d">conference, referral</div></div>
+        <span class="arrow"></span>
+        <div class="node store"><div class="t">bookings.source_tag</div><div class="d">null</div></div>
+        <span class="arrow"></span>
+        <div class="node new"><div class="t">Sales Hub → Bookings<span class="badge b-new">D</span></div><div class="d">staff sets it after the call</div></div>
+        <span class="arrow new"></span>
+        <div class="node store new"><div class="t">bookings.source_tag</div><div class="d">manual</div></div>
+        <span class="arrow new"></span>
+        <div class="node count"><div class="t">Meetings +1</div><div class="d">or stays Unattributed</div></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="sw" style="background:#EEF2FF;border-color:#C7D2FE"></span> new behaviour</span>
+      <span><span class="sw" style="background:#4F46E5;border-color:#4F46E5"></span> the counter</span>
+      <span><b style="color:#3730A3">A B C D</b> the four options, in the order they catch traffic</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PRECEDENCE ══════════ -->
+<div class="lbl">Precedence — what wins when two signals disagree</div>
+<div class="card">
+  <div class="ch"><h3>Order of trust</h3><span class="sp"></span>
+    <span style="font-size:11px;color:#64748B">first match wins · a lower row never overwrites a higher one</span></div>
+  <div class="cb">
+    <div class="prec">
+      <div class="prow first">
+        <span class="rank">1</span>
+        <span class="src">/fit session <span class="lockpill" style="margin:0 0 0 4px">keep</span></span>
+        <span>The person walked the funnel. You know the campaign, the answers and the intent.
+              <b>Always wins</b>, even if the scheduler link also carried a tag.</span>
+        <span class="conf c-high">Highest</span>
+      </div>
+      <div class="prow">
+        <span class="rank">2</span>
+        <span class="src">Tagged scheduler link</span>
+        <span>They clicked a link you posted. Real click, real campaign — just no funnel behind it.</span>
+        <span class="conf c-high">High</span>
+      </div>
+      <div class="prow">
+        <span class="rank">3</span>
+        <span class="src">Site-wide source cookie</span>
+        <span>They arrived from a tagged link at some point in the window and booked later.
+              Same evidence as 2, further from the booking in time.</span>
+        <span class="conf c-high">High</span>
+      </div>
+      <div class="prow">
+        <span class="rank">4</span>
+        <span class="src">&ldquo;How did you hear&rdquo;</span>
+        <span>Self-reported. Fills in where 1–3 saw nothing; never overwrites them. Flagged as self-reported
+              on the row so you can discount it.</span>
+        <span class="conf c-mid">Medium</span>
+      </div>
+      <div class="prow">
+        <span class="rank">5</span>
+        <span class="src">Staff set it manually</span>
+        <span>You sat in the meeting. Overrides everything, because a human decided — and the row records who
+              and when.</span>
+        <span class="conf c-mid">Manual</span>
+      </div>
+      <div class="prow">
+        <span class="rank">6</span>
+        <span class="src">Nothing</span>
+        <span>Stays <b>Unattributed</b>. Shown in the count, never folded into zero.</span>
+        <span class="conf c-low">None</span>
+      </div>
+    </div>
+    <p style="font-size:11.8px;color:#64748B;margin:12px 0 0;line-height:1.6">
+      Rows 1–3 are <b>first-touch</b>: once a booking has a source it is not replaced by a later signal of the
+      same or lower rank. This matches what <code>/fit</code> already does
+      (<code>if (!overrides.lead_source)</code>), so the platform keeps one rule instead of two.
+      Row 5 is the deliberate exception — a person overriding a machine.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ WHAT CHANGES ══════════ -->
+<div class="lbl">What actually has to be built</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:9%"></th><th style="width:26%">Piece</th><th style="width:34%">What it does</th><th>Status today</th></tr>
+    <tr>
+      <td><span class="badge b-new" style="margin:0">new</span></td>
+      <td><code>scheduling_bookings.source_tag</code></td>
+      <td>The booking becomes the attributed record, instead of attribution being inferred through a contact
+          that may not exist.</td>
+      <td class="no2">Column does not exist</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-new" style="margin:0">A</span></td>
+      <td><code>/schedule/[hostId]</code> reads <code>?src</code></td>
+      <td>Carries the tag through the booking form into the row.</td>
+      <td class="no2">Reads nothing — grepped, confirmed</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-new" style="margin:0">B</span></td>
+      <td>Site-wide source cookie</td>
+      <td>Generalises the <code>fs_session</code> mechanism that already works on <code>/fit</code> to every page.</td>
+      <td class="no2">Only <code>/fit</code> sets one</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-new" style="margin:0">C</span></td>
+      <td>&ldquo;How did you hear&rdquo; → picklist</td>
+      <td>Options map to campaign ids, not to the literal string typed.</td>
+      <td class="no2">Free text; lands in <code>lead_source</code>; matches nothing</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-new" style="margin:0">D</span></td>
+      <td>Source field on a booking</td>
+      <td>Staff set it after the call. One dropdown.</td>
+      <td class="no2">No field</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-has" style="margin:0">has</span></td>
+      <td><code>social_clicks</code> / <code>fit_sessions</code></td>
+      <td>Already record <code>source_tag</code> correctly — this is why Clicks reads 14 and is trustworthy.</td>
+      <td class="yes">Working</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-has" style="margin:0">has</span></td>
+      <td>Campaign tags</td>
+      <td><code>social_campaigns.source_tag</code>, applied to published links by the queue.</td>
+      <td class="yes">Working</td>
+    </tr>
+  </table>
+</div></div>
+
+<!-- ══════════ THE TILE ══════════ -->
+<div class="lbl">What the tile should say at each stage</div>
+<div class="tiles">
+  <div class="tile">
+    <svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#E2E8F0" stroke-width="6"/>
+      <text x="25" y="29" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">0</text></svg>
+    <div>
+      <div class="tt">Today</div>
+      <div class="tv">0 <span class="tu">of 0</span></div>
+      <div class="fl bad">Reads as &ldquo;no meetings happened&rdquo;</div>
+      <div style="font-size:11px;color:#94A3B8;margin-top:4px">Which is false, and alarming.</div>
+    </div>
+  </div>
+  <div class="tile">
+    <svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#E2E8F0" stroke-width="6" stroke-dasharray="3 5"/>
+      <text x="25" y="29" text-anchor="middle" font-size="12" font-weight="700" fill="#94A3B8">—</text></svg>
+    <div>
+      <div class="tt">Until capture ships</div>
+      <div class="tv" style="color:#94A3B8">Unmeasured</div>
+      <div class="tu">bookings carry no source</div>
+      <div class="fl warn">Honest: nothing can be attributed yet</div>
+    </div>
+  </div>
+  <div class="tile">
+    <svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#E2E8F0" stroke-width="6"/>
+      <circle cx="25" cy="25" r="20" fill="none" stroke="#059669" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="78 126" transform="rotate(-90 25 25)"/>
+      <text x="25" y="29" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">9</text></svg>
+    <div>
+      <div class="tt">After</div>
+      <div class="tv">9 <span class="tu">of 14 clicks</span></div>
+      <div class="fl good">7 tagged · 2 self-reported · 5 unattributed</div>
+      <div style="font-size:11px;color:#94A3B8;margin-top:4px">Unattributed shown, not hidden.</div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>The unattributed count stays visible.</b> Once capture works there will still be meetings nothing saw —
+  a conference handshake, a referral. Folding those into zero is how the tile lied in the first place. Showing
+  &ldquo;5 unattributed&rdquo; beside the number keeps it honest and tells you how much of your funnel is dark.
+  <br><br>
+  <b>Self-reported is marked as such.</b> A tag from an actual click and an answer to &ldquo;how did you
+  hear&rdquo; are not the same quality of evidence. C should never overwrite A or B — it fills in where they saw
+  nothing, and the row says which one it was.
+  <br><br>
+  <b>Settled by keeping path 1.</b> Choosing to preserve the /fit funnel settles the first-touch question with
+  it: that code already refuses to overwrite an existing <code>lead_source</code>, so first-touch becomes the
+  rule everywhere by default rather than by a second decision. The cost is real and worth naming — the post
+  that <i>first</i> found someone gets the credit, not the one that finally brought them back to book.
+</div>
+
+</div>
+</body>
+</html>

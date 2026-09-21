@@ -13,7 +13,8 @@
  * Actuals per stage (per campaign, within a period window):
  *   Outreach     = published variants (posts that went out)
  *   Clicks       = social_clicks / fit_sessions carrying the campaign source_tag
- *   Meetings     = scheduling_bookings whose contact's lead_source = source_tag
+ *   Meetings     = scheduling_bookings carrying the campaign source_tag directly
+ *                  (was: the booker's CRM contact's lead_source — see meetingsByTag)
  *   Conversions  = crm_contacts whose lead_source = source_tag (attributed signups)
  *
  * The pure functions (period math + computeFunnel) are IO-free and unit-tested; the
@@ -265,35 +266,73 @@ async function conversionsByTag(tags: string[], start: Date, end: Date): Promise
   return out;
 }
 
-/** Meetings (bookings) by tag within [start,end), attributed via the contact's lead_source. */
+/**
+ * Meetings (bookings) by tag within [start,end).
+ *
+ * Reads `scheduling_bookings.source_tag` directly. Until migration
+ * 20260921004 the booking carried no source at all, so this had to walk
+ * contacts → emails → bookings and match on email equality — which meant a
+ * meeting only counted if the booker was already a CRM contact AND that
+ * contact's `lead_source` exactly equalled the campaign tag AND the booking
+ * email matched the contact email. For anyone who booked without walking the
+ * /fit funnel, all three failed, and the tile read zero while meetings were
+ * plainly happening.
+ */
 async function meetingsByTag(tags: string[], start: Date, end: Date): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (!tags.length) return out;
-  // Contacts attributed to these tags → their emails → bookings in-window by email.
-  // One indexed lookup per tag, selecting ONLY email: this query has no date bound (a
-  // contact attributed last year can book today), so it previously scanned every
-  // crm_contacts row and detoasted its `overrides` jsonb — the single most expensive
-  // thing the funnel did. See migration 20260912003.
-  const emailToTag = new Map<string, string>();
-  for (const tag of tags) {
-    const { data, error } = await db().from("crm_contacts").select("email")
-      .eq("overrides->>lead_source", tag).limit(20000);
-    reportDbError("meetingsByTag: crm_contacts", error);
-    for (const c of (data ?? []) as { email: string | null }[]) {
-      const em = (c.email ?? "").trim().toLowerCase();
-      if (em) emailToTag.set(em, tag);
-    }
-  }
-  const emails = [...emailToTag.keys()];
-  if (!emails.length) return out;
-  const { data: bookings, error: eBook } = await db().from("scheduling_bookings").select("booker_email, created_at")
-    .gte("created_at", start.toISOString()).lt("created_at", end.toISOString()).limit(100000);
-  reportDbError("meetingsByTag: scheduling_bookings", eBook);
-  for (const b of (bookings ?? []) as { booker_email: string | null }[]) {
-    const tag = emailToTag.get((b.booker_email ?? "").trim().toLowerCase());
-    if (tag) out.set(tag, (out.get(tag) ?? 0) + 1);
+
+  const { data, error } = await db().from("scheduling_bookings").select("source_tag")
+    .in("source_tag", tags)
+    .gte("created_at", start.toISOString()).lt("created_at", end.toISOString())
+    .limit(100000);
+  reportDbError("meetingsByTag: scheduling_bookings", error);
+
+  for (const b of (data ?? []) as { source_tag: string | null }[]) {
+    const tag = b.source_tag ?? "";
+    if (tags.includes(tag)) out.set(tag, (out.get(tag) ?? 0) + 1);
   }
   return out;
+}
+
+/**
+ * How much of the meeting picture is actually visible.
+ *
+ * `attributed` and `unattributed` are reported separately so the Meetings tile
+ * can say "9 of 14, 5 unattributed" instead of folding the unknown into the
+ * count — folding it into zero is exactly how the tile misled in the first
+ * place. `selfReported` is split out because an answer to "how did you hear"
+ * is a recollection, not the same evidence as a tracked click.
+ */
+export type MeetingAttributionCoverage = {
+  total: number;
+  attributed: number;
+  unattributed: number;
+  selfReported: number;
+  /** False until at least one booking carries a source — the tile shows "unmeasured". */
+  anyCaptured: boolean;
+};
+
+export async function meetingAttributionCoverage(
+  start: Date,
+  end: Date,
+): Promise<MeetingAttributionCoverage> {
+  const { data, error } = await db().from("scheduling_bookings").select("source_tag, source_confidence")
+    .gte("created_at", start.toISOString()).lt("created_at", end.toISOString())
+    .limit(100000);
+  reportDbError("meetingAttributionCoverage: scheduling_bookings", error);
+
+  const rows = (data ?? []) as { source_tag: string | null; source_confidence: string | null }[];
+  const attributed = rows.filter((r) => r.source_tag).length;
+  const selfReported = rows.filter((r) => r.source_confidence === "self_reported").length;
+
+  return {
+    total: rows.length,
+    attributed,
+    unattributed: rows.length - attributed,
+    selfReported,
+    anyCaptured: attributed > 0,
+  };
 }
 
 async function countsFor(campaigns: CampaignRow[], tags: string[], start: Date, end: Date): Promise<Map<string, StageCounts>> {

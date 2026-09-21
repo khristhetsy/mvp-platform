@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getBooking, updateBookingStatus, updateBookingNote, BOOKING_STATUSES } from "@/lib/scheduling/bookings";
+import { getBooking, updateBookingStatus, updateBookingNote, setBookingSource, BOOKING_STATUSES } from "@/lib/scheduling/bookings";
+import { normalizeSourceTag } from "@/lib/attribution/source";
 import { cancelEvent } from "@/lib/calendar/events";
 import { sendBookingCancellation } from "@/lib/scheduling/notify";
 import { logActivity } from "@/lib/sales/activity";
@@ -18,7 +19,11 @@ export const dynamic = "force-dynamic";
 const patchSchema = z.object({
   status: z.enum(BOOKING_STATUSES).optional(),
   note: z.string().max(4000).nullable().optional(),
-}).refine((d) => d.status !== undefined || d.note !== undefined, { message: "Nothing to update." });
+  // Staff attribution override. Null clears it back to unattributed. Wins over
+  // every machine-captured signal, because the person setting it sat in the
+  // meeting — and the row records who and when.
+  sourceTag: z.string().max(120).nullable().optional(),
+}).refine((d) => d.status !== undefined || d.note !== undefined || d.sourceTag !== undefined, { message: "Nothing to update." });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
@@ -26,10 +31,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
-  const { status, note } = parsed.data;
+  const { status, note, sourceTag } = parsed.data;
 
   const before = await getBooking(id);
   if (!before) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+
+  // Source-only update — no calendar or email side effects.
+  if (sourceTag !== undefined && status === undefined && note === undefined) {
+    const tag = sourceTag === null ? null : normalizeSourceTag(sourceTag);
+    if (sourceTag !== null && !tag) {
+      return NextResponse.json(
+        { error: "That is not a campaign tag. Pick a campaign, or clear the source." },
+        { status: 400 },
+      );
+    }
+    const res = await setBookingSource({ bookingId: id, tag, userId: profile.id });
+    if (res.error) return NextResponse.json({ error: res.error }, { status: 500 });
+    const fresh = await getBooking(id);
+    return NextResponse.json({ ok: true, booking: fresh });
+  }
 
   // Note-only update (private meeting notes) — no calendar/email side effects.
   if (status === undefined) {
