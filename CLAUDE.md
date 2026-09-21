@@ -123,6 +123,62 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
 
 > **Note (from AGENTS.md):** This project uses Next.js 16 App Router, which has breaking changes from earlier versions. Before writing any Next.js-specific code, check `node_modules/next/dist/docs/` for the current API.
 
+## UI conventions — the house design
+
+These are the platform's agreed patterns. **Every new dashboard, card, list and
+search must use them.** Don't invent a parallel design; if something here doesn't
+fit a new surface, say so rather than building a one-off.
+
+### Metric tiles — `MetricCard` / `OperationalMetric`
+
+Never hand-roll a KPI card. Every metric tile on every dashboard (admin, founder,
+investor, and all hubs) uses `MetricCard`, which gives:
+
+- **`ring`** — a `ScoreRing` for scale. A metric with a real 0–100 or an x-of-y
+  denominator gets a filled arc; one with **no ceiling** gets `pending: true`,
+  which draws a dashed ring rather than a fake proportion. `gate` draws a
+  threshold tick so a score reads as a distance (CRR against `OUTREACH_GATE`).
+- **`unit`** — the denominator beside the value ("of 42", "gate 65").
+- **`flag`** — one coloured line (`good` / `warn` / `bad`) carrying the fact that
+  changes what you'd do today. **Omit it when the number behind it isn't loaded**;
+  never invent a statistic to fill the slot.
+- **`detailPanel`** — opens `MetricDetailDrawer` with the breakdown the tile has
+  no room for, plus a link to act. Tiles without one keep `href` navigation.
+- **`audience`** — `admin` / `founder` / `investor`, addresses the AI explanation.
+
+Every drawer carries the on-demand AI explainer (`POST /api/metrics/explain`):
+fetched on click, never on render; returns null when the tile has no supporting
+context; the prompt is given only the displayed figures and may not invent any.
+
+A bare number is not acceptable. "14" tells nobody anything — "14 open of 18
+tracked · 4 high priority" does.
+
+### Cards and sections
+
+- Actions live in the **card's own header, right-aligned**, secondary → primary,
+  with any count badge to their left. `WorkspaceSection` takes an `action` prop.
+  Never float an action inside the body, and never give the same action two
+  entry points on one screen.
+- Section bodies hold content only.
+
+### Search
+
+Every list search uses `src/lib/ui/live-search.ts` + `components/ui/SearchStatus.tsx`:
+
+- **Filters as you type.** `OdooSearchBar` debounces the typed text into `q`.
+- **The count reflects the filter** — "6 of 23", never the unfiltered total.
+- **Matches are highlighted** (`Highlight`), and an empty result uses
+  `NoSearchMatches`, which names the fields that were searched.
+- Searchable fields must cover **every column the table shows**, not a subset.
+
+### Honesty rules that apply to all of the above
+
+- A status nobody measures is **not** "done". Show it as unmeasured and name the
+  query that would measure it.
+- Never show a control that cannot run — if an action would fail, don't render it
+  at full prominence.
+- Provenance on any derived figure: where it came from and when.
+
 ## Working with khris
 
 - Mockup first: show a mockup and wait for "build it" before writing code.

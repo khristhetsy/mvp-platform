@@ -35,11 +35,19 @@ function defaultPlanForRole(role: UserRole, _requestedPlan?: PlanType | null): {
     };
   }
 
-  // New model: founders start on permanent Free (all tools; no trial countdown).
+  // Founders: the free tier was discontinued when Basic launched at $49
+  // (16 Sep 2026). A new founder lands on Basic awaiting payment rather than on
+  // a free plan they'd later have to be moved off. Existing free accounts keep
+  // theirs via subscriptions.is_grandfathered — this path only runs when no row
+  // exists yet, so it can never downgrade someone.
+  const requested = _requestedPlan;
+  const plan: PlanType =
+    requested === "founder_professional" || requested === "founder_managed_ir" ? requested : "founder_basic";
+
   return {
-    plan_type: "founder_free",
-    subscription_status: "free",
-    monthly_price_cents: PLAN_PRICES.founder_free,
+    plan_type: plan,
+    subscription_status: "pending_payment",
+    monthly_price_cents: PLAN_PRICES[plan],
     trial_started_at: null,
     trial_ends_at: null,
   };

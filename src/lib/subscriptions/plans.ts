@@ -15,7 +15,9 @@ export type SubscriptionStatus =
   | "expired"
   | "canceled"
   | "free"
-  | "internal";
+  | "internal"
+  /** New founder, signed up but checkout not finished. No paid entitlements. */
+  | "pending_payment";
 
 export type FeatureKey =
   | "dashboard"
@@ -58,7 +60,9 @@ export type SubscriptionRecord = {
 };
 
 export const PLAN_LABELS: Record<PlanType, string> = {
-  founder_free: "Free (grandfathered)",
+  // Whether an account is genuinely grandfathered lives on the row, not in the
+  // label — use planLabelFor() so the two can never disagree.
+  founder_free: "Free",
   founder_trial: "Free (legacy)",
   founder_basic: "Basic",
   founder_professional: "Professional",
@@ -117,20 +121,10 @@ export type SignupPlanOption = {
   contactSales?: boolean;
 };
 
+// Free is NOT here. It was discontinued for new signups when Basic launched at
+// $49 (16 Sep 2026); existing accounts keep it via subscriptions.is_grandfathered.
+// Re-adding it here would auto-grant free accounts again — see isAutoGrantSignupPlan.
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
-  {
-    planType: "founder_free",
-    title: "Free",
-    priceLabel: "$0",
-    priceSubtext: "Readiness",
-    badge: "Start here",
-    features: [
-      "All tools: CRR, valuation, data room, e-learning",
-      "See that matches exist — count, sector, fit tier",
-      "Investor identities hidden · no distribution",
-      "Your qualification layer, prescored for you",
-    ],
-  },
   {
     planType: "founder_basic",
     title: "Basic",
@@ -192,7 +186,8 @@ export const SIGNUP_INVESTOR_PLAN: SignupPlanOption = {
 };
 
 const SIGNUP_PLAN_TYPES = new Set<PlanType>([
-  "founder_free",
+  // founder_free deliberately absent — a crafted ?plan=founder_free must not
+  // re-open the discontinued tier.
   "founder_basic",
   "founder_professional",
   "investor_free",
@@ -215,5 +210,22 @@ export function isAutoGrantSignupPlan(role: "founder" | "investor", planType: Pl
     return planType === "investor_free";
   }
 
-  return planType === "founder_free";
+  // Founders have no free tier to auto-grant — every founder plan goes through
+  // checkout. This returning true for founder_free is what let new signups skip
+  // payment entirely.
+  return false;
+}
+
+/**
+ * Plan label for one account.
+ *
+ * The plan type alone can't say whether free access is legitimate: the label
+ * used to read "Free (grandfathered)" for every free row, including accounts
+ * created after the tier was discontinued. This reads the stored flag instead.
+ */
+export function planLabelFor(planType: PlanType, isGrandfathered = false): string {
+  if (planType === "founder_free") {
+    return isGrandfathered ? "Free (grandfathered)" : "Free — discontinued tier";
+  }
+  return PLAN_LABELS[planType];
 }

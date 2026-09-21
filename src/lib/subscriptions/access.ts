@@ -80,6 +80,14 @@ export function isSubscriptionActive(subscription: SubscriptionRecord, now = new
 }
 
 function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, now = new Date()): Set<FeatureKey> {
+  // Signed up but hasn't paid. The plan row already says founder_basic, so
+  // without this guard the feature set below would hand over the full product
+  // before checkout — the exact hole the free tier used to leave open. Only the
+  // dashboard (which shows the checkout prompt) and settings are reachable.
+  if (subscription.subscription_status === "pending_payment") {
+    return new Set<FeatureKey>(["dashboard", "settings"]);
+  }
+
   if (planType === "admin_internal") {
     return new Set<FeatureKey>([
       ...FOUNDER_PROFESSIONAL_FEATURES,
@@ -91,10 +99,11 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, n
     return new Set<FeatureKey>(["investor_workspace", "settings"]);
   }
 
-  // New pricing model: Free gives ALL tools (CRR, valuation, data room, e-learning).
-  // Paid tiers add distribution (investor identities, one-pager sends, limits,
-  // brokered intros) — that gating is enforced separately (Phase 2), not by the
-  // tool feature set here. Managed IR is done-for-you on top of Professional.
+  // founder_free is a DISCONTINUED tier kept for grandfathered accounts only —
+  // they keep the full tool set they signed up with. New rows can no longer be
+  // created on it (see defaultPlanForRole / isAutoGrantSignupPlan); this branch
+  // exists to honour the existing ones, not to hand access to anyone new.
+  // Paid tiers add distribution, gated separately.
   if (
     planType === "founder_free" ||
     planType === "founder_professional" ||
