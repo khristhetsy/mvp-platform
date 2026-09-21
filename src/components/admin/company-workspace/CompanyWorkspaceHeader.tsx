@@ -100,6 +100,7 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
       {drill(
         "qualify",
         <MetricCard
+          audience="admin"
           label={t("readiness_score")}
           value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
           detail={readiness.milestoneLabel}
@@ -116,6 +117,7 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
       {drill(
         "deploy",
         <MetricCard
+          audience="admin"
           label="Capital Readiness Rating"
           value={data.investable ? String(data.investable.effectiveScore ?? data.investable.totalScore) : "—"}
           detail={
@@ -135,11 +137,29 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
                 ? { text: `${OUTREACH_GATE - crrScore} points to unlock investor outreach.`, tone: "warn" }
                 : { text: "Outreach gate cleared.", tone: "good" }
           }
+          detailPanel={{
+            note: data.investable?.isOverridden
+              ? "This score is an admin override, not the engine's own figure."
+              : undefined,
+            breakdown: [
+              { label: "Engine score", value: String(data.investable?.totalScore ?? "—") },
+              { label: "Effective score", value: String(crrScore ?? "—") },
+              { label: "Outreach gate", value: String(OUTREACH_GATE) },
+              {
+                label: "Distance to gate",
+                value: crrScore == null ? "—" : crrScore >= OUTREACH_GATE ? "cleared" : `${OUTREACH_GATE - crrScore}`,
+                tone: crrScore != null && crrScore >= OUTREACH_GATE ? "good" : "warn",
+              },
+            ],
+            href: `/admin/companies/${companyId}#qualify`,
+            hrefLabel: "Open Preparation",
+          }}
         />,
       )}
       {drill(
         "qualify",
         <MetricCard
+          audience="admin"
           label={t("open_remediation")}
           value={String(readiness.remediation.active)}
           detail={`${readiness.remediation.completed} closed of ${readiness.remediation.total} · ${readiness.remediation.highPriorityOpen} high priority`}
@@ -153,6 +173,17 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
                 ? { text: "None are high priority.", tone: "good" }
                 : null
           }
+          detailPanel={{
+            breakdown: [
+              { label: "Open", value: String(readiness.remediation.open), tone: readiness.remediation.open > 0 ? "warn" : undefined },
+              { label: "In progress", value: String(readiness.remediation.inProgress) },
+              { label: "Completed", value: String(readiness.remediation.completed), tone: "good" },
+              { label: "Dismissed", value: String(readiness.remediation.dismissed) },
+              { label: "High priority open", value: String(readiness.remediation.highPriorityOpen), tone: readiness.remediation.highPriorityOpen > 0 ? "bad" : "good" },
+            ],
+            href: `/admin/companies/${companyId}#qualify`,
+            hrefLabel: "Open readiness",
+          }}
           // A bare "8" has no scale. The ring fills as tasks close.
           ring={{
             percent: readiness.remediation.total > 0 ? Math.round((readiness.remediation.completed / readiness.remediation.total) * 100) : null,
@@ -164,6 +195,7 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
         />,
       )}
       <MetricCard
+          audience="admin"
         label={t("investor_interests_2")}
         value={String(data.investorActivity.interests)}
         detail={`${data.investorActivity.introRequests} intro requests`}
@@ -184,6 +216,7 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
         }}
       />
       <MetricCard
+          audience="admin"
         label={t("open_compliance")}
         value={String(data.compliance.openCount)}
         detail={`${data.compliance.totalCount - data.compliance.openCount} resolved of ${data.compliance.totalCount} · ${data.compliance.criticalCount} critical`}
@@ -196,6 +229,17 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
               ? { text: "Nothing outstanding.", tone: "good" }
               : null
         }
+        detailPanel={{
+          note: data.compliance.nextAction ?? undefined,
+          breakdown: [
+            { label: "Open", value: String(data.compliance.openCount), tone: data.compliance.openCount > 0 ? "warn" : "good" },
+            { label: "Critical", value: String(data.compliance.criticalCount), tone: data.compliance.criticalCount > 0 ? "bad" : "good" },
+            { label: "High", value: String(data.compliance.highCount) },
+            { label: "Resolved", value: String(data.compliance.totalCount - data.compliance.openCount), tone: "good" },
+            { label: "Raised all time", value: String(data.compliance.totalCount) },
+          ],
+          hrefLabel: "Open compliance",
+        }}
         ring={{
           percent: data.compliance.totalCount > 0
             ? Math.round(((data.compliance.totalCount - data.compliance.openCount) / data.compliance.totalCount) * 100)
