@@ -136,6 +136,8 @@ export interface EventPresenter {
   startsAt: string | null;
   timezone: string | null;
   email: string | null;
+  /** When the roster row was created — orders "most recent appearance". */
+  createdAt?: string | null;
   /** Joined from events, for the cross-event presenter manager. */
   eventTitle?: string | null;
   eventSlug?: string | null;

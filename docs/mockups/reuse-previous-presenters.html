@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reuse previous presenters</title>
+<style>
+  :root{ --navy:#0f2544; --blue:#185FA5; --border:#e2e8f0; --muted:#64748b; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:820px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .panel{border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;
+         box-shadow:0 1px 2px rgba(15,23,42,.06)}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  /* manager header */
+  .mhead{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:14px 16px}
+  .mhead .t{min-width:0;flex:1}
+  .mhead h3{margin:0;font-size:15.5px;color:var(--navy)}
+  .mhead p{margin:2px 0 0;font-size:12.3px;color:var(--muted)}
+  .btn{border-radius:7px;padding:6px 12px;font-size:12.3px;font-weight:600;
+       border:1px solid var(--border);background:#fff;color:#334155;white-space:nowrap;
+       display:inline-flex;align-items:center;gap:6px}
+  .btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn.sm{padding:4px 10px;font-size:11.6px}
+  .new{box-shadow:0 0 0 3px rgba(24,95,165,.16)}
+
+  /* drawer */
+  .drawer{border:1px solid #bfdbfe;border-radius:12px;background:#fff;overflow:hidden;
+          box-shadow:0 10px 30px rgba(15,23,42,.10)}
+  .dhead{display:flex;flex-wrap:wrap;align-items:center;gap:9px;
+         background:#f0f7ff;border-bottom:1px solid #dbeafe;padding:11px 14px}
+  .dhead b{font-size:13.5px;color:var(--navy)}
+  .dhead .x{margin-left:auto;color:#94a3b8;font-size:15px}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px 14px;
+         border-bottom:1px solid #f1f5f9}
+  .inp{border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12.3px;
+       color:#475569;background:#fff}
+  .inp.grow{flex:1;min-width:180px}
+  .cnt{font-size:11.5px;color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.6px}
+  th{text-align:left;font-size:10.3px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 14px;background:#f8fafc;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .who{display:flex;align-items:center;gap:9px;min-width:0}
+  .av{width:26px;height:26px;border-radius:50%;background:#e2e8f0;color:#64748b;flex:none;
+      display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700}
+  .nm{min-width:0}
+  .nm b{display:block;font-weight:600;color:#1e293b}
+  .nm span{display:block;font-size:11px;color:#94a3b8}
+  .from{font-size:11.5px;color:#475569}
+  .from span{display:block;font-size:10.5px;color:#94a3b8}
+  .mark{background:#fef08a;border-radius:2px;padding:0 1px}
+  .tick{width:15px;height:15px;border-radius:4px;border:1.5px solid #cbd5e1;display:inline-flex;
+        align-items:center;justify-content:center;font-size:9px;color:#fff}
+  .tick.on{background:var(--navy);border-color:var(--navy)}
+  .tick.on::after{content:"✓"}
+  tr.on td{background:#f8fbff}
+  tr.dim td{opacity:.5}
+  .badge{font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .badge.here{background:#f1f5f9;color:#64748b;border:1px solid var(--border)}
+  .badge.n{background:#eef2ff;color:#4338ca}
+
+  .dfoot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 14px;
+         border-top:1px solid #f1f5f9;background:#fafcff}
+  .opts{display:flex;flex-wrap:wrap;gap:14px;font-size:11.8px;color:#475569}
+  .opts label{display:inline-flex;align-items:center;gap:6px}
+
+  .carry{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);
+         border-radius:11px;overflow:hidden}
+  @media(max-width:760px){.carry{grid-template-columns:1fr}}
+  .carry > div{padding:13px 15px}
+  .carry .l{border-right:1px solid #f1f5f9;background:#f8fdfa}
+  .carry .r{background:#fffaf8}
+  .carry h4{margin:0 0 8px;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  .carry .l h4{color:#047857}
+  .carry .r h4{color:#b45309}
+  .carry ul{margin:0;padding-left:17px;font-size:12.3px;color:#475569}
+  .carry li{margin-bottom:4px}
+  .carry li i{font-style:normal;color:#94a3b8}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Reuse previous presenters</h1>
+  <p class="sub">Newport Beach has a full roster. Las Vegas starts empty. This adds a second door beside <b>Add presenter</b> that copies people you&rsquo;ve already had on stage, instead of retyping them.</p>
+
+  <!-- HEADER -->
+  <h2>Where it lives</h2>
+  <div class="panel">
+    <div class="mhead">
+      <div class="t">
+        <h3>Presenters</h3>
+        <p>Add speakers directly to the roster, schedule their slot, and manage the details attendees see.</p>
+      </div>
+      <span class="btn new">⟲ Reuse previous</span>
+      <span class="btn pri">+ Add presenter</span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:9px">Secondary, to the left of the primary — it&rsquo;s the shortcut, not the main path.</p>
+
+  <!-- PICKER -->
+  <h2>What it opens</h2>
+  <div class="drawer">
+    <div class="dhead">
+      <b>Reuse previous presenters</b>
+      <span class="cnt">→ adding to <b style="color:#0f2544">iCFO PE Expo — Las Vegas | Sept 22</b></span>
+      <span class="x">✕</span>
+    </div>
+
+    <div class="tools">
+      <input class="inp grow" value="" placeholder="Search name, company or topic…" />
+      <select class="inp"><option>Any past event</option><option>iCFO PE Expo — Newport Beach</option><option>iCFO PE Expo — Miami</option></select>
+      <select class="inp"><option>Any role</option><option>Presenter</option><option>Founder Showcase</option><option>Panelist</option></select>
+      <span class="cnt" style="margin-left:auto">11 people · <b style="color:#0f2544">4 selected</b></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:28px"></th>
+          <th>Person</th>
+          <th style="width:27%">Last presented</th>
+          <th style="width:20%">Role</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="on">
+          <td><span class="tick on"></span></td>
+          <td><div class="who"><span class="av">JA</span><div class="nm"><b>Dr. Jamie Allsop</b><span>jamie@clearpool.io · CEO</span></div></div></td>
+          <td class="from">Newport Beach <span>ClearPool Digital (cplx.oi)</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td></td>
+        </tr>
+        <tr class="on">
+          <td><span class="tick on"></span></td>
+          <td><div class="who"><span class="av">SS</span><div class="nm"><b>Shailesh Shah</b><span>shailesh@sohm.com · Founder</span></div></div></td>
+          <td class="from">Newport Beach <span>SOHM</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td></td>
+        </tr>
+        <tr class="on">
+          <td><span class="tick on"></span></td>
+          <td><div class="who"><span class="av">BW</span><div class="nm"><b>Bob Wood</b><span>bob@scriptive.com · President &amp; CEO</span></div></div></td>
+          <td class="from">Newport Beach <span>Scriptive</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td></td>
+        </tr>
+        <tr class="on">
+          <td><span class="tick on"></span></td>
+          <td><div class="who"><span class="av">SP</span><div class="nm"><b>Shan Padda</b><span>shan@harvardmedtech.com · CEO</span></div></div></td>
+          <td class="from">Newport Beach <span>Harvard MedTech</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><span class="tick"></span></td>
+          <td><div class="who"><span class="av">LD</span><div class="nm"><b>Lode Debrabandere</b><span>lode@amynas.com · Founder &amp; CEO</span></div></div></td>
+          <td class="from">Newport Beach <span>Amynas</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><span class="tick"></span></td>
+          <td><div class="who"><span class="av">AS</span><div class="nm"><b>Alan Steinberg</b><span>alan@brainlest.ai · CEO</span></div></div></td>
+          <td class="from">Newport Beach <span>Brainlest AI</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td></td>
+        </tr>
+        <tr class="dim">
+          <td><span class="tick"></span></td>
+          <td><div class="who"><span class="av">TM</span><div class="nm"><b>Tyler Mackay</b><span>tyler@revolution5.com · CEO</span></div></div></td>
+          <td class="from">Newport Beach <span>Revolution5 Global</span></td>
+          <td><span class="badge n">Presenter</span></td>
+          <td><span class="badge here">on roster</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="dfoot">
+      <div class="opts">
+        <label><span class="tick on"></span> Keep their bio &amp; company summary</label>
+        <label><span class="tick"></span> Keep last event&rsquo;s talk topic</label>
+      </div>
+      <span style="flex:1"></span>
+      <span class="btn sm">Cancel</span>
+      <span class="btn navy sm">Add 4 to this event</span>
+    </div>
+  </div>
+
+  <!-- WHAT CARRIES -->
+  <h2>What comes across</h2>
+  <div class="carry">
+    <div class="l">
+      <h4>Copied</h4>
+      <ul>
+        <li>Name, email <i>— the identity</i></li>
+        <li>Role label <i>— Presenter, Founder Showcase…</i></li>
+        <li>Bio and company summary <i>— optional, ticked by default</i></li>
+        <li>Links</li>
+        <li>Headshot <i>— the stored file, not a new upload</i></li>
+        <li>Talk topic <i>— optional, unticked by default</i></li>
+      </ul>
+    </div>
+    <div class="r">
+      <h4>Left behind — event-specific</h4>
+      <ul>
+        <li>Session assignment <i>— this event&rsquo;s sessions are different</i></li>
+        <li>Slot date, time and timezone</li>
+        <li>Meet link <i>— a room from last event would be dead</i></li>
+        <li>Video URL and pitch deck <i>— re-collected per event</i></li>
+        <li>The originating application</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:10px">Talk topic is unticked by default because a headline like &ldquo;ClearPool
+    Digital (cplx.oi)&rdquo; belongs to the talk they gave, not to them — carrying it silently is how a booklet ends up
+    advertising last quarter&rsquo;s session. Tick it when it&rsquo;s the same talk.</p>
+
+  <!-- HONEST -->
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>There is no &ldquo;person&rdquo; record.</b> <code>event_presenters</code> holds one row
+    per person <em>per event</em> — nothing links Jamie at Newport Beach to Jamie at Las Vegas. This list is built by
+    collapsing past rows on <code>profile_id</code>, falling back to lowercased email, then name. Two rows spelled
+    differently with no email will show as two people; the search box is how you catch that.</p>
+    <p style="margin:0 0 8px"><b>A copy, not a link.</b> Editing the bio on the new event does not change the old one,
+    and fixing a typo on the old event does not reach the new one. That is the right behaviour for a booklet you have
+    already printed — just don&rsquo;t expect one to follow the other.</p>
+    <p style="margin:0"><b>Order still isn&rsquo;t solved.</b> Copied presenters land at
+    <code>position 0</code> like every other row, so booklet order stays whatever the database returns. Separate
+    problem, separate fix.</p>
+  </div>
+
+</div>
+</body>
+</html>

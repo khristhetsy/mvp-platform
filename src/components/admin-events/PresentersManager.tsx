@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { EventPresenter } from "@/lib/icfo-events/types";
+import { ReusePresentersDrawer } from "@/components/admin-events/ReusePresentersDrawer";
 
 type EventOpt = { id: string; title: string; timezone: string | null };
 
@@ -202,6 +203,7 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
 export function PresentersManager({ initialPresenters, events }: { initialPresenters: EventPresenter[]; events: EventOpt[] }) {
   const [rows, setRows] = useState<EventPresenter[]>(initialPresenters);
   const [adding, setAdding] = useState(false);
+  const [reusing, setReusing] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -237,9 +239,16 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
           <h2 className="font-semibold text-[var(--navy)]">Presenters</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">Add speakers directly to the roster, schedule their slot, and manage the details attendees see.</p>
         </div>
-        <button type="button" onClick={() => { setAdding((v) => !v); setEditId(null); }} className="shrink-0 rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
-          <i className="ti ti-user-plus" aria-hidden="true" /> Add presenter
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {events.length > 0 && (
+            <button type="button" onClick={() => { setReusing((v) => !v); setAdding(false); setEditId(null); }} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-50">
+              <i className="ti ti-history" aria-hidden="true" /> Reuse previous
+            </button>
+          )}
+          <button type="button" onClick={() => { setAdding((v) => !v); setReusing(false); setEditId(null); }} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
+            <i className="ti ti-user-plus" aria-hidden="true" /> Add presenter
+          </button>
+        </div>
       </div>
 
       {events.length > 1 && (
@@ -248,6 +257,17 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
             <option value="all">All events</option>
             {events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
           </select>
+        </div>
+      )}
+
+      {reusing && (
+        <div className="mt-4">
+          <ReusePresentersDrawer
+            all={rows}
+            events={events}
+            onAdded={(added) => setRows((rs) => [...added, ...rs])}
+            onClose={() => setReusing(false)}
+          />
         </div>
       )}
 

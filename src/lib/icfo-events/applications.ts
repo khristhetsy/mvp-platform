@@ -59,6 +59,7 @@ function mapPresenter(r: Row): EventPresenter {
     startsAt: (r.starts_at as string | null) ?? null,
     timezone: (r.timezone as string | null) ?? null,
     email: (r.email as string | null) ?? null,
+    createdAt: (r.created_at as string | null) ?? null,
     eventTitle: event?.title ?? null,
     eventSlug: event?.slug ?? null,
   };
@@ -175,6 +176,8 @@ export async function createPresenter(
     meetingUrl?: string | null;
     startsAt?: string | null;
     timezone?: string | null;
+    /** Carried over when reusing a presenter — the stored file, not a re-upload. */
+    headshotPath?: string | null;
   },
 ): Promise<EventPresenter> {
   const { data, error } = await raw(supabase)
@@ -189,6 +192,7 @@ export async function createPresenter(
       headline: input.headline ?? null,
       bio: input.bio ?? null,
       company_summary: input.companySummary ?? null,
+      headshot_path: input.headshotPath ?? null,
       links: input.links ?? [],
       email: input.email ?? null,
       meeting_url: input.meetingUrl ?? null,
