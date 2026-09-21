@@ -17,6 +17,8 @@ const schema = z.object({
   startsAt: z.string().datetime().nullable().optional().or(z.literal("")),
   timezone: z.string().max(64).nullable().optional(),
   meetingUrl: z.string().url().max(2000).nullable().optional().or(z.literal("")),
+  // Billed under a session (talk-show guests) rather than the flat roster list.
+  sessionId: z.string().uuid().nullable().optional().or(z.literal("")),
 });
 
 /** Edit a presenter (staff). */
@@ -36,6 +38,7 @@ export async function PATCH(
       email: d.email === "" ? null : d.email,
       meetingUrl: d.meetingUrl === "" ? null : d.meetingUrl,
       startsAt: d.startsAt === "" ? null : d.startsAt,
+      sessionId: d.sessionId === "" ? null : d.sessionId,
     });
     return NextResponse.json({ presenter });
   } catch (err) {

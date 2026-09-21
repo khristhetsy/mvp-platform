@@ -40,7 +40,9 @@ export const eventMergeSchema = z.object({
   /** The event's live published booklet URL, when one exists. */
   bookletUrl: z.string().nullable().default(null),
   sessions: z.array(
-    z.object({ type: z.string(), title: z.string(), abstract: z.string(), accent: z.string() }),
+    // `id` is what lets a presenter be billed under their session rather than
+    // in the flat list — without it there is nothing to join a roster row to.
+    z.object({ id: z.string().default(""), type: z.string(), title: z.string(), abstract: z.string(), accent: z.string() }),
   ),
   sponsorLockup: z.string().nullable(),
   organizerLine: z.string(),
@@ -54,6 +56,8 @@ export const eventMergeSchema = z.object({
       initials: z.string(),
       bio: z.string().default(""),
       companySummary: z.string().default(""),
+      /** Billed under this session when set; otherwise listed with the roster. */
+      sessionId: z.string().nullable().default(null),
     }),
   ),
   sponsorTiers: z.object({
@@ -103,6 +107,7 @@ export function buildEventMergeData(
     .filter((s: EventSession) => s.status !== "draft")
     .sort((a, b) => a.position - b.position)
     .map((s) => ({
+      id: s.id,
       type: s.type,
       title: s.title,
       abstract: s.abstract ?? "",
@@ -157,6 +162,7 @@ export async function loadEventMergeData(
       initials: initialsOf(p.displayName),
       bio: p.bio ?? "",
       companySummary: p.companySummary ?? "",
+      sessionId: p.sessionId ?? null,
     }));
   return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers, bookletUrl });
 }

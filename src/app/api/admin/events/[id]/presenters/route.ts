@@ -17,6 +17,8 @@ const schema = z.object({
   startsAt: z.string().datetime().nullable().optional(),
   timezone: z.string().max(64).nullable().optional(),
   meetingUrl: z.string().url().max(2000).nullable().optional().or(z.literal("")),
+  // Billed under a session (talk-show guests) rather than the flat roster list.
+  sessionId: z.string().uuid().nullable().optional().or(z.literal("")),
 });
 
 /** Manually add a presenter to an event's roster (staff). */
@@ -43,6 +45,7 @@ export async function POST(
       startsAt: d.startsAt ?? null,
       timezone: d.timezone ?? null,
       meetingUrl: d.meetingUrl || null,
+      sessionId: d.sessionId || null,
     });
     return NextResponse.json({ presenter }, { status: 201 });
   } catch (err) {

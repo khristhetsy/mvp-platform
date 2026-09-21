@@ -149,7 +149,7 @@ async function loadSectors(
   return (data ?? []).map(mapSector);
 }
 
-async function loadSessions(
+export async function loadSessions(
   supabase: SupabaseClient<Database>,
   eventId: string,
 ): Promise<EventSession[]> {

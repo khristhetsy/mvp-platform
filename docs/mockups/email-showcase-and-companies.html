@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event email — Founder Showcase &amp; presenting companies</title>
+<style>
+  :root{ --navy:#0c2340; --blue:#2E78F5; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:840px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  .cols{display:grid;grid-template-columns:330px 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .panel h3{margin:0;padding:11px 13px;font-size:10.6px;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--muted);border-bottom:1px solid #f1f5f9;background:#fafcff;font-weight:700}
+  .opt{display:flex;align-items:flex-start;gap:8px;padding:9px 13px;border-bottom:1px solid #f4f6fa;font-size:12.6px}
+  .opt:last-child{border-bottom:0}
+  .opt.sub{padding-left:30px;background:#fbfdff}
+  .opt .bx{width:14px;height:14px;border-radius:3px;border:1.5px solid #c3cbd9;flex:none;margin-top:1px;
+           display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+  .opt.on .bx{background:var(--blue);border-color:var(--blue)}
+  .opt.on .bx::after{content:"✓"}
+  .opt .t{min-width:0}
+  .opt .t b{display:block;font-weight:500;color:#1e293b}
+  .opt .t span{display:block;font-size:10.6px;color:var(--muted);margin-top:1px}
+  .opt.new{background:#f2f8ff}
+  .opt.off{opacity:.45}
+  .pill{margin-left:auto;flex:none;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;
+        background:#eef4ff;color:#1d4ed8}
+  .pill.zero{background:#f1f5f9;color:#94a3b8}
+  .grip{flex:none;color:#cbd5e1;font-size:11px;margin-top:2px;cursor:grab}
+
+  /* email */
+  .mail{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden;max-width:560px}
+  .hero{background:var(--navy);color:#fff;padding:20px 22px}
+  .hero .eb{font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin:0 0 5px}
+  .hero h4{margin:0;font-size:19px;line-height:1.25}
+  .hero p{margin:6px 0 13px;font-size:12px;opacity:.82}
+  .cta{display:inline-block;background:var(--blue);color:#fff;border-radius:6px;padding:8px 15px;
+       font-size:12.6px;font-weight:700}
+  .body{padding:18px 22px}
+  .h2{margin:0 0 4px;font-size:15px;color:var(--navy);font-weight:700}
+  .lead{margin:0 0 10px;font-size:11.6px;color:var(--muted);line-height:1.5}
+  .cal{border-left:3px solid #2E78F5;background:#f7faff;border-radius:0 6px 6px 0;padding:9px 12px;margin-bottom:8px}
+  .cal .k{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+          background:#2E78F5;color:#fff;border-radius:3px;padding:1px 6px;margin-bottom:4px}
+  .cal b{display:block;font-size:13px;color:var(--navy)}
+  .cal p{margin:3px 0 0;font-size:11.5px;color:#4a5568;line-height:1.5}
+
+  /* showcase cards */
+  .sc{border:1px solid var(--border);border-left:3px solid #7c3aed;border-radius:0 7px 7px 0;
+      padding:10px 12px;margin-bottom:7px;background:#fdfcff}
+  .sc b{display:block;font-size:13.2px;color:var(--navy)}
+  .sc .who{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  .sc p{margin:5px 0 0;font-size:11.4px;color:#4a5568;line-height:1.5}
+
+  .co{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .co > div{background:#fff;padding:9px 11px}
+  .co b{display:block;font-size:12.6px;color:var(--navy);line-height:1.3}
+  .co span{display:block;font-size:10.8px;color:var(--muted);margin-top:2px}
+  .inline{font-size:12px;color:#33415a;line-height:1.75;margin:0}
+
+  .newwrap{position:relative;padding:6px;margin:0 -6px;border-radius:9px;
+           box-shadow:0 0 0 2px #c4b5fd, 0 0 0 6px rgba(196,181,253,.2)}
+  .newwrap.blue{box-shadow:0 0 0 2px #93c5fd, 0 0 0 6px rgba(147,197,253,.2)}
+  .newtag{position:absolute;top:-10px;right:8px;background:#6d28d9;color:#fff;font-size:9px;
+          font-weight:800;letter-spacing:.07em;border-radius:999px;padding:2px 9px}
+  .newtag.blue{background:#1d4ed8}
+  .foot{border-top:1px solid var(--border);padding:14px 22px;font-size:10.5px;color:#8a93a6;line-height:1.5}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .arrow{color:#94a3b8}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+  .bad{border:1px solid #fecaca;background:#fef2f2;border-radius:11px;padding:13px 15px;
+       font-size:12.5px;color:#991b1b;max-width:880px}
+  .bad b{color:#b91c1c}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Founder Showcase, and presenting companies</h1>
+  <p class="sub">Two lists, not one — they answer different questions. The roster already distinguishes them by role, so both come from data the email is handed and currently ignores.</p>
+
+  <div class="cols">
+    <!-- CONTROLS -->
+    <div>
+      <div class="panel">
+        <h3>Content &amp; preview</h3>
+        <div class="opt on"><span class="bx"></span><span class="t"><b>Banner image</b><span>else solid navy hero</span></span></div>
+        <div class="opt"><span class="bx"></span><span class="t"><b>Lobby CTA</b></span></div>
+        <div class="opt on new"><span class="bx"></span><span class="t"><b>Who&rsquo;s presenting</b><span>blocks from the event roster</span></span><span class="pill">12</span></div>
+        <div class="opt sub on"><span class="grip">⠿</span><span class="bx"></span><span class="t"><b>Founder Showcase</b><span>card each, with the pitch line</span></span><span class="pill">5</span></div>
+        <div class="opt sub on"><span class="grip">⠿</span><span class="bx"></span><span class="t"><b>Presenting companies</b><span>two columns</span></span><span class="pill">5</span></div>
+        <div class="opt sub on"><span class="grip">⠿</span><span class="bx"></span><span class="t"><b>Exhibitors</b><span>one line</span></span><span class="pill">2</span></div>
+        <div class="opt sub off"><span class="grip">⠿</span><span class="bx"></span><span class="t"><b>Panelists</b><span>nobody on the roster</span></span><span class="pill zero">0</span></div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.8px">
+        Each group is its own block, so it can be reordered or switched off on its own — a reminder email might carry
+        only the Showcase. A group with nobody in it is shown at zero and can&rsquo;t be switched on, rather than
+        being switched on and rendering an empty heading.
+      </p>
+    </div>
+
+    <!-- EMAIL -->
+    <div>
+      <div class="mail">
+        <div class="hero">
+          <p class="eb">iCFO PE Expo</p>
+          <h4>iCFO PE Expo — Las Vegas | Sept 22</h4>
+          <p>Tuesday, September 22, 2026 · 12:00 PM – 4:00 PM PDT · Webinar · Free registration</p>
+          <span class="cta">Register to attend →</span>
+        </div>
+        <div class="body">
+          <p class="h2">Agenda</p>
+          <div class="cal">
+            <span class="k">Keynote</span><b>Auditorium</b>
+            <p>Prequalified deal flow, dynamic presentations, and live Q&amp;A with our experts.</p>
+          </div>
+
+          <div class="newwrap" style="margin-top:24px">
+            <span class="newtag">NEW</span>
+            <p class="h2">Founder Showcase</p>
+            <p class="lead">Five companies pitching live from the main stage.</p>
+            <div class="sc">
+              <b>SOHM</b><span class="who">Shailesh Shah · Founder</span>
+              <p>Generic pharmaceuticals manufacturer expanding into the US retail channel.</p>
+            </div>
+            <div class="sc">
+              <b>Harvard MedTech</b><span class="who">Shan Padda · CEO</span>
+              <p>Virtual-reality therapeutics for chronic pain, reimbursed through workers&rsquo; comp.</p>
+            </div>
+            <div class="sc">
+              <b>Amynas</b><span class="who">Lode Debrabandere · Founder &amp; CEO</span>
+              <p>Antibody discovery platform targeting autoimmune indications.</p>
+            </div>
+            <div class="sc">
+              <b>NovaRhythm Biosciences</b><span class="who">Paul E. Miller, PhD · Founding Partner</span>
+              <p>Cardiac rhythm diagnostics with an FDA submission filed this quarter.</p>
+            </div>
+            <div class="sc">
+              <b>LivIQ</b><span class="who">Steve Gatt · CEO &amp; Co-Founder</span>
+              <p>Longevity analytics from consumer wearables, sold through employer plans.</p>
+            </div>
+          </div>
+
+          <div class="newwrap blue" style="margin-top:26px">
+            <span class="newtag blue">NEW</span>
+            <p class="h2">Presenting companies</p>
+            <div class="co">
+              <div><b>ClearPool Digital</b><span>Dr. Jamie Allsop · CEO</span></div>
+              <div><b>Scriptive</b><span>Bob Wood · President &amp; CEO</span></div>
+              <div><b>Brainlest AI</b><span>Alan Steinberg · CEO</span></div>
+              <div><b>Revolution5 Global</b><span>Tyler Mackay · CEO</span></div>
+              <div><b>Doyle Organics</b><span>John Kelser · CEO</span></div>
+              <div style="background:#fafcff"></div>
+            </div>
+            <p class="h2" style="margin-top:16px;font-size:13.4px">Exhibitors</p>
+            <p class="inline">NAI Technology · Impervitex Corp</p>
+          </div>
+
+          <p style="margin:20px 0 0;font-size:11.5px;color:var(--muted)">Presented by iCFO Capital Global</p>
+        </div>
+        <div class="foot">iCFO events are for education and community only. Nothing in this email is an offer to sell…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHY DIFFERENT -->
+  <h2>Why the Showcase looks different</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:20%">Group</th><th style="width:22%">Layout</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><b>Founder Showcase</b></td><td>Card each, with the pitch line</td><td>This is the reason an investor registers — the company and what it does is the content, not a credit</td></tr>
+        <tr><td><b>Presenting companies</b></td><td>Two columns, name + person</td><td>Who is on the programme. Scanned, not read</td></tr>
+        <tr><td><b>Exhibitors</b></td><td>One line</td><td>A booth is a presence, not a session</td></tr>
+        <tr><td><b>Panelists</b></td><td>—</td><td>Rolled in with presenting companies unless you split them out</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:10px">The Showcase pitch line is <code>company_summary</code> where it exists,
+  falling back to <code>bio</code>, and the card drops to a bare name when both are empty. The <b>Reuse previous
+  presenters</b> flow carries both across, so a founder who presented before arrives with their line intact.</p>
+
+  <!-- THE REAL PROBLEM -->
+  <h2>The thing that has to be fixed first</h2>
+  <div class="bad">
+    <p style="margin:0 0 8px"><b><code>role_label</code> is free text, and four code paths spell the same role differently.</b>
+    Splitting on the exact string would produce three separate &ldquo;Founder Showcase&rdquo; headings in one email.</p>
+    <table style="margin:10px 0 0;background:#fff;border-radius:8px;overflow:hidden">
+      <thead><tr><th style="width:44%">Where the presenter came from</th><th>Stored as</th></tr></thead>
+      <tbody>
+        <tr><td>Presenters manager dropdown</td><td><code>Founder showcase</code></td></tr>
+        <tr><td>Accepted invitation</td><td><code>Founder Showcase</code></td></tr>
+        <tr><td>Approved application, no label chosen</td><td><code>founder showcase</code></td></tr>
+        <tr><td>Invitation sent as role &ldquo;Founder&rdquo;</td><td><code>Founder</code> <span class="arrow">— a different role entirely</span></td></tr>
+      </tbody>
+    </table>
+    <p style="margin:10px 0 0">Grouping normalises before matching — lowercased, punctuation and spacing collapsed — so
+    all three land in one section. <code>Founder</code> stays separate, because it is.</p>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>Company still comes from <code>headline</code>,</b> which is a topic field. Most of
+    your roster holds the company already; one row reads &ldquo;ClearPool Digital (cplx.oi)&rdquo;. The block prints
+    what the roster holds.</p>
+    <p style="margin:0 0 8px"><b>Order within each group is arbitrary</b> — <code>position</code> is never written, so
+    it is database order. Within a Showcase block that is more noticeable than in a booklet; alphabetical by company
+    is the obvious default if you want one.</p>
+    <p style="margin:0"><b>A role with nobody in it renders nothing</b> — no heading, no empty state. Same rule the
+    booklet&rsquo;s presenter page follows.</p>
+  </div>
+
+</div>
+</body>
+</html>

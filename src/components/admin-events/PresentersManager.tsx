@@ -5,8 +5,12 @@ import type { EventPresenter } from "@/lib/icfo-events/types";
 import { ReusePresentersDrawer } from "@/components/admin-events/ReusePresentersDrawer";
 
 type EventOpt = { id: string; title: string; timezone: string | null };
+type SessionOpt = { id: string; eventId: string; title: string };
 
-const ROLE_OPTIONS = ["Presenter", "Panelist", "Founder showcase"];
+// Guest CEO and Investor bill a person under a session rather than in the flat
+// roster list — the talk-show line-up. `role_label` is free text, so these are
+// options rather than an enum; the email groups them case-insensitively.
+const ROLE_OPTIONS = ["Presenter", "Panelist", "Founder showcase", "Guest CEO", "Investor", "Exhibitor"];
 const TZ_OPTIONS = [
   "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York",
   "UTC", "Europe/London", "Europe/Berlin", "Asia/Singapore", "Asia/Kolkata", "Australia/Sydney",
@@ -53,11 +57,13 @@ type FormState = {
   date: string;
   time: string;
   meetingUrl: string;
+  sessionId: string;
 };
 
-function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
+function PresenterForm({ mode, events, sessions, presenter, onSaved, onCancel }: {
   mode: "add" | "edit";
   events?: EventOpt[];
+  sessions?: SessionOpt[];
   presenter?: EventPresenter;
   onSaved: (p: EventPresenter) => void;
   onCancel: () => void;
@@ -77,6 +83,7 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
     date: split.date,
     time: split.time,
     meetingUrl: presenter?.meetingUrl ?? "",
+    sessionId: presenter?.sessionId ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [creatingMeet, setCreatingMeet] = useState(false);
@@ -98,6 +105,7 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
       timezone: f.date && f.time ? f.tz : null,
       startsAt,
       meetingUrl: f.meetingUrl.trim() || "",
+      sessionId: f.sessionId || null,
     };
   }
 
@@ -163,6 +171,18 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
             {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </label>
+        <label className="block">
+          <span className={L}>Session</span>
+          <select value={f.sessionId} onChange={(e) => set("sessionId", e.target.value)} className={I}>
+            <option value="">— not tied to a session —</option>
+            {(sessions ?? []).filter((s) => s.eventId === f.eventId).map((s) => (
+              <option key={s.id} value={s.id}>{s.title}</option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[10.5px] text-[var(--text-muted)]">
+            Billed under that session in the email and the booklet. Left blank, they appear in the roster list instead.
+          </span>
+        </label>
         <label className="block"><span className={L}>Talk topic / headline</span><input value={f.headline} onChange={(e) => set("headline", e.target.value)} className={I} /></label>
         <label className="block sm:col-span-2"><span className={L}>Short bio</span><textarea rows={2} value={f.bio} onChange={(e) => set("bio", e.target.value)} className={I} /></label>
         <label className="block sm:col-span-2"><span className={L}>Company summary</span><textarea rows={2} value={f.companySummary} onChange={(e) => set("companySummary", e.target.value)} placeholder="What the company does, stage, traction…" className={I} /></label>
@@ -200,7 +220,7 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
   );
 }
 
-export function PresentersManager({ initialPresenters, events }: { initialPresenters: EventPresenter[]; events: EventOpt[] }) {
+export function PresentersManager({ initialPresenters, events, sessions = [] }: { initialPresenters: EventPresenter[]; events: EventOpt[]; sessions?: SessionOpt[] }) {
   const [rows, setRows] = useState<EventPresenter[]>(initialPresenters);
   const [adding, setAdding] = useState(false);
   const [reusing, setReusing] = useState(false);
@@ -273,7 +293,7 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
 
       {adding && (
         <div className="mt-4">
-          <PresenterForm mode="add" events={events} onSaved={upsert} onCancel={() => setAdding(false)} />
+          <PresenterForm mode="add" events={events} sessions={sessions} onSaved={upsert} onCancel={() => setAdding(false)} />
         </div>
       )}
 
@@ -303,7 +323,7 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
               </div>
               {editId === p.id && (
                 <div className="border-b border-[var(--border-subtle)] p-3">
-                  <PresenterForm mode="edit" presenter={p} onSaved={upsert} onCancel={() => setEditId(null)} />
+                  <PresenterForm mode="edit" presenter={p} events={events} sessions={sessions} onSaved={upsert} onCancel={() => setEditId(null)} />
                 </div>
               )}
             </div>

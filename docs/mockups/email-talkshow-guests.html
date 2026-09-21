@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Talk show — guest CEO &amp; investor</title>
+<style>
+  :root{ --navy:#0c2340; --blue:#2E78F5; --violet:#7c3aed; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:840px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+       text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.now{background:#f1f5f9;color:#475569;border:1px solid var(--border)}
+  .tag.after{background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe}
+
+  /* email */
+  .mail{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .body{padding:16px 18px}
+  .h2{margin:0 0 10px;font-size:15px;color:var(--navy);font-weight:700}
+  .cal{border-left:3px solid var(--blue);background:#f7faff;border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:9px}
+  .cal.ts{border-left-color:var(--violet);background:#fbfaff}
+  .cal .k{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+          background:var(--blue);color:#fff;border-radius:3px;padding:1px 6px;margin-bottom:4px}
+  .cal.ts .k{background:var(--violet)}
+  .cal b{display:block;font-size:13.4px;color:var(--navy)}
+  .cal p{margin:4px 0 0;font-size:11.5px;color:#4a5568;line-height:1.5}
+
+  /* the guests strip */
+  .guests{margin-top:10px;border-top:1px solid #ece9fb;padding-top:9px;display:grid;
+          grid-template-columns:1fr 1fr;gap:9px}
+  @media(max-width:520px){.guests{grid-template-columns:1fr}}
+  .g{display:flex;gap:8px;align-items:flex-start;min-width:0}
+  .g .av{width:30px;height:30px;border-radius:50%;background:#ede9fe;color:#6d28d9;flex:none;
+         display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800}
+  .g .av.inv{background:#dbeafe;color:#1d4ed8}
+  .g .t{min-width:0}
+  .g .r{display:block;font-size:8.8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+        color:var(--violet);margin-bottom:1px}
+  .g .r.inv{color:#1d4ed8}
+  .g b{display:block;font-size:12.4px;color:var(--navy);line-height:1.25}
+  .g span{display:block;font-size:10.8px;color:var(--muted);margin-top:1px}
+
+  .newwrap{position:relative;padding:6px;margin:0 -6px;border-radius:9px;
+           box-shadow:0 0 0 2px #c4b5fd, 0 0 0 6px rgba(196,181,253,.2)}
+  .newtag{position:absolute;top:-10px;right:10px;background:#6d28d9;color:#fff;font-size:9px;
+          font-weight:800;letter-spacing:.07em;border-radius:999px;padding:2px 9px}
+
+  /* admin form */
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .panel h3{margin:0;padding:11px 13px;font-size:10.6px;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--muted);border-bottom:1px solid #f1f5f9;background:#fafcff;font-weight:700}
+  .form{padding:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .f{min-width:0}
+  .f.wide{grid-column:1 / -1}
+  .f label{display:block;font-size:10.4px;font-weight:700;color:#475569;margin-bottom:4px}
+  .inp{width:100%;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:12.2px;
+       color:#334155;background:#fff}
+  .inp.new{border-color:#c4b5fd;box-shadow:0 0 0 3px rgba(196,181,253,.18)}
+  .hint{margin:4px 0 0;font-size:10.4px;color:var(--muted)}
+  .hint.hl{color:#6d28d9;font-weight:600}
+
+  /* roster preview */
+  .rost{font-size:12.2px}
+  .rost .row{display:flex;align-items:center;gap:9px;padding:7px 13px;border-bottom:1px solid #f4f6fa}
+  .rost .row:last-child{border-bottom:0}
+  .rost .nm{min-width:0;flex:1}
+  .rost .nm b{display:block;font-weight:600;color:var(--navy)}
+  .rost .nm span{display:block;font-size:10.4px;color:var(--muted)}
+  .chip{font-size:9.8px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .chip.ceo{background:#f5f3ff;color:#6d28d9}
+  .chip.inv{background:#eff6ff;color:#1d4ed8}
+  .chip.pres{background:#f1f5f9;color:#64748b}
+  .sess{font-size:10.6px;color:var(--muted);white-space:nowrap}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .yes{color:#047857;font-weight:700}
+  .no{color:#b91c1c;font-weight:700}
+
+  .bad{border:1px solid #fecaca;background:#fef2f2;border-radius:11px;padding:13px 15px;
+       font-size:12.5px;color:#991b1b;max-width:880px}
+  .bad b{color:#b91c1c}
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Talk show — the guest CEO and the investor</h1>
+  <p class="sub">The draw of &ldquo;Inside the Investor&rsquo;s Mind&rdquo; is <em>who is in the chair this month</em>. Right now the email names the session and says nothing about either guest.</p>
+
+  <!-- BEFORE / AFTER -->
+  <h2>In the email</h2>
+  <div class="cols">
+    <div>
+      <span class="tag now">Now</span>
+      <div class="mail">
+        <div class="body">
+          <p class="h2">Agenda</p>
+          <div class="cal ts">
+            <span class="k">Talk show</span>
+            <b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+            <p>A monthly, investor-grade talk show designed to reveal how CEOs think, decide and lead under
+              real-world pressure. Each episode features a candid conversation with a CEO, followed by a live
+              investor panel.</p>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">&ldquo;A CEO&rdquo;. &ldquo;A live investor panel&rdquo;. The abstract
+        describes the format, not this episode — so the one fact that would make someone register is missing.</p>
+    </div>
+
+    <div>
+      <span class="tag after">After</span>
+      <div class="mail">
+        <div class="body">
+          <p class="h2">Agenda</p>
+          <div class="newwrap">
+            <span class="newtag">NEW</span>
+            <div class="cal ts" style="margin-bottom:0">
+              <span class="k">Talk show</span>
+              <b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+              <p>A candid conversation with a CEO, followed by a live investor panel.</p>
+              <div class="guests">
+                <div class="g">
+                  <span class="av">SP</span>
+                  <span class="t">
+                    <span class="r">Guest CEO</span>
+                    <b>Shan Padda</b>
+                    <span>Harvard MedTech</span>
+                  </span>
+                </div>
+                <div class="g">
+                  <span class="av inv">MR</span>
+                  <span class="t">
+                    <span class="r inv">Investor</span>
+                    <b>Marcus Reyes</b>
+                    <span>Tessellate Ventures</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">Attached to the session, so it moves with the agenda and can&rsquo;t
+        drift from it. Any session can carry people this way — a keynote shows its speaker — the talk show is just
+        where it matters most.</p>
+    </div>
+  </div>
+
+  <!-- HOW IT'S SET -->
+  <h2>How you say who they are</h2>
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h3>Presenters → Edit · Marcus Reyes</h3>
+        <div class="form">
+          <div class="f"><label>Full name *</label><div class="inp">Marcus Reyes</div></div>
+          <div class="f"><label>Email</label><div class="inp">marcus@tessellate.vc</div></div>
+          <div class="f">
+            <label>Role</label>
+            <div class="inp new">Investor ▾</div>
+            <p class="hint hl">Two new options: Guest CEO, Investor</p>
+          </div>
+          <div class="f">
+            <label>Session</label>
+            <div class="inp new">Inside the Investor&rsquo;s Mind Vol. 3 ▾</div>
+            <p class="hint hl">New field — the column exists, the form never offered it</p>
+          </div>
+          <div class="f wide">
+            <label>Talk topic / headline</label>
+            <div class="inp">Tessellate Ventures</div>
+            <p class="hint">Shown as the line under their name — firm for an investor, company for a CEO.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h3>Roster — what it looks like after</h3>
+        <div class="rost">
+          <div class="row">
+            <span class="nm"><b>Shan Padda</b><span>Harvard MedTech</span></span>
+            <span class="chip ceo">Guest CEO</span>
+            <span class="sess">Investor&rsquo;s Mind Vol. 3</span>
+          </div>
+          <div class="row">
+            <span class="nm"><b>Marcus Reyes</b><span>Tessellate Ventures</span></span>
+            <span class="chip inv">Investor</span>
+            <span class="sess">Investor&rsquo;s Mind Vol. 3</span>
+          </div>
+          <div class="row">
+            <span class="nm"><b>Dr. Jamie Allsop</b><span>ClearPool Digital</span></span>
+            <span class="chip pres">Presenter</span>
+            <span class="sess">—</span>
+          </div>
+          <div class="row">
+            <span class="nm"><b>Bob Wood</b><span>Scriptive</span></span>
+            <span class="chip pres">Presenter</span>
+            <span class="sess">—</span>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px">Someone with no session stays in the flat <b>Presenting companies</b>
+        list from the last mockup. Attaching them to a session is what moves them up into the agenda.</p>
+    </div>
+  </div>
+
+  <!-- WHAT'S MISSING -->
+  <h2>What this needs that doesn&rsquo;t exist yet</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:34%">Piece</th><th style="width:14%">Today</th><th>Needed</th></tr></thead>
+      <tbody>
+        <tr><td><code>event_presenters.session_id</code></td><td class="yes">exists</td><td>Nothing — the column has been there since the first events migration</td></tr>
+        <tr><td>Session picker on the presenter form</td><td class="no">missing</td><td>A select. Only application-approval can set a session today; the manager can&rsquo;t</td></tr>
+        <tr><td>Roles &ldquo;Guest CEO&rdquo; and &ldquo;Investor&rdquo;</td><td class="no">missing</td><td>Two entries in the role dropdown — <code>role_label</code> is free text, so no schema change</td></tr>
+        <tr><td>Session id in the email merge data</td><td class="no">dropped</td><td>The merge maps presenters but discards <code>sessionId</code>, and sessions carry no id — so nothing can be joined</td></tr>
+        <tr><td>A block that renders them</td><td class="no">missing</td><td>The agenda callout gains a guests strip when the session has people</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bad" style="margin-top:14px">
+    <p style="margin:0"><b>The same free-text trap as before.</b> Because <code>role_label</code> is a string, the
+    email has to match &ldquo;Guest CEO&rdquo; case- and spacing-insensitively, exactly as the Founder Showcase
+    grouping does. Anything attached to the session that isn&rsquo;t a recognised role renders under its own label
+    rather than being hidden — an unmatched role should still show the person, not drop them.</p>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>More than one of each is fine.</b> Two investors on the panel render as two rows;
+    the strip is a list, not a pair of slots. Guest CEOs come first, then investors, then anyone else.</p>
+    <p style="margin:0 0 8px"><b>The abstract should stop describing the format</b> once the names are there —
+    &ldquo;a candid conversation with a CEO&rdquo; reads oddly directly above the CEO&rsquo;s name. That&rsquo;s
+    copy on the session record, editable in the block editor, not something this changes for you.</p>
+    <p style="margin:0"><b>It applies to the booklet too</b>, which has the same gap — presenters carry a
+    <code>session_id</code> the booklet also ignores. Same fix, different renderer; say if you want both.</p>
+  </div>
+
+</div>
+</body>
+</html>

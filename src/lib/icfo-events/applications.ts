@@ -76,6 +76,8 @@ export type PresenterFields = {
   meetingUrl?: string | null;
   startsAt?: string | null;
   timezone?: string | null;
+  /** Which session bills them, or null to move them back to the flat roster. */
+  sessionId?: string | null;
 };
 
 // ── applications ────────────────────────────────────────────────────────────
@@ -222,6 +224,7 @@ export async function updatePresenter(
   if (fields.meetingUrl !== undefined) patch.meeting_url = fields.meetingUrl;
   if (fields.startsAt !== undefined) patch.starts_at = fields.startsAt;
   if (fields.timezone !== undefined) patch.timezone = fields.timezone;
+  if (fields.sessionId !== undefined) patch.session_id = fields.sessionId;
   const { data, error } = await raw(supabase)
     .from("event_presenters")
     .update(patch)
