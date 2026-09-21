@@ -5,10 +5,11 @@ import type { EventRegistrationRow } from "@/lib/icfo-events/registrations";
 import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
 import {
   type RegistrationField,
-  REGISTRATION_COMMON,
-  REGISTRATION_BY_TYPE,
+  REGISTRATION_COMMON as CODE_COMMON,
+  REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
 import { EventManualRegister } from "./EventManualRegister";
+import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
 const TYPE_LABEL: Record<string, string> = {
   investor: "Investor",
@@ -29,7 +30,7 @@ function answerEntries(answers: Record<string, unknown>): [string, string][] {
     .filter(([, v]) => v.trim() !== "");
 }
 
-export function EventRegistrationsBoard({ eventId, initial }: { eventId: string; initial: EventRegistrationRow[] }) {
+export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventId: string; initial: EventRegistrationRow[]; fieldSet?: FieldSet }) {
   const [rows, setRows] = useState<EventRegistrationRow[]>(initial);
   const [filter, setFilter] = useState<string>("all");
   const [busy, setBusy] = useState<string | null>(null);
@@ -112,6 +113,7 @@ export function EventRegistrationsBoard({ eventId, initial }: { eventId: string;
         <div className="mt-4">
           <EventManualRegister
             eventId={eventId}
+            fieldSet={fieldSet}
             onClose={() => setAdding(false)}
             onAdded={(r) => { setRows((rs) => [r, ...rs.filter((x) => x.id !== r.id)]); setAdding(false); }}
           />
@@ -244,14 +246,20 @@ function RegistrationEditForm({
   row,
   onSaved,
   onCancel,
+  fieldSet,
 }: {
   eventId: string;
   row: EventRegistrationRow;
   onSaved: (r: EventRegistrationRow) => void;
   onCancel: () => void;
+  fieldSet?: FieldSet;
 }) {
   const type = (row.attendeeType as AttendeeType | null) ?? null;
-  const fields: RegistrationField[] = [...REGISTRATION_COMMON, ...(type ? REGISTRATION_BY_TYPE[type] : [])];
+  const common: RegistrationField[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;
+  const perType: RegistrationField[] = type
+    ? (fieldSet ? resolveAll(fieldSet.byType[type] ?? []) : CODE_BY_TYPE[type])
+    : [];
+  const fields: RegistrationField[] = [...common, ...perType];
   const configKeys = new Set(fields.map((f) => f.key));
   // Legacy answer keys not in the current config (e.g. openToIntros) stay editable.
   const extraKeys = Object.keys(row.answers).filter((k) => !configKeys.has(k) && row.answers[k] != null && row.answers[k] !== "");

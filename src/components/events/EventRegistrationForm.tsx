@@ -8,9 +8,10 @@ import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
 import {
   type RegistrationField as Field,
-  REGISTRATION_COMMON as COMMON,
-  REGISTRATION_BY_TYPE as BY_TYPE,
+  REGISTRATION_COMMON as CODE_COMMON,
+  REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
+import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
 const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins }[] = [
   { key: "investor", label: "Investor", Icon: Coins },
@@ -19,7 +20,13 @@ const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins }[] = [
   { key: "sponsor", label: "Sponsor", Icon: Store },
 ];
 
-export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEmail, defaultPhone, defaultName }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string }) {
+export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEmail, defaultPhone, defaultName, fieldSet }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string; fieldSet?: FieldSet }) {
+  // The saved set when the page loaded one; otherwise the code constants, so
+  // the form renders even if the table is empty or unreachable.
+  const COMMON: Field[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;
+  const BY_TYPE: Record<string, Field[]> = fieldSet
+    ? Object.fromEntries(Object.entries(fieldSet.byType).map(([k, v]) => [k, resolveAll(v)]))
+    : CODE_BY_TYPE;
   const t = useTranslations("eventsCmp");
   const [role, setRole] = useState<AttendeeType | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>({

@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { EventRegistrationForm } from "@/components/events/EventRegistrationForm";
+import { loadRegistrationFieldSet } from "@/lib/icfo-events/registration-field-sets-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Register — iCFO Events", robots: { index: false } };
@@ -32,7 +33,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
         <p className="mt-1 text-sm text-[var(--text-muted)]">{t("free_registration_a_few_quick_questions_so_we")}</p>
 
         <div className="mt-6">
-          <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile.email ?? undefined} defaultName={profile.full_name ?? undefined} />
+          <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile.email ?? undefined} defaultName={profile.full_name ?? undefined} fieldSet={await loadRegistrationFieldSet()} />
         </div>
       </section>
       <MarketingFooter />

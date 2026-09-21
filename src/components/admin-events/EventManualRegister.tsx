@@ -5,18 +5,25 @@ import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
 import type { EventRegistrationRow } from "@/lib/icfo-events/registrations";
 import {
   type RegistrationField,
-  REGISTRATION_ROLES,
-  REGISTRATION_COMMON,
-  REGISTRATION_BY_TYPE,
+  REGISTRATION_ROLES as CODE_ROLES,
+  REGISTRATION_COMMON as CODE_COMMON,
+  REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
+import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
-export function EventManualRegister({ eventId, onAdded, onClose }: { eventId: string; onAdded: (r: EventRegistrationRow) => void; onClose: () => void }) {
+export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { eventId: string; onAdded: (r: EventRegistrationRow) => void; onClose: () => void; fieldSet?: FieldSet }) {
   const [role, setRole] = useState<AttendeeType>("investor");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fields: RegistrationField[] = [...REGISTRATION_COMMON, ...REGISTRATION_BY_TYPE[role]];
+  // Same source as the public form, so the two can never ask different things.
+  const REGISTRATION_ROLES = fieldSet?.roles ?? CODE_ROLES;
+  const common: RegistrationField[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;
+  const perType: RegistrationField[] = fieldSet
+    ? resolveAll(fieldSet.byType[role] ?? [])
+    : CODE_BY_TYPE[role];
+  const fields: RegistrationField[] = [...common, ...perType];
 
   function set(key: string, value: unknown) {
     setAnswers((a) => ({ ...a, [key]: value }));

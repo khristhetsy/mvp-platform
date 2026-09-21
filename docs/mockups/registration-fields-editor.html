@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Registration fields — admin editor</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --navy:#0C2340;--ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 9px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.2px;white-space:nowrap}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+         box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:12px}
+  .ph{display:flex;align-items:center;gap:9px;padding:10px 15px;border-bottom:1px solid var(--l100);background:var(--l50)}
+  .ph h3{margin:0;font-size:12.5px;font-weight:650}
+  .ph .sp{flex:1}
+  .pb{padding:14px 15px}
+
+  .btn{border-radius:7px;padding:5px 11px;font-size:12px;font-weight:550;border:1px solid var(--line);
+       background:#fff;color:var(--s600);text-decoration:none;display:inline-block;white-space:nowrap}
+  .btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn.ind{background:var(--ind);border-color:var(--ind);color:#fff}
+  .btn.sm{padding:2px 8px;font-size:11px}
+  .btn.dis{opacity:.45;cursor:not-allowed}
+
+  .tabs{display:flex;gap:2px;background:var(--l100);border-radius:9px;padding:3px;width:fit-content}
+  .tabs a{border-radius:7px;padding:5px 13px;font-size:12.3px;font-weight:550;color:var(--s600);text-decoration:none;white-space:nowrap}
+  .tabs a.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+
+  .chip{display:inline-block;border-radius:99px;padding:2px 8px;font-size:10.3px;font-weight:650;border:1px solid}
+  .c-grey{background:var(--l100);color:var(--s600);border-color:var(--line)}
+  .c-ok{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
+  .c-amber{background:#FFFBEB;color:#92400E;border-color:#FDE68A}
+  .c-red{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}
+  .c-ind{background:#EEF2FF;color:#3730A3;border-color:#C7D2FE}
+  .c-lock{background:#F8FAFC;color:#64748B;border-color:#E2E8F0}
+
+  /* field rows */
+  .frow{display:flex;align-items:center;gap:9px;padding:9px 15px;border-bottom:1px solid var(--l100)}
+  .frow:last-child{border-bottom:none}
+  .grip{color:#CBD5E1;font-size:13px;cursor:grab;flex:none}
+  .fname{font-size:12.6px;font-weight:550;min-width:170px}
+  .fkey{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.6px;color:var(--s400);min-width:110px}
+  .fkind{flex:none}
+  .fopts{flex:1;min-width:0;font-size:11.2px;color:var(--s500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .facts{flex:none;display:flex;gap:5px}
+  .frow.edit{background:#F8F9FF;box-shadow:inset 0 0 0 1px #C7D2FE}
+
+  .ed{padding:12px 15px 14px 39px;background:#FAFAFA;border-bottom:1px solid var(--l100)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .field label{display:block;font-size:10.8px;font-weight:600;color:var(--s600);margin-bottom:3px}
+  .inp{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12.3px;color:var(--s700);background:#fff}
+  .inp.lock{background:var(--l100);color:var(--s500)}
+  .hint{font-size:10.5px;color:var(--s500);margin-top:3px;line-height:1.45}
+  .hint b{color:var(--warn)}
+
+  .opt{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:99px;
+       padding:2px 4px 2px 9px;font-size:11.3px;color:var(--s700);background:#fff;margin:0 4px 4px 0}
+  .opt .x{color:#CBD5E1;font-size:11px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.2px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);
+     text-align:left;padding:0 9px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 9px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ind);border-radius:9px;
+        padding:12px 15px;font-size:12.5px;color:var(--s600);line-height:1.62;margin-bottom:12px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  .ok{border-left-color:#059669;background:#F0FDF9;color:#065F46}
+  .ok b{color:#022C22}
+  ul.t{margin:6px 0 0;padding-left:18px}
+  ul.t li{font-size:12.3px;margin-bottom:5px;line-height:1.55}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Registration fields — admin editor</h1>
+<p class="sub">Admin → Event Hub → Registration fields · mockup, nothing built</p>
+
+<div class="note">
+  <b>Today these live only in code.</b> <code>lib/icfo-events/registration-fields.ts</code> exports
+  three arrays that both the public registration form and the admin &ldquo;Register a guest&rdquo;
+  form read, so they can never drift. Changing a check-size band means a deploy.
+  <br><br>
+  This is the same problem <code>crr_weight_sets</code> and <code>pricing_sets</code> already solved:
+  move the definition into a versioned table, keep one active row, append on save, and seed it from
+  today&rsquo;s code constants so nothing changes on the day it ships.
+</div>
+
+<!-- ═════ EDITOR ═════ -->
+<div class="lbl">The editor</div>
+<div class="panel">
+  <div class="ph">
+    <h3>Registration fields</h3>
+    <span class="chip c-grey">Active · reg-fields-v1</span>
+    <span class="sp"></span>
+    <a class="btn" href="#">History</a>
+    <a class="btn pri" href="#">Save as new version</a>
+  </div>
+
+  <div class="pb" style="padding-bottom:0">
+    <div class="tabs">
+      <a href="#">Everyone</a>
+      <a class="on" href="#">Investor</a>
+      <a href="#">Founder</a>
+      <a href="#">Service Provider</a>
+      <a href="#">Sponsor</a>
+    </div>
+    <p class="hint" style="margin:8px 0 12px">
+      <b>Everyone</b> is the shared block — name, company, title, country, email, phone. The other
+      tabs add questions for that role only.
+    </p>
+  </div>
+
+  <div class="frow">
+    <span class="grip" aria-hidden>⠿</span>
+    <span class="fname">Investor type</span>
+    <span class="fkey">investorType</span>
+    <span class="fkind"><span class="chip c-ind">Select</span></span>
+    <span class="fopts">Angel · Venture Capital · Private Equity · Family Office · LP · Syndicate</span>
+    <span class="chip c-grey">Required</span>
+    <span class="facts"><a class="btn sm" href="#">Edit</a></span>
+  </div>
+
+  <div class="frow edit">
+    <span class="grip" aria-hidden>⠿</span>
+    <span class="fname">Typical check size</span>
+    <span class="fkey">checkSize</span>
+    <span class="fkind"><span class="chip c-ind">Select</span></span>
+    <span class="fopts">editing…</span>
+    <span class="chip c-grey">Required</span>
+    <span class="facts"><a class="btn sm" href="#">Close</a></span>
+  </div>
+  <div class="ed">
+    <div class="grid2">
+      <div class="field">
+        <label>Label — what registrants see</label>
+        <input class="inp" value="Typical check size" readonly>
+        <p class="hint">Safe to change at any time. Nothing stored depends on it.</p>
+      </div>
+      <div class="field">
+        <label>Key — where the answer is stored</label>
+        <input class="inp lock" value="checkSize" readonly>
+        <p class="hint"><b>Locked — 412 people have answered this.</b> Answers live in
+          <code>registrations.answers</code> keyed by this name, so renaming it would orphan every
+          one of them.</p>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:10px">
+      <label>Options</label>
+      <div>
+        <span class="opt">&lt; $25k <span class="x">✕</span></span>
+        <span class="opt">$25k–$100k <span class="x">✕</span></span>
+        <span class="opt">$100k–$500k <span class="x">✕</span></span>
+        <span class="opt">$500k–$2M <span class="x">✕</span></span>
+        <span class="opt">$2M+ <span class="x">✕</span></span>
+        <span class="opt" style="border-style:dashed;color:var(--s400)">+ add</span>
+      </div>
+      <p class="hint">Removing an option doesn&rsquo;t delete answers that already used it — they
+        stay on the registration and show as-is in exports.</p>
+    </div>
+
+    <div class="grid2" style="margin-top:10px">
+      <div class="field">
+        <label>Type</label>
+        <select class="inp"><option>Select (one)</option><option>Chips (many)</option>
+          <option>Text</option><option>Long text</option><option>Checkbox</option></select>
+        <p class="hint">Changing Select → Chips keeps existing single answers and treats them as a
+          list of one.</p>
+      </div>
+      <div class="field">
+        <label>Required</label>
+        <select class="inp"><option>Required</option><option>Optional</option></select>
+        <p class="hint">Checkboxes are always optional — a single yes/no can&rsquo;t sensibly be
+          required.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:7px;margin-top:12px">
+      <a class="btn ind" href="#">Apply</a>
+      <a class="btn" href="#">Cancel</a>
+      <span style="flex:1"></span>
+      <a class="btn" href="#" style="color:#B91C1C;border-color:#FECACA">Remove field</a>
+    </div>
+  </div>
+
+  <div class="frow">
+    <span class="grip" aria-hidden>⠿</span>
+    <span class="fname">Stage focus</span>
+    <span class="fkey">stages</span>
+    <span class="fkind"><span class="chip c-ind">Chips</span></span>
+    <span class="fopts">Pre-seed · Seed · Series A · Series B+</span>
+    <span class="chip c-grey">Required</span>
+    <span class="facts"><a class="btn sm" href="#">Edit</a></span>
+  </div>
+
+  <div class="frow">
+    <span class="grip" aria-hidden>⠿</span>
+    <span class="fname">Sectors of interest</span>
+    <span class="fkey">sectors</span>
+    <span class="fkind"><span class="chip c-ind">Chips</span></span>
+    <span class="fopts">13 sectors — from the event sector list</span>
+    <span class="chip c-lock">Options linked</span>
+    <span class="facts"><a class="btn sm dis" href="#">Edit</a></span>
+  </div>
+
+  <div class="frow">
+    <span class="grip" aria-hidden>⠿</span>
+    <span class="fname">Investment thesis / what you look for</span>
+    <span class="fkey">thesis</span>
+    <span class="fkind"><span class="chip c-ind">Long text</span></span>
+    <span class="fopts">—</span>
+    <span class="chip c-grey">Required</span>
+    <span class="facts"><a class="btn sm" href="#">Edit</a></span>
+  </div>
+
+  <div class="frow">
+    <span class="grip" aria-hidden>⠿</span>
+    <span class="fname">I am an accredited investor</span>
+    <span class="fkey">accredited</span>
+    <span class="fkind"><span class="chip c-ind">Checkbox</span></span>
+    <span class="fopts">—</span>
+    <span class="chip c-grey">Optional</span>
+    <span class="facts"><a class="btn sm" href="#">Edit</a></span>
+  </div>
+
+  <div class="pb" style="border-top:1px solid var(--l100)">
+    <a class="btn" href="#">+ Add a question</a>
+  </div>
+</div>
+
+<div class="note ok">
+  <b>Sectors stay linked rather than copied.</b> That row&rsquo;s options come from
+  <code>EVENT_SECTORS</code>, the same list the event&rsquo;s own sector tracks use — the chips on
+  your screenshot are that list. Letting someone edit them here would create a second sector
+  vocabulary that silently diverges from the one events are tagged with, so the row shows
+  <b>Options linked</b> and points at the sector settings instead.
+</div>
+
+<div class="note warn">
+  <b>The key is the part that can quietly destroy data, so the editor treats it as load-bearing.</b>
+  Answers are stored in <code>registrations.answers</code> as jsonb keyed by field key. A rename
+  leaves every previous answer stranded under the old key — invisible in the UI, still in the
+  database, absent from exports.
+  <ul class="t">
+    <li><b>Never answered</b> → key is editable, because nothing points at it yet.</li>
+    <li><b>Answered by anyone</b> → key is locked, and the editor says how many. The label stays
+      free to change, which is what people usually actually want.</li>
+    <li><b>Removing a field</b> hides it from the form but keeps the answers. Exports keep the
+      column so historical registrations stay readable.</li>
+  </ul>
+</div>
+
+<!-- ═════ SAVE ═════ -->
+<div class="lbl">Saving — same shape as the weights and pricing editors</div>
+<div class="panel"><div class="pb">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div>
+      <p style="margin:0 0 6px;font-size:12px;font-weight:650">What changed</p>
+      <ul style="margin:0;padding-left:16px">
+        <li style="font-size:12px;color:var(--s600)">Investor · <b>Typical check size</b> — added
+          &ldquo;$2M–$10M&rdquo;, removed &ldquo;$2M+&rdquo;</li>
+        <li style="font-size:12px;color:var(--s600)">Investor · <b>Investment thesis</b> — now optional</li>
+        <li style="font-size:12px;color:var(--s600)">Founder · added <b>Have you raised before?</b></li>
+      </ul>
+    </div>
+    <div>
+      <p style="margin:0 0 6px;font-size:12px;font-weight:650">Who this affects</p>
+      <p style="margin:0;font-size:12px;color:var(--s600)">
+        The public registration form and the admin Register-a-guest form, on <b>every event</b>,
+        from the moment you save. <b>1,284</b> existing registrations are untouched.
+      </p>
+    </div>
+  </div>
+  <div class="field" style="margin-top:12px">
+    <label>Why (required)</label>
+    <input class="inp" value="Splitting the top check-size band — too many investors were landing in $2M+." readonly>
+  </div>
+  <div style="display:flex;gap:7px;margin-top:11px">
+    <a class="btn pri" href="#">Save as reg-fields-v2</a>
+    <a class="btn" href="#">Cancel</a>
+  </div>
+</div></div>
+
+<div class="note warn">
+  <b>One decision before this gets built: global, or per event?</b> Today there is exactly one set,
+  shared by every event, because it lives in one file.
+  <ul class="t">
+    <li><b>Global only</b> (what the mockup shows) — one set, versioned. Simplest, and matches how
+      pricing and CRR weights already work. An expo and a webinar ask identical questions.</li>
+    <li><b>Global + per-event override</b> — an event can opt out and define its own. More
+      flexible, but two places to look when a field is wrong, and exports across events stop
+      lining up.</li>
+  </ul>
+  I&rsquo;d start global. The per-event case is real but rarer than it sounds, and it can be added
+  later without changing the table — an <code>event_id</code> column that is null for the shared set.
+</div>
+
+<div class="panel"><div class="pb">
+  <table>
+    <tr><th style="width:32%">Piece</th><th>Notes</th></tr>
+    <tr><td><b>Migration</b></td>
+      <td><code>registration_field_sets</code> — version, <code>roles</code> jsonb,
+        <code>common</code> jsonb, <code>by_type</code> jsonb, <code>is_active</code>,
+        <code>reason</code>, <code>created_by</code>. Seeded from today&rsquo;s constants so the
+        first save changes nothing.</td></tr>
+    <tr><td><b>Loader</b></td>
+      <td><code>loadRegistrationFields()</code>, cached per request like
+        <code>loadPricing()</code>, falling back to the code constants when the table is empty or
+        unreachable — the form must never fail to render.</td></tr>
+    <tr><td><b>Answer counts</b></td>
+      <td>One query per key over <code>registrations.answers</code> to decide which keys lock.
+        This is what makes the guard real rather than advisory.</td></tr>
+    <tr><td><b>The three consumers</b></td>
+      <td><code>EventRegistrationForm</code>, <code>EventManualRegister</code>,
+        <code>EventRegistrationsBoard</code> already read the arrays — they take the loaded set
+        instead, and otherwise don&rsquo;t change.</td></tr>
+  </table>
+</div></div>
+
+</div>
+</body>
+</html>
