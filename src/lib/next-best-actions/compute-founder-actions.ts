@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { crrScoresFor } from "@/lib/crr/crr-for";
 import { buildActionId, createNextBestAction } from "@/lib/next-best-actions/action-catalog";
 import type { NextBestAction } from "@/lib/next-best-actions/types";
 import { listCompanyDocuments } from "@/lib/data/documents";
@@ -102,11 +101,7 @@ export async function loadFounderNbaContext(
   });
 
   const uploadedTypeCodes = docs.flatMap((doc) => (doc.document_type ? [doc.document_type] : []));
-  // The CRR engine score — one number across the platform. The old expression
-  // (diligence score, falling back to a document-type count) survives only as a
-  // last resort for a company the engine has never scored.
-  const readinessScore = (await crrScoresFor([company.id])).get(company.id)
-    ?? diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
+  const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
 
   const learningPercent =
     FOUNDER_COURSES.length > 0

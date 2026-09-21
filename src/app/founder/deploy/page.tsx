@@ -10,6 +10,7 @@ import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/i
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
@@ -26,9 +27,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-// The gate is the engine's, not a number typed on this page — a founder was
-// being told outreach was unlocked while the engine flag said it was not.
-import { OUTREACH_GATE as OUTREACH_THRESHOLD, crrFor } from "@/lib/crr/crr-for";
+const OUTREACH_THRESHOLD = 70;
 
 /** Turn the real pipeline numbers into expandable AI insight cards for the Analytics step. */
 function buildDeployInsights(input: {
@@ -135,26 +134,34 @@ export default async function FounderDeployPage() {
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
     // Board is loaded AFTER outreach enrollment below, so newly-queued recipients
     // show on first render (not just on refresh).
-    const [activity, pledgeSummary, , loadedHub, engineCrr] = await Promise.all([
+    const [activity, pledgeSummary, journeyState, loadedHub] = await Promise.all([
       listFounderInvestorActivity(supabase, company.id),
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
       evaluateFounderJourney(supabase, profile.id),
       loadFounderInvestorHub(company, profile.id),
-      crrFor(company.id),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
     hub = loadedHub;
 
-    // The CRR — the engine score for this company's own stage. This page used to
-    // recompute a third copy of a document-count composite here, which is what
-    // decided whether automated outreach was enrolled.
-    investableScore = engineCrr.score ?? 0;
+    // Investable Score — same composite the Qualify stage shows, so the gate here
+    // matches what the founder saw there. Readiness-weighted, plus profile and gates.
+    const readiness = journeyState.conditions.readinessScore ?? 0;
+    const profilePercent = buildProfileCompletion(company).percent;
+    investableScore = Math.round(
+      Math.min(
+        100,
+        0.6 * readiness +
+          0.3 * profilePercent +
+          (journeyState.conditions.onboardingComplete ? 5 : 0) +
+          (journeyState.conditions.requiredDocsUploaded ? 5 : 0),
+      ),
+    );
 
-    // Founder-automatic outreach: once the CRR clears the engine gate, ensure the
-    // company's outreach campaign exists and is approved. Runs BEFORE the board
-    // load so queued recipients render immediately. Non-fatal; real email dispatch
-    // is still gated by the automation toggle + published one-pager.
-    if (entitlements.canDistribute && engineCrr.outreachUnlocked) {
+    // Founder-automatic outreach: once the Investable Score clears the threshold,
+    // ensure the company's outreach campaign exists and is approved. Runs BEFORE
+    // the board load so queued recipients render immediately. Non-fatal; real
+    // email dispatch is still gated by the automation toggle + published one-pager.
+    if (entitlements.canDistribute && investableScore >= OUTREACH_THRESHOLD) {
       try {
         await ensureFounderAutomatedOutreach(company.id, profile.id);
       } catch {

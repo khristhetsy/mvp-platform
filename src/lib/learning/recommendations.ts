@@ -1,5 +1,4 @@
 import { computeReadinessScore } from "@/lib/data/founder-readiness";
-import { crrScoresFor } from "@/lib/crr/crr-for";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import {
   listLearningProgressForCompany,
@@ -195,11 +194,7 @@ export async function getAICoachRecommendations(
     diligenceReportExists: Boolean(diligenceReport),
     storedStepState: (company as Company).onboarding_step_state,
   });
-  // The CRR engine score — one number across the platform. The old expression
-  // (diligence score, falling back to a document-type count) survives only as a
-  // last resort for a company the engine has never scored.
-  const readinessScore = (await crrScoresFor([companyId])).get(companyId)
-    ?? diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
+  const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
   const completedModuleIds = new Set(
     progressRows.filter((row) => row.status === "completed").map((row) => row.module_id),
   );

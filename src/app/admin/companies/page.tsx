@@ -18,7 +18,6 @@ import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscript
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { computeReadinessScore } from "@/lib/data/founder-readiness";
-import { crrScoresFor } from "@/lib/crr/crr-for";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +29,6 @@ type PendingProfileRow = {
 };
 
 type CompanyRow = {
-  id: string | null;
   founder_id: string | null;
   company_name: string | null;
 };
@@ -66,25 +64,21 @@ export default async function AdminCompaniesPage() {
       const founderProfileIds = pendingProfiles.map((p) => p.id);
       const { data: companiesForFoundersRaw } = await rawSupabase
         .from("companies")
-        .select("id, founder_id, company_name")
+        .select("founder_id, company_name")
         .in("founder_id", founderProfileIds);
 
       const companiesForFounders = (companiesForFoundersRaw ?? []) as CompanyRow[];
       const companyNameByFounderId = new Map<string, string>();
-      const companyIdByFounderId = new Map<string, string>();
       for (const c of companiesForFounders) {
         if (c.founder_id) {
           companyNameByFounderId.set(c.founder_id, c.company_name ?? "");
-          if (c.id) companyIdByFounderId.set(c.founder_id, c.id);
         }
       }
 
-      // The queue shows the same number the founder sees: the engine CRR.
-      // Document completeness is only the fallback for a founder who has never
-      // been scored — it is not the rating (readiness_score is not a profiles
-      // column either; selecting it previously errored the whole query and left
-      // the queue permanently empty).
-      const pendingCrr = await crrScoresFor([...companyIdByFounderId.values()]);
+      // Compute each founder's readiness the same way the founder view does,
+      // so the queue shows the real number (readiness_score is not a profiles
+      // column — selecting it previously errored the whole query and left the
+      // queue permanently empty).
       const { data: docsRaw } = await rawSupabase
         .from("documents")
         .select("uploaded_by, document_type")
@@ -104,9 +98,7 @@ export default async function AdminCompaniesPage() {
         email: p.email,
         companyName: companyNameByFounderId.get(p.id) ?? null,
         requestedAt: p.stage_approval_requested_at ?? "",
-        readinessScore:
-          pendingCrr.get(companyIdByFounderId.get(p.id) ?? "")
-          ?? computeReadinessScore(docTypesByFounderId.get(p.id) ?? []),
+        readinessScore: computeReadinessScore(docTypesByFounderId.get(p.id) ?? []),
       }));
     }
 
@@ -114,10 +106,19 @@ export default async function AdminCompaniesPage() {
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
     const companyIds = companies.map((company) => company.id);
 
-    // The CRR column — the engine score, read through the one platform reader so
-    // this list, the founder dashboard and the public one-pager cannot disagree.
-    const investableByCompanyId: Map<string, number | null> = new Map(await crrScoresFor(companyIds));
+    // AI "investable" score per company (latest effective_score) + founder journey stage.
+    const investableByCompanyId = new Map<string, number | null>();
     const journeyByFounderId = new Map<string, { stage: string | null; approval: string | null }>();
+    if (companyIds.length) {
+      const { data: scoreRows } = await rawSupabase
+        .from("company_readiness_scores")
+        .select("company_id, effective_score, created_at")
+        .in("company_id", companyIds)
+        .order("created_at", { ascending: false });
+      for (const r of (scoreRows ?? []) as Array<{ company_id: string; effective_score: number | null }>) {
+        if (!investableByCompanyId.has(r.company_id)) investableByCompanyId.set(r.company_id, r.effective_score ?? null);
+      }
+    }
     if (founderIds.length) {
       const { data: journeyRows } = await rawSupabase
         .from("profiles")
