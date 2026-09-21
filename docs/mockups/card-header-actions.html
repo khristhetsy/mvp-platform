@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Card actions — top right, every card</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #DC2626;border-radius:8px;padding:13px 15px;margin-bottom:22px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why ul{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .why li{margin-bottom:4px}
+
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:24px 0 8px}
+
+  /* ---- the pattern ---- */
+  .sec{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+  .hd{display:flex;align-items:center;gap:11px;padding:12px 15px;border-bottom:1px solid var(--l100)}
+  .ic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+  .ic.b{background:#EEF2FF;color:#4338CA} .ic.p{background:#F5F3FF;color:#6D28D9}
+  .ic.a{background:#FFFBEB;color:#B45309} .ic.g{background:#F1F5F9;color:#475569}
+  .ic.gr{background:#ECFDF5;color:#047857}
+  .ttl{min-width:0}
+  .ttl h3{margin:0;font-size:13.5px;font-weight:650}
+  .ttl p{margin:1px 0 0;font-size:11.5px;color:var(--s500)}
+  .acts{margin-left:auto;display:flex;align-items:center;gap:7px;flex:none}
+  .bd{padding:14px 15px}
+
+  .b{border-radius:8px;border:1px solid var(--line);background:#fff;color:#334155;padding:6px 11px;
+     font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+  .b.pri{background:#4338CA;border-color:#4338CA;color:#fff}
+  .b.ic{padding:6px 8px}
+  .count{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:700}
+
+  .strip{display:flex;align-items:flex-start;gap:9px;border-radius:8px;background:#EEF2FF;padding:9px 11px;font-size:12.5px;color:#312E81;line-height:1.6}
+  .strip.ok{background:#F0FDF9;color:#065F46}
+  .strip b{font-variant-numeric:tabular-nums}
+
+  .row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--l100);font-size:13px}
+  .row:last-child{border-bottom:none}
+  .row .sp{flex:1}
+  .chip{border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:600}
+  .chip.done{background:#ECFDF5;color:#047857}
+  .chip.att{background:#FFFBEB;color:#B45309}
+  .chip.todo{background:#F1F5F9;color:#64748B}
+  .asf{border-radius:6px;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;padding:3px 8px;font-size:11px;font-weight:600}
+  .hl{font-size:11.5px;color:var(--s500)}
+
+  .mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .m{border:1px solid var(--line);border-radius:9px;padding:11px}
+  .m .c{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s400);margin-bottom:7px}
+  .m .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+  .m .d{font-size:11px;color:var(--s500);margin-top:3px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #4F46E5;border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:18px}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Card actions — top right, every card</h1>
+<p class="sub">Admin → company workspace. One rule: a card's actions live in its own header, right-aligned.</p>
+
+<div class="why">
+  <h2>What's inconsistent today</h2>
+  <ul>
+    <li><b>Reach out to founder appears in three different places.</b> Inside the indigo strip on the stage tabs, as its own full card in "Do next", and buried in the review panel — three entry points to the same action.</li>
+    <li><b>Section headers are decoration.</b> "At a glance", "Where they are", "Operations" carry an icon and a subtitle but no controls, so every action has to be re-housed somewhere in the body.</li>
+    <li><b>Actions drift to wherever there was room</b> — the strip's right edge, a button row under a table, a standalone card. Nothing predicts where a control will be.</li>
+  </ul>
+</div>
+
+<div class="lbl">The pattern</div>
+
+<!-- AT A GLANCE -->
+<div class="sec">
+  <div class="hd">
+    <span class="ic b">◷</span>
+    <div class="ttl"><h3>At a glance</h3><p>The company's current health</p></div>
+    <div class="acts">
+      <button class="b">↻ Re-score</button>
+      <button class="b pri">✉ Reach out to founder</button>
+    </div>
+  </div>
+  <div class="bd">
+    <div class="mini">
+      <div class="m"><div class="c">Completion</div><div class="v" style="color:#059669">78</div><div class="d">Diligence verified</div></div>
+      <div class="m"><div class="c">Capital Readiness</div><div class="v" style="color:#B45309">45</div><div class="d">20 short of gate 65</div></div>
+      <div class="m"><div class="c">Open remediation</div><div class="v">8</div><div class="d">34 closed of 42</div></div>
+      <div class="m"><div class="c">Investor interests</div><div class="v" style="color:#94A3B8">0</div><div class="d">Outreach locked</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- WHERE THEY ARE -->
+<div class="sec">
+  <div class="hd">
+    <span class="ic p">⤳</span>
+    <div class="ttl"><h3>Where they are</h3><p>Current stage, gates, and what's pending to advance</p></div>
+    <div class="acts">
+      <span class="count">2 blocking</span>
+      <button class="b">Approve stage</button>
+      <button class="b pri">✉ Reach out to founder</button>
+    </div>
+  </div>
+  <div class="bd">
+    <div class="strip">✦ Scores <b>45</b>/100 on the Pre-seed profile. Outreach unlocks at <b>65</b>. The gate needs all 3 core documents — missing Pitch deck, Financial model, Cap table.</div>
+  </div>
+</div>
+
+<!-- PREPARATION MENU -->
+<div class="sec">
+  <div class="hd">
+    <span class="ic a">☑</span>
+    <div class="ttl"><h3>Founder&apos;s Preparation menu</h3><p>2 of 2 measured items done · 7 not tracked</p></div>
+    <div class="acts">
+      <button class="b">Open all as founder</button>
+      <button class="b pri">✉ Reach out to founder</button>
+    </div>
+  </div>
+  <div class="bd" style="padding-top:4px;padding-bottom:6px">
+    <div class="row"><span style="color:#D97706">⚠</span><span>Capital Readiness Rating</span><span class="hl">CRR 45/100 · gate 65 · 20 short</span><span class="sp"></span><span class="chip att">Attention</span><span class="asf">Open as founder</span></div>
+    <div class="row"><span style="color:#D97706">⚠</span><span>Documents</span><span class="hl">0 of 3 core · 4 of 9 full package</span><span class="sp"></span><span class="chip att">Attention</span><span class="asf">Open as founder</span></div>
+    <div class="row"><span style="color:#94A3B8">○</span><span>Data room</span><span class="hl">not measured</span><span class="sp"></span><span class="chip todo">Open</span><span class="asf">Open as founder</span></div>
+  </div>
+</div>
+
+<!-- DO NEXT -->
+<div class="sec">
+  <div class="hd">
+    <span class="ic gr">✓</span>
+    <div class="ttl"><h3>Do next</h3><p>What needs your action</p></div>
+    <div class="acts">
+      <button class="b">Add task</button>
+      <button class="b pri">✉ Reach out to founder</button>
+    </div>
+  </div>
+  <div class="bd">
+    <div class="strip ok">✓ The draft email is written from this stage&apos;s findings — the score, the gaps and the ranked fixes — not from the item names.</div>
+  </div>
+</div>
+
+<!-- OPERATIONS -->
+<div class="sec">
+  <div class="hd">
+    <span class="ic g">☰</span>
+    <div class="ttl"><h3>Operations</h3><p>Items affecting this company across operational queues</p></div>
+    <div class="acts">
+      <span class="count">6 queue items</span>
+      <button class="b">Export</button>
+      <button class="b ic" title="More">⋯</button>
+    </div>
+  </div>
+  <div class="bd"><p style="margin:0;font-size:12.5px;color:var(--s500)">Queue rows…</p></div>
+</div>
+
+<div class="note">
+  <b>One rule, applied everywhere:</b> a card&apos;s actions sit in that card&apos;s header, right-aligned, in the order
+  <i>secondary → primary</i>, with any count badge to their left. The body holds content only.
+  <br><br>
+  <b>Reach out to founder appears once per card</b> and is scoped to that card — the Preparation one drafts from
+  Preparation&apos;s findings, the Marketing one from Marketing&apos;s. Today the same button lives inside the indigo
+  strip, as a standalone card in "Do next", and again in the review panel; the strip goes back to being text.
+  <br><br>
+  <b>Implementation:</b> <code>WorkspaceSection</code> already takes <code>icon</code>, <code>tone</code>,
+  <code>title</code> and <code>subtitle</code> — it needs one more prop, <code>actions</code>, rendered
+  <code>ml-auto</code> in the header. Every section then passes its own controls and the pattern is enforced by the
+  component rather than by remembering.
+</div>
+
+</div>
+</body>
+</html>

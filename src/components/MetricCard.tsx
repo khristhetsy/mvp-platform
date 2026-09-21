@@ -12,6 +12,7 @@ export function MetricCard({
   status,
   urgency,
   href,
+  ring,
 }: Readonly<{
   label: string;
   value: string;
@@ -24,6 +25,15 @@ export function MetricCard({
   status?: "neutral" | "info" | "success" | "warning" | "danger" | "pending";
   urgency?: boolean;
   href?: string;
+  ring?: {
+    percent: number | null;
+    center?: string;
+    sublabel?: string;
+    color?: string;
+    gate?: number | null;
+    pending?: boolean;
+    title?: string;
+  };
 }>) {
   return (
     <OperationalMetric
@@ -38,6 +48,7 @@ export function MetricCard({
       status={status}
       urgency={urgency}
       href={href}
+      ring={ring}
     />
   );
 }

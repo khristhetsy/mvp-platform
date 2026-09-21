@@ -88,7 +88,7 @@ export function StageMenuMirror({
           <p className="text-[11px] font-semibold text-slate-600">
             Founder&apos;s {stageLabel(stage)} menu
             <span className="font-normal text-slate-400">
-              {" "}· {mirror.reached ? `${mirror.doneCount} of ${mirror.total} done` : "not reached"}
+              {" "}· {mirror.reached ? `${mirror.doneCount} of ${mirror.measuredCount} measured items done · ${mirror.total - mirror.measuredCount} not tracked` : "not reached"}
             </span>
           </p>
         </div>

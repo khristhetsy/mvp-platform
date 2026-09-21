@@ -15,6 +15,7 @@ import { allGaps } from "@/lib/crr/dimension-detail";
 import { loadActiveSet } from "@/lib/crr/weight-sets-db";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requiredDocumentTypes } from "@/lib/documents/required-types";
+import { documentTypeCode } from "@/lib/data/founder-readiness";
 import type { StoredFactor } from "@/lib/crr/weight-sets";
 import type { FactorKey } from "@/lib/ai/readiness-scoring";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
@@ -53,6 +54,13 @@ export type ItemDiagnosis = {
 
 /** How a whole stage stands — decides the banner and what the email should say. */
 export type StageSituation = "blocking" | "cleared" | "locked-near" | "locked-far";
+
+// Same alias map the founder checklist uses — the upload API and the legacy
+// form wrote different codes for the same document.
+const DOC_CODE_ALIASES: Record<string, string[]> = {
+  FINANCIAL_MODEL: ["FINANCIAL_STATEMENTS", "FINANCIALS"],
+  LEGAL_DOCUMENTS: ["LEGAL_DOCUMENT"],
+};
 
 const DIM_LABEL: Record<string, string> = {
   team: "Team",
@@ -120,10 +128,21 @@ function crrDiagnosis(crr: Crr, gapLines: MissingRow[], fixes: FixStep[]): ItemD
   };
 }
 
-/** The documents item — measured against the canonical required list. */
+/**
+ * The documents item — measured against the canonical required list.
+ *
+ * `present` holds the UPPER_SNAKE codes actually stored on the rows
+ * (PITCH_DECK, FINANCIAL_STATEMENTS…), never the human labels. Comparing the
+ * labels directly reported "0 of 3 core" for a company with every document
+ * uploaded, which then sat next to a green Done chip.
+ */
 function documentsDiagnosis(present: Set<string>, coreNeeded: string[]): ItemDiagnosis {
-  const missingCore = coreNeeded.filter((t) => !present.has(t.toLowerCase()));
-  const missingAll = requiredDocumentTypes.filter((t) => !present.has(t.toLowerCase()));
+  const has = (label: string) => {
+    const code = documentTypeCode(label);
+    return present.has(code) || (DOC_CODE_ALIASES[code] ?? []).some((a) => present.has(a));
+  };
+  const missingCore = coreNeeded.filter((t) => !has(t));
+  const missingAll = requiredDocumentTypes.filter((t) => !has(t));
   const haveCore = coreNeeded.length - missingCore.length;
 
   const missing: MissingRow[] = [
@@ -237,10 +256,12 @@ export async function diagnoseStage(
   if (companyId) {
     try {
       const db = createServiceRoleClient();
-      const { data } = await db.from("documents").select("document_type").eq("company_id", companyId);
+      const { data } = await db.from("documents").select("document_type, status").eq("company_id", companyId);
       const present = new Set(
-        ((data ?? []) as Array<{ document_type?: string | null }>)
-          .map((d) => (d.document_type ?? "").toLowerCase().trim())
+        ((data ?? []) as Array<{ document_type?: string | null; status?: string | null }>)
+          // Archived files don't satisfy a slot — same rule as buildDocumentChecklist.
+          .filter((d) => (d.status ?? "").toLowerCase() !== "archived")
+          .map((d) => (d.document_type ?? "").toUpperCase().trim())
           .filter(Boolean),
       );
       docDiag = documentsDiagnosis(present, coreNeeded);

@@ -42,6 +42,8 @@ export type StageMirror = {
   items: MirrorItem[];
   doneCount: number;
   total: number;
+  /** How many of the items have a wired signal at all — the honest denominator. */
+  measuredCount: number;
   recommendation: string;
 };
 
@@ -116,11 +118,15 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
     if (d.condition) {
       return { label: d.label, href: d.href, status: conditionMet(journey, d.condition) ? "done" : "attention", actable };
     }
-    // Past stage without a signal: treat as done; current stage: neutral to-do.
-    return { label: d.label, href: d.href, status: isCurrent ? "todo" : "done", actable };
+    // No signal wired for this item. It is NOT done just because the founder
+    // moved past the stage — marking it done was a fake pass that produced
+    // "9 of 9 done" on a company with no documents uploaded at all.
+    return { label: d.label, href: d.href, status: "todo", actable };
   });
 
+  // Only measured passes count. An item nobody checks can never be "done".
   const doneCount = items.filter((i) => i.status === "done").length;
+  const measuredCount = defs.filter((d) => d.condition).length;
   const unmet = items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
 
   let recommendation: string;
@@ -135,5 +141,5 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
     recommendation = `On track — no blocking items in ${STAGE_LABEL[stage]}.`;
   }
 
-  return { stage, reached, items, doneCount, total: items.length, recommendation };
+  return { stage, reached, items, doneCount, total: items.length, measuredCount, recommendation };
 }

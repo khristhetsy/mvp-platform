@@ -65,6 +65,8 @@ export type AdminCompanyWorkspaceData = {
     openCount: number;
     criticalCount: number;
     highCount: number;
+    /** All events ever raised for this company — the ring's denominator. */
+    totalCount: number;
     recentEvents: ComplianceEventRecord[];
     nextAction: string | null;
   };

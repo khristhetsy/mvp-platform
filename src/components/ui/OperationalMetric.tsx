@@ -4,6 +4,7 @@ import { metricAccentBorder } from "@/lib/ui/design-tokens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SparklineChart } from "@/components/ui/charts/SparklineChart";
 import { ClickableCard, drilldownHoverClass } from "@/components/ui/drilldown";
+import { ScoreRing } from "@/components/ui/ScoreRing";
 
 export function OperationalMetric({
   label,
@@ -17,6 +18,7 @@ export function OperationalMetric({
   status = "neutral",
   urgency,
   href,
+  ring,
 }: Readonly<{
   label: string;
   value: string;
@@ -29,6 +31,21 @@ export function OperationalMetric({
   status?: OperationalStatus;
   urgency?: boolean;
   href?: string;
+  /** Draws a circle graph beside the value. Needs a denominator to be honest:
+   *  pass `pending` when the metric has no ceiling and nothing recorded yet. */
+  ring?: {
+    /** 0–100 fill. */
+    percent: number | null;
+    /** Text in the middle — usually the raw count, not the percentage. */
+    center?: string;
+    /** Small caption under it, e.g. "of 42". */
+    sublabel?: string;
+    color?: string;
+    /** Threshold tick, so a score reads as a distance. */
+    gate?: number | null;
+    pending?: boolean;
+    title?: string;
+  };
 }>) {
   const border = metricAccentBorder[accent] ?? metricAccentBorder.slate;
   const trendSymbol =
@@ -49,8 +66,22 @@ export function OperationalMetric({
           </div>
           <div className="mt-1.5 flex flex-1 flex-col justify-between gap-2">
             <div className="flex items-end justify-between gap-2">
-              <div className="flex min-w-0 items-baseline gap-2">
-                <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                {ring ? (
+                  <ScoreRing
+                    score={ring.percent}
+                    size={54}
+                    color={ring.color}
+                    label={ring.center}
+                    sublabel={ring.sublabel}
+                    gate={ring.gate}
+                    pending={ring.pending}
+                    title={ring.title ?? label}
+                  />
+                ) : null}
+                {ring ? null : (
+                  <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
+                )}
                 {trendSymbol ? (
                   <span className={`shrink-0 text-xs font-medium ${trendColor}`} aria-label={`Trend ${trend}`}>
                     {trendSymbol}

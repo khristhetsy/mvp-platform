@@ -24,6 +24,8 @@ export function ScoreRing({
   label,
   track = "#EEEDFE",
   title,
+  gate,
+  pending,
 }: {
   /** 0–100, or null when the record has never been scored. */
   score: number | null | undefined;
@@ -37,8 +39,13 @@ export function ScoreRing({
   track?: string;
   /** Accessible description. Defaults to "<n>% match" / "not scored". */
   title?: string;
+  /** 0–100. Draws a threshold tick, turning a score into a distance. */
+  gate?: number | null;
+  /** Dashed empty ring: the metric has no ceiling and nothing recorded yet, so
+   *  any filled arc would be invented. */
+  pending?: boolean;
 }) {
-  const scored = typeof score === "number" && Number.isFinite(score);
+  const scored = !pending && typeof score === "number" && Number.isFinite(score);
   const value = scored ? Math.max(0, Math.min(100, score)) : 0;
   const stroke = color ?? (scored ? scoreBandColor(value) : "#CBD5E1");
 
@@ -69,7 +76,21 @@ export function ScoreRing({
       aria-label={title ?? (scored ? `${Math.round(value)}% match` : "Not scored")}
     >
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={track} strokeWidth={sw} />
-      {p > 0 && (
+      {/* Nothing recorded and no ceiling to measure against: a dashed ring says
+          "not started" without inventing a proportion. */}
+      {pending ? (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke="#CBD5E1"
+          strokeWidth={sw}
+          strokeDasharray={`2 ${Math.max(4, size * 0.1)}`}
+          strokeLinecap="round"
+        />
+      ) : null}
+      {p > 0 && !pending && (
         <path
           d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`}
           fill="none"
@@ -78,6 +99,24 @@ export function ScoreRing({
           strokeLinecap="round"
         />
       )}
+      {/* Threshold tick — turns a score into a distance from the gate. */}
+      {typeof gate === "number" && gate > 0 && gate < 100 && !pending
+        ? (() => {
+            const ga = (gate / 100) * 2 * Math.PI - Math.PI / 2;
+            const inner = r - sw * 0.85;
+            const outer = r + sw * 0.85;
+            return (
+              <line
+                x1={(cx + inner * Math.cos(ga)).toFixed(2)}
+                y1={(cy + inner * Math.sin(ga)).toFixed(2)}
+                x2={(cx + outer * Math.cos(ga)).toFixed(2)}
+                y2={(cy + outer * Math.sin(ga)).toFixed(2)}
+                stroke="#DC2626"
+                strokeWidth={Math.max(1.5, size * 0.035)}
+              />
+            );
+          })()
+        : null}
       {middle !== "" && (
         <text
           x={cx}

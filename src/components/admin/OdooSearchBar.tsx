@@ -71,6 +71,8 @@ function Chip({ text, color, bg, border, onRemove, icon }: { text: string; color
 export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, noGroupId = "", placeholder = "Search…", applyDefault = true, width = 560, api = "/api/marketing/saved-searches", personalOnly = false }: Props) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  /** True while `q` is being driven by the live input rather than a committed chip. */
+  const liveQ = useRef(false);
   const [openField, setOpenField] = useState<string | null>(null);
   const [fieldQ, setFieldQ] = useState("");
   const [saved, setSaved] = useState<SavedView[]>([]);
@@ -106,6 +108,27 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
   }, [saved, applyDefault, onChange]);
 
   const set = (patch: Partial<SearchState>) => { setApplied(null); onChange({ ...state, ...patch }); };
+
+  // Type-to-filter. The typed text used to live only in this component until you
+  // pressed Enter or picked a row, so typing a letter narrowed nothing and the
+  // list looked frozen. It now flows into `q` after a short pause — long enough
+  // that a server-backed list isn't queried once per keystroke.
+  const stateRef = useRef(state);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { stateRef.current = state; onChangeRef.current = onChange; });
+  useEffect(() => {
+    const next = typed.trim();
+    // Only the live text drives q here; a committed chip clears `typed`, and we
+    // must not then wipe the chip it just became.
+    if (!next && !liveQ.current) return;
+    const id = setTimeout(() => {
+      liveQ.current = next.length > 0;
+      if (stateRef.current.q === next) return;
+      setApplied(null);
+      onChangeRef.current({ ...stateRef.current, q: next });
+    }, 200);
+    return () => clearTimeout(id);
+  }, [typed]);
   const toggleQuick = (k: string) => set({ quick: state.quick.includes(k) ? state.quick.filter((x) => x !== k) : [...state.quick, k] });
   const toggleValue = (f: string, v: string) => {
     const cur = state.fields[f] ?? [];
@@ -155,7 +178,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
       <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
         <i className="ti ti-search" style={{ color: "var(--muted-foreground)", fontSize: 14 }} aria-hidden="true" />
         {applied && <Chip icon="ti-star" text={applied.name} color="#3C3489" bg="#EEEDFE" border="#CECBF6" onRemove={clearAll} />}
-        {state.q && <Chip text={`Search: ${state.q}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => set({ q: "" })} />}
+        {state.q && !typed && <Chip text={`Search: ${state.q}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => set({ q: "" })} />}
         {state.quick.map((k) => <Chip key={k} text={quickLabel(k)} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => toggleQuick(k)} />)}
         {Object.entries(state.fields).map(([f, vals]) => <Chip key={f} text={`${fieldLabel(f)}: ${vals.join(", ")}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => { const copy = { ...state.fields }; delete copy[f]; set({ fields: copy }); }} />)}
         {state.groupBy && state.groupBy !== noGroupId && <Chip icon="ti-layout-list" text={groupLabel} color="#633806" bg="#FAEEDA" border="#E3C08A" onRemove={() => set({ groupBy: noGroupId })} />}
@@ -164,7 +187,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
           onChange={(e) => setTyped(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && typed.trim()) { set({ q: typed.trim() }); setTyped(""); setOpen(false); }
+            if (e.key === "Enter" && typed.trim()) { liveQ.current = false; set({ q: typed.trim() }); setTyped(""); setOpen(false); }
             if (e.key === "Backspace" && !typed && state.q) set({ q: "" });
           }}
           placeholder={hasAny ? "" : placeholder}
@@ -179,7 +202,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
           <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, width: typed.trim() ? "100%" : 620, maxWidth: "calc(100vw - 48px)", zIndex: 30, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", overflow: "hidden" }}>
             {typed.trim() ? (
               <div style={{ padding: "4px 0" }}>
-                <button type="button" onClick={() => { set({ q: typed.trim() }); setTyped(""); setOpen(false); }} style={{ ...item, paddingLeft: 12 }}>Search for: <span style={{ color: "#185FA5" }}>{typed.trim()}</span></button>
+                <button type="button" onClick={() => { liveQ.current = false; set({ q: typed.trim() }); setTyped(""); setOpen(false); }} style={{ ...item, paddingLeft: 12 }}>Search for: <span style={{ color: "#185FA5" }}>{typed.trim()}</span></button>
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.15fr", alignItems: "start" }}>

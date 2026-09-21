@@ -407,6 +407,8 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       openCount: openEvents.length,
       criticalCount: criticalEvents.length,
       highCount: highEvents.length,
+      // Denominator for the ring: open is only meaningful against the total raised.
+      totalCount: complianceEvents.length,
       recentEvents: complianceEvents.slice(0, COMPLIANCE_LIMIT),
       nextAction: nextCompliance ? `Review: ${nextCompliance.title}` : null,
     },
