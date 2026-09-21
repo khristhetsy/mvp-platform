@@ -130,6 +130,9 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
   Building happens only when khris says so, or after the plan has been agreed. Until then,
   answer the question and stop.
 - Only change what khris explicitly asks for — don't touch working code.
+- Once building has started, fix errors rather than reporting them. Don't ask "shall I fix
+  this?", don't ask "shall I carry on?", and don't hand khris a git command to repair
+  something Claude can repair itself. Finish the job, then report what was done.
 - khris runs all SQL in the Supabase SQL editor himself; never print `supabase db push`
   (the CLI's migration history is out of sync with the editor-applied schema and it errors);
   no paid upgrades.

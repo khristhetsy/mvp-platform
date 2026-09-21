@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stage diagnosis v2 — same format, same controls, real content</title>
+<style>
+  :root{
+    --ink:#1E293B; --slate800:#1E293B; --slate600:#475569; --slate500:#64748B; --slate400:#94A3B8;
+    --line:#E2E8F0; --line100:#F1F5F9; --bg:#F8FAFC;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--slate600);margin:0 0 20px;font-size:13px}
+
+  .kept{background:#fff;border:1px solid var(--line);border-left:3px solid #10B981;border-radius:8px;
+        padding:12px 14px;margin-bottom:20px;font-size:12.5px;color:var(--slate600)}
+  .kept b{color:var(--ink)}
+  .kept code{background:var(--line100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .stagehead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+             color:var(--slate400);margin:26px 0 9px}
+
+  /* ---- UNCHANGED: indigo recommendation strip ---- */
+  .strip{display:flex;align-items:flex-start;gap:10px;border-radius:8px;background:#EEF2FF;
+         padding:10px 12px;margin-bottom:12px}
+  .strip .ico{color:#4F46E5;flex:none;margin-top:1px}
+  .strip p{flex:1;margin:0;font-size:12.5px;line-height:1.65;color:#312E81}
+  .strip .num{font-variant-numeric:tabular-nums;font-weight:700}
+  .reachout{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border-radius:8px;
+            border:1px solid var(--line);background:#fff;padding:6px 12px;font-size:12px;font-weight:600;
+            color:#334155;cursor:pointer}
+
+  /* ---- UNCHANGED: menu card ---- */
+  .card{overflow:hidden;border-radius:12px;border:1px solid var(--line);background:#fff}
+  .card>.hd{border-bottom:1px solid var(--line100);background:#F8FAFC;padding:8px 14px}
+  .card>.hd p{margin:0;font-size:11px;font-weight:600;color:var(--slate600)}
+  .card>.hd span{font-weight:400;color:var(--slate400)}
+  ul.items{list-style:none;margin:0;padding:0}
+  ul.items>li{border-top:1px solid var(--line100)}
+  ul.items>li:first-child{border-top:none}
+  .itemrow{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer}
+  .itemrow:hover{background:#FCFDFE}
+  .gi{font-size:15px;flex:none;width:17px;text-align:center}
+  .gi.done{color:#059669} .gi.att{color:#D97706} .gi.miss{color:#DC2626}
+  .gi.todo{color:#94A3B8} .gi.lock{color:#CBD5E1}
+  .lbl{min-width:0;flex:1;font-size:13px;font-weight:500;color:var(--slate800)}
+  .chip{border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600;white-space:nowrap}
+  .chip.done{background:#ECFDF5;color:#047857}
+  .chip.att{background:#FFFBEB;color:#B45309}
+  .chip.miss{background:#FEF2F2;color:#B91C1C}
+  .chip.todo{background:#F1F5F9;color:#64748B}
+  .chip.lock{background:#F1F5F9;color:#94A3B8}
+  .open{font-size:11.5px;font-weight:600;color:#475569;text-decoration:none;white-space:nowrap}
+  .soon{border-radius:6px;background:#F1F5F9;color:#94A3B8;padding:3px 8px;font-size:11px;font-weight:600}
+  .asfounder{border-radius:6px;background:#FEF3C7;color:#92400E;padding:3px 8px;font-size:11px;font-weight:600;
+             border:1px solid #FDE68A}
+  .car{color:#CBD5E1;font-size:10px;width:10px}
+
+  /* ---- NEW: the diagnosis drawer (added, not a redesign) ---- */
+  .drawer{padding:0 14px 14px 43px;background:#FCFDFE;border-top:1px dashed var(--line)}
+  .three{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px;margin-top:12px}
+  .b{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px}
+  .b h4{margin:0 0 7px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+  .b.p h4{color:#B91C1C} .b.m h4{color:#B45309} .b.f h4{color:#047857}
+  .b p{margin:0;font-size:12.5px;color:var(--slate600);line-height:1.55}
+  .b p+p{margin-top:6px}
+  .b b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .b ul{list-style:none;margin:0;padding:0}
+  .b li{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--slate600);
+        padding:3.5px 0;border-bottom:1px solid var(--line100)}
+  .b li:last-child{border-bottom:none}
+
+  /* ---- the graph: score ring + dimension bars (unchanged from what's on the page today) ---- */
+  .ringwrap{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+  .ringmeta{font-size:11.5px;color:var(--slate600);line-height:1.5}
+  .ringmeta b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .bars{margin-top:2px}
+  .bar{margin-bottom:7px}
+  .bar:last-child{margin-bottom:0}
+  .bartop{display:flex;justify-content:space-between;font-size:11.5px;color:var(--slate600);margin-bottom:3px}
+  .bartop b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+  .track{height:7px;border-radius:99px;background:#F1F5F9;overflow:hidden;position:relative}
+  .fill{height:100%;border-radius:99px}
+  .fill.bad{background:#DC2626} .fill.warn{background:#D97706} .fill.ok{background:#059669}
+  .lost{font-variant-numeric:tabular-nums;font-weight:700;color:#DC2626;font-size:12px}
+  .gain{font-variant-numeric:tabular-nums;font-weight:700;color:#059669;font-size:12px}
+  .fx{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line100);align-items:flex-start}
+  .fx:last-child{border-bottom:none}
+  .n{width:16px;height:16px;border-radius:50%;background:#EEF2FF;color:#4F46E5;font-size:9.5px;font-weight:700;
+     display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px}
+  .fxt{flex:1;font-size:12.5px;color:var(--slate600);line-height:1.5}
+  .who{display:block;font-size:10.5px;color:var(--slate400);margin-top:1px}
+  .src{margin-top:10px;font-size:10.5px;color:var(--slate400)}
+
+  /* ---- email composer ---- */
+  .mail{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+  .mail .mh{background:#F8FAFC;border-bottom:1px solid var(--line100);padding:9px 14px;
+            display:flex;align-items:center;gap:8px}
+  .mail .mh b{font-size:12px} .mail .mh span{font-size:11px;color:var(--slate400)}
+  .mail .mb{padding:12px 14px}
+  .fl{font-size:11px;font-weight:600;color:var(--slate600);margin-bottom:4px;display:block}
+  .fi{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;
+      margin-bottom:11px;color:var(--ink);background:#fff}
+  .ta{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;
+      line-height:1.65;color:var(--slate600);white-space:pre-wrap;background:#fff;min-height:170px}
+  .ta em{background:#FEF9C3;font-style:normal;padding:0 2px;border-radius:2px}
+  .mf{display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .mf .spacer{flex:1}
+  .bt{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-size:11.5px;
+      font-weight:600;color:#334155;cursor:pointer}
+  .bt.pri{background:#4F46E5;border-color:#4F46E5;color:#fff}
+  .cb{font-size:11.5px;color:var(--slate600);display:flex;align-items:center;gap:5px}
+  .sendas{display:flex;align-items:center;gap:7px;margin-top:11px;padding-top:11px;border-top:1px solid var(--line100);flex-wrap:wrap}
+  .sl{font-size:11px;font-weight:600;color:var(--slate600)}
+  .seg{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:8px;
+       padding:5px 10px;font-size:11.5px;color:var(--slate600);cursor:pointer;background:#fff}
+  .seg.on{border-color:#4F46E5;background:#EEF2FF;color:#3730A3;font-weight:600}
+  .seg small{color:var(--slate400);font-weight:400}
+  .fromline{font-size:11px;color:var(--slate400);margin-top:6px}
+  .fromline b{color:var(--slate600)}
+  .why{margin-top:10px;background:#F8FAFC;border-radius:8px;padding:9px 11px;font-size:11.5px;color:var(--slate600)}
+  .why b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Stage diagnosis — same format, same controls</h1>
+<p class="sub">Admin company workspace · Northwind Bio · the layout and every control are untouched; the row now opens, and the email is written from what the row found.</p>
+
+<div class="kept">
+  <b>Unchanged:</b> the indigo recommendation strip, the <code>Reach out to founder</code> button, the
+  <code>Founder&apos;s … menu · N of M done</code> header, the five status chips
+  (Done / Attention / Missing / Open / Not started) and the <code>Open</code> · <code>Open as founder</code> ·
+  <code>Soon</code> controls from <code>OpenFounderItem</code>.
+  <b>Added:</b> the row expands, the strip and the email carry numbers instead of labels, the email can be sent
+  <b>with iCapOS</b> as well as from your Gmail, and every Preparation item offers <b>Open as founder</b>.
+</div>
+
+<div class="kept" style="border-left-color:#D97706">
+  <b>Two notes on what these two changes cost.</b>
+  <b>Sender:</b> the platform mailer already exists — <code>sendTransactionalEmail</code> (Resend,
+  <code>TRANSACTIONAL_EMAIL_FROM</code>), used by data rooms, e-signature and IR summaries. The reach-out route just
+  never calls it; it only knows <code>sendViaGmail</code>. So this is a branch in one route, not new infrastructure.
+  <b>Open as founder:</b> this one is not just a UI flag. <code>ACT_ON_BEHALF_WIRED</code> holds a single route because
+  only <code>/founder/financial-model</code> has adopted <code>resolveActingFounderScope</code>. The other eight
+  Preparation pages need that resolver before the button can do anything but redirect staff to their own view.
+</div>
+
+<!-- ============== STAGE 2 ============== -->
+<div class="stagehead">Stage 2 · Preparation — current</div>
+
+<div class="strip">
+  <span class="ico">✦</span>
+  <p>Blocking Preparation: <b>Capital Readiness Rating</b> — CRR <span class="num">34</span>/100 against a gate of
+     <span class="num">65</span>, <span class="num">31</span> short, with <span class="num">44</span> of the 66 unearned
+     points sitting in Traction and Financials. <b>Documents</b> — <span class="num">2</span> of <span class="num">3</span> core files; the Financial
+     model has never been uploaded and it is what blocks both items. Open the item to resolve it with the founder.</p>
+  <button class="reachout">✉ Reach out to founder</button>
+</div>
+
+<div class="card">
+  <div class="hd"><p>Founder&apos;s Preparation menu <span>· 0 of 9 done</span></p></div>
+  <ul class="items">
+
+    <li>
+      <div class="itemrow">
+        <span class="gi att">⚠</span><span class="lbl">Capital Readiness Rating</span>
+        <span class="chip att">Attention</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▾</span>
+      </div>
+      <div class="drawer">
+        <div class="three">
+          <div class="b p"><h4>The problem</h4>
+            <div class="ringwrap">
+              <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="CRR 34 of 100, gate at 65">
+                <circle cx="32" cy="32" r="24" fill="none" stroke="#EEEDFE" stroke-width="8"/>
+                <path d="M 32 8 A 24 24 0 0 1 52.26 44.86" fill="none" stroke="#D97706" stroke-width="8" stroke-linecap="round"/>
+                <line x1="16.63" y1="43.17" x2="7.73" y2="49.63" stroke="#DC2626" stroke-width="2"/>
+                <text x="32" y="34" text-anchor="middle" font-size="17" font-weight="600" fill="#D97706">34</text>
+                <text x="32" y="45" text-anchor="middle" font-size="8" fill="#94A3B8">CRR</text>
+              </svg>
+              <span class="ringmeta">Seed profile · band <b>Early</b><br>
+                <span style="color:#DC2626">▎</span> gate <b>65</b> · <b>31</b> short<br>
+                <b>+3</b> in 60 days</span>
+            </div>
+            <p>At that rate it does not reach the gate this year.</p></div>
+          <div class="b m"><h4>What&apos;s missing</h4>
+            <div class="bars">
+              <div class="bar"><div class="bartop"><span>Traction</span><span><b>2</b>/25 <span class="lost">−23</span></span></div>
+                <div class="track"><div class="fill bad" style="width:8%"></div></div></div>
+              <div class="bar"><div class="bartop"><span>Financials</span><span><b>4</b>/25 <span class="lost">−21</span></span></div>
+                <div class="track"><div class="fill bad" style="width:16%"></div></div></div>
+              <div class="bar"><div class="bartop"><span>Narrative</span><span><b>5</b>/15 <span class="lost">−10</span></span></div>
+                <div class="track"><div class="fill warn" style="width:33%"></div></div></div>
+              <div class="bar"><div class="bartop"><span>Team</span><span><b>13</b>/20 <span class="lost">−7</span></span></div>
+                <div class="track"><div class="fill ok" style="width:65%"></div></div></div>
+              <div class="bar"><div class="bartop"><span>Market</span><span><b>10</b>/15 <span class="lost">−5</span></span></div>
+                <div class="track"><div class="fill ok" style="width:67%"></div></div></div>
+            </div></div>
+          <div class="b f"><h4>How to solve</h4>
+            <div class="fx"><span class="n">1</span><span class="fxt">Upload 12 months of MRR history — Revenue scores 0 for want of evidence, not performance.<span class="who">Founder</span></span><span class="gain">+9</span></div>
+            <div class="fx"><span class="n">2</span><span class="fxt">Add the 3-year financial model — the same file the Documents item is missing.<span class="who">Clears 2 items</span></span><span class="gain">+8</span></div>
+            <div class="fx"><span class="n">3</span><span class="fxt">Record retention and logo churn for the last 4 quarters.<span class="who">Founder · wizard</span></span><span class="gain">+7</span></div>
+            <div class="fx"><span class="n">4</span><span class="fxt">Rewrite the one-line problem statement — Narrative is 1 of 4.<span class="who">15 min</span></span><span class="gain">+3</span></div>
+          </div>
+        </div>
+        <p class="src">Source: CRR engine · weight set crr-v4 · scored 18 Sep 2026 · Seed profile from the company&apos;s funding stage</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="itemrow">
+        <span class="gi todo">○</span><span class="lbl">Readiness checklist</span>
+        <span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span>
+      </div>
+    </li>
+    <li>
+      <div class="itemrow">
+        <span class="gi todo">○</span><span class="lbl">Data room</span>
+        <span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span>
+      </div>
+    </li>
+
+    <li>
+      <div class="itemrow">
+        <span class="gi att">⚠</span><span class="lbl">Documents</span>
+        <span class="chip att">Attention</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▾</span>
+      </div>
+      <div class="drawer">
+        <div class="three">
+          <div class="b p"><h4>The problem</h4>
+            <p>The gate needs all <b>3</b> core documents. Pitch deck and Cap table are in; the <b>Financial model</b> has never been uploaded.</p>
+            <p>That one file also blocks CRR Financials and Valuation Studio.</p></div>
+          <div class="b m"><h4>What&apos;s missing</h4>
+            <div class="bars" style="margin-bottom:9px">
+              <div class="bar"><div class="bartop"><span>Core (gate)</span><span><b>2</b>/3</span></div>
+                <div class="track"><div class="fill warn" style="width:67%"></div></div></div>
+              <div class="bar"><div class="bartop"><span>Full package</span><span><b>3</b>/9</span></div>
+                <div class="track"><div class="fill bad" style="width:33%"></div></div></div>
+            </div>
+            <ul>
+              <li><span>Financial model · core</span><span class="lost">absent</span></li>
+              <li><span>Business plan</span><span class="lost">absent</span></li>
+              <li><span>Team bios</span><span class="lost">absent</span></li>
+              <li><span>Customer contracts</span><span class="lost">absent</span></li>
+              <li><span>Market research</span><span class="lost">absent</span></li>
+              <li><span>Legal documents</span><span class="lost">14 mo old</span></li>
+            </ul></div>
+          <div class="b f"><h4>How to solve</h4>
+            <div class="fx"><span class="n">1</span><span class="fxt">Request the Financial model — this alone clears the stage gate.<span class="who">Templated request</span></span><span class="gain">gate</span></div>
+            <div class="fx"><span class="n">2</span><span class="fxt">Send the xlsx model template if they have not built one.<span class="who">Founder</span></span></div>
+            <div class="fx"><span class="n">3</span><span class="fxt">Re-date Legal documents — last refreshed Jul 2025.<span class="who">Founder</span></span></div>
+            <div class="fx"><span class="n">4</span><span class="fxt">The other four are not gate items — chase after the stage clears.<span class="who">Not blocking</span></span></div>
+          </div>
+        </div>
+        <p class="src">Source: documents table vs requiredDocumentTypes (9 types, 3 core) · live</p>
+      </div>
+    </li>
+
+    <li><div class="itemrow"><span class="gi todo">○</span><span class="lbl">Business plan</span><span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi todo">○</span><span class="lbl">Pitch deck</span><span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi todo">○</span><span class="lbl">Financial model</span><span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi todo">○</span><span class="lbl">Cap table</span><span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi todo">○</span><span class="lbl">Valuation Studio</span><span class="chip todo">Open</span><a class="open">Open</a><span class="asfounder">Open as founder</span><span class="car">▸</span></div></li>
+  </ul>
+</div>
+
+<!-- EMAIL -->
+<div class="mail">
+  <div class="mh">✉ <b>Reach out to founder</b> <span>· Preparation · 2 blocking · via iCapOS or your Gmail</span></div>
+  <div class="mb">
+    <label class="fl">Subject</label>
+    <div class="fi">Two things standing between you and investor outreach — and the fastest way through</div>
+    <label class="fl">Message</label>
+    <div class="ta">Hi Sarah,
+
+I went through Northwind&apos;s readiness this morning. You&apos;re at <em>34 out of 100</em>, and outreach opens at <em>65</em> — so 31 points. That sounds like a lot, but almost all of it is evidence you already have rather than work you still need to do.
+
+<em>Traction is costing you 23 points and Financials 21.</em> Three things close most of that:
+
+1. Twelve months of MRR history (+9) — the revenue factor is scoring zero because nothing is uploaded, not because the numbers are weak.
+2. Your 3-year financial model (+8) — this is also the last of the three core documents we need, so it clears two blockers at once.
+3. Retention and logo churn for the last four quarters (+7).
+
+That puts you at 58. A tighter one-line problem statement gets you to 61, and I can help with the last stretch from there.
+
+If the model is the hold-up, say the word and I&apos;ll send our template.</div>
+
+    <div class="sendas">
+      <span class="sl">Send with</span>
+      <label class="seg on"><input type="radio" name="s1" checked> ✉ iCapOS <small>· no Google needed</small></label>
+      <label class="seg"><input type="radio" name="s1"> ⊞ My Gmail <small>· from you personally</small></label>
+    </div>
+    <p class="fromline">From <b>iCapOS &lt;notifications@icapos.com&gt;</b> · reply-to <b>you</b> · logged on the company timeline</p>
+
+    <div class="mf">
+      <label class="cb"><input type="checkbox" checked> Append my signature</label>
+      <label class="cb"><input type="checkbox"> Also drop an in-app nudge</label>
+      <span class="spacer"></span>
+      <button class="bt">✦ Regenerate</button>
+      <button class="bt">Save as draft</button>
+      <button class="bt pri">Send with iCapOS</button>
+    </div>
+    <div class="why"><b>What changed:</b> the draft route is handed <code>items: string[]</code> — just the labels
+      "Capital Readiness Rating, Documents" — which is why today&apos;s email can only say they are "still pending".
+      Passing the same diagnosis the drawer shows (score, gate, per-dimension points lost, ranked fixes with gains)
+      is what produces the letter above. The <b>110-word cap</b> in the prompt has to come up; a specific email
+      runs 150–180.</div>
+  </div>
+</div>
+
+<!-- ============== STAGE 1 ============== -->
+<div class="stagehead">Stage 1 · Onboarding — complete</div>
+<div class="strip">
+  <span class="ico">✦</span>
+  <p>On track — no blocking items in Onboarding. Company profile completed <b>14 Aug</b>; industry, funding stage and
+     description all set, which is what pins the company to the <b>Seed</b> scoring profile used above.
+     Worth confirming with the founder: if they are actually raising a <b>pre-seed</b> round, that one field is wrong
+     and the whole score is being computed against the wrong bar.</p>
+  <button class="reachout">✉ Reach out to founder</button>
+</div>
+<div class="card">
+  <div class="hd"><p>Founder&apos;s Onboarding menu <span>· 4 of 4 done</span></p></div>
+  <ul class="items">
+    <li><div class="itemrow"><span class="gi done">✓</span><span class="lbl">Company profile</span><span class="chip done">Done</span><a class="open">Open</a><span class="soon">Soon</span><span class="car">▾</span></div>
+      <div class="drawer"><div class="three">
+        <div class="b p"><h4>The problem</h4><p>None — this gate passed on <b>14 Aug 2026</b>.</p></div>
+        <div class="b m"><h4>What&apos;s missing</h4><p>Nothing required. Optional: logo and a second founder bio, neither of which is scored.</p></div>
+        <div class="b f"><h4>How to solve</h4><p>No action. Worth knowing: the <b>funding stage</b> field set here is what selects the Seed factor points, so changing it re-scores the company.</p></div>
+      </div><p class="src">Source: journey condition onboardingComplete · profile completeness 100%</p></div>
+    </li>
+    <li><div class="itemrow"><span class="gi done">✓</span><span class="lbl">My Progress</span><span class="chip done">Done</span><a class="open">Open</a><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi done">✓</span><span class="lbl">Action Center</span><span class="chip done">Done</span><a class="open">Open</a><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi done">✓</span><span class="lbl">One pager</span><span class="chip done">Done</span><a class="open">Open</a><span class="soon">Soon</span><span class="car">▸</span></div></li>
+  </ul>
+</div>
+<div class="mail">
+  <div class="mh">✉ <b>Reach out to founder</b> <span>· Onboarding · 0 blocking · via iCapOS or your Gmail</span></div>
+  <div class="mb">
+    <label class="fl">Subject</label>
+    <div class="fi">One field to double-check — it decides how you&apos;re scored</div>
+    <label class="fl">Message</label>
+    <div class="ta">Hi Sarah,
+
+Your profile came through complete on 14 August — nothing outstanding there.
+
+One thing worth thirty seconds of your time. The <em>funding stage</em> field on your profile is set to <em>Seed</em>, and that single field decides which bar your readiness score is measured against. A pre-seed company and a Series A company are scored completely differently, so if Seed isn&apos;t what you&apos;re actually raising, tell me and I&apos;ll change it — your score will move on its own.
+
+Assuming Seed is right, the next stage is Preparation, and you have two items open there. I&apos;ll follow up separately with what those are.</div>
+    <div class="sendas">
+      <span class="sl">Send with</span>
+      <label class="seg on"><input type="radio" name="s2" checked> ✉ iCapOS <small>· no Google needed</small></label>
+      <label class="seg"><input type="radio" name="s2"> ⊞ My Gmail <small>· from you personally</small></label>
+    </div>
+    <p class="fromline">From <b>iCapOS &lt;notifications@icapos.com&gt;</b> · reply-to <b>you</b> · logged on the company timeline</p>
+
+    <div class="mf">
+      <label class="cb"><input type="checkbox" checked> Append my signature</label>
+      <label class="cb"><input type="checkbox"> Also drop an in-app nudge</label>
+      <span class="spacer"></span>
+      <button class="bt">✦ Regenerate</button>
+      <button class="bt">Save as draft</button>
+      <button class="bt pri">Send with iCapOS</button>
+    </div>
+    <div class="why"><b>Why a complete stage still gets an email:</b> today the button is hidden unless
+      <code>pendingItems.length &gt; 0</code>, so a cleared stage offers nothing to say. But a cleared stage still has
+      something worth saying — here, that one profile field silently selects the scoring profile for everything downstream.</div>
+  </div>
+</div>
+
+<!-- ============== STAGE 3 ============== -->
+<div class="stagehead">Stage 3 · Marketing — not reached</div>
+<div class="strip">
+  <span class="ico">✦</span>
+  <p>Unlocks once Preparation clears. Concretely: outreach opens at CRR <b>65</b> and this company is at <b>34</b>.
+     The four fixes under Capital Readiness Rating are worth <b>+27</b>, reaching <b>61</b> — still <b>4</b> short,
+     and retention evidence is the cheapest remaining <b>+7</b>. Items shown for visibility.</p>
+  <button class="reachout">✉ Reach out to founder</button>
+</div>
+<div class="card">
+  <div class="hd"><p>Founder&apos;s Marketing menu <span>· not reached</span></p></div>
+  <ul class="items">
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Investor matches</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Matching Center</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Automated outreach</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▾</span></div>
+      <div class="drawer"><div class="three">
+        <div class="b p"><h4>The problem</h4><p>Sequences cannot enrol: the engine flag <b>outreach_unlocked</b> is false at <b>34</b>/65.</p></div>
+        <div class="b m"><h4>What&apos;s missing</h4><ul>
+          <li><span>Points to the gate</span><span class="lost">31</span></li>
+          <li><span>Covered by ranked fixes</span><span class="gain">+27</span></li>
+          <li><span>Still uncovered</span><span class="lost">4</span></li></ul></div>
+        <div class="b f"><h4>How to solve</h4><p>Nothing to do in this stage. Work the Preparation list; this unlocks on its own the moment the score crosses <b>65</b>, with no staff action.</p></div>
+      </div><p class="src">Source: CRR engine gate (OUTREACH_GATE 65) · same flag the founder page reads</p></div>
+    </li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Investor CRM</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Present at event</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Marketplace</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+  </ul>
+</div>
+<div class="mail">
+  <div class="mh">✉ <b>Reach out to founder</b> <span>· Marketing · locked upstream · via iCapOS or your Gmail</span></div>
+  <div class="mb">
+    <label class="fl">Subject</label>
+    <div class="fi">Where you are on investor outreach — 4 points, then it opens</div>
+    <label class="fl">Message</label>
+    <div class="ta">Hi Sarah,
+
+Quick orientation so the locked screens make sense. Investor matching and outreach open automatically at a readiness score of <em>65</em>. You&apos;re at <em>34</em> today — nothing is being held back by us, and no approval is needed.
+
+The three uploads we discussed are worth <em>24 points</em>, and the rewritten problem statement another 3. That lands you at 61. The last 4 come from the retention numbers, which is the one piece I&apos;d start pulling now since it usually takes the longest to assemble.
+
+Nothing in the Marketing section needs your attention until then — the moment the score crosses, matches appear on their own.</div>
+    <div class="sendas">
+      <span class="sl">Send with</span>
+      <label class="seg on"><input type="radio" name="s3" checked> ✉ iCapOS <small>· no Google needed</small></label>
+      <label class="seg"><input type="radio" name="s3"> ⊞ My Gmail <small>· from you personally</small></label>
+    </div>
+    <p class="fromline">From <b>iCapOS &lt;notifications@icapos.com&gt;</b> · reply-to <b>you</b> · logged on the company timeline</p>
+
+    <div class="mf">
+      <label class="cb"><input type="checkbox" checked> Append my signature</label>
+      <label class="cb"><input type="checkbox"> Also drop an in-app nudge</label>
+      <span class="spacer"></span>
+      <button class="bt">✦ Regenerate</button>
+      <button class="bt">Save as draft</button>
+      <button class="bt pri">Send with iCapOS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== STAGE 4 ============== -->
+<div class="stagehead">Stage 4 · Closing — not reached</div>
+<div class="strip">
+  <span class="ico">✦</span>
+  <p>Unlocks once Marketing clears — <b>three gates back</b>. Closing needs a Deal Room, which needs an interested
+     investor, which needs outreach at CRR <b>65</b>. Nothing here is actionable; work the Preparation list.
+     Items shown for visibility.</p>
+  <button class="reachout">✉ Reach out to founder</button>
+</div>
+<div class="card">
+  <div class="hd"><p>Founder&apos;s Closing menu <span>· not reached</span></p></div>
+  <ul class="items">
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Deal Room</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▾</span></div>
+      <div class="drawer"><div class="three">
+        <div class="b p"><h4>The problem</h4><p>No deal room exists. It is the gate for this whole stage, and it cannot be created until an investor reaches <b>Interested</b>.</p></div>
+        <div class="b m"><h4>What&apos;s missing</h4><ul>
+          <li><span>Interested investors</span><span class="lost">0</span></li>
+          <li><span>Outreach sent</span><span class="lost">0</span></li>
+          <li><span>Gates upstream</span><span class="lost">3</span></li></ul></div>
+        <div class="b f"><h4>How to solve</h4><p>No direct action exists. The chain is CRR 65 → outreach → one interested investor → deal room. Everything useful sits in <b>Preparation</b>.</p></div>
+      </div><p class="src">Source: journey condition hasDealRoom · ir_matches interest stage</p></div>
+    </li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Offering type</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">SPVs &amp; closings</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Capital Raise</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Investor update builder</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Milestones</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+    <li><div class="itemrow"><span class="gi lock">🔒</span><span class="lbl">Analytics</span><span class="chip lock">Not started</span><span class="soon">Soon</span><span class="car">▸</span></div></li>
+  </ul>
+</div>
+<div class="mail">
+  <div class="mh">✉ <b>Reach out to founder</b> <span>· Closing · 3 gates upstream · via iCapOS or your Gmail</span></div>
+  <div class="mb">
+    <label class="fl">Subject</label>
+    <div class="fi">Why the Closing tab is greyed out — the full path, so you can plan</div>
+    <label class="fl">Message</label>
+    <div class="ta">Hi Sarah,
+
+You asked why the Closing section is locked. Rather than a vague "later", here is the actual chain:
+
+A deal room opens when one investor marks themselves interested. Investors only see you once outreach starts. Outreach starts at a readiness score of <em>65</em>, and you&apos;re at <em>34</em>.
+
+So it&apos;s <em>three gates back</em> — which is good news in one sense: there is nothing you need to prepare for Closing right now, and no approval waiting on us. Term sheets, SPVs and the raise tracker all switch on by themselves.
+
+Everything that moves the needle is in Preparation. If you only do one thing this month, make it the financial model.</div>
+    <div class="sendas">
+      <span class="sl">Send with</span>
+      <label class="seg on"><input type="radio" name="s4" checked> ✉ iCapOS <small>· no Google needed</small></label>
+      <label class="seg"><input type="radio" name="s4"> ⊞ My Gmail <small>· from you personally</small></label>
+    </div>
+    <p class="fromline">From <b>iCapOS &lt;notifications@icapos.com&gt;</b> · reply-to <b>you</b> · logged on the company timeline</p>
+
+    <div class="mf">
+      <label class="cb"><input type="checkbox" checked> Append my signature</label>
+      <label class="cb"><input type="checkbox"> Also drop an in-app nudge</label>
+      <span class="spacer"></span>
+      <button class="bt">✦ Regenerate</button>
+      <button class="bt">Save as draft</button>
+      <button class="bt pri">Send with iCapOS</button>
+    </div>
+    <div class="why"><b>Four stages, four different emails — from one route.</b> The draft needs the stage&apos;s own
+      situation, not a label list: <code>blocking</code> (Preparation), <code>cleared</code> (Onboarding),
+      <code>locked-near</code> (Marketing — name the gap and the points), <code>locked-far</code> (Closing — name the
+      chain). Same <code>reach-out</code> endpoint, one extra field.</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

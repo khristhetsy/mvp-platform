@@ -9,6 +9,7 @@ import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { listValuations } from "@/lib/valuation/store";
 import { ValuationStudioClient, type ValuationProfile } from "@/components/founder/ValuationStudioClient";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Valuation Studio" };
@@ -27,8 +28,13 @@ function daysSince(iso: string | null | undefined): number {
 }
 
 export default async function FounderValuationPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
 
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "valuation")) notFound();
@@ -37,8 +43,10 @@ export default async function FounderValuationPage() {
   const plan = await getUserPlan(profile.id);
   const planEligible = plan === "founder_basic" || plan === "founder_professional";
 
-  const { company, org } = await getActiveCompanyForUser(profile);
-  const saved = planEligible && org ? await listValuations(supabase, org.id) : [];
+  const active = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : active.company;
+  const org = active.org;
+  const saved = planEligible && org ? await listValuations(db, org.id) : [];
 
   // Build the profile-intake object. A Deal Company (null company) has no profile
   // to load — the client falls back to the blank path (spec §6.2).

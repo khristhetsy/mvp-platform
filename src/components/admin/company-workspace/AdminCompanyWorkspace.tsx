@@ -294,7 +294,7 @@ export function AdminCompanyWorkspace({
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="initialize" />
           {reachOutFor("initialize")}
-          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="initialize" diagnosis={data.stageDiagnosis?.initialize ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
         </div>
       ) : null}
 
@@ -303,7 +303,7 @@ export function AdminCompanyWorkspace({
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="qualify" />
           {reachOutFor("qualify")}
-          <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="qualify" diagnosis={data.stageDiagnosis?.qualify ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
             <WorkspaceSection icon="ti-chart-line" tone="blue" title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
@@ -333,7 +333,7 @@ export function AdminCompanyWorkspace({
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="deploy" />
           {reachOutFor("deploy")}
-          <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="deploy" diagnosis={data.stageDiagnosis?.deploy ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investablePanel}
           {investorActivity}
@@ -346,7 +346,7 @@ export function AdminCompanyWorkspace({
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="optimize" />
           {reachOutFor("optimize")}
-          <StageMenuMirror journey={data.journey} stage="optimize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="optimize" diagnosis={data.stageDiagnosis?.optimize ?? null} founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investorActivity}
           {spvOperations}

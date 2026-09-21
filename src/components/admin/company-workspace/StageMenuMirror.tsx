@@ -2,6 +2,8 @@ import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/ty
 import { getStageMirror, stageLabel, type MirrorItemStatus } from "@/lib/admin/stage-menu-mirror";
 import { OpenFounderItem } from "@/components/admin/company-workspace/OpenFounderItem";
 import { ReachOutPanel } from "@/components/admin/company-workspace/ReachOutPanel";
+import { StageItemDrawer } from "@/components/admin/company-workspace/StageItemDrawer";
+import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
 
 const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon: string; iconColor: string }> = {
   done: { label: "Done", chip: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", iconColor: "text-emerald-600" },
@@ -25,6 +27,7 @@ export function StageMenuMirror({
   founderName = "the founder",
   founderEmail = null,
   reachOutHref,
+  diagnosis = null,
 }: Readonly<{
   journey: FounderJourneyState;
   stage: JourneyStage;
@@ -36,17 +39,28 @@ export function StageMenuMirror({
   /** When set, the banner shows a jump-link to a combined reach-out card instead of
    *  opening its own modal (avoids two entry points on stages that render that card). */
   reachOutHref?: string;
+  /** Per-item diagnosis, keyed by founder route. Resolved on the server by
+   *  `diagnoseStage` and threaded through the workspace loader, because the
+   *  parent workspace is a client component and cannot render an async child. */
+  diagnosis?: StageDiagnosis | null;
 }>) {
   const mirror = getStageMirror(journey, stage);
   const pendingItems = mirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
+
+  const byHref = diagnosis?.byHref ?? {};
+  const situation = diagnosis?.situation ?? "blocking";
+  const summary = diagnosis?.summary ?? "";
+  const facts = diagnosis?.facts ?? [];
 
   return (
     <div className="space-y-3">
       {/* Recommendation strip */}
       <div className="flex items-start gap-2.5 rounded-lg bg-indigo-50 px-3 py-2.5">
         <i className="ti ti-sparkles mt-0.5 text-indigo-600" aria-hidden="true" />
-        <p className="flex-1 text-[12.5px] leading-relaxed text-indigo-900">{mirror.recommendation}</p>
-        {companyId && pendingItems.length > 0 ? (
+        <p className="flex-1 text-[12.5px] leading-relaxed text-indigo-900">{summary || mirror.recommendation}</p>
+        {/* Every stage can reach out — a cleared stage and a stage locked three
+            gates back both have something worth saying, they just say it differently. */}
+        {companyId ? (
           reachOutHref ? (
             <a
               href={reachOutHref}
@@ -61,6 +75,8 @@ export function StageMenuMirror({
               founderEmail={founderEmail}
               stageLabel={stageLabel(stage)}
               pendingItems={pendingItems}
+              facts={facts}
+              situation={situation}
             />
           )
         ) : null}
@@ -80,11 +96,24 @@ export function StageMenuMirror({
           {mirror.items.map((item) => {
             const meta = STATUS_META[item.status];
             return (
-              <li key={item.label} className="flex items-center gap-3 px-3.5 py-2.5">
-                <i className={`ti ${meta.icon} ${meta.iconColor} text-[17px]`} aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{item.label}</span>
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>{meta.label}</span>
-                <OpenFounderItem href={item.href} founderId={founderId} canActOnBehalf={canActOnBehalf} actable={item.actable} />
+              <li key={item.label}>
+                {/* Row contents are unchanged — the drawer only adds the caret and
+                    the panel beneath, and keeps the Open controls outside the toggle. */}
+                <StageItemDrawer
+                  diagnosis={byHref[item.href] ?? null}
+                  actions={
+                    <OpenFounderItem href={item.href} founderId={founderId} canActOnBehalf={canActOnBehalf} actable={item.actable} />
+                  }
+                >
+                  <i className={`ti ${meta.icon} ${meta.iconColor} text-[17px]`} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{item.label}</span>
+                  {byHref[item.href]?.measured ? (
+                    <span className="hidden truncate text-[11.5px] text-slate-500 lg:inline">
+                      {byHref[item.href].headline}
+                    </span>
+                  ) : null}
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>{meta.label}</span>
+                </StageItemDrawer>
               </li>
             );
           })}

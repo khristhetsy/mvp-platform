@@ -17,6 +17,11 @@ export async function sendTransactionalEmail(input: {
   entityType?: string | null;
   entityId?: string | null;
   dedupeKey?: string | null;
+  /** Optional HTML alternative. Plain `body` is always sent as the text part. */
+  html?: string | null;
+  /** Where replies should land. Staff outreach sets this to the sender, so a
+   *  founder replying to a platform-addressed email reaches a person. */
+  replyTo?: string | null;
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from =
@@ -36,6 +41,8 @@ export async function sendTransactionalEmail(input: {
         to: [input.to],
         subject: input.subject,
         text: input.body,
+        ...(input.html ? { html: input.html } : {}),
+        ...(input.replyTo ? { reply_to: [input.replyTo] } : {}),
       }),
     });
 

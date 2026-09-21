@@ -12,7 +12,20 @@ export type MirrorItemStatus = "done" | "attention" | "missing" | "todo" | "lock
 // "Open as founder" actually renders as the founder. Others would just redirect
 // staff, so their Open control is shown as not-yet-available. Grow this set as
 // pages adopt resolveActingFounderScope.
-const ACT_ON_BEHALF_WIRED = new Set<string>(["/founder/financial-model"]);
+const ACT_ON_BEHALF_WIRED = new Set<string>([
+  // Preparation — all nine adopted the resolver. The four that read
+  // founder-scoped rows (readiness, wizard, data room, documents) also route
+  // those reads through `acting.supabase`; the rest only read global config.
+  "/founder/readiness/wizard",
+  "/founder/readiness",
+  "/founder/readiness/data-room",
+  "/founder/documents",
+  "/founder/business-plan",
+  "/founder/pitch-deck",
+  "/founder/financial-model",
+  "/founder/cap-table",
+  "/founder/valuation",
+]);
 
 export type MirrorItem = {
   label: string;

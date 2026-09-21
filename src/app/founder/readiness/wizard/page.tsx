@@ -20,6 +20,7 @@ import {
   type WizardProfileItem,
 } from "@/components/founder/ReadinessWizard";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +35,11 @@ const PROFILE_HINTS: Record<string, { hint: string; href: string }> = {
 };
 
 export default async function ReadinessWizardPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
 
   // Deal Company (no active company) has no readiness to improve — show a single empty state.
   if (!company) {
@@ -58,8 +61,11 @@ export default async function ReadinessWizardPage() {
   }
 
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
 
-  const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
+  const documents = company ? (await listCompanyDocuments(db, company.id)).data ?? [] : [];
   // Documents the founder marked "not applicable" (e.g. a SaaS with no customer
   // contracts) — excluded from the gap list and the score so they aren't nagged
   // to upload something that doesn't apply.
@@ -70,7 +76,7 @@ export default async function ReadinessWizardPage() {
   const profileCompletion = buildProfileCompletion(company);
 
   const { data: diligenceReport } = company
-    ? await getLatestDiligenceReport(supabase, company.id)
+    ? await getLatestDiligenceReport(db, company.id)
     : { data: null };
 
   const uploadedTypeCodes = documents.flatMap((d) => (d.document_type ? [d.document_type] : []));

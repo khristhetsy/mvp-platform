@@ -25,16 +25,22 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { computeReadinessBenchmark } from "@/lib/data/readiness-benchmark";
 import { ReadinessBenchmarkBanner } from "@/components/founder/ReadinessBenchmarkBanner";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 
 export default async function FounderReadinessPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
 
-  const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
+  const documents = company ? (await listCompanyDocuments(db, company.id)).data ?? [] : [];
   const notApplicable = company
     ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
     : [];
@@ -48,8 +54,8 @@ export default async function FounderReadinessPage() {
 
   const [{ data: diligenceReport }, { data: adminReview }] = company
     ? await Promise.all([
-        getLatestDiligenceReport(supabase, company.id),
-        getLatestAdminReview(supabase, company.id),
+        getLatestDiligenceReport(db, company.id),
+        getLatestAdminReview(db, company.id),
       ])
     : [{ data: null }, { data: null }];
 

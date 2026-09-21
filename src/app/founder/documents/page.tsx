@@ -15,6 +15,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getUploadLimits } from "@/lib/settings/platform-settings";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 // Human-readable label lookup — covers canonical codes + upload-API aliases
 const DOC_TYPE_LABEL_MAP: Record<string, string> = {};
@@ -42,14 +43,19 @@ for (const t of _FOUNDER_DOCUMENT_TYPES_RAW) {
 const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[] }[] = _FOUNDER_DOCUMENT_TYPES_RAW;
 
 export default async function DocumentUploadPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
-  const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
+  const { data: documents } = company ? await listCompanyDocuments(db, company.id) : { data: [] };
   const notApplicableTypes = company
     ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
     : [];
@@ -68,7 +74,7 @@ export default async function DocumentUploadPage() {
   const debugEnabled = process.env.NODE_ENV !== "production";
   const membership =
     debugEnabled && company
-      ? await supabase
+      ? await db
           .from("company_members")
           .select("role")
           .eq("company_id", company.id)

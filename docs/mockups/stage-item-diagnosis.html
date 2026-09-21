@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stage items — problem, what's missing, how to solve</title>
+<style>
+  :root{
+    --ink:#0F172A; --mid:#475569; --soft:#94A3B8; --line:#E2E8F0; --bg:#F8FAFC;
+    --red:#B91C1C; --redbg:#FEF2F2; --redline:#FECACA;
+    --amber:#B45309; --amberbg:#FFFBEB; --amberline:#FDE68A;
+    --green:#0F6E56; --greenbg:#F0FDF9; --greenline:#A7F3D0;
+    --indigo:#4F46E5; --indigobg:#EEF2FF; --indigoline:#C7D2FE;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--mid);margin:0 0 22px;font-size:13px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--red);
+        border-radius:8px;padding:14px 16px;margin-bottom:24px}
+  .note h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;color:var(--red)}
+  .note ul{margin:0;padding-left:18px;color:var(--mid);font-size:13px}
+  .note li{margin-bottom:5px}
+  .note code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
+
+  /* stage stepper */
+  .stepper{display:flex;gap:6px;margin-bottom:22px}
+  .step{flex:1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .step.cur{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigobg)}
+  .step .n{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--soft)}
+  .step .t{font-weight:600;font-size:13px;margin:2px 0}
+  .step .s{font-size:11px;color:var(--mid)}
+  .step.done .s{color:var(--green)}
+  .step.cur .s{color:var(--amber);font-weight:600}
+  .step.lock{opacity:.55}
+
+  /* stage block */
+  .stage{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:18px;overflow:hidden}
+  .stage>header{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);
+                background:#FCFDFE}
+  .stage>header h3{font-size:14px;margin:0;font-weight:650}
+  .cnt{font-size:12px;color:var(--mid)}
+  .cnt b{color:var(--ink)}
+  .spacer{flex:1}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 11px;font-size:12px;
+       color:var(--mid);cursor:pointer;white-space:nowrap}
+  .btn.primary{background:var(--indigo);border-color:var(--indigo);color:#fff}
+
+  /* verdict banner — now carries substance */
+  .verdict{margin:14px 16px;border-radius:8px;padding:12px 14px;font-size:13px;
+           background:var(--redbg);border:1px solid var(--redline)}
+  .verdict.ok{background:var(--greenbg);border-color:var(--greenline)}
+  .verdict .vt{font-weight:650;color:var(--red);margin-bottom:6px;display:flex;gap:7px;align-items:center}
+  .verdict.ok .vt{color:var(--green)}
+  .verdict p{margin:0;color:var(--mid)}
+  .verdict .num{font-variant-numeric:tabular-nums;font-weight:650;color:var(--ink)}
+
+  /* rows */
+  .row{border-top:1px solid var(--line)}
+  .row:first-of-type{border-top:none}
+  .rhead{display:flex;align-items:center;gap:11px;padding:11px 16px;cursor:pointer}
+  .rhead:hover{background:#FAFBFC}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .dot.att{background:#F59E0B} .dot.done{background:#10B981}
+  .dot.miss{background:#EF4444} .dot.unk{background:#fff;border:1.5px solid #CBD5E1}
+  .rlabel{font-weight:550;font-size:13.5px}
+  .chip{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+        padding:2px 7px;border-radius:99px}
+  .chip.att{background:var(--amberbg);color:var(--amber);border:1px solid var(--amberline)}
+  .chip.miss{background:var(--redbg);color:var(--red);border:1px solid var(--redline)}
+  .chip.done{background:var(--greenbg);color:var(--green);border:1px solid var(--greenline)}
+  .chip.unk{background:#F1F5F9;color:var(--soft);border:1px solid var(--line)}
+  .headline{font-size:12.5px;color:var(--mid);margin-left:2px}
+  .headline b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .caret{color:var(--soft);font-size:11px}
+
+  /* the diagnosis — three blocks */
+  .diag{padding:2px 16px 18px 36px;background:#FCFDFE;border-top:1px dashed var(--line)}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:14px;margin-top:14px}
+  .blk{border:1px solid var(--line);border-radius:8px;background:#fff;padding:11px 13px}
+  .blk h4{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;margin:0 0 8px;font-weight:700}
+  .blk.p h4{color:var(--red)} .blk.m h4{color:var(--amber)} .blk.f h4{color:var(--green)}
+  .blk p{margin:0;font-size:12.5px;color:var(--mid)}
+  .blk ul{margin:0;padding-left:0;list-style:none}
+  .blk li{font-size:12.5px;color:var(--mid);padding:4px 0;border-bottom:1px solid #F1F5F9;
+          display:flex;justify-content:space-between;gap:10px}
+  .blk li:last-child{border-bottom:none}
+  .pts{font-variant-numeric:tabular-nums;font-weight:650;color:var(--red);white-space:nowrap;font-size:12px}
+  .gain{font-variant-numeric:tabular-nums;font-weight:650;color:var(--green);white-space:nowrap;font-size:12px}
+  .fixrow{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start}
+  .fixrow:last-child{border-bottom:none}
+  .stepn{width:17px;height:17px;border-radius:50%;background:var(--indigobg);color:var(--indigo);
+         font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+  .fixtxt{flex:1;font-size:12.5px;color:var(--mid)}
+  .who{font-size:10.5px;color:var(--soft);display:block;margin-top:1px}
+  .prov{margin-top:11px;font-size:11px;color:var(--soft);display:flex;gap:6px;align-items:center}
+  .acts{margin-top:12px;display:flex;gap:7px}
+
+  /* unmeasured treatment */
+  .unmeasured{margin-top:13px;border:1px dashed #CBD5E1;border-radius:8px;padding:11px 13px;background:#fff}
+  .unmeasured h4{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;margin:0 0 6px;color:var(--soft);font-weight:700}
+  .unmeasured p{margin:0 0 7px;font-size:12.5px;color:var(--mid)}
+  .unmeasured .need{font-size:12px;color:var(--mid);background:#F8FAFC;border-radius:6px;padding:8px 10px}
+  .unmeasured .need b{color:var(--ink)}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 16px 14px;padding-top:12px;font-size:11.5px;color:var(--soft)}
+  .legend span{display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Stage items — problem, what's missing, how to solve</h1>
+  <p class="sub">Admin company workspace · Northwind Bio · every stage item states its own diagnosis instead of a bare status chip.</p>
+
+  <div class="note">
+    <h2>What's wrong with it today</h2>
+    <ul>
+      <li><b>Only 5 of 26 items across the four stages are actually measured.</b> In <code>stage-menu-mirror.ts</code> just five menu entries carry a <code>condition</code>; the other 21 get a status with no signal behind it.</li>
+      <li><b>Unmeasured items in a past stage are marked <code>done</code></b> (line 107). That is a fake pass — the file's own header comment says it shouldn't happen.</li>
+      <li><b>"0 of 9 done" counts only <code>done</code></b>, so seven unmeasured Preparation items drag the count to zero and the stage reads worse than it is.</li>
+      <li><b>"Attention" carries no content.</b> Capital Readiness Rating is a boolean (<code>readinessQualified</code>) — it never says the score is 34, that the gate is 65, or which dimension is short.</li>
+      <li><b>The banner just lists labels.</b> "Blocking Preparation: Capital Readiness Rating, Documents" — no number, no gap, no fix, nothing to act on.</li>
+    </ul>
+  </div>
+
+  <div class="stepper">
+    <div class="step done"><div class="n">Stage 1</div><div class="t">Onboarding</div><div class="s">✓ Complete · 4 of 4</div></div>
+    <div class="step cur"><div class="n">Stage 2</div><div class="t">Preparation</div><div class="s">2 blocking · 31 pts to gate</div></div>
+    <div class="step lock"><div class="n">Stage 3</div><div class="t">Marketing</div><div class="s">Locked — needs CRR 65</div></div>
+    <div class="step lock"><div class="n">Stage 4</div><div class="t">Closing</div><div class="s">Locked</div></div>
+  </div>
+
+  <!-- ======================= STAGE 2 ======================= -->
+  <div class="stage">
+    <header>
+      <h3>Founder's Preparation menu</h3>
+      <span class="cnt"><b>2</b> measured &amp; passing · <b>2</b> blocking · <b>5</b> not measured</span>
+      <span class="spacer"></span>
+      <button class="btn">Reach out to founder</button>
+      <button class="btn primary">Resolve blocking items</button>
+    </header>
+
+    <div class="verdict">
+      <div class="vt">⚠ Preparation is blocked on 2 items</div>
+      <p>
+        Capital Readiness Rating is <span class="num">34/100</span> against a gate of <span class="num">65</span> —
+        <span class="num">31 points</span> short, with <span class="num">26</span> of those sitting in Traction and Financials.
+        Documents are <span class="num">2 of 3</span> core files; the Financial model has never been uploaded.
+        Clearing the top three fixes below is worth <span class="num">+24 points</span> and closes the document gap.
+      </p>
+    </div>
+
+    <div class="legend">
+      <span><i class="dot done" style="display:inline-block"></i> Measured — passing</span>
+      <span><i class="dot att" style="display:inline-block"></i> Measured — blocking</span>
+      <span><i class="dot unk" style="display:inline-block"></i> Not measured — no signal wired</span>
+    </div>
+
+    <!-- ITEM 1 — CRR, expanded -->
+    <div class="row">
+      <div class="rhead">
+        <span class="dot att"></span>
+        <span class="rlabel">Capital Readiness Rating</span>
+        <span class="chip att">Blocking</span>
+        <span class="headline">CRR <b>34</b>/100 · gate <b>65</b> · <b>31</b> short</span>
+        <span class="spacer"></span>
+        <span class="caret">▾</span>
+      </div>
+      <div class="diag">
+        <div class="grid">
+          <div class="blk p">
+            <h4>The problem</h4>
+            <p>The engine scores this company <b>34/100</b> under the <b>Seed</b> profile. Investor outreach unlocks at <b>65</b>. Band: <b>Early</b>.</p>
+            <p style="margin-top:7px">It has moved <b>+3</b> in 60 days, so at the current rate it will not reach the gate this year.</p>
+          </div>
+          <div class="blk m">
+            <h4>What's missing</h4>
+            <ul>
+              <li><span>Traction</span><span class="pts">−15.0</span></li>
+              <li><span>Financials</span><span class="pts">−11.0</span></li>
+              <li><span>Narrative</span><span class="pts">−3.0</span></li>
+              <li><span>Team</span><span class="pts">−2.0</span></li>
+              <li><span>Market</span><span class="pts">0.0</span></li>
+            </ul>
+            <p style="margin-top:8px;font-size:11.5px;color:var(--soft)">Points of this company's score going unearned at Seed.</p>
+          </div>
+          <div class="blk f">
+            <h4>How to solve</h4>
+            <div class="fixrow"><span class="stepn">1</span><span class="fixtxt">Upload 12 months of MRR history to the data room — the Revenue factor is scoring 0 for want of evidence, not performance.<span class="who">Founder · Documents → Financials</span></span><span class="gain">+9</span></div>
+            <div class="fixrow"><span class="stepn">2</span><span class="fixtxt">Add the 3-year financial model. This is the same file the Documents item below is missing, so it clears both.<span class="who">Founder · blocks 2 items</span></span><span class="gain">+8</span></div>
+            <div class="fixrow"><span class="stepn">3</span><span class="fixtxt">Record retention and logo-churn for the last 4 quarters.<span class="who">Founder · Readiness wizard</span></span><span class="gain">+7</span></div>
+            <div class="fixrow"><span class="stepn">4</span><span class="fixtxt">Rewrite the one-line problem statement — Narrative is 1 of 4.<span class="who">Founder · 15 min</span></span><span class="gain">+3</span></div>
+          </div>
+        </div>
+        <div class="prov">Source: CRR engine · weight set <b style="color:var(--mid)">crr-v4</b> · scored 18 Sep 2026 · Seed profile (from Funding stage on the company profile)</div>
+        <div class="acts">
+          <button class="btn primary">Open readiness wizard as founder</button>
+          <button class="btn">Email these 4 steps to founder</button>
+          <button class="btn">Re-score now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEM 2 — Documents, expanded -->
+    <div class="row">
+      <div class="rhead">
+        <span class="dot att"></span>
+        <span class="rlabel">Documents</span>
+        <span class="chip att">Blocking</span>
+        <span class="headline"><b>2</b> of <b>3</b> core · <b>4</b> of <b>9</b> full package</span>
+        <span class="spacer"></span>
+        <span class="caret">▾</span>
+      </div>
+      <div class="diag">
+        <div class="grid">
+          <div class="blk p">
+            <h4>The problem</h4>
+            <p>The stage gate needs all <b>3</b> core documents. Pitch deck and Cap table are in; the <b>Financial model</b> has never been uploaded.</p>
+            <p style="margin-top:7px">This one file also blocks the CRR item above and the Valuation Studio below.</p>
+          </div>
+          <div class="blk m">
+            <h4>What's missing</h4>
+            <ul>
+              <li><span>Financial model <b style="color:var(--red)">· core</b></span><span class="pts">never uploaded</span></li>
+              <li><span>Business plan</span><span class="pts">never uploaded</span></li>
+              <li><span>Team bios</span><span class="pts">never uploaded</span></li>
+              <li><span>Customer contracts</span><span class="pts">never uploaded</span></li>
+              <li><span>Market research</span><span class="pts">never uploaded</span></li>
+              <li><span>Legal documents</span><span class="pts">stale · 14 mo</span></li>
+            </ul>
+          </div>
+          <div class="blk f">
+            <h4>How to solve</h4>
+            <div class="fixrow"><span class="stepn">1</span><span class="fixtxt">Request the Financial model — this alone clears the stage gate.<span class="who">One click · templated request</span></span><span class="gain">gate</span></div>
+            <div class="fixrow"><span class="stepn">2</span><span class="fixtxt">Send the model template if they don't have one built.<span class="who">Founder · xlsx template</span></span></div>
+            <div class="fixrow"><span class="stepn">3</span><span class="fixtxt">Re-date the Legal documents folder — last refreshed Jul 2025.<span class="who">Founder</span></span></div>
+            <div class="fixrow"><span class="stepn">4</span><span class="fixtxt">The other five are not gate items; chase after the stage clears.<span class="who">Not blocking</span></span></div>
+          </div>
+        </div>
+        <div class="prov">Source: documents table vs <b style="color:var(--mid)">requiredDocumentTypes</b> (9 types, 3 core) · checked live</div>
+        <div class="acts">
+          <button class="btn primary">Request Financial model</button>
+          <button class="btn">Open documents as founder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEM 3 — measured, passing -->
+    <div class="row">
+      <div class="rhead">
+        <span class="dot done"></span>
+        <span class="rlabel">Readiness checklist</span>
+        <span class="chip done">Passing</span>
+        <span class="headline"><b>11</b> of <b>14</b> answered · 3 marked N/A</span>
+        <span class="spacer"></span><span class="caret">▸</span>
+      </div>
+    </div>
+
+    <!-- ITEM 4 — NOT MEASURED, expanded to show the honest treatment -->
+    <div class="row">
+      <div class="rhead">
+        <span class="dot unk"></span>
+        <span class="rlabel">Data room</span>
+        <span class="chip unk">Not measured</span>
+        <span class="headline">no signal wired — status unknown, not "to do"</span>
+        <span class="spacer"></span><span class="caret">▾</span>
+      </div>
+      <div class="diag">
+        <div class="unmeasured">
+          <h4>Why this is blank instead of green or amber</h4>
+          <p>Nothing in the platform currently reads the data room's state, so any chip here would be invented. It is shown as unknown rather than guessed — that is the difference between a blank and a lie.</p>
+          <div class="need">
+            <b>To measure it:</b> count folders and files under the company's data room and compare against the nine required types, the same join the Documents item already does. One query — no new table.
+            <br><b>Then it would say:</b> "4 of 9 folders populated · Financials folder empty".
+          </div>
+        </div>
+        <div class="acts">
+          <button class="btn">Open data room as founder</button>
+          <button class="btn">Ask founder for a status</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Business plan</span><span class="chip unk">Not measured</span><span class="headline">would read: document present? last edited?</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot done"></span><span class="rlabel">Pitch deck</span><span class="chip done">Passing</span><span class="headline">uploaded 2 Sep · <b>18</b> slides · AI quality <b>72</b>/100</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot miss"></span><span class="rlabel">Financial model</span><span class="chip miss">Missing</span><span class="headline">no file · blocks Documents and CRR Financials</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Cap table</span><span class="chip unk">Not measured</span><span class="headline">file exists, contents never parsed</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Valuation Studio</span><span class="chip unk">Not measured</span><span class="headline">needs the financial model before it can run</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+  </div>
+
+  <!-- ======================= STAGE 1 ======================= -->
+  <div class="stage">
+    <header>
+      <h3>Stage 1 — Onboarding</h3>
+      <span class="cnt"><b>1</b> measured &amp; passing · <b>3</b> not measured</span>
+      <span class="spacer"></span>
+      <button class="btn">Reach out to founder</button>
+    </header>
+    <div class="verdict ok">
+      <div class="vt">✓ Cleared 14 Aug 2026</div>
+      <p>The one measured gate — company profile complete — passed. Three items were never measured; they are shown as unknown rather than backfilled to "done" the way the current code does for past stages.</p>
+    </div>
+    <div class="row"><div class="rhead"><span class="dot done"></span><span class="rlabel">Company profile</span><span class="chip done">Passing</span><span class="headline">100% · industry, stage, description all set</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">My Progress</span><span class="chip unk">Not measured</span><span class="headline">a view, not a deliverable — candidate to drop from the gate</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Action Center</span><span class="chip unk">Not measured</span><span class="headline">would read: open actions, oldest age</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">One pager</span><span class="chip unk">Not measured</span><span class="headline">would read: published? last viewed?</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+  </div>
+
+  <!-- ======================= STAGE 3 ======================= -->
+  <div class="stage">
+    <header>
+      <h3>Stage 3 — Marketing</h3>
+      <span class="cnt">Locked · <b>1</b> measured · <b>5</b> not measured</span>
+      <span class="spacer"></span>
+      <button class="btn">Preview as founder</button>
+    </header>
+    <div class="verdict">
+      <div class="vt">🔒 Locked — and here is exactly what unlocks it</div>
+      <p>
+        Outreach opens at CRR <span class="num">65</span>; this company is at <span class="num">34</span>.
+        The four fixes listed under Capital Readiness Rating are worth <span class="num">+27</span> — enough to reach
+        <span class="num">61</span>, still <span class="num">4</span> short. Retention evidence is the cheapest remaining
+        <span class="num">+7</span>. Nothing in this stage is actionable until then.
+      </p>
+    </div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Investor matches</span><span class="chip unk">Not measured</span><span class="headline">would read: matches ≥70, top score</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Matching Center</span><span class="chip unk">Not measured</span><span class="headline">would read: shortlist size</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Automated outreach</span><span class="chip unk">Not measured</span><span class="headline">would read: sequence enrolled? sends, replies</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot att"></span><span class="rlabel">Investor CRM</span><span class="chip att">Blocking</span><span class="headline">no investor has reached Interested — <b>0</b> in pipeline</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Present at event</span><span class="chip unk">Not measured</span><span class="headline">would read: applied? presented?</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Marketplace</span><span class="chip unk">Not measured</span><span class="headline">would read: campaign published?</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+  </div>
+
+  <!-- ======================= STAGE 4 ======================= -->
+  <div class="stage">
+    <header>
+      <h3>Stage 4 — Closing</h3>
+      <span class="cnt">Locked · <b>1</b> measured · <b>6</b> not measured</span>
+      <span class="spacer"></span>
+      <button class="btn">Preview as founder</button>
+    </header>
+    <div class="verdict">
+      <div class="vt">🔒 Locked — needs Marketing to clear first</div>
+      <p>Closing opens once a Deal Room exists. That needs at least one interested investor, which needs outreach, which needs CRR <span class="num">65</span>. <b>Three gates back</b> — so the honest instruction for staff is to work the Preparation list and ignore this stage entirely.</p>
+    </div>
+    <div class="row"><div class="rhead"><span class="dot att"></span><span class="rlabel">Deal Room</span><span class="chip att">Blocking</span><span class="headline">none open — the gate for this stage</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Offering type</span><span class="chip unk">Not measured</span><span class="headline">would read: type chosen?</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">SPVs &amp; closings</span><span class="chip unk">Not measured</span><span class="headline">would read: SPV count and phase</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Capital Raise</span><span class="chip unk">Not measured</span><span class="headline">would read: target vs committed</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Investor update builder</span><span class="chip unk">Not measured</span><span class="headline">would read: last update sent</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Milestones</span><span class="chip unk">Not measured</span><span class="headline">would read: next milestone, overdue count</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+    <div class="row"><div class="rhead"><span class="dot unk"></span><span class="rlabel">Analytics</span><span class="chip unk">Not measured</span><span class="headline">a view, not a deliverable — candidate to drop</span><span class="spacer"></span><span class="caret">▸</span></div></div>
+  </div>
+
+</div>
+</body>
+</html>

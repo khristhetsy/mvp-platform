@@ -31,6 +31,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import type { DocumentRecord } from "@/lib/supabase/types";
 import { crrFor } from "@/lib/crr/crr-for";
+import { diagnoseAllStages } from "@/lib/admin/stage-diagnosis";
 
 const TIMELINE_LIMIT = 25;
 const COMPLIANCE_LIMIT = 10;
@@ -389,6 +390,9 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     },
     investable,
     journey: journeyState,
+    // Per-stage diagnosis resolved server-side: the workspace shell is a client
+    // component, so it cannot await this itself.
+    stageDiagnosis: await diagnoseAllStages(companyId, journeyState),
     investorActivity: {
       savedDeals: savedDealsCount.count ?? 0,
       interests: interestsResult.count ?? 0,

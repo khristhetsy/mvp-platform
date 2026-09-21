@@ -4,7 +4,8 @@ import type { OperationalActivityFeedItem } from "@/lib/operational-activity/typ
 import type { AdminQueueItem } from "@/lib/queues/admin-queues";
 import type { summarizeRemediationTasks } from "@/lib/remediation/tasks";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
-import type { FounderJourneyState } from "@/lib/founder-journey/types";
+import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
+import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
 
 export type AdminInvestableFactorScores = Record<FactorKey, FactorScore>;
 
@@ -46,6 +47,10 @@ export type AdminCompanyWorkspaceData = {
   };
   investable: AdminInvestableReadiness | null;
   journey: FounderJourneyState;
+  /** Per-stage item diagnosis (problem / missing / how to solve) plus the
+   *  stage situation the reach-out email is written from. Resolved server-side
+   *  because the workspace shell is a client component. */
+  stageDiagnosis: Record<JourneyStage, StageDiagnosis>;
   investorActivity: {
     savedDeals: number;
     interests: number;

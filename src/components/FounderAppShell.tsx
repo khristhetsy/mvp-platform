@@ -8,6 +8,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { OfferingTypePrompt } from "@/components/founder/OfferingTypePrompt";
 import { FounderTour } from "@/components/founder/FounderTour";
 import { AccountSwitcherServer } from "@/components/account/AccountSwitcherServer";
+import { ActingAsBanner } from "@/components/admin/ActingAsBanner";
 
 type FounderAppShellProps = Readonly<{
   children: React.ReactNode;
@@ -56,6 +57,10 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       planBadge={planBadge}
       accountSwitcher={<AccountSwitcherServer />}
     >
+      {/* Always first: the shell is the one place every founder screen passes
+          through, so a staff member can never be acting on a founder's behalf
+          without the warning on screen. Renders null when nobody is acting. */}
+      <ActingAsBanner />
       {needsClassification ? <OfferingTypePrompt needsClassification /> : null}
       {profile?.role === "founder" ? <FounderTour /> : null}
       {children}

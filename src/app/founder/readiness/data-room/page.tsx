@@ -16,14 +16,17 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Data room" };
 
 export default async function FounderDataRoomPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
 
   // Deal Company (no active company) has no data room — show a single empty state.
   if (!company) {
@@ -45,7 +48,10 @@ export default async function FounderDataRoomPage() {
   }
 
   const supabase = await createServerSupabaseClient();
-  const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
+  const documents = company ? (await listCompanyDocuments(db, company.id)).data ?? [] : [];
   const [activity, engagement, questions] = company
     ? await Promise.all([
         listDataRoomActivity(company.id),
