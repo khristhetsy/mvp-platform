@@ -1,7 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { evaluateFounderJourney } from "./evaluate";
+
+// The CRR engine reads through the service-role client, which needs real env.
+// These tests cover the journey conditions, not the scoring engine, so the
+// reader is stubbed to "never scored" — the same shape crrFor returns for a
+// company with no score row.
+vi.mock("@/lib/crr/crr-for", () => ({
+  crrFor: async () => ({ score: null, outreachUnlocked: false, gate: 65, pointsToGate: 65 }),
+}));
+
+const { evaluateFounderJourney } = await import("./evaluate");
 
 type TableResult = { data: unknown };
 

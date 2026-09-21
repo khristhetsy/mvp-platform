@@ -6,7 +6,7 @@
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 
-export type MirrorItemStatus = "done" | "attention" | "missing" | "todo" | "locked";
+export type MirrorItemStatus = "done" | "attention" | "missing" | "todo" | "locked" | "partial";
 
 // Founder routes that have adopted the act-on-behalf resolver end-to-end, so
 // "Open as founder" actually renders as the founder. Others would just redirect
@@ -47,9 +47,26 @@ export type StageMirror = {
   recommendation: string;
 };
 
-type ConditionKey = "onboardingComplete" | "readinessQualified" | "requiredDocsUploaded" | "hasDealRoom" | "hasInvestorInterest";
+type ConditionKey =
+  | "onboardingComplete"
+  | "readinessQualified"
+  | "crrQualified"
+  | "requiredDocsUploaded"
+  | "hasDealRoom"
+  | "hasInvestorInterest";
 
-type MenuDef = { label: string; href: string; condition?: ConditionKey };
+type MenuDef = {
+  label: string;
+  href: string;
+  /** Unmet ⇒ "attention", and the item counts as blocking the stage. */
+  condition?: ConditionKey;
+  /**
+   * Unmet ⇒ "partial": part of the page still works, so it is NOT blocking.
+   * Investor matches and the Matching Center are browsable at any CRR — it is
+   * the "Request introduction" action inside them that the gate holds.
+   */
+  partialCondition?: ConditionKey;
+};
 
 // Pulled from the founder V2 nav (founderWorkspaceNavSectionsV2). Keep in sync if
 // the founder menu changes. `condition` links an item to a journey gate signal.
@@ -61,13 +78,10 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "One pager", href: "/founder/preview" },
   ],
   qualify: [
-    // NOTE: the label and the drawer (stage-diagnosis keys `crrDiagnosis` off
-    // this href) are both the CRR, but `condition` reads `readinessQualified` —
-    // the Preparation document-completion measure (75%), not the CRR engine gate
-    // (65). The row therefore reports a CRR requirement as met on the strength of
-    // file uploads. Left as-is deliberately: the fix is `crrQualified`, which
-    // arrives with the CRR stage gate, not with this label pass.
-    { label: "Capital Readiness Rating", href: "/founder/readiness/wizard", condition: "readinessQualified" },
+    // Label, drawer and condition now all mean the CRR. This used to read
+    // `readinessQualified` — the Preparation document count (75%) — so the row
+    // reported a CRR requirement as met on the strength of file uploads.
+    { label: "Capital Readiness Rating", href: "/founder/readiness/wizard", condition: "crrQualified" },
     { label: "Readiness checklist", href: "/founder/readiness" },
     { label: "Data room", href: "/founder/readiness/data-room" },
     { label: "Documents", href: "/founder/documents", condition: "requiredDocsUploaded" },
@@ -78,9 +92,14 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "Valuation Studio", href: "/founder/valuation" },
   ],
   deploy: [
-    { label: "Investor matches", href: "/founder/matches" },
-    { label: "Matching Center", href: "/founder/matching" },
-    { label: "Automated outreach", href: "/founder/deploy" },
+    // The requirement this stage runs on, stated first. Everything below that the
+    // gate touches points back at this row.
+    { label: "Capital Readiness Rating", href: "/founder/readiness/wizard", condition: "crrQualified" },
+    // Browsing is open at any CRR; "Request introduction" is what the gate holds.
+    { label: "Investor matches", href: "/founder/matches", partialCondition: "crrQualified" },
+    { label: "Matching Center", href: "/founder/matching", partialCondition: "crrQualified" },
+    // Sends into the iCapOS investor data from iCapOS infrastructure — hard gate.
+    { label: "Automated outreach", href: "/founder/deploy", condition: "crrQualified" },
     { label: "Investor CRM", href: "/founder/investor-pipeline", condition: "hasInvestorInterest" },
     { label: "Present at event", href: "/founder/events/present" },
     { label: "Marketplace", href: "/founder/private-market" },
@@ -124,6 +143,13 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
     if (d.condition) {
       return { label: d.label, href: d.href, status: conditionMet(journey, d.condition) ? "done" : "attention", actable };
     }
+    // Partially gated: the page is usable, one action inside it is held. Shown as
+    // "Browse only" and deliberately NOT counted as blocking — the row the gate
+    // belongs to carries that, and counting it here would say the same thing three
+    // times in one header.
+    if (d.partialCondition) {
+      return { label: d.label, href: d.href, status: conditionMet(journey, d.partialCondition) ? "done" : "partial", actable };
+    }
     // No signal wired for this item. It is NOT done just because the founder
     // moved past the stage — marking it done was a fake pass that produced
     // "9 of 9 done" on a company with no documents uploaded at all.
@@ -131,8 +157,10 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
   });
 
   // Only measured passes count. An item nobody checks can never be "done".
+  // A partially gated item IS measured — it has a wired signal — so it belongs in
+  // the denominator even though it never blocks.
   const doneCount = items.filter((i) => i.status === "done").length;
-  const measuredCount = defs.filter((d) => d.condition).length;
+  const measuredCount = defs.filter((d) => d.condition || d.partialCondition).length;
   const unmet = items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
 
   let recommendation: string;

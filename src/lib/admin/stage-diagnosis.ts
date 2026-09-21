@@ -315,6 +315,9 @@ export async function diagnoseStage(
   if (stage === "deploy") {
     const unlocked = crr?.outreachUnlocked ?? false;
     const short = crr?.pointsToGate ?? crr?.gate ?? 0;
+    // The requirement this stage runs on. Same diagnosis the Preparation row
+    // shows — one reader, so the two tabs can never disagree about the number.
+    if (crr) byHref["/founder/readiness/wizard"] = crrDiagnosis(crr, gapLines, crrFixes);
     byHref["/founder/deploy"] = {
       headline: unlocked ? "outreach unlocked" : `blocked — ${short} points to the gate`,
       measured: true,
@@ -342,8 +345,30 @@ export async function diagnoseStage(
       },
       "journey condition hasInvestorInterest",
     );
-    byHref["/founder/matches"] = unmeasured("matches scoring 70+, top score", "Count investor_match_index rows above the threshold.");
-    byHref["/founder/matching"] = unmeasured("shortlist size", "Count shortlisted investors for this company.");
+    // Browsing is open at any CRR. What the gate holds is "Request introduction" —
+    // a brokered intro goes out under the iCapOS name, so it waits for the rating.
+    const browseOnly = (what: string): ItemDiagnosis => ({
+      headline: unlocked ? "open" : `browse only — ${short} points to the gate`,
+      measured: true,
+      problem: unlocked
+        ? [`${what} is fully open; introductions can be requested.`]
+        : [
+            `${what} is browsable, but "Request introduction" is held: the engine flag outreach_unlocked is false at ${crr?.score ?? 0}/${crr?.gate ?? 65}.`,
+            "Looking costs nothing. An introduction carries the iCapOS name, which is what the rating gates.",
+          ],
+      missing: unlocked ? [] : [{ label: "Points to the gate", note: String(short) }],
+      fixes: unlocked
+        ? [{ text: "Nothing blocking.", who: "Staff" }]
+        : [
+            {
+              text: "Nothing to do here. The founder can keep reviewing matches; the request button enables itself when the score crosses the gate.",
+              who: "Automatic",
+            },
+          ],
+      source: "CRR engine gate (OUTREACH_GATE) — the same flag Automated outreach reads",
+    });
+    byHref["/founder/matches"] = browseOnly("Investor matches");
+    byHref["/founder/matching"] = browseOnly("The Matching Center");
     byHref["/founder/events/present"] = unmeasured("applied? presented?", "Read event applications for this company.");
     byHref["/founder/private-market"] = unmeasured("campaign published?", "Read the marketplace campaign's published flag.");
   }

@@ -9,6 +9,7 @@ const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon:
   done: { label: "Done", chip: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", iconColor: "text-emerald-600" },
   attention: { label: "Attention", chip: "bg-amber-50 text-amber-700", icon: "ti-alert-circle", iconColor: "text-amber-600" },
   missing: { label: "Missing", chip: "bg-red-50 text-red-700", icon: "ti-circle-x", iconColor: "text-red-600" },
+  partial: { label: "Browse only", chip: "bg-amber-50 text-amber-700", icon: "ti-eye", iconColor: "text-amber-600" },
   todo: { label: "Open", chip: "bg-slate-100 text-slate-500", icon: "ti-circle", iconColor: "text-slate-400" },
   locked: { label: "Not started", chip: "bg-slate-100 text-slate-400", icon: "ti-lock", iconColor: "text-slate-300" },
 };
