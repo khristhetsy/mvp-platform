@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Label audit — Preparation complete &amp; Capital Readiness Rating (CRR)</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.3px;white-space:nowrap}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+  .cb{padding:15px}
+  .ch{display:flex;align-items:center;gap:9px;padding:10px 15px;border-bottom:1px solid var(--l100);background:var(--l50)}
+  .ch h3{margin:0;font-size:13px;font-weight:650}
+  .ch .n{font-size:11px;color:var(--s500);margin-left:auto}
+
+  /* the two numbers */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .nbox{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .nbox .top{padding:12px 15px;border-bottom:1px solid var(--l100)}
+  .nbox .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 3px}
+  .nbox h4{margin:0;font-size:15px;font-weight:700}
+  .nbox .gate{font-size:11.5px;color:var(--s500);margin:3px 0 0}
+  .nbox .body{padding:12px 15px;font-size:12.3px;color:var(--s600);line-height:1.6}
+  .nbox .body b{color:var(--ink)}
+  .na{border-color:#FDE68A}.na .top{background:#FFFBEB}.na .eyebrow{color:#B45309}
+  .nb{border-color:#C7D2FE}.nb .top{background:#EEF2FF}.nb .eyebrow{color:#4338CA}
+  .aliases{margin-top:9px;padding-top:9px;border-top:1px solid var(--l100);font-size:11.3px;color:var(--s500)}
+  .al{display:inline-block;background:#FEF2F2;color:#B91C1C;border-radius:5px;padding:1px 6px;margin:2px 3px 2px 0;
+      font-size:10.8px;text-decoration:line-through}
+
+  table{width:100%;border-collapse:collapse;font-size:12.2px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);
+     text-align:left;padding:9px 10px 7px 15px;border-bottom:1px solid var(--line);background:#fff}
+  td{padding:8px 10px 8px 15px;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .f{font-size:11.3px;color:var(--s600)}
+  .f b{color:var(--ink);font-weight:600}
+  .was{color:#B91C1C;text-decoration:line-through}
+  .now{color:#065F46;font-weight:650}
+  .keep{color:var(--s400)}
+  .pill{display:inline-block;font-size:9px;font-weight:700;border-radius:99px;padding:2px 7px;
+        text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .pA{background:#FEF3C7;color:#92400E}
+  .pB{background:#E0E7FF;color:#3730A3}
+  .pN{background:#F1F5F9;color:#64748B}
+  .pX{background:#FEE2E2;color:#991B1B}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ind);border-radius:9px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);line-height:1.65;margin-bottom:12px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  .ok{border-left-color:#059669;background:#F0FDF9;color:#065F46}
+  .ok b{color:#022C22}
+  ul.t{margin:6px 0 0;padding-left:18px}
+  ul.t li{font-size:12.4px;margin-bottom:4px;line-height:1.55}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Label audit — <span style="color:#B45309">Preparation complete</span> &amp;
+  <span style="color:#4338CA">Capital Readiness Rating (CRR)</span></h1>
+<p class="sub">Every surface, every account type · mockup — nothing built</p>
+
+<!-- ═════ THE TWO NUMBERS ═════ -->
+<div class="lbl">The problem: two different numbers, eleven different names</div>
+<div class="two">
+  <div class="nbox na">
+    <div class="top">
+      <p class="eyebrow">A · the completion measure</p>
+      <h4>Preparation complete</h4>
+      <p class="gate"><code>computeReadinessScore(uploadedTypeCodes)</code> · gate <b>75</b></p>
+    </div>
+    <div class="body">
+      A count of how many required document types are present. <b>Not a rating</b> — no factor, no
+      dimension, no weight touches it. Re-scoring cannot move it.
+      <div class="aliases">Called today:
+        <span class="al">Readiness qualified</span><span class="al">Completion ≥ 75%</span><span class="al">Completion</span><span class="al">Readiness score</span><span class="al">Readiness</span>
+      </div>
+    </div>
+  </div>
+  <div class="nbox nb">
+    <div class="top">
+      <p class="eyebrow">B · the rating</p>
+      <h4>Capital Readiness Rating (CRR)</h4>
+      <p class="gate"><code>crrFor(companyId)</code> · gate <b>65</b> (<code>OUTREACH_GATE</code>)</p>
+    </div>
+    <div class="body">
+      The 13-factor engine score on the company&apos;s own stage profile. The number the Weights tab
+      tunes and the outreach gate reads.
+      <div class="aliases">Called today:
+        <span class="al">Capital Readiness Rating</span><span class="al">Capital Readiness</span><span class="al">Capital Readiness Score</span><span class="al">Readiness rating</span><span class="al">Readiness signal</span><span class="al">Readiness</span><span class="al">Readiness band</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note warn">
+  <b>The word &ldquo;Readiness&rdquo; alone is currently used for both.</b> The founder dashboard
+  tile reads <code>label: "Readiness"</code> over the <i>engine</i> score, while
+  <code>DiligenceReportCompare</code> reads &ldquo;Readiness score&rdquo; over the <i>document
+  count</i>. Same word, two numbers, different gates — and a founder comparing the two pages has
+  no way to tell. This is what the rename fixes; it is not a cosmetic pass.
+</div>
+
+<!-- ═════ FOUNDER ═════ -->
+<div class="lbl">1 · Founder account</div>
+<div class="card">
+  <div class="ch"><h3>What the founder sees</h3><span class="n">12 surfaces</span></div>
+  <table>
+    <tr><th style="width:30%">Where</th><th style="width:8%">Which</th><th style="width:27%">Today</th><th>Becomes</th></tr>
+    <tr>
+      <td class="f"><b>Journey page</b><br><code>founder/journey/page.tsx:111</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Completion ≥ 75%</span></td>
+      <td><span class="now">Preparation complete ≥ 75%</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Journey · stage card</b><br><code>founder/journey/page.tsx:326</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Completion</span></td>
+      <td><span class="now">Preparation complete</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Journey · inline figure</b><br><code>founder/journey/page.tsx:343</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Readiness 82</span></td>
+      <td><span class="now">Preparation 82%</span> — the word &ldquo;Readiness&rdquo; must leave
+        anything showing A</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Stage progress card</b><br><code>components/founder/StageProgressCard.tsx:24</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Completion ≥ 75%</span></td>
+      <td><span class="now">Preparation complete ≥ 75%</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Readiness donut cards</b><br><code>FounderReadinessDonutCards.tsx:144, 319</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Completion</span></td>
+      <td><span class="now">Preparation complete</span> — card title and legend</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Analytics cards</b><br><code>AnalyticsCardsClient.tsx:184</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Completion · 82% complete</span></td>
+      <td><span class="now">Preparation complete · 82%</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Diligence report compare</b><br><code>DiligenceReportCompare.tsx:82</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Readiness score</span></td>
+      <td><span class="now">Preparation complete</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Dashboard glance tile</b><br><code>founder/page.tsx:177</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="was">Readiness</span> — ambiguous, and this one is the <i>engine</i> score</td>
+      <td><span class="now">CRR</span> · sub-line keeps &ldquo;Outreach ready / Keep building&rdquo;</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Capital Readiness section</b><br><code>CapitalReadinessSection.tsx:263, 429</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>Capital Readiness Rating (CRR)</td>
+      <td class="keep">Already canonical — no change to the <i>label</i>. See the copy warning below.</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Score badge</b><br><code>InvestableScoreBadge.tsx:23, 47</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>aria &ldquo;Capital Readiness Rating&rdquo; · caption <span class="was">Readiness signal</span></td>
+      <td><span class="now">CRR</span> as the caption — &ldquo;signal&rdquo; names a component that
+        no longer exists</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Learning progress</b><br><code>founder/learning/progress/page.tsx:158</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="was">Readiness rating</span></td>
+      <td><span class="now">Capital Readiness Rating (CRR)</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Nav · Preparation menu</b><br><code>workspace-nav.ts:413</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>Capital Readiness Rating</td>
+      <td class="keep">No change</td>
+    </tr>
+  </table>
+</div>
+
+<div class="note warn">
+  <b>One piece of founder copy is describing a formula that no longer exists.</b>
+  <code>CapitalReadinessSection.tsx:284</code> tells the founder their CRR &ldquo;combines your
+  readiness signal (60%), profile completeness (30%), and onboarding and document
+  milestones&rdquo;, and the drawer breaks it down as <code>Readiness (60%)</code> /
+  <code>Profile completeness (30%)</code> / <code>+5</code> / <code>+5</code>. That was
+  <code>computeInvestableCrr</code>, which <code>crr-for.ts</code> retired — the number shown is now
+  the engine&apos;s 13-factor score. The label is right; the explanation underneath it is
+  describing the old maths. Worth correcting in the same pass, since a founder reading it will try
+  to raise their CRR by finishing profile fields, which no longer moves it.
+</div>
+
+<!-- ═════ INVESTOR ═════ -->
+<div class="lbl">2 · Investor account</div>
+<div class="card">
+  <div class="ch"><h3>What the investor sees</h3><span class="n">5 surfaces</span></div>
+  <table>
+    <tr><th style="width:30%">Where</th><th style="width:8%">Which</th><th style="width:27%">Today</th><th>Becomes</th></tr>
+    <tr>
+      <td class="f"><b>Readiness panel header</b><br><code>InvestableReadinessPanel.tsx:1261</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>Capital Readiness Rating</td>
+      <td class="keep">No change — this is the canonical investor-facing name</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Match card field</b><br><code>matching/InvestorMatchList.tsx:66</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="was">Readiness</span> → shows <code>readinessBand</code></td>
+      <td><span class="now">CRR</span> — the band is a CRR band, so it should say so</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Private market board</b><br><code>InvestorPrivateMarketBoard.tsx:163</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><code>readinessBand(deal.readinessScore)</code>, unlabelled chip</td>
+      <td><span class="now">CRR</span> prefix on the chip — an unlabelled number invites the
+        investor to guess which score it is</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Marketplace listing card</b><br><code>lib/marketplace/copy.ts:48</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="was">terms.readiness: "Readiness"</span></td>
+      <td><span class="now">"CRR"</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Opportunities disclaimer</b><br><code>investor/opportunities/page.tsx:134</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>&ldquo;Capital Readiness Ratings and&hellip;&rdquo;</td>
+      <td class="keep">No change</td>
+    </tr>
+  </table>
+</div>
+
+<div class="note ok">
+  <b>Investors never see the completion measure, and should not start.</b> Every investor surface
+  shows B. The rename gives them one word — <b>CRR</b> — in place of three
+  (&ldquo;Readiness&rdquo;, &ldquo;Capital Readiness Rating&rdquo;, and an unlabelled band chip).
+  &ldquo;Preparation complete&rdquo; is a founder-and-staff term and stays inside those two
+  workspaces.
+</div>
+
+<!-- ═════ ADMIN ═════ -->
+<div class="lbl">3 · Admin &amp; analyst (staff)</div>
+<div class="card">
+  <div class="ch"><h3>What staff see</h3><span class="n">9 surfaces</span></div>
+  <table>
+    <tr><th style="width:30%">Where</th><th style="width:8%">Which</th><th style="width:27%">Today</th><th>Becomes</th></tr>
+    <tr>
+      <td class="f"><b>Company Workspace · stage gate</b><br><code>FounderJourneyPanel.tsx:59</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Readiness qualified</span></td>
+      <td><span class="now">Preparation complete</span> · detail
+        <code>{n}% complete (needs ≥ 75%)</code></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Company Workspace · new gate</b><br><code>FounderJourneyPanel.tsx</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="pill pX">absent</span></td>
+      <td><span class="now">Capital Readiness Rating (CRR)</span> — the sixth gate</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Company Workspace header</b><br><code>CompanyWorkspaceHeader.tsx:121</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>Capital Readiness Rating</td>
+      <td class="keep">No change</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Company Workspace section</b><br><code>AdminCompanyWorkspace.tsx:134</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>Capital Readiness Rating (CRR)</td>
+      <td class="keep">No change</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Stage menu mirror</b><br><code>admin/stage-menu-mirror.ts:64</code></td>
+      <td><span class="pill pX">wrong</span></td>
+      <td>Item labelled <b>Capital Readiness Rating</b> whose condition is
+        <code>readinessQualified</code> — <b>the label says B, the number is A</b></td>
+      <td><span class="now">Repoint to <code>crrQualified</code></span> — right page, wrong number
+        today</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Readiness console</b><br><code>admin/readiness/page.tsx:123</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>Capital Readiness Rating</td>
+      <td class="keep">No change</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Founders-stuck table</b><br><code>admin/founders-stuck/page.tsx:131</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="was">Readiness</span></td>
+      <td><span class="now">CRR</span> — column header</td>
+    </tr>
+    <tr>
+      <td class="f"><b>CRM console table</b><br><code>components/crm/CrmConsole.tsx:261, 556</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>&ldquo;Capital Readiness&rdquo; column · &ldquo;Capital Readiness Rating&rdquo; detail</td>
+      <td><span class="now">CRR</span> for the column (space), full name in the detail. Pull both
+        from <code>CRM_LEXICON</code> rather than typing them.</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Prospect list wizard</b><br><code>marketing/prospects/CreateListWizard.tsx:202</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="was">Readiness ≥</span></td>
+      <td><span class="now">CRR ≥</span> — it filters on the engine score</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═════ EMAILS ═════ -->
+<div class="lbl">4 · Emails, notifications &amp; AI copy — the founder reads these too</div>
+<div class="card">
+  <div class="ch"><h3>Outbound and generated copy</h3><span class="n">7 surfaces</span></div>
+  <table>
+    <tr><th style="width:30%">Where</th><th style="width:8%">Which</th><th style="width:27%">Today</th><th>Becomes</th></tr>
+    <tr>
+      <td class="f"><b>Stage-gate reminder · label</b><br><code>stage-gate-reminders.ts:42</code></td>
+      <td><span class="pill pA">A</span></td>
+      <td><span class="was">Readiness qualified</span></td>
+      <td><span class="now">Preparation complete</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Stage-gate reminder · ask</b><br><code>stage-gate-reminders.ts:46</code></td>
+      <td><span class="pill pX">wrong</span></td>
+      <td>&ldquo;raise your <b>Capital Readiness score to 75</b>&rdquo; — on the <i>completion</i>
+        gate. Wrong name <i>and</i> wrong threshold, in an email the founder receives.</td>
+      <td><span class="now">&ldquo;finish your Preparation document set — it is 82% complete and
+        needs 75%&rdquo;</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Stage-gate reminder · new entry</b><br><code>stage-gate-reminders.ts</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td><span class="pill pX">absent</span></td>
+      <td><span class="now">CRR entry</span> with its own ask and path to
+        <code>/founder/readiness</code></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Stage gate status line</b><br><code>founder/stage-gate-status.ts:88, 199</code></td>
+      <td><span class="pill pX">mixed</span></td>
+      <td>line 88 <span class="was">Readiness 42/75</span> (A) · line 199
+        <span class="was">Reach a Capital Readiness score of 75</span> (B name, A gate)</td>
+      <td><span class="now">Preparation 42% of 75%</span> · <span class="now">Complete your
+        Preparation documents</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Founder nudges</b><br><code>notifications/founder-nudges.ts:76, 96</code></td>
+      <td><span class="pill pX">mixed</span></td>
+      <td>&ldquo;your <b>Capital Readiness score</b> and your documents&rdquo; — names B while
+        describing the A checklist</td>
+      <td><span class="now">&ldquo;your Preparation checklist and your documents&rdquo;</span></td>
+    </tr>
+    <tr>
+      <td class="f"><b>Outreach drafts · AI</b><br><code>founder-crm/outreach-drafts.ts:99</code><br>
+        <code>social-draft-templates.ts:42</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>&ldquo;Capital Readiness Rating: {n}/100&rdquo;</td>
+      <td class="keep">No change — correct name over the engine score</td>
+    </tr>
+    <tr>
+      <td class="f"><b>Support assistant brief</b><br><code>support/assistant/route.ts:31</code><br>
+        <code>assistant/assistant-prompts.ts:7</code></td>
+      <td><span class="pill pB">B</span></td>
+      <td>&ldquo;Capital Readiness Rating (CRR)&rdquo;</td>
+      <td class="keep">No change. Add one line so the assistant can tell the two apart when a
+        founder asks &ldquo;what score do I need?&rdquo; — it currently cannot.</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═════ PUBLIC ═════ -->
+<div class="lbl">5 · Public marketing site</div>
+<div class="card"><div class="cb">
+  <p style="margin:0 0 8px;font-size:12.6px;color:var(--s600);line-height:1.6">
+    18 places across <code>src/content/**</code>, <code>(marketing)/**</code>,
+    <code>deals/page.tsx</code> and the OG images say <b>Capital Readiness Rating</b>. They are all
+    B, all already correct, and none of them mention the completion measure — a visitor has no
+    account, so A does not exist for them.</p>
+  <p style="margin:0;font-size:12.6px;color:var(--s600);line-height:1.6">
+    <b>Two exceptions worth a look:</b> <code>deals/page.tsx:32</code> says &ldquo;Capital Readiness
+    <i>Score</i>&rdquo; where everywhere else says <i>Rating</i>; and
+    <code>(marketing)/readiness/page.tsx</code> uses the bare word &ldquo;readiness&rdquo; as
+    running prose (&ldquo;readiness is what iCapOS produces&rdquo;), which reads fine and should
+    stay — this audit is about <i>labels on numbers</i>, not the English word.</p>
+</div></div>
+
+<!-- ═════ WHAT DOESN'T CHANGE ═════ -->
+<div class="lbl">6 · Related fields — what deliberately stays as it is</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:40%">Identifier</th><th>Why it keeps its name</th></tr>
+    <tr><td><code>profiles.journey_stage</code> · <code>'qualify'</code></td>
+      <td>The stage key is <code>qualify</code> in the database and <b>Preparation</b> in the UI —
+        that mapping already exists in <code>STAGE_META</code>. Renaming the key touches migrations
+        for no user-visible gain.</td></tr>
+    <tr><td><code>StageConditions.readinessQualified</code></td>
+      <td>Field key, not a label. Renaming it touches 14 files and changes nothing anyone sees.
+        Only the display string moves.</td></tr>
+    <tr><td><code>company_readiness_scores</code> · <code>readiness_score</code></td>
+      <td>Table and column names. The <i>reader</i> is <code>crrFor()</code>; what it is called on
+        screen is set in one place above.</td></tr>
+    <tr><td><code>computeReadinessScore()</code></td>
+      <td>Function name. Its <i>output</i> is now labelled &ldquo;Preparation complete&rdquo;
+        everywhere. A comment on the function saying so is enough.</td></tr>
+    <tr><td><code>readinessBand</code> · <code>anonymized-cards.ts:18</code></td>
+      <td>API field consumed by investor match cards. The field stays; the visible
+        <i>label</i> above it becomes CRR.</td></tr>
+    <tr><td><code>lib/prescore/rubric.ts</code></td>
+      <td>The lead pre-score. Its own comment already forbids calling it CRR — leave it entirely
+        alone, and do not let &ldquo;CRR&rdquo; leak into voice or approach copy.</td></tr>
+  </table>
+</div></div>
+
+<!-- ═════ HOW IT STAYS FIXED ═════ -->
+<div class="note">
+  <b>How this stops drifting again.</b> <code>src/lib/crm/lexicon.ts</code> already locks
+  <code>capitalReadiness: "Capital Readiness Rating"</code> and has a unit test that fails the build
+  if a forbidden term appears — but it only polices <code>components/crm/**</code>. Extending the
+  same pattern is the smallest durable fix:
+  <ul class="t">
+    <li>Add <code>crrShort: "CRR"</code> and <code>preparationComplete: "Preparation complete"</code>
+      to the lexicon.</li>
+    <li>Add the bare string <code>"Readiness qualified"</code> to a forbidden list, plus bare
+      <code>"Readiness"</code> <i>as a standalone label</i>, so the ambiguous word cannot come back
+      as a column header or tile label.</li>
+    <li>Widen the existing lexicon test from <code>components/crm/**</code> to every founder,
+      investor and admin surface in the tables above.</li>
+  </ul>
+  Without that, the next dashboard adds a twelfth name.
+</div>
+
+<div class="note warn">
+  <b>Three genuine bugs this audit turned up</b>, separate from the renaming:
+  <ul class="t">
+    <li><code>stage-menu-mirror.ts:64</code> — an item labelled <b>Capital Readiness Rating</b>
+      whose condition reads the document count. The founder is told a CRR requirement is met when
+      what was measured was file uploads.</li>
+    <li><code>stage-gate-reminders.ts:46</code> — an email telling the founder to raise their
+      &ldquo;Capital Readiness score to 75&rdquo; when the gate it belongs to is the document count
+      and the CRR gate is 65.</li>
+    <li><code>CapitalReadinessSection.tsx:284</code> — the CRR explanation still describes the
+      retired 60/30/+5/+5 formula, so a founder following it will do work that cannot move the
+      number.</li>
+  </ul>
+  Each is a wrong statement to a user, not a style inconsistency.
+</div>
+
+</div>
+</body>
+</html>

@@ -39,12 +39,12 @@ export const GATE_DEFS: GateDef[] = [
   },
   {
     key: "readiness",
-    label: "Readiness qualified",
-    detail: "Score needs to reach 75",
+    label: "Preparation complete",
+    detail: "Needs to reach 75%",
     path: "/founder/readiness",
     met: (c) => c.readinessQualified,
-    ask: "raise your Capital Readiness score to 75 or higher — the diligence checklist shows the gaps to close",
-    steps: ["Open your readiness checklist", "Close the flagged gaps", "Upload documents that lift the score"],
+    ask: "finish your Preparation document set — it needs to reach 75% complete, and the diligence checklist shows exactly which documents are still missing",
+    steps: ["Open your Preparation checklist", "Close the flagged gaps", "Upload the remaining required documents"],
   },
   {
     key: "docs",

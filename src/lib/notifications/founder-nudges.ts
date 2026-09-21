@@ -73,8 +73,8 @@ export async function nudgeStalledPreparationFounders(): Promise<{ nudged: numbe
         await sendEmail({
           to: f.email,
           subject: "You're one step from investor matching",
-          html: `<p>Hi ${name},</p><p>You've done the hard part. Finish your <b>Preparation</b> checklist — your Capital Readiness score and your documents — and iCapOS will match you with investors from the iCFO network.</p><p><a href="${PREP_URL}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every iCapOS tool is free. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
-          text: `Hi ${name}, finish your Preparation checklist (readiness score + documents) to get matched with investors: ${PREP_URL}`,
+          html: `<p>Hi ${name},</p><p>You've done the hard part. Finish your <b>Preparation</b> checklist — your documents and the rest of your materials — and iCapOS will match you with investors from the iCFO network.</p><p><a href="${PREP_URL}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every iCapOS tool is free. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
+          text: `Hi ${name}, finish your Preparation checklist (documents and materials) to get matched with investors: ${PREP_URL}`,
           fromName: "iCapOS",
         });
       }
@@ -91,9 +91,9 @@ export async function nudgeStalledPreparationFounders(): Promise<{ nudged: numbe
 const STAGE_NUDGE: Record<string, { title: string; message: string; path: string; email: string }> = {
   qualify: {
     title: "You're one step from investor matching",
-    message: "Finish your Preparation checklist — your readiness score and documents — to get matched with investors.",
+    message: "Finish your Preparation checklist — your documents and materials — to get matched with investors.",
     path: "/founder/stages/preparation",
-    email: "Finish your <b>Preparation</b> checklist — your Capital Readiness score and your documents — and iCapOS will match you with investors from the iCFO network.",
+    email: "Finish your <b>Preparation</b> checklist — your documents and the rest of your materials — and iCapOS will match you with investors from the iCFO network.",
   },
   deploy: {
     title: "Keep your investor outreach moving",

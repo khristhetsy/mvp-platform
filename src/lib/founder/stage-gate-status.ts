@@ -85,7 +85,7 @@ export async function getJourneyOverview(
       if (state.approvalStatus === "pending") line = "Under review — we'll email you";
       else if (state.approvalStatus === "rejected") line = "Changes requested — resubmit";
       else if (!c.requiredDocsUploaded) line = "Upload your 3 core documents";
-      else if (!c.readinessQualified) line = `Readiness ${Math.round(c.readinessScore ?? 0)}/75 — a little more`;
+      else if (!c.readinessQualified) line = `Preparation ${Math.round(c.readinessScore ?? 0)}% of 75% — a little more`;
       else line = "Ready — submitting for review";
     } else if (slug === "marketing") line = c.hasDealRoom || c.hasInvestorInterest ? "In market" : "Open a data room to advance";
     else line = "Closing your round";
@@ -104,7 +104,7 @@ export async function getJourneyOverview(
     } else if (!c.requiredDocsUploaded) {
       nextAction = { title: "Upload your 3 core documents", description: "Pitch deck, financials, and cap table — the last requirements before investor matching.", cta: { label: "Upload documents", href: "/founder/qualify" }, secondaryCta: { label: "See what's left", href: "/founder/stages/preparation" } };
     } else if (!c.readinessQualified) {
-      nextAction = { title: `Reach a readiness of 75 — you're at ${Math.round(c.readinessScore ?? 0)}`, description: "A little more strengthens your materials and opens investor matching.", cta: { label: "Improve your readiness", href: "/founder/readiness" } };
+      nextAction = { title: `Reach 75% Preparation complete — you're at ${Math.round(c.readinessScore ?? 0)}%`, description: "A little more strengthens your materials and opens investor matching.", cta: { label: "Improve your Preparation", href: "/founder/readiness" } };
     } else {
       nextAction = { title: "You're ready — submitting for review", description: "We'll email you the moment Marketing opens.", cta: { label: "See your Preparation status", href: "/founder/stages/preparation" } };
     }
@@ -196,12 +196,12 @@ export async function getStageGateStatus(
         cta: { label: "Upload documents", href: "/founder/qualify" },
       },
       {
-        label: "Reach a Capital Readiness score of 75",
+        label: "Reach 75% Preparation complete",
         detail: c.readinessQualified
           ? undefined
-          : `You're at ${Math.round(c.readinessScore ?? 0)}.${missing ? ` Add your ${missing} to raise it.` : " Strengthen your materials to raise it."}`,
+          : `You're at ${Math.round(c.readinessScore ?? 0)}%.${missing ? ` Add your ${missing} to raise it.` : " Strengthen your materials to raise it."}`,
         state: c.readinessQualified ? "done" : "active",
-        cta: { label: "Improve your readiness", href: "/founder/readiness" },
+        cta: { label: "Improve your Preparation", href: "/founder/readiness" },
       },
     ];
     const review: GateReview | undefined =

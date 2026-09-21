@@ -141,7 +141,7 @@ export function FounderReadinessDonutCards({
     switch (key) {
       case "score":
         return {
-          title: "Completion",
+          title: "Preparation complete",
           sub: readinessDetail,
           stats: [
             { v: `${readinessScore}%`, l: "Complete" },
@@ -176,7 +176,7 @@ export function FounderReadinessDonutCards({
                 : "#A32D2D",
           })),
           meaning:
-            `Completion of ${readinessScore}% means ${readinessScore >= 80 ? "your profile is above the institutional benchmark — continue strengthening your data room" : `your core materials are present but key verification documents are missing. Institutional investors typically require 80%+ before taking a first meeting`}.`,
+            `Preparation complete of ${readinessScore}% means ${readinessScore >= 80 ? "your profile is above the institutional benchmark — continue strengthening your data room" : `your core materials are present but key verification documents are missing. Institutional investors typically require 80%+ before taking a first meeting`}.`,
           advice: scoreAdvice(),
           href: "/founder/readiness",
         };
@@ -316,7 +316,7 @@ export function FounderReadinessDonutCards({
   }[] = [
     {
       key: "score",
-      label: "Completion",
+      label: "Preparation complete",
       value: `${readinessScore}%`,
       detail: readinessDetail,
       pct: readinessScore / 100,

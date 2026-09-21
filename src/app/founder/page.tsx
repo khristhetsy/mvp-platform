@@ -155,7 +155,7 @@ export default async function FounderDashboardPage() {
   if (company) {
     const journeyState = await evaluateFounderJourney(supabase, profile.id);
     crrResult = investableCrrFrom(await crrFor(company.id), journeyState, company);
-    crrSubtitle = `Readiness ${crrResult.readiness} · Profile ${crrResult.profilePercent}%`;
+    crrSubtitle = `Preparation ${crrResult.readiness}% · Profile ${crrResult.profilePercent}%`;
     crrParts = {
       readiness: crrResult.readiness,
       profilePercent: crrResult.profilePercent,
@@ -174,7 +174,7 @@ export default async function FounderDashboardPage() {
   const matchedInvestorCount = investorFit?.approvedInvestorCount ?? investorFit?.strongMatchCount ?? 0;
   const glanceTiles: GlanceTile[] = company
     ? [
-        { label: "Readiness", value: String(readinessScore), valueClass: crrResult.outreachReady ? "text-emerald-600" : undefined, sub: crrResult.outreachReady ? "Outreach ready" : "Keep building", href: "/founder/readiness" },
+        { label: "Preparation complete", value: `${readinessScore}%`, valueClass: readinessScore >= 75 ? "text-emerald-600" : undefined, sub: readinessDetail, href: "/founder/readiness" },
         { label: "Matched investors", value: String(matchedInvestorCount), sub: "View pipeline →", href: "/founder/matches" },
         { label: "Pledged", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency), sub: company?.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined, href: "/founder/deal-room" },
         { label: "Investor activity", value: String(investorActivityTotal), sub: "Signals & intros", href: "/founder/matches" },

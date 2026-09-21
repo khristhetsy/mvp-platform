@@ -79,7 +79,7 @@ export function DiligenceReportCompare({
       </div>
 
       <div className="grid grid-cols-[160px_1fr_1fr] items-center gap-3 border-t border-slate-100 py-3">
-        <p className="text-xs font-semibold text-slate-500">Readiness score</p>
+        <p className="text-xs font-semibold text-slate-500">Preparation complete</p>
         <div className={`rounded-lg border p-3 text-lg font-semibold tabular-nums ${current.readiness_score !== previous.readiness_score ? "border-amber-200 bg-amber-50/50 text-slate-900" : "border-slate-200 bg-white text-slate-900"}`}>
           {current.readiness_score ?? "—"}
         </div>

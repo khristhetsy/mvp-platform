@@ -61,6 +61,12 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "One pager", href: "/founder/preview" },
   ],
   qualify: [
+    // NOTE: the label and the drawer (stage-diagnosis keys `crrDiagnosis` off
+    // this href) are both the CRR, but `condition` reads `readinessQualified` —
+    // the Preparation document-completion measure (75%), not the CRR engine gate
+    // (65). The row therefore reports a CRR requirement as met on the strength of
+    // file uploads. Left as-is deliberately: the fix is `crrQualified`, which
+    // arrives with the CRR stage gate, not with this label pass.
     { label: "Capital Readiness Rating", href: "/founder/readiness/wizard", condition: "readinessQualified" },
     { label: "Readiness checklist", href: "/founder/readiness" },
     { label: "Data room", href: "/founder/readiness/data-room" },

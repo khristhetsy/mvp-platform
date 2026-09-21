@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CRR Qualify — advance freely, gate by whose name is on it</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .cb{padding:15px}
+
+  .rec{background:#F0FDF9;border:1px solid #A7F3D0;border-left:3px solid var(--good);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+  .rec h2{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#065F46}
+  .rec p{margin:0 0 8px;font-size:12.9px;color:#134E4A;line-height:1.62}
+  .rec p:last-child{margin-bottom:0}
+  .rec b{color:#022C22}
+
+  /* tiers */
+  .tier{display:grid;grid-template-columns:34px 1fr 150px;gap:13px;align-items:start;padding:14px 0;border-bottom:1px solid var(--l100)}
+  .tier:last-child{border-bottom:none}
+  .tier .n{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+           font-size:13px;font-weight:700;color:#fff}
+  .n1{background:#059669}.n2{background:#4F46E5}.n3{background:#7C3AED}
+  .tier h4{margin:0 0 3px;font-size:13.5px;font-weight:650}
+  .tier p{margin:0;font-size:12.4px;color:var(--s600);line-height:1.55}
+  .tier .who{font-size:11.3px;color:var(--s500);margin-top:5px;line-height:1.5}
+  .tier .who b{color:var(--ink)}
+  .gate{text-align:right}
+  .gpill{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+         border-radius:99px;padding:3px 10px}
+  .g-open{background:#ECFDF5;color:#065F46}
+  .g-crr{background:#EEF2FF;color:#3730A3}
+  .g-both{background:#F5F3FF;color:#5B21B6}
+  .gate .sm{font-size:10.5px;color:var(--s400);margin-top:4px;line-height:1.4}
+
+  /* founder screen */
+  .screen{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .sbar{display:flex;align-items:center;gap:7px;background:#F8FAFC;border-bottom:1px solid var(--line);padding:7px 11px;font-size:10.5px;color:var(--s500)}
+  .sbody{padding:15px}
+  .qcard{border:1px solid #C7D2FE;background:linear-gradient(180deg,#EEF2FF 0%,#fff 62%);border-radius:11px;padding:14px}
+  .qhead{display:flex;align-items:center;gap:12px}
+  .qring{flex:none}
+  .qt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4F46E5}
+  .qs{font-size:16px;font-weight:700;margin-top:2px}
+  .qd{font-size:11.8px;color:var(--s500);margin-top:2px}
+  .track{height:7px;border-radius:99px;background:#E2E8F0;margin:12px 0 5px;position:relative;overflow:hidden}
+  .track .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#818CF8,#4F46E5);border-radius:99px}
+  .track .mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:#DC2626}
+  .tl{display:flex;justify-content:space-between;font-size:10px;color:var(--s400)}
+
+  .unlocks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+  .u{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
+  .u.on{border-color:#A7F3D0;background:#F0FDF9}
+  .u.off{border-style:dashed;background:#F8FAFC}
+  .u .ut{font-size:11.8px;font-weight:650;display:flex;align-items:center;gap:5px}
+  .u.on .ut{color:#065F46}
+  .u.off .ut{color:var(--s400)}
+  .u .ud{font-size:10.5px;color:var(--s500);margin-top:3px;line-height:1.45}
+
+  .fixes{margin-top:13px;border-top:1px solid #E0E7FF;padding-top:11px}
+  .fx{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12px}
+  .fx .pts{font-size:11px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;flex:none}
+  .fx .sp{flex:1;color:var(--s600)}
+  .fx .go{font-size:10.5px;color:#4F46E5}
+
+  .btnrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .btn{font-size:11.5px;border-radius:7px;padding:6px 12px;border:1px solid var(--line);background:#fff;color:var(--s600);text-decoration:none;display:inline-block}
+  .btn.pri{background:var(--ind);border-color:var(--ind);color:#fff}
+  .btn.dis{opacity:.45;border-style:dashed}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+
+  .risk{background:#fff;border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:13px 15px;font-size:12.6px;color:var(--s600);line-height:1.65;margin-top:12px}
+  .risk b{color:var(--ink)}
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>CRR Qualify</h1>
+<p class="sub">Advance the stage freely · gate by whose network and whose name · my recommendation</p>
+
+<div class="rec">
+  <h2>Short answer — yes, and here is the sharper reason</h2>
+  <p><b>Advance to Stage 3 regardless of score.</b> Your instinct is right, but &ldquo;encouragement&rdquo;
+     is not the strongest argument for it. The real one is this: <b>the three actions do not carry the
+     same risk, because they do not carry the same name.</b></p>
+  <p>A founder emailing <b>their own</b> investor list is using their own contacts and staking their own
+     reputation. iCapOS is not vouching for anything — so there is nothing for a CRR to protect, and no
+     reason to block it at any score.</p>
+  <p>Automated Outreach into <b>the platform&apos;s</b> investor data, from iCapOS&apos;s sending domain,
+     stakes <b>your</b> deliverability and <b>your</b> name. A brokered Introduction stakes it further
+     still — that is iCapOS personally telling an investor this company is worth their time.</p>
+  <p>So: gate on <b>whose network and whose name</b>, not on which stage the founder has reached.</p>
+</div>
+
+<div class="lbl">The three tiers</div>
+<div class="card"><div class="cb">
+  <div class="tier">
+    <span class="n n1">1</span>
+    <div>
+      <h4>The founder&apos;s own list</h4>
+      <p>Manual email to contacts they added themselves. Always open, at any CRR.</p>
+      <p class="who"><b>Whose data:</b> theirs — <code>founder_investor_contacts</code>, manual investors.
+        <b>Whose name:</b> theirs. <b>iCapOS vouches:</b> not at all.</p>
+    </div>
+    <div class="gate"><span class="gpill g-open">No gate</span>
+      <div class="sm">Nothing of yours is at stake</div></div>
+  </div>
+
+  <div class="tier">
+    <span class="n n2">2</span>
+    <div>
+      <h4>Automated Outreach</h4>
+      <p>Campaigns into the platform&apos;s investor data, sent from iCapOS infrastructure.</p>
+      <p class="who"><b>Whose data:</b> yours. <b>Whose name:</b> yours — your sending domain, your
+        deliverability. <b>iCapOS vouches:</b> implicitly, by letting it through.</p>
+    </div>
+    <div class="gate"><span class="gpill g-crr">CRR ≥ 65</span>
+      <div class="sm">Already gated this way today</div></div>
+  </div>
+
+  <div class="tier">
+    <span class="n n3">3</span>
+    <div>
+      <h4>Brokered Introduction</h4>
+      <p>You personally introduce the founder to a named investor.</p>
+      <p class="who"><b>Whose data:</b> yours. <b>Whose name:</b> yours, explicitly.
+        <b>iCapOS vouches:</b> directly — &ldquo;we think you should meet this company.&rdquo;</p>
+    </div>
+    <div class="gate"><span class="gpill g-both">CRR ≥ 65 + staff</span>
+      <div class="sm">Has no gate at all today</div></div>
+  </div>
+</div></div>
+
+<div class="lbl">What the founder sees at CRR 32, in Stage 3</div>
+<div class="screen">
+  <div class="sbar"><span>icapos.com/founder/dashboard · Stage 3 Marketing</span></div>
+  <div class="sbody">
+    <div class="qcard">
+      <div class="qhead">
+        <svg class="qring" width="62" height="62" viewBox="0 0 62 62">
+          <circle cx="31" cy="31" r="25" fill="none" stroke="#E2E8F0" stroke-width="7"/>
+          <circle cx="31" cy="31" r="25" fill="none" stroke="#4F46E5" stroke-width="7" stroke-linecap="round"
+                  stroke-dasharray="50 157" transform="rotate(-90 31 31)"/>
+          <text x="31" y="35" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">32</text>
+        </svg>
+        <div>
+          <div class="qt">Capital Readiness</div>
+          <div class="qs">Building</div>
+          <div class="qd">33 points from Qualified. You are in Marketing — nothing here is blocked that
+            depends only on you.</div>
+        </div>
+      </div>
+
+      <div class="track">
+        <div class="fill" style="width:32%"></div>
+        <div class="mark" style="left:65%"></div>
+      </div>
+      <div class="tl"><span>0</span><span style="color:#DC2626;font-weight:600">Qualified · 65</span><span>100</span></div>
+
+      <div class="unlocks">
+        <div class="u on">
+          <div class="ut">✓ Email your own investors</div>
+          <div class="ud">Your contacts, your name. Open now — most raises start here.</div>
+        </div>
+        <div class="u on">
+          <div class="ut">✓ Investor matches &amp; Matching Center</div>
+          <div class="ud">See who fits and what they look for. This is how the score moves.</div>
+        </div>
+        <div class="u off">
+          <div class="ut">🔒 Automated Outreach</div>
+          <div class="ud">Unlocks at Qualified — it sends from iCapOS to our investor network.</div>
+        </div>
+        <div class="u off">
+          <div class="ut">🔒 Brokered introductions</div>
+          <div class="ud">Unlocks at Qualified, then a person reviews it.</div>
+        </div>
+      </div>
+
+      <div class="fixes">
+        <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4F46E5;margin:0 0 5px">
+          Four fixes worth +43 — enough to qualify</p>
+        <div class="fx"><span class="pts">+16</span><span class="sp">Founder Integrity &amp; Team Depth — scoring 13.6 of 30</span><span class="go">Open →</span></div>
+        <div class="fx"><span class="pts">+14</span><span class="sp">Customer Traction &amp; LOIs — scoring 0 of 14</span><span class="go">Open →</span></div>
+        <div class="fx"><span class="pts">+7</span><span class="sp">Market &amp; Competitive Evidence — scoring 4.4 of 11</span><span class="go">Open →</span></div>
+        <div class="fx"><span class="pts">+6</span><span class="sp">IP Protection &amp; Competitive Moat — scoring 0 of 6</span><span class="go">Open →</span></div>
+      </div>
+
+      <div class="btnrow">
+        <a class="btn pri" href="#">Email my investors</a>
+        <a class="btn" href="#">See my matches</a>
+        <span class="btn dis">🔒 Automated Outreach</span>
+      </div>
+    </div>
+    <p style="font-size:11.5px;color:#64748B;margin:11px 0 0;line-height:1.6">
+      Same number as today. What changes is that it reads as <b>a door you are walking toward</b> rather
+      than a wall you failed to clear — and that the founder can see exactly what the door opens.
+    </p>
+  </div>
+</div>
+
+<div class="lbl">Why this beats blocking the stage</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:32%"></th><th>Block Stage 3 at CRR &lt; 65</th><th>CRR Qualify (recommended)</th></tr>
+    <tr>
+      <td><b>The diagnosis</b></td>
+      <td>The tools that show a founder what investors want — Matching Center, matches, fit signals —
+          live in Stage 3. Blocking them there means telling someone to improve while withholding the
+          instructions.</td>
+      <td>They reach the tools, see the gap themselves, and the score becomes something they can act on.</td>
+    </tr>
+    <tr>
+      <td><b>Momentum</b></td>
+      <td>A founder stuck at 32 with a wall and a number often just stops.</td>
+      <td>They start emailing their own list — the motion that most often produces the traction and LOIs
+          the score is missing.</td>
+    </tr>
+    <tr>
+      <td><b>Your name</b></td>
+      <td>Protected.</td>
+      <td>Equally protected. Nothing that sends from iCapOS or carries your endorsement moves an inch.</td>
+    </tr>
+    <tr>
+      <td><b>What the score means</b></td>
+      <td>&ldquo;Permission to exist on the platform.&rdquo;</td>
+      <td>&ldquo;Permission to use <i>our</i> network.&rdquo; Narrower, and far easier to defend to a
+          founder who disagrees with their score.</td>
+    </tr>
+  </table>
+</div></div>
+
+<div class="risk">
+  <b>The real risk in this design, named plainly.</b> A score that gates nothing gets ignored. If
+  &ldquo;Qualified&rdquo; only unlocks things founders do not want, the CRR becomes decoration and the
+  whole engine stops mattering. This survives that test only because access to <b>your</b> investor
+  network is the single thing founders most want from iCapOS — so the gate keeps its teeth exactly where
+  the teeth are worth having. If you ever find founders shrugging at Qualified, that is the signal the
+  tiering has drifted, not that the score needs to be stricter.
+</div>
+
+<div class="note">
+  <b>One rename, and it does real work.</b> &ldquo;CRR 32/100 · gate 65 · 33 short&rdquo; reads as a
+  verdict on the company. <b>Building → Qualified</b> reads as a path with a door at the end. Same
+  number, same threshold, and the founder now knows what the door opens rather than only that it is shut.
+  <br><br>
+  <b>Where I would still hold the line.</b> Brokered introductions should need CRR ≥ 65 <i>and</i> a
+  person — not because the score is untrustworthy, but because an introduction is the one action where
+  you cannot take it back. The founder can send a bad email to their own contact and only they pay for
+  it; an introduction you made badly costs you an investor relationship.
+  <br><br>
+  <b>Two things worth deciding alongside this.</b> Whether &ldquo;Qualified&rdquo; should notify the
+  founder the moment they cross it — the crossing is the most motivating moment in the whole journey and
+  currently nothing marks it. And whether dropping back below 65 should revoke access mid-campaign, or
+  only prevent starting a new one; revoking mid-flight is defensible but will feel arbitrary unless the
+  founder was warned as the score fell.
+</div>
+
+</div>
+</body>
+</html>

@@ -39,7 +39,9 @@ function approvalBadge(status: FounderJourneyState["approvalStatus"]) {
 function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
   const c = journey.conditions;
   const readinessDetail =
-    c.readinessScore != null ? `Score ${c.readinessScore} (needs ≥ 75)` : "No readiness score yet";
+    c.readinessScore != null
+      ? `${Math.round(c.readinessScore)}% complete (needs ≥ 75%)`
+      : "Not assessed yet";
   return [
     {
       key: "onboarding",
@@ -56,15 +58,15 @@ function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
     },
     {
       key: "readiness",
-      label: "Readiness qualified",
+      label: "Preparation complete",
       detail: readinessDetail,
       met: c.readinessQualified,
       why: c.readinessQualified
-        ? "Readiness clears the 75 qualify threshold."
-        : "Readiness is below the 75 threshold needed to qualify.",
+        ? "The Preparation document set clears the 75% threshold. This measures how much is filled in, not how good it is — the Capital Readiness Rating is the quality judgement."
+        : "The Preparation document set is below the 75% threshold. This measures how much is filled in, not how good it is — the Capital Readiness Rating is the quality judgement.",
       points: c.readinessQualified
-        ? ["Above the qualify threshold", "Documents drive the readiness score"]
-        : ["Upload the remaining required documents", "Generate a diligence report to lift the score"],
+        ? ["Above the 75% threshold", "Document types present drive this figure"]
+        : ["Upload the remaining required documents", "Generate a diligence report to lift the figure"],
       action: c.readinessQualified ? undefined : { label: "Open reports", href: `/admin/reports?companyId=${companyId}&reportType=due_diligence` },
     },
     {
