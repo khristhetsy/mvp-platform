@@ -104,7 +104,13 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
           value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
           detail={readiness.milestoneLabel}
           accent="indigo"
+          unit={`onboarding ${readiness.onboardingPercent}%`}
           ring={{ percent: readiness.latestScore, center: readiness.latestScore != null ? String(readiness.latestScore) : "—" }}
+          flag={
+            readiness.latestScore == null
+              ? { text: "No diligence report has been run for this company.", tone: "warn" }
+              : null
+          }
         />,
       )}
       {drill(
@@ -119,8 +125,16 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
           }
           accent="blue"
           status={data.investable ? "info" : "neutral"}
+          unit={`gate ${OUTREACH_GATE}`}
           // The gate tick is the point of this ring: it turns the score into a distance.
           ring={{ percent: crrScore, center: crrScore != null ? String(crrScore) : "—", sublabel: "/100", gate: OUTREACH_GATE }}
+          flag={
+            crrScore == null
+              ? { text: `The engine has never run — outreach stays locked until it scores ${OUTREACH_GATE}.`, tone: "warn" }
+              : crrScore < OUTREACH_GATE
+                ? { text: `${OUTREACH_GATE - crrScore} points to unlock investor outreach.`, tone: "warn" }
+                : { text: "Outreach gate cleared.", tone: "good" }
+          }
         />,
       )}
       {drill(
@@ -131,6 +145,14 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
           detail={`${readiness.remediation.completed} closed of ${readiness.remediation.total} · ${readiness.remediation.highPriorityOpen} high priority`}
           accent="violet"
           status={readiness.remediation.active > 0 ? "warning" : "success"}
+          unit={`${readiness.remediation.completed} closed of ${readiness.remediation.total}`}
+          flag={
+            readiness.remediation.highPriorityOpen > 0
+              ? { text: `${readiness.remediation.highPriorityOpen} high priority still open.`, tone: "bad" }
+              : readiness.remediation.active > 0
+                ? { text: "None are high priority.", tone: "good" }
+                : null
+          }
           // A bare "8" has no scale. The ring fills as tasks close.
           ring={{
             percent: readiness.remediation.total > 0 ? Math.round((readiness.remediation.completed / readiness.remediation.total) * 100) : null,
@@ -147,6 +169,12 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
         detail={`${data.investorActivity.introRequests} intro requests`}
         accent="blue"
         href={buildCompanyFilteredHref("/admin/crm", companyId)}
+        unit={`${data.investorActivity.introRequests} intro requests`}
+        flag={
+          data.investorActivity.interests === 0
+            ? { text: "No investor has seen this company yet.", tone: "warn" }
+            : null
+        }
         // No ceiling to measure against: a dashed ring beats an invented arc.
         ring={{
           percent: null,
@@ -160,6 +188,14 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
         value={String(data.compliance.openCount)}
         detail={`${data.compliance.totalCount - data.compliance.openCount} resolved of ${data.compliance.totalCount} · ${data.compliance.criticalCount} critical`}
         accent="slate"
+        unit={`${data.compliance.totalCount - data.compliance.openCount} resolved of ${data.compliance.totalCount}`}
+        flag={
+          data.compliance.criticalCount > 0
+            ? { text: `${data.compliance.criticalCount} critical.`, tone: "bad" }
+            : data.compliance.openCount === 0
+              ? { text: "Nothing outstanding.", tone: "good" }
+              : null
+        }
         ring={{
           percent: data.compliance.totalCount > 0
             ? Math.round(((data.compliance.totalCount - data.compliance.openCount) / data.compliance.totalCount) * 100)

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One column — all cards, all modules</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:26px 0 9px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #4F46E5;border-radius:8px;padding:13px 15px;margin-bottom:8px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#4338CA}
+  .why ul{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .why li{margin-bottom:4px}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  /* section */
+  .sec{margin-bottom:20px}
+  .hd{display:flex;align-items:center;gap:11px;border-bottom:2px solid var(--line);padding-bottom:8px;margin-bottom:13px}
+  .hd .ar{color:#94A3B8;font-size:11px}
+  .hd i{font-style:normal;font-size:16px}
+  .hd .t h2{margin:0;font-size:13.5px;font-weight:650}
+  .hd .t p{margin:1px 0 0;font-size:11.5px;color:var(--s500)}
+  .hd .sp{flex:1}
+  .b{border-radius:8px;border:1px solid var(--line);background:#fff;color:#334155;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+
+  /* ONE COLUMN stack */
+  .stack{display:flex;flex-direction:column;gap:10px}
+
+  /* wide metric row: ring left, label+value, supporting right */
+  .mrow{display:flex;align-items:center;gap:15px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px 16px}
+  .mrow .ring{flex:none}
+  .mrow .m{min-width:190px}
+  .mrow .cap{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s400)}
+  .mrow .val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:2px}
+  .mrow .det{flex:1;font-size:12.5px;color:var(--s600)}
+  .mrow .det b{color:var(--ink)}
+  .mrow .go{font-size:12px;font-weight:600;color:#4F46E5;white-space:nowrap}
+  .g{color:#059669}.a{color:#B45309}.r{color:#DC2626}.m0{color:#94A3B8}
+  .warn{display:inline-block;margin-top:3px;font-size:11.5px;color:#B45309}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+  .panel h3{margin:0 0 4px;font-size:12.5px;font-weight:650}
+  .panel p{margin:0;font-size:12px;color:var(--s500)}
+
+  /* old, for contrast */
+  .old{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .oc{background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px}
+  .oc .cap{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s400)}
+  .oc .val{font-size:18px;font-weight:700;margin-top:6px}
+  .oc .det{font-size:11px;color:var(--s500);margin-top:3px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #059669;border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:16px}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>One column — all cards, all modules</h1>
+<p class="sub">Admin → company workspace → Tinski Tech. Every card full width, stacked.</p>
+
+<div class="why">
+  <h2>What changes, and where</h2>
+  <ul>
+    <li><b>Four grid helpers drive nearly every card layout</b> — <code>MetricGrid</code> (4-up, 5 files),
+      <code>MetricGridWide</code> (3-up), <code>ContentGrid</code> (2–3 up, 3 files), plus one inline
+      <code>grid gap-6 xl:grid-cols-2</code> in the company workspace. Change those and the whole platform follows.</li>
+    <li><b>A full-width card has room the tiles never had.</b> The ring, the number and the supporting sentence fit on
+      one line, so "8" becomes "8 open of 42 · 2 high priority · 4 closed this week" without wrapping.</li>
+    <li><b>The honest cost:</b> five stacked cards are taller than one row of five, so the sections below get pushed
+      down. Mitigated by making the rows compact — roughly 62px each rather than a 140px tile.</li>
+  </ul>
+</div>
+
+<div class="lbl">Now — 4-up tiles</div>
+<div class="old">
+  <div class="oc"><div class="cap">Completion</div><div class="val m0">—</div><div class="det">Foundation Ready</div></div>
+  <div class="oc"><div class="cap">Capital Readiness</div><div class="val m0">—</div><div class="det">Not yet scored</div></div>
+  <div class="oc"><div class="cap">Open remediation</div><div class="val">14</div><div class="det">4 closed of 18</div></div>
+  <div class="oc"><div class="cap">Investor interests</div><div class="val m0">0</div><div class="det">0 intro requests</div></div>
+</div>
+
+<div class="lbl">Proposed — one column</div>
+
+<!-- AT A GLANCE -->
+<div class="sec">
+  <div class="hd">
+    <span class="ar">▾</span><i>◷</i>
+    <div class="t"><h2>At a glance</h2><p>The company&apos;s current health</p></div>
+    <span class="sp"></span>
+    <button class="b">✉ Reach out to founder</button>
+  </div>
+  <div class="stack">
+
+    <div class="mrow">
+      <svg class="ring" width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#EEEDFE" stroke-width="5.75"/><text x="23" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#94A3B8">—</text></svg>
+      <div class="m"><div class="cap">Completion</div><div class="val m0">Not scored</div></div>
+      <div class="det">Foundation Ready · onboarding <b>100%</b> · no diligence report has been run for this company yet.</div>
+      <span class="go">Open readiness →</span>
+    </div>
+
+    <div class="mrow">
+      <svg class="ring" width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#EEEDFE" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#CBD5E1" stroke-width="5.75" stroke-dasharray="2 5" stroke-linecap="round"/><line x1="11.6" y1="31.4" x2="6.2" y2="35.2" stroke="#DC2626" stroke-width="1.8"/><text x="23" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#94A3B8">—</text></svg>
+      <div class="m"><div class="cap">Capital Readiness Rating</div><div class="val m0">Not yet scored</div></div>
+      <div class="det">The engine has never run for Tinski Tech. <span class="warn">⚠ Outreach stays locked until it scores <b>65</b>.</span></div>
+      <span class="go">Run the score →</span>
+    </div>
+
+    <div class="mrow">
+      <svg class="ring" width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#FEE2E2" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 36.6 32.6" fill="none" stroke="#D97706" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">14</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">of 18</text></svg>
+      <div class="m"><div class="cap">Open remediation</div><div class="val a">14 open</div></div>
+      <div class="det"><b>4</b> closed of <b>18</b> tracked · <b>4</b> high priority. <span class="warn">⚠ The oldest has been open 46 days.</span></div>
+      <span class="go">Open queue →</span>
+    </div>
+
+    <div class="mrow">
+      <svg class="ring" width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#CBD5E1" stroke-width="5.75" stroke-dasharray="2 5" stroke-linecap="round"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#94A3B8">0</text></svg>
+      <div class="m"><div class="cap">Investor interests</div><div class="val m0">None yet</div></div>
+      <div class="det">0 intro requests · outreach is locked, so no investor has seen this company.</div>
+      <span class="go">Open CRM →</span>
+    </div>
+
+    <div class="mrow">
+      <svg class="ring" width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#059669" stroke-width="5.75"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">0</text></svg>
+      <div class="m"><div class="cap">Open compliance</div><div class="val g">All clear</div></div>
+      <div class="det">0 open of 0 raised · 0 critical. Nothing has ever been flagged for this company.</div>
+      <span class="go">Open compliance →</span>
+    </div>
+  </div>
+</div>
+
+<!-- WHERE THEY ARE -->
+<div class="sec">
+  <div class="hd">
+    <span class="ar">▾</span><i>⤳</i>
+    <div class="t"><h2>Where they are</h2><p>Current stage, gates, and what&apos;s pending to advance</p></div>
+    <span class="sp"></span>
+    <button class="b">✉ Reach out to founder</button>
+  </div>
+  <div class="stack">
+    <div class="panel"><h3>Stage stepper</h3><p>Full width — the four stages get room to show dates instead of truncating.</p></div>
+    <div class="panel"><h3>Founder&apos;s Preparation menu</h3><p>Already full width; unchanged.</p></div>
+  </div>
+</div>
+
+<!-- QUALIFY TAB PAIR -->
+<div class="sec">
+  <div class="hd">
+    <span class="ar">▾</span><i>☰</i>
+    <div class="t"><h2>Preparation tab — the paired panels</h2><p>Today: <code>grid gap-6 xl:grid-cols-2</code></p></div>
+  </div>
+  <div class="stack">
+    <div class="panel"><h3>Readiness</h3><p>Source: diligence reports, onboarding, remediation</p></div>
+    <div class="panel"><h3>Compliance</h3><p>Source: compliance_events</p></div>
+    <div class="panel"><h3>Documents &amp; diligence</h3><p>Source: documents, diligence_reports</p></div>
+    <div class="panel"><h3>Business plan</h3><p>Founder&apos;s AI-assisted plan</p></div>
+  </div>
+</div>
+
+<div class="note">
+  <b>One change, four helpers.</b> <code>MetricGrid</code> and <code>MetricGridWide</code> become a vertical stack,
+  <code>ContentGrid</code> defaults to <code>columns={1}</code>, and the inline
+  <code>xl:grid-cols-2</code> in the workspace drops to one. Every module that uses them follows without edits.
+  <br><br>
+  <b>The card itself has to change shape too</b>, or you get a 140px-tall tile stretched across 1000px of nothing.
+  The metric becomes a row: ring, then label and value, then the supporting sentence filling the space, then the
+  drill-down link right-aligned. That is what buys the extra detail — "14 open of 18 tracked · 4 high priority ·
+  oldest open 46 days" doesn&apos;t fit in a quarter-width tile.
+  <br><br>
+  <b>Worth deciding:</b> whether this applies on every breakpoint or only below a width. Full width on a 27-inch
+  monitor gives a very long line; capping the row content at ~900px keeps it readable while the card stays full
+  width.
+</div>
+
+</div>
+</body>
+</html>
