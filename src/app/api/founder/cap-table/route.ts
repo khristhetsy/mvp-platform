@@ -4,6 +4,7 @@ import { gateCapTableApi } from "@/lib/cap-table/gate";
 import { getCapTable, upsertCapTable } from "@/lib/cap-table/store";
 import { defaultHolders } from "@/lib/cap-table/compute";
 import type { Holder, RoundModel } from "@/lib/cap-table/types";
+import { emitActivity } from "@/lib/activity/emit";
 
 export const dynamic = "force-dynamic";
 
@@ -68,10 +69,28 @@ export async function PUT(req: Request): Promise<Response> {
   if ("error" in g) return g.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = (await req.json().catch(() => ({}))) as { holders?: unknown; round?: unknown };
+    const holders = sanitizeHolders(body.holders);
     const saved = await upsertCapTable(g.supabase, g.company.id, g.profile.id, {
-      holders: sanitizeHolders(body.holders),
+      holders,
       round: sanitizeRound(body.round),
     });
+
+    emitActivity({
+      classKey: "cap_table_changed",
+      actorUserId: g.profile.id,
+      actorRole: "founder",
+      companyId: g.company.id,
+      entityType: "cap_table",
+      entityId: g.company.id,
+      sourceModule: "cap-table",
+      title: `Saved the cap table — ${holders.length} shareholder${holders.length === 1 ? "" : "s"}`,
+      metadata: { shareholder_count: holders.length },
+      // The cap table is edited in a live grid; without a window every keystroke
+      // that autosaves would be its own alert.
+      dedupeKey: `activity-cap-table:${g.company.id}`,
+      dedupeWindowMinutes: 30,
+    });
+
     return NextResponse.json({ ok: true, updatedAt: saved.updatedAt });
   } catch (err) {
     Sentry.captureException(err);

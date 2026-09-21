@@ -21,6 +21,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { documentUploadSchema } from "@/lib/validation";
 import { getUploadLimits } from "@/lib/settings/platform-settings";
 import { validateFile, PDF_ONLY } from "@/lib/uploads/policy";
+import { emitActivity } from "@/lib/activity/emit";
 
 const uploadErrorMessages: Record<number, string> = {
   400: "Upload failed due to invalid input. Please check the file and try again.",
@@ -439,6 +440,24 @@ export async function POST(request: Request) {
         documentType: normalizedDocumentType,
         bucket,
       },
+    });
+  }
+
+  // Account activity: staff holding the founder's stage hear about this. A
+  // replaced deck in Preparation is progress; the same upload in Closing, after
+  // investors have read the old one, is a problem — which is why the event
+  // carries the stage rather than just the document type.
+  if (documentId && companyId) {
+    emitActivity({
+      classKey: "document_changed",
+      actorUserId: auth.profile.id,
+      actorRole: "founder",
+      companyId,
+      entityType: "document",
+      entityId: documentId,
+      sourceModule: "documents-upload",
+      title: `${operation === "update" ? "Replaced" : "Uploaded"} ${label || normalizedDocumentType.replace(/_/g, " ").toLowerCase()}`,
+      metadata: { document_type: normalizedDocumentType, operation },
     });
   }
 

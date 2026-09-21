@@ -10,6 +10,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { userHasCompanyAccess } from "@/lib/onboarding/ensure-founder-setup";
+import { emitActivity } from "@/lib/activity/emit";
 
 const schema = z.object({
   status: z.enum(["archived", "uploaded"]).optional(),
@@ -43,5 +44,43 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     entityId: id,
     metadata: { company_id: doc.company_id, document_type: doc.document_type, ...patch },
   });
+
+  // Archiving removes the file from the category, the report and the data room.
+  // Nothing is deleted from storage, but as far as an investor is concerned the
+  // document is gone — so it is treated as the destructive class, which goes to
+  // compliance and never waits for a digest.
+  // `document_type` is nullable on the row even though every real document has
+  // one; without this the label would read "undefined" in the alert.
+  const docLabel = (doc.document_type ?? "document").replace(/_/g, " ").toLowerCase();
+
+  if (patch.status === "archived") {
+    emitActivity({
+      classKey: "document_deleted",
+      actorUserId: auth.profile.id,
+      actorRole: "founder",
+      companyId: doc.company_id,
+      entityType: "document",
+      entityId: id,
+      sourceModule: "documents-patch",
+      title: `Removed ${docLabel} from the data room`,
+      metadata: { document_type: doc.document_type },
+    });
+  } else if (patch.status === "uploaded" || patch.label !== undefined) {
+    emitActivity({
+      classKey: "document_changed",
+      actorUserId: auth.profile.id,
+      actorRole: "founder",
+      companyId: doc.company_id,
+      entityType: "document",
+      entityId: id,
+      sourceModule: "documents-patch",
+      title:
+        patch.status === "uploaded"
+          ? `Restored ${docLabel}`
+          : `Renamed a ${docLabel} file`,
+      metadata: { document_type: doc.document_type },
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account activity — fold/unfold, staff assignment, per-stage</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 9px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .ch .cnt{font-size:11px;color:var(--s500)}
+  .btn{font-size:12px;border:1px solid var(--line);background:#fff;color:var(--s600);border-radius:7px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+  .btn.pri{background:var(--ind);border-color:var(--ind);color:#fff}
+  .cb{padding:13px 15px}
+
+  /* ---------- fold / unfold ---------- */
+  details{border-bottom:1px solid var(--l100)}
+  details:last-of-type{border-bottom:none}
+  summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 15px}
+  summary::-webkit-details-marker{display:none}
+  .caret{width:9px;height:9px;border-right:2px solid var(--s400);border-bottom:2px solid var(--s400);
+         transform:rotate(-45deg);transition:transform .15s;flex:none;margin-left:2px}
+  details[open] > summary .caret{transform:rotate(45deg)}
+  summary .sname{font-size:13px;font-weight:650;flex:none}
+  summary .sgrow{flex:1;min-width:0}
+  .stagepill{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;padding:2px 8px}
+  .st1{background:#EEF2FF;color:#3730A3}
+  .st2{background:#ECFEFF;color:#0E7490}
+  .st3{background:#FFF7ED;color:#9A3412}
+  .st4{background:#ECFDF5;color:#065F46}
+  .dbody{padding:2px 15px 14px 34px}
+
+  /* assignee faces */
+  .who{display:flex;align-items:center;gap:-6px}
+  .av{width:23px;height:23px;border-radius:99px;font-size:9.5px;font-weight:700;color:#fff;
+      display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-7px}
+  .av:first-child{margin-left:0}
+  .av.add{background:#fff;color:var(--s400);border:1px dashed var(--line);font-size:13px;font-weight:400}
+  .a1{background:#4F46E5}.a2{background:#0891B2}.a3{background:#EA580C}.a4{background:#059669}.a5{background:#7C3AED}
+
+  /* activity rows */
+  .row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--l100);align-items:flex-start}
+  .row:last-child{border-bottom:none}
+  .dot{width:7px;height:7px;border-radius:99px;margin-top:6px;flex:none}
+  .row .t{font-size:12.6px}
+  .row .m{font-size:11.3px;color:var(--s500);margin-top:1px}
+  .row .body{flex:1;min-width:0}
+  .when{font-size:11px;color:var(--s400);white-space:nowrap;margin-top:1px}
+  .pill{font-size:9.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px;white-space:nowrap}
+  .p-f{background:#EEF2FF;color:#3730A3}.p-i{background:#ECFDF5;color:#065F46}.p-s{background:#F1F5F9;color:#475569}
+  mark{background:#FEF08A;padding:0 1px;border-radius:2px}
+
+  /* prefs grid */
+  .prow{display:grid;grid-template-columns:1fr 54px 54px 54px 118px;gap:8px;align-items:center;
+        padding:7px 0;border-bottom:1px solid var(--l100);font-size:12.4px}
+  .prow:last-child{border-bottom:none}
+  .prow.head{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s400);
+             border-bottom:1px solid var(--line);padding-bottom:6px}
+  .prow .d{font-size:11px;color:var(--s500);margin-top:1px}
+  .sw{width:32px;height:18px;border-radius:99px;background:#CBD5E1;position:relative;margin:0 auto;display:block}
+  .sw.on{background:var(--ind)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:99px;background:#fff}
+  .sw.on::after{left:16px}
+  .sw.na{background:#F8FAFC;border:1px dashed var(--line)}
+  .sw.na::after{display:none}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px}
+  .seg span{padding:5px 11px;color:var(--s600);border-right:1px solid var(--line)}
+  .seg span:last-child{border-right:none}
+  .seg span.on{background:var(--ind);color:#fff;font-weight:600}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:16px;line-height:1.62}
+  .note b{color:var(--ink)}
+  .note code,.why code,.cb code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;
+       padding:13px 15px;margin-bottom:12px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 7px;font-size:12.5px;color:var(--s600)}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:var(--ink)}
+
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;
+          padding:6px 10px;font-size:12.5px;color:var(--s500);background:#fff;margin-bottom:9px}
+  .search .typed{color:var(--ink);font-weight:600}
+  .schip{font-size:11px;color:var(--s500);margin-bottom:4px}
+  .schip b{color:var(--ink)}
+
+  /* staff picker popover */
+  .pop{border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.10);
+       width:310px;padding:10px}
+  .pop h4{margin:0 0 3px;font-size:12px;font-weight:650}
+  .pop .ph{font-size:11px;color:var(--s500);margin:0 0 9px}
+  .sf{display:flex;align-items:center;gap:9px;padding:6px 4px;border-radius:7px;font-size:12.3px}
+  .sf.sel{background:#EEF2FF}
+  .sf .r{font-size:10.5px;color:var(--s500)}
+  .sf .ck{margin-left:auto;color:var(--ind);font-weight:700}
+  .sf .no{margin-left:auto;font-size:10px;color:var(--s400)}
+  .two{display:grid;grid-template-columns:1fr 340px;gap:12px;align-items:start}
+  .tag{display:inline-block;font-size:10.5px;background:var(--l100);color:var(--s600);border-radius:6px;padding:1px 6px;margin-left:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Account activity — folded by stage, routed to a named person</h1>
+<p class="sub">Mockup v2 · adds fold/unfold, staff assignment, and the four founder stages · nothing built</p>
+
+<div class="why">
+  <h2>Unchanged from v1 — the constraint this sits on</h2>
+  <p>Of the <b>115 founder and investor API routes, 6 emit an event.</b> The four stages below are real
+     (<code>initialize → qualify → deploy → optimize</code>, labelled Onboarding / Preparation / Marketing /
+     Closing) and every item listed under each one is a surface that already exists in
+     <code>STAGE_MENU</code> — but almost none of them write an activity row today. The design assumes they will.</p>
+</div>
+
+<!-- ============ 1. THE FEED, FOLDED BY STAGE ============ -->
+<div class="lbl">1 · Admin → Activity · folded by the founder&apos;s stage</div>
+
+<div class="card">
+  <div class="ch">
+    <h3>All account activity</h3><span class="sp"></span>
+    <span class="cnt">14 of 214</span>
+    <button class="btn">Collapse all</button>
+    <button class="btn">Expand all</button>
+    <button class="btn pri">Mark all seen</button>
+  </div>
+  <div class="cb" style="padding-bottom:4px">
+    <div class="search">🔎 <span class="typed">tinski</span><span style="color:#CBD5E1">|</span></div>
+    <div class="schip"><b>14 of 214</b> · matched on company, actor, entity, stage · filters as you type ·
+      folds stay open across a search so a match is never hidden inside a closed section</div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <details open>
+    <summary>
+      <span class="caret"></span>
+      <span class="stagepill st1">Stage 1 · Onboarding</span>
+      <span class="sname">3 events</span>
+      <span class="sgrow" style="font-size:11.5px;color:#64748B">Company profile · My Progress · Action Center · One pager</span>
+      <span class="who" title="Assigned"><span class="av a1">KT</span><span class="av a2">DR</span></span>
+      <button class="btn">Assign</button>
+    </summary>
+    <div class="dbody">
+      <div class="row"><span class="dot" style="background:#64748B"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> completed onboarding for <b><mark>Tinski</mark> Tech</b><span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/onboarding · 9 of 9 steps · advances initialize → qualify</div></div><span class="when">2d ago</span></div>
+      <div class="row"><span class="dot" style="background:#64748B"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> edited the business summary<span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/settings · 312 → 487 chars · <u>view diff</u></div></div><span class="when">5h ago</span></div>
+      <div class="row"><span class="dot" style="background:#B45309"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> published the one-pager<span class="pill p-f">Founder</span></div>
+        <div class="m">/f/tinski-tech · now publicly reachable</div></div><span class="when">4h ago</span></div>
+    </div>
+  </details>
+
+  <!-- STAGE 2 -->
+  <details open>
+    <summary>
+      <span class="caret"></span>
+      <span class="stagepill st2">Stage 2 · Preparation</span>
+      <span class="sname">6 events</span>
+      <span class="sgrow" style="font-size:11.5px;color:#64748B">CRR · Checklist · Data room · Documents · Business plan · Pitch deck · Financial model · Cap table · Valuation</span>
+      <span class="who"><span class="av a1">KT</span><span class="av a3">SM</span><span class="av a4">PL</span></span>
+      <button class="btn">Assign</button>
+    </summary>
+    <div class="dbody">
+      <div class="row"><span class="dot" style="background:#DC2626"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> removed <b>2 files</b> from the data room<span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/readiness/data-room · Cap table v1.xlsx, 2025 P&amp;L.pdf · deletions always alert</div></div><span class="when">3h ago</span></div>
+      <div class="row"><span class="dot" style="background:#B45309"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> replaced <b>Pitch deck</b><span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/pitch-deck · v3 supersedes v2 · 4.1 MB · re-triggers CRR scoring</div></div><span class="when">18m ago</span></div>
+      <div class="row"><span class="dot" style="background:#DC2626"></span><div class="body">
+        <div class="t">CRR fell <b>71 → 64</b> on <b><mark>Tinski</mark> Tech</b><span class="pill p-s">System</span></div>
+        <div class="m">crr engine · Documents factor · now <b>below the 65 outreach gate</b></div></div><span class="when">17m ago</span></div>
+      <div class="row"><span class="dot" style="background:#B45309"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> changed the cap table<span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/cap-table · added 1 shareholder · fully-diluted 100% → 100%</div></div><span class="when">1d ago</span></div>
+      <div class="row"><span class="dot" style="background:#64748B"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> saved a valuation scenario<span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/valuation · pre-money $4.2M</div></div><span class="when">1d ago</span></div>
+      <div class="row"><span class="dot" style="background:#64748B"></span><div class="body">
+        <div class="t"><b>khris</b> acted on behalf of <b>Martin Goldberg</b> for 11 min<span class="pill p-s">Staff</span></div>
+        <div class="m">act_on_behalf · 4 pages · 0 writes · already recorded today</div></div><span class="when">yesterday</span></div>
+    </div>
+  </details>
+
+  <!-- STAGE 3 -->
+  <details>
+    <summary>
+      <span class="caret"></span>
+      <span class="stagepill st3">Stage 3 · Marketing</span>
+      <span class="sname">4 events</span>
+      <span class="sgrow" style="font-size:11.5px;color:#64748B">Matches · Matching Center · Outreach · Investor CRM · Events · Marketplace</span>
+      <span class="who"><span class="av a3">SM</span><span class="av add">+</span></span>
+      <button class="btn">Assign</button>
+    </summary>
+    <div class="dbody">
+      <div class="row"><span class="dot" style="background:#059669"></span><div class="body">
+        <div class="t"><b>Anne Whitcombe</b> moved <b><mark>Tinski</mark> Tech</b> Watchlist → Diligence<span class="pill p-i">Investor</span></div>
+        <div class="m">investor_interests · notifies the founder&apos;s IR view</div></div><span class="when">1h ago</span></div>
+      <div class="row"><span class="dot" style="background:#B45309"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> launched an outreach campaign to <b>38 investors</b><span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/deploy · sends at 09:00 · CRR 64 is <b>under the gate</b></div></div><span class="when">40m ago</span></div>
+      <div class="row"><span class="dot" style="background:#059669"></span><div class="body">
+        <div class="t"><b>Anne Whitcombe</b> requested an intro<span class="pill p-i">Investor</span></div>
+        <div class="m">/investor/intro-requests · awaiting staff approval</div></div><span class="when">55m ago</span></div>
+      <div class="row"><span class="dot" style="background:#64748B"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> listed on the marketplace<span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/private-market · visible to 412 investors</div></div><span class="when">2d ago</span></div>
+    </div>
+  </details>
+
+  <!-- STAGE 4 -->
+  <details>
+    <summary>
+      <span class="caret"></span>
+      <span class="stagepill st4">Stage 4 · Closing</span>
+      <span class="sname">1 event</span>
+      <span class="sgrow" style="font-size:11.5px;color:#64748B">Deal Room · Offering type · SPVs &amp; closings · Capital Raise · Updates · Milestones · Analytics</span>
+      <span class="who"><span class="av a1">KT</span><span class="av a5">RV</span></span>
+      <button class="btn">Assign</button>
+    </summary>
+    <div class="dbody">
+      <div class="row"><span class="dot" style="background:#DC2626"></span><div class="body">
+        <div class="t"><b>Martin Goldberg</b> changed the offering type after an SPV had opened<span class="pill p-f">Founder</span></div>
+        <div class="m">/founder/offering-type · SAFE → Priced equity · <b>2 participations already signed</b></div></div><span class="when">6h ago</span></div>
+    </div>
+  </details>
+</div>
+
+<!-- ============ 2. PREFERENCES, PER STAGE ============ -->
+<div class="lbl">2 · Account activity alerts · one block per stage, folded</div>
+
+<div class="two">
+<div>
+
+  <div class="card">
+    <div class="ch"><h3>Account activity alerts</h3><span class="sp"></span>
+      <span class="cnt">4 stages · 21 classes</span>
+      <button class="btn">Collapse all</button><button class="btn">Reset</button></div>
+
+    <!-- stage 1 prefs -->
+    <details open>
+      <summary><span class="caret"></span><span class="stagepill st1">Stage 1 · Onboarding</span>
+        <span class="sgrow" style="font-size:11.5px;color:#64748B">4 classes</span>
+        <span class="who"><span class="av a1">KT</span><span class="av a2">DR</span></span></summary>
+      <div class="dbody">
+        <div class="prow head"><span></span><span>App</span><span>Mail</span><span>Digest</span><span>Goes to</span></div>
+        <div class="prow"><div>Onboarding completed<div class="d">all 9 steps · advances the stage</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Profile edited<div class="d">summary, industries, team, highlights, logo</div></div>
+          <span class="sw on"></span><span class="sw"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Capital ask / valuation changed<div class="d">feeds the CRR Capital factor</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>One-pager published or unpublished<div class="d">/f/&lt;slug&gt; goes public</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>Compliance</b></span></div>
+      </div>
+    </details>
+
+    <!-- stage 2 prefs -->
+    <details open>
+      <summary><span class="caret"></span><span class="stagepill st2">Stage 2 · Preparation</span>
+        <span class="sgrow" style="font-size:11.5px;color:#64748B">6 classes</span>
+        <span class="who"><span class="av a1">KT</span><span class="av a3">SM</span><span class="av a4">PL</span></span></summary>
+      <div class="dbody">
+        <div class="prow head"><span></span><span>App</span><span>Mail</span><span>Digest</span><span>Goes to</span></div>
+        <div class="prow"><div>Document uploaded or replaced<div class="d">deck, financials, business plan, cap table</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Document or data-room file deleted<div class="d">destructive</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>Compliance</b></span></div>
+        <div class="prow"><div>CRR moved<div class="d">any change ≥ 3 points, either direction</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>CRR crossed the 65 gate<div class="d">up = outreach unlocks · down = it should stop</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>CEO</b></span></div>
+        <div class="prow"><div>Cap table changed<div class="d">shareholder added / removed / diluted</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Data-room access granted or revoked<div class="d">who can see what</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>Compliance</b></span></div>
+      </div>
+    </details>
+
+    <!-- stage 3 prefs -->
+    <details>
+      <summary><span class="caret"></span><span class="stagepill st3">Stage 3 · Marketing</span>
+        <span class="sgrow" style="font-size:11.5px;color:#64748B">6 classes</span>
+        <span class="who"><span class="av a3">SM</span><span class="av add">+</span></span></summary>
+      <div class="dbody">
+        <div class="prow head"><span></span><span>App</span><span>Mail</span><span>Digest</span><span>Goes to</span></div>
+        <div class="prow"><div>Outreach campaign launched<div class="d">who, how many, when it sends</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Outreach launched <b>below the gate</b><div class="d">CRR under 65 — the one that should wake someone</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>CEO</b></span></div>
+        <div class="prow"><div>Investor interest stage changed<div class="d">watchlist → diligence → committed</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Intro requested<div class="d">investor asks to be introduced</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Marketplace listing published or pulled<div class="d">visibility to all investors</div></div>
+          <span class="sw on"></span><span class="sw"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Investor saved / unsaved a deal<div class="d">routine signal, volume is high</div></div>
+          <span class="sw"></span><span class="sw"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Digest only</span></div>
+      </div>
+    </details>
+
+    <!-- stage 4 prefs -->
+    <details>
+      <summary><span class="caret"></span><span class="stagepill st4">Stage 4 · Closing</span>
+        <span class="sgrow" style="font-size:11.5px;color:#64748B">5 classes</span>
+        <span class="who"><span class="av a1">KT</span><span class="av a5">RV</span></span></summary>
+      <div class="dbody">
+        <div class="prow head"><span></span><span>App</span><span>Mail</span><span>Digest</span><span>Goes to</span></div>
+        <div class="prow"><div>Deal room opened / closed<div class="d">and who was admitted</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Offering type changed<div class="d">SAFE ↔ priced ↔ note</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>Compliance</b></span></div>
+        <div class="prow"><div>Offering type changed <b>after an SPV opened</b><div class="d">participations already signed against the old terms</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">+ <b>CEO</b>, <b>Compliance</b></span></div>
+        <div class="prow"><div>SPV participation added or withdrawn<div class="d">money moving</div></div>
+          <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+        <div class="prow"><div>Investor update sent<div class="d">/founder/investor-update</div></div>
+          <span class="sw on"></span><span class="sw"></span><span class="sw on"></span><span style="font-size:11px;color:#475569">Stage owners</span></div>
+      </div>
+    </details>
+  </div>
+
+  <div style="font-size:11.5px;color:#64748B;padding:0 2px">
+    Dashed digest switches are classes that <b>bypass digest on purpose</b> — a deletion, a gate crossing or an
+    offering change after money has been committed is worthless twelve hours late.
+  </div>
+</div>
+
+<!-- ============ 3. STAFF ASSIGNMENT ============ -->
+<div>
+  <div class="pop">
+    <h4>Who gets Stage 2 · Preparation</h4>
+    <p class="ph">Assignment is per stage. These people receive every class switched on above, on their own
+       channels, under their own quiet hours.</p>
+    <div class="sf sel"><span class="av a1">KT</span><span>khris<div class="r">super_admin</div></span><span class="ck">✓</span></div>
+    <div class="sf sel"><span class="av a3">SM</span><span>Sara Mendez<div class="r">manager · Sales</div></span><span class="ck">✓</span></div>
+    <div class="sf sel"><span class="av a4">PL</span><span>Priya Lal<div class="r">analyst · Diligence</div></span><span class="ck">✓</span></div>
+    <div class="sf"><span class="av a2">DR</span><span>Dan Roth<div class="r">manager · Onboarding</div></span></div>
+    <div class="sf"><span class="av a5">RV</span><span>Rafa Vidal<div class="r">admin · SPV</div></span></div>
+    <div class="sf" style="opacity:.55"><span class="av" style="background:#94A3B8">JC</span>
+      <span>Jon Carr<div class="r">regular_user</div></span><span class="no">no admin access</span></div>
+
+    <div style="border-top:1px solid #F1F5F9;margin-top:9px;padding-top:9px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:6px">Escalation</div>
+      <div style="font-size:11.8px;color:#475569;line-height:1.6">
+        If nobody on this stage opens a <b>high</b> or <b>critical</b> event within
+        <b><span class="tag">4 hours</span></b>, it escalates to <b>khris</b>.
+      </div>
+    </div>
+    <div style="border-top:1px solid #F1F5F9;margin-top:9px;padding-top:9px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:6px">Fallback</div>
+      <div style="font-size:11.8px;color:#475569;line-height:1.6">
+        A stage with <b>nobody assigned</b> shows a red flag on the card header and routes to
+        <b>all super_admins</b> — never silently to no-one.
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="ch"><h3>Scope</h3></div>
+    <div class="cb">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:6px">Whose accounts</div>
+      <div class="seg" style="margin-bottom:14px"><span class="on">Everyone</span><span>Accounts I own</span><span>Pick</span></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:6px">Digest cadence</div>
+      <div class="seg" style="margin-bottom:14px"><span>Hourly</span><span class="on">Daily 08:00</span><span>Weekly</span></div>
+      <div style="font-size:12.3px;color:#475569;line-height:1.65">
+        <b>Quiet hours</b>, <b>pause all</b> and <b>critical override</b> already exist at
+        <code>/admin/sales/settings/notifications</code> and apply here unchanged. This adds four folded
+        blocks to that page rather than a second settings screen.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="note">
+  <b>Why fold by stage rather than by category.</b> The thirteen
+  <code>OPERATIONAL_EVENT_CATEGORIES</code> are how the table is indexed, not how you work. You work a company
+  through four stages, and the same event means something different depending on where the founder is —
+  a replaced pitch deck in Preparation is progress; the same upload in Closing, after investors have read the
+  old one, is a problem. Stage is the axis that carries the judgement.
+  <br><br>
+  <b>Assignment is per stage, not per event.</b> Twenty-one classes × five staff is a grid nobody maintains.
+  Four stage owners is a thing you can actually keep current, and it matches how the work is already divided.
+  Three classes override it (<i>+ Compliance</i>, <i>+ CEO</i>) because they aren&apos;t stage work — they&apos;re
+  firm risk.
+  <br><br>
+  <b>Two things the stage framing exposes that v1 missed.</b> <i>Outreach launched below the gate</i> and
+  <i>offering type changed after an SPV opened</i> are the events most worth a phone call, and neither is a
+  single field change — each is a founder action read against the stage it happened in. That check has to live
+  in the emitter, not in the notification layer.
+  <br><br>
+  <b>Still open from v1.</b> Whether events store the old value (<code>$750,000 → $400,000</code>) or only the
+  field name, and whether <code>channel_slack</code> gets wired or dropped.
+</div>
+
+</div>
+</body>
+</html>

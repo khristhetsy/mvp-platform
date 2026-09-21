@@ -18,6 +18,8 @@ import {
 } from "@/lib/notifications/founder-outreach-events";
 import { outreachCampaignSchema } from "@/lib/validation";
 import { recordFunnelEventOnce } from "@/lib/analytics/funnel";
+import { emitActivity } from "@/lib/activity/emit";
+import { crrFor } from "@/lib/crr/crr-for";
 
 export async function GET() {
   const auth = await requireFounderInvestorCrmApi();
@@ -171,6 +173,36 @@ export async function POST(request: Request) {
     campaignId: campaignResult.data!.id,
     campaignName: campaignResult.data!.name,
   });
+
+  // Readiness is the gate this route enforces, and the CRR engine is a separate
+  // reading of the same company. They can disagree: readiness passes on the
+  // checklist while the live engine score sits under the outreach gate — a deck
+  // replaced an hour ago is enough to do it. That disagreement is the one event
+  // worth a phone call, so it is emitted as its own critical class rather than
+  // folded into "campaign launched".
+  void (async () => {
+    const crr = await crrFor(auth.company.id);
+    const belowGate = crr.score !== null && !crr.outreachUnlocked;
+    emitActivity({
+      classKey: belowGate ? "outreach_below_gate" : "outreach_launched",
+      actorUserId: auth.profile.id,
+      actorRole: "founder",
+      companyId: auth.company.id,
+      entityType: "outreach_campaign",
+      entityId: campaignResult.data!.id,
+      sourceModule: "outreach-campaigns",
+      title: belowGate
+        ? `Launched outreach to ${messages.length} investors with CRR ${crr.score} — under the ${crr.gate} gate`
+        : `Launched outreach to ${messages.length} investors`,
+      metadata: {
+        campaign_name: campaignResult.data!.name,
+        recipient_count: messages.length,
+        crr_score: crr.score,
+        gate: crr.gate,
+        readiness_score: readiness.readinessScore,
+      },
+    });
+  })();
 
   return NextResponse.json({
     campaign: campaignResult.data,

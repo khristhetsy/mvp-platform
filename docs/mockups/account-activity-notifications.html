@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notify me of all founder / investor account activity</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 9px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:13px 15px;margin-bottom:12px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 7px;font-size:12.5px;color:var(--s600)}
+  .why p:last-child{margin-bottom:0}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .why b{color:var(--ink)}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ch{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650;flex:1}
+  .ch .cnt{font-size:11px;color:var(--s500)}
+  .btn{font-size:12px;border:1px solid var(--line);background:#fff;color:var(--s600);border-radius:7px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+  .btn.pri{background:var(--ind);border-color:var(--ind);color:#fff}
+  .cb{padding:14px 16px}
+
+  /* coverage tiles */
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:13px;align-items:flex-start}
+  .tile .tt{font-size:11px;font-weight:650;color:var(--s500);text-transform:uppercase;letter-spacing:.05em}
+  .tile .tv{font-size:23px;font-weight:700;line-height:1.15;margin-top:3px}
+  .tile .tu{font-size:11.5px;color:var(--s500)}
+  .tile .fl{font-size:11.5px;margin-top:6px;font-weight:600}
+  .fl.bad{color:var(--bad)} .fl.warn{color:var(--warn)} .fl.good{color:var(--good)}
+  .ring{flex:none}
+
+  /* feed */
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--s500);background:#fff;margin-bottom:10px}
+  .search .typed{color:var(--ink);font-weight:600}
+  .schip{font-size:11px;color:var(--s500);margin-bottom:12px}
+  .schip b{color:var(--ink)}
+  mark{background:#FEF08A;padding:0 1px;border-radius:2px}
+
+  .row{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--l100);align-items:flex-start}
+  .row:last-child{border-bottom:none}
+  .dot{width:8px;height:8px;border-radius:99px;margin-top:6px;flex:none}
+  .row .body{flex:1;min-width:0}
+  .row .t{font-size:12.8px}
+  .row .t b{font-weight:650}
+  .row .m{font-size:11.5px;color:var(--s500);margin-top:2px}
+  .pill{font-size:9.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px;white-space:nowrap}
+  .p-f{background:#EEF2FF;color:#3730A3}
+  .p-i{background:#ECFDF5;color:#065F46}
+  .p-s{background:#F1F5F9;color:#475569}
+  .when{font-size:11px;color:var(--s400);white-space:nowrap;margin-top:1px}
+
+  /* prefs */
+  .prow{display:grid;grid-template-columns:1fr 62px 62px 62px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--l100);font-size:12.5px}
+  .prow:last-child{border-bottom:none}
+  .prow.head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s400);border-bottom:1px solid var(--line)}
+  .prow .d{font-size:11px;color:var(--s500);margin-top:1px}
+  .sw{width:34px;height:19px;border-radius:99px;background:#CBD5E1;position:relative;margin:0 auto;display:block}
+  .sw.on{background:var(--ind)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:99px;background:#fff}
+  .sw.on::after{left:17px}
+  .sw.na{background:#F1F5F9;border:1px dashed var(--line)}
+  .sw.na::after{display:none}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px}
+  .seg span{padding:5px 11px;color:var(--s600);border-right:1px solid var(--line)}
+  .seg span:last-child{border-right:none}
+  .seg span.on{background:var(--ind);color:#fff;font-weight:600}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:18px;line-height:1.6}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  pre{background:#0F172A;color:#E2E8F0;border-radius:9px;padding:13px 15px;font-size:11.5px;line-height:1.6;overflow:auto;margin:10px 0 0}
+  pre .c{color:#64748B}
+  pre .k{color:#93C5FD}
+  pre .s{color:#86EFAC}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Notify me of all activity on founder &amp; investor accounts</h1>
+<p class="sub">Mockup · admin notification settings + the feed it would draw from</p>
+
+<div class="why">
+  <h2>What I found before designing this</h2>
+  <p><b>The table exists. Almost nothing writes to it.</b> <code>operational_activity_events</code> is fully
+     built — categories, severities, visibility, dedupe, a feed query layer in
+     <code>src/lib/operational-activity/</code>. But of the <b>115 founder and investor API routes</b>,
+     only <b>6</b> emit an event: onboarding, two learning routes, intro-requests, saved-deals, interests.</p>
+  <p>So today a founder can change their funding ask, re-upload a pitch deck, edit their cap table, invite a
+     co-founder, publish a campaign or delete a data-room file and <b>nothing is recorded anywhere</b>. The ten
+     notification event keys you already have (<code>document_uploaded</code>, <code>investor_interest</code>, …)
+     are business milestones, not account activity.</p>
+  <p>This is therefore <b>not a notification problem</b>. There is nothing to notify from. The work is: instrument
+     the write paths first, then the feed and the alerts fall out of it for free.</p>
+</div>
+
+<div class="lbl">1 · Coverage — what the admin sees about its own instrumentation</div>
+<div class="tiles">
+  <div class="tile">
+    <svg class="ring" width="52" height="52" viewBox="0 0 52 52">
+      <circle cx="26" cy="26" r="21" fill="none" stroke="#E2E8F0" stroke-width="6"/>
+      <circle cx="26" cy="26" r="21" fill="none" stroke="#DC2626" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="6.9 125" transform="rotate(-90 26 26)"/>
+      <text x="26" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">5%</text>
+    </svg>
+    <div>
+      <div class="tt">Routes instrumented</div>
+      <div class="tv">6 <span class="tu">of 115</span></div>
+      <div class="fl bad">109 write paths record nothing</div>
+    </div>
+  </div>
+  <div class="tile">
+    <svg class="ring" width="52" height="52" viewBox="0 0 52 52">
+      <circle cx="26" cy="26" r="21" fill="none" stroke="#E2E8F0" stroke-width="6" stroke-dasharray="3 5"/>
+      <text x="26" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#94A3B8">—</text>
+    </svg>
+    <div>
+      <div class="tt">Founder events, last 7d</div>
+      <div class="tv" style="color:#94A3B8">Unmeasured</div>
+      <div class="tu">no ceiling to score against</div>
+      <div class="fl warn">dashed ring, not a fake zero</div>
+    </div>
+  </div>
+  <div class="tile">
+    <svg class="ring" width="52" height="52" viewBox="0 0 52 52">
+      <circle cx="26" cy="26" r="21" fill="none" stroke="#E2E8F0" stroke-width="6"/>
+      <circle cx="26" cy="26" r="21" fill="none" stroke="#059669" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="132 0" transform="rotate(-90 26 26)"/>
+      <text x="26" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">13</text>
+    </svg>
+    <div>
+      <div class="tt">Categories wired</div>
+      <div class="tv">13 <span class="tu">of 13</span></div>
+      <div class="fl good">schema is ready; emitters aren&apos;t</div>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">2 · The feed — Admin → Activity</div>
+<div class="card">
+  <div class="ch">
+    <h3>All account activity</h3>
+    <span class="cnt">8 of 214</span>
+    <button class="btn">Export CSV</button>
+    <button class="btn">Notification settings</button>
+    <button class="btn pri">Mark all seen</button>
+  </div>
+  <div class="cb">
+    <div class="search">🔎 <span class="typed">tinski</span><span style="color:#CBD5E1">|</span></div>
+    <div class="schip"><b>8 of 214</b> · matched on company, actor, entity · filtering as you type</div>
+
+    <div class="row">
+      <span class="dot" style="background:#DC2626"></span>
+      <div class="body">
+        <div class="t"><b>Martin Goldberg</b> lowered the capital ask on <b><mark>Tinski</mark> Tech</b>
+          from $750,000 to $400,000<span class="pill p-f">Founder</span></div>
+        <div class="m">companies.funding_amount · via /founder/settings · affects CRR Capital factor</div>
+      </div>
+      <span class="when">2m ago</span>
+    </div>
+
+    <div class="row">
+      <span class="dot" style="background:#B45309"></span>
+      <div class="body">
+        <div class="t"><b>Martin Goldberg</b> replaced <b>Pitch deck</b> on <b><mark>Tinski</mark> Tech</b>
+          <span class="pill p-f">Founder</span></div>
+        <div class="m">documents · v3 supersedes v2 · 4.1 MB · re-triggers readiness scoring</div>
+      </div>
+      <span class="when">18m ago</span>
+    </div>
+
+    <div class="row">
+      <span class="dot" style="background:#059669"></span>
+      <div class="body">
+        <div class="t"><b>Anne Whitcombe</b> moved <b><mark>Tinski</mark> Tech</b> from Watchlist to
+          Diligence<span class="pill p-i">Investor</span></div>
+        <div class="m">investor_interests · stage change · notifies the founder&apos;s IR view</div>
+      </div>
+      <span class="when">1h ago</span>
+    </div>
+
+    <div class="row">
+      <span class="dot" style="background:#DC2626"></span>
+      <div class="body">
+        <div class="t"><b>Martin Goldberg</b> removed <b>2 files</b> from the <b><mark>Tinski</mark> Tech</b>
+          data room<span class="pill p-f">Founder</span></div>
+        <div class="m">data_room · Cap table v1.xlsx, 2025 P&amp;L.pdf · deletions always alert</div>
+      </div>
+      <span class="when">3h ago</span>
+    </div>
+
+    <div class="row">
+      <span class="dot" style="background:#64748B"></span>
+      <div class="body">
+        <div class="t"><b>Martin Goldberg</b> edited the business summary on <b><mark>Tinski</mark> Tech</b>
+          <span class="pill p-f">Founder</span></div>
+        <div class="m">companies.business_description · 312 → 487 chars · <u>view diff</u></div>
+      </div>
+      <span class="when">5h ago</span>
+    </div>
+
+    <div class="row">
+      <span class="dot" style="background:#64748B"></span>
+      <div class="body">
+        <div class="t"><b>khris</b> acted on behalf of <b>Martin Goldberg</b> for 11 minutes
+          <span class="pill p-s">Staff</span></div>
+        <div class="m">act_on_behalf · already recorded today · 4 pages viewed, 0 writes</div>
+      </div>
+      <span class="when">yesterday</span>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">3 · What you get told, and how</div>
+<div class="two">
+  <div class="card">
+    <div class="ch"><h3>Account activity alerts</h3><button class="btn">Reset</button></div>
+    <div class="cb">
+      <div class="prow head"><span>Activity class</span><span>In-app</span><span>Email</span><span>Digest</span></div>
+      <div class="prow">
+        <div>Destructive
+          <div class="d">deletes a document, removes a data-room file, revokes access</div></div>
+        <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span>
+      </div>
+      <div class="prow">
+        <div>Material change
+          <div class="d">capital ask, valuation, funding stage, cap table, pitch deck</div></div>
+        <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span>
+      </div>
+      <div class="prow">
+        <div>Profile &amp; content edits
+          <div class="d">summary, industries, team, highlights, logo</div></div>
+        <span class="sw on"></span><span class="sw"></span><span class="sw on"></span>
+      </div>
+      <div class="prow">
+        <div>Investor moves
+          <div class="d">interest stage, intro request, saved deal, portfolio edit</div></div>
+        <span class="sw on"></span><span class="sw on"></span><span class="sw on"></span>
+      </div>
+      <div class="prow">
+        <div>Access &amp; security
+          <div class="d">sign-in from a new device, email change, password reset, seat added</div></div>
+        <span class="sw on"></span><span class="sw on"></span><span class="sw na"></span>
+      </div>
+      <div class="prow">
+        <div>Routine
+          <div class="d">page views, saved filters, course progress, draft autosaves</div></div>
+        <span class="sw"></span><span class="sw"></span><span class="sw on"></span>
+      </div>
+      <div style="margin-top:13px;font-size:11.5px;color:#64748B">
+        Dashed switches are classes that <b>bypass digest on purpose</b> — a deletion or a sign-in from a new
+        device is worthless twelve hours late.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><h3>Scope &amp; delivery</h3></div>
+    <div class="cb">
+      <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin-bottom:7px">Whose accounts</div>
+      <div class="seg" style="margin-bottom:16px">
+        <span class="on">Everyone</span><span>Only companies I own</span><span>Pick accounts</span>
+      </div>
+
+      <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin-bottom:7px">Digest cadence</div>
+      <div class="seg" style="margin-bottom:16px">
+        <span>Hourly</span><span class="on">Daily 08:00</span><span>Weekly Mon</span>
+      </div>
+
+      <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin-bottom:7px">Channels</div>
+      <div style="font-size:12.5px;line-height:1.9">
+        <div>✅ In-app bell — already built</div>
+        <div>✅ Email — already built (<code>sendTransactionalEmail</code>)</div>
+        <div>⬜ Slack — <b>declared but dead.</b> <code>channel_slack</code> exists in
+             <code>NotificationPrefs</code> and nothing reads it. Either wire a webhook or drop the field;
+             leaving it shown is a control that cannot run.</div>
+      </div>
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #F1F5F9;font-size:12.5px;color:#475569">
+        <b>Quiet hours, pause-all and critical-override</b> already exist at
+        <code>/admin/sales/settings/notifications</code> and apply to these classes unchanged —
+        this adds rows to that screen rather than a second settings page.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">4 · How 109 routes get instrumented without touching 109 files by hand</div>
+<div class="card"><div class="cb">
+  <div style="font-size:12.5px;color:#475569;margin-bottom:2px">
+    One wrapper at the route boundary. It reads the actor from the session, the entity from the path, and the
+    before/after from the Supabase write — so a route opts in with a single line rather than a bespoke
+    <code>createOperationalEvent</code> call it will forget to keep current.
+  </div>
+<pre><span class="c">// src/lib/operational-activity/with-activity.ts  (new)</span>
+<span class="k">export function</span> withActivity(handler, spec) {
+  <span class="k">return async</span> (req, ctx) => {
+    <span class="k">const</span> before = spec.snapshot ? <span class="k">await</span> spec.snapshot(ctx) : <span class="k">null</span>;
+    <span class="k">const</span> res = <span class="k">await</span> handler(req, ctx);
+    <span class="k">if</span> (res.ok) emitOperationalEvent({
+      eventType: spec.type,                 <span class="c">// "founder.funding_amount_changed"</span>
+      eventCategory: spec.category,
+      actorUserId: ctx.userId, actorRole: ctx.role,
+      severity: spec.severity,              <span class="c">// destructive → "high"</span>
+      metadata: diff(before, <span class="k">await</span> spec.snapshot?.(ctx)),
+      sourceModule: spec.module,
+    });                                      <span class="c">// fire-and-forget; never blocks the response</span>
+    <span class="k">return</span> res;
+  };
+}
+
+<span class="c">// src/app/api/founder/settings/route.ts</span>
+<span class="k">export const</span> PATCH = withActivity(handler, {
+  type: <span class="s">"founder.profile_updated"</span>, category: <span class="s">"founder"</span>,
+  module: <span class="s">"founder-settings"</span>, severity: <span class="s">"low"</span>,
+  snapshot: (ctx) => loadCompany(ctx.companyId),
+});</pre>
+</div></div>
+
+<div class="note">
+  <b>Order this would go in.</b> Wrapper + the diff helper; then the ~30 routes that carry real meaning
+  (profile, documents, data room, cap table, campaign, interests, intro requests, access changes) rather than
+  all 109 at once — page views and autosaves are noise and would bury the six things you actually want to see.
+  Then the feed page, then the six preference rows.
+  <br><br>
+  <b>One thing to decide, because it changes the schema.</b> A <i>diff</i> ("$750,000 → $400,000") is far more
+  useful than a bare "profile updated", but it means storing the old value in <code>metadata</code>. That is
+  founder-supplied business data sitting in a second table with its own retention. Either it is in scope and
+  <code>sanitize.ts</code> gets a field allow-list, or events stay field-name-only and the feed says
+  <i>"changed the capital ask"</i> without the numbers.
+  <br><br>
+  <b>Not included on purpose.</b> Sign-in events come from Supabase Auth, not from a route — those need the
+  <code>auth.audit_log_entries</code> mirror or a webhook, which is a separate piece of work from instrumenting
+  the API surface.
+</div>
+
+</div>
+</body>
+</html>

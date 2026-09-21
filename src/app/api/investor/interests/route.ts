@@ -3,6 +3,7 @@ import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
+import { emitActivity } from "@/lib/activity/emit";
 import { upsertInvestorInterest } from "@/lib/data/investor-interests";
 import { notifyFounderInvestorInterest } from "@/lib/notifications/investor-events";
 import { emailFounderInvestorInterest } from "@/lib/email/deal-room-emails";
@@ -118,6 +119,23 @@ export async function POST(request: Request) {
   }
 
   track("investor_interest_expressed", { userId: auth.profile.id, companyId: data.company_id, status: data.status });
+
+  // The 0044 event above is the CRM's record of the interest. This is the
+  // account-activity record, which is a different thing: it is stamped with the
+  // investor's pipeline stage and routed to whoever holds that stage.
+  emitActivity({
+    classKey: "interest_stage_changed",
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    companyId: data.company_id,
+    investorId: auth.profile.id,
+    entityType: "investor_interest",
+    entityId: data.id,
+    sourceModule: "investor-interests",
+    title: `Investor interest set to ${String(data.status ?? "interested").replace(/_/g, " ")}`,
+    metadata: { status: data.status },
+    dedupeKey: `activity-interest:${data.id}:${data.status}`,
+  });
 
   return NextResponse.json({ interest: data });
 }

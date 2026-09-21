@@ -113,6 +113,18 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Operational Tools",
         children: [
           { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
+          {
+            // Everything founders and investors do on their own accounts,
+            // folded by the stage they were in when they did it.
+            href: "/admin/activity",
+            label: "Account Activity",
+            requiredPermission: "view_admin_dashboard",
+            children: [
+              { href: "/admin/activity",             label: "Feed"       },
+              { href: "/admin/activity/alerts",      label: "Alerts"     },
+              { href: "/admin/activity/assignments", label: "Assignment" },
+            ],
+          },
           { href: "/admin/ir-funnel",        label: "IR Funnel",       requiredPermission: "view_admin_dashboard" },
           { href: "/admin/fit",              label: "Fit funnel",      requiredPermission: "view_admin_dashboard" },
           { href: "/admin/investors/enrich", label: "Enrich data",     requiredPermission: "manage_investors"     },
