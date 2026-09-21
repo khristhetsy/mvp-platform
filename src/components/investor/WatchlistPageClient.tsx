@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { matchRows, searchSummary, type SearchField } from "@/lib/ui/live-search";
 
 export type WatchlistRow = {
   id: string;
@@ -50,6 +51,14 @@ function StatusPill({ status }: { status: string | null }) {
   );
 }
 
+const WATCHLIST_SEARCH_FIELDS: SearchField<WatchlistRow>[] = [
+  { label: "company", get: (r) => r.companyName },
+  { label: "industry", get: (r) => r.industry },
+  { label: "stage", get: (r) => r.stage },
+  { label: "location", get: (r) => r.location },
+];
+const WATCHLIST_SEARCH_LABELS = WATCHLIST_SEARCH_FIELDS.map((f) => f.label);
+
 export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>) {
   const t = useTranslations("investorCmp");
   const [query, setQuery] = useState("");
@@ -88,17 +97,8 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
     [saveNote],
   );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.companyName.toLowerCase().includes(q) ||
-        (r.industry?.toLowerCase().includes(q) ?? false) ||
-        (r.stage?.toLowerCase().includes(q) ?? false) ||
-        (r.location?.toLowerCase().includes(q) ?? false),
-    );
-  }, [rows, query]);
+  const search = useMemo(() => matchRows(rows, WATCHLIST_SEARCH_FIELDS, query), [rows, query]);
+  const filtered = search.rows;
 
   return (
     <>
@@ -121,7 +121,7 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
 
       {/* Section label */}
       <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-        Saved deals · {filtered.length} {filtered.length === 1 ? "company" : "companies"}
+        Saved deals · {searchSummary(search, filtered.length === 1 && !search.active ? "company" : "companies")}
       </p>
 
       {filtered.length === 0 ? (
@@ -129,7 +129,7 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
           <p className="text-sm text-slate-500">
             {rows.length === 0
               ? "No saved deals yet. Browse the marketplace to start building your watchlist."
-              : "No results match your search."}
+              : `Nothing matches "${query}". Searched ${WATCHLIST_SEARCH_LABELS.join(", ")}.`}
           </p>
         </div>
       ) : (

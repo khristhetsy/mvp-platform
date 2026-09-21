@@ -51,7 +51,7 @@ export function ProjectsClient({ meId }: { meId: string }) {
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px] text-slate-700">
           <option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="">All</option>
         </select>
-        <span className="ml-auto text-[12px] text-slate-500">{rows.length ? `1-${rows.length} / ${rows.length}` : "0 / 0"}</span>
+        <span className="ml-auto text-[12px] text-slate-500">{rows.length ? `1-${rows.length} / ${(data?.projects ?? []).length}` : `0 / ${(data?.projects ?? []).length}`}</span>
       </div>
 
       {error ? <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div> : null}

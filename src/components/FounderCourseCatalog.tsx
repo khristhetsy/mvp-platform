@@ -7,6 +7,7 @@ import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { FounderCourseCatalogItem } from "@/lib/learning/load-founder-courses";
+import { matchRows, searchSummary, type SearchField } from "@/lib/ui/live-search";
 
 type CategoryStyle = {
   bg: string;
@@ -114,6 +115,13 @@ function formatCategoryLabel(category: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const COURSE_SEARCH_FIELDS: SearchField<{ title: string; description: string; instructor: string; category: string }>[] = [
+  { label: "title", get: (c) => c.title },
+  { label: "description", get: (c) => c.description },
+  { label: "instructor", get: (c) => c.instructor },
+  { label: "category", get: (c) => c.category },
+];
+
 export function FounderCourseCatalog({
   courses,
   categories,
@@ -127,19 +135,14 @@ export function FounderCourseCatalog({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return courses.filter((course) => {
-      if (category !== "all" && course.category !== category) return false;
-      if (!q) return true;
-      return (
-        course.title.toLowerCase().includes(q) ||
-        course.description.toLowerCase().includes(q) ||
-        course.instructor.toLowerCase().includes(q) ||
-        course.category.toLowerCase().includes(q)
-      );
-    });
-  }, [courses, query, category]);
+  // Category is a separate control, so it narrows first; the text query then
+  // searches within that, and the count reports against the same base.
+  const inCategory = useMemo(
+    () => (category === "all" ? courses : courses.filter((c) => c.category === category)),
+    [courses, category],
+  );
+  const search = useMemo(() => matchRows(inCategory, COURSE_SEARCH_FIELDS, query), [inCategory, query]);
+  const filtered = search.rows;
 
   return (
     <div className="space-y-6">
@@ -147,7 +150,7 @@ export function FounderCourseCatalog({
         eyebrow={t("icapos_founder_academy")}
         title={t("online_courses")}
         description={t("educational_founder_training_investor_prepar")}
-        metadata={`${courses.length} courses · ${overallPercent}% overall learning progress`}
+        metadata={`${searchSummary(search, "courses")} · ${overallPercent}% overall learning progress`}
       />
 
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">

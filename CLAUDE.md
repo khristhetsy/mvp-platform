@@ -137,6 +137,12 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
   (the CLI's migration history is out of sync with the editor-applied schema and it errors);
   no paid upgrades.
 - Never enter credentials or authenticate on anyone's behalf; never store passwords anywhere.
+- Read the consumer before writing the component. Check whether the parent is `"use client"`
+  before making a component async, check the type before adding a field to a loader, and check
+  the call site before changing a signature. `tsc` does not catch an async server component
+  rendered from a client one — most of the avoidable errors here come from writing first.
+- Never propose a destructive diagnostic (`git revert`, deleting state, resetting data) for a
+  cause already traced to something outside the code. Say what the evidence shows and stop.
 
 ## Shipping
 

@@ -89,7 +89,7 @@ export function SuppressionsClient({ suppressions: initial }: { suppressions: Su
         <div>
           <h2 style={S.title}>Suppression list</h2>
           <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>
-            {rows.length} suppressed — emails on this list will not receive any campaigns or sequences
+            {search ? `${filtered.length} of ${rows.length}` : rows.length} suppressed — emails on this list will not receive any campaigns or sequences
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

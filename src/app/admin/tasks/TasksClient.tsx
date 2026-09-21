@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Task, TaskStatus, TaskPriority, TaskCategory, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { matchRows, type SearchField } from "@/lib/ui/live-search";
 
 const GCAL_PURPLE = "#2E78F5";
 const GCAL_LIGHT  = "#EEEDFE";
@@ -650,6 +651,14 @@ interface Props {
   googleStatus: GoogleConnectionStatus;
 }
 
+const TASK_SEARCH_FIELDS: SearchField<Task>[] = [
+  { label: "title", get: (t) => t.title },
+  { label: "description", get: (t) => t.description },
+  { label: "priority", get: (t) => t.priority },
+  { label: "status", get: (t) => t.status },
+  { label: "category", get: (t) => t.task_category },
+];
+
 export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected, googleStatus }: Props) {
   const [tasks, setTasks]         = useState<Task[]>(initialTasks);
   const [viewMode, setViewMode]   = useState<ViewMode>("kanban");
@@ -755,7 +764,9 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       if (activeCat !== "all" && t.task_category !== activeCat) return false;
-      if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
+      // Title only was too narrow — the board also shows description, priority,
+      // status and category, so typing any of those found nothing.
+      if (search && !matchRows([t], TASK_SEARCH_FIELDS, search).rows.length) return false;
       if (filterAssignee && t.assigned_to !== filterAssignee) return false;
       if (filterPriority && t.priority !== filterPriority) return false;
       if (filterDue) {
