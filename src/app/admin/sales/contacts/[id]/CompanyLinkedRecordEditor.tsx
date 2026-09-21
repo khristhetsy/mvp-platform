@@ -68,12 +68,22 @@ function Chips({ options, value, onToggle, single = false }: { options: string[]
   );
 }
 
-function ViewRow({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * A blank field means one of three different things, and a bare dash says all
+ * three at once. `unasked` marks a field the onboarding wizard has not yet put
+ * to the founder, so staff can tell "chase the founder" from "they left it
+ * blank" without opening the founder's account.
+ */
+function ViewRow({ label, children, unasked = false }: { label: string; children: React.ReactNode; unasked?: boolean }) {
   const empty = children == null || children === "" || (Array.isArray(children) && children.length === 0);
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
       <span style={LBL}>{label}</span>
-      <span style={{ flex: "1 1 160px", minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", overflowWrap: "anywhere" }}>{empty ? "—" : children}</span>
+      <span style={{ flex: "1 1 160px", minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", overflowWrap: "anywhere" }}>
+        {!empty ? children : unasked
+          ? <span style={{ fontStyle: "italic", fontSize: 11.5 }}>not asked yet</span>
+          : "—"}
+      </span>
     </div>
   );
 }
@@ -147,6 +157,8 @@ export function CompanyLinkedRecordEditor({
   }
 
   const stageLabel = REVENUE_STAGES.find((s) => s.value === data.revenue_stage)?.label ?? data.revenue_stage;
+  // Blank because the wizard hasn't asked, rather than because the answer is none.
+  const unasked = !company.fundingInfoCaptured;
   const pill = (t: string) => <span style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>;
 
   return (
@@ -161,23 +173,36 @@ export function CompanyLinkedRecordEditor({
 
       {err ? <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>{err}</p> : null}
 
+      {/* Everything below "One-pager" is collected in the wizard's
+          `funding_information` step. Until the founder submits it, those fields
+          are blank because nobody has asked — not because they have no answer. */}
+      {!editing && !company.fundingInfoCaptured ? (
+        <div style={{ display: "flex", gap: 7, alignItems: "flex-start", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "7px 9px", marginBottom: 8 }}>
+          <i className="ti ti-progress-alert" aria-hidden="true" style={{ color: "#B45309", fontSize: 14, marginTop: 1 }} />
+          <span style={{ fontSize: 11.5, color: "#78350F", lineHeight: 1.5 }}>
+            <b>Onboarding stopped before the funding step.</b> Stage, capital sought, EBITDA and
+            management team are collected there, so they have not been asked yet.
+          </span>
+        </div>
+      ) : null}
+
       {!editing ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 28px" }}>
           <ViewRow label="Industry">{data.industry ? pill(data.industry) : null}</ViewRow>
-          <ViewRow label="Revenue stage">{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
-          <ViewRow label="Funding target">{data.funding_amount ? `$${Number(data.funding_amount).toLocaleString()}` : null}</ViewRow>
+          <ViewRow label="Revenue stage" unasked={unasked}>{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
+          <ViewRow label="Funding target" unasked={unasked}>{data.funding_amount ? `$${Number(data.funding_amount).toLocaleString()}` : null}</ViewRow>
           <ViewRow label="Website">{data.website ? <a href={data.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{data.website}</a> : null}</ViewRow>
           <ViewRow label="Location">{[data.state, data.country].filter(Boolean).join(", ") || null}</ViewRow>
           <ViewRow label="One-pager">{onePager?.slug ? <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>/f/{onePager.slug}{onePager.published ? " · Published" : " · Draft"}</a> : null}</ViewRow>
-          <ViewRow label="Funding stage">{data.funding_stage.join(", ") || null}</ViewRow>
-          <ViewRow label="Operating stage">{data.operating_stage.join(", ") || null}</ViewRow>
-          <ViewRow label="Business entity">{data.business_entity || null}</ViewRow>
-          <ViewRow label="Annual EBITDA">{data.annual_ebitda || null}</ViewRow>
-          <ViewRow label="Type of investor(s)">{data.seeking_investor_types.join(", ") || null}</ViewRow>
-          <ViewRow label="Type(s) of capital">{data.seeking_capital_types.join(", ") || null}</ViewRow>
-          <ViewRow label="Active investor preference">{data.active_investor_preference.join(", ") || null}</ViewRow>
-          <ViewRow label="Management team">{data.management_team || null}</ViewRow>
-          <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Use of funds">{data.use_of_funds || null}</ViewRow></div>
+          <ViewRow label="Funding stage" unasked={unasked}>{data.funding_stage.join(", ") || null}</ViewRow>
+          <ViewRow label="Operating stage" unasked={unasked}>{data.operating_stage.join(", ") || null}</ViewRow>
+          <ViewRow label="Business entity" unasked={unasked}>{data.business_entity || null}</ViewRow>
+          <ViewRow label="Annual EBITDA" unasked={unasked}>{data.annual_ebitda || null}</ViewRow>
+          <ViewRow label="Type of investor(s)" unasked={unasked}>{data.seeking_investor_types.join(", ") || null}</ViewRow>
+          <ViewRow label="Type(s) of capital" unasked={unasked}>{data.seeking_capital_types.join(", ") || null}</ViewRow>
+          <ViewRow label="Active investor preference" unasked={unasked}>{data.active_investor_preference.join(", ") || null}</ViewRow>
+          <ViewRow label="Management team" unasked={unasked}>{data.management_team || null}</ViewRow>
+          <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Use of funds" unasked={unasked}>{data.use_of_funds || null}</ViewRow></div>
           <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Description">{data.business_description || null}</ViewRow></div>
         </div>
       ) : (

@@ -376,6 +376,24 @@ export type LinkedCompany = {
   seekingInvestorTypes: string | null;
   seekingCapitalTypes: string | null;
   activeInvestorPreference: string | null;
+  /** True once the founder submitted the wizard step that collects the fields above. */
+  fundingInfoCaptured: boolean;
+};
+
+/**
+ * The contact's portal subscription, read whole rather than as a plan key.
+ * `founder_free` alone can't say whether the free access is legitimate, and the
+ * plan key alone carries no price — both of which a salesperson needs on a call.
+ */
+export type MemberPlan = {
+  label: string;
+  /** null for the free tiers, which have no price to show. */
+  priceLabel: string | null;
+  status: string;
+  statusLabel: string;
+  /** Free access with no grandfather entitlement — shouldn't exist. */
+  discontinued: boolean;
+  since: string | null;
 };
 
 // Read-only display row for linked / recap sections (not click-to-edit).
@@ -392,7 +410,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
 type FormdFirmSummary = { regd_footprint: number | null; vehicle_count: number | null; fund_types: string[] | null; last_investment_at: string | null; last_investment_issuer: string | null; last_investment_round_size: number | null; activity_band: string | null; state_or_country: string | null; investments_24mo: number | null };
 const fmtUsdM = (n: number | null | undefined) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], bookings = [], investorRating = null, formdFirm = null, crr = null, memberPlan = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; bookings?: BookingLite[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; memberPlan?: string | null; basePath?: string }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], bookings = [], investorRating = null, formdFirm = null, crr = null, memberPlan = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; bookings?: BookingLite[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; memberPlan?: MemberPlan | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -778,7 +796,35 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
                 <i className="ti ti-crown" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
                 <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Member Portal Plan</span>
-                {memberPlan ? <span style={{ fontSize: 11, fontWeight: 600, color: "#3C3489", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>{memberPlan}</span> : <span style={{ color: "var(--muted-foreground)" }}>—</span>}
+                {memberPlan ? (
+                  <span style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minWidth: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#3C3489", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>
+                      {memberPlan.label}{memberPlan.priceLabel ? ` · ${memberPlan.priceLabel}` : ""}
+                    </span>
+                    <span
+                      title={memberPlan.since ? `Since ${new Date(memberPlan.since).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}` : undefined}
+                      style={{
+                        fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "1px 9px",
+                        ...(memberPlan.status === "active"
+                          ? { color: "#047857", background: "#ECFDF5" }
+                          : memberPlan.status === "pending_payment" || memberPlan.status === "trialing"
+                            ? { color: "#92400E", background: "#FFFBEB" }
+                            : { color: "#64748B", background: "#F1F5F9" }),
+                      }}
+                    >
+                      {memberPlan.statusLabel}
+                    </span>
+                    {/* Free access with no grandfather entitlement — the one state
+                        that used to be indistinguishable from a legitimate one. */}
+                    {memberPlan.discontinued ? (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#B91C1C", background: "#FEF2F2", borderRadius: 20, padding: "1px 9px" }}>
+                        Discontinued tier
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>Not a portal member</span>
+                )}
               </div>
               <Row icon="ti-flag" label="Lead Status" value={contact.lead_status} options={LEAD_STATUSES} onSave={saveText("lead_status")} />
               <Row icon="ti-arrow-down-circle" label="Lead Source" value={contact.lead_source} options={LEAD_SOURCE_OPTS} onSave={saveText("lead_source")} />

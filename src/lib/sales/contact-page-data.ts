@@ -10,9 +10,22 @@ import { fetchPartnerMessages } from "@/lib/crm-connectors/odoo/messages";
 import { listContactBookings } from "@/lib/scheduling/bookings";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
-import { PLAN_LABELS } from "@/lib/subscriptions/plans";
-import type { LinkedCompany } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
+import { planLabelFor, type PlanType, type SubscriptionStatus } from "@/lib/subscriptions/plans";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { priceShort } from "@/lib/subscriptions/pricing-catalog";
+import { parseOnboardingStepState } from "@/lib/onboarding/progress";
+import type { LinkedCompany, MemberPlan } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
+
+/** Plain-English status, so the chip never shows a raw enum. */
+const STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  active: "Active",
+  trialing: "Trial",
+  pending_payment: "Awaiting payment",
+  expired: "Expired",
+  canceled: "Canceled",
+  free: "Free",
+  internal: "Internal",
+};
 
 type ProfileLike = { id: string; email?: string | null; role?: string | null; is_super_admin?: boolean | null };
 
@@ -36,21 +49,44 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
   let onePager: { slug: string | null; published: boolean; companyName: string | null } | null = null;
   let linkedCompany: LinkedCompany | null = null;
   let crr: { score: number; tier: string } | null = null;
-  // Member Portal Plan — the contact's live subscription plan (label), when their
-  // email matches a portal account. Read-only.
-  let memberPlan: string | null = null;
+  // Member Portal Plan — the contact's live subscription, when their email matches
+  // a portal account. Read-only.
+  //
+  // This reads the whole row rather than the plan key alone. `founder_free` means
+  // two different things — legitimately grandfathered, or a discontinued tier that
+  // should not exist — and `PLAN_LABELS[plan]` cannot tell them apart. The price
+  // comes from the active pricing catalogue, so it tracks a pricing change rather
+  // than going stale in the UI.
+  let memberPlan: MemberPlan | null = null;
   if (data.contact.email) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
     const { data: prof } = await admin.from("profiles").select("id").eq("email", data.contact.email).maybeSingle();
     if (prof?.id) {
       try {
-        const plan = await getUserPlan(prof.id);
-        if (plan) memberPlan = PLAN_LABELS[plan] ?? null;
-      } catch { /* ignore — plan stays null */ }
+        const { data: sub } = await admin
+          .from("subscriptions")
+          .select("plan_type, subscription_status, is_grandfathered, created_at")
+          .eq("profile_id", prof.id)
+          .maybeSingle();
+        if (sub?.plan_type) {
+          const planType = sub.plan_type as PlanType;
+          const status = sub.subscription_status as SubscriptionStatus;
+          const paid = planType !== "founder_free" && planType !== "founder_trial" && planType !== "investor_free";
+          memberPlan = {
+            label: planLabelFor(planType, Boolean(sub.is_grandfathered)),
+            priceLabel: paid ? priceShort(await loadPricing(), planType) : null,
+            status,
+            statusLabel: STATUS_LABEL[status] ?? status,
+            // The one case worth shouting about: free access with no entitlement to it.
+            discontinued: planType === "founder_free" && !sub.is_grandfathered,
+            since: sub.created_at ?? null,
+          };
+        }
+      } catch { /* ignore — plan stays null, rendered as "not a portal member" */ }
       const { data: comp } = await admin
         .from("companies")
-        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds, readiness_score")
+        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds, readiness_score, onboarding_step_state")
         .eq("founder_id", prof.id)
         .maybeSingle();
       if (comp) {
@@ -73,6 +109,13 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
           fundingStage: null, operatingStage: null, businessEntity: null,
           annualEbitda: null, managementTeam: null, seekingInvestorTypes: null,
           seekingCapitalTypes: null, activeInvestorPreference: null,
+          // Seeking / Company & stage / Traction are all collected in the wizard's
+          // `funding_information` step. Whether that step was submitted is what
+          // separates "the founder hasn't been asked" from "asked and left blank" —
+          // without it every gap renders as the same dash.
+          fundingInfoCaptured: Boolean(
+            parseOnboardingStepState(comp.onboarding_step_state).steps.funding_information?.completed,
+          ),
         };
         const { data: extra } = await admin
           .from("companies")
