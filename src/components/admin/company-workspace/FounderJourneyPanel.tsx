@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
+import { OUTREACH_GATE } from "@/lib/crr/weight-sets";
 import { buildCompanyFilteredHref } from "@/lib/admin/company-workspace-types";
 
 const STAGE_META: Record<JourneyStage, { label: string; blurb: string }> = {
@@ -21,6 +22,12 @@ type Gate = {
   why: string;
   points: string[];
   action?: { label: string; href: string };
+  /**
+   * Gates sharing an id are alternatives, not separate requirements — satisfying
+   * one satisfies the group. The pending count treats the group as a single item,
+   * because listing both made staff chase two things when either would do.
+   */
+  anyOf?: string;
 };
 
 function approvalBadge(status: FounderJourneyState["approvalStatus"]) {
@@ -72,24 +79,48 @@ function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
     {
       key: "docs",
       label: "Required documents uploaded",
-      detail: "Qualify-stage document set",
+      detail: `${STAGE_META.qualify.label} document set`,
       met: c.requiredDocsUploaded,
       why: c.requiredDocsUploaded
-        ? "The required Qualify-stage document set is present."
-        : "One or more required Qualify-stage documents are missing.",
+        ? `The required ${STAGE_META.qualify.label} document set is present.`
+        : `One or more required ${STAGE_META.qualify.label} documents are missing.`,
       points: c.requiredDocsUploaded
         ? ["Core documents present", "Pitch deck present"]
         : ["Identify the missing document categories", "Request them from the founder", "Confirm uploads in the data room"],
       action: c.requiredDocsUploaded ? undefined : { label: "Open documents", href: `/admin/companies/${companyId}#qualify` },
     },
     {
+      key: "crr",
+      label: "Capital Readiness Rating",
+      detail:
+        c.crrScore != null
+          ? `CRR ${c.crrScore}, needs ${OUTREACH_GATE}${c.crrQualified ? "" : ` · ${Math.max(0, OUTREACH_GATE - c.crrScore)} short`}`
+          : "Not scored yet",
+      met: c.crrQualified,
+      why: c.crrQualified
+        ? `The rating clears the ${OUTREACH_GATE} gate, so automated outreach and introduction requests are open.`
+        : `The rating is below the ${OUTREACH_GATE} gate. Automated outreach and introduction requests are held — both go out under the iCapOS name. This does NOT hold stage advancement; the founder reaches ${STAGE_META.optimize.label} on a deal room or a logged interest whatever the rating says.`,
+      points: c.crrQualified
+        ? ["Above the gate", "Outreach and introductions are open"]
+        : [
+            "Open the rating to see which dimensions are losing the most points",
+            "The recommendations there are ordered by points recoverable",
+            "It unlocks on its own the moment the score crosses the gate — no staff action",
+          ],
+      action: { label: "Open rating", href: `/admin/readiness?companyId=${companyId}` },
+    },
+    // Either of the next two advances the stage — `shouldAdvanceDeployToOptimize`
+    // reads `hasDealRoom || hasInvestorInterest`. They share an `anyOf` id so the
+    // pending count says one thing to do, not two.
+    {
       key: "dealroom",
       label: "Deal room created",
-      detail: "Needed for Deploy",
+      detail: `Opens ${STAGE_META.optimize.label}`,
       met: c.hasDealRoom,
+      anyOf: "advance",
       why: c.hasDealRoom
         ? "A deal room exists to coordinate the raise."
-        : "Deploy assumes an active deal room to coordinate the raise. None exists yet, which blocks progress into Optimize.",
+        : `No deal room exists yet. Either this or a logged investor interest opens ${STAGE_META.optimize.label} — only one is needed.`,
       points: c.hasDealRoom
         ? ["Deal room is active"]
         : ["Open Deal Rooms", "Create a room and attach this company", "Invite the founder and internal deal team", "Load the data-room documents"],
@@ -98,17 +129,35 @@ function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
     {
       key: "interest",
       label: "Investor interest logged",
-      detail: "Signal for Optimize",
+      detail: `Opens ${STAGE_META.optimize.label}`,
       met: c.hasInvestorInterest,
+      anyOf: "advance",
       why: c.hasInvestorInterest
         ? "At least one investor interest has been recorded."
-        : "No investor interest is recorded yet. Optimize is about converting demand, so at least one logged interest is required.",
+        : `No investor interest is recorded yet. Either this or a deal room opens ${STAGE_META.optimize.label} — only one is needed.`,
       points: c.hasInvestorInterest
         ? ["Interest recorded"]
         : ["Run investor matching for the company", "Surface it to matched investors", "Send a targeted intro campaign", "Log the first expressed interest"],
       action: { label: "Open matching", href: buildCompanyFilteredHref("/admin/matching", companyId) },
     },
   ];
+}
+
+/**
+ * Unmet gates, with each `anyOf` group counted once. Satisfying any member of a
+ * group satisfies the group, so a group with one member already met contributes
+ * nothing at all.
+ */
+function pendingGates(gates: Gate[]): Gate[] {
+  const satisfiedGroups = new Set(gates.filter((g) => g.met && g.anyOf).map((g) => g.anyOf));
+  const seenGroups = new Set<string>();
+  return gates.filter((g) => {
+    if (g.met) return false;
+    if (!g.anyOf) return true;
+    if (satisfiedGroups.has(g.anyOf) || seenGroups.has(g.anyOf)) return false;
+    seenGroups.add(g.anyOf);
+    return true;
+  });
 }
 
 type ReminderStatus = {
@@ -154,7 +203,11 @@ export function FounderJourneyPanel({
   const { stage, stageIndex, approvalStatus, approvalFeedback, pendingApproval } = journey;
   const badge = approvalBadge(approvalStatus);
   const gates = buildGates(journey, companyId);
-  const pending = gates.filter((g) => !g.met);
+  const pending = pendingGates(gates);
+  // The CRR holds what iCapOS sends on the founder's behalf; the rest is what
+  // moves them to the next stage. Saying "3 pending" ran the two together.
+  const blocking = pending.filter((g) => g.key === "crr");
+  const toAdvance = pending.filter((g) => g.key !== "crr");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const active = gates.find((g) => g.key === openKey) ?? null;
 
@@ -304,10 +357,23 @@ export function FounderJourneyPanel({
       </div>
 
       {pending.length > 0 ? (
-        <p className="mt-2 text-[11px] text-slate-500">
-          <span className="font-semibold text-red-600">{pending.length} pending:</span>{" "}
-          {pending.map((p) => p.label).join(", ")} — click to resolve.
-        </p>
+        <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+          {blocking.length > 0 ? (
+            <p>
+              <span className="font-semibold text-red-600">{blocking.length} blocking this stage:</span>{" "}
+              {blocking.map((p) => p.label).join(", ")} — outreach and introductions are held.
+            </p>
+          ) : null}
+          {toAdvance.length > 0 ? (
+            <p>
+              <span className="font-semibold text-slate-700">To advance:</span>{" "}
+              {/* The anyOf group collapses to one item, so this reads "a deal room
+                  or a logged interest", not two separate chores. */}
+              {toAdvance.map((p) => p.label).join(", ")}
+              {gates.some((g) => g.anyOf === "advance" && !g.met) ? " — either one is enough." : " — click to resolve."}
+            </p>
+          ) : null}
+        </div>
       ) : (
         <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11.5px] text-emerald-800">
           All tracked gates are met. {pendingApproval ? "Awaiting your stage approval." : "Ready to progress."}

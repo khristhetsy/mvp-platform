@@ -18,14 +18,14 @@ function getLockTitle(
     return "Complete Qualify requirements to unlock this";
   }
   if (minRequired === "deploy") {
-    return "Reach Deploy stage to access this feature";
+    return "Reach the Marketing stage to access this feature";
   }
   return `Reach ${minRequired} stage to access this feature`;
 }
 
 function getLockDescription(stage: JourneyStage, minRequired: JourneyStage): string {
   if (stage === "initialize") {
-    return "Finish setting up your founder profile to advance to the Qualify stage and unlock this feature.";
+    return "Finish setting up your founder profile to advance to the Preparation stage and unlock this feature.";
   }
   if (stage === "qualify") {
     return "Upload required documents and achieve qualifying completion to request admin review and advance to Deploy.";

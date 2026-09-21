@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Where they are — stage gates with CRR</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.3px;white-space:nowrap}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;
+         box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:12px}
+  .head{display:flex;align-items:flex-start;gap:9px;margin-bottom:13px}
+  .head .t{font-size:13px;font-weight:650}
+  .head .d{font-size:11.5px;color:var(--s500)}
+  .head .sp{flex:1}
+  .btn{border-radius:8px;padding:5px 11px;font-size:11.5px;border:1px solid var(--line);background:#fff;
+       color:var(--s600);text-decoration:none;white-space:nowrap}
+
+  /* stepper */
+  .step{display:flex;align-items:center;margin-bottom:14px}
+  .sitem{flex:1;display:flex;align-items:center}
+  .sitem:last-child{flex:none}
+  .scol{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .dot{width:30px;height:30px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+  .d-cur{background:var(--ind);color:#fff;box-shadow:0 0 0 4px #E0E7FF}
+  .d-done{background:#10B981;color:#fff}
+  .d-todo{background:var(--l100);color:var(--s400)}
+  .scol p{margin:6px 0 0;font-size:11px;font-weight:650}
+  .p-cur{color:#4338CA}.p-done{color:var(--s700)}.p-todo{color:var(--s400)}
+  .bar{flex:1;height:2px;border-radius:99px;margin:0 4px;background:#E2E8F0}
+  .bar.on{background:#6EE7B7}
+
+  .cs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;
+      border-radius:9px;background:var(--l50);padding:10px 12px;margin-bottom:13px}
+  .cs .k{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s500)}
+  .cs .v{font-size:14px;font-weight:700;margin:1px 0}
+  .cs .b{font-size:11px;color:var(--s500)}
+  .pill{border-radius:99px;padding:3px 10px;font-size:11px;font-weight:650;border:1px solid}
+  .p-ok{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
+  .p-amber{background:#FFFBEB;color:#92400E;border-color:#FDE68A}
+  .p-red{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}
+
+  .gh{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s500);margin:0 0 6px}
+  .gh span{font-weight:400;text-transform:none;letter-spacing:0;color:var(--s400)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;column-gap:22px;row-gap:2px}
+  .g{display:flex;align-items:flex-start;gap:9px;border-radius:8px;padding:7px 8px}
+  .g .m{margin-top:2px;width:15px;height:15px;border-radius:99px;flex:none;display:flex;align-items:center;
+        justify-content:center;font-size:9.5px;font-weight:700}
+  .m-ok{background:#D1FAE5;color:#047857}
+  .m-no{background:#FEE2E2;color:#DC2626}
+  .m-done{background:var(--l100);color:#94A3B8}
+  .g .tx{flex:1;min-width:0}
+  .g .nm{display:block;font-size:12px;font-weight:550;color:#1E293B}
+  .g .dt{display:block;font-size:11px;color:var(--s500)}
+  .g .go{flex:none;margin-top:2px;font-size:11px;color:var(--s400)}
+  .g.isnew{background:#EEF2FF;box-shadow:inset 0 0 0 1px #C7D2FE}
+  .g.cleared .nm{color:#94A3B8}
+  .tagnew{font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;
+          padding:1px 6px;margin-left:5px;vertical-align:1px;background:var(--ind);color:#fff}
+  .tagfix{font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;
+          padding:1px 6px;margin-left:5px;vertical-align:1px;background:#B45309;color:#fff}
+  .rem{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:650;border-radius:99px;
+       padding:1px 7px;background:#EFF6FF;color:#1D4ED8;margin-top:4px}
+
+  /* either/or group */
+  .either{grid-column:1 / -1;border:1px dashed #C7D2FE;background:#F8F9FF;border-radius:9px;padding:8px 9px;margin-top:3px}
+  .either .cap{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#4338CA;margin:0 0 3px}
+  .either .cap span{font-weight:400;text-transform:none;letter-spacing:0;color:var(--s500)}
+  .orline{display:flex;align-items:center;gap:8px;margin:2px 0}
+  .orline .w{font-size:10px;font-weight:700;color:#A5B4FC;padding-left:30px}
+
+  .foot{margin-top:10px;font-size:11.5px}
+  .foot b{color:var(--bad)}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ind);border-radius:9px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);line-height:1.65;margin-bottom:12px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  ul.t{margin:6px 0 0;padding-left:18px}
+  ul.t li{font-size:12.4px;margin-bottom:5px;line-height:1.55}
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);
+     text-align:left;padding:0 9px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 9px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .was{color:#B91C1C;text-decoration:line-through}
+  .now{color:#065F46;font-weight:650}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Where they are — stage gates</h1>
+<p class="sub">Company Workspace → Overview · mockup, using this company&apos;s live numbers (CRR 32, gate 65)</p>
+
+<!-- ═════ TODAY ═════ -->
+<div class="lbl">Today</div>
+<div class="panel">
+  <div class="step">
+    <div class="sitem"><div class="scol"><div class="dot d-done">✓</div><p class="p-done">Onboarding</p></div><div class="bar on"></div></div>
+    <div class="sitem"><div class="scol"><div class="dot d-done">✓</div><p class="p-done">Preparation</p></div><div class="bar on"></div></div>
+    <div class="sitem"><div class="scol"><div class="dot d-cur">3</div><p class="p-cur">Marketing</p></div><div class="bar"></div></div>
+    <div class="sitem"><div class="scol"><div class="dot d-todo">4</div><p class="p-todo">Closing</p></div></div>
+  </div>
+  <div class="cs">
+    <div><p class="k">Current stage</p><p class="v">Marketing</p><p class="b">Go-to-market &amp; deal room</p></div>
+    <span class="pill p-ok">Stage approved</span>
+  </div>
+  <p class="gh">Stage gates <span>— click a gate for its solution</span></p>
+  <div class="grid">
+    <div class="g"><span class="m m-ok">✓</span><span class="tx"><span class="nm">Onboarding complete</span>
+      <span class="dt">Company profile, funding info, pitch deck</span></span><span class="go">Details ›</span></div>
+    <div class="g"><span class="m m-ok">✓</span><span class="tx"><span class="nm">Preparation complete</span>
+      <span class="dt">78% complete (needs ≥ 75%)</span></span><span class="go">Details ›</span></div>
+    <div class="g"><span class="m m-ok">✓</span><span class="tx"><span class="nm">Required documents uploaded</span>
+      <span class="dt">Qualify-stage document set</span></span><span class="go">Details ›</span></div>
+    <div class="g"><span class="m m-no">✕</span><span class="tx"><span class="nm">Deal room created</span>
+      <span class="dt">Needed for Deploy</span><span class="rem">◷ Reminder on · scheduled</span></span><span class="go">Resolve ›</span></div>
+    <div class="g"><span class="m m-no">✕</span><span class="tx"><span class="nm">Investor interest logged</span>
+      <span class="dt">Signal for Optimize</span><span class="rem">◷ Reminder on · scheduled</span></span><span class="go">Resolve ›</span></div>
+  </div>
+  <p class="foot"><b>2 pending:</b> Deal room created, Investor interest logged — click to resolve.</p>
+</div>
+
+<div class="note warn">
+  <b>Three problems, only one of which is the missing CRR row.</b>
+  <ul class="t">
+    <li><b>No CRR gate.</b> The number that holds outreach and brokered introductions for this whole
+      stage — 32 against a gate of 65 — appears nowhere.</li>
+    <li><b>&ldquo;Needed for Deploy&rdquo; and &ldquo;Signal for Optimize&rdquo; leak the internal
+      stage keys.</b> Every other label on the page says Marketing and Closing. And they are
+      backwards: a deal room is not needed <i>for</i> Marketing — the company is already in it. Both
+      are what move it <i>out</i>, into Closing.</li>
+    <li><b>&ldquo;2 pending&rdquo; overstates the work.</b>
+      <code>shouldAdvanceDeployToOptimize</code> reads
+      <code>hasDealRoom <b>||</b> hasInvestorInterest</code> — <i>either one</i> advances the stage.
+      The panel renders them as two independent blockers, so staff chase both when one would do.</li>
+  </ul>
+</div>
+
+<!-- ═════ PROPOSED ═════ -->
+<div class="lbl">Proposed</div>
+<div class="panel">
+  <div class="step">
+    <div class="sitem"><div class="scol"><div class="dot d-done">✓</div><p class="p-done">Onboarding</p></div><div class="bar on"></div></div>
+    <div class="sitem"><div class="scol"><div class="dot d-done">✓</div><p class="p-done">Preparation</p></div><div class="bar on"></div></div>
+    <div class="sitem"><div class="scol"><div class="dot d-cur">3</div><p class="p-cur">Marketing</p></div><div class="bar"></div></div>
+    <div class="sitem"><div class="scol"><div class="dot d-todo">4</div><p class="p-todo">Closing</p></div></div>
+  </div>
+  <div class="cs">
+    <div><p class="k">Current stage</p><p class="v">Marketing</p><p class="b">Go-to-market &amp; deal room</p></div>
+    <span style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="pill p-ok">Stage approved</span>
+      <span class="pill p-red">CRR 32 · needs 65</span>
+    </span>
+  </div>
+
+  <p class="gh">Stage gates <span>— click a gate for its solution</span></p>
+  <div class="grid">
+    <div class="g cleared"><span class="m m-done">✓</span><span class="tx"><span class="nm">Onboarding complete</span>
+      <span class="dt">Cleared in Onboarding</span></span><span class="go">Details ›</span></div>
+    <div class="g cleared"><span class="m m-done">✓</span><span class="tx"><span class="nm">Preparation complete</span>
+      <span class="dt">Cleared in Preparation · 78%</span></span><span class="go">Details ›</span></div>
+    <div class="g cleared"><span class="m m-done">✓</span><span class="tx"><span class="nm">Required documents uploaded</span>
+      <span class="dt">Cleared in Preparation</span></span><span class="go">Details ›</span></div>
+
+    <div class="g isnew"><span class="m m-no">✕</span>
+      <span class="tx"><span class="nm">Capital Readiness Rating <span class="tagnew">New</span></span>
+        <span class="dt">CRR 32, needs 65 · 33 short · Seed profile</span>
+        <span class="dt" style="color:#B45309;margin-top:2px">Holds automated outreach and introduction requests</span></span>
+      <span class="go">Resolve ›</span></div>
+
+    <div class="either">
+      <p class="cap">To advance to Closing <span>· either one is enough</span></p>
+      <div class="orline" style="flex-direction:column;align-items:stretch;gap:0">
+        <div class="g" style="padding:5px 0"><span class="m m-no">✕</span>
+          <span class="tx"><span class="nm">Deal room created <span class="tagfix">Reworded</span></span>
+            <span class="dt">Opens Closing</span><span class="rem">◷ Reminder on · scheduled</span></span>
+          <span class="go">Resolve ›</span></div>
+        <div class="w">— or —</div>
+        <div class="g" style="padding:5px 0"><span class="m m-no">✕</span>
+          <span class="tx"><span class="nm">Investor interest logged <span class="tagfix">Reworded</span></span>
+            <span class="dt">Opens Closing</span><span class="rem">◷ Reminder on · scheduled</span></span>
+          <span class="go">Resolve ›</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">
+    <b>1 blocking this stage:</b> Capital Readiness Rating — outreach and introductions are held.<br>
+    <span style="color:var(--s500)">To advance: 0 of 1 — a deal room <i>or</i> a logged investor
+    interest opens Closing.</span>
+  </p>
+</div>
+
+<div class="note">
+  <b>What the CRR row does and does not stop.</b> It holds the two things that go out under the
+  iCapOS name — Automated Outreach and introduction requests — exactly as the Marketing menu already
+  shows. It does <b>not</b> hold stage advancement: this company reaches Closing the moment a deal
+  room or an investor interest exists, whatever the CRR says. The footer states the two separately
+  for that reason.
+</div>
+
+<!-- ═════ WHAT IT TAKES ═════ -->
+<div class="lbl">What this takes</div>
+<div class="panel" style="padding:15px">
+  <table>
+    <tr><th style="width:36%">Where</th><th>Change</th></tr>
+    <tr>
+      <td><code>FounderJourneyPanel.tsx</code><br><span style="color:#94A3B8;font-size:11px">buildGates()</span></td>
+      <td>One new gate keyed <code>crr</code>, reading <code>c.crrQualified</code> and
+        <code>c.crrScore</code> — both already on <code>StageConditions</code> from the Marketing-menu
+        change, so there is no new query. Its <code>why</code> / <code>points</code> mirror the
+        <code>crrDiagnosis</code> wording already used in the menu drawer.</td>
+    </tr>
+    <tr>
+      <td><code>FounderJourneyPanel.tsx</code><br><span style="color:#94A3B8;font-size:11px">gate detail strings</span></td>
+      <td><code>&quot;Needed for Deploy&quot;</code> → <span class="now">&quot;Opens Closing&quot;</span>,
+        <code>&quot;Signal for Optimize&quot;</code> → <span class="now">&quot;Opens Closing&quot;</span>.
+        Two string literals; <code>STAGE_META</code> already holds the display names, so they can be
+        derived rather than typed.</td>
+    </tr>
+    <tr>
+      <td><code>FounderJourneyPanel.tsx</code><br><span style="color:#94A3B8;font-size:11px">pending count</span></td>
+      <td>Gates gain an optional <code>anyOf</code> group id. The deal-room and interest gates share
+        one, so the footer counts the group once. Everything else counts as it does now.</td>
+    </tr>
+    <tr>
+      <td><code>stage-gate-reminders.ts</code></td>
+      <td>Same two strings, and the same either/or: the founder currently gets chased separately for
+        both, when doing one closes the other.</td>
+    </tr>
+    <tr>
+      <td><code>founder-journey/*</code></td>
+      <td><span style="color:var(--s400)">No change.</span> <code>crrScore</code> and
+        <code>crrQualified</code> already exist and are already populated.</td>
+    </tr>
+  </table>
+</div>
+
+</div>
+</body>
+</html>

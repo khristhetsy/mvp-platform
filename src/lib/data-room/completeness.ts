@@ -159,5 +159,5 @@ export function computeDataRoomState(
 export const DATA_ROOM_UNLOCKS = [
   "Visibility to investors in the Private Market",
   "The ability to request investor introductions",
-  "Advancing to the Deploy stage to start your raise",
+  "Advancing to the Marketing stage to start your raise",
 ] as const;

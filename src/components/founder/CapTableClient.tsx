@@ -100,7 +100,7 @@ export function CapTableClient() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "Could not export.");
-      setExportMsg(`Saved ${j.fileName as string} to your Documents — counts toward readiness and the Qualify stage.`);
+      setExportMsg(`Saved ${j.fileName as string} to your Documents — counts toward your Preparation completeness and the Preparation stage.`);
       if (j.url) window.open(j.url as string, "_blank", "noopener");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not export.");
