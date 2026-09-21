@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { useDismiss } from "@/lib/ui/use-dismiss";
 import Link from "next/link";
 import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench, Pin } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,73 @@ import type {
 } from "@/lib/icfo-events/types";
 
 const SESSION_TYPE_VALUES: SessionType[] = ["keynote", "panel", "talk_show", "founder_showcase", "workshop"];
+
+/**
+ * Secondary destinations for one event, behind a single trigger.
+ *
+ * These are navigation, not actions on this page — the only thing you *do* from
+ * the header is open the live control centre. Marketing Hub is edit-gated the
+ * same way it was as a button; the read-only ones are always listed.
+ */
+function EventHeaderMenu({
+  event,
+  canEdit,
+  moreLabel,
+  publicLabel,
+  marketingLabel,
+  leadsLabel,
+  registrationsLabel,
+}: Readonly<{
+  event: { id: string; slug: string };
+  canEdit: boolean;
+  moreLabel: string;
+  publicLabel: string;
+  marketingLabel: string;
+  leadsLabel: string;
+  registrationsLabel: string;
+}>) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss<HTMLDivElement>(open, () => setOpen(false));
+
+  const item = "flex items-center gap-2 rounded px-2.5 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-slate-50";
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+      >
+        {moreLabel} <span aria-hidden>▾</span>
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-[var(--border-subtle)] bg-white p-1 shadow-lg"
+        >
+          {canEdit ? (
+            <Link role="menuitem" href={`/admin/events/${event.id}/marketing`} className={item} onClick={() => setOpen(false)}>
+              {marketingLabel}
+            </Link>
+          ) : null}
+          <Link role="menuitem" href={`/admin/events/${event.id}/registrations`} className={item} onClick={() => setOpen(false)}>
+            {registrationsLabel}
+          </Link>
+          <Link role="menuitem" href={`/admin/events/${event.id}/leads`} className={item} onClick={() => setOpen(false)}>
+            {leadsLabel}
+          </Link>
+          <div className="my-1 h-px bg-slate-100" />
+          {/* Leaves the admin for the public site, so it is separated and opens away. */}
+          <Link role="menuitem" href={`/events/${event.slug}`} target="_blank" className={item} onClick={() => setOpen(false)}>
+            {publicLabel} <span aria-hidden className="text-[var(--text-muted)]">↗</span>
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 /** Clean business/line icons per session type (replaces emoji marks). */
 const SESSION_ICONS: Record<SessionType, typeof Mic> = {
@@ -641,50 +709,28 @@ export function EventDetailManager({
         <ArrowLeft className="h-4 w-4" /> {t("allEvents")}
       </Link>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div>
+      {/* One primary action; everything else behind a menu. Five buttons in a flex
+          row with no whitespace-nowrap shrank inside max-w-4xl and broke their
+          labels across two and three lines at differing heights. `min-w-0` lets
+          the title truncate instead of squeezing the controls. */}
+      <div className="mt-3 flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             /{event.slug} · <span>{t(`status.${event.status}`)}</span> ·{" "}
             {headerSectors.join(", ") || t("noSectorTracks")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-none items-center gap-2">
           {canEdit && (
             <Link
               href={`/admin/events/${event.id}/control`}
-              className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              className="whitespace-nowrap rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
             >
               {t("liveControlCenter")}
             </Link>
           )}
-          {canEdit && (
-            <Link
-              href={`/admin/events/${event.id}/marketing`}
-              className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-            >
-              {t("marketingHub")}
-            </Link>
-          )}
-          <Link
-            href={`/admin/events/${event.id}/registrations`}
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            Registrations
-          </Link>
-          <Link
-            href={`/admin/events/${event.id}/leads`}
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            {t("leads")}
-          </Link>
-          <Link
-            href={`/events/${event.slug}`}
-            target="_blank"
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            {t("viewPublic")}
-          </Link>
+          <EventHeaderMenu event={event} canEdit={canEdit} moreLabel={t("more")} publicLabel={t("viewPublic")} marketingLabel={t("marketingHub")} leadsLabel={t("leads")} registrationsLabel={t("registrations")} />
         </div>
       </div>
 

@@ -417,7 +417,9 @@
         "live": "En vivo",
         "ended": "Terminado",
         "archived": "Archivado"
-      }
+      },
+      "more": "Más",
+      "registrations": "Registros"
     },
     "control": {
       "stat": {

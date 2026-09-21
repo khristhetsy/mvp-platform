@@ -417,7 +417,9 @@
         "live": "Live",
         "ended": "Ended",
         "archived": "Archived"
-      }
+      },
+      "more": "More",
+      "registrations": "Registrations"
     },
     "control": {
       "stat": {

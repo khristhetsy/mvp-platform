@@ -10,7 +10,8 @@
  *
  * The page owns its rows and its SearchState; this only renders the chrome.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useDismiss } from "@/lib/ui/use-dismiss";
 import {
   OdooSearchBar, type FieldFilter, type GroupOption, type QuickFilter, type SearchState,
 } from "@/components/admin/OdooSearchBar";
@@ -30,19 +31,7 @@ const menu: React.CSSProperties = {
 const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", fontSize: 12.5, cursor: "pointer", width: "100%", background: "none", border: "none", textAlign: "left" };
 const head: React.CSSProperties = { fontSize: 10, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted-foreground, #94A3B8)", fontWeight: 600, padding: "5px 12px" };
 
-/** Close on outside click / Escape — the behaviour every one of these menus needs. */
-function useDismiss(open: boolean, close: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [open, close]);
-  return ref;
-}
+// useDismiss moved to @/lib/ui/use-dismiss so the event header menu shares it.
 
 export function FounderToolbar({
   scope, state, onChange, quick, fields, groups,
