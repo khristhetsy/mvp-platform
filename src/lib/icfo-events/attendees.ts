@@ -13,6 +13,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { countMatches, sectorsOf, type Matchable } from "@/lib/icfo-events/matching-rule";
 
 function raw(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -27,9 +28,25 @@ export type EventAttendees = {
   unnamed: number;
   /** Everyone registered, whatever they registered as. */
   total: number;
+  /**
+   * Registrations by role — named or not.
+   *
+   * Deliberately not `investors.length`: someone who registered without giving
+   * a name is not shown as a chip but is still in the room, and a headline
+   * count that quietly omitted them would understate the event.
+   */
+  investorCount: number;
+  founderCount: number;
+  /** Investors and founders together — the pool the matching runs over. */
+  matchable: number;
+  /** Pairs that match, by the same rule the staff board counts with. */
+  matches: number;
 };
 
-const EMPTY: EventAttendees = { investors: [], founders: [], unnamed: 0, total: 0 };
+const EMPTY: EventAttendees = {
+  investors: [], founders: [], unnamed: 0, total: 0,
+  investorCount: 0, founderCount: 0, matchable: 0, matches: 0,
+};
 
 type Row = Record<string, unknown>;
 
@@ -53,11 +70,24 @@ export async function listEventAttendees(eventId: string): Promise<EventAttendee
       .eq("event_id", eventId);
     if (error) return EMPTY;
 
-    const out: EventAttendees = { investors: [], founders: [], unnamed: 0, total: 0 };
+    const out: EventAttendees = {
+      investors: [], founders: [], unnamed: 0, total: 0,
+      investorCount: 0, founderCount: 0, matchable: 0, matches: 0,
+    };
+    const pool: Matchable[] = [];
+
     for (const r of (data ?? []) as Row[]) {
       out.total += 1;
-      const badge = BADGE[String(r.attendee_type ?? "").toLowerCase()];
+      const role = String(r.attendee_type ?? "").toLowerCase();
+      const badge = BADGE[role];
       if (!badge) continue;
+
+      if (badge === "Investor") out.investorCount += 1;
+      else out.founderCount += 1;
+      pool.push({
+        role: role as Matchable["role"],
+        sectors: sectorsOf((r.answers as Record<string, unknown> | null) ?? {}),
+      });
 
       const name = nameOf(r);
       // A blank chip is worse than a count: someone with no name at all is
@@ -73,6 +103,9 @@ export async function listEventAttendees(eventId: string): Promise<EventAttendee
     const byName = (a: Attendee, b: Attendee) => a.name.localeCompare(b.name);
     out.investors.sort(byName);
     out.founders.sort(byName);
+
+    out.matchable = pool.length;
+    out.matches = countMatches(pool);
     return out;
   } catch {
     return EMPTY;

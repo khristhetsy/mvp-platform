@@ -111,6 +111,56 @@ describe("a failed read", () => {
     // Supabase reports a failure in `error` rather than rejecting, and the
     // page must still render — an attendee list is not worth a 500.
     failing.mockReturnValue(true);
-    expect(await listEventAttendees("e1")).toEqual({ investors: [], founders: [], unnamed: 0, total: 0 });
+    expect(await listEventAttendees("e1")).toEqual({
+      investors: [], founders: [], unnamed: 0, total: 0,
+      investorCount: 0, founderCount: 0, matchable: 0, matches: 0,
+    });
+  });
+});
+
+describe("the numbers on the event page", () => {
+  it("counts registrations by role, not the chips it renders", async () => {
+    // The unnamed one gets no chip but is still an investor in the room.
+    rows.mockReturnValue([
+      reg(),
+      reg({ answers: {}, profiles: null }),
+      reg({ attendee_type: "founder", answers: { name: "Shan" } }),
+    ]);
+    const a = await listEventAttendees("e1");
+    expect(a.investors).toHaveLength(1);
+    expect(a.investorCount).toBe(2);
+    expect(a.founderCount).toBe(1);
+  });
+
+  it("leaves sponsors out of the matchable pool but in the total", async () => {
+    rows.mockReturnValue([reg(), reg({ attendee_type: "sponsor" }), reg({ attendee_type: "service" })]);
+    const a = await listEventAttendees("e1");
+    expect(a.total).toBe(3);
+    expect(a.matchable).toBe(1);
+  });
+
+  it("counts matches by the same rule the staff board uses", async () => {
+    rows.mockReturnValue([
+      reg({ answers: { name: "A", sectors: ["FinTech"] } }),
+      reg({ answers: { name: "B", sectors: ["FinTech"] } }),
+      reg({ attendee_type: "founder", answers: { name: "C", sector: "EdTech" } }),
+    ]);
+    // A–B share FinTech; both pair with the founder on role alone.
+    expect((await listEventAttendees("e1")).matches).toBe(3);
+  });
+
+  it("does not match two investors with nothing in common", async () => {
+    rows.mockReturnValue([
+      reg({ answers: { name: "A", sectors: ["FinTech"] } }),
+      reg({ answers: { name: "B", sectors: ["EdTech"] } }),
+    ]);
+    expect((await listEventAttendees("e1")).matches).toBe(0);
+  });
+
+  it("reports no matches for a room of one", async () => {
+    rows.mockReturnValue([reg()]);
+    const a = await listEventAttendees("e1");
+    expect(a.matchable).toBe(1);
+    expect(a.matches).toBe(0);
   });
 });

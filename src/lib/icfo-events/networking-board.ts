@@ -14,6 +14,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listIntroductions } from "@/lib/icfo-events/introductions-server";
+import { pairScore, sectorsOf, sharedSectors } from "@/lib/icfo-events/matching-rule";
 
 function raw(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -64,22 +65,6 @@ const EMPTY: NetworkingBoard = {
 const MAX_ROWS = 400;
 
 const pairKey = (a: string, b: string) => [a, b].sort().join("|");
-
-/**
- * The sectors someone declared at registration.
- *
- * Investors answer `sectors` (many), founders answer `sector` (one) — and the
- * form has changed over time, so both shapes are accepted from either.
- */
-function sectorsOf(answers: Record<string, unknown>): string[] {
-  const out: string[] = [];
-  for (const key of ["sectors", "sector"]) {
-    const v = answers[key];
-    if (Array.isArray(v)) out.push(...v.map(String));
-    else if (typeof v === "string" && v.trim()) out.push(v.trim());
-  }
-  return [...new Set(out.map((s) => s.trim()).filter(Boolean))];
-}
 
 export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBoard> {
   try {
@@ -136,11 +121,13 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
     for (let i = 0; i < people.length; i += 1) {
       for (let j = i + 1; j < people.length; j += 1) {
         const [x, y] = [people[i], people[j]];
-        const mine = new Set(x.sectors);
-        const shared = y.sectors.filter((s) => mine.has(s));
-        const complementary = x.side.role !== y.side.role;
-        const score = shared.length * 2 + (complementary ? 3 : 0);
+        // The same rule the public event page counts with, so the two numbers
+        // can never disagree.
+        const left = { role: x.side.role, sectors: x.sectors };
+        const right = { role: y.side.role, sectors: y.sectors };
+        const score = pairScore(left, right);
         if (score <= 0) continue;
+        const shared = sharedSectors(left, right);
 
         // Investor first, so a mixed pair reads the way an introduction would.
         // Two of the same kind keep the order they arrived in.

@@ -15,6 +15,7 @@ import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
 import { CallInBar } from "@/components/events/CallInBar";
 import { OnStageGuests } from "@/components/events/OnStageGuests";
 import { EventCountdown } from "@/components/events/EventCountdown";
+import { EventRoomStats } from "@/components/events/EventRoomStats";
 import { EventSideRail } from "@/components/events/EventSideRail";
 import { sanitizeBannerHtml } from "@/lib/icfo-events/sanitize-html";
 import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
@@ -425,11 +426,24 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               </div>
             )}
 
-            {event.showCountdown && event.startsAt && (
+            {attendees.total > 0 ? (
+              <div className={bannerHtml ? "mt-6" : ""}>
+                <EventRoomStats
+                  investors={attendees.investorCount}
+                  founders={attendees.founderCount}
+                  registered={attendees.total}
+                  matchable={attendees.matchable}
+                  matches={attendees.matches}
+                  startsAt={event.showCountdown ? event.startsAt : null}
+                />
+              </div>
+            ) : event.showCountdown && event.startsAt ? (
+              // Nobody has registered yet: an empty room is not worth counting,
+              // but the clock still is.
               <div className={bannerHtml ? "mt-6" : ""}>
                 <EventCountdown startsAt={event.startsAt} />
               </div>
-            )}
+            ) : null}
 
         {event.sectors.length > 0 && (
           <div className="mt-8">

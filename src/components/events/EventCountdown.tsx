@@ -16,8 +16,14 @@ function parts(targetMs: number, nowMs: number) {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** Live countdown to the event start. Renders nothing once the start has passed. */
-export function EventCountdown({ startsAt }: { startsAt: string }) {
+/**
+ * Live countdown to the event start. Renders nothing once the start has passed.
+ *
+ * `bare` drops the card chrome and adds a rule above, for when it sits inside
+ * another card — and because it can vanish mid-session, the rule has to belong
+ * to the countdown rather than to whatever is above it.
+ */
+export function EventCountdown({ startsAt, bare = false }: { startsAt: string; bare?: boolean }) {
   const t = useTranslations("appPages");
   const target = new Date(startsAt).getTime();
   const [now, setNow] = useState<number>(() => Date.now());
@@ -39,7 +45,9 @@ export function EventCountdown({ startsAt }: { startsAt: string }) {
 
   return (
     <div
-      className="rounded-2xl border border-[var(--border-subtle)] bg-white p-5"
+      className={bare
+        ? "mt-4 border-t border-[var(--border-subtle)] pt-4"
+        : "rounded-2xl border border-[var(--border-subtle)] bg-white p-5"}
       role="timer"
       aria-label={t("countdown_days")}
     >
