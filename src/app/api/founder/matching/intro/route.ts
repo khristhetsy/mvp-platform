@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { crrFor } from "@/lib/crr/crr-for";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
@@ -38,6 +39,23 @@ export async function POST(request: Request) {
     : !(await emailDispatchAllowedForUser(admin, founderId));
   if (emailBlocked) {
     return NextResponse.json({ error: EMAIL_DISABLED_MESSAGE, code: "email_disabled" }, { status: 403 });
+  }
+
+  // The rating gate, enforced where it cannot be clicked around. The matches
+  // page locks the button; this refuses the request that skips the page.
+  const crr = await crrFor(company.id);
+  if (!crr.outreachUnlocked) {
+    return NextResponse.json(
+      {
+        error: crr.score === null
+          ? `Introductions open once your Capital Readiness Rating reaches ${crr.gate}. Yours has not been scored yet.`
+          : `Introductions open at a Capital Readiness Rating of ${crr.gate}. Yours is ${crr.score}.`,
+        code: "crr_gate",
+        score: crr.score,
+        gate: crr.gate,
+      },
+      { status: 403 },
+    );
   }
 
   // Per-plan monthly cap on how many investor connection requests this founder

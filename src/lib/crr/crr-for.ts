@@ -20,6 +20,9 @@ import {
   type StoredFactor,
 } from "@/lib/crr/weight-sets";
 import { dimensionCards, type DimensionCard } from "@/lib/crr/dimension-detail";
+import { DIMENSION_LABEL, FACTOR_KEYS, FACTOR_LABEL } from "@/lib/crr/weight-sets";
+import { FACTOR_TO_DIMENSION } from "@/lib/crr/profiles";
+import type { FactorGap } from "@/lib/crr/improvement";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 
 export { OUTREACH_GATE };
@@ -46,6 +49,12 @@ export type Crr = {
   history: Array<{ score: number; at: string }>;
   /** Supporting figures. They feed the score; they are no longer the score. */
   documentCount: number;
+  /**
+   * Per-factor points earned and available at this company's stage — what the
+   * improvement wizard ranks. Already in CRR points, so a gap of 11 is 11
+   * points of the score.
+   */
+  factorGaps: FactorGap[];
 };
 
 const EMPTY = (profile: ProfileKey): Crr => ({
@@ -64,6 +73,7 @@ const EMPTY = (profile: ProfileKey): Crr => ({
   version: null,
   history: [],
   documentCount: 0,
+  factorGaps: [],
 });
 
 /**
@@ -131,6 +141,20 @@ export async function crrFor(companyId: string | null | undefined): Promise<Crr>
       .map((r) => ({ score: num(r.override_score) ?? num(r.total_score) ?? 0, at: r.created_at as string }))
       .reverse(),
     documentCount: num(latest.document_count) ?? 0,
+    factorGaps: FACTOR_KEYS.map((key) => {
+      const max = points[key] ?? 0;
+      const f = stored[key];
+      // The factor was scored against its own maximum, which may differ from
+      // this stage's; the achievement ratio is what carries across.
+      const ratio = f && f.max > 0 ? Math.min(1, Math.max(0, f.pts / f.max)) : 0;
+      return {
+        key,
+        label: FACTOR_LABEL[key],
+        pts: Math.round(ratio * max * 10) / 10,
+        max,
+        dimension: DIMENSION_LABEL[FACTOR_TO_DIMENSION[key]],
+      };
+    }),
   };
 }
 

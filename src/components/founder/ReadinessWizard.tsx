@@ -123,7 +123,10 @@ function StepCard({
           <div>
             <p className="text-sm font-semibold text-slate-900">{step.title}</p>
             <p className="text-[10px]" style={{ color: step.status === "current" ? "#2E78F5" : "#94a3b8" }}>
-              {step.status === "done" ? "Complete" : `+${step.pointValue} pts toward 80`}
+              {/* No point value: these close a document gap, and what that is
+                  worth to the rating depends on what the document says. The CRR
+                  panel above prices each move honestly. */}
+              {step.status === "done" ? "Complete" : "Still missing"}
             </p>
           </div>
         </div>

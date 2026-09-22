@@ -17,6 +17,9 @@ import {
 } from "@/lib/data/founder-readiness";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { FounderReadinessDonutCards } from "@/components/founder/FounderReadinessDonutCards";
+import { CrrImprovement } from "@/components/founder/CrrImprovement";
+import { crrFor } from "@/lib/crr/crr-for";
+import { improvementSteps, reachesGate } from "@/lib/crr/improvement";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -77,6 +80,11 @@ export default async function FounderReadinessPage() {
 
   const companyName = company?.company_name ?? "Your company";
   const remediation = await loadFounderRemediationPlan(profile);
+  // The rating leads this page now: it is what opens outreach, and the
+  // checklist below is one of its inputs rather than a rival score.
+  const crr = company ? await crrFor(company.id) : null;
+  const crrSteps = crr ? improvementSteps(crr.factorGaps) : [];
+  const crrReach = crr ? reachesGate(crrSteps, crr.pointsToGate) : { enough: false, available: 0, shortfall: 0 };
   const benchmark = company ? await computeReadinessBenchmark(company.id, company.revenue_stage ?? null) : null;
 
   return (
@@ -104,6 +112,25 @@ export default async function FounderReadinessPage() {
             </WorkspacePanel>
           ) : (
             <>
+              {crr ? (
+                <section className="mb-6">
+                  <CrrImprovement
+                    companyName={companyName}
+                    score={crr.score}
+                    band={crr.band}
+                    gate={crr.gate}
+                    pointsToGate={crr.pointsToGate}
+                    outreachUnlocked={crr.outreachUnlocked}
+                    dimensions={crr.dimensions.map((d) => ({
+                      label: d.label, contributes: d.contributes, weight: d.weight,
+                    }))}
+                    steps={crrSteps}
+                    reach={crrReach}
+                    scoredAt={crr.scoredAt}
+                  />
+                </section>
+              ) : null}
+
               <section>
                 <FounderReadinessDonutCards
                   readinessScore={readinessScore}

@@ -9,7 +9,9 @@ import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
+import Link from "next/link";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
+import { crrFor } from "@/lib/crr/crr-for";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
@@ -51,6 +53,10 @@ export default async function FounderMatchesPage() {
   const viewers = company ? await countViewersForFounder(companyIds) : 0;
   const data = company ? await loadFounderMatchingCenter(company) : { cards: [], total: 0, strong: 0 };
   const plan = await getUserPlan(profile.id);
+  // The rating gate, read from the engine rather than a threshold typed on this
+  // page. The admin model already says this surface is CRR-qualified; now the
+  // button agrees with it.
+  const crr = company ? await crrFor(company.id) : null;
   // Free sees matches (count · sector · fit tier) but not identities or actions.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;
 
@@ -151,8 +157,21 @@ export default async function FounderMatchesPage() {
         />
 
         {/* Investor search — the full named directory with per-investor actions. */}
+        {crr && !crr.outreachUnlocked ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-[12.5px] text-amber-900">
+            <span>
+              {cards.length} match{cards.length === 1 ? "" : "es"}. Introductions unlock at CRR {crr.gate}
+              {crr.score === null ? " — you have not been scored yet." : ` — you are at ${crr.score}.`}
+            </span>
+            <Link href="/founder/readiness/wizard" className="font-semibold underline">
+              {crr.score === null ? "Run your rating" : `See the ${crr.pointsToGate} points`}
+            </Link>
+          </div>
+        ) : null}
+
         <MatchingCenterList
           scope="matches"
+          gate={crr ? { score: crr.score, gate: crr.gate, unlocked: crr.outreachUnlocked } : undefined}
           cards={cards}
           introEndpoint="/api/founder/matching/intro"
           followUpEndpoint="/api/founder/matching/follow-up"

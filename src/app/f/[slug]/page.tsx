@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
+import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
+import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
 
 export const dynamic = "force-dynamic";
 
@@ -273,8 +275,8 @@ export default async function InvestorOnePagerPage({
           gap: 12, marginBottom: 20,
         }}>
           <MetricCard
-            label="Round context (illustrative)"
-            value={company.funding_amount ? `~${formatFunding(company.funding_amount)}` : "TBD"}
+            label="Raising"
+            value={company.funding_amount ? formatFunding(company.funding_amount) : "TBD"}
             accent
           />
           <MetricCard
@@ -295,14 +297,19 @@ export default async function InvestorOnePagerPage({
 
         {/* Use of funds */}
         {company.use_of_funds && (
-          <Section title="Planned use of capital (illustrative)" icon={
+          <Section title="Use of capital" icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           }>
-            <FormattedText text={company.use_of_funds} />
+            {parseUseOfFunds(company.use_of_funds)
+              ? <UseOfCapitalBar slices={parseUseOfFunds(company.use_of_funds) ?? []} />
+              : <FormattedText text={company.use_of_funds} />}
+            <p style={{ fontSize: 11, color: "#94a3b8", margin: "12px 0 0" }}>
+              Illustrative allocation, not a commitment.
+            </p>
           </Section>
         )}
 

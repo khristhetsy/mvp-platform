@@ -36,9 +36,13 @@ export function buildCompanyMatchProfile(company: {
   marketplace_visible?: boolean | null;
   published_at?: string | null;
   readinessScore?: number | null;
-  /** Founder's actual ARR / MRR, USD (option B — from the CRM contact). */
-  arr?: number | null;
-  mrr?: number | null;
+  /**
+   * ARR / MRR from either source: a number when a CRM contact supplied an exact
+   * figure, or the band the founder picked in settings — `companies.arr` and
+   * `.mrr` are text columns, so a row passed straight in arrives as a string.
+   */
+  arr?: number | string | null;
+  mrr?: number | string | null;
 }): CompanyMatchProfile {
   // Funding stage + operating stage + revenue stage all feed the stage factor.
   const stageParts = [company.funding_stage, company.operating_stage, company.revenue_stage]
@@ -60,8 +64,10 @@ export function buildCompanyMatchProfile(company: {
     isPublished: Boolean(company.is_published),
     marketplaceVisible: Boolean(company.marketplace_visible),
     publishedAt: company.published_at ?? null,
-    arr: company.arr ?? null,
-    mrr: company.mrr ?? null,
+    arr: typeof company.arr === "number" ? company.arr : null,
+    mrr: typeof company.mrr === "number" ? company.mrr : null,
+    arrBand: typeof company.arr === "string" ? company.arr : null,
+    mrrBand: typeof company.mrr === "string" ? company.mrr : null,
     ...(soughtInvestorTypes.length ? { soughtInvestorTypes } : {}),
     ...(soughtCapitalTypes.length ? { soughtCapitalTypes } : {}),
   };

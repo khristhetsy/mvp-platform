@@ -13,6 +13,7 @@ import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/foun
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { investableCrrFrom, OUTREACH_THRESHOLD } from "@/lib/crr/investable-score";
 import { crrFor } from "@/lib/crr/crr-for";
+import type { CrrSummary } from "@/lib/crr/blocker";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
@@ -145,6 +146,9 @@ export default async function FounderDashboardPage() {
   // (or an account with no company) shows a zeroed CRR rather than leaking the
   // profile-scoped journey of another account.
   let crrResult = { crr: 0, readiness: 0, profilePercent: 0, outreachReady: false };
+  // The engine's own reading, kept whole: the dashboard needs the dimensions to
+  // say what is in the way, not just whether the gate is open.
+  let crrSummary: CrrSummary | null = null;
   let crrSubtitle = isDealCompany ? "No raise on this account" : "No company yet";
   let crrParts = {
     readiness: 0,
@@ -154,7 +158,17 @@ export default async function FounderDashboardPage() {
   };
   if (company) {
     const journeyState = await evaluateFounderJourney(supabase, profile.id);
-    crrResult = investableCrrFrom(await crrFor(company.id), journeyState, company);
+    const engineCrr = await crrFor(company.id);
+    crrSummary = {
+      score: engineCrr.score,
+      gate: engineCrr.gate,
+      pointsToGate: engineCrr.pointsToGate,
+      outreachUnlocked: engineCrr.outreachUnlocked,
+      dimensions: engineCrr.dimensions.map((d) => ({
+        label: d.label, score: d.score, weight: d.weight, headroom: d.headroom,
+      })),
+    };
+    crrResult = investableCrrFrom(engineCrr, journeyState, company);
     crrSubtitle = `Preparation ${crrResult.readiness}% · Profile ${crrResult.profilePercent}%`;
     crrParts = {
       readiness: crrResult.readiness,
@@ -169,12 +183,28 @@ export default async function FounderDashboardPage() {
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
   const journeyOverview = company
-    ? await getJourneyOverview(supabase, profile.id, { outreachReady: crrResult.outreachReady }).catch(() => null)
+    ? await getJourneyOverview(supabase, profile.id, {
+        outreachReady: crrResult.outreachReady,
+        crr: crrSummary,
+      }).catch(() => null)
     : null;
   const matchedInvestorCount = investorFit?.approvedInvestorCount ?? investorFit?.strongMatchCount ?? 0;
   const glanceTiles: GlanceTile[] = company
     ? [
-        { label: "Preparation complete", value: `${readinessScore}%`, valueClass: readinessScore >= 75 ? "text-emerald-600" : undefined, sub: readinessDetail, href: "/founder/readiness" },
+        // The rating first: it is the number that opens and closes doors. The
+        // document count sits beside it, named for what it counts.
+        {
+          label: "Capital Readiness",
+          value: crrSummary?.score === null || crrSummary === null ? "—" : String(crrSummary.score),
+          valueClass: crrSummary?.outreachUnlocked ? "text-emerald-600" : "text-amber-600",
+          sub: crrSummary === null || crrSummary.score === null
+            ? "Not scored yet"
+            : crrSummary.outreachUnlocked
+              ? "Outreach open"
+              : `${crrSummary.pointsToGate} to gate ${crrSummary.gate}`,
+          href: "/founder/readiness",
+        },
+        { label: "Documents", value: `${readinessScore}%`, valueClass: readinessScore >= 75 ? "text-emerald-600" : undefined, sub: readinessDetail, href: "/founder/readiness" },
         { label: "Matched investors", value: String(matchedInvestorCount), sub: "View pipeline →", href: "/founder/matches" },
         { label: "Pledged", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency), sub: company?.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined, href: "/founder/deal-room" },
         { label: "Investor activity", value: String(investorActivityTotal), sub: "Signals & intros", href: "/founder/matches" },

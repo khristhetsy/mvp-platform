@@ -30,6 +30,26 @@ function barColor(score: number): string {
   return "#cbd5e1";
 }
 
+/**
+ * The introduction gate, on the button itself.
+ *
+ * The engine has always refused to broker below the rating gate; the button
+ * did not know, so a founder at 51 could ask and be silently declined. Locked
+ * and legible beats live and futile.
+ */
+function IntroLocked({ gate, score }: { gate: number; score: number | null }) {
+  return (
+    <span
+      className="cursor-not-allowed rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-400"
+      title={score === null
+        ? `Introductions open once your Capital Readiness Rating reaches ${gate}.`
+        : `Your CRR is ${score}. Introductions open at ${gate}.`}
+    >
+      Locked until CRR {gate}
+    </span>
+  );
+}
+
 function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: string }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -118,6 +138,7 @@ export function MatchingCenterList({
   followUpEndpoint,
   draftEndpoint,
   scope,
+  gate,
 }: {
   cards: MatchCenterCard[];
   emptyText: string;
@@ -126,6 +147,8 @@ export function MatchingCenterList({
   draftEndpoint?: string;
   /** Saved-views key. Omit on the investor side, which has no founder toolbar. */
   scope?: string;
+  /** The CRR gate. Omitted on the investor side, which has no rating to hold. */
+  gate?: { score: number | null; gate: number; unlocked: boolean };
 }) {
   const [selected, setSelected] = useState<MatchCenterCard | null>(null);
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
@@ -236,7 +259,11 @@ export function MatchingCenterList({
               {(introEndpoint || followUpEndpoint) ? (
                 <div className="flex items-center gap-2 sm:justify-end" onClick={(e) => e.stopPropagation()}>
                   {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
-                  {introEndpoint && c.introRef && <IntroButton introRef={c.introRef} endpoint={introEndpoint} />}
+                  {introEndpoint && c.introRef && (
+                    gate && !gate.unlocked
+                      ? <IntroLocked gate={gate.gate} score={gate.score} />
+                      : <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
+                  )}
                 </div>
               ) : <span />}
             </div>
@@ -284,7 +311,11 @@ export function MatchingCenterList({
           {(introEndpoint || followUpEndpoint) && (
             <div className="mt-4 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
               {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
-              {introEndpoint && c.introRef && <IntroButton introRef={c.introRef} endpoint={introEndpoint} />}
+              {introEndpoint && c.introRef && (
+                gate && !gate.unlocked
+                  ? <IntroLocked gate={gate.gate} score={gate.score} />
+                  : <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
+              )}
             </div>
           )}
         </div>

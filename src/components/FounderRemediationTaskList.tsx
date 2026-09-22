@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { RemediationTaskRecord } from "@/lib/remediation/types";
+import { dimensionForCategory } from "@/lib/remediation/crr-dimension";
 
 function priorityClass(priority: string) {
   switch (priority) {
@@ -94,6 +95,13 @@ export function FounderRemediationTaskList({
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
                     {categoryLabel(task.category)}
                   </span>
+                  {/* Which part of the rating this earns points in, so the task
+                      and its score sit together. */}
+                  {dimensionForCategory(task.category) ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                      {dimensionForCategory(task.category)?.label}
+                    </span>
+                  ) : null}
                   <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
                     {statusLabel(task.status)}
                   </span>

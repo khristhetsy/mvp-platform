@@ -14,6 +14,8 @@ import {
   FUNDING_STAGE_OPTIONS,
   OPERATING_STAGE_OPTIONS,
   REVENUE_SIZE_OPTIONS,
+  ARR_BAND_OPTIONS,
+  MRR_BAND_OPTIONS,
   BUSINESS_ENTITY_OPTIONS,
   splitProfileCsv,
 } from "@/lib/profile/options";
@@ -144,8 +146,11 @@ const FIELDS: FieldDef[] = [
   // Traction — asked at onboarding step 8, editable here afterwards. Revenue
   // size and highlights are investor-facing; EBITDA above is not.
   { key: "annual_revenue_size", label: "Annual revenue size", type: "chips-single", options: REVENUE_SIZE_OPTIONS, section: "Investor fit profile" },
-  { key: "arr", label: "ARR", type: "text", placeholder: "e.g. $240,000 (blank if none)", section: "Investor fit profile" },
-  { key: "mrr", label: "MRR", type: "text", placeholder: "e.g. $20,000 (blank if none)", section: "Investor fit profile" },
+  // Bands, not free text: the matcher compares ARR and MRR against the
+  // investor's stated range, and "e.g. $240,000" could never be compared to
+  // anything. Both factors were quietly dropping out of every match.
+  { key: "arr", label: "ARR", type: "chips-single", options: [...ARR_BAND_OPTIONS], section: "Investor fit profile" },
+  { key: "mrr", label: "MRR", type: "chips-single", options: [...MRR_BAND_OPTIONS], section: "Investor fit profile" },
   { key: "key_highlights", label: "Five key highlights", type: "textarea", placeholder: "One per line — these become the bullets on your one-pager", section: "Investor fit profile" },
   { key: "business_entity", label: "Business entity", type: "chips-single", options: BUSINESS_ENTITY_OPTIONS, section: "Investor fit profile" },
 ];

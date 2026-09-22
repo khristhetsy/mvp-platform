@@ -49,6 +49,23 @@ export function parseMoneyBand(raw: string): { min: number; max: number } | null
   return { min: nums[0] * 0.75, max: nums[0] * 1.25 };
 }
 
+/**
+ * Do two stated bands overlap at all?
+ *
+ * Both sides of an ARR comparison are bands now — the founder picks one in
+ * settings, the investor states one in their preferences — so "in range" is an
+ * overlap question, not a point-in-interval one. A band that parses to nothing
+ * ("Pre-revenue", "None") overlaps nothing, which is the honest answer rather
+ * than a zero that counts against the match.
+ */
+export function bandsOverlap(a: string | null | undefined, b: string | null | undefined): boolean | null {
+  if (!a?.trim() || !b?.trim()) return null;
+  const left = parseMoneyBand(a);
+  const right = parseMoneyBand(b);
+  if (!left || !right) return null;
+  return left.min <= right.max && right.min <= left.max;
+}
+
 function inAnyBand(amount: number, bands: string[]): boolean {
   return bands.some((b) => {
     const r = parseMoneyBand(b);

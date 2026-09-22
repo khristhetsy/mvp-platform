@@ -17,7 +17,7 @@
 
 import type { InvestorProfileRecord } from "@/lib/investor/types";
 import { sectorsAlign } from "@/lib/matching/sector-synonyms";
-import { parseMoneyBand } from "@/lib/investors/preference-match";
+import { bandsOverlap, parseMoneyBand } from "@/lib/investors/preference-match";
 
 export type CompanyMatchProfile = {
   id: string;
@@ -41,6 +41,9 @@ export type CompanyMatchProfile = {
    *  Optional — absent means the ARR/MRR factors drop out. */
   arr?: number | null;
   mrr?: number | null;
+  /** The band the founder picked in settings, e.g. "$100k – $500k". */
+  arrBand?: string | null;
+  mrrBand?: string | null;
 };
 
 export type InvestorMatchProfile = Pick<
@@ -217,9 +220,18 @@ function scoreActiveRating(investor: InvestorMatchProfile, weight: number): Fact
  *  lower scores for the common case where the founder has no ARR/MRR on file. */
 function scoreArr(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const range = investor.preferred_arr_range;
-  if (!range?.trim() || company.arr == null) {
-    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  if (!range?.trim()) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+
+  // The founder's band, when that is what they gave — settings collects a band
+  // now, and an exact figure from a CRM contact still works below.
+  const overlap = bandsOverlap(company.arrBand, range);
+  if (overlap !== null) {
+    return overlap
+      ? { points: weight, weight, evaluated: true, reason: "ARR in target range", missing: null }
+      : { points: 0, weight, evaluated: true, reason: null, missing: "ARR outside target range" };
   }
+
+  if (company.arr == null) return { points: 0, weight, evaluated: false, reason: null, missing: null };
   const band = parseMoneyBand(range);
   if (band && band.min <= company.arr && company.arr <= band.max) {
     return { points: weight, weight, evaluated: true, reason: "ARR in target range", missing: null };
@@ -230,9 +242,16 @@ function scoreArr(investor: InvestorMatchProfile, company: CompanyMatchProfile, 
 /** MRR fit — the founder's actual MRR inside the investor's preferred MRR range. */
 function scoreMrr(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const range = investor.preferred_mrr_range;
-  if (!range?.trim() || company.mrr == null) {
-    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  if (!range?.trim()) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+
+  const overlap = bandsOverlap(company.mrrBand, range);
+  if (overlap !== null) {
+    return overlap
+      ? { points: weight, weight, evaluated: true, reason: "MRR in target range", missing: null }
+      : { points: 0, weight, evaluated: true, reason: null, missing: "MRR outside target range" };
   }
+
+  if (company.mrr == null) return { points: 0, weight, evaluated: false, reason: null, missing: null };
   const band = parseMoneyBand(range);
   if (band && band.min <= company.mrr && company.mrr <= band.max) {
     return { points: weight, weight, evaluated: true, reason: "MRR in target range", missing: null };

@@ -299,6 +299,7 @@ export function DeployWorkflow({
   automated,
   manual,
   analytics,
+  outreachAnalytics,
 }: {
   companyName: string;
   investableScore: number;
@@ -307,6 +308,8 @@ export function DeployWorkflow({
   automated: ReactNode;
   manual: ReactNode;
   analytics: DeployAnalytics;
+  /** The full analytics view — funnel, segments, follow-up debt, messages. */
+  outreachAnalytics?: ReactNode;
 }) {
   const [step, setStep] = useState<Step>("profile");
   const [otab, setOtab] = useState<OutreachTab>("automated");
@@ -405,6 +408,10 @@ export function DeployWorkflow({
       {/* ---------- STEP 3 · ANALYTICS ---------- */}
       {step === "analytics" ? (
         <div className="space-y-5">
+          {/* What happened after the send — counted from the recipient rows.
+              The two bar groups below stay as the top-of-funnel summary. */}
+          {outreachAnalytics}
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <MiniBars title="Automated outreach" data={analytics.automated} accent="#6366f1" />
             <MiniBars title="Manual outreach" data={analytics.manual} accent="#0ea5e9" />

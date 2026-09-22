@@ -60,15 +60,22 @@ const GUIDES: Record<StageSlug, StageGuide> = {
   preparation: {
     slug: "preparation",
     stageLabel: "Stage 2 – Preparation",
-    title: "Prepare your materials",
-    intro: "Assemble the documents and get an honest read on how investable you are — then close the gaps before investors see you.",
+    title: "Qualify on your Capital Readiness Rating",
+    intro: "Your Capital Readiness Rating decides when investors can be approached. Reach the gate and introductions and automated outreach open in Stage 3.",
     steps: [
       {
         title: "Get your Capital Readiness Rating",
-        desc: "An AI assessment of how investable you are right now, with the specific gaps to fix.",
-        href: "/founder/readiness/wizard",
-        hrefLabel: "Open the rating wizard",
+        desc: "An AI assessment of how investable you are right now, weighted for your stage.",
+        href: "/founder/readiness",
+        hrefLabel: "Open your rating",
         ai: { kind: "tool", href: "/founder/readiness/wizard", label: "Run AI rating" },
+      },
+      {
+        title: "Close the gaps it names",
+        desc: "Each gap is priced in rating points at your stage — the largest first.",
+        href: "/founder/readiness/wizard",
+        hrefLabel: "Open score improvement",
+        ai: { kind: "assistant", prompt: "Which gaps in my Capital Readiness Rating are worth the most points, and how do I close them?" },
       },
       {
         title: "Build your business plan",

@@ -19,7 +19,7 @@ const crr = (over: Partial<Crr>): Crr => ({
   score: 34, isOverridden: false, band: "Early", profile: "seed_institutional",
   profileLabel: "Seed", outreachUnlocked: false, gate: OUTREACH_GATE, pointsToGate: 31,
   dimensions: [], dims: null, factorScores: {}, scoredAt: null, version: null,
-  history: [], documentCount: 0, ...over,
+  history: [], documentCount: 0, factorGaps: [], ...over,
 });
 
 const state = (readiness: number | null): FounderJourneyState =>

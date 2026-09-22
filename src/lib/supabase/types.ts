@@ -46,6 +46,14 @@ export type Company = {
   onboarding_step_state?: Record<string, unknown> | null;
   capital_ready_at?: string | null;
   learning_readiness_bonus?: number;
+  /**
+   * Traction fields (migration 20260921002). Text, and now a band the founder
+   * picks rather than free prose — the matcher compares them to the investor's
+   * stated range, and "e.g. $240,000" could never be compared to anything.
+   */
+  arr?: string | null;
+  mrr?: string | null;
+  annual_revenue_size?: string | null;
   /** Dual-lane: founder-attested securities exemption (added 20260719006). */
   offering_type?: string | null;
   offering_type_attested_at?: string | null;

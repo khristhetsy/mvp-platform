@@ -141,3 +141,28 @@ export const REVENUE_SIZE_OPTIONS = [
   "$1M – $5M",
   "$5M+",
 ] as const;
+
+/**
+ * ARR and MRR as bands.
+ *
+ * Free text ("e.g. $240,000") never reached the matcher: the company side is
+ * typed as a number, nothing parsed the text, and the two six-point factors
+ * silently dropped out of every match. Bands are also how investors state their
+ * own preference, so both sides now speak the same vocabulary.
+ */
+export const ARR_BAND_OPTIONS = [
+  "None",
+  "Under $100k",
+  "$100k – $500k",
+  "$500k – $1M",
+  "$1M – $5M",
+  "$5M+",
+] as const;
+
+export const MRR_BAND_OPTIONS = [
+  "None",
+  "Under $10k",
+  "$10k – $50k",
+  "$50k – $100k",
+  "$100k+",
+] as const;

@@ -6,6 +6,8 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
+import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
+import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
 
 export const dynamic = "force-dynamic";
 
@@ -298,7 +300,7 @@ export default async function FounderPreviewPage({
 
         {/* Key metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
-          <MetricCard label="Round context (illustrative)" value={pub.funding_amount ? `~${formatFunding(pub.funding_amount)}` : "TBD"} accent />
+          <MetricCard label="Raising" value={pub.funding_amount ? formatFunding(pub.funding_amount) : "TBD"} accent />
           <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
           {geography && <MetricCard label={t("location")} value={geography} />}
           {pub.website && (
@@ -311,8 +313,13 @@ export default async function FounderPreviewPage({
         </div>
 
         {pub.use_of_funds && (
-          <Section title="Planned use of capital (illustrative)" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
-            <FormattedText text={pub.use_of_funds} />
+          <Section title="Use of capital" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
+            {parseUseOfFunds(pub.use_of_funds)
+              ? <UseOfCapitalBar slices={parseUseOfFunds(pub.use_of_funds) ?? []} />
+              : <FormattedText text={pub.use_of_funds} />}
+            <p style={{ fontSize: 11, color: "#94a3b8", margin: "12px 0 0" }}>
+              Illustrative allocation, not a commitment.
+            </p>
           </Section>
         )}
 

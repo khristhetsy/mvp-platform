@@ -26,6 +26,7 @@ const crr = (score: number | null, gate = 65): Crr =>
   ({
     score,
     isOverridden: false,
+    factorGaps: [],
     band: "Early",
     profile: "seed_institutional",
     profileLabel: "Seed",

@@ -8,6 +8,8 @@ import { buildFounderInvestorCrmView } from "@/lib/data/investor-crm";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
+import { loadOutreachRecords } from "@/lib/founder/outreach-records";
+import { OutreachAnalytics } from "@/components/founder/OutreachAnalytics";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
@@ -169,6 +171,9 @@ export default async function FounderDeployPage() {
     }
   }
 
+  // Every send this company has made, from the three tables that record them.
+  const outreachRecords = company ? await loadOutreachRecords(company.id) : [];
+
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
   const interestedCount = crmView?.summary.totalInterestedInvestors ?? 0;
   const introRequests = crmView?.summary.introRequests ?? 0;
@@ -328,6 +333,16 @@ export default async function FounderDeployPage() {
               automated={automatedNode}
               manual={manualNode}
               analytics={analytics}
+              outreachAnalytics={
+                <OutreachAnalytics
+                  records={outreachRecords}
+                  crrNote={
+                    investableScore < OUTREACH_THRESHOLD
+                      ? `CRR ${investableScore} — automated outreach is paused until ${OUTREACH_THRESHOLD}. Everything below is your manual outreach.`
+                      : null
+                  }
+                />
+              }
             />
           </div>
         </FounderFeatureGate>

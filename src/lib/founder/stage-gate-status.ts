@@ -9,6 +9,7 @@ import type { Database } from "@/lib/supabase/types";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { STAGE_SLUGS, type StageSlug } from "@/lib/founder/stage-guides";
 import { requiredDocumentTypes } from "@/lib/documents/required-types";
+import { outreachBlocker, type CrrSummary } from "@/lib/crr/blocker";
 
 export type GateItemState = "done" | "active" | "todo";
 export type GateCta = { label: string; href: string };
@@ -69,7 +70,7 @@ export type JourneyOverview = {
 export async function getJourneyOverview(
   supabase: SupabaseClient<Database>,
   profileId: string,
-  opts?: { outreachReady?: boolean },
+  opts?: { outreachReady?: boolean; crr?: CrrSummary | null },
 ): Promise<JourneyOverview> {
   const state = await evaluateFounderJourney(supabase, profileId);
   const founderIdx = state.stageIndex;
@@ -87,7 +88,11 @@ export async function getJourneyOverview(
       else if (!c.requiredDocsUploaded) line = "Upload your 3 core documents";
       else if (!c.readinessQualified) line = `Preparation ${Math.round(c.readinessScore ?? 0)}% of 75% — a little more`;
       else line = "Ready — submitting for review";
-    } else if (slug === "marketing") line = c.hasDealRoom || c.hasInvestorInterest ? "In market" : "Open a data room to advance";
+    } else if (slug === "marketing") {
+      line = opts?.crr && !opts.crr.outreachUnlocked && opts.crr.score !== null
+        ? `Held at CRR ${opts.crr.score} — outreach opens at ${opts.crr.gate}`
+        : c.hasDealRoom || c.hasInvestorInterest ? "In market" : "Open a data room to advance";
+    }
     else line = "Closing your round";
     return { slug, stageNumber: idx + 1, name: STAGE_NAMES[slug], relation, line };
   });
@@ -109,9 +114,22 @@ export async function getJourneyOverview(
       nextAction = { title: "You're ready — submitting for review", description: "We'll email you the moment Marketing opens.", cta: { label: "See your Preparation status", href: "/founder/stages/preparation" } };
     }
   } else if (cur === "marketing") {
-    nextAction = opts?.outreachReady
-      ? { title: "Send your one-pager to your matched investors", description: "You're outreach-ready — reaching out now is the highest-impact move this week.", cta: { label: "Open outreach", href: "/founder/deploy" }, secondaryCta: { label: "Review matches", href: "/founder/matches" } }
-      : { title: "Open a data room to move toward Closing", description: "A ready data room is what investors ask for next.", cta: { label: "Open your data room", href: "/founder/deal-room" } };
+    // Held at the gate: name the number that caused it. Suggesting an unrelated
+    // task while the score is what blocks them is how a founder spends a week
+    // on the wrong thing.
+    const blocker = opts?.crr ? outreachBlocker(opts.crr) : null;
+    if (opts?.outreachReady) {
+      nextAction = { title: "Send your one-pager to your matched investors", description: "You're outreach-ready — reaching out now is the highest-impact move this week.", cta: { label: "Open outreach", href: "/founder/deploy" }, secondaryCta: { label: "Review matches", href: "/founder/matches" } };
+    } else if (blocker) {
+      nextAction = {
+        title: blocker.title,
+        description: blocker.description,
+        cta: { label: `Fix the ${opts?.crr?.pointsToGate ?? 0} points`, href: "/founder/readiness/wizard" },
+        secondaryCta: { label: "See what investors will ask", href: "/founder/report" },
+      };
+    } else {
+      nextAction = { title: "Open a data room to move toward Closing", description: "A ready data room is what investors ask for next.", cta: { label: "Open your data room", href: "/founder/deal-room" } };
+    }
   } else if (cur === "closing") {
     nextAction = { title: "Close your round", description: "Track commitments and coordinate closing.", cta: { label: "Open your deal room", href: "/founder/deal-room" } };
   }
