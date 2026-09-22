@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { upsertOptin } from "@/lib/icfo-events/networking";
+import { normalizeSectors } from "@/lib/icfo-events/sectors";
 import { notifyStaff } from "@/lib/notifications/notifications";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
@@ -19,6 +20,31 @@ function asStringArray(v: unknown): string[] {
 }
 
 /**
+ * Store sectors as slugs, whatever the form rendered.
+ *
+ * The field-set questions offer labels — `resolvedOptionsFor` keeps the label
+ * and drops the slug — so without this the answers say "FinTech" while the
+ * interest chips on the same page say "fintech". Storing the key means a
+ * later rename changes what people read without orphaning what they answered.
+ *
+ * `sectors` stays a list and `sector` stays a single value: the shape the
+ * form uses is the registrant's, not ours to change underneath them.
+ */
+function withCanonicalSectors(answers: RegistrationAnswers): RegistrationAnswers {
+  const out = { ...answers };
+
+  if ("sectors" in out) {
+    const slugs = normalizeSectors(asStringArray(out.sectors));
+    out.sectors = Array.isArray(out.sectors) ? slugs : slugs[0] ?? "";
+  }
+  if ("sector" in out) {
+    const slugs = normalizeSectors(asStringArray(out.sector));
+    out.sector = Array.isArray(out.sector) ? slugs : slugs[0] ?? "";
+  }
+  return out;
+}
+
+/**
  * Apply the typed registration: persist the answers on the registration, then
  * route the data — matchmaking opt-in for investors/founders, lead pipeline for
  * sponsors/service providers. Per the agreed design this never writes to core
@@ -32,7 +58,8 @@ export async function applyRegistrationIntake(input: {
   attendeeType: AttendeeType;
   answers: RegistrationAnswers;
 }): Promise<void> {
-  const { supabase, eventId, eventTitle, profileId, attendeeType, answers } = input;
+  const { supabase, eventId, eventTitle, profileId, attendeeType } = input;
+  const answers = withCanonicalSectors(input.answers);
 
   // 1) Persist the type + answers on the attendee's own registration row.
   await raw(supabase)
@@ -45,9 +72,12 @@ export async function applyRegistrationIntake(input: {
   try {
     if (attendeeType === "investor" || attendeeType === "founder") {
       // Sector interests power the event's networking matchmaking — scoped to
-      // the event, not the core profile.
-      const interests =
-        attendeeType === "investor" ? asStringArray(answers.sectors) : asStringArray(answers.sector);
+      // the event, not the core profile. Already slugs, so the opt-in store and
+      // the answers agree instead of holding two spellings of one sector.
+      const interests = normalizeSectors([
+        ...asStringArray(answers.sectors),
+        ...asStringArray(answers.sector),
+      ]);
       if (interests.length > 0) {
         await upsertOptin(supabase, eventId, profileId, true, interests);
       }

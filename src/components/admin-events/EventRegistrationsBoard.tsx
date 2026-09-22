@@ -7,7 +7,9 @@ import {
   type RegistrationField,
   REGISTRATION_COMMON as CODE_COMMON,
   REGISTRATION_BY_TYPE as CODE_BY_TYPE,
+  optionText,
 } from "@/lib/icfo-events/registration-fields";
+import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { EventManualRegister } from "./EventManualRegister";
 import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
@@ -23,10 +25,16 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Sector answers are stored as slugs; staff reading the row want the label. */
+function readable(key: string, v: unknown): string {
+  const one = (x: unknown) => (key === "sectors" || key === "sector" ? sectorLabel(String(x)) : String(x ?? ""));
+  return Array.isArray(v) ? v.map(one).join(", ") : one(v);
+}
+
 function answerEntries(answers: Record<string, unknown>): [string, string][] {
   return Object.entries(answers)
     .filter(([k]) => !["company", "name", "email", "phone"].includes(k))
-    .map(([k, v]) => [k.replace(/_/g, " "), Array.isArray(v) ? v.join(", ") : String(v ?? "")] as [string, string])
+    .map(([k, v]) => [k.replace(/_/g, " "), readable(k, v)] as [string, string])
     .filter(([, v]) => v.trim() !== "");
 }
 
@@ -316,7 +324,7 @@ function RegistrationEditForm({
           <p className="mb-1.5 text-[11px] text-[var(--text-secondary)]">{f.label}</p>
           <div className="flex flex-wrap gap-1.5">
             {f.options!.map((o) => (
-              <button key={o} type="button" onClick={() => toggleChip(f.key, o)} className={`rounded-full border px-2.5 py-1 text-xs ${cur.includes(o) ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{o}</button>
+              <button key={o} type="button" onClick={() => toggleChip(f.key, o)} className={`rounded-full border px-2.5 py-1 text-xs ${cur.includes(o) ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{optionText(f, o)}</button>
             ))}
           </div>
         </div>
@@ -328,7 +336,7 @@ function RegistrationEditForm({
         {f.kind === "select" ? (
           <select value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs">
             <option value="">Select…</option>
-            {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
+            {f.options!.map((o) => <option key={o} value={o}>{optionText(f, o)}</option>)}
           </select>
         ) : f.kind === "textarea" ? (
           <textarea value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs" />

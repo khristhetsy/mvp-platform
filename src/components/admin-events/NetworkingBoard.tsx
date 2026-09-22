@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MatchPair, NetworkingBoard as Board } from "@/lib/icfo-events/networking-board";
+import { sectorLabel } from "@/lib/icfo-events/sectors";
 
 const I = "rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs";
 
@@ -178,7 +179,10 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
     return board.pairs.filter((p) => {
       if (status && p.status !== status) return false;
       if (!needle) return true;
-      return [p.a.name, p.b.name, ...p.sharedInterests].join(" ").toLowerCase().includes(needle);
+      // Both spellings, because the column shows the label while the row
+      // stores the slug — typing either has to find it.
+      const sectors = p.sharedInterests.flatMap((s) => [s, sectorLabel(s)]);
+      return [p.a.name, p.b.name, ...sectors].join(" ").toLowerCase().includes(needle);
     });
   }, [board.pairs, q, status]);
 
@@ -367,7 +371,9 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
                   <td className="px-3.5 py-2"><Who side={p.a} /></td>
                   <td className="px-3.5 py-2"><Who side={p.b} /></td>
                   <td className="px-3.5 py-2 text-[10.8px] text-[var(--text-muted)]">
-                    {p.sharedInterests.length ? p.sharedInterests.join(", ") : "complementary roles only"}
+                    {p.sharedInterests.length
+                      ? p.sharedInterests.map((s) => sectorLabel(s)).join(", ")
+                      : "complementary roles only"}
                   </td>
                   <td className="px-3.5 py-2 font-bold tabular-nums text-[var(--navy)]">{p.score}</td>
                   <td className="px-3.5 py-2">

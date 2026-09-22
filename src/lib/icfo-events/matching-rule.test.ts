@@ -8,25 +8,54 @@ const inv = (...sectors: string[]): Matchable => ({ role: "investor", sectors })
 const fnd = (...sectors: string[]): Matchable => ({ role: "founder", sectors });
 
 describe("reading the sectors off a registration", () => {
-  it("takes the investor's list", () => {
-    expect(sectorsOf({ sectors: ["FinTech", "HealthTech"] })).toEqual(["FinTech", "HealthTech"]);
+  it("takes the investor's list, as slugs", () => {
+    expect(sectorsOf({ sectors: ["fintech", "healthtech"] })).toEqual(["fintech", "healthtech"]);
   });
 
   it("takes the founder's single answer", () => {
-    expect(sectorsOf({ sector: "HealthTech" })).toEqual(["HealthTech"]);
+    expect(sectorsOf({ sector: "healthtech" })).toEqual(["healthtech"]);
   });
 
   it("accepts either shape from either side — the form has changed over time", () => {
-    expect(sectorsOf({ sectors: "FinTech", sector: ["HealthTech"] })).toEqual(["FinTech", "HealthTech"]);
+    expect(sectorsOf({ sectors: "fintech", sector: ["healthtech"] })).toEqual(["fintech", "healthtech"]);
   });
 
   it("trims and de-duplicates", () => {
-    expect(sectorsOf({ sectors: [" FinTech ", "FinTech"], sector: "FinTech" })).toEqual(["FinTech"]);
+    expect(sectorsOf({ sectors: [" fintech ", "fintech"], sector: "fintech" })).toEqual(["fintech"]);
   });
 
   it("returns nothing for a registration that declared nothing", () => {
     expect(sectorsOf({})).toEqual([]);
     expect(sectorsOf({ sectors: [], sector: "  " })).toEqual([]);
+  });
+
+  // The bug this rule was written to end: staff registered a guest through a
+  // form that stored labels, the public form stored slugs, and the two never
+  // shared a sector.
+  it("resolves a label stored by the old form to the same slug", () => {
+    expect(sectorsOf({ sectors: ["FinTech", "SaaS / B2B Software"] })).toEqual(["fintech", "saas"]);
+  });
+
+  it("de-duplicates across the two spellings", () => {
+    expect(sectorsOf({ sectors: ["FinTech", "fintech"] })).toEqual(["fintech"]);
+  });
+
+  it("ignores the separators a label carries", () => {
+    expect(sectorsOf({ sector: "AI / ML" })).toEqual(["ai-ml"]);
+    expect(sectorsOf({ sector: "E-commerce" })).toEqual(["ecommerce"]);
+  });
+
+  it("keeps a value that is no sector at all, so two who typed it still meet", () => {
+    expect(sectorsOf({ sectors: ["Agtech"] })).toEqual(["agtech"]);
+  });
+
+  it("matches a staff-registered guest with a self-registered one", () => {
+    const staffEntered = sectorsOf({ sectors: ["FinTech", "HealthTech"] });
+    const selfRegistered = sectorsOf({ sector: "fintech" });
+    expect(sharedSectors(
+      { role: "investor", sectors: staffEntered },
+      { role: "founder", sectors: selfRegistered },
+    )).toEqual(["fintech"]);
   });
 });
 

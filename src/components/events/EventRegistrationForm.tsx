@@ -10,6 +10,7 @@ import {
   type RegistrationField as Field,
   REGISTRATION_COMMON as CODE_COMMON,
   REGISTRATION_BY_TYPE as CODE_BY_TYPE,
+  optionText,
 } from "@/lib/icfo-events/registration-fields";
 import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
@@ -79,7 +80,7 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
                   cur.includes(o) ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
                 }`}
               >
-                {o}
+                {optionText(f, o)}
               </button>
             ))}
           </div>
@@ -94,7 +95,7 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
         {f.kind === "select" ? (
           <select value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
             <option value="">Select…</option>
-            {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
+            {f.options!.map((o) => <option key={o} value={o}>{optionText(f, o)}</option>)}
           </select>
         ) : f.kind === "textarea" ? (
           <textarea value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
