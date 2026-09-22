@@ -19,6 +19,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       type?: EventEmailType;
       includeBanner?: boolean;
       includeLobby?: boolean;
+      includeRoster?: boolean;
       bookletUrl?: string;
     };
     if (!body.eventId) return NextResponse.json({ error: "Missing eventId." }, { status: 400 });
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       type: body.type ?? "invite",
       includeBanner: body.includeBanner,
       includeLobby: body.includeLobby,
+      includeRoster: body.includeRoster,
       bookletUrl: body.bookletUrl,
     });
     return NextResponse.json({ html });

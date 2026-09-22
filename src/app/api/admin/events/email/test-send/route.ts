@@ -21,6 +21,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       type?: EventEmailType;
       includeBanner?: boolean;
       includeLobby?: boolean;
+  includeRoster?: boolean;
       bookletUrl?: string;
       subject?: string;
       bodyHtml?: string;
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
     const html = body.bodyHtml?.trim()
       ? body.bodyHtml
-      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, bookletUrl });
+      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, includeRoster: body.includeRoster, bookletUrl });
 
     const settings = await getMarketingSettings();
     const result = await sendMarketingEmail({
