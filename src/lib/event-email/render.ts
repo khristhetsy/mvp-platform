@@ -3,6 +3,11 @@
 // The compliance footer is hard-coded and cannot be toggled off (§5, "event ≠ offer").
 
 import type { EventMergeData, EventEmailType } from "./merge";
+import { buildAgenda, type AgendaRow } from "./agenda";
+import {
+  accentFor, BLUE, BODY, CARD_BG, INK, LINE, MUTED, NAVY, TINT, TINT_LINE,
+  type SessionWeight,
+} from "./palette";
 import {
   chunk,
   companyLine,
@@ -26,7 +31,6 @@ export type RenderOptions = {
   coverNote?: string;
 };
 
-const NAVY = "#0c2340";
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -34,39 +38,79 @@ const esc = (s: string) =>
 const COMPLIANCE = `iCFO events are for education and community only. Nothing in this email is an offer to sell or a solicitation to buy any security. iCFO Capital Global, Inc. is not a broker-dealer, placement agent, or registered investment adviser, and no funding outcome is promised.`;
 
 function ctaButton(href: string, label: string, primary: boolean): string {
-  const bg = primary ? "#2E78F5" : "#ffffff";
+  const bg = primary ? BLUE : "#ffffff";
   const color = primary ? "#ffffff" : NAVY;
-  const border = primary ? "#2E78F5" : "#d5deea";
+  const border = primary ? BLUE : "#d5deea";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0;"><tr><td style="border-radius:8px;background:${bg};border:1px solid ${border};">
     <a href="${esc(href)}" style="display:inline-block;padding:12px 22px;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:${color};text-decoration:none;">${esc(label)}</a>
   </td></tr></table>`;
 }
 
-function sessionCard(s: EventMergeData["sessions"][number], roster: RosterPerson[] = []): string {
-  // Whoever is billed under this session is named in the card itself, so the
-  // draw of a talk show travels with the session rather than sitting in a list
-  // further down the email.
-  const billed = s.id ? sessionGuests(roster, s.id) : [];
-  const billing = billed.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;border-top:1px solid #e6eaf3;"><tr>${billed
-        .slice(0, 3)
-        .map(
-          (g) =>
-            `<td valign="top" style="padding:8px 8px 0 0;font-family:Arial,sans-serif;">
-              <div style="font-size:9px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:${s.accent};">${esc(g.role)}</div>
-              <div style="font-size:13px;font-weight:bold;color:${NAVY};line-height:1.25;">${esc(g.person.name)}</div>
-              ${g.person.company ? `<div style="font-size:11px;color:#6a7690;">${esc(g.person.company)}</div>` : ""}
-            </td>`,
-        )
-        .join("")}</tr></table>`
-    : "";
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;">
-    <tr><td style="border-left:4px solid ${s.accent};background:#f6f8fc;border-radius:6px;padding:12px 14px;font-family:Arial,sans-serif;">
-      <div style="font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:${s.accent};">${esc(s.type.replace(/_/g, " "))}</div>
-      <div style="font-size:15px;font-weight:bold;color:${NAVY};margin-top:2px;">${esc(s.title)}</div>
-      ${s.abstract ? `<div style="font-size:13px;color:#4a5568;line-height:1.5;margin-top:4px;">${esc(s.abstract)}</div>` : ""}
-      ${billing}
-    </td></tr></table>`;
+/** The badge in the fixed left column. Fixed width so the titles line up. */
+function badge(label: string, weight: SessionWeight): string {
+  const { bg, fg } = accentFor(weight);
+  return `<td width="78" valign="top" style="width:78px;padding:2px 10px 0 0;">
+    <div style="background:${bg};color:${fg};font-family:Arial,sans-serif;font-size:9px;font-weight:bold;letter-spacing:.07em;text-transform:uppercase;text-align:center;border-radius:3px;padding:4px 2px;">${esc(label)}</div>
+  </td>`;
+}
+
+/** Whoever is billed under a session, named with it. */
+function billingLine(sessionId: string, roster: RosterPerson[]): string {
+  const billed = sessionId ? sessionGuests(roster, sessionId) : [];
+  if (!billed.length) return "";
+  return `<div style="margin-top:6px;font-family:Arial,sans-serif;font-size:11.5px;color:#40546f;line-height:1.6;">${billed
+    .slice(0, 3)
+    .map((g) => `<span style="color:${MUTED};">${esc(g.role)}</span> <strong style="color:${INK};">${esc(g.person.name)}</strong>${g.person.company ? `, ${esc(g.person.company)}` : ""}`)
+    .join(" &nbsp;·&nbsp; ")}</div>`;
+}
+
+/**
+ * One agenda row: badge, title, at most a line of abstract, and the people
+ * billed under it — the draw of a talk show is who is in the chair, and that
+ * belongs with the session rather than in a list further down.
+ *
+ * The lead row is the same shape on a tint. Billing renders on any session
+ * that has guests, not just the lead, so a single-session event keeps it.
+ */
+function sessionRow(r: AgendaRow, roster: RosterPerson[], featured: boolean): string {
+  const inner = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${badge(r.label, featured ? "lead" : r.weight)}
+      <td valign="top" style="font-family:Arial,sans-serif;">
+        <div style="font-size:${featured ? 15 : 14}px;font-weight:bold;color:${NAVY};line-height:1.3;">${esc(r.session.title)}</div>
+        ${r.abstract ? `<div style="font-size:${featured ? 12.5 : 12}px;color:${BODY};line-height:1.5;margin-top:${featured ? 3 : 2}px;">${esc(r.abstract)}</div>` : ""}
+        ${billingLine(r.session.id, roster)}
+      </td>
+    </tr></table>`;
+  return featured
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;background:${TINT};border:1px solid ${TINT_LINE};border-radius:8px;">
+        <tr><td style="padding:11px 12px;">${inner}</td></tr></table>`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f1f4f9;">
+        <tr><td style="padding:9px 0;">${inner}</td></tr></table>`;
+}
+
+/** Booth sessions, merged to one row naming the companies. */
+function exhibitRow(names: string[]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:9px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${badge("Exhibits", "aside")}
+      <td valign="top" style="font-family:Arial,sans-serif;">
+        <div style="font-size:13.5px;font-weight:bold;color:${NAVY};line-height:1.35;">${esc(names.join(" · "))}</div>
+      </td>
+    </tr></table></td></tr></table>`;
+}
+
+/**
+ * The agenda. Abstracts are trimmed to a line here and stay whole on the event
+ * page — an agenda in an email says what is on, not what it is about.
+ */
+function agendaBlock(merge: EventMergeData): string {
+  if (!merge.sessions.length) return "";
+  const { lead, rows, exhibits } = buildAgenda(merge.sessions);
+  const count = merge.sessions.length;
+  return `<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:${MUTED};margin:6px 0 9px;">Agenda · ${count} ${count === 1 ? "session" : "sessions"}</div>
+    ${lead ? sessionRow(lead, merge.presenters, true) : ""}
+    ${rows.map((r) => sessionRow(r, merge.presenters, false)).join("")}
+    ${exhibits.length ? exhibitRow(exhibits) : ""}`;
 }
 
 /**
@@ -85,7 +129,7 @@ function columnRow(
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${opts.bg};border:1px solid ${opts.border};border-radius:8px;"><tr>
           <td style="padding:11px 11px 12px;font-family:Arial,sans-serif;">
             <div style="font-size:${opts.titleSize}px;font-weight:bold;color:${NAVY};line-height:1.25;">${esc(companyLine(p))}</div>
-            ${second ? `<div style="font-size:${opts.textSize}px;color:#6a7690;line-height:1.4;margin-top:3px;">${esc(second)}</div>` : ""}
+            ${second ? `<div style="font-size:${opts.textSize}px;color:${MUTED};line-height:1.4;margin-top:3px;">${esc(second)}</div>` : ""}
           </td>
         </tr></table>
       </td>`;
@@ -108,13 +152,13 @@ function rosterBlock(merge: EventMergeData): string {
   if (!companies.length && !showcase.length && !exhibitors.length) return "";
 
   const feature = companies.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;background:#f2f6fd;border:1px solid #dbe6f8;border-radius:10px;">
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;background:${TINT};border:1px solid ${TINT_LINE};border-radius:10px;">
         <tr><td style="padding:16px 12px 8px;font-family:Arial,sans-serif;">
-          <div style="font-size:10px;font-weight:bold;letter-spacing:.11em;text-transform:uppercase;color:#2E78F5;padding:0 5px;">On the programme</div>
+          <div style="font-size:10px;font-weight:bold;letter-spacing:.11em;text-transform:uppercase;color:${BLUE};padding:0 5px;">On the programme</div>
           <div style="font-size:20px;font-weight:bold;color:${NAVY};line-height:1.2;margin-top:3px;padding:0 5px;">Presenting companies</div>
           <div style="font-size:12px;color:#40546f;line-height:1.5;margin:5px 0 12px;padding:0 5px;">${companies.length} ${companies.length === 1 ? "company" : "companies"} presenting to the room.</div>
           ${chunk(companies, 3)
-            .map((row) => columnRow(row, { bg: "#ffffff", border: "#dbe6f8", titleSize: 14, textSize: 11, withRole: true, withPitch: false }))
+            .map((row) => columnRow(row, { bg: "#ffffff", border: TINT_LINE, titleSize: 14, textSize: 11, withRole: true, withPitch: false }))
             .join("")}
         </td></tr></table>`
     : "";
@@ -122,17 +166,17 @@ function rosterBlock(merge: EventMergeData): string {
   const quiet = showcase.length
     ? `<div style="font-family:Arial,sans-serif;margin:20px 0 0;">
         <div style="font-size:13px;font-weight:bold;color:#40546f;">Founder Showcase</div>
-        <div style="font-size:11px;color:#6a7690;line-height:1.5;margin:2px 0 9px;">${showcase.length} ${showcase.length === 1 ? "company" : "companies"} pitching live from the main stage.</div>
+        <div style="font-size:11px;color:${MUTED};line-height:1.5;margin:2px 0 9px;">${showcase.length} ${showcase.length === 1 ? "company" : "companies"} pitching live from the main stage.</div>
       </div>${chunk(showcase, 3)
         // Role is dropped at a third of the width — the pitch line is worth more.
-        .map((row) => columnRow(row, { bg: "#f7f9fc", border: "#e6ebf3", titleSize: 12, textSize: 10, withRole: false, withPitch: true }))
+        .map((row) => columnRow(row, { bg: CARD_BG, border: LINE, titleSize: 12, textSize: 10, withRole: false, withPitch: true }))
         .join("")}`
     : "";
 
   const booths = exhibitors.length
     ? `<div style="font-family:Arial,sans-serif;margin:18px 0 0;">
-        <div style="font-size:12px;font-weight:bold;color:#6a7690;">Exhibitors</div>
-        <div style="font-size:12px;color:#5b6b80;line-height:1.7;margin-top:3px;">${esc(exhibitors.map(companyLine).join(" · "))}</div>
+        <div style="font-size:12px;font-weight:bold;color:${MUTED};">Exhibitors</div>
+        <div style="font-size:12px;color:${BODY};line-height:1.7;margin-top:3px;">${esc(exhibitors.map(companyLine).join(" · "))}</div>
       </div>`
     : "";
 
@@ -166,7 +210,7 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
     </div>`;
 
   const hero = showBanner
-    ? `<td background="${esc(merge.bannerUrl as string)}" bgcolor="${NAVY}" valign="top" style="background-image:linear-gradient(135deg,rgba(12,35,64,.86),rgba(12,35,64,.7)),url('${esc(merge.bannerUrl as string)}');background-size:cover;background-position:center;">${heroInner}</td>`
+    ? `<td background="${esc(merge.bannerUrl as string)}" bgcolor="${NAVY}" valign="top" style="background-image:linear-gradient(135deg,rgba(10,26,64,.86),rgba(10,26,64,.7)),url('${esc(merge.bannerUrl as string)}');background-size:cover;background-position:center;">${heroInner}</td>`
     : `<td bgcolor="${NAVY}" valign="top" style="background:${NAVY};">${heroInner}</td>`;
 
   const registerBtn = booklet
@@ -178,14 +222,12 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
       ? ctaButton(merge.lobbyUrl, "Enter lobby ↗", lobbyPrimary)
       : "";
 
-  const sessionsBlock = merge.sessions.length
-    ? `<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;color:#6a7690;margin:6px 0 10px;">Agenda</div>${merge.sessions.map((s) => sessionCard(s, merge.presenters)).join("")}`
-    : "";
+  const sessionsBlock = agendaBlock(merge);
 
   const rosterHtml = options.includeRoster === false ? "" : rosterBlock(merge);
 
   const sponsorRow = merge.sponsorLockup
-    ? `<div style="font-family:Arial,sans-serif;font-size:12px;color:#6a7690;margin:14px 0 0;">${esc(merge.sponsorLockup)}</div>`
+    ? `<div style="font-family:Arial,sans-serif;font-size:12px;color:${MUTED};margin:14px 0 0;">${esc(merge.sponsorLockup)}</div>`
     : "";
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(merge.title)}</title></head>
