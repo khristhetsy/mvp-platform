@@ -11,6 +11,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { makeToken, verifyToken } from "@/lib/signed-links/tokens";
 import {
+  DEFAULT_PAIR_TYPES, sanitizeRules, type PairTypeKey,
+} from "@/lib/icfo-events/pair-types";
+import {
   introVars, renderBody, renderTemplate, shouldFollowUp, shouldRemindFounder,
   type Introduction, type IntroductionStatus,
 } from "@/lib/icfo-events/introductions";
@@ -54,7 +57,7 @@ export function introFromRescheduleToken(token: string): string | null {
   return verifyToken({ token, kind: "event_invite", action: ACTION_RESCHEDULE });
 }
 
-export type TemplateKind = "invitation" | "follow_up";
+export type TemplateKind = "invitation" | "follow_up" | "peer_invitation";
 export type IntroTemplate = { kind: TemplateKind; subject: string; body: string; updatedAt: string };
 
 export async function listTemplates(): Promise<IntroTemplate[]> {
@@ -155,6 +158,7 @@ export async function createIntroductions(
   eventId: string,
   pairs: { investorRegId: string; founderRegId: string; score: number; sharedSectors: string[] }[],
   createdBy: string | null,
+  sentVia: "icapos" | "gmail" = "icapos",
 ): Promise<SendResult> {
   if (!pairs.length) return { created: 0, skipped: [] };
 
@@ -173,6 +177,9 @@ export async function createIntroductions(
       score: p.score,
       shared_sectors: p.sharedSectors,
       created_by: createdBy,
+      // Recorded so the board can explain why a Gmail-sent row stops updating:
+      // its replies never reach the hook.
+      sent_via: sentVia,
     })),
   );
   if (error) return { created: 0, skipped: [error.message] };
@@ -518,4 +525,38 @@ export async function requestReschedule(
     })
     .eq("id", id);
   return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ── Matching rules ────────────────────────────────────────────────────────
+// Which pairings an event generates. Stored per event so one room's rules
+// never leak into another's.
+
+/** The pairings in force, defaulted when nobody has chosen. */
+export async function loadMatchingRules(eventId: string): Promise<PairTypeKey[]> {
+  const { data, error } = await raw()
+    .from("event_matching_rules").select("pair_types").eq("event_id", eventId).maybeSingle();
+  if (error) {
+    console.error("[matching-rules] read failed:", error.message);
+    return DEFAULT_PAIR_TYPES;
+  }
+  return sanitizeRules((data as Row | null)?.pair_types);
+}
+
+export async function saveMatchingRules(
+  eventId: string,
+  pairTypes: PairTypeKey[],
+  updatedBy: string | null,
+): Promise<{ ok: true; saved: PairTypeKey[] } | { ok: false; error: string }> {
+  // Sanitised again on the way in: an unknown key from a stale tab must never
+  // widen what the board matches.
+  const saved = sanitizeRules(pairTypes);
+  const { error } = await raw()
+    .from("event_matching_rules")
+    .upsert({
+      event_id: eventId,
+      pair_types: saved,
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "event_id" });
+  return error ? { ok: false, error: error.message } : { ok: true, saved };
 }

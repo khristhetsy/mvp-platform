@@ -59,16 +59,19 @@ function Who({ side }: Readonly<{ side: MatchPair["a"] }>) {
  * the whole set is already on the page, so a round-trip per keystroke would
  * buy nothing.
  */
-export function NetworkingBoard({ board, events, eventId }: Readonly<{
+export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   board: Board;
   events: { id: string; title: string }[];
   eventId: string;
+  /** Offered as a sender only when it can actually send. */
+  gmail?: { available: boolean; address: string | null };
 }>) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [allMatches, setAllMatches] = useState(false);
   const [cap, setCap] = useState(5);
+  const [sendVia, setSendVia] = useState<"icapos" | "gmail">("icapos");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -97,6 +100,7 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
           pairKeys: allMatches ? [] : [...picked],
           allMatches,
           maxPerInvestor: cap,
+          sendVia,
           dryRun,
         }),
       });
@@ -244,6 +248,27 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
                 Strongest first. What the cap holds back is not recorded, so the next send finds it again.
               </span>
             </div>
+
+            {gmail?.available ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-[11.5px] text-sky-900">Send from</span>
+                {(["icapos", "gmail"] as const).map((v) => (
+                  <button key={v} type="button" onClick={() => setSendVia(v)}
+                    className={`rounded-lg px-2.5 py-1 text-[11.5px] ${
+                      sendVia === v
+                        ? "border-2 border-[var(--navy)] bg-white font-semibold text-[var(--navy)]"
+                        : "border border-[var(--border-subtle)] bg-white/70 text-[var(--text-secondary)]"
+                    }`}>
+                    {v === "icapos" ? "iCapOS" : gmail.address ?? "Gmail"}
+                  </button>
+                ))}
+                {sendVia === "gmail" ? (
+                  <span className="text-[11px] text-amber-800">
+                    Replies go to your inbox, not the board — these rows will stop updating.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

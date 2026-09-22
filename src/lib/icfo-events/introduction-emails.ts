@@ -7,11 +7,42 @@
 import "server-only";
 
 import { sendEmail } from "@/lib/email/send-email";
+import { sendViaGmail } from "@/lib/integrations/gmail-send";
 import { introToken, renderIntro, type IntroTemplate } from "@/lib/icfo-events/introductions-server";
 import type { Recipient } from "@/lib/icfo-events/introductions";
 
 const NAVY = "#0A1A40";
 const BLUE = "#2563eb";
+
+export type Sender =
+  /** Resend, from the platform address. Replies come back to the reply hook. */
+  | { via: "icapos" }
+  /**
+   * The staff member's own Google account. Replies land in their inbox, where
+   * the hook cannot see them — the board says so rather than pretending the
+   * status will keep updating.
+   */
+  | { via: "gmail"; userId: string };
+
+/** One door for both senders, so every introduction email can use either. */
+async function deliver(sender: Sender, input: { to: string; subject: string; html: string }): Promise<boolean> {
+  if (sender.via === "gmail") {
+    const result = await sendViaGmail({
+      userId: sender.userId,
+      to: input.to,
+      subject: input.subject,
+      // Gmail wants a plain-text part too; the HTML is what people read.
+      body: input.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+      html: input.html,
+    });
+    if ("error" in result) {
+      console.error("[introductions] gmail send failed:", result.error.message);
+      return false;
+    }
+    return true;
+  }
+  return sendEmail({ to: input.to, subject: input.subject, html: input.html });
+}
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -85,6 +116,8 @@ export async function sendIntroductionEmail(input: {
   baseUrl: string;
   /** A rehearsal: flagged in the subject, and its buttons lead nowhere. */
   test?: boolean;
+  /** Who it comes from. Defaults to the platform address. */
+  sender?: Sender;
 }): Promise<boolean> {
   if (!input.to?.includes("@")) return false;
 
@@ -96,7 +129,7 @@ export async function sendIntroductionEmail(input: {
   });
 
   const base = input.baseUrl.replace(/\/$/, "");
-  return sendEmail({
+  return deliver(input.sender ?? { via: "icapos" }, {
     to: input.to,
     subject: input.test ? `[Test] ${subject}` : subject,
     html: introductionHtml({
@@ -265,9 +298,14 @@ export type DigestItem = {
   sharedSectors: string[];
 };
 
-/** The subject for a bundled send. One line, no templating — it is a count. */
-export function digestSubject(count: number, eventTitle: string): string {
-  return `${count} founders worth meeting at ${eventTitle}`;
+/**
+ * The subject for a bundled send. One line, no templating — it is a count.
+ *
+ * `noun` because a digest may carry peers rather than founders, and calling
+ * two investors "founders" is the mistake the peer template exists to avoid.
+ */
+export function digestSubject(count: number, eventTitle: string, noun = "founders"): string {
+  return `${count} ${noun} worth meeting at ${eventTitle}`;
 }
 
 /**
@@ -319,6 +357,10 @@ export async function sendIntroductionDigest(input: {
   baseUrl: string;
   /** A rehearsal: flagged in the subject, and its buttons lead nowhere. */
   test?: boolean;
+  /** Who it comes from. Defaults to the platform address. */
+  sender?: Sender;
+  /** "founders" when every row is a founder; "people" for a mixed or peer set. */
+  noun?: string;
 }): Promise<boolean> {
   if (!input.to?.includes("@") || input.items.length === 0) return false;
 
@@ -338,13 +380,16 @@ export async function sendIntroductionDigest(input: {
     };
   });
 
-  const subject = digestSubject(input.items.length, input.eventTitle);
-  return sendEmail({
+  const noun = input.noun ?? "founders";
+  const subject = digestSubject(input.items.length, input.eventTitle, noun);
+  return deliver(input.sender ?? { via: "icapos" }, {
     to: input.to,
     subject: input.test ? `[Test] ${subject}` : subject,
     html: introductionDigestHtml({
       greeting: `Hi ${input.investorName.split(/\s+/)[0] || input.investorName},`,
-      intro: `${input.items.length} founders at ${input.eventTitle} match what you back. Accept the ones you want to meet — each sends you their time and a link.`,
+      intro: noun === "founders"
+        ? `${input.items.length} founders at ${input.eventTitle} match what you back. Accept the ones you want to meet — each sends you their time and a link.`
+        : `${input.items.length} people at ${input.eventTitle} share your sectors. Accept the ones you want to meet — each sends you a time and a link.`,
       rows,
       test: input.test,
     }),

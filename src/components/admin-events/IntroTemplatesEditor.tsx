@@ -26,6 +26,10 @@ const LABEL: Record<TemplateKind, { title: string; note: string }> = {
     title: "Invitation",
     note: "Goes to the investor, about the founder.",
   },
+  peer_invitation: {
+    title: "Peer invitation",
+    note: "Between equals — two investors, or a service provider and a founder. Nobody is pitching anybody.",
+  },
   follow_up: {
     title: "Founder follow-up",
     note: "Chases the investor on the founder's behalf. Twice at most, never after a decline.",
@@ -40,12 +44,14 @@ const INP = "w-full rounded-lg border border-[var(--border-subtle)] px-2.5 py-1.
  * An unknown token is left visible in the rendered mail rather than blanked,
  * so a typo here shows up in a test send instead of silently leaving a gap.
  */
-export function IntroTemplatesEditor({ initial, eventId, testAddresses }: Readonly<{
+export function IntroTemplatesEditor({ initial, eventId, testAddresses, gmail }: Readonly<{
   initial: IntroTemplate[];
   /** The event a test is built from — its strongest unsent match. */
   eventId: string;
   /** Where a test may be sent. Empty means the control does not render. */
   testAddresses: string[];
+  /** The signed-in staff member's Google account, when it can send. */
+  gmail: { available: boolean; address: string | null; reason: string | null };
 }>) {
   const [tab, setTab] = useState<TemplateKind>("invitation");
   const [drafts, setDrafts] = useState(
@@ -109,7 +115,7 @@ export function IntroTemplatesEditor({ initial, eventId, testAddresses }: Readon
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
       <div className="flex gap-0.5 border-b border-[var(--border-subtle)] bg-slate-50/70 px-3 pt-2.5">
-        {(["invitation", "follow_up"] as TemplateKind[]).map((k) => (
+        {(["invitation", "peer_invitation", "follow_up"] as TemplateKind[]).map((k) => (
           <button key={k} type="button" onClick={() => { setTab(k); setSaved(null); setError(null); }}
             className={`-mb-px rounded-t-lg border border-b-0 px-3.5 py-1.5 text-[12.4px] font-semibold ${
               tab === k ? "border-[var(--border-subtle)] bg-white text-[var(--navy)]" : "border-transparent text-slate-500"
@@ -162,6 +168,38 @@ export function IntroTemplatesEditor({ initial, eventId, testAddresses }: Readon
               iCFO events are for education and community only. Nothing in this email is an offer to sell or a
               solicitation to buy any security. iCFO Capital Global, Inc. is not a broker-dealer, placement agent,
               or registered investment adviser, and no funding outcome is promised.
+            </p>
+          </div>
+
+          <div className="mt-4 border-t border-[var(--border-subtle)] pt-3.5">
+            <p className="text-[10.6px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+              Send from
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-lg border-2 border-[var(--blue)] bg-[var(--blue-muted)] p-2.5">
+                <p className="text-[12.5px] font-semibold text-[var(--navy)]">iCapOS</p>
+                <p className="text-[11.5px] text-[var(--text-secondary)]">the platform address</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                  Replies come back into the platform, so the board can show who answered.
+                </p>
+              </div>
+              <div className={`rounded-lg border p-2.5 ${gmail.available ? "border-[var(--border-subtle)]" : "border-dashed border-[var(--border-subtle)] opacity-70"}`}>
+                <p className="text-[12.5px] font-semibold text-[var(--navy)]">Gmail</p>
+                <p className="text-[11.5px] text-[var(--text-secondary)]">
+                  {gmail.address ?? "your connected Google account"}
+                </p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                  {gmail.available
+                    ? "Sent through your Google account and kept in your Sent folder."
+                    : gmail.reason}
+                </p>
+              </div>
+            </div>
+            <p className="mt-2 rounded-lg border border-dashed border-amber-300 bg-amber-50/70 px-2.5 py-2 text-[11px] leading-relaxed text-amber-900">
+              Choosing Gmail moves the conversation out of iCapOS: replies arrive in your inbox rather than the
+              reply hook, so &ldquo;awaiting an answer&rdquo; stops updating for those rows and the follow-ups keep
+              chasing people who already answered. Worth it for a handful of hand-picked introductions, not for a
+              hundred. The sender is chosen on the Matches tab, next to Introduce.
             </p>
           </div>
 

@@ -6,7 +6,11 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { loadNetworkingBoard } from "@/lib/icfo-events/networking-board";
 import { contactsFor, createIntroductions, listTemplates } from "@/lib/icfo-events/introductions-server";
-import { sendIntroductionDigest, sendIntroductionEmail } from "@/lib/icfo-events/introduction-emails";
+import {
+  sendIntroductionDigest, sendIntroductionEmail, type Sender,
+} from "@/lib/icfo-events/introduction-emails";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { pairTypeFor } from "@/lib/icfo-events/pair-types";
 import { planBulkSend } from "@/lib/icfo-events/introductions";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +37,8 @@ const schema = z.object({
   maxPerInvestor: z.number().int().min(1).max(MAX_PER_INVESTOR).default(MAX_PER_INVESTOR),
   /** Look only: report who would be mailed, and how often. */
   dryRun: z.boolean().default(false),
+  /** Who the mail comes from. Gmail takes replies out of the platform. */
+  sendVia: z.enum(["icapos", "gmail"]).default("icapos"),
 });
 
 /**
@@ -100,6 +106,29 @@ export async function POST(
     const capped = applyCap(selected, parsed.data.maxPerInvestor);
     const pairs = capped.keep;
 
+    // Never offer a sender that cannot send: Gmail needs a connected account
+    // with the send scope, and failing after the rows exist would leave
+    // introductions recorded that nobody received.
+    if (parsed.data.sendVia === "gmail" && !parsed.data.dryRun) {
+      const status = await getGoogleConnectionStatus(auth.supabase, auth.profile.id);
+      if (!status.connected) {
+        return NextResponse.json(
+          { error: "Google account not connected. Connect it in Settings, or send from iCapOS.", code: "gmail_not_connected" },
+          { status: 400 },
+        );
+      }
+      if (!status.scopes.includes("https://www.googleapis.com/auth/gmail.send")) {
+        return NextResponse.json(
+          { error: "Gmail send permission not granted. Reconnect your Google account, or send from iCapOS.", code: "gmail_no_scope" },
+          { status: 400 },
+        );
+      }
+    }
+
+    const sender: Sender = parsed.data.sendVia === "gmail"
+      ? { via: "gmail", userId: auth.profile.id }
+      : { via: "icapos" };
+
     // An investor matched to six founders would otherwise get six separate
     // emails from us on one morning, which reads as spam whatever each says.
     const plan = planBulkSend(pairs.map((p) => ({ investorRegId: p.a.registrationId, introductionId: p.key })));
@@ -123,6 +152,7 @@ export async function POST(
         sharedSectors: p.sharedInterests,
       })),
       auth.profile.id,
+      parsed.data.sendVia,
     );
 
     // Send only for what was actually created, so a repeat click can't mail
@@ -134,6 +164,9 @@ export async function POST(
       admin.from("event_introductions").select("*").eq("event_id", eventId).eq("status", "sent"),
     ]);
     const invitation = templates.find((t) => t.kind === "invitation");
+    // A pairing between equals gets the peer message: two investors are not
+    // pitching each other, and the founder copy would read as nonsense.
+    const peer = templates.find((t) => t.kind === "peer_invitation") ?? invitation;
 
     let sent = 0;
     if (invitation && event) {
@@ -155,6 +188,8 @@ export async function POST(
           stage: string | null; raising: string | null; roundSize: string | null;
         };
         sharedSectors: string[];
+        /** True when the two sides are equals — a peer invitation, not a pitch. */
+        peer: boolean;
       };
       const byInvestor = new Map<string, { email: string; name: string; company: string | null; items: Piece[] }>();
 
@@ -180,6 +215,7 @@ export async function POST(
             roundSize: founder?.roundSize ?? null,
           },
           sharedSectors: pair.sharedInterests,
+          peer: pairTypeFor(pair.pairType)?.template === "peer_invitation",
         });
         byInvestor.set(investor.registrationId, bucket);
       }
@@ -190,7 +226,8 @@ export async function POST(
           const ok = await sendIntroductionEmail({
             introductionId: only.introductionId,
             to: person.email,
-            template: invitation,
+            template: only.peer ? (peer ?? invitation) : invitation,
+            sender,
             investor: { name: person.name, company: person.company },
             founder: only.founder,
             eventTitle: event.title,
@@ -207,6 +244,9 @@ export async function POST(
           eventTitle: event.title,
           items: person.items,
           baseUrl: BASE_URL,
+          sender,
+          // A digest carrying any peer pair must not call them founders.
+          noun: person.items.every((i) => !i.peer) ? "founders" : "people",
         });
         // One email, however many introductions it carries — counting it once
         // is what makes "emails sent" mean something.

@@ -10,6 +10,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const regs = vi.fn();
 const conns = vi.fn();
+/** Pairings in force. Undefined means "nobody has chosen", i.e. the defaults. */
+const rules = vi.fn<() => unknown>(() => undefined);
+const presenters = vi.fn<() => unknown[]>(() => []);
 
 vi.mock("@/lib/supabase/admin", () => ({
   createServiceRoleClient: () => ({
@@ -20,10 +23,13 @@ vi.mock("@/lib/supabase/admin", () => ({
             if (opts?.head) return { count: 9, error: null };
             if (table === "registrations") return { data: regs(), error: null };
             if (table === "networking_connections") return { data: conns(), error: null };
+            if (table === "event_presenters") return { data: presenters(), error: null };
+            if (table === "event_matching_rules") return { data: { pair_types: rules() }, error: null };
             return { data: [], error: null };
           };
           return Object.assign(Promise.resolve(done()), {
             eq: () => Promise.resolve(done()),
+            maybeSingle: () => Promise.resolve(done()),
           });
         },
       }),
@@ -45,10 +51,14 @@ const person = (id: string, name: string, role: string, sectors: string[]) => ({
 beforeEach(() => {
   regs.mockReturnValue([]);
   conns.mockReturnValue([]);
+  rules.mockReturnValue(undefined);
+  presenters.mockReturnValue([]);
 });
 
 describe("which pairs count as a match", () => {
   it("scores shared sectors at two apiece", async () => {
+    // Founder-to-founder is off by default, so the rule is switched on here.
+    rules.mockReturnValue(["founder_founder"]);
     regs.mockReturnValue([
       person("a", "Ann", "founder", ["FinTech", "AI / ML"]),
       person("b", "Ben", "founder", ["FinTech", "AI / ML"]),
@@ -187,7 +197,9 @@ describe("registration is the qualifier", () => {
     expect((await loadNetworkingBoard("e1")).pairs[0].status).toBe("none");
   });
 
-  it("leaves sponsors and service providers out of the pool", async () => {
+  it("leaves sponsors and service providers out of the pool the rules cannot match", async () => {
+    // They are loaded — a sponsor rule would pair them — but with the default
+    // rules nothing can, so the pool tile does not count them.
     regs.mockReturnValue([
       person("a", "Ann", "founder", ["FinTech"]),
       person("s", "Sponsor Co", "sponsor", ["FinTech"]),
@@ -197,6 +209,28 @@ describe("registration is the qualifier", () => {
     expect(b.matchable).toBe(1);
     expect(b.registered).toBe(3);
     expect(b.pairs).toEqual([]);
+  });
+
+  it("pairs a sponsor with anyone once that rule is on", async () => {
+    rules.mockReturnValue(["sponsor_any"]);
+    regs.mockReturnValue([
+      person("a", "Ann", "founder", ["FinTech"]),
+      person("s", "Sponsor Co", "sponsor", ["FinTech"]),
+    ]);
+    const b = await loadNetworkingBoard("e1");
+    expect(b.pairs).toHaveLength(1);
+    expect(b.pairs[0].pairType).toBe("sponsor_any");
+  });
+
+  it("matches a presenter to an investor, from the presenter list rather than a registration", async () => {
+    rules.mockReturnValue(["presenter_investor"]);
+    regs.mockReturnValue([person("i", "Ivy", "investor", ["FinTech"])]);
+    presenters.mockReturnValue([
+      { id: "p1", profile_id: null, display_name: "Dr Shan", role_label: "Keynote" },
+    ]);
+    const b = await loadNetworkingBoard("e1");
+    expect(b.pairs).toHaveLength(1);
+    expect(b.pairs.some((p) => p.a.registrationId.startsWith("presenter:") || p.b.registrationId.startsWith("presenter:"))).toBe(true);
   });
 });
 
@@ -238,7 +272,9 @@ describe("a room big enough to matter", () => {
     regs.mockReturnValue(many);
     const b = await loadNetworkingBoard("e1");
     expect(b.matchable).toBe(120);
-    expect(b.totalPairs).toBeGreaterThan(7000);
+    // 3,600 cross pairs + 1,770 investor peers. Founder-to-founder is off by
+    // default, so its 1,770 are not generated.
+    expect(b.totalPairs).toBe(5370);
     expect(b.pairs.length).toBe(400);
     expect(b.counts.matches).toBe(b.totalPairs);
   });

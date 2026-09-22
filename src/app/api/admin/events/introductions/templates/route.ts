@@ -7,7 +7,7 @@ import { listTemplates, saveTemplate } from "@/lib/icfo-events/introductions-ser
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  kind: z.enum(["invitation", "follow_up"]),
+  kind: z.enum(["invitation", "peer_invitation", "follow_up"]),
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(4000),
 });

@@ -15,6 +15,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listIntroductions } from "@/lib/icfo-events/introductions-server";
 import { pairScore, sectorsOf, sharedSectors } from "@/lib/icfo-events/matching-rule";
+import {
+  DEFAULT_PAIR_TYPES, PAIR_TYPES, matchableRoles, medianScore, pairTypeOf, sanitizeRules, scoreBands,
+  type PairTypeKey, type Role, type ScoreBand,
+} from "@/lib/icfo-events/pair-types";
 
 function raw(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -25,9 +29,10 @@ type Row = Record<string, unknown>;
 export type Side = {
   /** Null for a guest registered without an account. */
   profileId: string | null;
+  /** For a presenter this is `presenter:<id>` — they have no registration. */
   registrationId: string;
   name: string;
-  role: "investor" | "founder";
+  role: Role;
   company: string | null;
 };
 
@@ -53,6 +58,8 @@ export type MatchPair = {
   founderReminders: number;
   /** The investor asked for a different slot and is waiting again. */
   rescheduleAsked: boolean;
+  /** Which pairing produced this row, and so which message it would get. */
+  pairType: PairTypeKey;
 };
 
 export type NetworkingBoard = {
@@ -68,11 +75,21 @@ export type NetworkingBoard = {
     matches: number; requested: number; accepted: number; declined: number;
     notSent: number; scheduled: number;
   };
+  /** The pairings in force, and how the scores are spread. */
+  rules: PairTypeKey[];
+  bands: ScoreBand[];
+  median: number | null;
+  /** Pairs each rule would produce, whether or not it is switched on. */
+  byPairType: Record<string, { pairs: number; median: number | null }>;
 };
 
 const EMPTY: NetworkingBoard = {
   matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
   counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0, scheduled: 0 },
+  rules: DEFAULT_PAIR_TYPES,
+  bands: [],
+  median: null,
+  byPairType: {},
 };
 
 /** A 106-person event is ~5,600 pairs. Show the strongest; count them all. */
@@ -80,24 +97,41 @@ const MAX_ROWS = 400;
 
 const pairKey = (a: string, b: string) => [a, b].sort().join("|");
 
+const ALL_PAIR_KEYS: PairTypeKey[] = PAIR_TYPES.map((p) => p.key);
+
+/**
+ * How a role scores.
+ *
+ * The scoring rule knows two roles — an investor and a founder are worth
+ * meeting whatever they declared. Everyone else matches on shared sectors
+ * alone, so they are scored as the same side.
+ */
+function scoreRole(role: Role): "investor" | "founder" {
+  return role === "investor" ? "investor" : "founder";
+}
+
 export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBoard> {
   try {
     const db = raw();
-    const [regsRes, connsRes, intros] = await Promise.all([
+    const [regsRes, connsRes, intros, rulesRes, presentersRes] = await Promise.all([
       db.from("registrations")
         .select("id, attendee_id, attendee_type, answers, profiles:attendee_id(full_name)")
         .eq("event_id", eventId),
       db.from("networking_connections").select("from_id, to_id, status").eq("event_id", eventId),
       listIntroductions(eventId),
+      db.from("event_matching_rules").select("pair_types").eq("event_id", eventId).maybeSingle(),
+      db.from("event_presenters").select("id, profile_id, display_name, role_label").eq("event_id", eventId),
     ]);
     if (regsRes.error) return EMPTY;
+
+    const rules = sanitizeRules((rulesRes.data as Row | null)?.pair_types);
 
     const rows = (regsRes.data ?? []) as Row[];
     const people: { side: Side; sectors: string[] }[] = [];
 
     for (const r of rows) {
       const role = String(r.attendee_type ?? "").toLowerCase();
-      if (role !== "investor" && role !== "founder") continue;
+      if (role !== "investor" && role !== "founder" && role !== "service" && role !== "sponsor") continue;
 
       const answers = (r.answers as Record<string, unknown> | null) ?? {};
       const profile = r.profiles as { full_name?: string | null } | null;
@@ -109,10 +143,25 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
           profileId: (r.attendee_id as string | null) ?? null,
           registrationId: String(r.id),
           name: typed || profile?.full_name?.trim() || "Attendee",
-          role,
+          role: role as Role,
           company: company || null,
         },
         sectors: sectorsOf(answers),
+      });
+    }
+
+    // Presenters are not registrations — they are the event's own speaker list,
+    // and carry no sector answers, so they match on role alone.
+    for (const p of ((presentersRes.data ?? []) as Row[])) {
+      people.push({
+        side: {
+          profileId: (p.profile_id as string | null) ?? null,
+          registrationId: `presenter:${String(p.id)}`,
+          name: String(p.display_name ?? "Presenter"),
+          role: "presenter",
+          company: (p.role_label as string | null) ?? null,
+        },
+        sectors: [],
       });
     }
 
@@ -131,16 +180,35 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
       intros.map((i) => [pairKey(i.investorRegId, i.founderRegId), i]),
     );
 
+    const eligible = matchableRoles(rules);
     const pairs: MatchPair[] = [];
+    // Every rule's yield, whether or not it is switched on — the rules tab
+    // shows what turning one on would add before you turn it on.
+    const byPairType = new Map<string, number[]>();
+
     for (let i = 0; i < people.length; i += 1) {
       for (let j = i + 1; j < people.length; j += 1) {
         const [x, y] = [people[i], people[j]];
-        // The same rule the public event page counts with, so the two numbers
-        // can never disagree.
-        const left = { role: x.side.role, sectors: x.sectors };
-        const right = { role: y.side.role, sectors: y.sectors };
+
+        // Which pairing this is, if any: staff decide which kinds of pair the
+        // event generates, and a pair nobody enabled is not a match.
+        const type = pairTypeOf(x.side.role, y.side.role, rules);
+        const anyType = pairTypeOf(x.side.role, y.side.role, ALL_PAIR_KEYS);
+
+        // The same scoring rule the public event page counts with, so the two
+        // numbers can never disagree. Roles beyond investor/founder score on
+        // shared sectors alone.
+        const left = { role: scoreRole(x.side.role), sectors: x.sectors };
+        const right = { role: scoreRole(y.side.role), sectors: y.sectors };
         const score = pairScore(left, right);
-        if (score <= 0) continue;
+
+        if (anyType && score > 0) {
+          const bucket = byPairType.get(anyType.key) ?? [];
+          bucket.push(score);
+          byPairType.set(anyType.key, bucket);
+        }
+
+        if (!type || score <= 0) continue;
         const shared = sharedSectors(left, right);
 
         // Investor first, so a mixed pair reads the way an introduction would.
@@ -175,6 +243,7 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
           meetingUrl: intro?.meetingUrl ?? null,
           founderReminders: intro?.founderReminders ?? 0,
           rescheduleAsked: Boolean(intro?.rescheduleRequestedAt),
+          pairType: type.key,
         });
       }
     }
@@ -182,10 +251,19 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
     pairs.sort((p, q) => q.score - p.score || p.a.name.localeCompare(q.a.name));
     const count = (s: MatchPair["status"]) => pairs.filter((p) => p.status === s).length;
 
+    const scores = pairs.map((p) => p.score);
+
     return {
-      matchable: people.length,
+      rules,
+      bands: scoreBands(scores),
+      median: medianScore(scores),
+      byPairType: Object.fromEntries(
+        [...byPairType].map(([k, v]) => [k, { pairs: v.length, median: medianScore(v) }]),
+      ),
+      // The pool these rules could pair — not everybody in the room.
+      matchable: people.filter((p) => eligible.has(p.side.role)).length,
       registered: rows.length,
-      withoutSectors: people.filter((p) => p.sectors.length === 0).length,
+      withoutSectors: people.filter((p) => eligible.has(p.side.role) && p.sectors.length === 0).length,
       pairs: pairs.slice(0, MAX_ROWS),
       totalPairs: pairs.length,
       counts: {

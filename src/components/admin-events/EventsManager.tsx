@@ -310,6 +310,28 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {/* The page as the public sees it. A draft has none, so it
+                          offers the staff-only preview rather than a 404. */}
+                      {ev.status === "published" || ev.status === "live" ? (
+                        <a
+                          href={`/events/${ev.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md border border-blue-300 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        >
+                          View public page ↗
+                        </a>
+                      ) : (
+                        <a
+                          href={`/events/${ev.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Not published yet — this is the page as it would look"
+                          className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] hover:bg-slate-50"
+                        >
+                          Preview ↗
+                        </a>
+                      )}
                       <button
                         onClick={() => openDuplicate(ev)}
                         className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
