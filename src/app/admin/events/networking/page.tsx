@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listAllEvents } from "@/lib/icfo-events/queries";
-import { loadNetworkingBoard } from "@/lib/icfo-events/networking-board";
+import { loadNetworkingBoard, type NetworkingBoard as Board } from "@/lib/icfo-events/networking-board";
 import { NetworkingBoard } from "@/components/admin-events/NetworkingBoard";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +28,11 @@ export default async function NetworkingMatchingPage({
 
   const events = await listAllEvents(admin).catch(() => []);
   const selected = eventId && events.some((e) => e.id === eventId) ? eventId : events[0]?.id ?? null;
-  const board = selected
-    ? await loadNetworkingBoard(selected)
-    : { optedIn: 0, registered: 0, pairs: [], counts: { matches: 0, requested: 0, accepted: 0, declined: 0, noAnswer: 0 } };
+  const empty: Board = {
+    matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
+    counts: { matches: 0, requested: 0, accepted: 0, declined: 0 },
+  };
+  const board = selected ? await loadNetworkingBoard(selected) : empty;
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Networking Matching">

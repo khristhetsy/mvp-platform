@@ -26,6 +26,7 @@ function Who({ side }: Readonly<{ side: MatchPair["a"] }>) {
   return (
     <span className="min-w-0">
       <span className="block truncate font-medium text-[var(--navy)]">{side.name}</span>
+      {side.company ? <span className="block truncate text-[10px] text-[var(--text-muted)]">{side.company}</span> : null}
       <span className={`mt-0.5 inline-block rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wide ${
         role === "investor" ? "bg-blue-50 text-blue-700" : role === "founder" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-500"
       }`}>
@@ -62,11 +63,14 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <Stat n={board.optedIn} label={`opted in of ${board.registered}`} />
+        <Stat n={board.matchable} label={`investors & founders of ${board.registered}`} />
         <Stat n={board.counts.matches} label="matches found" />
         <Stat n={board.counts.requested} label="awaiting an answer" warn={board.counts.requested > 0} />
         <Stat n={board.counts.accepted} label="accepted" />
         <Stat n={board.counts.declined} label="declined" />
+        {board.withoutSectors > 0 ? (
+          <Stat n={board.withoutSectors} label="declared no sector" warn />
+        ) : null}
       </div>
 
       <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
@@ -89,13 +93,16 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
           </select>
           <span className="text-[11.5px] text-[var(--text-muted)]">
             {shown.length === board.pairs.length ? `${board.pairs.length}` : `${shown.length} of ${board.pairs.length}`}
+            {board.totalPairs > board.pairs.length
+              ? ` · strongest ${board.pairs.length} of ${board.totalPairs}`
+              : ""}
           </span>
         </div>
 
         {shown.length === 0 ? (
           <p className="px-3.5 py-8 text-center text-sm text-[var(--text-muted)]">
-            {board.optedIn === 0
-              ? "Nobody has opted into networking for this event yet."
+            {board.matchable === 0
+              ? "Nobody has registered as an investor or a founder for this event yet."
               : board.pairs.length === 0
                 ? "Nobody shares a sector, and there is no founder–investor pairing to suggest."
                 : "No match matches that search."}
@@ -138,10 +145,10 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
       </div>
 
       <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-[11.8px] text-amber-900">
-        <b>Read-only for now.</b> Connection requests come from attendees, in the app — nothing here sends an
-        invitation, and no email goes out when a request is made. Matches are recomputed on every load rather than
-        stored, so a score can move as people edit their sectors. Staff-sent invitations and founder follow-ups are
-        the next build.
+        <b>Read-only for now.</b> Everyone registered as an investor or a founder is matched — registration is the
+        qualifier, not the networking opt-in. Connection requests still come from attendees in the app, so nothing
+        here sends an invitation and no email goes out when a request is made. A status only appears where both
+        sides have an account. Staff-sent invitations and founder follow-ups are the next build.
       </p>
     </div>
   );
