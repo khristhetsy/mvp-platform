@@ -111,8 +111,8 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-slate-50 text-left text-[10.4px] uppercase tracking-wide text-[var(--text-muted)]">
-                <th className="px-3.5 py-2 font-bold">Investor</th>
-                <th className="px-3.5 py-2 font-bold">Founder</th>
+                <th className="px-3.5 py-2 font-bold">Match</th>
+                <th className="px-3.5 py-2 font-bold">With</th>
                 <th className="px-3.5 py-2 font-bold">Why matched</th>
                 <th className="px-3.5 py-2 font-bold">Score</th>
                 <th className="px-3.5 py-2 font-bold">Status</th>
@@ -146,9 +146,10 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
 
       <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-[11.8px] text-amber-900">
         <b>Read-only for now.</b> Everyone registered as an investor or a founder is matched — registration is the
-        qualifier, not the networking opt-in. Connection requests still come from attendees in the app, so nothing
-        here sends an invitation and no email goes out when a request is made. A status only appears where both
-        sides have an account. Staff-sent invitations and founder follow-ups are the next build.
+        qualifier, not the networking opt-in. A pair can be two investors who share sectors, which is why the
+        columns are sides rather than roles; a founder–investor pairing scores three points higher. Connection
+        requests still come from attendees in the app, so every status reads <b>No request</b> until someone sends
+        one — staff-sent invitations and founder follow-ups are the next build.
       </p>
     </div>
   );

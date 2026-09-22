@@ -39,7 +39,7 @@ const merge = (over: Partial<EventMergeData> = {}): EventMergeData => ({
   sponsorLockup: null,
   organizerLine: "iCFO Capital Global, Inc.",
   presenters: [],
-  attendees: { investors: [], founders: [], privateCount: 0, total: 0 },
+  attendees: { investors: [], founders: [], total: 0 },
   sponsorTiers: { presenting: [], track: [], community: [] },
   ...over,
 });
@@ -138,7 +138,7 @@ describe("email-safe output", () => {
 
 describe("who's coming — the attendee list", () => {
   const withAttendees = (over = {}) => merge({
-    attendees: { investors: ["Marcus Reyes", "Aisha Kamara"], founders: ["Shan Padda"], privateCount: 12, total: 15, ...over },
+    attendees: { investors: ["Marcus Reyes", "Aisha Kamara"], founders: ["Shan Padda"], total: 15, ...over },
   });
 
   it("names the people who agreed to be listed", () => {
@@ -154,14 +154,6 @@ describe("who's coming — the attendee list", () => {
     expect(html).toContain("Founders · 1");
   });
 
-  it("never leaks the private ones — an email has no session behind it", () => {
-    // 15 registered, 3 named: the other 12 must not be counted into a group
-    // or hinted at in any way a forwarded mail could expose.
-    const html = render(withAttendees());
-    expect(html).not.toContain("attending privately");
-    expect(html).not.toContain("Investors · 14");
-  });
-
   it("caps each group at six, then says how many more", () => {
     const many = Array.from({ length: 10 }, (_, i) => `Investor ${i + 1}`);
     const html = render(withAttendees({ investors: many }));
@@ -170,8 +162,8 @@ describe("who's coming — the attendee list", () => {
     expect(html).toContain("+ 4 more investors");
   });
 
-  it("renders nothing when nobody has opted in", () => {
-    const html = render(merge({ attendees: { investors: [], founders: [], privateCount: 41, total: 41 } }));
+  it("renders nothing when nobody registered as an investor or founder", () => {
+    const html = render(merge({ attendees: { investors: [], founders: [], total: 41 } }));
     expect(html).not.toContain("Who&rsquo;s coming");
   });
 

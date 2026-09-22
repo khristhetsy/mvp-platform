@@ -248,10 +248,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     event.sessions.filter((s) => s.status !== "draft") as unknown as AgendaSession[],
   ) as unknown as typeof event.sessions;
 
-  // Who's attending. A registered viewer sees everyone; anyone else sees only
-  // the people who ticked the box, plus a count of those who didn't.
-  const viewerIsRegistered = Boolean(registration);
-  const attendees = await listEventAttendees(event.id, { viewerIsRegistered });
+  // Who's attending. Registration is the qualifier, so the list is the same
+  // for every viewer — no consent gate, no signed-in variant.
+  const attendees = await listEventAttendees(event.id);
 
   // Sign playback URLs for any visible session that has a recording.
   const playbackEntries = await Promise.all(
@@ -459,7 +458,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         <SponsorLockup sponsors={sponsors} />
 
-        <EventAttendees data={attendees} viewerIsRegistered={viewerIsRegistered} />
+        <EventAttendees data={attendees} />
 
         <div id="agenda" className="mt-10 scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("agenda")}</h2>

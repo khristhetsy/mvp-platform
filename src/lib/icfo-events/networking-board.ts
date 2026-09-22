@@ -132,7 +132,9 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
         const score = shared.length * 2 + (complementary ? 3 : 0);
         if (score <= 0) continue;
 
-        const investorFirst = y.side.role === "investor";
+        // Investor first, so a mixed pair reads the way an introduction would.
+        // Two of the same kind keep the order they arrived in.
+        const investorFirst = y.side.role === "investor" && x.side.role !== "investor";
         const a = investorFirst ? y.side : x.side;
         const b = investorFirst ? x.side : y.side;
 

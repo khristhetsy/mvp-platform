@@ -61,15 +61,10 @@ export const eventMergeSchema = z.object({
       sessionId: z.string().nullable().default(null),
     }),
   ),
-  /**
-   * The public attendee list — opted-in names only. An email has no session
-   * behind it, so it can never show the private ones: a mail naming everyone
-   * leaks them to whoever it is forwarded to.
-   */
+  /** Everyone registered as an investor or a founder, by name. */
   attendees: z.object({
     investors: z.array(z.string()),
     founders: z.array(z.string()),
-    privateCount: z.number(),
     total: z.number(),
   }),
   sponsorTiers: z.object({
@@ -143,7 +138,7 @@ export function buildEventMergeData(
     sponsorLockup: presentingSponsors.length ? `Presented with ${presentingSponsors.join(", ")}` : null,
     organizerLine: ORGANIZER_LINE,
     presenters: extras.presenters ?? [],
-    attendees: extras.attendees ?? { investors: [], founders: [], privateCount: 0, total: 0 },
+    attendees: extras.attendees ?? { investors: [], founders: [], total: 0 },
     sponsorTiers: extras.sponsorTiers ?? emptyTiers,
   };
 }
@@ -166,10 +161,9 @@ export async function loadEventMergeData(
     ? {
         investors: attending.investors.map((a) => a.name),
         founders: attending.founders.map((a) => a.name),
-        privateCount: attending.privateInvestors + attending.privateFounders,
         total: attending.total,
       }
-    : { investors: [], founders: [], privateCount: 0, total: 0 };
+    : { investors: [], founders: [], total: 0 };
   const bookletUrl = await publishedBookletUrl(supabase, eventId, opts.baseUrl).catch(() => null);
   const presentingSponsors = sponsors.filter((s) => s.placement === "presenting").map((s) => s.name);
   const tierOf = (p: string) => (p === "presenting" ? "presenting" : p === "track" ? "track" : "community");
