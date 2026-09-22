@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { MatchPair, NetworkingBoard as Board } from "@/lib/icfo-events/networking-board";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 
@@ -67,6 +68,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   /** Offered as a sender only when it can actually send. */
   gmail?: { available: boolean; address: string | null };
 }>) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -118,11 +120,11 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
       if (dryRun) {
         const repeat = Number(json.wouldRepeat ?? 0);
         const held = Number(json.held ?? 0);
-        const left = Number(json.remaining ?? 0);
+        const left = Number(json.outstanding ?? json.remaining ?? 0);
         setMsg(
           `${json.emails} email${Number(json.emails) === 1 ? "" : "s"} to ${json.recipients} ` +
           `investor${Number(json.recipients) === 1 ? "" : "s"}, covering ${json.matches ?? json.emails} matches.` +
-          (left ? ` This press sends ${json.thisBatch}; press again for the remaining ${left}.` : "") +
+          (left ? ` This press sends ${json.thisBatch}; ${left.toLocaleString()} would be left after it.` : "") +
           (held
             ? ` ${held} held back by the cap of ${cap} — they stay unsent and are picked up next time.`
             : "") +
@@ -132,23 +134,26 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
         );
         return;
       }
-      const left = Number(json.remaining ?? 0);
+      // Everything still to introduce, including what the cap held back — not
+      // just this batch's overflow. Reporting the smaller number is what made
+      // a working job look stuck.
+      const left = Number(json.outstanding ?? json.remaining ?? 0);
       setMsg(
         `${json.created} introductions created, ${json.sent} emails sent` +
-        (Number(json.held ?? 0) ? `, ${json.held} held back by the cap` : "") +
-        (left ? `. ${left} still to send — press Introduce again.` : "."),
+        (Number(json.held ?? 0) ? `, ${json.held} held back by the cap of ${cap}` : "") +
+        (left ? `. ${left.toLocaleString()} still to introduce — press Introduce again.` : "."),
       );
+      // Refresh after every press, finished or not. The tiles and the table are
+      // server-rendered, so without this they keep reporting the state before
+      // the first press and nothing looks like it moved.
+      router.refresh();
       // Only clear the selection when the job is finished; otherwise the next
-      // press has nothing to continue with.
+      // press has nothing to continue with. The server re-derives what is
+      // still introducible on every press, so pressing again cannot double-send.
       if (!left) {
         setPicked(new Set());
         setAllMatches(false);
-        window.location.reload();
-        return;
       }
-      // More to send: keep the selection and the message. The table is stale
-      // until the next reload, but the server re-derives what is still
-      // introducible on every press, so continuing is safe.
     } catch (err) {
       setMsg(
         err instanceof DOMException && err.name === "AbortError"
@@ -167,7 +172,12 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   // Matches beyond the rendered page exist but their keys were never sent to
   // the browser, so "select all" is a flag the server acts on, not a list.
   const beyondPage = Math.max(board.counts.matches - introducible.length, 0);
-  const selectedCount = allMatches ? board.counts.notSent : picked.size;
+  // Only what is still introducible counts. After a partial send the board
+  // refreshes underneath the selection, and the keys of pairs that just went
+  // out would otherwise keep inflating the button's number.
+  const selectedCount = allMatches
+    ? board.counts.notSent
+    : introducible.filter((p) => picked.has(p.key)).length;
 
   function toggleAllOnPage() {
     setAllMatches(false);

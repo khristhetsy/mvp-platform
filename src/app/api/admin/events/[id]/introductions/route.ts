@@ -127,6 +127,16 @@ export async function POST(
     // first whatever happens to the rest.
     const batch = capped.keep.slice(0, MAX_PER_REQUEST);
     const remaining = capped.keep.length - batch.length;
+    /**
+     * Everything selected that this press does not send — what the batch left
+     * behind *and* what the cap held back.
+     *
+     * `remaining` counts only the batch's own overflow, so with a cap of 5 on
+     * 1,515 matches it reported 350 while 1,365 were still outstanding. The
+     * board printed that smaller number, which is how a job that was working
+     * looked stuck.
+     */
+    const outstanding = selected.length - batch.length;
     const pairs = batch;
 
     // Never offer a sender that cannot send: Gmail needs a connected account
@@ -168,6 +178,7 @@ export async function POST(
         // What one press would actually do.
         thisBatch: batch.length,
         remaining,
+        outstanding,
       });
     }
 
@@ -322,6 +333,7 @@ export async function POST(
       // Left for the next press. The rows were never created, so nothing is
       // recorded as sent that was not.
       remaining,
+      outstanding,
     });
   } catch (err) {
     Sentry.captureException(err);
