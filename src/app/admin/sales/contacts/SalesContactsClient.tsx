@@ -75,7 +75,7 @@ function relTime(at: string): string {
 type FacetKey = "leadSource" | "industries" | "capital" | "fundingStages" | "investorTypes" | "operatingStages";
 const FACET_LABEL: Record<FacetKey, string> = {
   leadSource: "Lead source",
-  industries: "Type of industries",
+  industries: "Industry",
   capital: "Amount / type of capital",
   fundingStages: "Funding stage",
   investorTypes: "Investor profile",

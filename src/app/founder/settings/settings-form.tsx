@@ -138,7 +138,7 @@ const FIELDS: FieldDef[] = [
   { key: "founder_goals", label: "Investor-fit notes", type: "textarea", ai: "goals", hint: "What you want beyond capital — network, board experience, portfolio synergies.", section: "Investor fit profile" },
   { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds", section: "Investor fit profile" },
   { key: "funding_stage", label: "Funding stage", type: "chips-multi", options: FUNDING_STAGE_OPTIONS, section: "Investor fit profile" },
-  { key: "industry", label: "Type of industries", type: "select-industry", required: true, section: "Investor fit profile" },
+  { key: "industry", label: "Industry", type: "select-industry", required: true, section: "Investor fit profile" },
   { key: "revenue_stage", label: "Revenue stage", type: "select-stage", section: "Investor fit profile" },
   { key: "annual_ebitda", label: "Annual EBITDA", type: "text", placeholder: "e.g. -$120,000 (0 if pre-revenue)", section: "Investor fit profile" },
   { key: "operating_stage", label: "Operating stage", type: "chips-multi", options: OPERATING_STAGE_OPTIONS, section: "Investor fit profile" },

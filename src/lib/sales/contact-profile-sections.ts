@@ -69,7 +69,9 @@ const FOUNDER_SCHEMA: SectionDef[] = [
     title: "Company & stage",
     fields: [
       { display: "Business summary", match: "business summary", odoo: "Entrepreneur business summary" },
-      { display: "Industries", match: "industries", odoo: "Industries" },
+      // One concept, one word, on both sides of the platform. `match` and `odoo`
+      // keep the synced spelling — they address the stored data, not the reader.
+      { display: "Industry", match: "industries", odoo: "Industries" },
       { display: "Funding stage", match: "funding stage", odoo: "Entrepreneur funding stage?" },
       { display: "Operating stage", match: "operating stage", odoo: "Entrepreneur operating stage?" },
       { display: "Annual revenue size", match: "annual revenue size", odoo: "Entrepreneur annual revenue size?" },
@@ -120,7 +122,7 @@ const INVESTOR_SCHEMA: SectionDef[] = [
   {
     title: "Investor thesis",
     fields: [
-      { display: "Industries", match: "industries", odoo: "Industries" },
+      { display: "Industry", match: "industries", odoo: "Industries" },
       // ONE row for one concept. The value may arrive under the investor-side phrasing
       // ("...operational stage?") or the entrepreneur-side one ("Entrepreneur operating
       // stage?") — the matcher unions both, so the profile does too. Edits save to the

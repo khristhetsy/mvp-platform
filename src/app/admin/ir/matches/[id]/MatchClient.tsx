@@ -170,7 +170,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
             <div className="grid gap-x-8 gap-y-1 text-[12.5px] sm:grid-cols-2">
               <Field label="Name" value={investor?.name ?? "—"} /><Field label="Firm" value={investor?.firm ?? "—"} />
               <Field label="Country" value={investor?.country ?? "—"} /><Field label="Data source" value={investor?.dataSource === "verified" ? `Verified ${fmtDay(investor.verifiedAt)}` : investor?.dataSource === "self_reported" ? "Self-reported" : "Unverified"} />
-              <Field label="Investor profile" value={investor?.investorTypes.join(", ") || "—"} /><Field label="Industries" value={investor?.industries.join(", ") || "—"} />
+              <Field label="Investor profile" value={investor?.investorTypes.join(", ") || "—"} /><Field label="Industry" value={investor?.industries.join(", ") || "—"} />
               <div className="sm:col-span-2"><Link href={`/admin/sales/contacts/${m.investor_contact_id}`} className="text-[12.5px] text-indigo-700 hover:underline">Open in Sales Hub (phone / email there, permission-gated) →</Link></div>
             </div>
           ) : null}
