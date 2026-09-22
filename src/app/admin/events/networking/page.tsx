@@ -37,6 +37,13 @@ export default async function NetworkingMatchingPage({
   const board = selected ? await loadNetworkingBoard(selected) : empty;
   const templates = await listTemplates().catch(() => []);
 
+  // Where a test may go: the signed-in staff address, plus one alternate from
+  // the environment for checking how another mail client renders it. Neither
+  // is invented — an unset alternate simply does not appear.
+  const testAddresses = [profile.email, process.env.EVENT_TEST_EMAIL]
+    .map((a) => (a ?? "").trim())
+    .filter((a, i, all) => a.includes("@") && all.indexOf(a) === i);
+
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Networking Matching">
       <WorkspacePageContainer>
@@ -62,7 +69,11 @@ export default async function NetworkingMatchingPage({
                   <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                     The messages that go out
                   </h2>
-                  <IntroTemplatesEditor initial={templates} />
+                  <IntroTemplatesEditor
+                    initial={templates}
+                    eventId={selected ?? ""}
+                    testAddresses={testAddresses}
+                  />
                 </div>
               ) : null}
             </>

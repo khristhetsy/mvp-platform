@@ -40,7 +40,13 @@ const INP = "w-full rounded-lg border border-[var(--border-subtle)] px-2.5 py-1.
  * An unknown token is left visible in the rendered mail rather than blanked,
  * so a typo here shows up in a test send instead of silently leaving a gap.
  */
-export function IntroTemplatesEditor({ initial }: Readonly<{ initial: IntroTemplate[] }>) {
+export function IntroTemplatesEditor({ initial, eventId, testAddresses }: Readonly<{
+  initial: IntroTemplate[];
+  /** The event a test is built from — its strongest unsent match. */
+  eventId: string;
+  /** Where a test may be sent. Empty means the control does not render. */
+  testAddresses: string[];
+}>) {
   const [tab, setTab] = useState<TemplateKind>("invitation");
   const [drafts, setDrafts] = useState(
     Object.fromEntries(initial.map((t) => [t.kind, { subject: t.subject, body: t.body }])) as
@@ -49,10 +55,38 @@ export function IntroTemplatesEditor({ initial }: Readonly<{ initial: IntroTempl
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [testTo, setTestTo] = useState(testAddresses[0] ?? "");
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const draft = drafts[tab] ?? { subject: "", body: "" };
   const set = (patch: Partial<{ subject: string; body: string }>) =>
     setDrafts((d) => ({ ...d, [tab]: { ...d[tab], ...patch } }));
+
+  async function sendTest() {
+    setTestBusy(true); setTestMsg(null); setTestError(null);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/introductions/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: testTo }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        to?: string; shape?: string; rows?: number; investor?: string; founder?: string; error?: string;
+      };
+      if (!res.ok) { setTestError(json.error ?? "Could not send the test."); return; }
+      setTestMsg(
+        json.shape === "digest"
+          ? `Sent to ${json.to} — the digest ${json.investor} would get, with ${json.rows} founders.`
+          : `Sent to ${json.to} — the invitation ${json.investor} would get about ${json.founder}.`,
+      );
+    } catch {
+      setTestError("Network error. Please try again.");
+    } finally {
+      setTestBusy(false);
+    }
+  }
 
   async function save() {
     setBusy(true); setError(null); setSaved(null);
@@ -130,6 +164,44 @@ export function IntroTemplatesEditor({ initial }: Readonly<{ initial: IntroTempl
               or registered investment adviser, and no funding outcome is promised.
             </p>
           </div>
+
+          {testAddresses.length > 0 && eventId ? (
+            <div className="mt-4 border-t border-[var(--border-subtle)] pt-3.5">
+              <p className="text-[10.6px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                Send a test to
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {testAddresses.map((addr) => (
+                  <button
+                    key={addr}
+                    type="button"
+                    onClick={() => { setTestTo(addr); setTestMsg(null); setTestError(null); }}
+                    className={`rounded-lg px-3 py-1.5 text-[12.4px] ${
+                      testTo === addr
+                        ? "border-2 border-[var(--blue)] bg-[var(--blue-muted)] font-semibold text-[var(--navy)]"
+                        : "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
+                    }`}
+                  >
+                    {addr}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => void sendTest()}
+                  disabled={testBusy || !testTo}
+                  className="rounded-lg border border-[var(--navy)] px-3.5 py-1.5 text-[12.4px] font-semibold text-[var(--navy)] disabled:opacity-50"
+                >
+                  {testBusy ? "Sending…" : "Send a test"}
+                </button>
+              </div>
+              {testMsg ? <p className="mt-2 text-[12px] text-emerald-700">{testMsg}</p> : null}
+              {testError ? <p className="mt-2 text-[12px] text-rose-700">{testError}</p> : null}
+              <p className="mt-2 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                Real data from the strongest match on this event — whichever shape that investor would really
+                receive. Creates no introduction, mails nobody else, and its buttons do nothing.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div>

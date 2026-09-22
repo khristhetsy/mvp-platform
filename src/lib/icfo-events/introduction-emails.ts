@@ -22,9 +22,20 @@ function button(href: string, label: string, primary: boolean): string {
   }">${esc(label)}</a>`;
 }
 
+/** Says plainly that nothing happened, because the buttons below it won't. */
+const TEST_BANNER = `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px dashed #EF9F27;background:#FAEEDA;border-radius:8px;margin:0 0 16px;">
+  <tr><td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:12.5px;color:#633806;">
+    Test send. The buttons below do nothing — nobody has been introduced.
+  </td></tr>
+</table>`;
+
+/** Where a test's buttons point: a page that explains itself. */
+export const TEST_RESPOND_PATH = "/e/intro/test";
+
 export function introductionHtml(input: {
   body: string;
   respondUrl: string;
+  test?: boolean;
 }): string {
   const paragraphs = input.body
     .split(/\n{2,}/)
@@ -35,6 +46,7 @@ export function introductionHtml(input: {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5;padding:22px 0;"><tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f2;">
       <tr><td style="padding:24px 30px;font-family:Arial,sans-serif;">
+        ${input.test ? TEST_BANNER : ""}
         ${paragraphs}
         <div style="margin-top:6px;">
           ${button(`${input.respondUrl}?a=yes`, "Accept the introduction →", true)}
@@ -71,6 +83,8 @@ export async function sendIntroductionEmail(input: {
   eventTitle: string;
   sharedSectors: string[];
   baseUrl: string;
+  /** A rehearsal: flagged in the subject, and its buttons lead nowhere. */
+  test?: boolean;
 }): Promise<boolean> {
   if (!input.to?.includes("@")) return false;
 
@@ -81,12 +95,16 @@ export async function sendIntroductionEmail(input: {
     sharedSectors: input.sharedSectors,
   });
 
+  const base = input.baseUrl.replace(/\/$/, "");
   return sendEmail({
     to: input.to,
-    subject,
+    subject: input.test ? `[Test] ${subject}` : subject,
     html: introductionHtml({
       body,
-      respondUrl: `${input.baseUrl.replace(/\/$/, "")}/e/intro/${introToken(input.introductionId)}`,
+      // A test carries no introduction to answer, so its buttons must not look
+      // like they do — they lead to a page that says so.
+      respondUrl: input.test ? `${base}${TEST_RESPOND_PATH}` : `${base}/e/intro/${introToken(input.introductionId)}`,
+      test: input.test,
     }),
   });
 }
@@ -263,6 +281,7 @@ export function introductionDigestHtml(input: {
   greeting: string;
   intro: string;
   rows: { name: string; meta: string; pitch: string | null; respondUrl: string }[];
+  test?: boolean;
 }): string {
   const rows = input.rows.map((r) => `
     <tr><td style="padding:14px 0;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
@@ -276,6 +295,7 @@ export function introductionDigestHtml(input: {
     </td></tr>`).join("");
 
   return shell(
+    (input.test ? TEST_BANNER : "") +
     para(esc(input.greeting)) +
     para(esc(input.intro)) +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>` +
@@ -297,6 +317,8 @@ export async function sendIntroductionDigest(input: {
   eventTitle: string;
   items: DigestItem[];
   baseUrl: string;
+  /** A rehearsal: flagged in the subject, and its buttons lead nowhere. */
+  test?: boolean;
 }): Promise<boolean> {
   if (!input.to?.includes("@") || input.items.length === 0) return false;
 
@@ -312,17 +334,19 @@ export async function sendIntroductionDigest(input: {
       name: item.founder.name,
       meta,
       pitch: item.founder.pitch?.trim() || null,
-      respondUrl: `${base}/e/intro/${introToken(item.introductionId)}`,
+      respondUrl: input.test ? `${base}${TEST_RESPOND_PATH}` : `${base}/e/intro/${introToken(item.introductionId)}`,
     };
   });
 
+  const subject = digestSubject(input.items.length, input.eventTitle);
   return sendEmail({
     to: input.to,
-    subject: digestSubject(input.items.length, input.eventTitle),
+    subject: input.test ? `[Test] ${subject}` : subject,
     html: introductionDigestHtml({
       greeting: `Hi ${input.investorName.split(/\s+/)[0] || input.investorName},`,
       intro: `${input.items.length} founders at ${input.eventTitle} match what you back. Accept the ones you want to meet — each sends you their time and a link.`,
       rows,
+      test: input.test,
     }),
   });
 }

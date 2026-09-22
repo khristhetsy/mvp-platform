@@ -53,3 +53,17 @@ describe("the digest", () => {
     expect(nasty).toContain("&lt;script&gt;");
   });
 });
+
+describe("a test send", () => {
+  const test = introductionDigestHtml({
+    greeting: "Hi Kenneth,", intro: "Two founders match.", rows, test: true,
+  });
+
+  it("says so at the top", () => {
+    expect(test).toContain("Test send. The buttons below do nothing");
+  });
+
+  it("does not say so on a real one", () => {
+    expect(html).not.toContain("Test send.");
+  });
+});
