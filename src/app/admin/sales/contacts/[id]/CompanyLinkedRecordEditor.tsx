@@ -33,6 +33,7 @@ type Form = {
   annual_ebitda: string; management_team: string;
   seeking_investor_types: string[]; seeking_capital_types: string[]; active_investor_preference: string[];
   business_description: string;
+  annual_revenue_size: string; arr: string; mrr: string; key_highlights: string;
 };
 
 function fromCompany(c: LinkedCompany): Form {
@@ -44,6 +45,8 @@ function fromCompany(c: LinkedCompany): Form {
     annual_ebitda: c.annualEbitda ?? "", management_team: c.managementTeam ?? "",
     seeking_investor_types: splitCsv(c.seekingInvestorTypes), seeking_capital_types: splitCsv(c.seekingCapitalTypes),
     active_investor_preference: splitCsv(c.activeInvestorPreference), business_description: c.description ?? "",
+    annual_revenue_size: c.annualRevenueSize ?? "", arr: c.arr ?? "", mrr: c.mrr ?? "",
+    key_highlights: c.keyHighlights ?? "",
   };
 }
 
@@ -143,6 +146,10 @@ export function CompanyLinkedRecordEditor({
           seeking_investor_types: form.seeking_investor_types.join(", ") || null,
           seeking_capital_types: form.seeking_capital_types.join(", ") || null,
           active_investor_preference: form.active_investor_preference.join(", ") || null,
+          annual_revenue_size: form.annual_revenue_size.trim() || null,
+          arr: form.arr.trim() || null,
+          mrr: form.mrr.trim() || null,
+          key_highlights: form.key_highlights.trim() || null,
         }),
       });
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -197,13 +204,17 @@ export function CompanyLinkedRecordEditor({
           <ViewRow label="Funding stage" unasked={unasked}>{data.funding_stage.join(", ") || null}</ViewRow>
           <ViewRow label="Operating stage" unasked={unasked}>{data.operating_stage.join(", ") || null}</ViewRow>
           <ViewRow label="Business entity" unasked={unasked}>{data.business_entity || null}</ViewRow>
+          <ViewRow label="Annual revenue size" unasked={unasked}>{data.annual_revenue_size || null}</ViewRow>
           <ViewRow label="Annual EBITDA" unasked={unasked}>{data.annual_ebitda || null}</ViewRow>
+          <ViewRow label="ARR" unasked={unasked}>{data.arr || null}</ViewRow>
+          <ViewRow label="MRR" unasked={unasked}>{data.mrr || null}</ViewRow>
           <ViewRow label="Type of investor(s)" unasked={unasked}>{data.seeking_investor_types.join(", ") || null}</ViewRow>
           <ViewRow label="Type(s) of capital" unasked={unasked}>{data.seeking_capital_types.join(", ") || null}</ViewRow>
           <ViewRow label="Active investor preference" unasked={unasked}>{data.active_investor_preference.join(", ") || null}</ViewRow>
           <ViewRow label="Management team" unasked={unasked}>{data.management_team || null}</ViewRow>
           <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Use of funds" unasked={unasked}>{data.use_of_funds || null}</ViewRow></div>
           <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Description">{data.business_description || null}</ViewRow></div>
+          <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Key highlights" unasked={unasked}>{data.key_highlights || null}</ViewRow></div>
         </div>
       ) : (
         <div>
@@ -227,13 +238,17 @@ export function CompanyLinkedRecordEditor({
           <EditRow label="Funding stage"><Chips options={FUNDING_STAGE_OPTS} value={form.funding_stage} onToggle={(v) => toggle("funding_stage", v)} /></EditRow>
           <EditRow label="Operating stage"><Chips options={OPERATING_STAGE_OPTS} value={form.operating_stage} onToggle={(v) => toggle("operating_stage", v)} /></EditRow>
           <EditRow label="Business entity"><Chips options={BUSINESS_ENTITY_OPTS} value={form.business_entity ? [form.business_entity] : []} onToggle={(v) => set("business_entity", form.business_entity === v ? "" : v)} single /></EditRow>
+          <EditRow label="Annual revenue size"><input className={INPUT} style={inputStyle} value={form.annual_revenue_size} onChange={(e) => set("annual_revenue_size", e.target.value)} placeholder="e.g. $1.4M" /></EditRow>
           <EditRow label="Annual EBITDA"><input className={INPUT} style={inputStyle} value={form.annual_ebitda} onChange={(e) => set("annual_ebitda", e.target.value)} placeholder="e.g. -$120,000" /></EditRow>
+          <EditRow label="ARR"><input className={INPUT} style={inputStyle} value={form.arr} onChange={(e) => set("arr", e.target.value)} placeholder="e.g. $840,000" /></EditRow>
+          <EditRow label="MRR"><input className={INPUT} style={inputStyle} value={form.mrr} onChange={(e) => set("mrr", e.target.value)} placeholder="e.g. $70,000" /></EditRow>
           <EditRow label="Type of investor(s)"><Chips options={INVESTOR_TYPE_OPTS} value={form.seeking_investor_types} onToggle={(v) => toggle("seeking_investor_types", v)} /></EditRow>
           <EditRow label="Type(s) of capital"><Chips options={CAPITAL_TYPE_OPTS} value={form.seeking_capital_types} onToggle={(v) => toggle("seeking_capital_types", v)} /></EditRow>
           <EditRow label="Active investor preference"><Chips options={INVESTOR_PREF_OPTS} value={form.active_investor_preference} onToggle={(v) => toggle("active_investor_preference", v)} /></EditRow>
           <EditRow label="Management team"><input className={INPUT} style={inputStyle} value={form.management_team} onChange={(e) => set("management_team", e.target.value)} placeholder="e.g. 2 co-founders, 3 full-time" /></EditRow>
           <EditRow label="Use of funds"><input className={INPUT} style={inputStyle} value={form.use_of_funds} onChange={(e) => set("use_of_funds", e.target.value)} /></EditRow>
           <EditRow label="Description"><textarea className={INPUT} style={inputStyle} rows={3} value={form.business_description} onChange={(e) => set("business_description", e.target.value)} /></EditRow>
+          <EditRow label="Key highlights"><textarea className={INPUT} style={inputStyle} rows={2} value={form.key_highlights} onChange={(e) => set("key_highlights", e.target.value)} placeholder="The three or four facts an investor should take away." /></EditRow>
 
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button type="button" onClick={save} disabled={saving} style={{ fontSize: 12, padding: "7px 16px", borderRadius: 8, border: "none", background: "#2E78F5", color: "white", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>{saving ? "Saving…" : "Save changes"}</button>

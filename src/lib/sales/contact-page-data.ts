@@ -95,7 +95,8 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
           "id, slug, is_published, company_name, industry, revenue_stage, funding_amount," +
             " business_description, website, country, state, use_of_funds, onboarding_step_state," +
             " funding_stage, operating_stage, business_entity, annual_ebitda, management_team," +
-            " seeking_investor_types, seeking_capital_types, active_investor_preference",
+            " seeking_investor_types, seeking_capital_types, active_investor_preference,"  +
+            " annual_revenue_size, arr, mrr, key_highlights",
         )
         .eq("founder_id", prof.id)
         .maybeSingle();
@@ -127,6 +128,10 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
           seekingInvestorTypes: comp.seeking_investor_types ?? null,
           seekingCapitalTypes: comp.seeking_capital_types ?? null,
           activeInvestorPreference: comp.active_investor_preference ?? null,
+          annualRevenueSize: comp.annual_revenue_size ?? null,
+          arr: comp.arr ?? null,
+          mrr: comp.mrr ?? null,
+          keyHighlights: comp.key_highlights ?? null,
           // Seeking / Company & stage / Traction are all collected in the wizard's
           // `funding_information` step. Whether that step was submitted is what
           // separates "the founder hasn't been asked" from "asked and left blank" —

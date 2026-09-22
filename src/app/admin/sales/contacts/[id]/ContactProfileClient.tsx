@@ -376,6 +376,12 @@ export type LinkedCompany = {
   seekingInvestorTypes: string | null;
   seekingCapitalTypes: string | null;
   activeInvestorPreference: string | null;
+  // Traction (migration 20260921002). These exist on `companies` and the CRM
+  // simply never read them, so they showed as dashes with no way to fill them.
+  annualRevenueSize: string | null;
+  arr: string | null;
+  mrr: string | null;
+  keyHighlights: string | null;
   /** True once the founder submitted the wizard step that collects the fields above. */
   fundingInfoCaptured: boolean;
 };

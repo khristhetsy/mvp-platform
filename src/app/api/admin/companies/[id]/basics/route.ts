@@ -28,12 +28,17 @@ const patchSchema = z.object({
   seeking_investor_types: OPTIONAL_TEXT,
   seeking_capital_types: OPTIONAL_TEXT,
   active_investor_preference: OPTIONAL_TEXT,
+  annual_revenue_size: z.string().trim().max(120).nullable().optional(),
+  arr: z.string().trim().max(120).nullable().optional(),
+  mrr: z.string().trim().max(120).nullable().optional(),
+  key_highlights: OPTIONAL_TEXT,
 });
 
 const OPTIONAL_COLS = [
   "website", "country", "state", "use_of_funds", "funding_stage", "operating_stage",
   "business_entity", "annual_ebitda", "management_team", "seeking_investor_types",
   "seeking_capital_types", "active_investor_preference",
+  "annual_revenue_size", "arr", "mrr", "key_highlights",
 ] as const;
 
 /** Read the editable company basics. Staff only. */
