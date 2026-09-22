@@ -16,6 +16,7 @@ const TOKENS = [
   ["{{investor_line}}", "name — company"],
   ["{{investor_name}}", ""],
   ["{{investor_company}}", ""],
+  ["{{match_reason}}", "one line: shared sectors, or what they are at this event"],
   ["{{shared_line}}", "\", and you share X, Y\" — empty when nothing is shared"],
   ["{{shared_sectors}}", ""],
   ["{{event_title}}", ""],

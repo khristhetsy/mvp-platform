@@ -10,7 +10,7 @@ import {
   sendIntroductionDigest, sendIntroductionEmail, type Sender,
 } from "@/lib/icfo-events/introduction-emails";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
-import { pairTypeFor } from "@/lib/icfo-events/pair-types";
+import { pairTypeFor, type Role } from "@/lib/icfo-events/pair-types";
 import { formatSlot } from "@/lib/icfo-events/calendar-links";
 import { planBulkSend } from "@/lib/icfo-events/introductions";
 
@@ -53,6 +53,11 @@ const schema = z.object({
   dryRun: z.boolean().default(false),
   /** Who the mail comes from. Gmail takes replies out of the platform. */
   sendVia: z.enum(["icapos", "gmail"]).default("icapos"),
+  /**
+   * How it arrives. A digest is one email per person however many matches they
+   * have; individually is one email per match. Both record the same rows.
+   */
+  sendAs: z.enum(["digest", "individual"]).default("digest"),
 });
 
 /**
@@ -153,7 +158,9 @@ export async function POST(
     if (parsed.data.dryRun) {
       return NextResponse.json({
         recipients: plan.perRecipient.length,
-        emails: pairs.length,
+        // What this shape would actually send: one per person, or one per match.
+        emails: parsed.data.sendAs === "individual" ? pairs.length : plan.perRecipient.length,
+        matches: pairs.length,
         wouldRepeat: plan.wouldRepeat,
         held: capped.held,
         cappedInvestors: capped.cappedInvestors,
@@ -214,6 +221,7 @@ export async function POST(
         founder: {
           name: string; company: string | null; pitch: string | null;
           stage: string | null; raising: string | null; roundSize: string | null;
+          role: Role;
         };
         sharedSectors: string[];
         /** True when the two sides are equals — a peer invitation, not a pitch. */
@@ -241,6 +249,8 @@ export async function POST(
             stage: founder?.stage ?? null,
             raising: founder?.raising ?? null,
             roundSize: founder?.roundSize ?? null,
+            // The other side's place in the room, for the reason line.
+            role: pair.b.role,
           },
           sharedSectors: pair.sharedInterests,
           peer: pairTypeFor(pair.pairType)?.template === "peer_invitation",
@@ -249,6 +259,26 @@ export async function POST(
       }
 
       for (const person of byInvestor.values()) {
+        // Individually: one email per match, whatever the grouping found.
+        if (parsed.data.sendAs === "individual") {
+          for (const item of person.items) {
+            const ok = await sendIntroductionEmail({
+              introductionId: item.introductionId,
+              to: person.email,
+              template: item.peer ? (peer ?? invitation) : invitation,
+              sender,
+              investor: { name: person.name, company: person.company },
+              founder: item.founder,
+              eventTitle: event.title,
+              eventWhen,
+              sharedSectors: item.sharedSectors,
+              baseUrl: BASE_URL,
+            });
+            if (ok) sent += 1;
+          }
+          continue;
+        }
+
         if (person.items.length === 1) {
           const only = person.items[0];
           const ok = await sendIntroductionEmail({
@@ -272,7 +302,7 @@ export async function POST(
           investorName: person.name,
           eventTitle: event.title,
           eventWhen,
-          items: person.items,
+          items: person.items.map((i) => ({ ...i, role: i.founder.role })),
           baseUrl: BASE_URL,
           sender,
           // A digest carrying any peer pair must not call them founders.

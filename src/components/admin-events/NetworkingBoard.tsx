@@ -72,6 +72,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   const [allMatches, setAllMatches] = useState(false);
   const [cap, setCap] = useState(5);
   const [sendVia, setSendVia] = useState<"icapos" | "gmail">("icapos");
+  const [sendAs, setSendAs] = useState<"digest" | "individual">("digest");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -106,6 +107,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
           allMatches,
           maxPerInvestor: cap,
           sendVia,
+          sendAs,
           dryRun,
         }),
       });
@@ -117,7 +119,8 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
         const held = Number(json.held ?? 0);
         const left = Number(json.remaining ?? 0);
         setMsg(
-          `${json.emails} introductions to ${json.recipients} investors.` +
+          `${json.emails} email${Number(json.emails) === 1 ? "" : "s"} to ${json.recipients} ` +
+          `investor${Number(json.recipients) === 1 ? "" : "s"}, covering ${json.matches ?? json.emails} matches.` +
           (left ? ` This press sends ${json.thisBatch}; press again for the remaining ${left}.` : "") +
           (held
             ? ` ${held} held back by the cap of ${cap} — they stay unsent and are picked up next time.`
@@ -268,6 +271,28 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
               </span>
               <span className="text-[11px] text-sky-900/70">
                 Strongest first. What the cap holds back is not recorded, so the next send finds it again.
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-[11.5px] text-sky-900">Send as</span>
+              {([
+                ["digest", "One digest per person"],
+                ["individual", "One email per match"],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => setSendAs(value)}
+                  className={`rounded-lg px-2.5 py-1 text-[11.5px] ${
+                    sendAs === value
+                      ? "border-2 border-[var(--navy)] bg-white font-semibold text-[var(--navy)]"
+                      : "border border-[var(--border-subtle)] bg-white/70 text-[var(--text-secondary)]"
+                  }`}>
+                  {label}
+                </button>
+              ))}
+              <span className="text-[11px] text-sky-900/70">
+                {sendAs === "digest"
+                  ? "One email however many matches somebody has."
+                  : "One email per match — several can land on the same person at once."}
               </span>
             </div>
 

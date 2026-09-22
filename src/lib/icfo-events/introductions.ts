@@ -10,6 +10,8 @@
  * behalf.
  */
 
+import { matchReason } from "@/lib/icfo-events/match-reason";
+
 export const MAX_FOLLOW_UPS = 2;
 export const FOLLOW_UP_AFTER_DAYS = 3;
 /** Nothing is sent inside this window — an event is imminent, not a campaign. */
@@ -70,6 +72,8 @@ export function shouldFollowUp(
 export type Recipient = {
   name: string;
   company: string | null;
+  /** Their place in the room, for the reason line when nothing is shared. */
+  role?: "investor" | "founder" | "service" | "sponsor" | "presenter";
   /** From the founder's registration answers. Any of these may be missing. */
   pitch?: string | null;
   stage?: string | null;
@@ -151,6 +155,9 @@ export function introVars(input: {
     // rather than trailing "and you share ".
     shared_line: shared.length ? `, and you share ${shared.join(", ")}` : "",
     shared_sectors: shared.join(", "),
+    // The same line the digest rows carry, so one match cannot be explained
+    // two different ways depending on how it was delivered.
+    match_reason: matchReason({ sharedSectors: shared, role: input.founder.role ?? "founder" }),
   };
 }
 

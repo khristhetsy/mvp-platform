@@ -10,6 +10,8 @@ import { sendEmail } from "@/lib/email/send-email";
 import { sendViaGmail } from "@/lib/integrations/gmail-send";
 import { introToken, renderIntro, type IntroTemplate } from "@/lib/icfo-events/introductions-server";
 import type { Recipient } from "@/lib/icfo-events/introductions";
+import { matchReason } from "@/lib/icfo-events/match-reason";
+import type { Role } from "@/lib/icfo-events/pair-types";
 
 const NAVY = "#0A1A40";
 const BLUE = "#2563eb";
@@ -319,6 +321,8 @@ export type DigestItem = {
   introductionId: string;
   founder: Recipient;
   sharedSectors: string[];
+  /** The other person's role, for the reason line when nothing is shared. */
+  role?: Role;
 };
 
 /**
@@ -341,7 +345,7 @@ export function digestSubject(count: number, eventTitle: string, noun = "founder
 export function introductionDigestHtml(input: {
   greeting: string;
   intro: string;
-  rows: { name: string; meta: string; pitch: string | null; respondUrl: string }[];
+  rows: { name: string; meta: string; pitch: string | null; reason?: string; respondUrl: string }[];
   test?: boolean;
   /** Stated once, above the list — not on every row. */
   purpose?: { eventTitle: string; when: string | null } | null;
@@ -351,6 +355,7 @@ export function introductionDigestHtml(input: {
       <div style="font-size:14px;color:${NAVY};">${esc(r.name)}</div>
       ${r.meta ? `<div style="font-size:12.5px;color:#8a93a6;margin-top:2px;">${esc(r.meta)}</div>` : ""}
       ${r.pitch ? `<div style="font-size:13px;color:#33415a;margin-top:6px;line-height:1.55;">${esc(r.pitch)}</div>` : ""}
+      ${r.reason ? `<div style="font-size:12.5px;color:#8a93a6;margin-top:4px;">${esc(r.reason)}</div>` : ""}
       <div style="margin-top:10px;">
         ${button(`${r.respondUrl}?a=yes`, "Accept", true)}
         ${button(`${r.respondUrl}?a=no`, "No thanks", false)}
@@ -394,15 +399,13 @@ export async function sendIntroductionDigest(input: {
 
   const base = input.baseUrl.replace(/\/$/, "");
   const rows = input.items.map((item) => {
-    const meta = [
-      item.founder.company,
-      item.founder.stage,
-      item.founder.raising,
-      item.sharedSectors.join(", "),
-    ].map((v) => (v ?? "").trim()).filter(Boolean).join(" · ");
+    // Who they are; the reason sits on its own line below it.
+    const meta = [item.founder.company, item.founder.stage, item.founder.raising]
+      .map((v) => (v ?? "").trim()).filter(Boolean).join(" · ");
     return {
       name: item.founder.name,
       meta,
+      reason: matchReason({ sharedSectors: item.sharedSectors, role: item.role ?? "founder" }),
       pitch: item.founder.pitch?.trim() || null,
       respondUrl: input.test ? `${base}${TEST_RESPOND_PATH}` : `${base}/e/intro/${introToken(item.introductionId)}`,
     };

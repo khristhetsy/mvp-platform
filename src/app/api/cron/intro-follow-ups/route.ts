@@ -49,6 +49,8 @@ export async function GET(req: NextRequest): Promise<Response> {
               stage: detail.founder?.stage ?? null,
               raising: detail.founder?.raising ?? null,
               roundSize: detail.founder?.roundSize ?? null,
+              // The follow-up quotes the same reason as the invitation did.
+              role: "founder",
             },
             eventTitle: detail.event?.title ?? "an iCFO event",
             eventWhen: detail.event?.startsAt

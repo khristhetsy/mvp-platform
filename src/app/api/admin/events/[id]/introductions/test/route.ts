@@ -7,6 +7,7 @@ import { loadNetworkingBoard } from "@/lib/icfo-events/networking-board";
 import { contactsFor, listTemplates } from "@/lib/icfo-events/introductions-server";
 import { sendIntroductionDigest, sendIntroductionEmail } from "@/lib/icfo-events/introduction-emails";
 import { formatSlot } from "@/lib/icfo-events/calendar-links";
+import type { Role } from "@/lib/icfo-events/pair-types";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +72,12 @@ export async function POST(
     ]);
     const investor = people.get(top.a.registrationId);
 
-    const founderOf = (regId: string, fallbackName: string, fallbackCompany: string | null) => {
+    const founderOf = (
+      regId: string, fallbackName: string, fallbackCompany: string | null, role: Role = "founder",
+    ) => {
       const c = people.get(regId);
       return {
+        role,
         name: c?.name ?? fallbackName,
         company: c?.company ?? fallbackCompany,
         pitch: c?.pitch ?? null,
@@ -95,7 +99,8 @@ export async function POST(
           eventWhen,
           items: theirs.map((p) => ({
             introductionId: `test-${p.key}`,
-            founder: founderOf(p.b.registrationId, p.b.name, p.b.company),
+            founder: founderOf(p.b.registrationId, p.b.name, p.b.company, p.b.role),
+            role: p.b.role,
             sharedSectors: p.sharedInterests,
           })),
           baseUrl: BASE_URL,
@@ -106,7 +111,7 @@ export async function POST(
           to,
           template: invitation,
           investor: { name: investor?.name ?? top.a.name, company: investor?.company ?? top.a.company },
-          founder: founderOf(top.b.registrationId, top.b.name, top.b.company),
+          founder: founderOf(top.b.registrationId, top.b.name, top.b.company, top.b.role),
           eventTitle: event.title,
           eventWhen,
           sharedSectors: top.sharedInterests,
