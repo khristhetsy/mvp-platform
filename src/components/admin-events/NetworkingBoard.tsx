@@ -89,12 +89,17 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   }
 
   async function send(dryRun: boolean) {
-    if (picked.size === 0) return;
+    if (selectedCount === 0) return;
     setBusy(true);
     setMsg(null);
+    // A send is one network call per email. Bounded server-side, and given a
+    // ceiling here too — a button that spins forever tells nobody anything.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), dryRun ? 30_000 : 300_000);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/introductions`, {
         method: "POST",
+        signal: abort.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pairKeys: allMatches ? [] : [...picked],
@@ -110,8 +115,10 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
       if (dryRun) {
         const repeat = Number(json.wouldRepeat ?? 0);
         const held = Number(json.held ?? 0);
+        const left = Number(json.remaining ?? 0);
         setMsg(
           `${json.emails} introductions to ${json.recipients} investors.` +
+          (left ? ` This press sends ${json.thisBatch}; press again for the remaining ${left}.` : "") +
           (held
             ? ` ${held} held back by the cap of ${cap} — they stay unsent and are picked up next time.`
             : "") +
@@ -121,16 +128,31 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
         );
         return;
       }
+      const left = Number(json.remaining ?? 0);
       setMsg(
         `${json.created} introductions created, ${json.sent} emails sent` +
-        (Number(json.held ?? 0) ? `, ${json.held} held back by the cap.` : "."),
+        (Number(json.held ?? 0) ? `, ${json.held} held back by the cap` : "") +
+        (left ? `. ${left} still to send — press Introduce again.` : "."),
       );
-      setPicked(new Set());
-      setAllMatches(false);
-      window.location.reload();
-    } catch {
-      setMsg("Network error. Please try again.");
+      // Only clear the selection when the job is finished; otherwise the next
+      // press has nothing to continue with.
+      if (!left) {
+        setPicked(new Set());
+        setAllMatches(false);
+        window.location.reload();
+        return;
+      }
+      // More to send: keep the selection and the message. The table is stale
+      // until the next reload, but the server re-derives what is still
+      // introducible on every press, so continuing is safe.
+    } catch (err) {
+      setMsg(
+        err instanceof DOMException && err.name === "AbortError"
+          ? "That took too long and was stopped. Anything already sent is recorded — reload to see where it got to."
+          : "Network error. Please try again.",
+      );
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   }
@@ -199,7 +221,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
               </button>
               <button type="button" disabled={busy} onClick={() => void send(false)}
                 className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
-                {busy ? "Sending…" : `Introduce ${selectedCount}`}
+                {busy ? "Sending…" : `Introduce up to ${selectedCount}`}
               </button>
             </>
           ) : null}

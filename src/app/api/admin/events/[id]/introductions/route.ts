@@ -15,12 +15,25 @@ import { formatSlot } from "@/lib/icfo-events/calendar-links";
 import { planBulkSend } from "@/lib/icfo-events/introductions";
 
 export const dynamic = "force-dynamic";
+// Sending is a network call per email. Give the function room, and still bound
+// the work below — a request that cannot finish is worse than one that returns
+// having done part of the job.
+export const maxDuration = 300;
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
 // Not exported: a route file may only export route handlers and Next's own
 // config keys, and the board keeps its own copy for the slider.
 const MAX_PER_INVESTOR = 25;
+
+/**
+ * Emails one press may send.
+ *
+ * 1,515 selected matches is minutes of sequential sending; the function times
+ * out, the button spins forever and nobody knows what was sent. A press now
+ * does a bounded batch and reports what is left, so pressing again continues.
+ */
+const MAX_PER_REQUEST = 150;
 
 const schema = z.object({
   /** Pair keys from the board — `registrationId|registrationId`. */
@@ -105,7 +118,11 @@ export async function POST(
     }
 
     const capped = applyCap(selected, parsed.data.maxPerInvestor);
-    const pairs = capped.keep;
+    // One batch per press. Strongest first, so the best introductions go out
+    // first whatever happens to the rest.
+    const batch = capped.keep.slice(0, MAX_PER_REQUEST);
+    const remaining = capped.keep.length - batch.length;
+    const pairs = batch;
 
     // Never offer a sender that cannot send: Gmail needs a connected account
     // with the send scope, and failing after the rows exist would leave
@@ -141,6 +158,9 @@ export async function POST(
         held: capped.held,
         cappedInvestors: capped.cappedInvestors,
         selected: selected.length,
+        // What one press would actually do.
+        thisBatch: batch.length,
+        remaining,
       });
     }
 
@@ -162,7 +182,12 @@ export async function POST(
     const [event, templates, fresh] = await Promise.all([
       getEventById(auth.supabase, eventId).catch(() => null),
       listTemplates(),
-      admin.from("event_introductions").select("*").eq("event_id", eventId).eq("status", "sent"),
+      // Only this batch's rows: loading every sent row for the event grows with
+      // the event and is not needed to mail the ones just created.
+      admin.from("event_introductions").select("*")
+        .eq("event_id", eventId)
+        .eq("status", "sent")
+        .in("investor_reg_id", [...new Set(pairs.map((p) => p.a.registrationId))]),
     ]);
     const invitation = templates.find((t) => t.kind === "invitation");
     // The event's own date, for the fixed networking sentence.
@@ -264,6 +289,9 @@ export async function POST(
       sent,
       skipped: result.skipped,
       held: capped.held,
+      // Left for the next press. The rows were never created, so nothing is
+      // recorded as sent that was not.
+      remaining,
     });
   } catch (err) {
     Sentry.captureException(err);
