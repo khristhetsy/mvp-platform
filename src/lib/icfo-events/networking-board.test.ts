@@ -66,7 +66,7 @@ describe("which pairs count as a match", () => {
     const b = await loadNetworkingBoard("e1");
     expect(b.pairs).toHaveLength(1);
     expect(b.pairs[0].score).toBe(4);
-    expect(b.pairs[0].sharedInterests.sort()).toEqual(["ai-ml", "fintech"]);
+    expect(b.pairs[0].sharedInterests.sort()).toEqual(["AI / ML", "FinTech"]);
   });
 
   it("adds three for a founder–investor pairing", async () => {
@@ -240,7 +240,7 @@ describe("the sector answer comes in more than one shape", () => {
       { id: "r1", attendee_id: "a", attendee_type: "founder", answers: { name: "Ann", sector: "FinTech" }, profiles: null },
       person("b", "Ivy", "investor", ["FinTech"]),
     ]);
-    expect((await loadNetworkingBoard("e1")).pairs[0].sharedInterests).toEqual(["fintech"]);
+    expect((await loadNetworkingBoard("e1")).pairs[0].sharedInterests).toEqual(["FinTech"]);
   });
 
   it("counts somebody who declared nothing, and still matches them on role", async () => {
@@ -253,25 +253,12 @@ describe("the sector answer comes in more than one shape", () => {
     expect(b.pairs[0].score).toBe(3);
   });
 
-  // The two registration paths stored different spellings of one sector. A
-  // guest entered by staff and one who registered himself used to share
-  // nothing at all.
-  it("matches a label stored by one path against a slug stored by the other", async () => {
-    regs.mockReturnValue([
-      { id: "r1", attendee_id: "a", attendee_type: "founder", answers: { name: "Ann", sector: "SaaS / B2B Software" }, profiles: null },
-      person("b", "Ivy", "investor", ["saas"]),
-    ]);
-    const b = await loadNetworkingBoard("e1");
-    expect(b.pairs[0].sharedInterests).toEqual(["saas"]);
-    expect(b.pairs[0].score).toBeGreaterThan(3);
-  });
-
   it("does not double-count a sector listed under both keys", async () => {
     regs.mockReturnValue([
       { id: "r1", attendee_id: "a", attendee_type: "founder", answers: { name: "Ann", sector: "FinTech", sectors: ["FinTech"] }, profiles: null },
       person("b", "Ivy", "investor", ["FinTech"]),
     ]);
-    expect((await loadNetworkingBoard("e1")).pairs[0].sharedInterests).toEqual(["fintech"]);
+    expect((await loadNetworkingBoard("e1")).pairs[0].sharedInterests).toEqual(["FinTech"]);
   });
 });
 

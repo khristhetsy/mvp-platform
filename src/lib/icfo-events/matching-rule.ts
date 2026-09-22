@@ -7,8 +7,6 @@
  * both read it rather than each carrying a copy that drifts.
  */
 
-import { normalizeSectors } from "@/lib/icfo-events/sectors";
-
 export type Matchable = {
   role: "investor" | "founder";
   sectors: string[];
@@ -24,10 +22,6 @@ const COMPLEMENTARY_BONUS = 3;
  *
  * Investors answer `sectors` (many), founders answer `sector` (one) — and the
  * form has changed over time, so both shapes are accepted from either.
- *
- * Returns slugs. Rows written before the two forms agreed hold labels, so the
- * value is resolved rather than compared as typed; otherwise an investor
- * registered by staff shares nothing with a founder who registered himself.
  */
 export function sectorsOf(answers: Record<string, unknown>): string[] {
   const out: string[] = [];
@@ -36,7 +30,7 @@ export function sectorsOf(answers: Record<string, unknown>): string[] {
     if (Array.isArray(v)) out.push(...v.map(String));
     else if (typeof v === "string" && v.trim()) out.push(v.trim());
   }
-  return normalizeSectors(out);
+  return [...new Set(out.map((s) => s.trim()).filter(Boolean))];
 }
 
 /** The sectors both of them declared. */

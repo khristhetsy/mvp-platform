@@ -11,7 +11,6 @@
  */
 
 import { matchReason } from "@/lib/icfo-events/match-reason";
-import { sectorLabel } from "@/lib/icfo-events/sectors";
 
 export const MAX_FOLLOW_UPS = 2;
 export const FOLLOW_UP_AFTER_DAYS = 3;
@@ -129,8 +128,7 @@ export function introVars(input: {
   eventTitle: string;
   sharedSectors: string[];
 }): Record<string, string> {
-  // Stored as slugs, read as labels: "you share FinTech", never "fintech".
-  const shared = input.sharedSectors.filter(Boolean).map((s) => sectorLabel(s));
+  const shared = input.sharedSectors.filter(Boolean);
   // One line rather than three tokens, so a founder who answered none of them
   // loses the line instead of leaving " ·  · " behind.
   const stageLine = [input.founder.stage, input.founder.raising, input.founder.roundSize]

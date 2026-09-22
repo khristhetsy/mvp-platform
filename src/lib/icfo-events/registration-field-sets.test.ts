@@ -51,38 +51,27 @@ describe("a linked list can be narrowed without being copied", () => {
   const sectors: StoredField = { key: "sectors", label: "Sectors", kind: "chips", optionsFrom: "sectors" };
 
   it("offers everything when nothing is included — an untouched set is unchanged", () => {
-    expect(resolvedOptionsFor(sectors)).toEqual(sharedOptionList("sectors").map((o) => o.value));
+    expect(resolvedOptionsFor(sectors)).toEqual(sharedOptions("sectors"));
   });
 
-  // Options are the values the answer stores. Returning labels here is what
-  // left registrations holding "FinTech" while the same page's interest chips
-  // held "fintech", and matching compared the two as raw strings.
-  it("offers only what is included, as stored values", () => {
+  it("offers only what is included", () => {
     const f: StoredField = { ...sectors, include: ["fintech", "ai-ml"] };
-    expect(resolvedOptionsFor(f)).toEqual(["fintech", "ai-ml"]);
+    expect(resolvedOptionsFor(f)).toEqual(["FinTech", "AI / ML"]);
   });
 
   it("keeps the shared list's order, not the order values were ticked in", () => {
     const f: StoredField = { ...sectors, include: ["other", "fintech", "healthtech"] };
-    expect(resolvedOptionsFor(f)).toEqual(["fintech", "healthtech", "other"]);
+    expect(resolvedOptionsFor(f)).toEqual(["FinTech", "HealthTech", "Other"]);
   });
 
   it("ignores a value that has left the shared list rather than inventing an option", () => {
     const f: StoredField = { ...sectors, include: ["fintech", "web3"] };
-    expect(resolvedOptionsFor(f)).toEqual(["fintech"]);
+    expect(resolvedOptionsFor(f)).toEqual(["FinTech"]);
   });
 
   it("renders the narrowed list, so the form shows what the editor promised", () => {
     const f: StoredField = { ...sectors, include: ["cleantech"] };
-    const resolved = resolveField(f);
-    expect(resolved.options).toEqual(["cleantech"]);
-    // The value is stored; the label is what the registrant reads.
-    expect(resolved.optionLabels?.cleantech).toBe("CleanTech");
-  });
-
-  it("leaves optionLabels off a list that already reads as it stores", () => {
-    const country: StoredField = { key: "country", label: "Country", kind: "select", optionsFrom: "countries" };
-    expect(resolveField(country).optionLabels).toBeUndefined();
+    expect(resolveField(f).options).toEqual(["CleanTech"]);
   });
 
   it("rejects switching every option off — that would render an unanswerable question", () => {

@@ -8,28 +8,11 @@ export type RegistrationField = {
   key: string;
   label: string;
   kind: "text" | "select" | "chips" | "textarea" | "checkbox";
-  /** What gets stored. For most lists the value is also what you read. */
   options?: string[];
-  /**
-   * What to show for an option whose stored value isn't itself readable.
-   *
-   * Sectors are the only such list: the answer stores the slug so a rename
-   * never orphans it, while the registrant reads "SaaS / B2B Software". Every
-   * other list stores exactly what it displays and leaves this undefined.
-   */
-  optionLabels?: Record<string, string>;
   required?: boolean;
 };
 
-const SECTORS = EVENT_SECTORS.map((s) => s.slug);
-const SECTOR_LABELS: Record<string, string> = Object.fromEntries(
-  EVENT_SECTORS.map((s) => [s.slug, s.label]),
-);
-
-/** What to show for one stored option value. */
-export function optionText(f: Pick<RegistrationField, "optionLabels">, value: string): string {
-  return f.optionLabels?.[value] ?? value;
-}
+const SECTORS = EVENT_SECTORS.map((s) => s.label);
 
 /**
  * There is no public-listing opt-in. Registration is the qualifier: a
@@ -65,13 +48,13 @@ export const REGISTRATION_BY_TYPE: Record<AttendeeType, RegistrationField[]> = {
     { key: "investorType", label: "Investor type", kind: "select", options: ["Angel", "Venture Capital", "Private Equity", "Family Office", "LP", "Syndicate"], required: true },
     { key: "checkSize", label: "Typical check size", kind: "select", options: ["< $25k", "$25k–$100k", "$100k–$500k", "$500k–$2M", "$2M+"], required: true },
     { key: "stages", label: "Stage focus", kind: "chips", options: ["Pre-seed", "Seed", "Series A", "Series B+"], required: true },
-    { key: "sectors", label: "Sectors of interest", kind: "chips", options: SECTORS, optionLabels: SECTOR_LABELS, required: true },
+    { key: "sectors", label: "Sectors of interest", kind: "chips", options: SECTORS, required: true },
     { key: "thesis", label: "Investment thesis / what you look for", kind: "textarea", required: true },
     { key: "accredited", label: "I am an accredited investor", kind: "checkbox" },
   ],
   founder: [
     { key: "stage", label: "Company stage", kind: "select", options: ["Idea", "Pre-seed", "Seed", "Series A", "Series B+"], required: true },
-    { key: "sector", label: "Sector", kind: "select", options: SECTORS, optionLabels: SECTOR_LABELS, required: true },
+    { key: "sector", label: "Sector", kind: "select", options: SECTORS, required: true },
     { key: "raising", label: "Currently raising?", kind: "select", options: ["Not raising", "Raising now", "In 3–6 months"], required: true },
     { key: "roundSize", label: "Round size", kind: "select", options: ["< $250k", "$250k–$1M", "$1M–$3M", "$3M+"], required: true },
     { key: "lookingFor", label: "Looking for", kind: "chips", options: ["Capital", "Investor intros", "Mentorship", "Partners", "Hiring"], required: true },

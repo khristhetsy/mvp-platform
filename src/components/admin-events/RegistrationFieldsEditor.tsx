@@ -198,9 +198,7 @@ export function RegistrationFieldsEditor({
                     {KINDS.find((k) => k.value === f.kind)?.label ?? f.kind}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[11px] text-slate-500">
-                    {/* A linked field's options are the values it stores; the
-                        preview reads better as what the registrant will see. */}
-                    {opts.map((o) => all.find((x) => x.value === o)?.label ?? o).join(" · ") || "—"}
+                    {opts.join(" · ") || "—"}
                   </span>
                   {isLinked ? (
                     <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10.2px] font-semibold text-sky-700">

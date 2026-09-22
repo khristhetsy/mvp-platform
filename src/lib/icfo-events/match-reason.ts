@@ -11,7 +11,6 @@
  */
 
 import type { Role } from "@/lib/icfo-events/pair-types";
-import { sectorLabel } from "@/lib/icfo-events/sectors";
 
 const AT_EVENT: Record<Role, string> = {
   investor: "Investor at this event",
@@ -36,12 +35,7 @@ export function matchReason(input: {
   /** The role of the person being introduced, not the reader's. */
   role: Role;
 }): string {
-  // Sectors are stored and compared as slugs; nobody should be told they
-  // share "ai-ml". Already-labelled values pass through unchanged, so a row
-  // written before the backfill still reads properly.
-  const shared = input.sharedSectors
-    .map((s) => sectorLabel(s.trim()))
-    .filter(Boolean);
+  const shared = input.sharedSectors.map((s) => s.trim()).filter(Boolean);
 
   if (shared.length) {
     const shown = shared.slice(0, MAX_SECTORS).join(", ");

@@ -67,28 +67,12 @@ export function sharedOptions(name: StoredField["optionsFrom"]): string[] {
  * or its own copied list. Keeps the shared list's order rather than the order
  * the values were ticked in.
  */
-/**
- * The options a field offers, as the values it stores.
- *
- * This used to return `o.label` and throw the value away, which is how
- * registration answers came to hold "FinTech" while the same page's interest
- * chips held "fintech" — two spellings of one sector that matching compared as
- * raw strings and never reconciled. The label now travels beside the value in
- * `optionLabels` instead of replacing it.
- */
 export function resolvedOptionsFor(f: StoredField): string[] {
   if (!f.optionsFrom) return f.options ?? [];
   const all = sharedOptionList(f.optionsFrom);
-  if (!f.include) return all.map((o) => o.value);
+  if (!f.include) return all.map((o) => o.label);
   const wanted = new Set(f.include);
-  return all.filter((o) => wanted.has(o.value)).map((o) => o.value);
-}
-
-/** Display text for a linked field's values, when it differs from the value. */
-function labelsFor(f: StoredField): Record<string, string> | undefined {
-  if (!f.optionsFrom) return undefined;
-  const pairs = sharedOptionList(f.optionsFrom).filter((o) => o.value !== o.label);
-  return pairs.length ? Object.fromEntries(pairs.map((o) => [o.value, o.label])) : undefined;
+  return all.filter((o) => wanted.has(o.value)).map((o) => o.label);
 }
 
 /** A stored field resolved for rendering — options filled in from the shared list. */
@@ -98,7 +82,6 @@ export function resolveField(f: StoredField): RegistrationField {
     label: f.label,
     kind: f.kind,
     options: f.optionsFrom ? resolvedOptionsFor(f) : f.options,
-    optionLabels: labelsFor(f),
     required: f.required,
   };
 }
@@ -220,10 +203,7 @@ export function diffFieldSets(before: FieldSet, after: FieldSet, usage: KeyUsage
       const pOpts = resolvedOptionsFor(prev);
       const nOpts = resolvedOptionsFor(f);
       if (pOpts.join("|") !== nOpts.join("|")) {
-        // Named as the registrant reads them: "no longer offers HealthTech"
-        // says something, "no longer offers healthtech" barely does.
-        const names = labelsFor(f) ?? labelsFor(prev);
-        const dropped = pOpts.filter((o) => !nOpts.includes(o)).map((o) => names?.[o] ?? o);
+        const dropped = pOpts.filter((o) => !nOpts.includes(o));
         out.push({
           kind: "changed",
           group: label,
