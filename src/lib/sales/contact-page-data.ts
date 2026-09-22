@@ -14,6 +14,7 @@ import { planLabelFor, type PlanType, type SubscriptionStatus } from "@/lib/subs
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { parseOnboardingStepState } from "@/lib/onboarding/progress";
+import { crrFor } from "@/lib/crr/crr-for";
 import type { LinkedCompany, MemberPlan } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
 
 /** Plain-English status, so the chip never shows a raw enum. */
@@ -84,17 +85,29 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
           };
         }
       } catch { /* ignore — plan stays null, rendered as "not a portal member" */ }
-      const { data: comp } = await admin
+      // One read, every column the panel needs. `readiness_score` used to be in
+      // this list and has never existed on `companies` — it lives on
+      // `company_readiness_scores` — so PostgREST failed the whole select and
+      // the linked-company panel silently never rendered.
+      const { data: comp, error: compError } = await admin
         .from("companies")
-        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds, readiness_score, onboarding_step_state")
+        .select(
+          "id, slug, is_published, company_name, industry, revenue_stage, funding_amount," +
+            " business_description, website, country, state, use_of_funds, onboarding_step_state," +
+            " funding_stage, operating_stage, business_entity, annual_ebitda, management_team," +
+            " seeking_investor_types, seeking_capital_types, active_investor_preference",
+        )
         .eq("founder_id", prof.id)
         .maybeSingle();
+
+      // A failed lookup is not the same as "this contact has no company", and
+      // rendering it as one is what hid this for so long.
+      if (compError) {
+        console.error("[sales/contact] company lookup failed:", compError.message);
+      }
+
       if (comp) {
         onePager = { slug: comp.slug ?? null, published: Boolean(comp.is_published), companyName: comp.company_name ?? null };
-        if (comp.readiness_score != null) {
-          const s = comp.readiness_score as number;
-          crr = { score: s, tier: s >= 80 ? "Raise-ready" : s >= 60 ? "Building" : s >= 40 ? "Emerging" : "Early" };
-        }
         linkedCompany = {
           id: comp.id,
           companyName: comp.company_name ?? null,
@@ -106,9 +119,14 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
           country: comp.country ?? null,
           state: comp.state ?? null,
           useOfFunds: comp.use_of_funds ?? null,
-          fundingStage: null, operatingStage: null, businessEntity: null,
-          annualEbitda: null, managementTeam: null, seekingInvestorTypes: null,
-          seekingCapitalTypes: null, activeInvestorPreference: null,
+          fundingStage: comp.funding_stage ?? null,
+          operatingStage: comp.operating_stage ?? null,
+          businessEntity: comp.business_entity ?? null,
+          annualEbitda: comp.annual_ebitda ?? null,
+          managementTeam: comp.management_team ?? null,
+          seekingInvestorTypes: comp.seeking_investor_types ?? null,
+          seekingCapitalTypes: comp.seeking_capital_types ?? null,
+          activeInvestorPreference: comp.active_investor_preference ?? null,
           // Seeking / Company & stage / Traction are all collected in the wizard's
           // `funding_information` step. Whether that step was submitted is what
           // separates "the founder hasn't been asked" from "asked and left blank" —
@@ -117,21 +135,14 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
             parseOnboardingStepState(comp.onboarding_step_state).steps.funding_information?.completed,
           ),
         };
-        const { data: extra } = await admin
-          .from("companies")
-          .select("funding_stage, operating_stage, business_entity, annual_ebitda, management_team, seeking_investor_types, seeking_capital_types, active_investor_preference")
-          .eq("founder_id", prof.id)
-          .maybeSingle();
-        if (extra) {
-          linkedCompany.fundingStage = extra.funding_stage ?? null;
-          linkedCompany.operatingStage = extra.operating_stage ?? null;
-          linkedCompany.businessEntity = extra.business_entity ?? null;
-          linkedCompany.annualEbitda = extra.annual_ebitda ?? null;
-          linkedCompany.managementTeam = extra.management_team ?? null;
-          linkedCompany.seekingInvestorTypes = extra.seeking_investor_types ?? null;
-          linkedCompany.seekingCapitalTypes = extra.seeking_capital_types ?? null;
-          linkedCompany.activeInvestorPreference = extra.active_investor_preference ?? null;
-        }
+
+        // The real CRR, from the scoring table. The old chip divided a column
+        // that doesn't exist into invented bands ("Raise-ready" at 80), which
+        // had nothing to do with the engine's gate or its profile bands.
+        // A company that has never been scored comes back with a null score and
+        // no band — shown as no chip at all, rather than a zero.
+        const real = await crrFor(comp.id).catch(() => null);
+        if (real?.score != null && real.band) crr = { score: real.score, tier: real.band };
       }
     }
   }
