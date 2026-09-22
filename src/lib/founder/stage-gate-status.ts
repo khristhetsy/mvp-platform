@@ -164,6 +164,8 @@ export async function getStageGateStatus(
   supabase: SupabaseClient<Database>,
   profileId: string,
   guideSlug: StageSlug,
+  /** The rating, so a cleared stage cannot claim more than it earned. */
+  crr?: CrrSummary | null,
 ): Promise<StageGate> {
   const state = await evaluateFounderJourney(supabase, profileId);
   const founderIdx = state.stageIndex;
@@ -173,7 +175,17 @@ export async function getStageGateStatus(
   const base = { slug: guideSlug, stageNumber: guideIdx + 1, stageName: STAGE_NAMES[guideSlug], nextStageName, relation, headline: "", items: [] as GateItem[] };
 
   if (relation === "complete") {
-    return { ...base, headline: "Complete", summary: `You've cleared ${base.stageName}.` };
+    // Preparation clears on documents, the checklist and approval — none of
+    // which is the rating. Saying "Complete" while the rating still holds
+    // introductions shut is how a founder reads a green panel and waits.
+    const held = guideSlug === "preparation" && crr && !crr.outreachUnlocked && crr.score !== null;
+    return {
+      ...base,
+      headline: "Complete",
+      summary: held
+        ? `You've cleared ${base.stageName}. Your rating is ${crr.score} of ${crr.gate}, so introductions and automated outreach stay closed until it reaches the gate.`
+        : `You've cleared ${base.stageName}.`,
+    };
   }
   if (relation === "locked") {
     const prev = STAGE_NAMES[STAGE_SLUGS[guideIdx - 1]];

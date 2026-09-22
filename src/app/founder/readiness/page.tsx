@@ -127,6 +127,10 @@ export default async function FounderReadinessPage() {
                     steps={crrSteps}
                     reach={crrReach}
                     scoredAt={crr.scoredAt}
+                    inputs={{
+                      documents: `${uploadedCount} of ${checklist.length} documents`,
+                      diligence: `diligence ${formatReviewStatus(reviewStatus ? String(reviewStatus) : null).toLowerCase()}`,
+                    }}
                   />
                 </section>
               ) : null}

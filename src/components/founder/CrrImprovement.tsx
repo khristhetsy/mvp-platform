@@ -19,6 +19,8 @@ export type CrrImprovementProps = {
   steps: ImprovementStep[];
   reach: { enough: boolean; available: number; shortfall: number };
   scoredAt: string | null;
+  /** Stated here because they feed the score rather than scoring separately. */
+  inputs?: { documents: string; diligence: string } | null;
 };
 
 const CARD = "rounded-xl border border-[var(--border-subtle)] bg-white p-5";
@@ -62,7 +64,7 @@ function Ring({ score, gate, unlocked }: Readonly<{ score: number; gate: number;
  */
 export function CrrImprovement({
   companyName, score, band, gate, pointsToGate, outreachUnlocked,
-  dimensions, steps, reach, scoredAt,
+  dimensions, steps, reach, scoredAt, inputs,
 }: Readonly<CrrImprovementProps>) {
   if (score === null) {
     return (
@@ -101,9 +103,15 @@ export function CrrImprovement({
                 ? "Introductions and automated outreach are available."
                 : `Introductions and automated outreach unlock at ${gate}.`}
             </p>
+            {inputs ? (
+              <p className="mt-1.5 text-[12px] text-[var(--text-secondary)]">
+                {inputs.documents} · {inputs.diligence}
+              </p>
+            ) : null}
             {scoredAt ? (
               <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
-                Scored {new Date(scoredAt).toLocaleDateString()} from your documents and profile.
+                Scored {new Date(scoredAt).toLocaleDateString()} from your documents and profile. These feed the
+                score rather than being counted again beside it.
               </p>
             ) : null}
           </div>

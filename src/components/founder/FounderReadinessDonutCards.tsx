@@ -332,29 +332,15 @@ export function FounderReadinessDonutCards({
       color: "#7F77DD",
       href: "/founder/settings",
     },
-    {
-      key: "docs",
-      label: "Documents uploaded",
-      value: `${uploadedCount}/${checklistTotal}`,
-      detail: `${missingCount} key ${missingCount === 1 ? "document" : "documents"} missing`,
-      pct: checklistTotal > 0 ? uploadedCount / checklistTotal : 0,
-      color: "#2E78F5",
-      href: "/founder/readiness/documents",
-    },
-    {
-      key: "diligence",
-      label: "Diligence review",
-      value: reviewStatusFormatted,
-      detail: isPublished ? "Published to marketplace" : "Pending review",
-      pct: isPublished ? 0.6 : 0.3,
-      color: "#854F0B",
-      href: "/founder/readiness/diligence",
-    },
+    // Documents uploaded and Diligence review are deliberately absent: both
+    // feed the Capital Readiness Rating above, and scoring them again here is
+    // the same double-count the dashboard just lost. Their drawers still exist
+    // and open from the rating panel's own figures.
   ];
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {cards.map((card) => (
           <button
             key={card.key}

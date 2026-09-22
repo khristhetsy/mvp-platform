@@ -3,7 +3,7 @@
 // score, a diligence report, outreach/CRM/deal activity, milestones). Equal-weight
 // roll-up over the measured steps.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { crrScoresFor } from "@/lib/crr/crr-for";
+import { crrScoresFor, OUTREACH_GATE } from "@/lib/crr/crr-for";
 import type { Company, Database } from "@/lib/supabase/types";
 import { buildProfileCompletion, buildDocumentChecklist, getLatestDiligenceReport, computeReadinessScore } from "@/lib/data/founder-readiness";
 import { listCompanyDocuments } from "@/lib/data/documents";
@@ -97,8 +97,9 @@ export async function computeStageProgress(
     // survives only as a last resort for a company the engine has never scored.
     const readiness = (await crrScoresFor([company.id])).get(company.id)
       ?? diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes, undefined, notApplicableCodes);
-    const READINESS_TARGET = 80;
-    const readinessStep = readiness >= READINESS_TARGET ? step(100) : step(readiness);
+    // Done at the engine's own gate, not a target typed on this page — 80 was a
+    // third threshold competing with the gate of 65 and the checklist's 75.
+    const readinessStep = readiness >= OUTREACH_GATE ? step(100) : step(readiness);
 
     if (slug === "onboarding") {
       return rollup({
@@ -107,7 +108,8 @@ export async function computeStageProgress(
       });
     }
     return rollup({
-      "/founder/readiness/wizard": readinessStep,
+      // Keyed on the step's own href — the rating step links to the rating.
+      "/founder/readiness": readinessStep,
       "/founder/business-plan": step(planPercent),
       "/founder/pitch-deck": step(hasDoc("Pitch deck") ? 100 : 0),
       "/founder/readiness/data-room": step(docsPercent),
