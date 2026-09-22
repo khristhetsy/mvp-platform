@@ -20,6 +20,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       includeBanner?: boolean;
       includeLobby?: boolean;
       includeRoster?: boolean;
+      includeAttendees?: boolean;
       bookletUrl?: string;
     };
     if (!body.eventId) return NextResponse.json({ error: "Missing eventId." }, { status: 400 });
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       includeBanner: body.includeBanner,
       includeLobby: body.includeLobby,
       includeRoster: body.includeRoster,
+      includeAttendees: body.includeAttendees,
       bookletUrl: body.bookletUrl,
     });
     return NextResponse.json({ html });

@@ -22,6 +22,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       includeBanner?: boolean;
       includeLobby?: boolean;
   includeRoster?: boolean;
+  includeAttendees?: boolean;
       bookletUrl?: string;
       subject?: string;
       bodyHtml?: string;
@@ -48,7 +49,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
     const html = body.bodyHtml?.trim()
       ? body.bodyHtml
-      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, includeRoster: body.includeRoster, bookletUrl });
+      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, includeRoster: body.includeRoster,
+      includeAttendees: body.includeAttendees, bookletUrl });
 
     const settings = await getMarketingSettings();
     const result = await sendMarketingEmail({

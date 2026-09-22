@@ -39,6 +39,7 @@ const merge = (over: Partial<EventMergeData> = {}): EventMergeData => ({
   sponsorLockup: null,
   organizerLine: "iCFO Capital Global, Inc.",
   presenters: [],
+  attendees: { investors: [], founders: [], privateCount: 0, total: 0 },
   sponsorTiers: { presenting: [], track: [], community: [] },
   ...over,
 });
@@ -132,5 +133,51 @@ describe("email-safe output", () => {
 
   it("still carries the compliance footer", () => {
     expect(render(merge({ presenters: [person()] }))).toContain("Nothing in this email is an offer to sell");
+  });
+});
+
+describe("who's coming — the attendee list", () => {
+  const withAttendees = (over = {}) => merge({
+    attendees: { investors: ["Marcus Reyes", "Aisha Kamara"], founders: ["Shan Padda"], privateCount: 12, total: 15, ...over },
+  });
+
+  it("names the people who agreed to be listed", () => {
+    const html = render(withAttendees());
+    expect(html).toContain("Who&rsquo;s coming");
+    expect(html).toContain("Marcus Reyes");
+    expect(html).toContain("Shan Padda");
+  });
+
+  it("groups them and counts each group", () => {
+    const html = render(withAttendees());
+    expect(html).toContain("Investors · 2");
+    expect(html).toContain("Founders · 1");
+  });
+
+  it("never leaks the private ones — an email has no session behind it", () => {
+    // 15 registered, 3 named: the other 12 must not be counted into a group
+    // or hinted at in any way a forwarded mail could expose.
+    const html = render(withAttendees());
+    expect(html).not.toContain("attending privately");
+    expect(html).not.toContain("Investors · 14");
+  });
+
+  it("caps each group at six, then says how many more", () => {
+    const many = Array.from({ length: 10 }, (_, i) => `Investor ${i + 1}`);
+    const html = render(withAttendees({ investors: many }));
+    expect(html).toContain("Investor 6");
+    expect(html).not.toContain("Investor 7");
+    expect(html).toContain("+ 4 more investors");
+  });
+
+  it("renders nothing when nobody has opted in", () => {
+    const html = render(merge({ attendees: { investors: [], founders: [], privateCount: 41, total: 41 } }));
+    expect(html).not.toContain("Who&rsquo;s coming");
+  });
+
+  it("can be switched off", () => {
+    const html = render(withAttendees(), { includeAttendees: false });
+    expect(html).not.toContain("Who&rsquo;s coming");
+    expect(html).not.toContain("Marcus Reyes");
   });
 });

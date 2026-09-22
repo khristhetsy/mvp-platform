@@ -17,6 +17,8 @@ export type EventEmailBlockOpts = {
   bookletUrl?: string;
   /** The who's-presenting sections. Default on — the roster was always loaded. */
   includeRoster?: boolean;
+  /** The attendee list. Default on; opted-in names only, always. */
+  includeAttendees?: boolean;
 };
 
 /** Presenting companies leads: a tinted band, raised cards, larger type. */
@@ -160,6 +162,30 @@ export function buildEventEmailBlocks(m: EventMergeData, type: EventEmailType, o
 
   if (opts.includeRoster !== false) {
     blocks.push(...rosterBlocks(m));
+  }
+
+  if (opts.includeAttendees !== false) {
+    const { investors, founders, total } = m.attendees;
+    if (investors.length || founders.length) {
+      blocks.push({ id: newBlockId(), type: "heading", text: "Who's coming", level: 2, align: "left" });
+      blocks.push({ id: newBlockId(), type: "text", text: `${total} registered so far`, size: 11, color: "#6a7690" });
+      for (const [label, names] of [["Investors", investors], ["Founders", founders]] as [string, string[]][]) {
+        if (!names.length) continue;
+        blocks.push({ id: newBlockId(), type: "text", text: `${label} · ${names.length}`, size: 12, color: "#0A1A40" });
+        for (const row of chunk(names.slice(0, 6), COLUMNS_PER_ROW)) {
+          blocks.push({
+            id: newBlockId(), type: "columns", bg: "#ffffff", size: 11,
+            cells: row.map((n) => ({ title: n, text: label.replace(/s$/, "") })),
+          });
+        }
+        if (names.length > 6) {
+          blocks.push({
+            id: newBlockId(), type: "text",
+            text: `+ ${names.length - 6} more ${label.toLowerCase()}`, size: 11, color: "#6a7690",
+          });
+        }
+      }
+    }
   }
 
   if (m.sponsorLockup) {

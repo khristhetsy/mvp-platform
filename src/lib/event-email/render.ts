@@ -24,6 +24,8 @@ export type RenderOptions = {
   includeLobby?: boolean;
   /** The who's-presenting sections. Default on. */
   includeRoster?: boolean;
+  /** The attendee list. Default on; opted-in names only, always. */
+  includeAttendees?: boolean;
   logoUrl?: string;
   /** For the 'booklet' type — link to the digital brochure PDF. */
   bookletUrl?: string;
@@ -107,6 +109,49 @@ function agendaBlock(merge: EventMergeData): string {
   return `<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:${MUTED};margin:6px 0 9px;">Agenda · ${count} ${count === 1 ? "session" : "sessions"}</div>
     ${rows.map((r) => sessionRow(r, merge.presenters)).join("")}
     ${exhibits.length ? exhibitRow(exhibits) : ""}`;
+}
+
+/** A group of attendee names, three across, at most two rows then a count. */
+function attendeeGroup(label: string, names: string[], color: string): string {
+  if (!names.length) return "";
+  const shown = names.slice(0, 6);
+  const rest = names.length - shown.length;
+  const width = Math.floor(100 / 3);
+  const rows = chunk(shown, 3)
+    .map((row) => {
+      const cells = row
+        .map((n) => `<td width="${width}%" valign="top" style="width:${width}%;padding:0 5px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid ${LINE};border-radius:7px;"><tr>
+            <td style="padding:8px 9px;font-family:Arial,sans-serif;">
+              <div style="font-size:11.4px;font-weight:bold;color:${NAVY};line-height:1.25;">${esc(n)}</div>
+              <div style="margin-top:3px;"><span style="font-size:8.4px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:${color};">${esc(label.replace(/s$/, ""))}</span></div>
+            </td>
+          </tr></table></td>`)
+        .join("");
+      const filler = Array.from({ length: 3 - row.length })
+        .map(() => `<td width="${width}%" style="width:${width}%;"></td>`).join("");
+      return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 7px;"><tr>${cells}${filler}</tr></table>`;
+    })
+    .join("");
+  return `<div style="font-family:Arial,sans-serif;font-size:11.4px;font-weight:bold;color:${color};margin:9px 0 6px;">${esc(label)} · ${names.length}</div>
+    ${rows}
+    ${rest > 0 ? `<div style="font-family:Arial,sans-serif;font-size:11px;color:${MUTED};margin:0 0 4px;">+ ${rest} more ${esc(label.toLowerCase())}</div>` : ""}`;
+}
+
+/**
+ * Who is coming — opted-in names only.
+ *
+ * An email has no session behind it, so it can never show the private ones:
+ * a mail naming everyone leaks them to whoever it is forwarded to. The full
+ * list lives on the event page, which the CTA already points at.
+ */
+function attendeeBlock(merge: EventMergeData): string {
+  const { investors, founders, total } = merge.attendees;
+  if (!investors.length && !founders.length) return "";
+  return `<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:${NAVY};margin:20px 0 2px;">Who&rsquo;s coming</div>
+    <div style="font-family:Arial,sans-serif;font-size:11px;color:${MUTED};margin:0 0 4px;">${total} registered so far</div>
+    ${attendeeGroup("Investors", investors, "#1d4ed8")}
+    ${attendeeGroup("Founders", founders, "#6d28d9")}`;
 }
 
 /**
@@ -221,6 +266,7 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
   const sessionsBlock = agendaBlock(merge);
 
   const rosterHtml = options.includeRoster === false ? "" : rosterBlock(merge);
+  const attendeesHtml = options.includeAttendees === false ? "" : attendeeBlock(merge);
 
   const sponsorRow = merge.sponsorLockup
     ? `<div style="font-family:Arial,sans-serif;font-size:12px;color:${MUTED};margin:14px 0 0;">${esc(merge.sponsorLockup)}</div>`
@@ -239,6 +285,7 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
         <div style="height:8px;"></div>
         ${sessionsBlock}
         ${rosterHtml}
+        ${attendeesHtml}
         ${sponsorRow}
         <div style="height:18px;"></div>
         ${ctaButton(booklet ? bookletUrl : lobbyPrimary ? merge.lobbyUrl : merge.registerUrl, bottomCta, true)}

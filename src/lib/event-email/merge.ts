@@ -11,6 +11,7 @@ import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
 import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
+import { listEventAttendees } from "@/lib/icfo-events/attendees";
 
 export const ORGANIZER_LINE = "iCFO Capital Global, Inc. · (619) 956-9114 · info@myicfos.com";
 export const EVENT_BADGE = "iCFO Capital · Ecosystem Showcase";
@@ -60,6 +61,17 @@ export const eventMergeSchema = z.object({
       sessionId: z.string().nullable().default(null),
     }),
   ),
+  /**
+   * The public attendee list — opted-in names only. An email has no session
+   * behind it, so it can never show the private ones: a mail naming everyone
+   * leaks them to whoever it is forwarded to.
+   */
+  attendees: z.object({
+    investors: z.array(z.string()),
+    founders: z.array(z.string()),
+    privateCount: z.number(),
+    total: z.number(),
+  }),
   sponsorTiers: z.object({
     presenting: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
     track: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
@@ -90,6 +102,7 @@ export function buildEventMergeData(
     bannerUrl: string | null;
     presentingSponsors?: string[];
     presenters?: EventMergeData["presenters"];
+    attendees?: EventMergeData["attendees"];
     sponsorTiers?: EventMergeData["sponsorTiers"];
     bookletUrl?: string | null;
   },
@@ -130,6 +143,7 @@ export function buildEventMergeData(
     sponsorLockup: presentingSponsors.length ? `Presented with ${presentingSponsors.join(", ")}` : null,
     organizerLine: ORGANIZER_LINE,
     presenters: extras.presenters ?? [],
+    attendees: extras.attendees ?? { investors: [], founders: [], privateCount: 0, total: 0 },
     sponsorTiers: extras.sponsorTiers ?? emptyTiers,
   };
 }
@@ -143,10 +157,19 @@ export async function loadEventMergeData(
   const event = await getEventById(supabase, eventId).catch(() => null);
   if (!event) return null;
   const bannerUrl = bannerPublicUrl(supabase, event.coverPath);
-  const [sponsors, presenterRows] = await Promise.all([
+  const [sponsors, presenterRows, attending] = await Promise.all([
     listEventSponsors(supabase, eventId).catch(() => []),
     listEventPresenters(supabase, eventId).catch(() => []),
+    listEventAttendees(eventId).catch(() => null),
   ]);
+  const attendees: EventMergeData["attendees"] = attending
+    ? {
+        investors: attending.investors.map((a) => a.name),
+        founders: attending.founders.map((a) => a.name),
+        privateCount: attending.privateInvestors + attending.privateFounders,
+        total: attending.total,
+      }
+    : { investors: [], founders: [], privateCount: 0, total: 0 };
   const bookletUrl = await publishedBookletUrl(supabase, eventId, opts.baseUrl).catch(() => null);
   const presentingSponsors = sponsors.filter((s) => s.placement === "presenting").map((s) => s.name);
   const tierOf = (p: string) => (p === "presenting" ? "presenting" : p === "track" ? "track" : "community");
@@ -164,5 +187,5 @@ export async function loadEventMergeData(
       companySummary: p.companySummary ?? "",
       sessionId: p.sessionId ?? null,
     }));
-  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers, bookletUrl });
+  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers, bookletUrl, attendees });
 }

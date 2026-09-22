@@ -26,6 +26,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       includeBanner?: boolean;
       includeLobby?: boolean;
   includeRoster?: boolean;
+  includeAttendees?: boolean;
       listId?: string;
       audienceKind?: "list" | "registrants";
       registrantStatuses?: RegistrantStatus[];
@@ -88,7 +89,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Prefer the inline-edited HTML when the wizard sends it; else render fresh.
     const html = body.bodyHtml?.trim()
       ? body.bodyHtml
-      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, includeRoster: body.includeRoster, bookletUrl });
+      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, includeRoster: body.includeRoster,
+      includeAttendees: body.includeAttendees, bookletUrl });
 
     const input = {
       name: `${event.title} — ${type.replace("_", " ")}`,

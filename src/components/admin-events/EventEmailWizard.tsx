@@ -43,6 +43,7 @@ export function EventEmailWizard({
   const [includeBanner, setIncludeBanner] = useState(true);
   const [includeLobby, setIncludeLobby] = useState(false);
   const [includeRoster, setIncludeRoster] = useState(true);
+  const [includeAttendees, setIncludeAttendees] = useState(true);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [html, setHtml] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +103,7 @@ export function EventEmailWizard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster,
+          eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, includeAttendees,
           bookletEditionId,
           bodyHtml: editedHtml ?? undefined,
           audienceKind, listId, registrantStatuses: regStatuses, subject: subject.trim(),
@@ -125,14 +126,14 @@ export function EventEmailWizard({
   function startEditing() {
     if (editBlocks === null && merge) {
       editDirty.current = true;
-      setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, bookletUrl }));
+      setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, includeAttendees, bookletUrl }));
     }
     setEditMode(true);
   }
   function resetContent() {
     if (!merge) return;
     editDirty.current = true;
-    setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, bookletUrl }));
+    setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, includeAttendees, bookletUrl }));
   }
   const editedHtml = editBlocks ? finalizeEventEmailHtml(editBlocks, blockTheme) : null;
 
@@ -143,7 +144,7 @@ export function EventEmailWizard({
     try {
       const res = await fetch("/api/admin/events/email/test-send", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, bookletUrl, subject: subject.trim() || undefined, bodyHtml: editedHtml ?? undefined, toEmail: testEmail.trim() || undefined }),
+        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, includeAttendees, bookletUrl, subject: subject.trim() || undefined, bodyHtml: editedHtml ?? undefined, toEmail: testEmail.trim() || undefined }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Send failed.");
@@ -192,14 +193,14 @@ export function EventEmailWizard({
       const res = await fetch("/api/admin/events/email/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, bookletUrl }),
+        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster, includeAttendees, bookletUrl }),
       });
       const json = await res.json();
       if (res.ok) setHtml(json.html as string);
     } finally {
       setLoading(false);
     }
-  }, [eventId, type, includeBanner, includeLobby, includeRoster, lobbyForced, bookletUrl]);
+  }, [eventId, type, includeBanner, includeLobby, includeRoster, includeAttendees, lobbyForced, bookletUrl]);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -242,7 +243,7 @@ export function EventEmailWizard({
         body: JSON.stringify({ eventId, type, subject: subject.trim() || null, blocks: editBlocks, theme: blockTheme, includeBanner, includeLobby: includeLobby || lobbyForced, includeRoster }),
       });
     }, 500);
-  }, [editBlocks, blockTheme, eventId, type, subject, includeBanner, includeLobby, includeRoster, lobbyForced]);
+  }, [editBlocks, blockTheme, eventId, type, subject, includeBanner, includeLobby, includeRoster, includeAttendees, lobbyForced]);
 
   function pick(id: string) { setEventId(id); setStep(2); }
 
@@ -345,6 +346,7 @@ export function EventEmailWizard({
               <label className="flex items-center gap-2"><input type="checkbox" checked={includeBanner} onChange={(e) => setIncludeBanner(e.target.checked)} /> Banner image <span className="text-xs text-[var(--text-muted)]">(else solid navy hero)</span></label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={includeLobby || lobbyForced} disabled={lobbyForced} onChange={(e) => setIncludeLobby(e.target.checked)} /> Lobby CTA {lobbyForced && <span className="text-xs text-[var(--text-muted)]">(forced on for day-of)</span>}</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={includeRoster} onChange={(e) => setIncludeRoster(e.target.checked)} /> Who&rsquo;s presenting <span className="text-xs text-[var(--text-muted)]">(companies, showcase, exhibitors)</span></label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={includeAttendees} onChange={(e) => setIncludeAttendees(e.target.checked)} /> Who&rsquo;s coming <span className="text-xs text-[var(--text-muted)]">(opted-in names only)</span></label>
             </div>
 
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]"><i className="ti ti-lock" aria-hidden="true" /> Compliance footer is locked into every event template (education/community only — not an offer of securities). A working unsubscribe link is added automatically on send.</div>
