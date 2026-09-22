@@ -5,9 +5,12 @@ import { describe, it, expect } from "vitest";
 import {
   introVars,
   planBulkSend,
+  renderBody,
   renderTemplate,
   shouldFollowUp,
+  shouldRemindFounder,
   MAX_FOLLOW_UPS,
+  type FounderChase,
   type Introduction,
 } from "@/lib/icfo-events/introductions";
 
@@ -157,5 +160,108 @@ describe("a bulk send is grouped by who receives it", () => {
 
   it("copes with an empty selection", () => {
     expect(planBulkSend([])).toEqual({ perRecipient: [], wouldRepeat: 0 });
+  });
+});
+
+describe("chasing the founder for a time", () => {
+  const chase = (over: Partial<FounderChase> = {}): FounderChase => ({
+    status: "accepted",
+    scheduledAt: null,
+    respondedAt: daysAgo(2),
+    sentAt: daysAgo(6),
+    founderReminders: 0,
+    lastFounderReminderAt: null,
+    ...over,
+  });
+  const decide = (c: FounderChase, eventStartsAt?: string | null) =>
+    shouldRemindFounder(c, { now: NOW, eventStartsAt });
+
+  it("nudges a day after the investor said yes", () => {
+    expect(decide(chase())).toEqual({ send: true });
+  });
+
+  it("waits a day first — sooner than an investor chase, because someone is expecting a meeting", () => {
+    expect(decide(chase({ respondedAt: new Date(NOW.getTime() - 3 * 3_600_000).toISOString() }))).toEqual({
+      send: false, reason: "only 3h since the last message",
+    });
+  });
+
+  it("stops once a time is set", () => {
+    expect(decide(chase({ scheduledAt: daysAgo(1) }))).toEqual({ send: false, reason: "already scheduled" });
+  });
+
+  it("never chases an introduction that was not accepted", () => {
+    expect(decide(chase({ status: "sent" })).send).toBe(false);
+    expect(decide(chase({ status: "declined" })).send).toBe(false);
+  });
+
+  it("stops after two", () => {
+    expect(decide(chase({ founderReminders: 2, lastFounderReminderAt: daysAgo(4) })))
+      .toEqual({ send: false, reason: "already reminded 2 times" });
+  });
+
+  it("gives up once the event has started — there is no slot left to give", () => {
+    expect(decide(chase(), daysAgo(1))).toEqual({ send: false, reason: "event has started" });
+  });
+
+  it("still chases while the event is ahead", () => {
+    const later = new Date(NOW.getTime() + 5 * 86_400_000).toISOString();
+    expect(decide(chase(), later)).toEqual({ send: true });
+  });
+
+  it("counts from the last reminder, not from the acceptance", () => {
+    expect(decide(chase({ founderReminders: 1, lastFounderReminderAt: daysAgo(0) })).send).toBe(false);
+  });
+});
+
+describe("a token nobody answered", () => {
+  const vars = introVars({
+    investor: { name: "Marcus Reyes", company: "Tessellate" },
+    founder: {
+      name: "Shan Padda", company: "Harvard MedTech",
+      pitch: "VR therapy for chronic pain.", stage: "Seed", raising: "Raising now", roundSize: "$1M–$3M",
+    },
+    eventTitle: "iCFO PE Expo",
+    sharedSectors: ["HealthTech"],
+  });
+  const bare = introVars({
+    investor: { name: "Marcus", company: null },
+    founder: { name: "Shan", company: null },
+    eventTitle: "iCFO PE Expo",
+    sharedSectors: [],
+  });
+
+  const TEMPLATE = "Hi {{first_name}},\n\n{{founder_line}}.\n{{founder_pitch}}\n{{founder_stage_line}}\n\nBoth at {{event_title}}.";
+
+  it("prints every line when the founder answered everything", () => {
+    expect(renderBody(TEMPLATE, vars)).toBe(
+      "Hi Marcus,\n\nShan Padda — Harvard MedTech.\nVR therapy for chronic pain.\nSeed · Raising now · $1M–$3M\n\nBoth at iCFO PE Expo.",
+    );
+  });
+
+  it("drops the lines that emptied rather than leaving gaps", () => {
+    expect(renderBody(TEMPLATE, bare)).toBe("Hi Marcus,\n\nShan.\n\nBoth at iCFO PE Expo.");
+  });
+
+  it("keeps the blank lines between paragraphs", () => {
+    expect(renderBody("A\n\nB", vars)).toBe("A\n\nB");
+  });
+
+  it("still shows a mistyped token — that is a visible mistake, not a gap", () => {
+    expect(renderBody("Hi {{nickname}}.", vars)).toBe("Hi {{nickname}}.");
+  });
+
+  it("joins only the stage answers that exist", () => {
+    const some = introVars({
+      investor: { name: "M", company: null },
+      founder: { name: "S", company: null, stage: "Seed", raising: null, roundSize: "$1M–$3M" },
+      eventTitle: "X", sharedSectors: [],
+    });
+    expect(some.founder_stage_line).toBe("Seed · $1M–$3M");
+  });
+
+  it("leaves the name alone when there is no company", () => {
+    expect(bare.founder_line).toBe("Shan");
+    expect(vars.founder_line).toBe("Shan Padda — Harvard MedTech");
   });
 });

@@ -11,7 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { makeToken, verifyToken } from "@/lib/signed-links/tokens";
 import {
-  introVars, renderTemplate, shouldFollowUp,
+  introVars, renderBody, renderTemplate, shouldFollowUp, shouldRemindFounder,
   type Introduction, type IntroductionStatus,
 } from "@/lib/icfo-events/introductions";
 
@@ -22,6 +22,7 @@ function raw(): SupabaseClient {
 type Row = Record<string, unknown>;
 
 const ACTION_RESPOND = "intro";
+const ACTION_SCHEDULE = "intro-schedule";
 
 /** A signed link, so an investor with no account can answer from the email. */
 export function introToken(id: string): string {
@@ -30,6 +31,16 @@ export function introToken(id: string): string {
 
 export function introFromToken(token: string): string | null {
   return verifyToken({ token, kind: "event_invite", action: ACTION_RESPOND });
+}
+
+/** The founder's link for setting a time. A different action, so an investor's
+ * accept link can never be replayed into the scheduling page. */
+export function scheduleToken(id: string): string {
+  return makeToken({ kind: "event_invite", id, action: ACTION_SCHEDULE });
+}
+
+export function introFromScheduleToken(token: string): string | null {
+  return verifyToken({ token, kind: "event_invite", action: ACTION_SCHEDULE });
 }
 
 export type TemplateKind = "invitation" | "follow_up";
@@ -71,6 +82,15 @@ export type IntroRow = Introduction & {
   score: number;
   sharedSectors: string[];
   roomUrl: string | null;
+  /** When they accepted or declined. Null while still unanswered. */
+  respondedAt: string | null;
+  /** Set by the founder once they pick a slot. */
+  scheduledAt: string | null;
+  scheduledEnd: string | null;
+  /** Whatever the founder brought — Meet, Zoom, Teams. Not minted by us. */
+  meetingUrl: string | null;
+  founderReminders: number;
+  lastFounderReminderAt: string | null;
 };
 
 function mapIntro(r: Row): IntroRow {
@@ -86,6 +106,12 @@ function mapIntro(r: Row): IntroRow {
     followUps: Number(r.follow_ups ?? 0),
     lastFollowUpAt: (r.last_follow_up_at as string | null) ?? null,
     roomUrl: (r.room_url as string | null) ?? null,
+    respondedAt: (r.responded_at as string | null) ?? null,
+    scheduledAt: (r.scheduled_at as string | null) ?? null,
+    scheduledEnd: (r.scheduled_end as string | null) ?? null,
+    meetingUrl: (r.meeting_url as string | null) ?? null,
+    founderReminders: Number(r.founder_reminders ?? 0),
+    lastFounderReminderAt: (r.last_founder_reminder_at as string | null) ?? null,
   };
 }
 
@@ -221,6 +247,226 @@ export function renderIntro(
   const vars = introVars(input);
   return {
     subject: renderTemplate(template.subject, vars),
-    body: renderTemplate(template.body, vars),
+    // The body drops lines whose only content was an answer the founder never
+    // gave; the subject is one line and keeps whatever it renders to.
+    body: renderBody(template.body, vars),
   };
+}
+
+export type Contact = {
+  registrationId: string;
+  name: string;
+  company: string | null;
+  email: string | null;
+  /** Founder answers the invitation quotes. Any of these may be missing. */
+  pitch: string | null;
+  stage: string | null;
+  raising: string | null;
+  roundSize: string | null;
+};
+
+/**
+ * Who a registration belongs to.
+ *
+ * The typed answers win over the linked account: someone registering for an
+ * event gives the name and address they want used for it, which is not always
+ * the one on their profile.
+ */
+export async function contactsFor(regIds: string[]): Promise<Map<string, Contact>> {
+  const out = new Map<string, Contact>();
+  const ids = [...new Set(regIds.filter(Boolean))];
+  if (!ids.length) return out;
+
+  const { data, error } = await raw()
+    .from("registrations")
+    .select("id, answers, profiles:attendee_id(full_name, email)")
+    .in("id", ids);
+  if (error) {
+    console.error("[introductions] contacts failed:", error.message);
+    return out;
+  }
+
+  for (const r of ((data ?? []) as Row[])) {
+    const answers = (r.answers as Record<string, unknown> | null) ?? {};
+    const profile = r.profiles as { full_name?: string | null; email?: string | null } | null;
+    const typed = (k: string) => (typeof answers[k] === "string" ? String(answers[k]).trim() : "");
+    const email = typed("email") || profile?.email?.trim() || "";
+    out.set(String(r.id), {
+      registrationId: String(r.id),
+      name: typed("name") || profile?.full_name?.trim() || "Attendee",
+      company: typed("company") || null,
+      email: email.includes("@") ? email : null,
+      pitch: typed("pitch") || null,
+      stage: typed("stage") || null,
+      raising: typed("raising") || null,
+      roundSize: typed("roundSize") || null,
+    });
+  }
+  return out;
+}
+
+export type IntroEvent = {
+  id: string;
+  title: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  timezone: string | null;
+};
+
+export type IntroDetail = {
+  intro: IntroRow;
+  event: IntroEvent | null;
+  investor: Contact | null;
+  founder: Contact | null;
+};
+
+/**
+ * Everything the emailed pages need to name people and quote a date.
+ *
+ * The accept page used to know nothing but an id, so it could only say "you
+ * have both been named to each other" without saying to whom.
+ */
+export async function introDetail(id: string): Promise<IntroDetail | null> {
+  const { data, error } = await raw().from("event_introductions").select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  const intro = mapIntro(data as Row);
+
+  const [eventRes, contacts] = await Promise.all([
+    raw().from("events").select("id, title, starts_at, ends_at, timezone").eq("id", intro.eventId).maybeSingle(),
+    contactsFor([intro.investorRegId, intro.founderRegId]),
+  ]);
+
+  const e = eventRes.data as Row | null;
+  return {
+    intro,
+    event: e
+      ? {
+          id: String(e.id),
+          title: String(e.title ?? "the event"),
+          startsAt: (e.starts_at as string | null) ?? null,
+          endsAt: (e.ends_at as string | null) ?? null,
+          timezone: (e.timezone as string | null) ?? null,
+        }
+      : null,
+    investor: contacts.get(intro.investorRegId) ?? null,
+    founder: contacts.get(intro.founderRegId) ?? null,
+  };
+}
+
+/**
+ * The slots this founder has already given away, across every introduction.
+ *
+ * Not scoped to one event on purpose: a founder double-booked across two
+ * events on the same afternoon is just as stuck.
+ */
+export async function founderTakenSlots(founderRegId: string, exceptIntroId?: string): Promise<string[]> {
+  const { data, error } = await raw()
+    .from("event_introductions")
+    .select("id, scheduled_at")
+    .eq("founder_reg_id", founderRegId)
+    .not("scheduled_at", "is", null);
+  if (error) return [];
+  return ((data ?? []) as Row[])
+    .filter((r) => String(r.id) !== exceptIntroId)
+    .map((r) => String(r.scheduled_at));
+}
+
+export type ScheduleResult =
+  | { ok: true; changed: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Record the slot and the link.
+ *
+ * Only an accepted introduction can be scheduled: a time for a meeting nobody
+ * agreed to is a meeting that will not happen.
+ */
+export async function scheduleIntroduction(
+  id: string,
+  input: { startsAt: string; endsAt: string; meetingUrl: string; setBy?: string | null },
+): Promise<ScheduleResult> {
+  const detail = await introDetail(id);
+  if (!detail) return { ok: false, error: "That introduction no longer exists." };
+  if (detail.intro.status === "declined") return { ok: false, error: "That introduction was declined." };
+  if (detail.intro.status !== "accepted") {
+    return { ok: false, error: "That introduction has not been accepted yet." };
+  }
+
+  const already = detail.intro.scheduledAt === input.startsAt && detail.intro.meetingUrl === input.meetingUrl;
+
+  const { error } = await raw()
+    .from("event_introductions")
+    .update({
+      scheduled_at: input.startsAt,
+      scheduled_end: input.endsAt,
+      meeting_url: input.meetingUrl,
+      scheduled_by: input.setBy ?? null,
+      scheduled_set_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  return error ? { ok: false, error: error.message } : { ok: true, changed: !already };
+}
+
+/**
+ * Accepted introductions with nobody's time on them.
+ *
+ * This is the stall the scheduling step introduced: the investor said yes and
+ * is now waiting on the founder, and nothing else in the system would notice.
+ */
+export async function awaitingSchedule(eventId?: string): Promise<IntroRow[]> {
+  let q = raw().from("event_introductions").select("*").eq("status", "accepted").is("scheduled_at", null);
+  if (eventId) q = q.eq("event_id", eventId);
+  const { data, error } = await q;
+  if (error) {
+    console.error("[introductions] awaiting schedule failed:", error.message);
+    return [];
+  }
+  return ((data ?? []) as Row[]).map(mapIntro);
+}
+
+/** One more nudge sent to a founder who has not set a time. */
+export async function recordFounderReminder(id: string, count: number, now: Date = new Date()): Promise<void> {
+  await raw()
+    .from("event_introductions")
+    .update({ founder_reminders: count + 1, last_founder_reminder_at: now.toISOString() })
+    .eq("id", id);
+}
+
+/**
+ * One day's founder reminders.
+ *
+ * The mirror of `runFollowUpPass`, for the stall on the other side: an
+ * introduction the investor accepted and the founder has not given a time to.
+ * Same shape of report, for the same reason — this runs unattended.
+ */
+export async function runFounderReminderPass(
+  send: (intro: IntroRow) => Promise<boolean>,
+  now: Date = new Date(),
+): Promise<FollowUpPass> {
+  const out: FollowUpPass = { considered: 0, sent: 0, skipped: {} };
+
+  const { data: events } = await raw()
+    .from("events")
+    .select("id, starts_at")
+    .in("status", ["published", "live"]);
+
+  for (const e of ((events ?? []) as Row[])) {
+    const startsAt = (e.starts_at as string | null) ?? null;
+
+    for (const intro of await awaitingSchedule(String(e.id))) {
+      out.considered += 1;
+      const decision = shouldRemindFounder(intro, { now, eventStartsAt: startsAt });
+      if (!decision.send) {
+        out.skipped[decision.reason] = (out.skipped[decision.reason] ?? 0) + 1;
+        continue;
+      }
+      if (!(await send(intro).catch(() => false))) {
+        out.skipped["send failed"] = (out.skipped["send failed"] ?? 0) + 1;
+        continue;
+      }
+      await recordFounderReminder(intro.id, intro.founderReminders, now);
+      out.sent += 1;
+    }
+  }
+  return out;
 }

@@ -5,7 +5,7 @@ import { requirePermissionApi } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { loadNetworkingBoard } from "@/lib/icfo-events/networking-board";
-import { createIntroductions, listTemplates } from "@/lib/icfo-events/introductions-server";
+import { contactsFor, createIntroductions, listTemplates } from "@/lib/icfo-events/introductions-server";
 import { sendIntroductionEmail } from "@/lib/icfo-events/introduction-emails";
 import { planBulkSend } from "@/lib/icfo-events/introductions";
 
@@ -13,12 +13,56 @@ export const dynamic = "force-dynamic";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
+// Not exported: a route file may only export route handlers and Next's own
+// config keys, and the board keeps its own copy for the slider.
+const MAX_PER_INVESTOR = 25;
+
 const schema = z.object({
   /** Pair keys from the board — `registrationId|registrationId`. */
-  pairKeys: z.array(z.string()).min(1).max(200),
+  pairKeys: z.array(z.string()).max(5000).default([]),
+  /**
+   * Select every match, including the ones past the 400 the board renders.
+   * The keys for those were never sent to the browser, so the server takes
+   * the whole set itself rather than trusting a list it did not produce.
+   */
+  allMatches: z.boolean().default(false),
+  /**
+   * How many introductions one investor may receive in this send. The rest
+   * stay unsent and unrecorded, so the next send picks them up.
+   */
+  maxPerInvestor: z.number().int().min(1).max(MAX_PER_INVESTOR).default(MAX_PER_INVESTOR),
   /** Look only: report who would be mailed, and how often. */
   dryRun: z.boolean().default(false),
 });
+
+/**
+ * Trim a selection to the cap, strongest first.
+ *
+ * An investor matched to forty founders would otherwise get forty emails in
+ * one morning. What is dropped here is not recorded anywhere — no introduction
+ * row, no "sent" status — precisely so tomorrow's send finds it again.
+ */
+function applyCap<T extends { a: { registrationId: string }; score: number }>(
+  pairs: T[],
+  max: number,
+): { keep: T[]; held: number; cappedInvestors: number } {
+  const byScore = [...pairs].sort((p, q) => q.score - p.score);
+  const seen = new Map<string, number>();
+  const keep: T[] = [];
+  for (const p of byScore) {
+    const n = seen.get(p.a.registrationId) ?? 0;
+    if (n >= max) continue;
+    seen.set(p.a.registrationId, n + 1);
+    keep.push(p);
+  }
+  const counts = new Map<string, number>();
+  for (const p of pairs) counts.set(p.a.registrationId, (counts.get(p.a.registrationId) ?? 0) + 1);
+  return {
+    keep,
+    held: pairs.length - keep.length,
+    cappedInvestors: [...counts.values()].filter((n) => n > max).length,
+  };
+}
 
 /**
  * Send introductions for the selected matches.
@@ -41,12 +85,20 @@ export async function POST(
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request." }, { status: 400 });
     }
 
-    const wanted = new Set(parsed.data.pairKeys);
     const board = await loadNetworkingBoard(eventId);
-    const pairs = board.pairs.filter((p) => wanted.has(p.key));
-    if (!pairs.length) {
+
+    // Only a pair nobody has been introduced for can be introduced.
+    const introducible = board.pairs.filter((p) => p.status === "none");
+    const wanted = new Set(parsed.data.pairKeys);
+    const selected = parsed.data.allMatches
+      ? introducible
+      : introducible.filter((p) => wanted.has(p.key));
+    if (!selected.length) {
       return NextResponse.json({ error: "Those matches are no longer in the list." }, { status: 400 });
     }
+
+    const capped = applyCap(selected, parsed.data.maxPerInvestor);
+    const pairs = capped.keep;
 
     // An investor matched to six founders would otherwise get six separate
     // emails from us on one morning, which reads as spam whatever each says.
@@ -56,6 +108,9 @@ export async function POST(
         recipients: plan.perRecipient.length,
         emails: pairs.length,
         wouldRepeat: plan.wouldRepeat,
+        held: capped.held,
+        cappedInvestors: capped.cappedInvestors,
+        selected: selected.length,
       });
     }
 
@@ -84,20 +139,32 @@ export async function POST(
     if (invitation && event) {
       const rows = (fresh.data ?? []) as Record<string, unknown>[];
       const byPair = new Map(pairs.map((p) => [[p.a.registrationId, p.b.registrationId].sort().join("|"), p]));
-      const emails = await addressesFor(admin, rows.map((r) => String(r.investor_reg_id)));
+      // One read for both sides: the invitation quotes the founder's own
+      // answers — their pitch, stage and round — not just their name.
+      const people = await contactsFor(
+        rows.flatMap((r) => [String(r.investor_reg_id), String(r.founder_reg_id)]),
+      );
 
       for (const r of rows) {
         const key = [String(r.investor_reg_id), String(r.founder_reg_id)].sort().join("|");
         const pair = byPair.get(key);
         if (!pair) continue;
-        const to = emails.get(String(r.investor_reg_id));
-        if (!to) continue;
+        const investor = people.get(String(r.investor_reg_id));
+        const founder = people.get(String(r.founder_reg_id));
+        if (!investor?.email) continue;
         const ok = await sendIntroductionEmail({
           introductionId: String(r.id),
-          to,
+          to: investor.email,
           template: invitation,
-          investor: { name: pair.a.name, company: pair.a.company },
-          founder: { name: pair.b.name, company: pair.b.company },
+          investor: { name: investor.name, company: investor.company },
+          founder: {
+            name: founder?.name ?? pair.b.name,
+            company: founder?.company ?? pair.b.company,
+            pitch: founder?.pitch ?? null,
+            stage: founder?.stage ?? null,
+            raising: founder?.raising ?? null,
+            roundSize: founder?.roundSize ?? null,
+          },
           eventTitle: event.title,
           sharedSectors: pair.sharedInterests,
           baseUrl: BASE_URL,
@@ -106,29 +173,15 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ created: result.created, sent, skipped: result.skipped });
+    return NextResponse.json({
+      created: result.created,
+      sent,
+      skipped: result.skipped,
+      held: capped.held,
+    });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Couldn't send the introductions." }, { status: 500 });
   }
 }
 
-/** Registration id → email, from the answers or the linked account. */
-async function addressesFor(
-  db: import("@supabase/supabase-js").SupabaseClient,
-  regIds: string[],
-): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (!regIds.length) return out;
-  const { data } = await db
-    .from("registrations")
-    .select("id, answers, profiles:attendee_id(email)")
-    .in("id", regIds);
-  for (const r of ((data ?? []) as Record<string, unknown>[])) {
-    const answers = (r.answers as Record<string, unknown> | null) ?? {};
-    const profile = r.profiles as { email?: string | null } | null;
-    const email = (typeof answers.email === "string" ? answers.email : "") || profile?.email || "";
-    if (email.includes("@")) out.set(String(r.id), email);
-  }
-  return out;
-}

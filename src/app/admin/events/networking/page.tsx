@@ -32,7 +32,7 @@ export default async function NetworkingMatchingPage({
   const selected = eventId && events.some((e) => e.id === eventId) ? eventId : events[0]?.id ?? null;
   const empty: Board = {
     matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
-    counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0 },
+    counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0, scheduled: 0 },
   };
   const board = selected ? await loadNetworkingBoard(selected) : empty;
   const templates = await listTemplates().catch(() => []);

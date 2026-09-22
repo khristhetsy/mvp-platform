@@ -67,7 +67,15 @@ export function shouldFollowUp(
   return { send: true };
 }
 
-export type Recipient = { name: string; company: string | null };
+export type Recipient = {
+  name: string;
+  company: string | null;
+  /** From the founder's registration answers. Any of these may be missing. */
+  pitch?: string | null;
+  stage?: string | null;
+  raising?: string | null;
+  roundSize?: string | null;
+};
 
 /**
  * Fill a template.
@@ -85,6 +93,30 @@ export function renderTemplate(
   });
 }
 
+/**
+ * Fill a template and drop the lines that emptied.
+ *
+ * A token the writer mistyped stays visible — that is `renderTemplate`'s job.
+ * A token that is simply unanswered is different: the founder who registered
+ * before the pitch field existed has no pitch, and "runs Harvard MedTech — "
+ * is worse than not mentioning it. So a line that had content before
+ * substitution and none after is removed, and the blank lines between
+ * paragraphs are left alone.
+ */
+export function renderBody(text: string, vars: Record<string, string | null | undefined>): string {
+  return text
+    .split("\n")
+    .filter((line) => {
+      if (!line.trim()) return true;
+      return renderTemplate(line, vars).trim().length > 0;
+    })
+    .map((line) => renderTemplate(line, vars))
+    .join("\n")
+    // Three or more newlines can only come from a dropped paragraph.
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** The variables both templates are given. */
 export function introVars(input: {
   investor: Recipient;
@@ -93,7 +125,22 @@ export function introVars(input: {
   sharedSectors: string[];
 }): Record<string, string> {
   const shared = input.sharedSectors.filter(Boolean);
+  // One line rather than three tokens, so a founder who answered none of them
+  // loses the line instead of leaving " ·  · " behind.
+  const stageLine = [input.founder.stage, input.founder.raising, input.founder.roundSize]
+    .map((v) => (v ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
   return {
+    founder_pitch: (input.founder.pitch ?? "").trim(),
+    founder_stage: (input.founder.stage ?? "").trim(),
+    founder_raising: (input.founder.raising ?? "").trim(),
+    founder_round: (input.founder.roundSize ?? "").trim(),
+    founder_stage_line: stageLine,
+    // Name and company as one phrase, so a founder with no company on file
+    // reads as "Shan Padda" rather than "Shan Padda — ".
+    founder_line: [input.founder.name, (input.founder.company ?? "").trim()].filter(Boolean).join(" — "),
+    investor_line: [input.investor.name, (input.investor.company ?? "").trim()].filter(Boolean).join(" — "),
     first_name: input.investor.name.split(/\s+/)[0] || input.investor.name,
     investor_name: input.investor.name,
     investor_company: input.investor.company ?? "",
@@ -130,4 +177,51 @@ export function planBulkSend(pairs: { investorRegId: string; introductionId: str
     perRecipient: [...byInvestor].map(([investorRegId, introductionIds]) => ({ investorRegId, introductionIds })),
     wouldRepeat: [...byInvestor.values()].filter((ids) => ids.length > 1).length,
   };
+}
+
+/**
+ * Chasing the founder for a time.
+ *
+ * The scheduling step created a new way for an introduction to stall: the
+ * investor said yes and is waiting on somebody who has not come back. That is
+ * worse than an unanswered invitation — somebody is expecting a meeting — so
+ * the founder is chased sooner, and still not forever.
+ */
+export const MAX_FOUNDER_REMINDERS = 2;
+export const REMIND_FOUNDER_AFTER_HOURS = 24;
+
+export type FounderChase = {
+  status: IntroductionStatus;
+  /** Null until the founder picks a slot. */
+  scheduledAt: string | null;
+  respondedAt: string | null;
+  sentAt: string;
+  founderReminders: number;
+  lastFounderReminderAt: string | null;
+};
+
+export function shouldRemindFounder(
+  intro: FounderChase,
+  opts: { now?: Date; eventStartsAt?: string | null } = {},
+): FollowUpDecision {
+  const now = opts.now ?? new Date();
+
+  if (intro.status !== "accepted") return { send: false, reason: "not accepted" };
+  if (intro.scheduledAt) return { send: false, reason: "already scheduled" };
+  if (intro.founderReminders >= MAX_FOUNDER_REMINDERS) {
+    return { send: false, reason: `already reminded ${intro.founderReminders} times` };
+  }
+
+  // Once the event has started there is no slot left to give, so chasing for
+  // one is just noise.
+  if (opts.eventStartsAt && new Date(opts.eventStartsAt).getTime() <= now.getTime()) {
+    return { send: false, reason: "event has started" };
+  }
+
+  const since = intro.lastFounderReminderAt ?? intro.respondedAt ?? intro.sentAt;
+  const waited = hoursBetween(new Date(since), now);
+  if (waited < REMIND_FOUNDER_AFTER_HOURS) {
+    return { send: false, reason: `only ${Math.floor(waited)}h since the last message` };
+  }
+  return { send: true };
 }

@@ -37,11 +37,20 @@ export type MatchPair = {
   b: Side;
   sharedInterests: string[];
   score: number;
-  status: "none" | "requested" | "accepted" | "declined";
+  /**
+   * `accepted` means the investor said yes and nobody has set a time yet —
+   * the stall the scheduling step introduced. `scheduled` is a real meeting.
+   */
+  status: "none" | "requested" | "accepted" | "scheduled" | "declined";
   requestedBy: string | null;
   /** Set once we have sent an introduction for this pair. */
   introductionId: string | null;
   followUps: number;
+  /** The slot the founder gave, and the link they brought. */
+  scheduledAt: string | null;
+  meetingUrl: string | null;
+  /** Reminders sent to the founder for a time they have not given. */
+  founderReminders: number;
 };
 
 export type NetworkingBoard = {
@@ -53,12 +62,15 @@ export type NetworkingBoard = {
   pairs: MatchPair[];
   /** Pairs found, which can be far more than the page shows. */
   totalPairs: number;
-  counts: { matches: number; requested: number; accepted: number; declined: number; notSent: number };
+  counts: {
+    matches: number; requested: number; accepted: number; declined: number;
+    notSent: number; scheduled: number;
+  };
 };
 
 const EMPTY: NetworkingBoard = {
   matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
-  counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0 },
+  counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0, scheduled: 0 },
 };
 
 /** A 106-person event is ~5,600 pairs. Show the strongest; count them all. */
@@ -141,7 +153,11 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
         const intro = introByPair.get(key);
         const conn = a.profileId && b.profileId ? byPair.get(pairKey(a.profileId, b.profileId)) : undefined;
         const status: MatchPair["status"] = intro
-          ? (intro.status === "sent" ? "requested" : intro.status)
+          ? intro.status === "sent"
+            ? "requested"
+            : intro.status === "accepted" && intro.scheduledAt
+              ? "scheduled"
+              : intro.status
           : conn?.status ?? "none";
 
         pairs.push({
@@ -153,6 +169,9 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
           requestedBy: intro ? null : conn?.requestedBy ?? null,
           introductionId: intro?.id ?? null,
           followUps: intro?.followUps ?? 0,
+          scheduledAt: intro?.scheduledAt ?? null,
+          meetingUrl: intro?.meetingUrl ?? null,
+          founderReminders: intro?.founderReminders ?? 0,
         });
       }
     }
@@ -172,6 +191,7 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
         accepted: count("accepted"),
         declined: count("declined"),
         notSent: count("none"),
+        scheduled: count("scheduled"),
       },
     };
   } catch {

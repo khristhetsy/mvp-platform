@@ -5,8 +5,15 @@ import type { IntroTemplate, TemplateKind } from "@/lib/icfo-events/introduction
 
 const TOKENS = [
   ["{{first_name}}", "the investor's first name"],
+  ["{{founder_line}}", "name — company"],
   ["{{founder_name}}", ""],
   ["{{founder_company}}", ""],
+  ["{{founder_pitch}}", "their one-line pitch"],
+  ["{{founder_stage_line}}", "stage · raising · round size"],
+  ["{{founder_stage}}", ""],
+  ["{{founder_raising}}", ""],
+  ["{{founder_round}}", ""],
+  ["{{investor_line}}", "name — company"],
   ["{{investor_name}}", ""],
   ["{{investor_company}}", ""],
   ["{{shared_line}}", "\", and you share X, Y\" — empty when nothing is shared"],
@@ -102,10 +109,27 @@ export function IntroTemplatesEditor({ initial }: Readonly<{ initial: IntroTempl
             {error ? <span className="text-[12px] text-rose-700">{error}</span> : null}
           </div>
 
-          <p className="mt-3 text-[11px] text-[var(--text-muted)]">
-            The accept and decline buttons and the compliance footer are added when the mail is sent, and
-            can&rsquo;t be removed here.
-          </p>
+          <div className="mt-4 rounded-lg border border-dashed border-[var(--border-subtle)] bg-slate-50/60 p-3">
+            <p className="mb-2 text-[10.6px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+              Added at send — not editable
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="rounded-lg bg-[var(--blue)] px-3 py-1.5 text-[12px] font-semibold text-white">
+                Accept the introduction →
+              </span>
+              <span className="rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--text-secondary)]">
+                Not right now
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+              Declining is silent — nobody is told who declined.
+            </p>
+            <p className="mt-2 text-[10.6px] leading-relaxed text-[var(--text-muted)]">
+              iCFO events are for education and community only. Nothing in this email is an offer to sell or a
+              solicitation to buy any security. iCFO Capital Global, Inc. is not a broker-dealer, placement agent,
+              or registered investment adviser, and no funding outcome is promised.
+            </p>
+          </div>
         </div>
 
         <div>
@@ -120,9 +144,9 @@ export function IntroTemplatesEditor({ initial }: Readonly<{ initial: IntroTempl
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[10.6px] text-[var(--text-muted)]">
-            An unknown token stays visible in the mail rather than becoming a blank, so a typo shows up in a test
-            send.
+          <p className="mt-2 text-[10.6px] leading-relaxed text-[var(--text-muted)]">
+            A token you mistype stays visible in the mail, so the mistake shows up in a test send. A token the
+            founder simply never answered removes its own line instead of leaving a gap.
           </p>
         </div>
       </div>

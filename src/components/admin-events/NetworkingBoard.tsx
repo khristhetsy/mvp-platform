@@ -8,9 +8,25 @@ const I = "rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs
 const STATUS: Record<MatchPair["status"], { label: string; cls: string }> = {
   none: { label: "Not introduced", cls: "bg-slate-100 text-slate-600" },
   requested: { label: "Awaiting investor", cls: "bg-amber-50 text-amber-700" },
-  accepted: { label: "Accepted", cls: "bg-emerald-50 text-emerald-700" },
+  // Accepted and unscheduled is a stall, not a finish line — the investor said
+  // yes and is waiting on the founder, so it is coloured like a thing to do.
+  accepted: { label: "Founder hasn't set a time", cls: "bg-amber-50 text-amber-700" },
+  scheduled: { label: "Scheduled", cls: "bg-emerald-50 text-emerald-700" },
   declined: { label: "Declined", cls: "bg-rose-50 text-rose-700" },
 };
+
+const MAX_PER_INVESTOR = 25;
+
+/** The founder's slot, in the reader's own timezone. */
+function slotLabel(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    });
+  } catch {
+    return "scheduled";
+  }
+}
 
 function Stat({ n, label, warn }: Readonly<{ n: number; label: string; warn?: boolean }>) {
   return (
@@ -51,6 +67,8 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [allMatches, setAllMatches] = useState(false);
+  const [cap, setCap] = useState(5);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -59,6 +77,7 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
 
   function toggle(p: MatchPair) {
     if (!selectable(p)) return;
+    setAllMatches(false);
     setPicked((s) => {
       const next = new Set(s);
       if (next.has(p.key)) next.delete(p.key); else next.add(p.key);
@@ -74,27 +93,53 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
       const res = await fetch(`/api/admin/events/${eventId}/introductions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pairKeys: [...picked], dryRun }),
+        body: JSON.stringify({
+          pairKeys: allMatches ? [] : [...picked],
+          allMatches,
+          maxPerInvestor: cap,
+          dryRun,
+        }),
       });
       const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) { setMsg(String(json.error ?? "Could not send.")); return; }
 
       if (dryRun) {
         const repeat = Number(json.wouldRepeat ?? 0);
+        const held = Number(json.held ?? 0);
         setMsg(
           `${json.emails} introductions to ${json.recipients} investors.` +
-          (repeat ? ` ${repeat} would receive more than one email — send anyway, or narrow the selection.` : ""),
+          (held
+            ? ` ${held} held back by the cap of ${cap} — they stay unsent and are picked up next time.`
+            : "") +
+          (repeat ? ` ${repeat} would still receive more than one email.` : ""),
         );
         return;
       }
-      setMsg(`${json.created} introductions created, ${json.sent} emails sent.`);
+      setMsg(
+        `${json.created} introductions created, ${json.sent} emails sent` +
+        (Number(json.held ?? 0) ? `, ${json.held} held back by the cap.` : "."),
+      );
       setPicked(new Set());
+      setAllMatches(false);
       window.location.reload();
     } catch {
       setMsg("Network error. Please try again.");
     } finally {
       setBusy(false);
     }
+  }
+
+  const introducible = useMemo(() => board.pairs.filter(selectable), [board.pairs]);
+  const pageAllPicked = introducible.length > 0 && introducible.every((p) => picked.has(p.key));
+  const someOnPagePicked = introducible.some((p) => picked.has(p.key));
+  // Matches beyond the rendered page exist but their keys were never sent to
+  // the browser, so "select all" is a flag the server acts on, not a list.
+  const beyondPage = Math.max(board.counts.matches - introducible.length, 0);
+  const selectedCount = allMatches ? board.counts.notSent : picked.size;
+
+  function toggleAllOnPage() {
+    setAllMatches(false);
+    setPicked(pageAllPicked ? new Set() : new Set(introducible.map((p) => p.key)));
   }
 
   const shown = useMemo(() => {
@@ -112,7 +157,8 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
         <Stat n={board.matchable} label={`investors & founders of ${board.registered}`} />
         <Stat n={board.counts.matches} label="matches found" />
         <Stat n={board.counts.requested} label="awaiting an answer" warn={board.counts.requested > 0} />
-        <Stat n={board.counts.accepted} label="accepted" />
+        <Stat n={board.counts.scheduled} label="scheduled" />
+        <Stat n={board.counts.accepted} label="no time set" warn={board.counts.accepted > 0} />
         <Stat n={board.counts.notSent} label="not introduced" />
         <Stat n={board.counts.declined} label="declined" />
         {board.withoutSectors > 0 ? (
@@ -135,10 +181,11 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
             <option value="">All statuses</option>
             <option value="none">No request</option>
             <option value="requested">Awaiting answer</option>
-            <option value="accepted">Accepted</option>
+            <option value="accepted">No time set</option>
+            <option value="scheduled">Scheduled</option>
             <option value="declined">Declined</option>
           </select>
-          {picked.size > 0 ? (
+          {selectedCount > 0 ? (
             <>
               <button type="button" disabled={busy} onClick={() => void send(true)}
                 className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
@@ -146,7 +193,7 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
               </button>
               <button type="button" disabled={busy} onClick={() => void send(false)}
                 className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
-                {busy ? "Sending…" : `Introduce ${picked.size}`}
+                {busy ? "Sending…" : `Introduce ${selectedCount}`}
               </button>
             </>
           ) : null}
@@ -157,6 +204,46 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
               : ""}
           </span>
         </div>
+
+        {selectedCount > 0 ? (
+          <div className="border-b border-[var(--border-subtle)] bg-sky-50/70 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-sky-900">
+              <span>
+                {allMatches
+                  ? `All ${board.counts.notSent} matches selected.`
+                  : `${picked.size} selected on this page.`}
+              </span>
+              {!allMatches && pageAllPicked && beyondPage > 0 ? (
+                <button type="button" onClick={() => { setAllMatches(true); setPicked(new Set()); }}
+                  className="font-semibold underline">
+                  Select all {board.counts.notSent} matches
+                </button>
+              ) : null}
+              {allMatches ? (
+                <button type="button" onClick={() => setAllMatches(false)} className="font-semibold underline">
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2.5">
+              <label htmlFor="cap" className="text-[11.5px] text-sky-900">
+                Most invitations one investor receives
+              </label>
+              <input
+                id="cap" type="range" min={1} max={MAX_PER_INVESTOR} step={1} value={cap}
+                onChange={(e) => setCap(Number(e.target.value))}
+                className="h-1 w-40 accent-[var(--navy)]"
+              />
+              <span className="text-[11.5px] font-semibold tabular-nums text-sky-900">
+                {cap} of {MAX_PER_INVESTOR}
+              </span>
+              <span className="text-[11px] text-sky-900/70">
+                Strongest first. What the cap holds back is not recorded, so the next send finds it again.
+              </span>
+            </div>
+          </div>
+        ) : null}
 
         {shown.length === 0 ? (
           <p className="px-3.5 py-8 text-center text-sm text-[var(--text-muted)]">
@@ -170,7 +257,19 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-slate-50 text-left text-[10.4px] uppercase tracking-wide text-[var(--text-muted)]">
-                <th className="w-6 px-3.5 py-2" />
+                <th className="w-6 px-3.5 py-2">
+                  <input
+                    type="checkbox"
+                    aria-label="Select every match on this page"
+                    checked={pageAllPicked && !allMatches}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allMatches && someOnPagePicked && !pageAllPicked;
+                    }}
+                    disabled={introducible.length === 0}
+                    onChange={toggleAllOnPage}
+                    className="h-3.5 w-3.5 accent-[var(--navy)] disabled:opacity-30"
+                  />
+                </th>
                 <th className="px-3.5 py-2 font-bold">Match</th>
                 <th className="px-3.5 py-2 font-bold">With</th>
                 <th className="px-3.5 py-2 font-bold">Why matched</th>
@@ -185,7 +284,7 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
                     <input
                       type="checkbox"
                       aria-label={`Introduce ${p.a.name} to ${p.b.name}`}
-                      checked={picked.has(p.key)}
+                      checked={allMatches ? selectable(p) : picked.has(p.key)}
                       disabled={!selectable(p)}
                       onChange={() => toggle(p)}
                       className="h-3.5 w-3.5 accent-[var(--navy)] disabled:opacity-30"
@@ -201,7 +300,15 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS[p.status].cls}`}>
                       {STATUS[p.status].label}
                     </span>
-                    {p.followUps > 0 ? (
+                    {p.scheduledAt ? (
+                      <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
+                        {slotLabel(p.scheduledAt)}{p.meetingUrl ? " · link set" : ""}
+                      </span>
+                    ) : p.status === "accepted" && p.founderReminders > 0 ? (
+                      <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
+                        founder reminded {p.founderReminders}×
+                      </span>
+                    ) : p.followUps > 0 ? (
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
                         followed up {p.followUps}×
                       </span>
@@ -229,6 +336,9 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
         investor, about the founder</b>; the founder follow-up chases them, twice at most, never after a decline
         and never inside the last day before the event. <b>Preview send</b> shows who would be mailed and flags
         anyone who would get more than one.
+        Accepting no longer creates a room: the founder picks a slot inside the event and brings the meeting link,
+        and the investor is emailed the time. An acceptance with no time on it is chased — the founder, not the
+        investor — twice at most, and never once the event has started.
       </p>
     </div>
   );
