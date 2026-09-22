@@ -109,6 +109,28 @@ export async function listEventRegistrations(
   return ((data ?? []) as Record<string, unknown>[]).map(mapReg);
 }
 
+/**
+ * Every registration across every event, newest first (staff only).
+ *
+ * The per-event board answers "who is coming to this?"; this answers "who has
+ * ever registered?" — one list to search and one place to export from.
+ */
+export async function listAllRegistrations(
+  supabase: SupabaseClient<Database>,
+  limit = 2000,
+): Promise<(EventRegistrationRow & { eventTitle: string | null })[]> {
+  const { data, error } = await raw(supabase)
+    .from("registrations")
+    .select("*, profiles:attendee_id(full_name, email), events:event_id(title)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    ...mapReg(r),
+    eventTitle: ((r.events as { title?: string | null } | null)?.title) ?? null,
+  }));
+}
+
 /** Edit a registrant's contact details (stored as overrides in answers). */
 export async function setRegistrationContact(
   supabase: SupabaseClient<Database>,

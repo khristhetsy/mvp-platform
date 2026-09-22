@@ -69,23 +69,20 @@ function billingLine(sessionId: string, roster: RosterPerson[]): string {
  * billed under it — the draw of a talk show is who is in the chair, and that
  * belongs with the session rather than in a list further down.
  *
- * The lead row is the same shape on a tint. Billing renders on any session
- * that has guests, not just the lead, so a single-session event keeps it.
+ * Every session is the same shape. None is featured: the order carries the
+ * emphasis, so a keynote with no guests never has to look more important than
+ * the talk show that does.
  */
-function sessionRow(r: AgendaRow, roster: RosterPerson[], featured: boolean): string {
-  const inner = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${badge(r.label, featured ? "lead" : r.weight)}
+function sessionRow(r: AgendaRow, roster: RosterPerson[]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f1f4f9;">
+    <tr><td style="padding:9px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${badge(r.label, r.weight)}
       <td valign="top" style="font-family:Arial,sans-serif;">
-        <div style="font-size:${featured ? 15 : 14}px;font-weight:bold;color:${NAVY};line-height:1.3;">${esc(r.session.title)}</div>
-        ${r.abstract ? `<div style="font-size:${featured ? 12.5 : 12}px;color:${BODY};line-height:1.5;margin-top:${featured ? 3 : 2}px;">${esc(r.abstract)}</div>` : ""}
+        <div style="font-size:14px;font-weight:bold;color:${NAVY};line-height:1.3;">${esc(r.session.title)}</div>
+        ${r.abstract ? `<div style="font-size:12px;color:${BODY};line-height:1.5;margin-top:2px;">${esc(r.abstract)}</div>` : ""}
         ${billingLine(r.session.id, roster)}
       </td>
-    </tr></table>`;
-  return featured
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;background:${TINT};border:1px solid ${TINT_LINE};border-radius:8px;">
-        <tr><td style="padding:11px 12px;">${inner}</td></tr></table>`
-    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f1f4f9;">
-        <tr><td style="padding:9px 0;">${inner}</td></tr></table>`;
+    </tr></table></td></tr></table>`;
 }
 
 /** Booth sessions, merged to one row naming the companies. */
@@ -105,11 +102,10 @@ function exhibitRow(names: string[]): string {
  */
 function agendaBlock(merge: EventMergeData): string {
   if (!merge.sessions.length) return "";
-  const { lead, rows, exhibits } = buildAgenda(merge.sessions);
+  const { rows, exhibits } = buildAgenda(merge.sessions);
   const count = merge.sessions.length;
   return `<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:${MUTED};margin:6px 0 9px;">Agenda · ${count} ${count === 1 ? "session" : "sessions"}</div>
-    ${lead ? sessionRow(lead, merge.presenters, true) : ""}
-    ${rows.map((r) => sessionRow(r, merge.presenters, false)).join("")}
+    ${rows.map((r) => sessionRow(r, merge.presenters)).join("")}
     ${exhibits.length ? exhibitRow(exhibits) : ""}`;
 }
 

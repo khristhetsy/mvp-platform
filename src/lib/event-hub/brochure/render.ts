@@ -5,6 +5,7 @@
 
 import type { EventMergeData } from "@/lib/event-email/merge";
 import { THEMES, type BrochurePage, type BrochureSize, type BrochureTheme, type ThemeColors } from "./types";
+import { orderSessions } from "@/lib/event-email/agenda";
 
 const NAVY = "#0c2340";
 const esc = (s: string) =>
@@ -76,8 +77,10 @@ function introPage(m: EventMergeData, o: Record<string, Record<string, string>>)
 
 function agendaPage(m: EventMergeData, o: Record<string, Record<string, string>>): string {
   const intro = o?.agenda?.intro ? paras(o.agenda.intro) : "";
-  const rows = m.sessions.length
-    ? m.sessions.map((s) => `<div class="bk-agenda"><span class="bk-agenda-type" style="color:${s.accent}">${esc(s.type.replace(/_/g, " "))}</span>
+  // Shared ordering, so the printed agenda matches the email and the page.
+  const ordered = orderSessions(m.sessions);
+  const rows = ordered.length
+    ? ordered.map((s) => `<div class="bk-agenda"><span class="bk-agenda-type" style="color:${s.accent}">${esc(s.type.replace(/_/g, " "))}</span>
         <div><div class="bk-agenda-title">${esc(s.title)}</div>${s.abstract ? `<div class="bk-agenda-abs">${esc(s.abstract)}</div>` : ""}</div></div>`).join("")
     : `<p class="bk-p">Agenda to be announced.</p>`;
   return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "agenda", "heading", "Agenda"))}</h2><div class="bk-agenda-date">${esc(m.dateLabel)}${m.timeRange ? ` · ${esc(m.timeRange)}` : ""}</div>${intro}${rows}</div>`;

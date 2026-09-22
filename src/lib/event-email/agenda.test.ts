@@ -3,7 +3,7 @@ import {
   buildAgenda,
   exhibitName,
   isExhibitSession,
-  leadIndex,
+  orderSessions,
   trimAbstract,
   type Session,
 } from "@/lib/event-email/agenda";
@@ -76,28 +76,25 @@ describe("booth sessions masquerading as showcase slots", () => {
   });
 });
 
-describe("which session leads", () => {
-  it("prefers the talk show — it has a named guest each month", () => {
-    const list = [s({ type: "keynote" }), s({ type: "talk_show" }), s({ type: "workshop" })];
-    expect(leadIndex(list)).toBe(1);
+describe("the order an agenda is read in", () => {
+  it("opens with the keynote, then the talk show", () => {
+    const list = [s({ type: "workshop" }), s({ type: "talk_show" }), s({ type: "keynote" })];
+    expect(orderSessions(list).map((x) => x.type)).toEqual(["keynote", "talk_show", "workshop"]);
   });
 
-  it("falls back to the keynote", () => {
-    expect(leadIndex([s({ type: "workshop" }), s({ type: "keynote" })])).toBe(1);
+  it("keeps the given order within one kind, so admin reordering still works", () => {
+    const list = [s({ type: "panel", title: "B" }), s({ type: "panel", title: "A" })];
+    expect(orderSessions(list).map((x) => x.title)).toEqual(["B", "A"]);
   });
 
-  it("leads with nothing when there is only one session", () => {
-    expect(leadIndex([s({ type: "talk_show" })])).toBe(-1);
+  it("puts an unknown type last rather than dropping it", () => {
+    const list = [s({ type: "fireside" }), s({ type: "keynote" })];
+    expect(orderSessions(list).map((x) => x.type)).toEqual(["keynote", "fireside"]);
   });
 
-  it("leads with nothing when the only other rows are booths", () => {
-    // A feature of one is just a session wearing extra decoration.
-    expect(leadIndex([s({ type: "talk_show" }), s({ title: "Exhibitors - NAI" })])).toBe(-1);
-  });
-
-  it("never leads with a booth", () => {
-    const list = [s({ type: "talk_show", title: "Exhibitors - NAI" }), s({ type: "keynote" }), s({ type: "panel" })];
-    expect(list[leadIndex(list)].type).toBe("keynote");
+  it("does not need a keynote to be present", () => {
+    const list = [s({ type: "panel" }), s({ type: "talk_show" })];
+    expect(orderSessions(list).map((x) => x.type)).toEqual(["talk_show", "panel"]);
   });
 });
 
@@ -109,12 +106,12 @@ describe("the agenda, assembled", () => {
     s({ id: "d", type: "founder_showcase", title: "Exhibitors - Impervitex Corp", abstract: "Another one." }),
   ];
 
-  it("leads with the talk show", () => {
-    expect(buildAgenda(list).lead?.session.id).toBe("b");
+  it("puts the keynote before the talk show, whatever order they arrived in", () => {
+    expect(buildAgenda(list).rows.map((r) => r.session.id)).toEqual(["a", "b"]);
   });
 
-  it("puts the rest in rows, without the lead", () => {
-    expect(buildAgenda(list).rows.map((r) => r.session.id)).toEqual(["a"]);
+  it("features nothing — every session is an equal row", () => {
+    expect(buildAgenda(list).rows.every((r) => r.weight === "programmed")).toBe(true);
   });
 
   it("merges the booths into one line of company names", () => {
@@ -123,18 +120,18 @@ describe("the agenda, assembled", () => {
 
   it("trims every abstract it keeps", () => {
     const a = buildAgenda(list);
-    expect(a.lead?.abstract.length).toBeLessThanOrEqual(121);
     expect(a.rows[0].abstract).toBe("Auditorium: prequalified deal flow.");
+    expect(a.rows[1].abstract.length).toBeLessThanOrEqual(121);
   });
 
   it("labels a type readably rather than printing the enum", () => {
-    expect(buildAgenda(list).lead?.label).toBe("Talk show");
-    expect(buildAgenda([s({ type: "founder_showcase" }), s({ type: "keynote" })]).rows[0].label).toBe("Showcase");
+    expect(buildAgenda(list).rows[1].label).toBe("Talk show");
+    // Keynote sorts first now, so the showcase is the second row.
+    expect(buildAgenda([s({ type: "founder_showcase" }), s({ type: "keynote" })]).rows[1].label).toBe("Showcase");
   });
 
   it("copes with an agenda that is only booths", () => {
     const a = buildAgenda([s({ title: "Exhibitors - NAI" })]);
-    expect(a.lead).toBeNull();
     expect(a.rows).toEqual([]);
     expect(a.exhibits).toEqual(["NAI"]);
   });

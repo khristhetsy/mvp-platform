@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Events — confirmations, order, attendee lists</title>
+<style>
+  :root{ --navy:#0A1A40; --blue:#2563eb; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:840px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:36px 0 11px;font-weight:700}
+  h2 .n{display:inline-flex;width:17px;height:17px;border-radius:50%;background:var(--navy);color:#fff;
+        align-items:center;justify-content:center;font-size:10px;margin-right:7px;vertical-align:-3px}
+  .note{font-size:12.5px;color:#475569;max-width:870px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  /* dialog */
+  .dlg{max-width:470px;border:1px solid var(--border);border-radius:12px;background:#fff;
+       box-shadow:0 14px 36px rgba(10,26,64,.14);overflow:hidden}
+  .dlg .h{padding:13px 16px;border-bottom:1px solid #f1f5f9;display:flex;gap:9px;align-items:flex-start}
+  .dlg .ic{width:26px;height:26px;border-radius:7px;flex:none;display:flex;align-items:center;
+           justify-content:center;font-size:14px}
+  .ic.warn{background:#fffbeb;color:#b45309;border:1px solid #fde68a}
+  .ic.stop{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .dlg .h b{font-size:14px;color:var(--navy);display:block}
+  .dlg .h span{font-size:11.6px;color:var(--muted)}
+  .dlg .b{padding:13px 16px}
+  .impact{margin:0;padding:0;list-style:none}
+  .impact li{display:flex;gap:8px;align-items:flex-start;font-size:12.4px;color:#40546f;
+             padding:5px 0;border-bottom:1px solid #f4f6fa}
+  .impact li:last-child{border-bottom:0}
+  .impact .c{flex:none;font-size:11.6px;font-weight:800;min-width:26px;color:var(--navy);text-align:right}
+  .impact .z{color:#94a3b8;font-weight:500}
+  .dlg .f{display:flex;gap:8px;align-items:center;padding:11px 16px;border-top:1px solid #f1f5f9;background:#fafcff}
+  .btn{border-radius:7px;padding:6px 13px;font-size:12.3px;font-weight:600;border:1px solid var(--border);
+       background:#fff;color:#334155;white-space:nowrap}
+  .btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn.dngr{background:#b91c1c;color:#fff;border-color:#b91c1c}
+  .btn.off{opacity:.45}
+  .typeit{width:100%;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:12.2px;
+          color:#94a3b8;margin-top:9px}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:900px){.two{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.4px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+       padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.now{background:#f1f5f9;color:#475569;border:1px solid var(--border)}
+  .tag.after{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+
+  /* session rows */
+  .sess{border:1px solid var(--border);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:#fff;
+        display:flex;gap:9px;align-items:center}
+  .kb{flex:none;font-size:8.6px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#fff;
+      border-radius:3px;padding:3px 7px}
+  .sess b{font-size:13px;color:var(--navy)}
+  .ord{margin-left:auto;font-size:10px;font-weight:800;color:#94a3b8}
+
+  /* attendee chips */
+  .att{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;
+        padding:4px 11px 4px 5px;font-size:12px;background:#fff}
+  .chip .av{width:20px;height:20px;border-radius:50%;background:#eef2f7;color:#5b6b80;font-size:8.6px;
+            font-weight:800;display:flex;align-items:center;justify-content:center}
+  .chip .bd{font-size:8.8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;
+            padding:1px 5px}
+  .bd.inv{background:#eff6ff;color:#1d4ed8}
+  .bd.fnd{background:#f5f3ff;color:#6d28d9}
+  .grp{font-size:10.4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+       margin:0 0 7px}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+  .bad{border:1px solid #fecaca;background:#fef2f2;border-radius:11px;padding:13px 15px;
+       font-size:12.5px;color:#991b1b;max-width:880px}
+  .bad b{color:#b91c1c}
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Four changes</h1>
+  <p class="sub">Confirmations before anything irreversible, a fixed session order, and the attendee list on the email and the public page.</p>
+
+  <!-- 1 -->
+  <h2><span class="n">1</span>Changing the date, or ending the event</h2>
+  <div class="two">
+    <div>
+      <div class="dlg">
+        <div class="h">
+          <span class="ic warn">!</span>
+          <span><b>Move this event?</b><span>22 Sep, 9:00 PM → 24 Sep, 9:00 PM</span></span>
+        </div>
+        <div class="b">
+          <p class="note" style="margin:0 0 9px;font-size:12.2px">What is already pointing at the old date:</p>
+          <ul class="impact">
+            <li><span class="c">47</span><span>registrations, each with a calendar invite for 22 Sep</span></li>
+            <li><span class="c">2</span><span>emails scheduled to send before the old start</span></li>
+            <li><span class="c">4</span><span>sessions, whose own times do <b>not</b> move with the event</span></li>
+            <li><span class="c">1</span><span>published booklet, with the old date printed in the PDF</span></li>
+            <li><span class="c z">—</span><span class="z">Google Meet links stay valid</span></li>
+          </ul>
+          <p class="note" style="margin:10px 0 0;font-size:11.8px">
+            Nobody is notified automatically. Sending the change is a separate step, from Event&nbsp;Template →
+            Reminder.
+          </p>
+        </div>
+        <div class="f">
+          <span style="flex:1"></span>
+          <span class="btn">Cancel</span>
+          <span class="btn pri">Move the event</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">Only when the event is <b>published</b> and has
+        registrations. Editing an unpublished draft saves silently, as now.</p>
+    </div>
+
+    <div>
+      <div class="dlg">
+        <div class="h">
+          <span class="ic stop">✕</span>
+          <span><b>End this event?</b><span>iCFO PE Expo — Las Vegas | Sept 22</span></span>
+        </div>
+        <div class="b">
+          <ul class="impact">
+            <li><span class="c">2</span><span>sessions still <b>live</b> — both end immediately</span></li>
+            <li><span class="c">31</span><span>attendees in the lobby are dropped</span></li>
+            <li><span class="c">3</span><span>raised hands in the call-in queue are discarded</span></li>
+            <li><span class="c">0</span><span>recordings uploaded — nothing is captured after this</span></li>
+          </ul>
+          <p class="note" style="margin:10px 0 3px;font-size:11.8px">This can&rsquo;t be undone. Type the event
+            name to confirm:</p>
+          <div class="typeit">iCFO PE Expo — Las Vegas | Sept 22</div>
+        </div>
+        <div class="f">
+          <span style="flex:1"></span>
+          <span class="btn">Cancel</span>
+          <span class="btn dngr off">End the event</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">Type-to-confirm only here, because ending drops live
+        attendees. A date change is recoverable; this isn&rsquo;t.</p>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <h2><span class="n">2</span>Ending a session</h2>
+  <div class="dlg">
+    <div class="h">
+      <span class="ic stop">✕</span>
+      <span><b>End &ldquo;Inside the Investor&rsquo;s Mind Vol. 3&rdquo;?</b><span>Talk show · live for 41 minutes</span></span>
+    </div>
+    <div class="b">
+      <ul class="impact">
+        <li><span class="c">31</span><span>watching right now — the stream stops for all of them</span></li>
+        <li><span class="c">3</span><span>in the call-in queue, none brought on yet</span></li>
+        <li><span class="c">8</span><span>guests on the roster, including the guest CEO and investor</span></li>
+        <li><span class="c">0</span><span>recordings uploaded for this session</span></li>
+      </ul>
+      <p class="note" style="margin:10px 0 0;font-size:11.8px">
+        The room can be reopened, but everyone has to rejoin and the queue is not restored.
+      </p>
+    </div>
+    <div class="f">
+      <span style="flex:1"></span>
+      <span class="btn">Cancel</span>
+      <span class="btn dngr">End session</span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:10px">Same dialog for the Auditorium. <b>Unpin Main Stage</b> gets a lighter
+    one-line confirm — it changes what viewers see but ends nothing.</p>
+
+  <!-- 3 -->
+  <h2><span class="n">3</span>Auditorium first, then Talk Show</h2>
+  <div class="two">
+    <div>
+      <span class="tag now">Now</span>
+      <div class="sess"><span class="kb" style="background:#0A1A40">Talk show</span><b>Inside the Investor&rsquo;s Mind Vol. 3</b><span class="ord">featured</span></div>
+      <div class="sess"><span class="kb" style="background:#2563eb">Keynote</span><b>Auditorium</b><span class="ord">2nd</span></div>
+      <div class="sess"><span class="kb" style="background:#eef2f7;color:#5b6b80">Exhibits</span><b>NAI Technology · Impervitex</b><span class="ord">3rd</span></div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">The email leads with the talk show — I chose that
+        earlier, on the reasoning that the named guest is the draw.</p>
+    </div>
+    <div>
+      <span class="tag after">After</span>
+      <div class="sess"><span class="kb" style="background:#0A1A40">Keynote</span><b>Auditorium</b><span class="ord">featured</span></div>
+      <div class="sess"><span class="kb" style="background:#2563eb">Talk show</span><b>Inside the Investor&rsquo;s Mind Vol. 3</b><span class="ord">2nd</span></div>
+      <div class="sess"><span class="kb" style="background:#eef2f7;color:#5b6b80">Exhibits</span><b>NAI Technology · Impervitex</b><span class="ord">3rd</span></div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">Fixed order — keynote, talk show, everything else,
+        exhibits last — on the email, the public page and the booklet, whatever <code>position</code> says.</p>
+    </div>
+  </div>
+  <p class="note" style="margin-top:10px">One thing to settle: the talk show keeps its <b>guest billing</b> (Guest CEO,
+  Investor) even in second place. If Auditorium leads, the featured tint goes to a session with no named guests,
+  which is a quieter opening. Say if you want the tint to follow the guests rather than the order.</p>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span>Who&rsquo;s attending — name and badge</h2>
+  <div class="panel" style="padding:15px 16px;max-width:620px">
+    <p class="grp">Investors · 18</p>
+    <div class="att" style="margin-bottom:13px">
+      <span class="chip"><span class="av">MR</span>Marcus Reyes<span class="bd inv">Investor</span></span>
+      <span class="chip"><span class="av">AK</span>Aisha Kamara<span class="bd inv">Investor</span></span>
+      <span class="chip"><span class="av">DL</span>Daniel Lau<span class="bd inv">Investor</span></span>
+      <span class="chip"><span class="av">PV</span>Priya Venkat<span class="bd inv">Investor</span></span>
+      <span class="chip" style="color:#94a3b8">+14 more</span>
+    </div>
+    <p class="grp">Founders · 23</p>
+    <div class="att">
+      <span class="chip"><span class="av">SP</span>Shan Padda<span class="bd fnd">Founder</span></span>
+      <span class="chip"><span class="av">BW</span>Bob Wood<span class="bd fnd">Founder</span></span>
+      <span class="chip"><span class="av">SG</span>Steve Gatt<span class="bd fnd">Founder</span></span>
+      <span class="chip"><span class="av">AS</span>Alan Steinberg<span class="bd fnd">Founder</span></span>
+      <span class="chip" style="color:#94a3b8">+19 more</span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:10px">Name and badge only — no company, no email, no title. Same block on the
+  event page and in the email, where it sits under <b>Presenting companies</b> as plain text rows rather than chips.
+  Service providers and sponsors aren&rsquo;t shown; they register for different reasons.</p>
+
+  <div class="bad" style="margin-top:14px">
+    <p style="margin:0 0 8px"><b>This publishes attendee names, and nobody agreed to that.</b> The registration form
+    asks for name, email, firm and thesis to <em>attend</em> — it never says the name will appear on a public page
+    that Google can index. Adding the list without asking changes what those 41 people consented to.</p>
+    <p style="margin:0">Two ways to do it honestly. Either add a tick to the registration form — <em>&ldquo;List my
+    name on the event page&rdquo;</em>, default off, and show only those who said yes; or show the list only to
+    people who are themselves registered and signed in, which is what most event platforms do. The first is more
+    visible, the second needs no new consent for anyone already registered. I&rsquo;d do both: opt-in for the public
+    page, everyone for the signed-in view.</p>
+  </div>
+
+  <h2>What each needs</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:22%">Change</th><th style="width:16%">Data</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Date / end confirmations</td><td>none</td><td>Counts read from tables that already exist. Pure UI plus one read per dialog</td></tr>
+        <tr><td>Session end confirmation</td><td>none</td><td>Live viewer count comes from the lounge presence the control centre already shows</td></tr>
+        <tr><td>Session order</td><td>none</td><td>A rule in the agenda builder — <code>position</code> is untouched, so admin reordering still works within a type</td></tr>
+        <tr><td><b>Attendee list</b></td><td><b>yes</b></td><td>A consent column on <code>registrations</code>, and a public read policy — today the table is staff-only, with no policy that would let a visitor see any of it</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warn" style="margin-top:14px">
+    <p style="margin:0 0 8px"><b>Sessions don&rsquo;t move with the event.</b> Each session carries its own
+    <code>starts_at</code>, so changing the event date leaves all four sessions on the old day. The dialog says so;
+    it does not move them silently. Offering &ldquo;shift sessions by the same amount&rdquo; as a tick in that dialog
+    would be the obvious follow-up — say if you want it.</p>
+    <p style="margin:0"><b>A published booklet freezes its data.</b> The PDF is generated from a snapshot, so the old
+    date stays printed until it is regenerated. The dialog counts it; it can&rsquo;t fix it.</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -41,6 +41,7 @@ import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { googleCalUrl, formatSlot } from "@/lib/icfo-events/calendar-links";
 import { CompanySummary } from "@/components/events/CompanySummary";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
+import { orderSessions, type Session as AgendaSession } from "@/lib/event-email/agenda";
 
 export const dynamic = "force-dynamic";
 
@@ -239,7 +240,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         ])
       : [[], []];
 
-  const visibleSessions = event.sessions.filter((s) => s.status !== "draft");
+  // Same fixed order as the email and the booklet: keynote, talk show, then
+  // the rest. `orderSessions` is shared so the three can never disagree.
+  const visibleSessions = orderSessions(
+    event.sessions.filter((s) => s.status !== "draft") as unknown as AgendaSession[],
+  ) as unknown as typeof event.sessions;
 
   // Sign playback URLs for any visible session that has a recording.
   const playbackEntries = await Promise.all(

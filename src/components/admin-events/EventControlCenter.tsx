@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ImpactConfirm } from "@/components/ui/ImpactConfirm";
+import { useEventImpact } from "@/lib/ui/use-event-impact";
 import { useTranslations } from "next-intl";
 import { useEventPresence } from "@/components/events/EventPresenceProvider";
 import { venueZones, PRESENCE_ROOMS } from "@/lib/icfo-events/venue";
@@ -146,6 +148,16 @@ export function EventControlCenter({
     setAudit((a) => [{ id: Math.random().toString(36).slice(2), action, target, actorName: me.name || "You", createdAt: new Date().toISOString() }, ...a].slice(0, 20));
   }
 
+  // Ending a live session drops everyone watching and discards the queue, so
+  // it asks first. Starting one does not — that is recoverable.
+  const [endingSession, setEndingSession] = useState<EventSession | null>(null);
+  const impact = useEventImpact(eventId);
+
+  function askEnd(s: EventSession) {
+    impact.load(s.id);
+    setEndingSession(s);
+  }
+
   async function sessionLifecycle(s: EventSession, go: boolean) {
     let liveUrl: string | null = null;
     if (go) {
@@ -240,7 +252,7 @@ export function EventControlCenter({
                   {ended ? (
                     <span className="text-xs text-[var(--text-muted)]">{t("ended")}</span>
                   ) : live ? (
-                    <button onClick={() => sessionLifecycle(s, false)} disabled={busy} className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-50">{t("endSession")}</button>
+                    <button onClick={() => askEnd(s)} disabled={busy} className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-50">{t("endSession")}</button>
                   ) : (
                     <button onClick={() => sessionLifecycle(s, true)} disabled={busy} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">{t("start")}</button>
                   )}
@@ -371,6 +383,32 @@ export function EventControlCenter({
           </div>
         </section>
       </div>
+
+      <ImpactConfirm
+        open={Boolean(endingSession)}
+        tone="danger"
+        title={`End “${endingSession?.title ?? ""}”?`}
+        subtitle="The stream stops for everyone watching."
+        loading={impact.loading}
+        lines={[
+          { count: impact.session?.queued ?? null, text: "raised hands in the call-in queue — discarded, not restored" },
+          { count: impact.session?.billed ?? null, text: "people billed under this session" },
+          {
+            count: impact.session?.recorded ? 1 : 0,
+            text: impact.session?.recorded
+              ? "recording uploaded — this session is captured"
+              : "recordings uploaded — nothing of this session is kept",
+          },
+        ]}
+        note="The room can be reopened, but everyone has to rejoin and the queue is gone."
+        confirmLabel="End session"
+        onConfirm={() => {
+          const s = endingSession;
+          setEndingSession(null);
+          if (s) void sessionLifecycle(s, false);
+        }}
+        onCancel={() => setEndingSession(null)}
+      />
 
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-[var(--navy)] px-4 py-2 text-xs text-white shadow-lg">{toast}</div>

@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event Hub — agreed, and what it takes</title>
+<style>
+  :root{ --navy:#0A1A40; --blue:#2563eb; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:860px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:880px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{text-align:left;font-size:10.3px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 14px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:9px 14px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td b{color:var(--navy)}
+  .pill{display:inline-block;font-size:9.2px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+        border-radius:3px;padding:2px 6px;white-space:nowrap}
+  .ship{background:#ecfdf5;color:#047857}
+  .ui{background:#eff6ff;color:#1d4ed8}
+  .db{background:#f5f3ff;color:#6d28d9}
+  .new{background:#fffbeb;color:#b45309}
+  .ask{background:#fef2f2;color:#b91c1c}
+  .dim{color:#94a3b8}
+
+  /* phases */
+  .ph{display:grid;grid-template-columns:30px 1fr;gap:12px}
+  .rail{display:flex;flex-direction:column;align-items:center}
+  .dot{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;flex:none;
+       display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .dot.done{background:#047857}
+  .line{width:2px;flex:1;background:#e2e8f2;min-height:14px}
+  .pb{padding-bottom:17px;min-width:0}
+  .pb b{display:block;font-size:13.4px;color:var(--navy)}
+  .pb .m{margin:2px 0 0;font-size:12.2px;color:#5b6b80;line-height:1.5}
+  .pb .tags{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap}
+
+  /* surfaces */
+  .surf{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:900px){.surf{grid-template-columns:1fr}}
+  .s{border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden}
+  .s .h{padding:9px 12px;border-bottom:1px solid #f1f5f9;background:#fafcff;font-size:12.2px;
+        font-weight:700;color:var(--navy)}
+  .s ul{margin:0;padding:9px 12px 11px 27px;font-size:12px;color:#475569}
+  .s li{margin-bottom:5px}
+  .s li:last-child{margin-bottom:0}
+  .s li .pill{margin-left:4px;vertical-align:1px}
+
+  .q{border:1px solid #fecaca;background:#fef2f2;border-radius:10px;padding:11px 13px;margin-bottom:9px}
+  .q b{display:block;font-size:12.6px;color:#b91c1c;margin-bottom:3px}
+  .q p{margin:0;font-size:12.2px;color:#7f1d1d;line-height:1.5}
+  .q .opts{margin-top:6px;font-size:11.8px;color:#991b1b}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:890px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Event Hub — everything agreed</h1>
+  <p class="sub">All of it kept. This is the whole set in one place, what each piece costs, and the four questions still open.</p>
+
+  <!-- SHIPPED -->
+  <h2>Already shipped today</h2>
+  <div class="panel">
+    <table>
+      <tbody>
+        <tr><td style="width:30%"><b>Roster in the event email</b></td><td>Presenting companies, Founder Showcase, exhibitors — three across, companies leading <span class="pill ship">live</span></td></tr>
+        <tr><td><b>Palette and agenda</b></td><td>One colour family, abstracts trimmed to a line, exhibit sessions merged <span class="pill ship">live</span></td></tr>
+        <tr><td><b>Reuse previous presenters</b></td><td>Copy people from past events onto a new roster <span class="pill ship">live</span></td></tr>
+        <tr><td><b>Booklet naming</b></td><td>Named before it exists, unique per event, Open actually opens <span class="pill ship">live</span></td></tr>
+        <tr><td><b>Contact page</b></td><td>The company lookup that had never once succeeded <span class="pill ship">live</span></td></tr>
+        <tr><td><b>Schema guard</b></td><td>Every selected column must exist — caught eight more <span class="pill ship">live</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- AGREED -->
+  <h2>Agreed, not yet built</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:24%">Piece</th><th style="width:52%">What it is</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Safety confirmations</b></td>
+          <td>Moving the date, ending an event, ending a session — each counting the real consequences. Type-to-confirm on ending an event.</td>
+          <td><span class="pill ui">UI only</span></td>
+        </tr>
+        <tr>
+          <td><b>Fixed session order</b></td>
+          <td>Auditorium, then Talk Show, then the rest, exhibits last — email, page and booklet alike.</td>
+          <td><span class="pill ui">UI only</span></td>
+        </tr>
+        <tr>
+          <td><b>Attendee list</b></td>
+          <td>Name and badge, Investors then Founders. Rows in the email, chips on the page. Public list is opt-in; signed-in registrants see everyone.</td>
+          <td><span class="pill db">consent column</span> <span class="pill db">read policy</span></td>
+        </tr>
+        <tr>
+          <td><b>Registration page</b></td>
+          <td>One page, two tabs: all-events registrant list, and the existing Fields editor moved in. <code>Registration fields</code> leaves the top menu.</td>
+          <td><span class="pill ui">UI only</span></td>
+        </tr>
+        <tr>
+          <td><b>Networking Matching</b></td>
+          <td>Every match with both sides, why, score and invitation status. Bulk invite with a digest option. Invitation and founder follow-up editable.</td>
+          <td><span class="pill new">new feature</span> <span class="pill db">2 tables</span> <span class="pill db">cron</span></td>
+        </tr>
+        <tr>
+          <td><b>Accept → how to meet</b></td>
+          <td>Names revealed both ways, thread opens, then: lounge, talk now, book a time, or just message.</td>
+          <td><span class="pill new">slot picker</span> <span class="pill new">our own Meet link</span></td>
+        </tr>
+        <tr>
+          <td><b>Founder follow-up</b></td>
+          <td>Every &ldquo;chase&rdquo; renamed. Capped at two, never after a decline, nothing within 24h of the event.</td>
+          <td><span class="pill ui">wording</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BY SURFACE -->
+  <h2>By surface</h2>
+  <div class="surf">
+    <div class="s">
+      <div class="h">Event email</div>
+      <ul>
+        <li>Auditorium before Talk Show <span class="pill ui">UI</span></li>
+        <li>Attendee rows, public list only <span class="pill db">DB</span></li>
+        <li>Its own include tick <span class="pill ui">UI</span></li>
+      </ul>
+    </div>
+    <div class="s">
+      <div class="h">Public event page</div>
+      <ul>
+        <li>Same session order <span class="pill ui">UI</span></li>
+        <li>Attendee chips + &ldquo;attending privately&rdquo; <span class="pill db">DB</span></li>
+        <li>Signed-in sees everyone <span class="pill db">DB</span></li>
+      </ul>
+    </div>
+    <div class="s">
+      <div class="h">Admin — event</div>
+      <ul>
+        <li>Date / end confirmations <span class="pill ui">UI</span></li>
+        <li>End session confirmation <span class="pill ui">UI</span></li>
+        <li>Lighter confirm on unpin <span class="pill ui">UI</span></li>
+      </ul>
+    </div>
+    <div class="s">
+      <div class="h">Admin — Registration</div>
+      <ul>
+        <li>New page, two tabs <span class="pill ui">UI</span></li>
+        <li>Fields editor moves in <span class="pill ui">UI</span></li>
+        <li>&ldquo;Listed publicly&rdquo; column <span class="pill db">DB</span></li>
+      </ul>
+    </div>
+    <div class="s">
+      <div class="h">Admin — Networking</div>
+      <ul>
+        <li>Match table + statuses <span class="pill new">new</span></li>
+        <li>Bulk invite with digest <span class="pill new">new</span></li>
+        <li>Two editable templates <span class="pill new">new</span></li>
+      </ul>
+    </div>
+    <div class="s">
+      <div class="h">Registration form</div>
+      <ul>
+        <li>&ldquo;List my name&rdquo; tick, default off <span class="pill db">DB</span></li>
+        <li>Investors and founders only <span class="pill ui">UI</span></li>
+        <li>Lives in the field set <span class="pill ui">UI</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ORDER -->
+  <h2>The order I&rsquo;d build it in</h2>
+  <div class="ph">
+    <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+    <div class="pb">
+      <b>Confirmations, order, Registration page</b>
+      <p class="m">No schema, no new concepts, and the confirmations protect a live event you are running on the 22nd. Registration is a move plus a list over rows that already exist.</p>
+      <div class="tags"><span class="pill ui">UI only</span><span class="pill ship">ships same day</span></div>
+    </div>
+  </div>
+  <div class="ph">
+    <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+    <div class="pb">
+      <b>Attendee list, with consent</b>
+      <p class="m">One column and one policy. The tick has to exist before the list does, or the first version publishes names nobody agreed to — so these ship together, never separately.</p>
+      <div class="tags"><span class="pill db">consent column</span><span class="pill db">read policy</span></div>
+    </div>
+  </div>
+  <div class="ph">
+    <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+    <div class="pb">
+      <b>Our own meeting links</b>
+      <p class="m">Before any of the networking flow, because &ldquo;talk now&rdquo; currently fails for anyone without a connected Google account — and it fails immediately after they accept. This is also what makes &ldquo;book a time&rdquo; possible later.</p>
+      <div class="tags"><span class="pill new">new</span></div>
+    </div>
+  </div>
+  <div class="ph">
+    <div class="rail"><div class="dot">4</div></div>
+    <div class="pb">
+      <b>Networking Matching, then Accept</b>
+      <p class="m">The largest piece and the only one that changes what attendees agreed to. Worth running the 22nd with the current attendee-to-attendee flow first, and building this on what that event actually shows.</p>
+      <div class="tags"><span class="pill new">2 tables</span><span class="pill new">cron</span><span class="pill new">templates</span></div>
+    </div>
+  </div>
+
+  <!-- QUESTIONS -->
+  <h2>Four things only you can answer</h2>
+  <div class="q">
+    <b>1 · Which session gets the tint?</b>
+    <p>Auditorium now leads, but the Talk Show is the one with named guests. The featured treatment can follow the order or follow the guests.</p>
+    <p class="opts">→ Order (Auditorium tinted) &nbsp;·&nbsp; Guests (Talk Show tinted, second)</p>
+  </div>
+  <div class="q">
+    <b>2 · Who verifies a badge?</b>
+    <p>&ldquo;Investor&rdquo; is self-selected at registration and about to appear publicly, where it reads as our endorsement.</p>
+    <p class="opts">→ Staff can correct before it shows &nbsp;·&nbsp; Publish as chosen &nbsp;·&nbsp; No badge on the public page, only in the email</p>
+  </div>
+  <div class="q">
+    <b>3 · Do sessions move with the event date?</b>
+    <p>Each session holds its own time, so moving the event leaves all four behind. The dialog reports it either way.</p>
+    <p class="opts">→ Offer &ldquo;shift sessions too&rdquo; as a tick &nbsp;·&nbsp; Always shift &nbsp;·&nbsp; Never, just warn</p>
+  </div>
+  <div class="q">
+    <b>4 · Is the direction right?</b>
+    <p>I read it as: invitation goes to the <b>investor</b>, about the founder; the follow-up chases the investor on the founder&rsquo;s behalf.</p>
+    <p class="opts">→ Correct &nbsp;·&nbsp; Flip it</p>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>Las Vegas is on the 22nd — today.</b> Phase 1 is the only part worth having before
+    it, and the end-session confirmation is the one that matters most during a live event.</p>
+    <p style="margin:0"><b>Networking Matching is the one to be slow about.</b> It is the only piece that turns
+    attendee-to-attendee requests into introductions sent by us, and the score behind it is shared sectors ×2 plus 3.
+    Running the 22nd on the existing flow costs nothing and tells you whether people want brokered introductions at
+    all.</p>
+  </div>
+
+</div>
+</body>
+</html>

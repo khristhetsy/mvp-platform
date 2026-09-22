@@ -9,6 +9,8 @@ import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import { BannerEditor } from "@/components/admin-events/BannerEditor";
 import { EventInvitesPanel } from "@/components/admin-events/EventInvitesPanel";
+import { ImpactConfirm } from "@/components/ui/ImpactConfirm";
+import { useEventImpact } from "@/lib/ui/use-event-impact";
 import type {
   EventWithDetail,
   EventSession,
@@ -126,6 +128,16 @@ function formatApiError(error: unknown, fallback: string): string {
 }
 
 /** ISO → value for <input type="datetime-local"> in the viewer's local time. */
+/** Human date for the confirmation subtitle — "not set" beats an empty gap. */
+function whenLabel(iso: string | null): string {
+  if (!iso) return "not set";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+    });
+  } catch { return iso; }
+}
+
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -436,8 +448,27 @@ export function EventDetailManager({
     setDetailsMsg(null);
   }
 
-  async function saveDetails(e: React.FormEvent) {
+  // Moving a published event's date reaches past the form: registrations hold
+  // the old one, and sessions keep their own times. Confirm on that change
+  // only — every other field saves as before.
+  const [confirmMove, setConfirmMove] = useState(false);
+  const impact = useEventImpact(event.id);
+  const dateMoved = () =>
+    startsAt !== toLocalInput(event.startsAt) || endsAt !== toLocalInput(event.endsAt);
+  const published = event.status === "published" || event.status === "live";
+
+  function submitDetails(e: React.FormEvent) {
     e.preventDefault();
+    if (published && dateMoved()) {
+      impact.load();
+      setConfirmMove(true);
+      return;
+    }
+    void saveDetails();
+  }
+
+  async function saveDetails() {
+    setConfirmMove(false);
     setSavingDetails(true);
     setDetailsMsg(null);
     setError(null);
@@ -748,7 +779,7 @@ export function EventDetailManager({
       {/* Event details */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
         <h2 className="font-semibold text-[var(--navy)]">{t("eventDetails")}</h2>
-        <form onSubmit={saveDetails} className="mt-4">
+        <form onSubmit={submitDetails} className="mt-4">
           <fieldset disabled={!canEdit} className="grid gap-4 min-w-0 border-0 p-0 m-0">
           <label className="block">
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("title")}</span>
@@ -1156,6 +1187,23 @@ export function EventDetailManager({
           sessions={sessions.map((s) => ({ id: s.id, title: s.title }))}
         />
       </div>
+
+      <ImpactConfirm
+        open={confirmMove}
+        title="Move this event?"
+        subtitle={`${whenLabel(event.startsAt)} → ${whenLabel(startsAt ? new Date(startsAt).toISOString() : null)}`}
+        loading={impact.loading}
+        lines={[
+          { count: impact.event?.registrations ?? null, text: "registrations, each holding a calendar invite for the old date" },
+          { count: impact.event?.scheduledEmails ?? null, text: "emails scheduled to send before the old start" },
+          { count: impact.event?.sessions ?? null, text: "sessions, whose own times do not move with the event" },
+          { count: impact.event?.publishedBooklets ?? null, text: "published booklets, with the old date printed in the PDF" },
+        ]}
+        note="Nobody is notified automatically. Sending the change is a separate step, from Event Template → Reminder."
+        confirmLabel="Move the event"
+        onConfirm={() => void saveDetails()}
+        onCancel={() => setConfirmMove(false)}
+      />
 
       {removedSession && (
         <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg bg-[var(--navy)] px-4 py-2.5 text-sm text-white shadow-lg">

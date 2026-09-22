@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event Hub — Registration &amp; Networking Matching</title>
+<style>
+  :root{ --navy:#0A1A40; --blue:#2563eb; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:850px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:36px 0 11px;font-weight:700}
+  h2 .n{display:inline-flex;width:17px;height:17px;border-radius:50%;background:var(--navy);color:#fff;
+        align-items:center;justify-content:center;font-size:10px;margin-right:7px;vertical-align:-3px}
+  .note{font-size:12.5px;color:#475569;max-width:880px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  /* nav */
+  .nav{max-width:280px}
+  .nav .grp{font-size:12.4px;font-weight:700;color:var(--navy);padding:8px 11px;border-bottom:1px solid #f1f5f9}
+  .nav .it{padding:6px 11px 6px 26px;font-size:12.2px;color:#475569;border-bottom:1px solid #f7f9fc}
+  .nav .it:last-child{border-bottom:0}
+  .nav .it.new{background:#f0f7ff;color:var(--navy);font-weight:600}
+  .nav .it.gone{color:#cbd5e1;text-decoration:line-through}
+  .nav .it .sub2{display:block;padding-left:15px;font-size:11.4px;color:#64748b;margin-top:3px}
+
+  /* tabs */
+  .tabs{display:flex;gap:2px;padding:10px 13px 0;border-bottom:1px solid var(--border);background:#fafcff}
+  .tab{padding:7px 13px;font-size:12.4px;font-weight:600;color:#64748b;border:1px solid transparent;
+       border-bottom:none;border-radius:7px 7px 0 0;margin-bottom:-1px}
+  .tab.on{background:#fff;border-color:var(--border);color:var(--navy)}
+  .head{padding:13px 15px 0}
+  .head h3{margin:0;font-size:16px;color:var(--navy)}
+  .head p{margin:3px 0 0;font-size:12.2px;color:var(--muted)}
+
+  /* toolbar + table */
+  .tools{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:11px 15px}
+  .inp{border:1px solid var(--border);border-radius:7px;padding:5px 9px;font-size:12px;color:#475569;background:#fff}
+  .inp.grow{flex:1;min-width:150px}
+  .btn{border-radius:7px;padding:5px 11px;font-size:12px;font-weight:600;border:1px solid var(--border);
+       background:#fff;color:#334155;white-space:nowrap}
+  .btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn.sm{padding:3px 9px;font-size:11.4px}
+  .cnt{font-size:11.5px;color:var(--muted);margin-left:auto}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{text-align:left;font-size:10.3px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 15px;background:#fafcff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 15px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .who{display:flex;align-items:center;gap:8px;min-width:0}
+  .av{width:23px;height:23px;border-radius:50%;background:#eef2f7;color:#5b6b80;font-size:8.6px;font-weight:800;
+      flex:none;display:flex;align-items:center;justify-content:center}
+  .nm b{display:block;font-weight:600;color:var(--navy);font-size:12.3px}
+  .nm span{display:block;font-size:10.4px;color:#94a3b8}
+  .bd{font-size:8.6px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 6px}
+  .inv{background:#eff6ff;color:#1d4ed8}
+  .fnd{background:#f5f3ff;color:#6d28d9}
+  .st{font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .s-new{background:#f1f5f9;color:#64748b}
+  .s-sent{background:#eff6ff;color:#1d4ed8}
+  .s-acc{background:#ecfdf5;color:#047857}
+  .s-dec{background:#fef2f2;color:#b91c1c}
+  .s-chase{background:#fffbeb;color:#b45309}
+  .score{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+  .why{font-size:10.6px;color:#94a3b8}
+
+  /* stat strip */
+  .stats{display:flex;gap:9px;flex-wrap:wrap;padding:11px 15px 0}
+  .stat{border:1px solid var(--border);border-radius:9px;padding:8px 12px;min-width:104px;background:#fff}
+  .stat b{display:block;font-size:17px;color:var(--navy);line-height:1.1}
+  .stat span{display:block;font-size:10.4px;color:var(--muted);margin-top:2px}
+  .stat.warn{border-color:#fde68a;background:#fffbeb}
+  .stat.warn b{color:#b45309}
+
+  /* message editor */
+  .msg{display:grid;grid-template-columns:1fr 250px;gap:16px}
+  @media(max-width:880px){.msg{grid-template-columns:1fr}}
+  .mail{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+  .mail .mh{padding:9px 12px;border-bottom:1px solid #f1f5f9;background:#fafcff;font-size:11.4px;color:#5b6b80}
+  .mail .mb{padding:13px 14px;font-size:12.4px;color:#334155;line-height:1.65}
+  .tok{background:#eef4ff;color:#1d4ed8;border-radius:3px;padding:0 4px;font-weight:600;font-size:11.6px}
+  .mcta{display:inline-block;background:var(--blue);color:#fff;border-radius:6px;padding:7px 14px;
+        font-size:12px;font-weight:700;margin-top:9px}
+  .toks .t{display:block;font:11px ui-monospace,Menlo,monospace;color:#475569;padding:4px 0;border-bottom:1px solid #f4f6fa}
+  .toks .t:last-child{border-bottom:0}
+  .toks .t em{font-style:normal;color:#94a3b8}
+
+  .rule{display:flex;gap:8px;align-items:flex-start;font-size:12.2px;color:#40546f;padding:7px 0;border-bottom:1px solid #f4f6fa}
+  .rule:last-child{border-bottom:0}
+  .rule .bx{width:14px;height:14px;border-radius:3px;border:1.5px solid #c3cbd9;flex:none;margin-top:2px}
+  .rule .bx.on{background:var(--blue);border-color:var(--blue)}
+
+  .bad{border:1px solid #fecaca;background:#fef2f2;border-radius:11px;padding:13px 15px;
+       font-size:12.5px;color:#991b1b;max-width:890px}
+  .bad b{color:#b91c1c}
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:890px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Registration, and Networking Matching</h1>
+  <p class="sub">Two new pages under Event Hub. The first is a move; the second is a feature that doesn&rsquo;t exist yet — read the note at the end before deciding.</p>
+
+  <!-- NAV -->
+  <h2><span class="n">1</span>The menu</h2>
+  <div class="panel nav">
+    <div class="grp">Event Hub</div>
+    <div class="it">All events</div>
+    <div class="it">Applications</div>
+    <div class="it">Sponsors</div>
+    <div class="it">Event Template</div>
+    <div class="it new">Registration
+      <span class="sub2">Registrations · Fields</span>
+    </div>
+    <div class="it gone">Registration fields</div>
+    <div class="it new">Networking Matching</div>
+    <div class="it">Event Brochure</div>
+    <div class="it">Analytics</div>
+    <div class="it">Gamification</div>
+  </div>
+  <p class="note" style="margin-top:9px"><b>Registration fields</b> stops being a top-level item and becomes the
+  second tab of <b>Registration</b>. The per-event registrations board keeps its own link from an event page —
+  this page is the all-events view of the same rows.</p>
+
+  <!-- REGISTRATION PAGE -->
+  <h2><span class="n">2</span>Registration</h2>
+  <div class="panel">
+    <div class="head">
+      <h3>Registration</h3>
+      <p>Everyone who has registered, and the questions they were asked.</p>
+    </div>
+    <div class="tabs">
+      <span class="tab on">Registrations</span>
+      <span class="tab">Fields</span>
+    </div>
+    <div class="tools">
+      <select class="inp"><option>All events</option><option>iCFO PE Expo — Las Vegas</option></select>
+      <input class="inp grow" placeholder="Search name, email or company…" />
+      <select class="inp"><option>Any type</option><option>Investor</option><option>Founder</option></select>
+      <span class="btn">Export CSV</span>
+      <span class="btn pri">Register a guest</span>
+      <span class="cnt">41 of 41</span>
+    </div>
+    <table>
+      <thead><tr><th style="width:26%">Attendee</th><th style="width:12%">Type</th><th style="width:26%">Event</th><th style="width:14%">Registered</th><th>Listed publicly</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="who"><span class="av">MR</span><span class="nm"><b>Marcus Reyes</b><span>marcus@tessellate.vc</span></span></span></td>
+          <td><span class="bd inv">Investor</span></td>
+          <td>iCFO PE Expo — Las Vegas</td>
+          <td>18 Sep</td>
+          <td><span class="st s-acc">Yes</span></td>
+        </tr>
+        <tr>
+          <td><span class="who"><span class="av">SP</span><span class="nm"><b>Shan Padda</b><span>shan@harvardmedtech.com</span></span></span></td>
+          <td><span class="bd fnd">Founder</span></td>
+          <td>iCFO PE Expo — Las Vegas</td>
+          <td>17 Sep</td>
+          <td><span class="st s-acc">Yes</span></td>
+        </tr>
+        <tr>
+          <td><span class="who"><span class="av">AK</span><span class="nm"><b>Aisha Kamara</b><span>aisha@northstar.fund</span></span></span></td>
+          <td><span class="bd inv">Investor</span></td>
+          <td>iCFO PE Expo — Las Vegas</td>
+          <td>16 Sep</td>
+          <td><span class="st s-new">Private</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:9px">The <b>Fields</b> tab is the existing editor, unchanged — versions, the
+  key lock, the linked sector list. Only its address moves.</p>
+
+  <!-- NETWORKING -->
+  <h2><span class="n">3</span>Networking Matching</h2>
+  <div class="panel">
+    <div class="head">
+      <h3>Networking Matching</h3>
+      <p>Who was matched, who was invited, who accepted — and the chaser for everyone who didn&rsquo;t.</p>
+    </div>
+    <div class="stats">
+      <span class="stat"><b>31</b><span>opted in of 41</span></span>
+      <span class="stat"><b>88</b><span>matches found</span></span>
+      <span class="stat"><b>62</b><span>invitations sent</span></span>
+      <span class="stat"><b>24</b><span>accepted · 39%</span></span>
+      <span class="stat warn"><b>29</b><span>no answer · chase due</span></span>
+      <span class="stat"><b>9</b><span>declined</span></span>
+    </div>
+    <div class="tools">
+      <select class="inp"><option>iCFO PE Expo — Las Vegas</option></select>
+      <select class="inp"><option>All statuses</option><option>Not invited</option><option>Awaiting answer</option><option>Accepted</option><option>Declined</option></select>
+      <input class="inp grow" placeholder="Search either side…" />
+      <span class="btn">Invite all uninvited (26)</span>
+      <span class="btn pri">Send chasers now (29)</span>
+    </div>
+    <table>
+      <thead><tr><th style="width:21%">Investor</th><th style="width:21%">Founder</th><th style="width:16%">Why matched</th><th style="width:9%">Score</th><th style="width:17%">Status</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="who"><span class="av">MR</span><span class="nm"><b>Marcus Reyes</b><span>Tessellate</span></span></span></td>
+          <td><span class="who"><span class="av">SP</span><span class="nm"><b>Shan Padda</b><span>Harvard MedTech</span></span></span></td>
+          <td class="why">HealthTech, Deep Tech</td>
+          <td class="score">7</td>
+          <td><span class="st s-acc">Accepted</span> <span class="why">19 Sep</span></td>
+          <td><span class="btn sm">Open thread</span></td>
+        </tr>
+        <tr>
+          <td><span class="who"><span class="av">AK</span><span class="nm"><b>Aisha Kamara</b><span>Northstar</span></span></span></td>
+          <td><span class="who"><span class="av">SG</span><span class="nm"><b>Steve Gatt</b><span>LivIQ</span></span></span></td>
+          <td class="why">AI / ML</td>
+          <td class="score">5</td>
+          <td><span class="st s-chase">Chased once</span> <span class="why">2nd 21 Sep</span></td>
+          <td><span class="btn sm">Chase now</span></td>
+        </tr>
+        <tr>
+          <td><span class="who"><span class="av">DL</span><span class="nm"><b>Daniel Lau</b><span>Kestrel</span></span></span></td>
+          <td><span class="who"><span class="av">BW</span><span class="nm"><b>Bob Wood</b><span>Scriptive</span></span></span></td>
+          <td class="why">HealthTech, SaaS</td>
+          <td class="score">7</td>
+          <td><span class="st s-sent">Sent</span> <span class="why">20 Sep</span></td>
+          <td><span class="btn sm">Chase now</span></td>
+        </tr>
+        <tr>
+          <td><span class="who"><span class="av">PV</span><span class="nm"><b>Priya Venkat</b><span>Ardent</span></span></span></td>
+          <td><span class="who"><span class="av">AS</span><span class="nm"><b>Alan Steinberg</b><span>Brainlest AI</span></span></span></td>
+          <td class="why">AI / ML, Deep Tech</td>
+          <td class="score">7</td>
+          <td><span class="st s-new">Not invited</span></td>
+          <td><span class="btn sm">Invite</span></td>
+        </tr>
+        <tr>
+          <td><span class="who"><span class="av">TH</span><span class="nm"><b>Tomás Herrera</b><span>Vega</span></span></span></td>
+          <td><span class="who"><span class="av">JK</span><span class="nm"><b>John Kelser</b><span>Doyle Organics</span></span></span></td>
+          <td class="why">Consumer</td>
+          <td class="score">5</td>
+          <td><span class="st s-dec">Declined</span> <span class="why">20 Sep</span></td>
+          <td><span class="btn sm" style="opacity:.4">Chase now</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:9px">A declined match is never chased. Everything else with no answer is, on the
+  schedule below.</p>
+
+  <!-- MESSAGE -->
+  <h2>The invitation, and the chaser</h2>
+  <div class="msg">
+    <div>
+      <div class="mail">
+        <div class="mh">Subject: <b>Marcus Reyes would be worth meeting at Las Vegas</b> · <span class="btn sm" style="margin-left:6px">Edit</span></div>
+        <div class="mb">
+          Hi <span class="tok">{{first_name}}</span>,<br /><br />
+          You both opted into networking at <span class="tok">{{event_title}}</span>, and you share
+          <span class="tok">{{shared_interests}}</span>.<br /><br />
+          <b><span class="tok">{{match_name}}</span></b> — <span class="tok">{{match_company}}</span>,
+          <span class="tok">{{match_badge}}</span>.<br /><br />
+          If you&rsquo;d like an introduction, accept below. Nothing is shared until you both agree — no contact
+          details change hands before that.
+          <br />
+          <span class="mcta">Accept the introduction →</span>
+          <div style="margin-top:9px;font-size:11px;color:#94a3b8">Not interested? Decline, and they won&rsquo;t be
+            told who declined.</div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:12px">The chaser is the same message with one line changed and
+      is edited on its own tab. Both are blocks in the Marketing editor, like the event emails — so the compliance
+      footer is appended at send and can&rsquo;t be removed.</p>
+    </div>
+
+    <div>
+      <p class="note" style="margin:0 0 7px;font-weight:700;font-size:11.4px;color:var(--navy)">Tokens</p>
+      <div class="toks" style="margin-bottom:14px">
+        <span class="t">{{first_name}} <em>recipient</em></span>
+        <span class="t">{{match_name}}</span>
+        <span class="t">{{match_company}}</span>
+        <span class="t">{{match_badge}} <em>Investor / Founder</em></span>
+        <span class="t">{{shared_interests}}</span>
+        <span class="t">{{event_title}}</span>
+        <span class="t">{{event_date}}</span>
+      </div>
+
+      <p class="note" style="margin:0 0 7px;font-weight:700;font-size:11.4px;color:var(--navy)">Chasing</p>
+      <div class="rule"><span class="bx on"></span><span>Chase after <b>3 days</b> with no answer</span></div>
+      <div class="rule"><span class="bx on"></span><span>Chase again after <b>3 more</b>, then stop</span></div>
+      <div class="rule"><span class="bx on"></span><span>Never chase a declined match</span></div>
+      <div class="rule"><span class="bx on"></span><span>Stop everything <b>24h before</b> the event starts</span></div>
+      <div class="rule"><span class="bx"></span><span>Chase the other side too when neither has answered</span></div>
+      <p class="note" style="margin-top:9px;font-size:11.2px">Two chasers maximum. A third is not persistence, it is
+      the reason people mark mail as spam.</p>
+    </div>
+  </div>
+
+  <!-- HONESTY -->
+  <h2>Before you decide</h2>
+  <div class="bad">
+    <p style="margin:0 0 8px"><b>None of page 3 exists today — including the invitation.</b> Event networking
+    currently works one way only: an attendee opts in, sees a list of <em>names</em> suggested to them, clicks
+    Connect, and the other person accepts or declines in the app. Staff never see any of it, nothing is emailed, and
+    there is no message to edit because no message is ever sent.</p>
+    <p style="margin:0">So this is a new feature, not a view over existing data. It needs: matches stored rather than
+    recomputed per page load (today they exist only for the split second a suggestion list renders), an invitation
+    record with sent/accepted/declined and a chase count, an editable template, and a daily job to send the chasers.
+    The matching itself already works and would not change.</p>
+  </div>
+
+  <div class="warn" style="margin-top:14px">
+    <p style="margin:0 0 8px"><b>Staff-initiated invitations change what attendees agreed to.</b> Today a request
+    comes from another attendee who chose to send it. An emailed invitation from iCapOS saying &ldquo;you two should
+    meet&rdquo; is us making the introduction — worth being sure that is the product you want, because it reads very
+    differently to the person receiving it.</p>
+    <p style="margin:0 0 8px"><b>The score is thin.</b> Shared sectors ×2, plus 3 when one is a founder and the other
+    an investor — no stage, no cheque size, no geography. It ranks a suggestion list adequately; it is a weak basis
+    for an email asserting someone is worth meeting. <b>Why matched</b> is on the table so staff can see exactly how
+    thin before sending.</p>
+    <p style="margin:0"><b>&ldquo;Automatically&rdquo; needs a boundary.</b> The chasers above are capped at two and
+    stop a day before the event. Without both caps, a busy event sends a few hundred unsolicited emails to people who
+    have already ignored one.</p>
+  </div>
+
+</div>
+</body>
+</html>

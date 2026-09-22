@@ -14,6 +14,19 @@ export type RegistrationField = {
 
 const SECTORS = EVENT_SECTORS.map((s) => s.label);
 
+/**
+ * The tick that decides whether a registrant's name appears on the public
+ * event page. Absent means private — nobody is listed by default, and the
+ * people who registered before this existed are not opted in retroactively.
+ *
+ * Only the key lives here. The question itself is a registration field, which
+ * is versioned data now: it arrives as field-set v2 and is editable in
+ * Event Hub → Registration → Fields like everything else on the form. These
+ * constants are the emergency fallback for an empty table, and adding to them
+ * would make the fallback disagree with the seed.
+ */
+export const LISTED_PUBLICLY_KEY = "listedPublicly";
+
 export const REGISTRATION_COUNTRIES = ["United States", "Canada", "United Kingdom", "Germany", "India", "Singapore", "Other"];
 
 export const REGISTRATION_ROLES: { key: AttendeeType; label: string }[] = [

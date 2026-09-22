@@ -56,18 +56,25 @@ export function exhibitName(title: string): string {
 }
 
 /**
- * Which session leads. The talk show is the draw — it is the one with a named
- * guest each month — and a keynote leads when there isn't one. Nothing leads
- * when the agenda is a single session, because a feature of one is just a
- * session with extra decoration.
+ * The order an agenda is always read in: the keynote opens the room, the talk
+ * show follows, then everything else, and booths last.
+ *
+ * Fixed rather than derived. `position` still orders sessions of the same kind
+ * — so admin reordering works — but it cannot put a workshop above the keynote.
+ * No session is featured: they are equal rows, and whichever has guests shows
+ * them.
  */
-export function leadIndex(sessions: Session[]): number {
-  if (sessions.length < 2) return -1;
-  const eligible = sessions.filter((s) => !isExhibitSession(s.title));
-  if (eligible.length < 2) return -1;
-  const byType = (t: string) => sessions.findIndex((s) => s.type === t && !isExhibitSession(s.title));
-  const talk = byType("talk_show");
-  return talk >= 0 ? talk : byType("keynote");
+const TYPE_ORDER = ["keynote", "talk_show", "panel", "workshop", "founder_showcase"];
+
+export function orderSessions(sessions: Session[]): Session[] {
+  const rank = (s: Session) => {
+    const i = TYPE_ORDER.indexOf(s.type);
+    return i === -1 ? TYPE_ORDER.length : i;
+  };
+  return sessions
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => rank(a.s) - rank(b.s) || a.i - b.i)
+    .map(({ s }) => s);
 }
 
 export type AgendaRow = {
@@ -78,8 +85,7 @@ export type AgendaRow = {
 };
 
 export type Agenda = {
-  /** Rendered larger, on a tint, and carrying its guest billing. */
-  lead: AgendaRow | null;
+  /** Every real session, in the fixed order. No session is featured. */
   rows: AgendaRow[];
   /** Booth sessions, merged to one line naming the companies. */
   exhibits: string[];
@@ -99,22 +105,13 @@ function labelOf(s: Session): string {
 
 /** The agenda split into what it is, in the order it should be read. */
 export function buildAgenda(sessions: Session[]): Agenda {
-  const exhibits = sessions.filter((s) => isExhibitSession(s.title)).map((s) => exhibitName(s.title));
-  const rest = sessions.filter((s) => !isExhibitSession(s.title));
-
-  const lead = leadIndex(sessions);
-  const leadSession = lead >= 0 ? sessions[lead] : null;
-
-  const row = (s: Session, weight: SessionWeight): AgendaRow => ({
-    session: s,
-    weight,
-    label: labelOf(s),
-    abstract: trimAbstract(s.abstract),
-  });
-
   return {
-    lead: leadSession ? row(leadSession, "lead") : null,
-    rows: rest.filter((s) => s !== leadSession).map((s) => row(s, "programmed")),
-    exhibits,
+    rows: orderSessions(sessions.filter((s) => !isExhibitSession(s.title))).map((s) => ({
+      session: s,
+      weight: "programmed" as SessionWeight,
+      label: labelOf(s),
+      abstract: trimAbstract(s.abstract),
+    })),
+    exhibits: sessions.filter((s) => isExhibitSession(s.title)).map((s) => exhibitName(s.title)),
   };
 }
