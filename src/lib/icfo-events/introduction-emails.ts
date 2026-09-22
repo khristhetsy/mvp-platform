@@ -63,10 +63,29 @@ const TEST_BANNER = `<table role="presentation" cellpadding="0" cellspacing="0" 
 /** Where a test's buttons point: a page that explains itself. */
 export const TEST_RESPOND_PATH = "/e/intro/test";
 
+/**
+ * Why this email exists, in one sentence.
+ *
+ * Fixed rather than template copy: it belongs on the invitation, the peer
+ * invitation, the founder follow-up and the digest, and four copies of a
+ * sentence is four chances for one of them to drift or be edited away. The
+ * event names itself, so a duplicated event cannot carry last year's date.
+ */
+export function purposeBlock(input: { eventTitle: string; when: string | null }): string {
+  const where = input.when ? `${esc(input.eventTitle)}, ${esc(input.when)}` : esc(input.eventTitle);
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#f5f9ff;border-left:3px solid ${BLUE};margin:0 0 16px;">
+    <tr><td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12.5px;color:#33415a;line-height:1.6;">
+      This introduction is for networking at the upcoming iCFO Capital event — ${where}.
+    </td></tr>
+  </table>`;
+}
+
 export function introductionHtml(input: {
   body: string;
   respondUrl: string;
   test?: boolean;
+  /** The fixed networking sentence. Omitted only when the event is unknown. */
+  purpose?: { eventTitle: string; when: string | null } | null;
 }): string {
   const paragraphs = input.body
     .split(/\n{2,}/)
@@ -79,6 +98,7 @@ export function introductionHtml(input: {
       <tr><td style="padding:24px 30px;font-family:Arial,sans-serif;">
         ${input.test ? TEST_BANNER : ""}
         ${paragraphs}
+        ${input.purpose ? purposeBlock(input.purpose) : ""}
         <div style="margin-top:6px;">
           ${button(`${input.respondUrl}?a=yes`, "Accept the introduction →", true)}
           ${button(`${input.respondUrl}?a=no`, "Not right now", false)}
@@ -112,6 +132,8 @@ export async function sendIntroductionEmail(input: {
   investor: Recipient;
   founder: Recipient;
   eventTitle: string;
+  /** The event's date, for the networking sentence. */
+  eventWhen?: string | null;
   sharedSectors: string[];
   baseUrl: string;
   /** A rehearsal: flagged in the subject, and its buttons lead nowhere. */
@@ -138,6 +160,7 @@ export async function sendIntroductionEmail(input: {
       // like they do — they lead to a page that says so.
       respondUrl: input.test ? `${base}${TEST_RESPOND_PATH}` : `${base}/e/intro/${introToken(input.introductionId)}`,
       test: input.test,
+      purpose: { eventTitle: input.eventTitle, when: input.eventWhen ?? null },
     }),
   });
 }
@@ -320,6 +343,8 @@ export function introductionDigestHtml(input: {
   intro: string;
   rows: { name: string; meta: string; pitch: string | null; respondUrl: string }[];
   test?: boolean;
+  /** Stated once, above the list — not on every row. */
+  purpose?: { eventTitle: string; when: string | null } | null;
 }): string {
   const rows = input.rows.map((r) => `
     <tr><td style="padding:14px 0;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
@@ -336,6 +361,7 @@ export function introductionDigestHtml(input: {
     (input.test ? TEST_BANNER : "") +
     para(esc(input.greeting)) +
     para(esc(input.intro)) +
+    (input.purpose ? purposeBlock(input.purpose) : "") +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>` +
     `<p style="margin:16px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;">
        Accept as many or as few as you like. Declining is silent — nobody is told who declined.
@@ -355,6 +381,8 @@ export async function sendIntroductionDigest(input: {
   eventTitle: string;
   items: DigestItem[];
   baseUrl: string;
+  /** The event's date, for the networking sentence. */
+  eventWhen?: string | null;
   /** A rehearsal: flagged in the subject, and its buttons lead nowhere. */
   test?: boolean;
   /** Who it comes from. Defaults to the platform address. */
@@ -392,6 +420,7 @@ export async function sendIntroductionDigest(input: {
         : `${input.items.length} people at ${input.eventTitle} share your sectors. Accept the ones you want to meet — each sends you a time and a link.`,
       rows,
       test: input.test,
+      purpose: { eventTitle: input.eventTitle, when: input.eventWhen ?? null },
     }),
   });
 }

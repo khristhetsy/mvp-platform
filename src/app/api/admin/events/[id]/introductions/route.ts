@@ -11,6 +11,7 @@ import {
 } from "@/lib/icfo-events/introduction-emails";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { pairTypeFor } from "@/lib/icfo-events/pair-types";
+import { formatSlot } from "@/lib/icfo-events/calendar-links";
 import { planBulkSend } from "@/lib/icfo-events/introductions";
 
 export const dynamic = "force-dynamic";
@@ -164,6 +165,8 @@ export async function POST(
       admin.from("event_introductions").select("*").eq("event_id", eventId).eq("status", "sent"),
     ]);
     const invitation = templates.find((t) => t.kind === "invitation");
+    // The event's own date, for the fixed networking sentence.
+    const eventWhen = event?.startsAt ? formatSlot(event.startsAt, event.timezone ?? null) : null;
     // A pairing between equals gets the peer message: two investors are not
     // pitching each other, and the founder copy would read as nonsense.
     const peer = templates.find((t) => t.kind === "peer_invitation") ?? invitation;
@@ -231,6 +234,7 @@ export async function POST(
             investor: { name: person.name, company: person.company },
             founder: only.founder,
             eventTitle: event.title,
+            eventWhen,
             sharedSectors: only.sharedSectors,
             baseUrl: BASE_URL,
           });
@@ -242,6 +246,7 @@ export async function POST(
           to: person.email,
           investorName: person.name,
           eventTitle: event.title,
+          eventWhen,
           items: person.items,
           baseUrl: BASE_URL,
           sender,

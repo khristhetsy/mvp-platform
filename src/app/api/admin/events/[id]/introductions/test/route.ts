@@ -6,6 +6,7 @@ import { getEventById } from "@/lib/icfo-events/queries";
 import { loadNetworkingBoard } from "@/lib/icfo-events/networking-board";
 import { contactsFor, listTemplates } from "@/lib/icfo-events/introductions-server";
 import { sendIntroductionDigest, sendIntroductionEmail } from "@/lib/icfo-events/introduction-emails";
+import { formatSlot } from "@/lib/icfo-events/calendar-links";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,7 @@ export async function POST(
       };
     };
 
+    const eventWhen = event.startsAt ? formatSlot(event.startsAt, event.timezone ?? null) : null;
     const to = parsed.data.to;
     const shape = theirs.length > 1 ? "digest" : "single";
 
@@ -90,6 +92,7 @@ export async function POST(
           to,
           investorName: investor?.name ?? top.a.name,
           eventTitle: event.title,
+          eventWhen,
           items: theirs.map((p) => ({
             introductionId: `test-${p.key}`,
             founder: founderOf(p.b.registrationId, p.b.name, p.b.company),
@@ -105,6 +108,7 @@ export async function POST(
           investor: { name: investor?.name ?? top.a.name, company: investor?.company ?? top.a.company },
           founder: founderOf(top.b.registrationId, top.b.name, top.b.company),
           eventTitle: event.title,
+          eventWhen,
           sharedSectors: top.sharedInterests,
           baseUrl: BASE_URL,
           test: true,

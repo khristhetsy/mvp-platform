@@ -2,7 +2,7 @@
  * One email instead of forty.
  */
 import { describe, it, expect } from "vitest";
-import { digestSubject, introductionDigestHtml } from "@/lib/icfo-events/introduction-emails";
+import { digestSubject, introductionDigestHtml, purposeBlock } from "@/lib/icfo-events/introduction-emails";
 
 const rows = [
   { name: "Shan Padda", meta: "Harvard MedTech · Seed · HealthTech", pitch: "VR therapy for chronic pain.", respondUrl: "https://icapos.com/e/intro/tok-1" },
@@ -65,5 +65,42 @@ describe("a test send", () => {
 
   it("does not say so on a real one", () => {
     expect(html).not.toContain("Test send.");
+  });
+});
+
+describe("the purpose block itself", () => {
+  it("escapes an event title somebody typed", () => {
+    const out = purposeBlock({ eventTitle: "<script>x</script>", when: null });
+    expect(out).not.toContain("<script>x</script>");
+    expect(out).toContain("&lt;script&gt;");
+  });
+});
+
+describe("the networking purpose line", () => {
+  const withPurpose = introductionDigestHtml({
+    greeting: "Hi Kenneth,", intro: "Two founders match.", rows,
+    purpose: { eventTitle: "iCFO PE Expo — Las Vegas", when: "Tue 22 Sep 2026" },
+  });
+
+  it("names the event and the date, once", () => {
+    expect(withPurpose).toContain("for networking at the upcoming iCFO Capital event");
+    expect(withPurpose).toContain("iCFO PE Expo — Las Vegas, Tue 22 Sep 2026");
+    expect(withPurpose.match(/upcoming iCFO Capital event/g)).toHaveLength(1);
+  });
+
+  it("drops the date rather than printing an empty comma", () => {
+    const noDate = introductionDigestHtml({
+      greeting: "Hi,", intro: "x", rows,
+      purpose: { eventTitle: "iCFO PE Expo", when: null },
+    });
+    expect(noDate).toContain("event — iCFO PE Expo.");
+  });
+
+  it("says nothing when the event is unknown", () => {
+    expect(html).not.toContain("upcoming iCFO Capital event");
+  });
+
+  it("does not claim anything about who registered", () => {
+    expect(withPurpose).not.toContain("registered to attend");
   });
 });

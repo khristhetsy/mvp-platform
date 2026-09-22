@@ -51,6 +51,9 @@ export async function GET(req: NextRequest): Promise<Response> {
               roundSize: detail.founder?.roundSize ?? null,
             },
             eventTitle: detail.event?.title ?? "an iCFO event",
+            eventWhen: detail.event?.startsAt
+              ? formatSlot(detail.event.startsAt, detail.event.timezone)
+              : null,
             sharedSectors: intro.sharedSectors,
             baseUrl: BASE_URL,
           });

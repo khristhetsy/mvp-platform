@@ -153,6 +153,10 @@ export function IntroTemplatesEditor({ initial, eventId, testAddresses, gmail }:
             <p className="mb-2 text-[10.6px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
               Added at send — not editable
             </p>
+            <p className="mb-2.5 border-l-[3px] border-[var(--blue)] bg-[var(--blue-muted)] px-2.5 py-2 text-[11.5px] leading-relaxed text-[var(--text-secondary)]">
+              This introduction is for networking at the upcoming iCFO Capital event — the event&rsquo;s name and
+              date are filled in when it sends.
+            </p>
             <div className="flex flex-wrap gap-1.5">
               <span className="rounded-lg bg-[var(--blue)] px-3 py-1.5 text-[12px] font-semibold text-white">
                 Accept the introduction →
