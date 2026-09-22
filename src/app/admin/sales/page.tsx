@@ -30,10 +30,10 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
     return `${base}${base.includes("?") ? "&" : "?"}period=${p}`;
   };
 
-  let oppQuery = admin.from("sales_opportunities").select("id, name, status, value_cents, stage_id, billing, probability, updated_at");
+  let oppQuery = admin.from("sales_opportunities").select("id, title, status, value_cents, stage_id, billing, probability, updated_at");
   if (owner) oppQuery = oppQuery.eq("owner_id", owner);
   const { data: oppRows } = await oppQuery;
-  const opps = (oppRows ?? []) as Array<{ id: string; name: string | null; status: string; value_cents: number | null; stage_id: string | null; billing: string | null; probability: number | null; updated_at: string | null }>;
+  const opps = (oppRows ?? []) as Array<{ id: string; title: string | null; status: string; value_cents: number | null; stage_id: string | null; billing: string | null; probability: number | null; updated_at: string | null }>;
   const open = opps.filter((o) => o.status === "open");
   const won = opps.filter((o) => o.status === "won");
   const lost = opps.filter((o) => o.status === "lost");
@@ -87,7 +87,7 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
   const topMovers = [...open]
     .sort((a, b) => (b.value_cents ?? 0) - (a.value_cents ?? 0))
     .slice(0, 4)
-    .map((o) => ({ id: o.id, name: o.name ?? "Opportunity", stage: (o.stage_id && stageName.get(o.stage_id)) || "—", value: Math.round((o.value_cents ?? 0) / 100) }));
+    .map((o) => ({ id: o.id, name: o.title ?? "Opportunity", stage: (o.stage_id && stageName.get(o.stage_id)) || "—", value: Math.round((o.value_cents ?? 0) / 100) }));
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>

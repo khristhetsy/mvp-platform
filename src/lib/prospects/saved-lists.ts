@@ -54,9 +54,9 @@ export async function getListDetail(listId: string, previewLimit = 25): Promise<
 
   let preview: PreviewRow[] = [];
   if (ids.length > 0) {
-    const { data: contacts } = await db.from("marketing_contacts").select("name, email, company, first_name, last_name").in("id", ids);
+    const { data: contacts } = await db.from("marketing_contacts").select("email, company, first_name, last_name").in("id", ids);
     preview = ((contacts ?? []) as Row[]).map((c) => ({
-      name: c.name ?? ([c.first_name, c.last_name].filter(Boolean).join(" ") || null),
+      name: [c.first_name, c.last_name].filter(Boolean).join(" ") || null,
       email: c.email ?? null,
       company: c.company ?? null,
     }));
@@ -106,7 +106,7 @@ export async function getListApproachRows(listId: string, limit = 200): Promise<
       if (seen.has(r.id)) continue;
       seen.add(r.id);
       out.push({
-        id: r.id, name: r.name ?? null, email: r.email ?? null, company: r.company ?? null,
+        id: r.id, name: [r.first_name, r.last_name].filter(Boolean).join(" ") || null, email: r.email ?? null, company: r.company ?? null,
         side: r.side ?? null, segment: r.segment ?? null, lead_prescore: r.lead_prescore ?? null,
         lead_status: r.lead_status ?? null, email_status: r.email_status ?? null, phone: r.phone ?? null,
         approach: (r.approach ?? null) as Record<string, unknown> | null,
@@ -169,7 +169,7 @@ export async function getListExportRows(listId: string, requested: string[]): Pr
   // 2) marketing_contacts snapshot rows
   const mc = new Map<string, Row>();
   for (const c of chunk(ids, CHUNK)) {
-    const { data } = await db.from("marketing_contacts").select("id, name, first_name, last_name, email, company, source").in("id", c);
+    const { data } = await db.from("marketing_contacts").select("id, first_name, last_name, email, company, source").in("id", c);
     for (const r of (data ?? []) as Row[]) mc.set(r.id, r);
   }
 
@@ -187,7 +187,7 @@ export async function getListExportRows(listId: string, requested: string[]): Pr
     const m = mc.get(id) ?? {};
     const email = (m.email ?? null) as string | null;
     const e = email ? crm.get(email.toLowerCase()) ?? {} : {};
-    const name = m.name ?? ([m.first_name, m.last_name].filter(Boolean).join(" ") || null);
+    const name = [m.first_name, m.last_name].filter(Boolean).join(" ") || null;
     const pick: Record<string, string | number | null> = {};
     for (const c of cols) {
       pick[c] =

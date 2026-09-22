@@ -35,7 +35,7 @@ export default async function AdminStuckFoundersPage() {
 
   const founderIds = [...new Set(companies.map((c) => c.founder_id as string).filter(Boolean))];
   const { data: profilesData } = founderIds.length
-    ? await admin.from("profiles").select("id, full_name, email, journey_stage, updated_at").in("id", founderIds)
+    ? await admin.from("profiles").select("id, full_name, email, journey_stage, last_seen_at").in("id", founderIds)
     : { data: [] as Row[] };
   const profileById = new Map<string, Row>();
   for (const p of (profilesData ?? []) as Row[]) profileById.set(p.id as string, p);
@@ -69,7 +69,7 @@ export default async function AdminStuckFoundersPage() {
     if (!PRE_MATCH_STAGES.has(stage)) continue;
     const score = scoreByCompany.get(c.id as string) ?? null;
     const lastActive =
-      [c.updated_at as string | null, (founder?.updated_at as string | null) ?? null]
+      [c.updated_at as string | null, (founder?.last_seen_at as string | null) ?? null]
         .filter(Boolean)
         .sort()
         .slice(-1)[0] ?? null;

@@ -22,10 +22,10 @@ export async function GET(): Promise<Response> {
     const db: any = serviceRoleClientUntyped();
     const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
     const { data } = await db.from("marketing_events")
-      .select("metadata, created_at")
+      .select("metadata, occurred_at")
       .eq("event_type", "failed")
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
+      .gte("occurred_at", since)
+      .order("occurred_at", { ascending: false })
       .limit(200);
 
     const errors = ((data ?? []) as Array<{ metadata: { error?: string } | null }>)

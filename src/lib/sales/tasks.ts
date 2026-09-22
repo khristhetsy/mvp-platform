@@ -48,13 +48,13 @@ export async function listTasks(opts: { scope?: "my" | "all" | "overdue"; assign
   // whether to prompt for a next task (only while the deal is still open).
   const oppIds = [...new Set(tasks.map((t) => t.opportunity_id).filter(Boolean))] as string[];
   if (oppIds.length) {
-    const res = await db().from("sales_opportunities").select("id, name, status").in("id", oppIds);
-    const opps = (res.data ?? []) as Array<{ id: string; name: string | null; status: string | null }>;
+    const res = await db().from("sales_opportunities").select("id, title, status").in("id", oppIds);
+    const opps = (res.data ?? []) as Array<{ id: string; title: string | null; status: string | null }>;
     const byId = new Map(opps.map((o) => [o.id, o] as const));
     for (const t of tasks) {
       const o = t.opportunity_id ? byId.get(t.opportunity_id) : undefined;
       t.opportunity_status = (o?.status as SalesTask["opportunity_status"]) ?? null;
-      t.opportunity_name = o?.name ?? null;
+      t.opportunity_name = o?.title ?? null;
     }
   }
   return tasks;
