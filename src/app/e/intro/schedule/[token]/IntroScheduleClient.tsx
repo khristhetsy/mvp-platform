@@ -22,7 +22,7 @@ const MEET_NEW = "https://meet.google.com/new";
  * connected an account, which is most of them.
  */
 export function IntroScheduleClient({
-  token, status, investor, eventTitle, eventWhen, slots, existing,
+  token, status, investor, eventTitle, eventWhen, slots, existing, askedForAnother,
 }: Readonly<{
   token: string;
   status: "sent" | "accepted" | "declined";
@@ -31,6 +31,8 @@ export function IntroScheduleClient({
   eventWhen: string | null;
   slots: Slot[];
   existing: { startsAt: string; label: string; meetingUrl: string } | null;
+  /** The investor asked for a different slot. They ask; you still choose. */
+  askedForAnother: { note: string | null; who: string } | null;
 }>) {
   const [chosen, setChosen] = useState<string | null>(existing?.startsAt ?? null);
   const [url, setUrl] = useState(existing?.meetingUrl ?? "");
@@ -103,6 +105,19 @@ export function IntroScheduleClient({
       <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
         {eventTitle}{eventWhen ? ` · ${eventWhen}` : ""}
       </p>
+      {askedForAnother ? (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2.5">
+          <p className="text-[12.5px] font-medium text-amber-900">
+            {askedForAnother.who} asked for a different time.
+          </p>
+          {askedForAnother.note ? (
+            <p className="mt-1 border-l-2 border-amber-300 pl-2 text-[12.5px] text-amber-900/90">
+              {askedForAnother.note}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {existing ? (
         <p className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-slate-50/70 px-3 py-2 text-[12.5px] text-[var(--text-secondary)]">
           Currently set for {existing.label}. Choosing another slot replaces it and tells {firstName}.

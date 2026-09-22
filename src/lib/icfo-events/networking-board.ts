@@ -51,6 +51,8 @@ export type MatchPair = {
   meetingUrl: string | null;
   /** Reminders sent to the founder for a time they have not given. */
   founderReminders: number;
+  /** The investor asked for a different slot and is waiting again. */
+  rescheduleAsked: boolean;
 };
 
 export type NetworkingBoard = {
@@ -172,6 +174,7 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
           scheduledAt: intro?.scheduledAt ?? null,
           meetingUrl: intro?.meetingUrl ?? null,
           founderReminders: intro?.founderReminders ?? 0,
+          rescheduleAsked: Boolean(intro?.rescheduleRequestedAt),
         });
       }
     }

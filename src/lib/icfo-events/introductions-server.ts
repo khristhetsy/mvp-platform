@@ -23,6 +23,7 @@ type Row = Record<string, unknown>;
 
 const ACTION_RESPOND = "intro";
 const ACTION_SCHEDULE = "intro-schedule";
+const ACTION_RESCHEDULE = "intro-reschedule";
 
 /** A signed link, so an investor with no account can answer from the email. */
 export function introToken(id: string): string {
@@ -41,6 +42,16 @@ export function scheduleToken(id: string): string {
 
 export function introFromScheduleToken(token: string): string | null {
   return verifyToken({ token, kind: "event_invite", action: ACTION_SCHEDULE });
+}
+
+/** The investor's link for asking for a different time. Deliberately not the
+ * founder's scheduling token — asking is not the same as choosing. */
+export function rescheduleToken(id: string): string {
+  return makeToken({ kind: "event_invite", id, action: ACTION_RESCHEDULE });
+}
+
+export function introFromRescheduleToken(token: string): string | null {
+  return verifyToken({ token, kind: "event_invite", action: ACTION_RESCHEDULE });
 }
 
 export type TemplateKind = "invitation" | "follow_up";
@@ -91,6 +102,9 @@ export type IntroRow = Introduction & {
   meetingUrl: string | null;
   founderReminders: number;
   lastFounderReminderAt: string | null;
+  /** The investor asked for a different time; the founder still picks it. */
+  rescheduleRequestedAt: string | null;
+  rescheduleNote: string | null;
 };
 
 function mapIntro(r: Row): IntroRow {
@@ -112,6 +126,8 @@ function mapIntro(r: Row): IntroRow {
     meetingUrl: (r.meeting_url as string | null) ?? null,
     founderReminders: Number(r.founder_reminders ?? 0),
     lastFounderReminderAt: (r.last_founder_reminder_at as string | null) ?? null,
+    rescheduleRequestedAt: (r.reschedule_requested_at as string | null) ?? null,
+    rescheduleNote: (r.reschedule_note as string | null) ?? null,
   };
 }
 
@@ -402,6 +418,9 @@ export async function scheduleIntroduction(
       meeting_url: input.meetingUrl,
       scheduled_by: input.setBy ?? null,
       scheduled_set_at: new Date().toISOString(),
+      // Picking a time answers the request, whether or not it moved.
+      reschedule_requested_at: null,
+      reschedule_note: null,
     })
     .eq("id", id);
   return error ? { ok: false, error: error.message } : { ok: true, changed: !already };
@@ -469,4 +488,34 @@ export async function runFounderReminderPass(
     }
   }
   return out;
+}
+
+/** Longest note we will carry to the founder. */
+export const MAX_RESCHEDULE_NOTE = 400;
+
+/**
+ * The investor asks for a different time.
+ *
+ * Recorded rather than acted on: the founder owns the slot, so this puts the
+ * introduction back in their queue instead of moving the meeting.
+ */
+export async function requestReschedule(
+  id: string,
+  note: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data } = await raw().from("event_introductions").select("status, scheduled_at").eq("id", id).maybeSingle();
+  if (!data) return { ok: false, error: "That introduction no longer exists." };
+  const row = data as Row;
+  if (String(row.status) !== "accepted") {
+    return { ok: false, error: "There is no meeting to move." };
+  }
+
+  const { error } = await raw()
+    .from("event_introductions")
+    .update({
+      reschedule_requested_at: new Date().toISOString(),
+      reschedule_note: note?.trim() ? note.trim().slice(0, MAX_RESCHEDULE_NOTE) : null,
+    })
+    .eq("id", id);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }

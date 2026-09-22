@@ -41,6 +41,11 @@ export default async function IntroSchedulePage({ params }: {
         eventTitle={detail.event?.title ?? "the event"}
         eventWhen={detail.event?.startsAt ? formatSlot(detail.event.startsAt, detail.event.timezone) : null}
         slots={slots}
+        askedForAnother={
+          detail.intro.rescheduleRequestedAt
+            ? { note: detail.intro.rescheduleNote, who: detail.investor?.name ?? "The investor" }
+            : null
+        }
         existing={
           detail.intro.scheduledAt
             ? {

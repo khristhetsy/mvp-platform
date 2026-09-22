@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import {
-  founderTakenSlots, introDetail, introFromScheduleToken, scheduleIntroduction, scheduleToken,
+  founderTakenSlots, introDetail, introFromScheduleToken, rescheduleToken, scheduleIntroduction,
 } from "@/lib/icfo-events/introductions-server";
 import { checkMeetingUrl, checkSlot, SLOT_MINUTES } from "@/lib/icfo-events/intro-scheduling";
 import { sendScheduledNotice } from "@/lib/icfo-events/introduction-emails";
@@ -80,7 +80,9 @@ export async function POST(req: NextRequest): Promise<Response> {
           endISO: endsAt,
           details: link.url,
         }),
-        rescheduleUrl: `${BASE_URL.replace(/\/$/, "")}/e/intro/schedule/${scheduleToken(id)}`,
+        // The investor's own link: asking is not choosing, so this must never
+        // be the founder's picker.
+        rescheduleUrl: `${BASE_URL.replace(/\/$/, "")}/e/intro/reschedule/${rescheduleToken(id)}`,
         changed: !saved.changed ? false : Boolean(detail.intro.scheduledAt),
       }).catch(() => false);
     }

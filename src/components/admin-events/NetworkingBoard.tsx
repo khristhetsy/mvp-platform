@@ -111,7 +111,9 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
           (held
             ? ` ${held} held back by the cap of ${cap} — they stay unsent and are picked up next time.`
             : "") +
-          (repeat ? ` ${repeat} would still receive more than one email.` : ""),
+          (repeat
+            ? ` ${repeat} matched more than one founder — each of them gets a single email listing all of theirs.`
+            : ""),
         );
         return;
       }
@@ -300,7 +302,11 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS[p.status].cls}`}>
                       {STATUS[p.status].label}
                     </span>
-                    {p.scheduledAt ? (
+                    {p.rescheduleAsked ? (
+                      <span className="mt-0.5 block text-[10px] font-medium text-amber-700">
+                        investor asked for another time
+                      </span>
+                    ) : p.scheduledAt ? (
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
                         {slotLabel(p.scheduledAt)}{p.meetingUrl ? " · link set" : ""}
                       </span>
@@ -336,9 +342,11 @@ export function NetworkingBoard({ board, events, eventId }: Readonly<{
         investor, about the founder</b>; the founder follow-up chases them, twice at most, never after a decline
         and never inside the last day before the event. <b>Preview send</b> shows who would be mailed and flags
         anyone who would get more than one.
-        Accepting no longer creates a room: the founder picks a slot inside the event and brings the meeting link,
-        and the investor is emailed the time. An acceptance with no time on it is chased — the founder, not the
-        investor — twice at most, and never once the event has started.
+        An investor who matched several founders gets one email listing them, each with its own accept button,
+        rather than one email per match. Accepting no longer creates a room: the founder picks a slot inside the
+        event and brings the meeting link, and the investor is emailed the time. An acceptance with no time on it
+        is chased — the founder, not the investor — twice at most, and never once the event has started. The
+        investor can ask for another time; the founder still chooses it.
       </p>
     </div>
   );

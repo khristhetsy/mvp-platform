@@ -6,7 +6,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { loadNetworkingBoard } from "@/lib/icfo-events/networking-board";
 import { contactsFor, createIntroductions, listTemplates } from "@/lib/icfo-events/introductions-server";
-import { sendIntroductionEmail } from "@/lib/icfo-events/introduction-emails";
+import { sendIntroductionDigest, sendIntroductionEmail } from "@/lib/icfo-events/introduction-emails";
 import { planBulkSend } from "@/lib/icfo-events/introductions";
 
 export const dynamic = "force-dynamic";
@@ -145,6 +145,19 @@ export async function POST(
         rows.flatMap((r) => [String(r.investor_reg_id), String(r.founder_reg_id)]),
       );
 
+      // Group by who receives it. One match is one email; several become one
+      // email with a block each, since forty perfectly reasonable messages in
+      // one minute read as spam whatever each of them says.
+      type Piece = {
+        introductionId: string;
+        founder: {
+          name: string; company: string | null; pitch: string | null;
+          stage: string | null; raising: string | null; roundSize: string | null;
+        };
+        sharedSectors: string[];
+      };
+      const byInvestor = new Map<string, { email: string; name: string; company: string | null; items: Piece[] }>();
+
       for (const r of rows) {
         const key = [String(r.investor_reg_id), String(r.founder_reg_id)].sort().join("|");
         const pair = byPair.get(key);
@@ -152,11 +165,12 @@ export async function POST(
         const investor = people.get(String(r.investor_reg_id));
         const founder = people.get(String(r.founder_reg_id));
         if (!investor?.email) continue;
-        const ok = await sendIntroductionEmail({
+
+        const bucket = byInvestor.get(investor.registrationId) ?? {
+          email: investor.email, name: investor.name, company: investor.company, items: [],
+        };
+        bucket.items.push({
           introductionId: String(r.id),
-          to: investor.email,
-          template: invitation,
-          investor: { name: investor.name, company: investor.company },
           founder: {
             name: founder?.name ?? pair.b.name,
             company: founder?.company ?? pair.b.company,
@@ -165,10 +179,37 @@ export async function POST(
             raising: founder?.raising ?? null,
             roundSize: founder?.roundSize ?? null,
           },
-          eventTitle: event.title,
           sharedSectors: pair.sharedInterests,
+        });
+        byInvestor.set(investor.registrationId, bucket);
+      }
+
+      for (const person of byInvestor.values()) {
+        if (person.items.length === 1) {
+          const only = person.items[0];
+          const ok = await sendIntroductionEmail({
+            introductionId: only.introductionId,
+            to: person.email,
+            template: invitation,
+            investor: { name: person.name, company: person.company },
+            founder: only.founder,
+            eventTitle: event.title,
+            sharedSectors: only.sharedSectors,
+            baseUrl: BASE_URL,
+          });
+          if (ok) sent += 1;
+          continue;
+        }
+
+        const ok = await sendIntroductionDigest({
+          to: person.email,
+          investorName: person.name,
+          eventTitle: event.title,
+          items: person.items,
           baseUrl: BASE_URL,
         });
+        // One email, however many introductions it carries — counting it once
+        // is what makes "emails sent" mean something.
         if (ok) sent += 1;
       }
     }

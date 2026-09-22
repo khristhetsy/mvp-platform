@@ -195,3 +195,134 @@ export async function sendScheduledNotice(input: {
     ),
   });
 }
+
+/**
+ * To the founder: they would like a different time.
+ *
+ * The founder still chooses — this reopens their picker rather than moving
+ * anything, which is why the investor's button could never be the founder's
+ * scheduling link.
+ */
+export async function sendRescheduleRequest(input: {
+  to: string;
+  founderName: string;
+  investorName: string;
+  eventTitle: string;
+  currentWhen: string | null;
+  note: string | null;
+  scheduleUrl: string;
+}): Promise<boolean> {
+  if (!input.to?.includes("@")) return false;
+
+  return sendEmail({
+    to: input.to,
+    subject: `${input.investorName} asked for a different time`,
+    html: shell(
+      para(`Hi ${esc(input.founderName.split(/\s+/)[0] || input.founderName)},`) +
+      para(
+        `${esc(input.investorName)} would like to meet at another time` +
+        (input.currentWhen ? ` — ${esc(input.currentWhen)} does not work for them.` : ".") +
+        ` The introduction stands; only the slot is open again.`,
+      ) +
+      (input.note
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#f8fafc;border-left:3px solid ${BLUE};margin:0 0 16px;">
+             <tr><td style="padding:10px 14px;font-family:Arial,sans-serif;font-size:13px;color:#33415a;">
+               ${esc(input.note)}
+             </td></tr>
+           </table>`
+        : "") +
+      `<div>${button(input.scheduleUrl, "Pick another time →", true)}</div>`,
+    ),
+  });
+}
+
+// ── One email instead of forty ────────────────────────────────────────────
+// An investor matched to forty founders was mailed forty times in one minute,
+// each message perfectly reasonable on its own. The cap on the board limits
+// how many go out; this changes what "several" looks like in an inbox.
+
+export type DigestItem = {
+  introductionId: string;
+  founder: Recipient;
+  sharedSectors: string[];
+};
+
+/** The subject for a bundled send. One line, no templating — it is a count. */
+export function digestSubject(count: number, eventTitle: string): string {
+  return `${count} founders worth meeting at ${eventTitle}`;
+}
+
+/**
+ * One block per founder, each with its own pair of links.
+ *
+ * The links are the same per-introduction signed tokens the single email uses,
+ * so accepting from row three lands on exactly the page row three would have
+ * had on its own. Nothing new has to understand "accepted 3 of 40".
+ */
+export function introductionDigestHtml(input: {
+  greeting: string;
+  intro: string;
+  rows: { name: string; meta: string; pitch: string | null; respondUrl: string }[];
+}): string {
+  const rows = input.rows.map((r) => `
+    <tr><td style="padding:14px 0;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
+      <div style="font-size:14px;color:${NAVY};">${esc(r.name)}</div>
+      ${r.meta ? `<div style="font-size:12.5px;color:#8a93a6;margin-top:2px;">${esc(r.meta)}</div>` : ""}
+      ${r.pitch ? `<div style="font-size:13px;color:#33415a;margin-top:6px;line-height:1.55;">${esc(r.pitch)}</div>` : ""}
+      <div style="margin-top:10px;">
+        ${button(`${r.respondUrl}?a=yes`, "Accept", true)}
+        ${button(`${r.respondUrl}?a=no`, "No thanks", false)}
+      </div>
+    </td></tr>`).join("");
+
+  return shell(
+    para(esc(input.greeting)) +
+    para(esc(input.intro)) +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>` +
+    `<p style="margin:16px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;">
+       Accept as many or as few as you like. Declining is silent — nobody is told who declined.
+     </p>`,
+  );
+}
+
+/**
+ * Send one investor everything they matched with.
+ *
+ * Returns false rather than throwing: a failed send is a row the next pass can
+ * try again, not a crashed job.
+ */
+export async function sendIntroductionDigest(input: {
+  to: string;
+  investorName: string;
+  eventTitle: string;
+  items: DigestItem[];
+  baseUrl: string;
+}): Promise<boolean> {
+  if (!input.to?.includes("@") || input.items.length === 0) return false;
+
+  const base = input.baseUrl.replace(/\/$/, "");
+  const rows = input.items.map((item) => {
+    const meta = [
+      item.founder.company,
+      item.founder.stage,
+      item.founder.raising,
+      item.sharedSectors.join(", "),
+    ].map((v) => (v ?? "").trim()).filter(Boolean).join(" · ");
+    return {
+      name: item.founder.name,
+      meta,
+      pitch: item.founder.pitch?.trim() || null,
+      respondUrl: `${base}/e/intro/${introToken(item.introductionId)}`,
+    };
+  });
+
+  return sendEmail({
+    to: input.to,
+    subject: digestSubject(input.items.length, input.eventTitle),
+    html: introductionDigestHtml({
+      greeting: `Hi ${input.investorName.split(/\s+/)[0] || input.investorName},`,
+      intro: `${input.items.length} founders at ${input.eventTitle} match what you back. Accept the ones you want to meet — each sends you their time and a link.`,
+      rows,
+    }),
+  });
+}
