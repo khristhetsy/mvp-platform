@@ -6,6 +6,8 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listAllEvents } from "@/lib/icfo-events/queries";
 import { loadNetworkingBoard, type NetworkingBoard as Board } from "@/lib/icfo-events/networking-board";
 import { NetworkingBoard } from "@/components/admin-events/NetworkingBoard";
+import { listTemplates } from "@/lib/icfo-events/introductions-server";
+import { IntroTemplatesEditor } from "@/components/admin-events/IntroTemplatesEditor";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Networking Matching" };
@@ -13,7 +15,7 @@ export const metadata = { title: "Networking Matching" };
 /**
  * Who matched with whom, and where their connection request got to.
  *
- * One event at a time: matches are every pair of opted-in attendees, so the
+ * One event at a time: matches are every pair of registered attendees, so the
  * set grows with the square of the room and there is nothing useful to say
  * across events at once.
  */
@@ -30,9 +32,10 @@ export default async function NetworkingMatchingPage({
   const selected = eventId && events.some((e) => e.id === eventId) ? eventId : events[0]?.id ?? null;
   const empty: Board = {
     matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
-    counts: { matches: 0, requested: 0, accepted: 0, declined: 0 },
+    counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0 },
   };
   const board = selected ? await loadNetworkingBoard(selected) : empty;
+  const templates = await listTemplates().catch(() => []);
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Networking Matching">
@@ -48,11 +51,21 @@ export default async function NetworkingMatchingPage({
               No events yet.
             </p>
           ) : (
-            <NetworkingBoard
-              board={board}
-              eventId={selected ?? ""}
-              events={events.map((e) => ({ id: e.id, title: e.title }))}
-            />
+            <>
+              <NetworkingBoard
+                board={board}
+                eventId={selected ?? ""}
+                events={events.map((e) => ({ id: e.id, title: e.title }))}
+              />
+              {templates.length ? (
+                <div className="mt-6">
+                  <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    The messages that go out
+                  </h2>
+                  <IntroTemplatesEditor initial={templates} />
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </WorkspacePageContainer>

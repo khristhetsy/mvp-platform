@@ -83,6 +83,10 @@
     {
       "path": "/api/cron/event-invite-reminders",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/intro-follow-ups",
+      "schedule": "0 11 * * *"
     }
   ]
 }

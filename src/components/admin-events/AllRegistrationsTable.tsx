@@ -11,8 +11,6 @@ export type AllRegRow = {
   contactEmail: string | null;
   company: string | null;
   createdAt: string;
-  /** Whether they agreed to appear on the public event page. */
-  listedPublicly: boolean;
 };
 
 const I = "rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs";
@@ -61,10 +59,9 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
   }, [rows, q, eventId, type]);
 
   function exportCsv() {
-    const header = ["Name", "Email", "Company", "Type", "Event", "Registered", "Listed publicly"];
+    const header = ["Name", "Email", "Company", "Type", "Event", "Registered"];
     const body = shown.map((r) => [
-      r.contactName, r.contactEmail, r.company, r.attendeeType, r.eventTitle,
-      r.createdAt, r.listedPublicly ? "yes" : "no",
+      r.contactName, r.contactEmail, r.company, r.attendeeType, r.eventTitle, r.createdAt,
     ].map(csvCell).join(","));
     const blob = new Blob([[header.join(","), ...body].join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -111,7 +108,6 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
               <th className="px-3.5 py-2 font-bold">Type</th>
               <th className="px-3.5 py-2 font-bold">Event</th>
               <th className="px-3.5 py-2 font-bold">Registered</th>
-              <th className="px-3.5 py-2 font-bold">Listed publicly</th>
             </tr>
           </thead>
           <tbody>
@@ -132,11 +128,6 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
                 </td>
                 <td className="px-3.5 py-2 text-[var(--text-secondary)]">{r.eventTitle ?? "—"}</td>
                 <td className="px-3.5 py-2 text-[var(--text-muted)]">{fmt(r.createdAt)}</td>
-                <td className="px-3.5 py-2">
-                  {r.listedPublicly
-                    ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Yes</span>
-                    : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">Private</span>}
-                </td>
               </tr>
             ))}
           </tbody>

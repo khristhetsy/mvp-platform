@@ -155,3 +155,44 @@ describe("the public-listing question ships as a new version", () => {
     expect(investor.filter((f) => f.key === "listedPublicly")).toHaveLength(1);
   });
 });
+
+describe("and comes back off once registration is the qualifier", () => {
+  const drop = () =>
+    pg.exec(
+      readFileSync(
+        join(process.cwd(), "supabase/migrations/20260922007_registration_drop_listed_publicly.sql"),
+        "utf8",
+      ),
+    );
+
+  it("removes the question from every role", async () => {
+    await drop();
+    const r = await pg.query<Row>(`select * from public.registration_field_sets where is_active`);
+    expect(JSON.stringify(r.rows[0].by_type)).not.toContain("listedPublicly");
+  });
+
+  it("keeps the other questions", async () => {
+    const r = await pg.query<Row>(`select * from public.registration_field_sets where is_active`);
+    const byType = r.rows[0].by_type as Record<string, { key: string }[]>;
+    expect((byType.investor ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("leaves the version that asked it readable, so it can be reverted", async () => {
+    const r = await pg.query<{ n: number }>(
+      `select count(*)::int as n from public.registration_field_sets
+        where by_type::text like '%listedPublicly%'`,
+    );
+    expect(r.rows[0].n).toBeGreaterThan(0);
+  });
+
+  it("is a no-op when re-run", async () => {
+    const before = await pg.query<{ n: number }>(
+      `select count(*)::int as n from public.registration_field_sets`,
+    );
+    await drop();
+    const after = await pg.query<{ n: number }>(
+      `select count(*)::int as n from public.registration_field_sets`,
+    );
+    expect(after.rows[0].n).toBe(before.rows[0].n);
+  });
+});

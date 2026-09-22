@@ -13,6 +13,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { listIntroductions } from "@/lib/icfo-events/introductions-server";
 
 function raw(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -37,6 +38,9 @@ export type MatchPair = {
   score: number;
   status: "none" | "requested" | "accepted" | "declined";
   requestedBy: string | null;
+  /** Set once we have sent an introduction for this pair. */
+  introductionId: string | null;
+  followUps: number;
 };
 
 export type NetworkingBoard = {
@@ -48,12 +52,12 @@ export type NetworkingBoard = {
   pairs: MatchPair[];
   /** Pairs found, which can be far more than the page shows. */
   totalPairs: number;
-  counts: { matches: number; requested: number; accepted: number; declined: number };
+  counts: { matches: number; requested: number; accepted: number; declined: number; notSent: number };
 };
 
 const EMPTY: NetworkingBoard = {
   matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
-  counts: { matches: 0, requested: 0, accepted: 0, declined: 0 },
+  counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0 },
 };
 
 /** A 106-person event is ~5,600 pairs. Show the strongest; count them all. */
@@ -80,11 +84,12 @@ function sectorsOf(answers: Record<string, unknown>): string[] {
 export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBoard> {
   try {
     const db = raw();
-    const [regsRes, connsRes] = await Promise.all([
+    const [regsRes, connsRes, intros] = await Promise.all([
       db.from("registrations")
         .select("id, attendee_id, attendee_type, answers, profiles:attendee_id(full_name)")
         .eq("event_id", eventId),
       db.from("networking_connections").select("from_id, to_id, status").eq("event_id", eventId),
+      listIntroductions(eventId),
     ]);
     if (regsRes.error) return EMPTY;
 
@@ -122,6 +127,11 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
       });
     }
 
+    // Introductions we sent, keyed the same way as the pairs.
+    const introByPair = new Map(
+      intros.map((i) => [pairKey(i.investorRegId, i.founderRegId), i]),
+    );
+
     const pairs: MatchPair[] = [];
     for (let i = 0; i < people.length; i += 1) {
       for (let j = i + 1; j < people.length; j += 1) {
@@ -138,14 +148,24 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
         const a = investorFirst ? y.side : x.side;
         const b = investorFirst ? x.side : y.side;
 
+        const key = pairKey(x.side.registrationId, y.side.registrationId);
+        // An introduction we sent outranks an attendee-to-attendee request:
+        // it is the thing staff acted on and the thing they are waiting for.
+        const intro = introByPair.get(key);
         const conn = a.profileId && b.profileId ? byPair.get(pairKey(a.profileId, b.profileId)) : undefined;
+        const status: MatchPair["status"] = intro
+          ? (intro.status === "sent" ? "requested" : intro.status)
+          : conn?.status ?? "none";
+
         pairs.push({
-          key: pairKey(x.side.registrationId, y.side.registrationId),
+          key,
           a, b,
           sharedInterests: shared,
           score,
-          status: conn?.status ?? "none",
-          requestedBy: conn?.requestedBy ?? null,
+          status,
+          requestedBy: intro ? null : conn?.requestedBy ?? null,
+          introductionId: intro?.id ?? null,
+          followUps: intro?.followUps ?? 0,
         });
       }
     }
@@ -164,6 +184,7 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
         requested: count("requested"),
         accepted: count("accepted"),
         declined: count("declined"),
+        notSent: count("none"),
       },
     };
   } catch {

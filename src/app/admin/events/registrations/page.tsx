@@ -14,7 +14,7 @@ import {
 import { sharedOptionList } from "@/lib/icfo-events/registration-field-sets";
 import { RegistrationFieldsEditor } from "@/components/admin-events/RegistrationFieldsEditor";
 import { AllRegistrationsTable, type AllRegRow } from "@/components/admin-events/AllRegistrationsTable";
-import { LISTED_PUBLICLY_KEY } from "@/lib/icfo-events/registration-fields";
+
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Registration" };
@@ -85,9 +85,6 @@ export default async function RegistrationPage({
       contactEmail: r.contactEmail,
       company: r.company,
       createdAt: r.createdAt,
-      // Absent means private: the tick postdates most of these registrations,
-      // and nobody is listed by default.
-      listedPublicly: r.answers[LISTED_PUBLICLY_KEY] === true,
     }));
     return (
       <AllRegistrationsTable
