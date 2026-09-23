@@ -94,7 +94,7 @@ export const offeringTypeCopy = {
     saving: "Saving…",
   },
   legalFooter:
-    "iCFO CapitalOS is a software platform. It is not a registered broker-dealer, funding portal, or investment adviser, and does not offer, sell, or recommend securities.",
+    "iCapOS is a software platform. It is not a registered broker-dealer, funding portal, or investment adviser, and does not offer, sell, or recommend securities.",
   progress: {
     steps: ["Account", "Company", "Capital structure", "Readiness intake"],
     current: 3,

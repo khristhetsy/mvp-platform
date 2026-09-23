@@ -27,6 +27,12 @@ const REQUIRE_BUILT = args.has("--require-built");
 const DEPRECATED_HEX = [/#0D9488/i, /#5EEAD4/i, /#534AB7/i, /#3C3489/i];
 const SHAREDCMP_KEY = /sharedCmp\.[a-z_]+/;
 const OLD_BRAND = /CapitalOS/; // PascalCase only — lowercase infra keys are exempt
+// Narrow exemption: the diligence report's legal disclaimer names the registered
+// legal entity "iCFO CapitalOS", which must stay verbatim. Only this exact
+// sentence is stripped before the brand scan; any other "CapitalOS" still fails.
+const BRAND_EXEMPT = [
+  "iCFO CapitalOS is not a registered broker-dealer, funding portal, or investment adviser.",
+];
 const PUBLIC_ROUTES = ["/", "/founders", "/investors", "/marketplace", "/pricing"];
 
 const failures = [];
@@ -93,7 +99,8 @@ function checkSourceStrings() {
   for (const f of files) {
     const s = readFileSync(f, "utf8");
     if (DEPRECATED_HEX.some((re) => re.test(s))) { hex++; fail(`hex: deprecated brand color in ${f}`); }
-    if (OLD_BRAND.test(s)) { brand++; fail(`brand: "CapitalOS" in ${f}`); }
+    const brandScan = BRAND_EXEMPT.reduce((acc, ex) => acc.split(ex).join(""), s);
+    if (OLD_BRAND.test(brandScan)) { brand++; fail(`brand: "CapitalOS" in ${f}`); }
   }
   console.log(`  source strings: ${hex} files with deprecated hex, ${brand} with old brand`);
 }

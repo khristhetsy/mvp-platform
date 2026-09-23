@@ -18,7 +18,7 @@ type PipelineStage = "new" | "contacted" | "interested" | "meeting" | "committed
 const PIPELINE_STAGES: { id: PipelineStage; label: string; color: string }[] = [
   { id: "new",        label: "New",        color: "#185FA5" },
   { id: "contacted",  label: "Contacted",  color: "#BA7517" },
-  { id: "interested", label: "Interested", color: "#534AB7" },
+  { id: "interested", label: "Interested", color: "#1A6CE4" },
   { id: "meeting",    label: "Meeting",    color: "#1D9E75" },
   { id: "committed",  label: "Committed",  color: "#0F6E56" },
   { id: "passed",     label: "Passed",     color: "#A32D2D" },

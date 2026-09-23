@@ -18,10 +18,10 @@ export const EVENT_BADGE = "iCFO Capital · Ecosystem Showcase";
 
 /** Session accent by type — matches the approved template (§5). */
 export const SESSION_ACCENT: Record<string, string> = {
-  keynote: "#0D9488",
-  panel: "#0D9488",
-  workshop: "#0D9488",
-  founder_showcase: "#534AB7",
+  keynote: "#185FA5",
+  panel: "#185FA5",
+  workshop: "#185FA5",
+  founder_showcase: "#1A6CE4",
   talk_show: "#0c2340",
 };
 
@@ -119,7 +119,7 @@ export function buildEventMergeData(
       type: s.type,
       title: s.title,
       abstract: s.abstract ?? "",
-      accent: SESSION_ACCENT[s.type] ?? "#0D9488",
+      accent: SESSION_ACCENT[s.type] ?? "#185FA5",
     }));
 
   return {

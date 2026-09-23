@@ -706,7 +706,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 {q.error ? <p className="mt-1 text-[11px] text-rose-600">{q.error}</p> : null}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="text-[10.5px] text-slate-400">Event color</span>
-                  {["#534AB7", "#185FA5", "#0F6E56", "#CA8A04", "#A32D2D"].map((c) => (
+                  {["#1A6CE4", "#185FA5", "#0F6E56", "#CA8A04", "#A32D2D"].map((c) => (
                     <button key={c} type="button" aria-label={`Set color ${c}`} onClick={() => void setStyle(q.id, { color: c })}
                       className="h-4 w-4 rounded-full ring-offset-1" style={{ background: c, boxShadow: q.event_color === c ? `0 0 0 2px #fff, 0 0 0 3px ${c}` : "none" }} />
                   ))}
@@ -928,7 +928,7 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
 
 function Attribution({ data }: { data: WeekBar[] }) {
   const max = Math.max(1, ...data.map((d) => d.linkedin + d.email + d.website + d.other));
-  const legend: [string, string][] = [["LinkedIn", "#4338CA"], ["Email", "#0D9488"], ["Website", "#F59E0B"], ["Other", "#CBD5E1"]];
+  const legend: [string, string][] = [["LinkedIn", "#4338CA"], ["Email", "#185FA5"], ["Website", "#F59E0B"], ["Other", "#CBD5E1"]];
   return (
     <div className="max-w-2xl">
       <p className="text-[13px] font-medium text-slate-700">Leads captured by source · 8 weeks</p>
@@ -937,7 +937,7 @@ function Attribution({ data }: { data: WeekBar[] }) {
           <div key={d.week} className="flex flex-1 flex-col items-center gap-1">
             <div className="flex w-full flex-col-reverse overflow-hidden rounded" style={{ height: 150 }}>
               <div style={{ height: `${(d.linkedin / max) * 150}px`, background: "#4338CA" }} />
-              <div style={{ height: `${(d.email / max) * 150}px`, background: "#0D9488" }} />
+              <div style={{ height: `${(d.email / max) * 150}px`, background: "#185FA5" }} />
               <div style={{ height: `${(d.website / max) * 150}px`, background: "#F59E0B" }} />
               <div style={{ height: `${(d.other / max) * 150}px`, background: "#CBD5E1" }} />
             </div>

@@ -177,7 +177,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
     <div style={{ position: "relative", flex: `0 1 ${typeof width === "number" ? `${width}px` : width}`, minWidth: 260 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
         <i className="ti ti-search" style={{ color: "var(--muted-foreground)", fontSize: 14 }} aria-hidden="true" />
-        {applied && <Chip icon="ti-star" text={applied.name} color="#3C3489" bg="#EEEDFE" border="#CECBF6" onRemove={clearAll} />}
+        {applied && <Chip icon="ti-star" text={applied.name} color="#0A1A40" bg="#EEEDFE" border="#CECBF6" onRemove={clearAll} />}
         {state.q && !typed && <Chip text={`Search: ${state.q}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => set({ q: "" })} />}
         {state.quick.map((k) => <Chip key={k} text={quickLabel(k)} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => toggleQuick(k)} />)}
         {Object.entries(state.fields).map(([f, vals]) => <Chip key={f} text={`${fieldLabel(f)}: ${vals.join(", ")}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => { const copy = { ...state.fields }; delete copy[f]; set({ fields: copy }); }} />)}

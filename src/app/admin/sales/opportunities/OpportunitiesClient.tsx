@@ -313,7 +313,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
         );
       }
       case "sequence": return o.sequence
-        ? <span style={{ fontSize: 11.5, color: "#3C3489", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }} title={o.sequence.name}>{o.sequence.name} · step {o.sequence.step}/{o.sequence.steps}</span>
+        ? <span style={{ fontSize: 11.5, color: "#0A1A40", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }} title={o.sequence.name}>{o.sequence.name} · step {o.sequence.step}/{o.sequence.steps}</span>
         : <span style={{ color: "var(--muted-foreground)" }}>—</span>;
     }
   }

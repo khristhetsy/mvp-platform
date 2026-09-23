@@ -106,7 +106,7 @@ export function SalesHubTabs({ viewOnly = false, inline = false }: { viewOnly?: 
               <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 30, width: 220, maxHeight: 300, overflowY: "auto", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: 5 }}>
                 {members.map((m) => (
                   <button key={m.id} onClick={() => setView(m.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: m.id === viewAs ? "#F7F6FE" : "transparent", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
-                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#EEEDFE", color: "#3C3489", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 500, flexShrink: 0 }}>{m.name.slice(0, 2).toUpperCase()}</span>
+                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#EEEDFE", color: "#0A1A40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 500, flexShrink: 0 }}>{m.name.slice(0, 2).toUpperCase()}</span>
                     <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</span>
                     {m.id === viewAs && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#4338CA" }} aria-hidden="true" />}
                   </button>

@@ -7,7 +7,7 @@ export const STAGE_LABELS: Record<StageKey, string> = {
   outreach: "Outreach", clicks: "Clicks", meetings: "Meetings", conversions: "Conversions",
 };
 export const STAGE_COLORS: Record<StageKey, string> = {
-  outreach: "#534AB7", clicks: "#185FA5", meetings: "#0F6E56", conversions: "#3B6D11",
+  outreach: "#1A6CE4", clicks: "#185FA5", meetings: "#0F6E56", conversions: "#3B6D11",
 };
 export const GRAINS: Grain[] = ["week", "month", "quarter", "year"];
 export const GRAIN_LABELS: Record<Grain, string> = { week: "Week", month: "Month", quarter: "Quarter", year: "Year" };

@@ -13,7 +13,7 @@ const s = (over: Partial<Session> = {}): Session => ({
   type: "keynote",
   title: "Auditorium",
   abstract: "",
-  accent: "#0D9488",
+  accent: "#185FA5",
   ...over,
 });
 

@@ -1,9 +1,9 @@
 /**
  * The event email's colours — one family, six steps.
  *
- * The email had drifted into five hues, three of which were near-misses of
+ * The email had drifted into five hues, several of which were near-misses of
  * tokens the platform already defines: #0c2340 beside `--navy #0A1A40`,
- * #2E78F5 beside `--blue #2563eb`, #0D9488 beside `--teal #0f766e`. Almost
+ * #2E78F5 beside `--blue #2563eb`. Almost
  * matching reads worse than clashing, because it looks accidental rather than
  * chosen. These are the real tokens, mirrored here because an email cannot
  * read CSS variables.

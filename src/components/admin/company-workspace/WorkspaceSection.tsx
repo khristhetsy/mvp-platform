@@ -13,7 +13,7 @@ type Tone = "blue" | "purple" | "amber" | "gray" | "red" | "teal" | "green";
 
 const TONES: Record<Tone, { icon: string; line: string }> = {
   blue: { icon: "#185FA5", line: "#B5D4F4" },
-  purple: { icon: "#534AB7", line: "#CECBF6" },
+  purple: { icon: "#1A6CE4", line: "#CECBF6" },
   amber: { icon: "#BA7517", line: "#FAC775" },
   gray: { icon: "#5F5E5A", line: "#D3D1C7" },
   red: { icon: "#A32D2D", line: "#F0C7C7" },

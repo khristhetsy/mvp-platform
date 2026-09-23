@@ -89,7 +89,7 @@ export function renderIntroEmail(f: IntroTemplateFields): { subject: string; htm
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e6e9f0;border-radius:12px;margin:18px 0">
     <tr><td style="padding:16px 18px">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:40px;vertical-align:middle"><div style="width:40px;height:40px;border-radius:9px;background:#EEEDFE;color:#3C3489;font-weight:700;font-size:16px;text-align:center;line-height:40px">${initial}</div></td>
+        <td style="width:40px;vertical-align:middle"><div style="width:40px;height:40px;border-radius:9px;background:#EEEDFE;color:#0A1A40;font-weight:700;font-size:16px;text-align:center;line-height:40px">${initial}</div></td>
         <td style="padding-left:12px;vertical-align:middle"><div style="font-size:15px;font-weight:600;color:#22304a">${company}</div>${tagline ? `<div style="font-size:13px;color:#5b6577">${tagline}</div>` : ""}</td>
       </tr></table>
       ${metaCells ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px"><tr>${metaCells}</tr></table>` : ""}

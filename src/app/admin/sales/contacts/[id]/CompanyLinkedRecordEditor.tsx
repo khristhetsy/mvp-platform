@@ -62,7 +62,7 @@ function Chips({ options, value, onToggle, single = false }: { options: string[]
         return (
           <button key={o} type="button" onClick={() => onToggle(o)}
             style={{ borderRadius: 999, padding: "3px 10px", fontSize: 11.5, cursor: "pointer",
-              border: on ? "1px solid #2E78F5" : "1px solid #e2e8f0", background: on ? "#EEEDFE" : "white", color: on ? "#3C3489" : "#475569" }}>
+              border: on ? "1px solid #2E78F5" : "1px solid #e2e8f0", background: on ? "#EEEDFE" : "white", color: on ? "#0A1A40" : "#475569" }}>
             {o}{single && on ? <> <i className="ti ti-check" aria-hidden="true" /></> : ""}
           </button>
         );
@@ -166,7 +166,7 @@ export function CompanyLinkedRecordEditor({
   const stageLabel = REVENUE_STAGES.find((s) => s.value === data.revenue_stage)?.label ?? data.revenue_stage;
   // Blank because the wizard hasn't asked, rather than because the answer is none.
   const unasked = !company.fundingInfoCaptured;
-  const pill = (t: string) => <span style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>;
+  const pill = (t: string) => <span style={{ fontSize: 11, background: "#EEEDFE", color: "#0A1A40", borderRadius: 12, padding: "2px 9px" }}>{t}</span>;
 
   return (
     <div style={{ marginTop: 6 }}>

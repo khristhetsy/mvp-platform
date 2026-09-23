@@ -125,7 +125,7 @@ const DEPARTMENTS = ["Sales", "Investor Relations", "Marketing", "Administration
 const UNASSIGNED = "Unassigned";
 const DEPT_META: Record<string, { icon: string; color: string }> = {
   Sales: { icon: "ti-shopping-cart", color: "#0F6E56" },
-  "Investor Relations": { icon: "ti-briefcase", color: "#534AB7" },
+  "Investor Relations": { icon: "ti-briefcase", color: "#1A6CE4" },
   Marketing: { icon: "ti-speakerphone", color: "#BA7517" },
   Administration: { icon: "ti-building-bank", color: "#185FA5" },
   Events: { icon: "ti-calendar-event", color: "#199e70" },

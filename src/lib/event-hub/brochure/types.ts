@@ -57,7 +57,7 @@ export type ThemeColors = { primary: string; accent: string; coverText: string; 
 export const THEMES: Record<BrochureTheme, ThemeColors> = {
   navy: { primary: "#0c2340", accent: "#2E78F5", coverText: "#ffffff", coverBadge: "#9fd0ff" },
   teal: { primary: "#0f6e56", accent: "#1D9E75", coverText: "#ffffff", coverBadge: "#9fe1cb" },
-  violet: { primary: "#3C3489", accent: "#7F77DD", coverText: "#ffffff", coverBadge: "#cecbf6" },
+  violet: { primary: "#0A1A40", accent: "#7F77DD", coverText: "#ffffff", coverBadge: "#cecbf6" },
   mono: { primary: "#2C2C2A", accent: "#5F5E5A", coverText: "#ffffff", coverBadge: "#d3d1c7" },
 };
 export const THEME_LABEL: Record<BrochureTheme, string> = { navy: "Navy", teal: "Teal", violet: "Violet", mono: "Mono" };

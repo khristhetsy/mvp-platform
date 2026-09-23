@@ -246,7 +246,7 @@ function Detail({ d, seq }: { d: SequenceDetail; seq: { id: string; name: string
     const blob = new Blob([rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${seq.name.replace(/[^\w]+/g, "-")}-followup.csv`; a.click(); URL.revokeObjectURL(a.href);
   };
-  const tag: Record<string, { bg: string; fg: string; t: string }> = { won: { bg: "#EAF3DE", fg: "#27500A", t: "Won" }, meeting: { bg: "#EEEDFE", fg: "#3C3489", t: "Meeting" }, replied: { bg: "#E1F5EE", fg: "#085041", t: "Replied" } };
+  const tag: Record<string, { bg: string; fg: string; t: string }> = { won: { bg: "#EAF3DE", fg: "#27500A", t: "Won" }, meeting: { bg: "#EEEDFE", fg: "#0A1A40", t: "Meeting" }, replied: { bg: "#E1F5EE", fg: "#085041", t: "Replied" } };
   const h = (t: string) => <div style={{ fontSize: 10.5, letterSpacing: ".04em", textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>{t}</div>;
   return (
     <div style={{ background: "#F8FAFD", padding: "12px 14px" }}>

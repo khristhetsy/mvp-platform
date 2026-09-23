@@ -75,7 +75,7 @@ const RESP_COLS = "repeat(auto-fit, minmax(240px, 1fr))";
 const TAG_PALETTE = [
   { bg: "#D5F5E8", fg: "#0F6E56" }, { bg: "#E6F1FB", fg: "#185FA5" },
   { bg: "#FBE7F0", fg: "#993556" }, { bg: "#FAEEDA", fg: "#854F0B" },
-  { bg: "#EEEDFE", fg: "#3C3489" }, { bg: "#FCEBEB", fg: "#A32D2D" },
+  { bg: "#EEEDFE", fg: "#0A1A40" }, { bg: "#FCEBEB", fg: "#A32D2D" },
   { bg: "#EAF3DE", fg: "#3B6D11" }, { bg: "#F1EFE8", fg: "#5F5E5A" },
 ];
 function tagColor(name: string): { bg: string; fg: string } {
@@ -244,7 +244,7 @@ function EditablePrefRow({
       ? onChange(selSet.has(o) ? "" : o)
       : onChange((selSet.has(o) ? selected.filter((x) => x !== o) : [...selected, o]).join(", "));
     const chipBg = rating ? "#E1F5EE" : "#EEEDFE";
-    const chipFg = rating ? "#0F6E56" : "#3C3489";
+    const chipFg = rating ? "#0F6E56" : "#0A1A40";
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
         <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)", paddingTop: 6 }}>{label}</span>
@@ -330,7 +330,7 @@ function EditablePrefRow({
           <a
             href={hrefOf(values[0])} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            style={{ color: "#3C3489", textDecoration: "underline", overflowWrap: "anywhere" }}
+            style={{ color: "#0A1A40", textDecoration: "underline", overflowWrap: "anywhere" }}
           >
             {values[0]} <i className="ti ti-external-link" aria-hidden="true" style={{ fontSize: 11 }} />
           </a>
@@ -339,7 +339,7 @@ function EditablePrefRow({
         ) : values.map((v) => {
           const unlisted = strict && !options.includes(v);
           return <span key={v} title={unlisted ? "Not one of the Odoo options — open the field and pick the matching one." : undefined}
-            style={{ fontSize: 11, background: unlisted ? "#FAEEDA" : rating ? "#E1F5EE" : "#EEEDFE", color: unlisted ? "#633806" : rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{unlisted ? `Unlisted · ${v}` : v}</span>;
+            style={{ fontSize: 11, background: unlisted ? "#FAEEDA" : rating ? "#E1F5EE" : "#EEEDFE", color: unlisted ? "#633806" : rating ? "#0F6E56" : "#0A1A40", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{unlisted ? `Unlisted · ${v}` : v}</span>;
         })}
         <i className="ti ti-pencil" aria-hidden="true" style={{ fontSize: 12.5, color: "var(--muted-foreground)", opacity: hover ? 1 : 0, marginLeft: 2 }} />
         {changed ? <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>edited</span> : null}
@@ -804,7 +804,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Member Portal Plan</span>
                 {memberPlan ? (
                   <span style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minWidth: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#3C3489", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#0A1A40", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>
                       {memberPlan.label}{memberPlan.priceLabel ? ` · ${memberPlan.priceLabel}` : ""}
                     </span>
                     <span
