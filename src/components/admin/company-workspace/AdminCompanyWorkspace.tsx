@@ -243,7 +243,7 @@ export function AdminCompanyWorkspace({
           ) : null}
 
           <WorkspaceSection icon="ti-list-check" tone="gray" title="Operations" subtitle={t("items_affecting_this_company_across_operatio")}>
-            <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
+            <CompanyQueuesPanel items={data.queueItems} />
           </WorkspaceSection>
 
           {/* Staff controls — review/publish, stage override, and the destructive

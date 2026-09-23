@@ -807,7 +807,7 @@ function fade(color: string): string {
 
 /**
  * Wrap already-escaped content in a link when the block has a URL. Unsafe or
- * missing URLs fall through to plain text rather than emitting a dead `href="#"`
+ * missing URLs fall through to plain text rather than emitting a dead `#` link
  * that looks clickable to the recipient but goes nowhere.
  */
 function linkWrap(inner: string, url: string | undefined, color: string): string {

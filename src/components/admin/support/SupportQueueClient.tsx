@@ -107,7 +107,8 @@ export function SupportQueueClient({
   function toggleResolved() {
     const q = new URLSearchParams(params.toString());
     if (showResolved) q.delete("resolved"); else q.set("resolved", "1");
-    router.push(`/admin/support${q.toString() ? `?${q}` : ""}`);
+    const query = q.toString();
+    router.push(query ? `/admin/support?${query}` : "/admin/support");
   }
 
   async function act(body: Record<string, unknown>) {

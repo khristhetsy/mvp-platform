@@ -469,7 +469,12 @@ export function StageAssignmentClient({
               Also notified
             </span>
             <span className="flex items-center gap-1.5">
-              <Checkbox state="some" onClick={() => undefined} label="Partly filled" />
+              <span
+                aria-hidden
+                className="inline-flex h-[15px] w-[15px] items-center justify-center rounded border border-indigo-600 bg-indigo-600 text-[10px] font-bold leading-none text-white"
+              >
+                –
+              </span>
               Some, not all
             </span>
           </div>

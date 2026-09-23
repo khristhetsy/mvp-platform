@@ -73,13 +73,13 @@ function MenuItem({
   reason,
   danger,
   onClick,
-}: Readonly<{ label: string; reason?: string; danger?: boolean; onClick: () => void }>) {
+}: Readonly<{ label: string; reason?: string; danger?: boolean; onClick?: () => void }>) {
   const blocked = Boolean(reason);
   return (
     <button
       type="button"
       disabled={blocked}
-      onClick={onClick}
+      onClick={blocked ? undefined : onClick}
       className={`${MENU_ITEM} ${
         blocked
           ? "cursor-not-allowed text-slate-400"
@@ -649,7 +649,7 @@ export function AdminCompanyCard({ company }: Props) {
                       onClick={fromMenu(() => setShowFeedbackForm("changes_requested"))}
                     />
                     {isApproved ? (
-                      <MenuItem label="Approve" reason={approveBlockedBy} onClick={() => undefined} />
+                      <MenuItem label="Approve" reason={approveBlockedBy} />
                     ) : null}
 
                     <div className="my-1 h-px bg-slate-100" />
@@ -690,7 +690,7 @@ export function AdminCompanyCard({ company }: Props) {
                       onClick={fromMenu(() => setShowDocuments((open) => !open))}
                     />
                     {hasPitchDeck ? null : (
-                      <MenuItem label="Pitch deck" reason="none uploaded" onClick={() => undefined} />
+                      <MenuItem label="Pitch deck" reason="none uploaded" />
                     )}
                   </div>
                 ) : null}
