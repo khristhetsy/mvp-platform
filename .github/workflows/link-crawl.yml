@@ -24,31 +24,41 @@ on:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    # Secrets can't be referenced in a step-level `if:`, so surface the one we
-    # branch on as a job-level env var and gate the step on that instead.
+    # Secrets can't be referenced in a step-level `if:`, so surface the ones we
+    # branch on as job-level env vars and gate the steps on those instead.
     env:
       CRAWL_STORAGE_STATE: ${{ secrets.CRAWL_STORAGE_STATE }}
+      # Resolve the effective base URL once (manual input wins over the secret).
+      # Empty when neither is configured — the crawl then skips instead of
+      # failing against a non-existent localhost server.
+      CRAWL_BASE_URL: ${{ github.event.inputs.base_url || secrets.CRAWL_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Skip notice (no base URL configured)
+        if: ${{ env.CRAWL_BASE_URL == '' }}
+        run: echo "No CRAWL_BASE_URL secret and no base_url input — nothing to crawl. Skipping gracefully."
+
       - name: Install Playwright + Chromium
+        if: ${{ env.CRAWL_BASE_URL != '' }}
         run: npm i -D playwright && npx playwright install --with-deps chromium
 
       - name: Write auth storage state
-        if: ${{ env.CRAWL_STORAGE_STATE != '' }}
+        if: ${{ env.CRAWL_BASE_URL != '' && env.CRAWL_STORAGE_STATE != '' }}
         run: printf '%s' "$CRAWL_STORAGE_STATE" > auth-state.json
 
       - name: Crawl
+        if: ${{ env.CRAWL_BASE_URL != '' }}
         run: npm run audit:crawl
         env:
-          BASE_URL: ${{ github.event.inputs.base_url || secrets.CRAWL_BASE_URL }}
+          BASE_URL: ${{ env.CRAWL_BASE_URL }}
           STORAGE_STATE: auth-state.json
           SAMPLE_ID: ${{ github.event.inputs.sample_id || vars.CRAWL_SAMPLE_ID }}

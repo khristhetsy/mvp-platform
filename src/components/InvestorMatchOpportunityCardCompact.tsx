@@ -43,7 +43,7 @@ export function InvestorMatchOpportunityCardCompact({
         padding: 12,
         transition: "box-shadow .15s, border-color .15s",
       }}
-      className="group hover:border-[#2E78F5] hover:shadow-[0_4px_14px_rgba(83,74,183,.15)]"
+      className="group hover:border-[#2E78F5] hover:shadow-[0_4px_14px_rgba(26,108,228,.15)]"
     >
       {/* Top row: donut + company info */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
