@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   resolve: {
     // See src/test/server-only-stub.ts — the real package throws outside Next's RSC runtime.
-    alias: { "server-only": new URL("./src/test/server-only-stub.ts", import.meta.url).pathname },
+    alias: { "server-only": decodeURIComponent(new URL("./src/test/server-only-stub.ts", import.meta.url).pathname) },
   },
   test: {
     environment: "node",
