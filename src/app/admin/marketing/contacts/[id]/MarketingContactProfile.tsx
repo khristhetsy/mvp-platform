@@ -127,9 +127,9 @@ export function MarketingContactProfile({ contact: initial, memberLists, allList
             <div style={{ fontSize: 12, fontWeight: 600, color: engagement.c }}>{engagement.t}</div>
           </div>
           <Link href={`/admin/inbox?to=${encodeURIComponent(contact.email)}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}><Mail size={13} /> Send email</Link>
-          <button onClick={() => { setAddMode("list"); setAddId(""); setMsg(null); }} style={outlineBtn}><ListPlus size={13} /> Add to list</button>
-          <button onClick={() => { setAddMode("seq"); setAddId(""); setMsg(null); }} style={outlineBtn}><Send size={13} /> Add to sequence</button>
-          {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><Pencil size={13} /> Edit</button>}
+          <button type="button" onClick={() => { setAddMode("list"); setAddId(""); setMsg(null); }} style={outlineBtn}><ListPlus size={13} /> Add to list</button>
+          <button type="button" onClick={() => { setAddMode("seq"); setAddId(""); setMsg(null); }} style={outlineBtn}><Send size={13} /> Add to sequence</button>
+          {!editing && <button type="button" onClick={() => setEditing(true)} style={outlineBtn}><Pencil size={13} /> Edit</button>}
         </div>
 
         {/* Add-to bar */}
@@ -140,8 +140,8 @@ export function MarketingContactProfile({ contact: initial, memberLists, allList
               <option value="">Choose…</option>
               {(addMode === "list" ? allLists : sequences).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select>
-            <button onClick={doAdd} disabled={!addId || busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: !addId || busy ? 0.5 : 1 }}>Add</button>
-            <button onClick={() => setAddMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+            <button type="button" onClick={doAdd} disabled={!addId || busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: !addId || busy ? 0.5 : 1 }}>Add</button>
+            <button type="button" onClick={() => setAddMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
             {msg && <span style={{ fontSize: 11.5, color: "#0F6E56" }}>{msg}</span>}
           </div>
         )}
@@ -150,7 +150,7 @@ export function MarketingContactProfile({ contact: initial, memberLists, allList
         {/* Tabs */}
         <div style={{ display: "flex", padding: "0 16px", borderBottom: "0.5px solid #eef1f5" }}>
           {(["details", "activity"] as const).map((s) => (
-            <button key={s} onClick={() => setSection(s)} style={{ fontSize: 12.5, fontWeight: section === s ? 600 : 400, color: section === s ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === s ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer", textTransform: "capitalize" }}>{s === "activity" ? `Activity${events.length ? ` · ${events.length}` : ""}` : "Details"}</button>
+            <button type="button" key={s} onClick={() => setSection(s)} style={{ fontSize: 12.5, fontWeight: section === s ? 600 : 400, color: section === s ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === s ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer", textTransform: "capitalize" }}>{s === "activity" ? `Activity${events.length ? ` · ${events.length}` : ""}` : "Details"}</button>
           ))}
         </div>
 
@@ -171,8 +171,8 @@ export function MarketingContactProfile({ contact: initial, memberLists, allList
                   <div key={k}><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label><input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} style={{ ...inp, marginTop: 4 }} /></div>
                 ))}
                 <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6 }}>
-                  <button onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
-                  <button onClick={() => setEditing(false)} style={{ ...outlineBtn, padding: "8px 16px" }}>Cancel</button>
+                  <button type="button" onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
+                  <button type="button" onClick={() => setEditing(false)} style={{ ...outlineBtn, padding: "8px 16px" }}>Cancel</button>
                 </div>
               </div>
             ) : (
@@ -190,11 +190,11 @@ export function MarketingContactProfile({ contact: initial, memberLists, allList
                   <div style={{ display: "flex", fontSize: 11.5, alignItems: "flex-start" }}>
                     <span style={{ width: 110, color: "var(--muted-foreground)", flexShrink: 0, paddingTop: 2 }}>Tags</span>
                     <span style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-                      {tags.map((t) => <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4", fontWeight: 500 }}>{t}{tagEdit && <button onClick={() => removeTag(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, fontSize: 11 }}>×</button>}</span>)}
+                      {tags.map((t) => <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4", fontWeight: 500 }}>{t}{tagEdit && <button type="button" onClick={() => removeTag(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, fontSize: 11 }}>×</button>}</span>)}
                       {tagEdit ? (
                         <input autoFocus value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); } if (e.key === "Escape") setTagEdit(false); }} onBlur={() => setTagEdit(false)} placeholder="add tag…" style={{ fontSize: 10, width: 72, border: "1px solid #2E78F5", borderRadius: 8, padding: "2px 5px", outline: "none", background: "var(--input)" }} />
                       ) : (
-                        <button onClick={() => { setTagEdit(true); setTagInput(""); }} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>+ tag</button>
+                        <button type="button" onClick={() => { setTagEdit(true); setTagInput(""); }} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>+ tag</button>
                       )}
                     </span>
                   </div>

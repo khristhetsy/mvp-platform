@@ -195,7 +195,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
     return (
       <div key={c.id} style={{ display: "grid", gridTemplateColumns: template, padding: "10px 16px", borderBottom: "0.5px solid var(--border)", alignItems: "center", background: isSel ? "#F5F9FF" : undefined }}>
         <input type="checkbox" checked={isSel} onChange={() => toggleSelect(c.id)} aria-label="Select contact" style={{ width: 14, height: 14 }} />
-        <button onClick={() => openProfile(c.id)} title="Open contact" style={{ width: 28, height: 28, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, border: "none", cursor: "pointer", padding: 0 }}>{initials(c)}</button>
+        <button type="button" onClick={() => openProfile(c.id)} title="Open contact" style={{ width: 28, height: 28, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, border: "none", cursor: "pointer", padding: 0 }}>{initials(c)}</button>
         <div onClick={() => openProfile(c.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openProfile(c.id); } }} title="Open contact" style={{ minWidth: 0, cursor: "pointer" }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: "#1A6CE4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName || c.email}</div>
           {displayName && <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
@@ -210,21 +210,21 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
             {tags.map((tag) => (
               <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4", fontWeight: 500 }}>
-                {tag}{isEditingTags && <button onClick={() => removeTag(c, tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, lineHeight: 1, fontSize: 11 }}>×</button>}
+                {tag}{isEditingTags && <button type="button" onClick={() => removeTag(c, tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, lineHeight: 1, fontSize: 11 }}>×</button>}
               </span>
             ))}
             {isEditingTags ? (
               <input autoFocus value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(c, tagInput); } if (e.key === "Escape") setEditTagsId(null); }} placeholder="add tag…" style={{ fontSize: 10, width: 70, border: "1px solid #2E78F5", borderRadius: 8, padding: "2px 5px", outline: "none", background: "var(--input)" }} />
             ) : (
-              <button onClick={() => { setEditTagsId(c.id); setTagInput(""); }} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>+ tag</button>
+              <button type="button" onClick={() => { setEditTagsId(c.id); setTagInput(""); }} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>+ tag</button>
             )}
           </div>
         )}
         {cols.source && <div>{c.source ? <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#F1EFE8", color: "#5F5E5A", fontWeight: 500 }}>{c.source}</span> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
         <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-          <button onClick={() => openProfile(c.id)} style={ICON_BTN} title="Open contact"><Eye size={14} /></button>
+          <button type="button" onClick={() => openProfile(c.id)} style={ICON_BTN} title="Open contact"><Eye size={14} /></button>
           <a href={`mailto:${c.email}`} style={{ ...ICON_BTN, textDecoration: "none" }} title="Email"><Mail size={14} /></a>
-          <button onClick={() => setEditContact(c)} style={ICON_BTN} title="Edit"><Pencil size={14} /></button>
+          <button type="button" onClick={() => setEditContact(c)} style={ICON_BTN} title="Edit"><Pencil size={14} /></button>
           <DeleteContactButton contactId={c.id} onDeleted={() => { reloadView(); void refreshLists(); }} />
         </div>
       </div>
@@ -238,7 +238,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
       <>
         {gs.rows.map(renderRow)}
         {gs.rows.length < gs.total && (
-          <button onClick={() => (groupBy === "none" ? loadNone(false) : null)} disabled={gs.loading} style={{ width: "100%", padding: 9, fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
+          <button type="button" onClick={() => (groupBy === "none" ? loadNone(false) : null)} disabled={gs.loading} style={{ width: "100%", padding: 9, fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
             {gs.loading ? "Loading…" : `Load ${Math.min(PAGE, gs.total - gs.rows.length)} more of ${gs.total.toLocaleString()}`}
           </button>
         )}
@@ -256,8 +256,8 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{total.toLocaleString()} total</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => { setShowImport(!showImport); setShowAdd(false); }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)", cursor: "pointer" }}>↑ Import CSV</button>
-          <button onClick={() => { setShowAdd(!showAdd); setShowImport(false); }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>+ Add contact</button>
+          <button type="button" onClick={() => { setShowImport(!showImport); setShowAdd(false); }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)", cursor: "pointer" }}>↑ Import CSV</button>
+          <button type="button" onClick={() => { setShowAdd(!showAdd); setShowImport(false); }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>+ Add contact</button>
         </div>
       </div>
 
@@ -295,7 +295,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <option value="company:desc">Company Z–A</option>
         </select>
         <div style={{ position: "relative" }}>
-          <button onClick={() => setShowCols((v) => !v)} style={{ ...ICON_BTN, width: "auto", padding: "0 10px", gap: 5, height: 32 }} title="Columns"><Columns3 size={14} /> <span style={{ fontSize: 12 }}>Columns</span></button>
+          <button type="button" onClick={() => setShowCols((v) => !v)} style={{ ...ICON_BTN, width: "auto", padding: "0 10px", gap: 5, height: 32 }} title="Columns"><Columns3 size={14} /> <span style={{ fontSize: 12 }}>Columns</span></button>
           {showCols && (
             <div style={{ position: "absolute", right: 0, top: 36, zIndex: 20, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: 8, boxShadow: "0 8px 24px rgb(12 35 64 / 0.12)", minWidth: 150 }}>
               {([
@@ -316,7 +316,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
       {selected.size > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "8px 12px", marginBottom: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: "#0C447C", fontWeight: 500 }}>{selected.size} selected</span>
-          <button onClick={clearSelection} style={{ fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", cursor: "pointer" }}>Clear</button>
+          <button type="button" onClick={clearSelection} style={{ fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", cursor: "pointer" }}>Clear</button>
           <div style={{ flex: 1 }} />
           {bulkMode === "list" ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -324,26 +324,26 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
                 <option value="">Choose list…</option>
                 {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
-              <button disabled={!bulkListId || bulkBusy} onClick={() => runBulk({ action: "add_to_list", list_id: bulkListId })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !bulkListId || bulkBusy ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setBulkMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+              <button type="button" disabled={!bulkListId || bulkBusy} onClick={() => runBulk({ action: "add_to_list", list_id: bulkListId })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !bulkListId || bulkBusy ? 0.5 : 1 }}>Add</button>
+              <button type="button" onClick={() => setBulkMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
             </div>
           ) : bulkMode === "tag" ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <input value={bulkTag} onChange={(e) => setBulkTag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && bulkTag.trim() && runBulk({ action: "tag", tag: bulkTag })} autoFocus placeholder="tag name…" style={{ fontSize: 12, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff" }} />
-              <button disabled={!bulkTag.trim() || bulkBusy} onClick={() => runBulk({ action: "tag", tag: bulkTag })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !bulkTag.trim() || bulkBusy ? 0.5 : 1 }}>Apply</button>
-              <button onClick={() => setBulkMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+              <button type="button" disabled={!bulkTag.trim() || bulkBusy} onClick={() => runBulk({ action: "tag", tag: bulkTag })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !bulkTag.trim() || bulkBusy ? 0.5 : 1 }}>Apply</button>
+              <button type="button" onClick={() => setBulkMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
             </div>
           ) : confirmDelete ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11.5, color: "#A32D2D" }}>Delete {selected.size} contacts?</span>
-              <button disabled={bulkBusy} onClick={() => runBulk({ action: "delete" })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>Delete</button>
-              <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+              <button type="button" disabled={bulkBusy} onClick={() => runBulk({ action: "delete" })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>Delete</button>
+              <button type="button" onClick={() => setConfirmDelete(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
             </div>
           ) : (
             <>
-              <button onClick={() => { setBulkMode("list"); setBulkListId(""); }} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><ListPlus size={13} /> Add to list</button>
-              <button onClick={() => { setBulkMode("tag"); setBulkTag(""); }} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><TagIcon size={13} /> Tag</button>
-              <button onClick={() => setConfirmDelete(true)} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid #F09595", color: "#A32D2D", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><Trash2 size={13} /> Delete</button>
+              <button type="button" onClick={() => { setBulkMode("list"); setBulkListId(""); }} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><ListPlus size={13} /> Add to list</button>
+              <button type="button" onClick={() => { setBulkMode("tag"); setBulkTag(""); }} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><TagIcon size={13} /> Tag</button>
+              <button type="button" onClick={() => setConfirmDelete(true)} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid #F09595", color: "#A32D2D", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><Trash2 size={13} /> Delete</button>
             </>
           )}
         </div>
@@ -356,8 +356,8 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
             <input type="checkbox" aria-label="Select all in view" checked={noneState.rows.length > 0 && groupBy === "none" && noneState.rows.every((c) => selected.has(c.id))} onChange={(e) => { if (groupBy === "none") selectMany(noneState.rows.map((c) => c.id), e.target.checked); }} style={{ width: 14, height: 14 }} />
           </div>
           <div />
-          <button onClick={() => toggleSort("name")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Contact {sortArrow("name")}</button>
-          {cols.company && <button onClick={() => toggleSort("company")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Company {sortArrow("company")}</button>}
+          <button type="button" onClick={() => toggleSort("name")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Contact {sortArrow("name")}</button>
+          {cols.company && <button type="button" onClick={() => toggleSort("company")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Company {sortArrow("company")}</button>}
           {cols.type && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Type</div>}
           {cols.membership && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Membership</div>}
           {cols.phone && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Phone</div>}
@@ -375,7 +375,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
             const isOpen = expanded.has(l.id);
             return (
               <div key={l.id}>
-                <button onClick={() => toggleList(l.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
+                <button type="button" onClick={() => toggleList(l.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
                   {isOpen ? <ChevronDown size={15} color="#0C447C" /> : <ChevronRight size={15} color="#0C447C" />}
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{l.name}</span>
                   <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{(gs?.total ?? l.contact_count ?? 0).toLocaleString()}</span>
@@ -396,9 +396,9 @@ function DeleteContactButton({ contactId, onDeleted }: { contactId: string; onDe
   const [confirming, setConfirming] = useState(false);
   async function handleDelete() { await fetch(`/api/marketing/contacts?id=${contactId}`, { method: "DELETE" }); onDeleted(); }
   if (confirming) {
-    return <button onClick={handleDelete} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }} title="Confirm delete"><Check size={14} /></button>;
+    return <button type="button" onClick={handleDelete} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }} title="Confirm delete"><Check size={14} /></button>;
   }
-  return <button onClick={() => setConfirming(true)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "0.5px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer" }} title="Delete"><Trash2 size={14} /></button>;
+  return <button type="button" onClick={() => setConfirming(true)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "0.5px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer" }} title="Delete"><Trash2 size={14} /></button>;
 }
 
 function EditContactModal({ contact, onClose, onSaved }: { contact: MarketingContact; onClose: () => void; onSaved: () => void }) {

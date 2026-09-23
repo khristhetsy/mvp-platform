@@ -30,11 +30,11 @@ export function RepOnlineToggle({ sponsorId, repName }: { sponsorId: string; rep
 
   useEffect(() => {
     return () => goOffline();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   return (
-    <button
+    <button type="button"
       onClick={() => (online ? goOffline() : goOnline())}
       className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium ${
         online ? "bg-emerald-600 text-white" : "border border-[var(--border-subtle)] text-[var(--text-secondary)]"

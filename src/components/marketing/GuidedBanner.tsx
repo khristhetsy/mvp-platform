@@ -42,7 +42,7 @@ export function GuidedBanner() {
         </div>
       </div>
       <Link href="/admin/marketing/prospects" style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 7, padding: "7px 14px", textDecoration: "none" }}>Start →</Link>
-      <button onClick={dismiss} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#1A6CE4", lineHeight: 1 }}><i className="ti ti-x" aria-hidden="true" /></button>
+      <button type="button" onClick={dismiss} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#1A6CE4", lineHeight: 1 }}><i className="ti ti-x" aria-hidden="true" /></button>
     </div>
   );
 }

@@ -85,7 +85,7 @@ export function SequenceApprovals({ canApprove }: { canApprove: boolean }) {
             </div>
             {b.approver_name ? <span style={{ fontSize: 10.5, fontWeight: 700, color: "#1A6CE4", background: "#EFF6FF", border: "0.5px solid #93C5FD", borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>Assigned: {b.approver_name}</span> : null}
             {canApprove ? (
-              <button onClick={() => release(b.id)} disabled={busy === b.id}
+              <button type="button" onClick={() => release(b.id)} disabled={busy === b.id}
                 style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "8px 14px", cursor: "pointer", opacity: busy === b.id ? 0.5 : 1 }}>
                 {busy === b.id ? "Releasing…" : `Review & release ${b.will_send_count} →`}
               </button>

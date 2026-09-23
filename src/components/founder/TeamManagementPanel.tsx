@@ -214,7 +214,7 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
                   </div>
                   <RoleBadge role={m.role} />
                   {!isOwner && !isCurrentUser && (
-                    <button
+                    <button type="button"
                       onClick={() => void handleRemove(m.id, displayName)}
                       style={{
                         fontSize: 12, color: "#6b7280", background: "none",
@@ -260,7 +260,7 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
                   </p>
                 </div>
                 <RoleBadge role={inv.role} />
-                <button
+                <button type="button"
                   onClick={() => void handleRemove(inv.id, inv.invitee_email)}
                   style={{
                     fontSize: 12, color: "#6b7280", background: "none",

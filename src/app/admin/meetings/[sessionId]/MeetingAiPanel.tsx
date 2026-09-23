@@ -60,8 +60,8 @@ export function MeetingAiPanel({ sessionId, onTaskCreated }: { sessionId: string
         <span style={{ fontSize: 13, fontWeight: 700, color: "#185FA5" }}><i className="ti ti-sparkles" aria-hidden="true" /> AI Chief-of-Staff</span>
         {brief?.model === null && brief && <span style={{ fontSize: 10, color: MUTED }}>heuristic</span>}
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          <button onClick={() => void genBrief(!!brief)} disabled={briefBusy} style={btn(BLUE, "#fff")}>{briefBusy ? "Thinking…" : brief ? "Refresh brief" : "Generate brief"}</button>
-          <button onClick={() => void genSuggestions()} disabled={sugBusy} style={btn("#E6F1FB", BLUE)}>{sugBusy ? "Analyzing…" : "Suggest actions"}</button>
+          <button type="button" onClick={() => void genBrief(!!brief)} disabled={briefBusy} style={btn(BLUE, "#fff")}>{briefBusy ? "Thinking…" : brief ? "Refresh brief" : "Generate brief"}</button>
+          <button type="button" onClick={() => void genSuggestions()} disabled={sugBusy} style={btn("#E6F1FB", BLUE)}>{sugBusy ? "Analyzing…" : "Suggest actions"}</button>
         </div>
       </div>
 
@@ -96,8 +96,8 @@ export function MeetingAiPanel({ sessionId, onTaskCreated }: { sessionId: string
                     <div style={{ fontSize: 12.5, fontWeight: 500, color: NAVY }}>{s.title}</div>
                     {s.rationale && <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{s.rationale}</div>}
                   </div>
-                  <button onClick={() => void resolve(s.id, "confirm")} style={btn("#E1F5EE", "#0F6E56")}>Confirm → task</button>
-                  <button onClick={() => void resolve(s.id, "dismiss")} style={{ ...btn("transparent", MUTED), border: "0.5px solid var(--border)" }}>Dismiss</button>
+                  <button type="button" onClick={() => void resolve(s.id, "confirm")} style={btn("#E1F5EE", "#0F6E56")}>Confirm → task</button>
+                  <button type="button" onClick={() => void resolve(s.id, "dismiss")} style={{ ...btn("transparent", MUTED), border: "0.5px solid var(--border)" }}>Dismiss</button>
                 </div>
               </div>
             ))}

@@ -70,7 +70,7 @@ export function CalendarView({ meetings, occurrences, onRefresh }: { meetings: C
 
   const seg = (opts: [string, string][], val: string, on: (v: string) => void) => (
     <div style={{ display: "inline-flex", background: "#EEF1F7", borderRadius: 8, padding: 2 }}>
-      {opts.map(([k, l]) => <button key={k} onClick={() => on(k)} style={{ fontSize: 12, fontWeight: 600, padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", background: val === k ? "#fff" : "transparent", color: val === k ? navy : "#6B7690" }}>{l}</button>)}
+      {opts.map(([k, l]) => <button type="button" key={k} onClick={() => on(k)} style={{ fontSize: 12, fontWeight: 600, padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", background: val === k ? "#fff" : "transparent", color: val === k ? navy : "#6B7690" }}>{l}</button>)}
     </div>
   );
 
@@ -83,14 +83,14 @@ export function CalendarView({ meetings, occurrences, onRefresh }: { meetings: C
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: navy }}>Calendar</div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 6 }}>
-          <button onClick={() => shift(-1)} style={navBtn}>‹</button>
-          <button onClick={() => setAnchor(new Date())} style={{ ...navBtn, width: "auto", padding: "0 10px", fontSize: 11.5, fontWeight: 600 }}>Today</button>
-          <button onClick={() => shift(1)} style={navBtn}>›</button>
+          <button type="button" onClick={() => shift(-1)} style={navBtn}>‹</button>
+          <button type="button" onClick={() => setAnchor(new Date())} style={{ ...navBtn, width: "auto", padding: "0 10px", fontSize: 11.5, fontWeight: 600 }}>Today</button>
+          <button type="button" onClick={() => shift(1)} style={navBtn}>›</button>
           <span style={{ fontSize: 13, fontWeight: 600, color: navy, marginLeft: 6 }}>{label}</span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
           {seg([["week", "Week"], ["month", "Month"]], mode, (v) => setMode(v as "week" | "month"))}
-          <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{adding ? "Cancel" : "+ One-off"}</button>
+          <button type="button" onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{adding ? "Cancel" : "+ One-off"}</button>
         </div>
       </div>
 
@@ -116,7 +116,7 @@ function EventChip({ ev, onDelete }: { ev: DayEvent; onDelete?: (id: string) => 
     <div title={ev.note ?? ev.meeting.name} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, lineHeight: 1.3, padding: "3px 6px", borderRadius: 5, background: `${c}14`, color: navy, borderLeft: `3px ${ev.oneOff ? "dashed" : "solid"} ${c}` }}>
       <span style={{ fontWeight: 700, color: c }}>{ev.time}</span>
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.meeting.name}</span>
-      {ev.oneOff && ev.occurrenceId && onDelete && <button onClick={() => onDelete(ev.occurrenceId!)} style={{ marginLeft: "auto", border: "none", background: "none", color: "#98A2B3", cursor: "pointer", fontSize: 11, padding: 0 }} aria-label="Remove"><i className="ti ti-x" aria-hidden="true" /></button>}
+      {ev.oneOff && ev.occurrenceId && onDelete && <button type="button" onClick={() => onDelete(ev.occurrenceId!)} style={{ marginLeft: "auto", border: "none", background: "none", color: "#98A2B3", cursor: "pointer", fontSize: 11, padding: 0 }} aria-label="Remove"><i className="ti ti-x" aria-hidden="true" /></button>}
     </div>
   );
 }
@@ -196,7 +196,7 @@ function AddOccurrence({ meetings, onDone }: { meetings: CeoMeeting[]; onDone: (
       <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inp} />
       <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inp} />
       <input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={{ ...inp, flex: 1, minWidth: 140 }} />
-      <button onClick={save} disabled={busy || !meetingKey} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Adding…" : "Add"}</button>
+      <button type="button" onClick={save} disabled={busy || !meetingKey} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Adding…" : "Add"}</button>
       {err && <span style={{ fontSize: 11.5, color: "#D6455D", width: "100%" }}>{err}</span>}
     </div>
   );

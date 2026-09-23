@@ -239,14 +239,14 @@ export function LiveSessionPanel({
 
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-2">
         <div className="flex gap-1">
-          <button
+          <button type="button"
             onClick={() => setTab("qa")}
             className={`rounded-md px-3 py-1 text-sm font-medium ${activeTab === "qa" ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}
           >
             Q&amp;A
           </button>
           {showChat && (
-            <button
+            <button type="button"
               onClick={() => setTab("chat")}
               className={`rounded-md px-3 py-1 text-sm font-medium ${activeTab === "chat" ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}
             >
@@ -256,7 +256,7 @@ export function LiveSessionPanel({
         </div>
         <div className="flex gap-0.5">
           {REACTIONS.map((r) => (
-            <button
+            <button type="button"
               key={r.key}
               onClick={() => react(r.key)}
               className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--indigo)]"
@@ -280,7 +280,7 @@ export function LiveSessionPanel({
               maxLength={500}
               className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
             />
-            <button onClick={submitQuestion} disabled={!qInput.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
+            <button type="button" onClick={submitQuestion} disabled={!qInput.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
               Ask
             </button>
           </div>
@@ -290,7 +290,7 @@ export function LiveSessionPanel({
             ) : (
               sortedQuestions.map((q) => (
                 <li key={q.id} className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
-                  <button
+                  <button type="button"
                     onClick={() => toggleVote(q)}
                     className={`flex flex-none flex-col items-center rounded-md border px-2 py-1 text-xs font-semibold ${
                       q.votedByMe ? "border-[var(--indigo)] bg-[var(--indigo-soft)] text-[var(--indigo)]" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
@@ -308,10 +308,10 @@ export function LiveSessionPanel({
                     </p>
                     {isStaff && (
                       <div className="mt-1 flex gap-2">
-                        <button onClick={() => setAnswered(q)} className="text-xs text-[var(--blue)] hover:underline">
+                        <button type="button" onClick={() => setAnswered(q)} className="text-xs text-[var(--blue)] hover:underline">
                           {q.isAnswered ? "Unmark" : "Mark answered"}
                         </button>
-                        <button onClick={() => hide(q)} className="text-xs text-rose-600 hover:underline">
+                        <button type="button" onClick={() => hide(q)} className="text-xs text-rose-600 hover:underline">
                           Hide
                         </button>
                       </div>
@@ -348,7 +348,7 @@ export function LiveSessionPanel({
               maxLength={1000}
               className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
             />
-            <button onClick={sendChat} disabled={!cInput.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
+            <button type="button" onClick={sendChat} disabled={!cInput.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
               Send
             </button>
           </div>

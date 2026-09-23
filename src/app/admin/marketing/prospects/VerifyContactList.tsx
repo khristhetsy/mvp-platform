@@ -246,7 +246,7 @@ export function VerifyContactList() {
               ? <>Verifying <b>“{carried.name}”</b> — {carried.count.toLocaleString()} contacts carried over and pre-selected.</>
               : <>Just created <b>“{carried.name}”</b> ({carried.count.toLocaleString()} contacts). Use <b>Verify all contacts</b> to run the whole set.</>}
           </span>
-          <button onClick={clearCarry} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>Verify whole queue instead</button>
+          <button type="button" onClick={clearCarry} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>Verify whole queue instead</button>
         </div>
       ) : null}
 
@@ -256,16 +256,16 @@ export function VerifyContactList() {
         <span style={{ fontSize: 11.5, color: sel.size > 0 ? "#1A4E9E" : "var(--muted-foreground)", fontWeight: 600 }}>
           {sel.size > 0 ? `${sel.size} selected` : `Select contacts to verify`}
         </span>
-        <button onClick={findMissingBulk} disabled={running || sel.size === 0}
+        <button type="button" onClick={findMissingBulk} disabled={running || sel.size === 0}
           style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#4F46E5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}
           title="Search the internet + company website for missing phone/email on the selected contacts">
           <><i className="ti ti-sparkles" aria-hidden="true" /> Find missing info ({sel.size})</>
         </button>
-        <button onClick={verifyAll} disabled={running}
+        <button type="button" onClick={verifyAll} disabled={running}
           style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running ? 0.5 : 1 }}>
           {running ? "Verifying…" : <><i className="ti ti-sparkles" aria-hidden="true" /> Verify all contacts</>}
         </button>
-        <button onClick={verifySelected} disabled={running || sel.size === 0}
+        <button type="button" onClick={verifySelected} disabled={running || sel.size === 0}
           style={{ fontSize: 11.5, fontWeight: 700, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7F3D0", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}>
           {`Verify selected (${sel.size})`}
         </button>
@@ -303,7 +303,7 @@ export function VerifyContactList() {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <a href={linkedinSearchUrl(r.name, r.company)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10.5, fontWeight: 700, color: "#0369A1", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ background: "#0A66C2", color: "#fff", borderRadius: 3, padding: "0 3px", fontSize: 9 }}>in</span>Find</a>
               {missing && !s ? (
-                <button onClick={() => findMissing(r.id)} title="Suggest missing email/phone from the company website + licensed provider"
+                <button type="button" onClick={() => findMissing(r.id)} title="Suggest missing email/phone from the company website + licensed provider"
                   style={{ fontSize: 12, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: 0 }}><i className="ti ti-sparkles" aria-hidden="true" /></button>
               ) : null}
             </div>
@@ -322,8 +322,8 @@ export function VerifyContactList() {
                         {sg.note}{sg.confident ? "" : " · verify before send"}
                       </span>
                       <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                        <button onClick={() => acceptSugg(r.id, sg)} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 5, padding: "4px 11px", cursor: "pointer" }}>Accept</button>
-                        <button onClick={() => rejectSugg(r.id, sg)} style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 5, padding: "4px 11px", cursor: "pointer" }}>Reject</button>
+                        <button type="button" onClick={() => acceptSugg(r.id, sg)} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 5, padding: "4px 11px", cursor: "pointer" }}>Accept</button>
+                        <button type="button" onClick={() => rejectSugg(r.id, sg)} style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 5, padding: "4px 11px", cursor: "pointer" }}>Reject</button>
                       </div>
                     </div>
                   ))}

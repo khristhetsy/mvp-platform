@@ -88,7 +88,7 @@ export function ApproachListView() {
         <div style={card}>
           <div style={{ padding: "8px 14px", background: sel.size > 0 ? "#EFF6FF" : "var(--muted)", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 11.5, fontWeight: 700, color: sel.size > 0 ? "#1A4E9E" : "var(--muted-foreground)" }}>{sel.size} selected</span>
-            <button onClick={run} disabled={running || sel.size === 0} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}>{running ? "Scoring…" : `Run AI approach (${sel.size})`}</button>
+            <button type="button" onClick={run} disabled={running || sel.size === 0} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}>{running ? "Scoring…" : `Run AI approach (${sel.size})`}</button>
           </div>
 
           {msg ? <p style={{ margin: "8px 14px 0", background: "#ECFDF5", border: "0.5px solid #A7F3D0", color: "#065F46", fontSize: 11.5, borderRadius: 8, padding: "7px 11px" }}>{msg}</p> : null}
@@ -112,7 +112,7 @@ export function ApproachListView() {
                   <div><span style={{ fontSize: 11, fontWeight: 700, color: SEG_COLOR[seg] }}>{cap(seg)}</span></div>
                   <div style={{ fontWeight: 700 }}>{typeof r.lead_prescore === "number" ? r.lead_prescore : "—"}</div>
                   <div style={{ fontSize: 11, color: "#1A6CE4", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.advice.hook ? "Scored" : "Not scored"}</div>
-                  <button onClick={() => toggleOpen(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", transform: isOpen ? "rotate(90deg)" : "none" }}>▸</button>
+                  <button type="button" onClick={() => toggleOpen(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", transform: isOpen ? "rotate(90deg)" : "none" }}>▸</button>
                 </div>
                 {isOpen ? (
                   <div style={{ padding: "0 14px 13px 40px", background: "#F5F9FF", borderBottom: "0.5px solid var(--border)" }}>

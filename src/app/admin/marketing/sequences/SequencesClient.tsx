@@ -214,7 +214,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
   useEffect(() => {
     try {
       const v = localStorage.getItem(SEQ_VIEW_KEY) as SeqView | null;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       if (v) setView(v);
     } catch { /* ignore */ }
   }, []);
@@ -315,11 +315,11 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button onClick={() => handleUpdateStep(step.id)}
+                          <button type="button" onClick={() => handleUpdateStep(step.id)}
                             style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>Save</button>
-                          <button onClick={() => setEditingStep(null)}
+                          <button type="button" onClick={() => setEditingStep(null)}
                             style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>Cancel</button>
-                          <button onClick={() => handleDeleteStep(step.id)}
+                          <button type="button" onClick={() => handleDeleteStep(step.id)}
                             style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "#A32D2D", marginLeft: "auto" }}>Delete</button>
                         </div>
                       </div>
@@ -333,7 +333,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                             {(step.template as { name?: string } | null)?.name ?? "No template"}
                           </div>
                         </div>
-                        <button onClick={() => startEditStep(step)} aria-label="Edit step"
+                        <button type="button" onClick={() => startEditStep(step)} aria-label="Edit step"
                           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6, flexShrink: 0 }}>
                           <i className="ti ti-edit" style={{ fontSize: 15 }} aria-hidden="true" />
                         </button>
@@ -368,18 +368,18 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => handleAddStep(seq.id, steps.length + 1)}
+                      <button type="button" onClick={() => handleAddStep(seq.id, steps.length + 1)}
                         style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                         Add step
                       </button>
-                      <button onClick={() => setAddingStep(null)}
+                      <button type="button" onClick={() => setAddingStep(null)}
                         style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setAddingStep(seq.id)}
+                  <button type="button" onClick={() => setAddingStep(seq.id)}
                     style={{ width: "100%", marginTop: 8, fontSize: 12, padding: "7px", borderRadius: 6, border: "0.5px dashed var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     + Add step
                   </button>
@@ -388,35 +388,35 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                 {/* Status actions */}
                 <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: "0.5px solid var(--border)" }}>
                   {seq.status === "draft" && (
-                    <button onClick={() => handleStatusChange(seq.id, "active")}
+                    <button type="button" onClick={() => handleStatusChange(seq.id, "active")}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Activate
                     </button>
                   )}
                   {seq.status === "active" && (
-                    <button onClick={() => handleStatusChange(seq.id, "paused")}
+                    <button type="button" onClick={() => handleStatusChange(seq.id, "paused")}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                       Pause
                     </button>
                   )}
                   {seq.status === "paused" && (
-                    <button onClick={() => handleStatusChange(seq.id, "active")}
+                    <button type="button" onClick={() => handleStatusChange(seq.id, "active")}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Resume
                     </button>
                   )}
                   {seq.status === "archived" ? (
-                    <button onClick={() => handleStatusChange(seq.id, "draft")}
+                    <button type="button" onClick={() => handleStatusChange(seq.id, "draft")}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                       Unarchive
                     </button>
                   ) : (
-                    <button onClick={() => handleStatusChange(seq.id, "archived")}
+                    <button type="button" onClick={() => handleStatusChange(seq.id, "archived")}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                       Archive
                     </button>
                   )}
-                  <button onClick={() => handleDeleteSequence(seq.id, seq.name)}
+                  <button type="button" onClick={() => handleDeleteSequence(seq.id, seq.name)}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "#A32D2D" }}>
                     Delete
                   </button>
@@ -439,7 +439,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                         lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)
                       )}
                     </select>
-                    <button
+                    <button type="button"
                       onClick={() => handleEnrollList(seq.id)}
                       disabled={!listForSeq(seq.id)}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", opacity: listForSeq(seq.id) ? 1 : 0.5 }}
@@ -460,7 +460,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                       placeholder="you@example.com"
                       style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--foreground)", minWidth: 160 }}
                     />
-                    <button
+                    <button type="button"
                       onClick={() => handleSendTest(seq.id)}
                       disabled={testBusy === seq.id}
                       title="Sends every step of this sequence to the address above — real contacts are not touched."
@@ -488,8 +488,8 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
         <OdooSearchBar scope="marketing_sequences" state={search} onChange={setSearch} quick={SEQ_QUICK}
           fields={[{ key: "department", label: "Department", options: [...DEPARTMENTS, UNASSIGNED] }]} groups={SEQ_GROUPS} noGroupId="none" placeholder="Search sequences…" width={440} />
         <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-          <button onClick={() => pickView("grid")} aria-label="Grid view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
-          <button onClick={() => pickView("list")} aria-label="List view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-list" aria-hidden="true" /></button>
+          <button type="button" onClick={() => pickView("grid")} aria-label="Grid view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
+          <button type="button" onClick={() => pickView("list")} aria-label="List view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-list" aria-hidden="true" /></button>
         </div>
       </div>
 
@@ -506,11 +506,11 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
               <option value="">Department…</option>
               {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
-            <button onClick={handleCreateSequence} disabled={saving}
+            <button type="button" onClick={handleCreateSequence} disabled={saving}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
               {saving ? "Creating…" : "Create"}
             </button>
-            <button onClick={() => setShowCreate(false)}
+            <button type="button" onClick={() => setShowCreate(false)}
               style={{ fontSize: 12, padding: "7px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
               Cancel
             </button>

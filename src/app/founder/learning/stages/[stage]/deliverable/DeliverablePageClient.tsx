@@ -111,7 +111,7 @@ export function DeliverablePageClient({
               />
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-xs text-slate-400">{content.length} characters</p>
-                <button
+                <button type="button"
                   onClick={handleSubmit}
                   disabled={submitting || content.trim().length < 50}
                   className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50"
@@ -137,7 +137,7 @@ export function DeliverablePageClient({
               )}
             </div>
             <div className="flex gap-3">
-              <button
+              <button type="button"
                 onClick={() => { setSubmitted(false); }}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >

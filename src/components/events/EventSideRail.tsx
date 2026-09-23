@@ -184,7 +184,7 @@ export function EventSideRail({
           >
             <Mail className="h-4 w-4" />
           </a>
-          <button onClick={copyLink} aria-label={t("share")} className="hover:text-[var(--blue)]">
+          <button type="button" onClick={copyLink} aria-label={t("share")} className="hover:text-[var(--blue)]">
             {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Link2 className="h-4 w-4" />}
           </button>
         </div>

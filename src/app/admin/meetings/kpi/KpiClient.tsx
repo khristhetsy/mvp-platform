@@ -32,7 +32,7 @@ export function KpiClient({ departments, isAdmin }: { departments: Dept[]; isAdm
 
       <div style={{ display: "flex", gap: 14, borderBottom: "0.5px solid var(--border)", marginBottom: 16, flexWrap: "wrap" }}>
         {(["input", "weekly", "monthly", "quarterly", "yearly"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} style={{ paddingBottom: 8, fontSize: 12.5, background: "none", border: "none", cursor: "pointer", textTransform: "capitalize", color: tab === t ? BLUE : MUTED, fontWeight: tab === t ? 600 : 400, borderBottom: tab === t ? `2px solid ${BLUE}` : "2px solid transparent" }}>
+          <button type="button" key={t} onClick={() => setTab(t)} style={{ paddingBottom: 8, fontSize: 12.5, background: "none", border: "none", cursor: "pointer", textTransform: "capitalize", color: tab === t ? BLUE : MUTED, fontWeight: tab === t ? 600 : 400, borderBottom: tab === t ? `2px solid ${BLUE}` : "2px solid transparent" }}>
             {t === "input" ? "Data Input" : t}
           </button>
         ))}
@@ -141,12 +141,12 @@ function DataInput({ dept }: { dept: string }) {
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <input value={newAgent} onChange={(e) => setNewAgent(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addAgent(); }} placeholder="Agent name" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 170 }} />
-          <button onClick={() => void addAgent()} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Agent</button>
+          <button type="button" onClick={() => void addAgent()} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Agent</button>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <input value={newKpi.key} onChange={(e) => setNewKpi((p) => ({ ...p, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") }))} placeholder="key_snake_case" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 150 }} />
           <input value={newKpi.label} onChange={(e) => setNewKpi((p) => ({ ...p, label: e.target.value }))} placeholder="KPI label" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 190 }} />
-          <button onClick={() => void addKpi()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Add KPI</button>
+          <button type="button" onClick={() => void addKpi()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Add KPI</button>
         </div>
       </div>
     </div>
@@ -183,7 +183,7 @@ function RollupView({ dept, period, isAdmin }: { dept: string; period: Period; i
               <span style={{ fontSize: 12.5, color: NAVY, fontVariantNumeric: "tabular-nums" }}>{r.actual} / {r.goal}</span>
               <span style={{ fontSize: 10.5, fontWeight: 600, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 6, padding: "2px 8px" }}>{r.pct != null ? `${r.pct}%` : "—"}</span>
               {r.owed > 0 && <span style={{ fontSize: 10.5, color: "#A32D2D" }}>owed {r.owed}</span>}
-              {isAdmin && <button onClick={() => void pin(r.kpi_id)} style={{ fontSize: 10.5, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Pin</button>}
+              {isAdmin && <button type="button" onClick={() => void pin(r.kpi_id)} style={{ fontSize: 10.5, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Pin</button>}
             </div>
             <div style={{ height: 8, background: "#F1EFE8", borderRadius: 99, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${Math.round(frac * 83)}%`, background: barColor(r.pct), borderRadius: 99 }} />

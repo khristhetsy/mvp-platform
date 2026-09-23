@@ -396,8 +396,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <span style={{ background: ch.bg, color: ch.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>{item.channel}</span>
                 <div style={{ display: "flex", gap: 2 }}>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
+                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
               </div>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
@@ -410,7 +410,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 {item.task_id ? (
                   <span style={{ fontSize: 11, color: "#0F6E56", fontWeight: 500 }}><i className="ti ti-check" aria-hidden="true" /> Synced to Tasks</span>
                 ) : (
-                  <button style={{ ...btnGhost, padding: "4px 9px", fontSize: 11 }} disabled={busy === "sync-" + item.id} onClick={() => syncTask(item)}>
+                  <button type="button" style={{ ...btnGhost, padding: "4px 9px", fontSize: 11 }} disabled={busy === "sync-" + item.id} onClick={() => syncTask(item)}>
                     {busy === "sync-" + item.id ? "…" : "→ Add to Tasks"}
                   </button>
                 )}
@@ -452,8 +452,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 <option value="done">Done</option>
               </select>
               <div style={{ display: "flex", gap: 2 }}>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
+                <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
               </div>
             </div>
           );
@@ -502,8 +502,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                           {item.due_date && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Due {item.due_date}</span>}
                           <span style={{ background: pr.bg, color: pr.color, fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 6, textTransform: "capitalize" }}>{item.priority}</span>
                           <Badge map={ITEM_STATUS_MAP} value={item.status} />
-                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 4px", fontSize: 14 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
-                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 4px", fontSize: 14 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
+                          <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 4px", fontSize: 14 }} onClick={() => openEdit(item)} title="Edit"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                          <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 4px", fontSize: 14 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete"><i className="ti ti-x" aria-hidden="true" /></button>
                         </div>
                       </div>
                     );
@@ -528,10 +528,10 @@ export function PlanClient({ plans, aiEnabled }: Props) {
         {/* Plan list */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...btnPrimary, flex: 1 }} onClick={() => { setShowCreate((v) => !v); setShowCmo(false); }}>
+            <button type="button" style={{ ...btnPrimary, flex: 1 }} onClick={() => { setShowCreate((v) => !v); setShowCmo(false); }}>
               + New plan
             </button>
-            <button
+            <button type="button"
               style={{ ...btnGhost, flex: 1 }}
               onClick={() => { setShowCmo(true); setShowCreate(false); }}
               title={aiEnabled ? "Generate a draft with the AI CMO" : "AI not configured — shows a starter outline"}
@@ -586,8 +586,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     <input style={smallInput} placeholder="e.g. SaaS founders, Series A" value={planEditForm.target_audience} onChange={(e) => setPlanEditForm({ ...planEditForm, target_audience: e.target.value })} />
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                    <button style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setEditingPlanId(null)}>Cancel</button>
-                    <button style={{ ...btnPrimary, flex: 1, padding: "6px 8px", fontSize: 11 }} disabled={busy === "plan-edit-" + p.id || !planEditForm.name.trim()} onClick={savePlanEdit}>
+                    <button type="button" style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setEditingPlanId(null)}>Cancel</button>
+                    <button type="button" style={{ ...btnPrimary, flex: 1, padding: "6px 8px", fontSize: 11 }} disabled={busy === "plan-edit-" + p.id || !planEditForm.name.trim()} onClick={savePlanEdit}>
                       {busy === "plan-edit-" + p.id ? "Saving…" : "Save changes"}
                     </button>
                   </div>
@@ -595,7 +595,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               ) : (
                 /* ── View mode ── */
                 <div>
-                  <button
+                  <button type="button"
                     onClick={() => openPlan(p.id)}
                     style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", width: "100%" }}
                   >
@@ -609,8 +609,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     </div>
                   </button>
                   <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                    <button style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11 }} onClick={() => startPlanEdit(p)}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
-                    <button style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11, color: "#A32D2D", borderColor: "#F0A0A0" }} disabled={busy === "plan-del-" + p.id} onClick={() => deletePlan(p.id, p.name)}>
+                    <button type="button" style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11 }} onClick={() => startPlanEdit(p)}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
+                    <button type="button" style={{ ...btnGhost, flex: 1, padding: "5px 8px", fontSize: 11, color: "#A32D2D", borderColor: "#F0A0A0" }} disabled={busy === "plan-del-" + p.id} onClick={() => deletePlan(p.id, p.name)}>
                       {busy === "plan-del-" + p.id ? "Deleting…" : <><i className="ti ti-x" aria-hidden="true" /> Delete</>}
                     </button>
                   </div>
@@ -630,8 +630,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 <input style={smallInput} placeholder="Budget" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
               </div>
               <div style={{ display: "flex", gap: 6 }}>
-                <button style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setShowCreate(false)}>Cancel</button>
-                <button style={{ ...btnPrimary, flex: 1, padding: "6px 8px", fontSize: 11 }} disabled={busy === "create" || !form.name.trim()} onClick={handleCreate}>
+                <button type="button" style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setShowCreate(false)}>Cancel</button>
+                <button type="button" style={{ ...btnPrimary, flex: 1, padding: "6px 8px", fontSize: 11 }} disabled={busy === "create" || !form.name.trim()} onClick={handleCreate}>
                   {busy === "create" ? "Creating…" : "Create plan"}
                 </button>
               </div>
@@ -643,7 +643,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
             <div style={{ ...card, padding: 14, display: "flex", flexDirection: "column", gap: 8, borderColor: ACCENT }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ fontSize: 12, fontWeight: 500, margin: 0, color: ACCENT }}><i className="ti ti-sparkles" aria-hidden="true" /> AI CMO</p>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 16 }} onClick={() => { setShowCmo(false); setDraft(null); }}><i className="ti ti-x" aria-hidden="true" /></button>
+                <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 16 }} onClick={() => { setShowCmo(false); setDraft(null); }}><i className="ti ti-x" aria-hidden="true" /></button>
               </div>
               {!draft ? (
                 <>
@@ -652,7 +652,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     <input style={smallInput} placeholder="Timeframe (e.g. Q3 2026)" value={cmoBrief.timeframe} onChange={(e) => setCmoBrief({ ...cmoBrief, timeframe: e.target.value })} />
                     <input style={smallInput} placeholder="Budget (optional)" value={cmoBrief.budget} onChange={(e) => setCmoBrief({ ...cmoBrief, budget: e.target.value })} />
                   </div>
-                  <button style={{ ...btnPrimary, padding: "6px 8px", fontSize: 11 }} disabled={cmoLoading || !cmoBrief.goal.trim()} onClick={runCmo}>
+                  <button type="button" style={{ ...btnPrimary, padding: "6px 8px", fontSize: 11 }} disabled={cmoLoading || !cmoBrief.goal.trim()} onClick={runCmo}>
                     {cmoLoading ? "Drafting… 20–30s" : "Generate draft"}
                   </button>
                 </>
@@ -678,8 +678,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     {draft.items.length > 4 && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>+{draft.items.length - 4} more</span>}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setDraft(null)}>Regenerate</button>
-                    <button style={{ ...btnPrimary, flex: 1, padding: "6px 8px", fontSize: 11 }} disabled={busy === "save-draft"} onClick={saveDraft}>
+                    <button type="button" style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setDraft(null)}>Regenerate</button>
+                    <button type="button" style={{ ...btnPrimary, flex: 1, padding: "6px 8px", fontSize: 11 }} disabled={busy === "save-draft"} onClick={saveDraft}>
                       {busy === "save-draft" ? "Saving…" : "Save as plan"}
                     </button>
                   </div>
@@ -746,7 +746,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 <Badge map={STATUS_MAP} value={detail.status} />
-                <button
+                <button type="button"
                   style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
                   onClick={() => { setShareOpen((v) => !v); if (!shareOpen) openShare(); }}
                 >
@@ -760,7 +760,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               <div style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, padding: 14, marginBottom: 14, background: "#fafafa", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>Share plan with Admin team</p>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 15 }} onClick={() => setShareOpen(false)}><i className="ti ti-x" aria-hidden="true" /></button>
+                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 15 }} onClick={() => setShareOpen(false)}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
@@ -768,7 +768,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     value={`${typeof window !== "undefined" ? window.location.origin : ""}/admin/marketing/plan?plan=${selectedId}`}
                     style={{ ...inputStyle, fontSize: 11, color: "var(--text-muted)", background: "#f1f1f1", flex: 1 }}
                   />
-                  <button style={{ ...btnPrimary, padding: "8px 14px", fontSize: 11, whiteSpace: "nowrap" }} onClick={copyPlanLink}>
+                  <button type="button" style={{ ...btnPrimary, padding: "8px 14px", fontSize: 11, whiteSpace: "nowrap" }} onClick={copyPlanLink}>
                     {copyDone ? <><i className="ti ti-check" aria-hidden="true" /> Copied</> : "Copy link"}
                   </button>
                 </div>
@@ -825,7 +825,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                   const labels: Record<ViewMode, string> = { card: "⊞ Cards", list: "≡ List", tree: "⌥ Tree" };
                   const active = viewMode === mode;
                   return (
-                    <button key={mode} onClick={() => setViewMode(mode)} style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, background: active ? ACCENT : "#fff", color: active ? "#fff" : "var(--text-primary)", borderColor: active ? ACCENT : "#e2e6ed" }}>
+                    <button type="button" key={mode} onClick={() => setViewMode(mode)} style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, background: active ? ACCENT : "#fff", color: active ? "#fff" : "var(--text-primary)", borderColor: active ? ACCENT : "#e2e6ed" }}>
                       {labels[mode]}
                     </button>
                   );
@@ -850,7 +850,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
               </select>
-              <button style={{ ...btnPrimary, whiteSpace: "nowrap" }} disabled={busy === "add-item"} onClick={addItem}>
+              <button type="button" style={{ ...btnPrimary, whiteSpace: "nowrap" }} disabled={busy === "add-item"} onClick={addItem}>
                 {busy === "add-item" ? "Adding…" : "+ Add"}
               </button>
             </div>
@@ -874,8 +874,8 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 <textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
-                <button style={btnGhost} onClick={() => setEditingItem(null)}>Cancel</button>
-                <button style={btnPrimary} disabled={busy === "edit-" + editingItem.id || !editForm.title.trim()} onClick={saveEdit}>
+                <button type="button" style={btnGhost} onClick={() => setEditingItem(null)}>Cancel</button>
+                <button type="button" style={btnPrimary} disabled={busy === "edit-" + editingItem.id || !editForm.title.trim()} onClick={saveEdit}>
                   {busy === "edit-" + editingItem.id ? "Saving…" : "Save changes"}
                 </button>
               </div>

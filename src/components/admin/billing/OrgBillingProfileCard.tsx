@@ -40,7 +40,7 @@ export function OrgBillingProfileCard() {
         <h2 className="text-sm font-semibold text-slate-900">Billing profile</h2>
         {editing
           ? <span className="rounded-md bg-[#1A6CE4]/10 px-2 py-0.5 text-[11px] font-medium text-[#1A6CE4]"><i className="ti ti-pencil" aria-hidden="true" /> Editing</span>
-          : <button onClick={() => setEditing(true)} className="text-xs font-medium text-[#1A6CE4] hover:underline">Edit</button>}
+          : <button type="button" onClick={() => setEditing(true)} className="text-xs font-medium text-[#1A6CE4] hover:underline">Edit</button>}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {FIELDS.map((f) => (
@@ -58,8 +58,8 @@ export function OrgBillingProfileCard() {
       </div>
       {editing && (
         <div className="mt-3 flex items-center gap-2">
-          <button onClick={() => void save()} disabled={saving} className="rounded-lg bg-[#1A6CE4] px-4 py-2 text-xs font-semibold text-white">{saving ? "Saving…" : "Save changes"}</button>
-          <button onClick={cancel} className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600">Cancel</button>
+          <button type="button" onClick={() => void save()} disabled={saving} className="rounded-lg bg-[#1A6CE4] px-4 py-2 text-xs font-semibold text-white">{saving ? "Saving…" : "Save changes"}</button>
+          <button type="button" onClick={cancel} className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600">Cancel</button>
           {msg && <span className="text-xs text-slate-500">{msg}</span>}
         </div>
       )}

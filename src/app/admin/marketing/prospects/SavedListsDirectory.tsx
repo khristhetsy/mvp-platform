@@ -83,7 +83,7 @@ export function SavedListsDirectory() {
             {lists.map((l) => {
               const active = l.id === selId;
               return (
-                <button key={l.id} onClick={() => setSelId(l.id)} style={{ textAlign: "left", cursor: "pointer", border: active ? "1px solid #2E78F5" : "0.5px solid #e2e6ed", background: active ? "#EFF6FF" : "#fff", borderRadius: 9, padding: "10px 12px" }}>
+                <button type="button" key={l.id} onClick={() => setSelId(l.id)} style={{ textAlign: "left", cursor: "pointer", border: active ? "1px solid #2E78F5" : "0.5px solid #e2e6ed", background: active ? "#EFF6FF" : "#fff", borderRadius: 9, padding: "10px 12px" }}>
                   <div style={{ fontSize: 12.5, fontWeight: active ? 700 : 600, color: active ? "#1A4E9E" : "var(--foreground)" }}>{l.name}</div>
                   <div style={{ fontSize: 10.5, color: active ? "#1A6CE4" : "var(--muted-foreground)" }}>{l.contact_count.toLocaleString()} contacts · {when(l.created_at)}</div>
                 </button>
@@ -101,8 +101,8 @@ export function SavedListsDirectory() {
                   {renaming ? (
                     <div style={{ display: "flex", gap: 6 }}>
                       <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} autoFocus style={{ flex: 1, fontSize: 14, fontWeight: 600, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 9px" }} />
-                      <button onClick={saveName} disabled={busy} style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setRenaming(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+                      <button type="button" onClick={saveName} disabled={busy} style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Save</button>
+                      <button type="button" onClick={() => setRenaming(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
                     </div>
                   ) : (
                     <>
@@ -120,8 +120,8 @@ export function SavedListsDirectory() {
                   <a href={`/admin/marketing/campaigns?new=${detail.id}`} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 6, padding: "7px 12px", textDecoration: "none" }}>→ Create campaign from this list</a>
                   <a href={`/admin/marketing/lists?list=${detail.id}`} style={{ fontSize: 11, fontWeight: 700, color: "#1A6CE4", background: "#fff", border: "0.5px solid #93C5FD", borderRadius: 6, padding: "7px 12px", textDecoration: "none" }}>Send to Contact Lists</a>
                   <a href={`/api/prospects/lists/${detail.id}/export?format=csv&cols=name,email,company,lead_status`} style={{ fontSize: 11, fontWeight: 700, color: "#1A6CE4", background: "#fff", border: "0.5px solid #93C5FD", borderRadius: 6, padding: "7px 12px", textDecoration: "none" }}>Export CSV ↓</a>
-                  <button onClick={() => { setNameDraft(detail.name); setRenaming(true); }} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "7px 12px", cursor: "pointer" }}>Rename</button>
-                  <button onClick={archive} disabled={busy} style={{ fontSize: 11, fontWeight: 600, color: "#B91C1C", background: "#fff", border: "0.5px solid #FECACA", borderRadius: 6, padding: "7px 12px", cursor: "pointer" }}>Archive</button>
+                  <button type="button" onClick={() => { setNameDraft(detail.name); setRenaming(true); }} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "7px 12px", cursor: "pointer" }}>Rename</button>
+                  <button type="button" onClick={archive} disabled={busy} style={{ fontSize: 11, fontWeight: 600, color: "#B91C1C", background: "#fff", border: "0.5px solid #FECACA", borderRadius: 6, padding: "7px 12px", cursor: "pointer" }}>Archive</button>
                 </div>
 
                 <div style={{ padding: "12px 15px" }}>

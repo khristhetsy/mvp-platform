@@ -120,7 +120,7 @@ export function BookingsClient({ bookings: initial, campaigns = [], canExport = 
               const newGroup = gk && (i === 0 || groupOf(rows[i - 1]) !== gk);
               return (<Fragment key={b.id}>
                 {newGroup && <div style={{ padding: "6px 13px", background: "var(--muted)", borderTop: i ? "0.5px solid #eef1f5" : "none", fontSize: 11, fontWeight: 600 }}>{gk}</div>}
-                <button onClick={() => setSelectedId(b.id)} style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 13px", borderTop: i ? "0.5px solid #eef1f5" : "none", background: on ? "#F5F9FF" : "transparent", border: "none", cursor: "pointer" }}>
+                <button type="button" onClick={() => setSelectedId(b.id)} style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 13px", borderTop: i ? "0.5px solid #eef1f5" : "none", background: on ? "#F5F9FF" : "transparent", border: "none", cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--foreground)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.booker_name ?? b.booker_email ?? "Invitee"}</span>
                     <span style={{ fontSize: 9.5, background: st.bg, color: st.color, borderRadius: 20, padding: "1px 7px" }}>{st.label}</span>
@@ -318,8 +318,8 @@ function BookingDetail({ b, campaigns, onUpdated }: { b: Booking; campaigns: Cam
             <div>
               <textarea value={noteVal} onChange={(e) => setNoteVal(e.target.value)} rows={3} placeholder="Add a private note about this meeting…" style={{ width: "100%", boxSizing: "border-box", fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 7, padding: "6px 8px", resize: "vertical", lineHeight: 1.5 }} />
               <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                <button onClick={saveNote} disabled={noteBusy} style={{ fontSize: 11, fontWeight: 500, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "5px 12px", cursor: noteBusy ? "not-allowed" : "pointer", opacity: noteBusy ? 0.5 : 1 }}>Save note</button>
-                <button onClick={() => { setNoteVal(b.note ?? ""); setNoteEditing(false); }} disabled={noteBusy} style={{ fontSize: 11, color: "var(--foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+                <button type="button" onClick={saveNote} disabled={noteBusy} style={{ fontSize: 11, fontWeight: 500, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "5px 12px", cursor: noteBusy ? "not-allowed" : "pointer", opacity: noteBusy ? 0.5 : 1 }}>Save note</button>
+                <button type="button" onClick={() => { setNoteVal(b.note ?? ""); setNoteEditing(false); }} disabled={noteBusy} style={{ fontSize: 11, color: "var(--foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           ) : (
@@ -341,20 +341,20 @@ function BookingDetail({ b, campaigns, onUpdated }: { b: Booking; campaigns: Cam
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", borderTop: "0.5px solid var(--border)", paddingTop: 12, alignItems: "center" }}>
           {isConfirmed ? (
             <>
-              <button onClick={() => setShowReschedule((s) => !s)} disabled={busy} style={actBtn}><i className="ti ti-calendar-event" aria-hidden="true" /> Reschedule</button>
-              <button onClick={() => setStatus("completed")} disabled={busy} style={actBtn}><i className="ti ti-check" aria-hidden="true" /> Mark completed</button>
-              <button onClick={() => setStatus("no_show")} disabled={busy} style={{ ...actBtn, color: "#5F5E5A" }}><i className="ti ti-user-x" aria-hidden="true" /> No-show</button>
+              <button type="button" onClick={() => setShowReschedule((s) => !s)} disabled={busy} style={actBtn}><i className="ti ti-calendar-event" aria-hidden="true" /> Reschedule</button>
+              <button type="button" onClick={() => setStatus("completed")} disabled={busy} style={actBtn}><i className="ti ti-check" aria-hidden="true" /> Mark completed</button>
+              <button type="button" onClick={() => setStatus("no_show")} disabled={busy} style={{ ...actBtn, color: "#5F5E5A" }}><i className="ti ti-user-x" aria-hidden="true" /> No-show</button>
               {confirmCancel ? (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <button onClick={() => setStatus("cancelled")} disabled={busy} style={{ ...actBtn, color: "#fff", background: "#A32D2D", border: "none" }}>Confirm cancel</button>
-                  <button onClick={() => setConfirmCancel(false)} disabled={busy} style={actBtn}>Keep</button>
+                  <button type="button" onClick={() => setStatus("cancelled")} disabled={busy} style={{ ...actBtn, color: "#fff", background: "#A32D2D", border: "none" }}>Confirm cancel</button>
+                  <button type="button" onClick={() => setConfirmCancel(false)} disabled={busy} style={actBtn}>Keep</button>
                 </span>
               ) : (
-                <button onClick={() => setConfirmCancel(true)} disabled={busy} style={{ ...actBtn, color: "#A32D2D", border: "0.5px solid #F0999577" }}><i className="ti ti-x" aria-hidden="true" /> Cancel</button>
+                <button type="button" onClick={() => setConfirmCancel(true)} disabled={busy} style={{ ...actBtn, color: "#A32D2D", border: "0.5px solid #F0999577" }}><i className="ti ti-x" aria-hidden="true" /> Cancel</button>
               )}
             </>
           ) : (
-            <button onClick={() => setStatus("confirmed")} disabled={busy} style={actBtn}><i className="ti ti-rotate" aria-hidden="true" /> Reconfirm</button>
+            <button type="button" onClick={() => setStatus("confirmed")} disabled={busy} style={actBtn}><i className="ti ti-rotate" aria-hidden="true" /> Reconfirm</button>
           )}
           {b.booker_email ? (
             <a href={`mailto:${b.booker_email}`} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 500, color: "#fff", background: "#4338CA", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email invitee</a>

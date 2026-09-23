@@ -90,21 +90,21 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose }: 
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--background, #fff)", borderRadius: 12, padding: 16, width: 560, maxWidth: "100%", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Email {count.toLocaleString()} contact{count === 1 ? "" : "s"}</p>
-          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
+          <button type="button" onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
         </div>
 
         {result ? (
           <div style={{ padding: 14, textAlign: "center" }}>
             <p style={{ fontSize: 13, color: "#0F6E56", fontWeight: 500, margin: "0 0 4px" }}>✓ {result}</p>
             <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "0 0 12px" }}>Results appear in Marketing → Analytics.</p>
-            <button onClick={onClose} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer" }}>Done</button>
+            <button type="button" onClick={onClose} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer" }}>Done</button>
           </div>
         ) : (
           <>
             {/* mode */}
             <div style={{ display: "inline-flex", border: "0.5px solid #cdd9ec", borderRadius: 9, overflow: "hidden", marginBottom: 12 }}>
-              <button onClick={() => setMode("once")} style={chip(mode === "once")}>Send once</button>
-              <button onClick={() => setMode("sequence")} style={chip(mode === "sequence")}>Enroll in sequence</button>
+              <button type="button" onClick={() => setMode("once")} style={chip(mode === "once")}>Send once</button>
+              <button type="button" onClick={() => setMode("sequence")} style={chip(mode === "sequence")}>Enroll in sequence</button>
             </div>
 
             {mode === "once" ? (
@@ -112,18 +112,18 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose }: 
                 {/* channel */}
                 <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 5px" }}>SEND WITH</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: gmailOver ? 6 : 12 }}>
-                  <button onClick={() => setChannel("icapos")} style={{ textAlign: "left", border: channel === "icapos" ? "1.5px solid #2E78F5" : "0.5px solid var(--border)", background: channel === "icapos" ? "#F5F9FF" : "transparent", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}>
+                  <button type="button" onClick={() => setChannel("icapos")} style={{ textAlign: "left", border: channel === "icapos" ? "1.5px solid #2E78F5" : "0.5px solid var(--border)", background: channel === "icapos" ? "#F5F9FF" : "transparent", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}>
                     <div style={{ fontSize: 12.5, fontWeight: 600, color: channel === "icapos" ? "#185FA5" : "var(--foreground)" }}>{channel === "icapos" ? "✓ " : ""}iCapOS Email</div>
                     <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", marginTop: 2 }}>Large, tracked, unsubscribe-safe.</div>
                   </button>
-                  <button onClick={() => setChannel("gmail")} style={{ textAlign: "left", border: channel === "gmail" ? "1.5px solid #4285F4" : "0.5px solid var(--border)", background: channel === "gmail" ? "#F3F7FE" : "transparent", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}>
+                  <button type="button" onClick={() => setChannel("gmail")} style={{ textAlign: "left", border: channel === "gmail" ? "1.5px solid #4285F4" : "0.5px solid var(--border)", background: channel === "gmail" ? "#F3F7FE" : "transparent", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}>
                     <div style={{ fontSize: 12.5, fontWeight: 600, color: channel === "gmail" ? "#1A56C4" : "var(--foreground)" }}>{channel === "gmail" ? "✓ " : ""}Google (Gmail)</div>
                     <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", marginTop: 2 }}>From your inbox. Small batches.</div>
                   </button>
                 </div>
                 {gmailOver && (
                   <p style={{ fontSize: 11.5, color: "#8A5A00", background: "#FBF3E0", border: "0.5px solid #F0DFB0", borderRadius: 8, padding: "9px 11px", margin: "0 0 12px" }}>
-                    ⚠ {count.toLocaleString()} exceeds Gmail&rsquo;s daily limit (~{GMAIL_LIMIT}). <button onClick={() => setChannel("icapos")} style={{ border: "none", background: "none", color: "#185FA5", textDecoration: "underline", cursor: "pointer", padding: 0, fontSize: 11.5 }}>Use iCapOS instead</button> or reduce the selection.
+                    ⚠ {count.toLocaleString()} exceeds Gmail&rsquo;s daily limit (~{GMAIL_LIMIT}). <button type="button" onClick={() => setChannel("icapos")} style={{ border: "none", background: "none", color: "#185FA5", textDecoration: "underline", cursor: "pointer", padding: 0, fontSize: 11.5 }}>Use iCapOS instead</button> or reduce the selection.
                   </p>
                 )}
 
@@ -147,7 +147,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose }: 
                 <div style={{ border: "0.5px dashed #B5D4F4", background: "#F5F9FF", borderRadius: 9, padding: "9px 10px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5" }}>Send test to</span>
                   <input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="you@example.com" style={{ ...inp, flex: 1, minWidth: 140, background: "#fff" }} />
-                  <button onClick={sendTest} disabled={busy} style={{ background: "#fff", color: "#185FA5", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Send test</button>
+                  <button type="button" onClick={sendTest} disabled={busy} style={{ background: "#fff", color: "#185FA5", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Send test</button>
                 </div>
               </>
             ) : (
@@ -165,7 +165,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose }: 
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{msg ?? "Unsubscribed + no-email skipped automatically."}</span>
-              <button onClick={doSend} disabled={busy || gmailOver} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: gmailOver ? "#9aa1ab" : "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: gmailOver ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
+              <button type="button" onClick={doSend} disabled={busy || gmailOver} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: gmailOver ? "#9aa1ab" : "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: gmailOver ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
                 {busy ? "Working…" : mode === "sequence" ? `Enroll · ${count.toLocaleString()}` : `Send · ${count.toLocaleString()}`}
               </button>
             </div>

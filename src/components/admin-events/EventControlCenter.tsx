@@ -252,9 +252,9 @@ export function EventControlCenter({
                   {ended ? (
                     <span className="text-xs text-[var(--text-muted)]">{t("ended")}</span>
                   ) : live ? (
-                    <button onClick={() => askEnd(s)} disabled={busy} className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-50">{t("endSession")}</button>
+                    <button type="button" onClick={() => askEnd(s)} disabled={busy} className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-50">{t("endSession")}</button>
                   ) : (
-                    <button onClick={() => sessionLifecycle(s, true)} disabled={busy} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">{t("start")}</button>
+                    <button type="button" onClick={() => sessionLifecycle(s, true)} disabled={busy} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">{t("start")}</button>
                   )}
                 </div>
               );
@@ -275,7 +275,7 @@ export function EventControlCenter({
         <textarea value={bBody} onChange={(e) => setBBody(e.target.value)} rows={2} maxLength={400} placeholder={t("messagePh")} className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[11px] text-[var(--text-muted)]">{t("eduOnly")}</span>
-          <button onClick={broadcast} disabled={!bTitle.trim() || !bBody.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">{t("send")}</button>
+          <button type="button" onClick={broadcast} disabled={!bTitle.trim() || !bBody.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">{t("send")}</button>
         </div>
       </section>
 
@@ -287,7 +287,7 @@ export function EventControlCenter({
               {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
             <input type="number" min={1} max={500} value={dropAmount} onChange={(e) => setDropAmount(e.target.value)} className="w-20 rounded-md border border-[var(--border-subtle)] px-2 py-2 text-sm" />
-            <button onClick={dropPoints} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium">{t("drop")}</button>
+            <button type="button" onClick={dropPoints} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium">{t("drop")}</button>
           </div>
           <p className="mt-2 text-[11px] text-[var(--text-muted)]">{t("dropHint")}</p>
         </div>
@@ -309,13 +309,13 @@ export function EventControlCenter({
                   );
                 })}
               </div>
-              <button onClick={endPoll} className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700">{t("closePoll")}</button>
+              <button type="button" onClick={endPoll} className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700">{t("closePoll")}</button>
             </div>
           ) : (
             <div className="mt-3 space-y-2">
               <input value={pQ} onChange={(e) => setPQ(e.target.value)} placeholder={t("pollQuestionPh")} maxLength={200} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
               <textarea value={pOpts} onChange={(e) => setPOpts(e.target.value)} rows={3} placeholder={t("pollOptionsPh")} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
-              <button onClick={launchPoll} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium">{t("launchPoll")}</button>
+              <button type="button" onClick={launchPoll} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium">{t("launchPoll")}</button>
             </div>
           )}
         </div>
@@ -333,7 +333,7 @@ export function EventControlCenter({
                   <p className="truncate text-sm text-[var(--navy)]">“{h.message}”</p>
                   <p className="text-xs text-[var(--text-muted)]">{h.requesterName} · {new Date(h.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
-                <button onClick={() => resolveHelp(h.id)} className="shrink-0 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100">{t("resolve")}</button>
+                <button type="button" onClick={() => resolveHelp(h.id)} className="shrink-0 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100">{t("resolve")}</button>
               </div>
             ))
           )}
@@ -357,9 +357,9 @@ export function EventControlCenter({
                     <select defaultValue={rooms.includes(m.room) ? m.room : rooms[0]} onChange={(e) => moveAttendee(m, e.target.value)} aria-label={t("moveAttendee")} className="rounded-md border border-[var(--border-subtle)] px-1.5 py-1 text-xs">
                       {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
-                    <button onClick={() => toggleMute(m, true)} aria-label={t("muteAria", { name: m.name })} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50">{t("mute")}</button>
-                    <button onClick={() => removeAttendee(m)} aria-label={t("removeAria", { name: m.name })} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">{t("remove")}</button>
-                    <button onClick={() => banAttendee(m)} aria-label={t("banAria", { name: m.name })} className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs text-rose-700 hover:bg-rose-100">{t("ban")}</button>
+                    <button type="button" onClick={() => toggleMute(m, true)} aria-label={t("muteAria", { name: m.name })} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50">{t("mute")}</button>
+                    <button type="button" onClick={() => removeAttendee(m)} aria-label={t("removeAria", { name: m.name })} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">{t("remove")}</button>
+                    <button type="button" onClick={() => banAttendee(m)} aria-label={t("banAria", { name: m.name })} className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs text-rose-700 hover:bg-rose-100">{t("ban")}</button>
                   </div>
                 </div>
               ))

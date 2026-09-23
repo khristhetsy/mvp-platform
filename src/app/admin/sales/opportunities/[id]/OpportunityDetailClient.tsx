@@ -209,8 +209,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         {/* Action bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          {wonStage && o.status === "open" && <button onClick={() => patch({ status: "won", stageId: wonStage.id })} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Won</button>}
-          {o.status === "open" && <button onClick={() => patch({ status: "lost" })} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>Lost</button>}
+          {wonStage && o.status === "open" && <button type="button" onClick={() => patch({ status: "won", stageId: wonStage.id })} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Won</button>}
+          {o.status === "open" && <button type="button" onClick={() => patch({ status: "lost" })} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>Lost</button>}
           {o.status !== "open" && <span style={{ fontSize: 11.5, fontWeight: 600, color: statusColor, background: "var(--muted)", borderRadius: 10, padding: "5px 12px" }}>{o.status.toUpperCase()}</span>}
           <div style={{ width: 8 }} />
           {o.contact_phone && <a href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("call")} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
@@ -234,9 +234,9 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             </span>
           )}
           <div style={{ flex: 1 }} />
-          <button onClick={() => setEditing((v) => !v)} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>{editing ? "Close edit" : "Edit"}</button>
-          {nextStage && o.status === "open" && <button onClick={() => patch({ stageId: nextStage.id })} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Advance →</button>}
-          <button onClick={del} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Delete</button>
+          <button type="button" onClick={() => setEditing((v) => !v)} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>{editing ? "Close edit" : "Edit"}</button>
+          {nextStage && o.status === "open" && <button type="button" onClick={() => patch({ stageId: nextStage.id })} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Advance →</button>}
+          <button type="button" onClick={del} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Delete</button>
         </div>
 
         {/* Stage bar */}
@@ -245,7 +245,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             const active = s.id === o.stage_id;
             const done = s.sort_order < currentSort;
             return (
-              <button key={s.id} onClick={() => patch({ stageId: s.id })} disabled={busy}
+              <button type="button" key={s.id} onClick={() => patch({ stageId: s.id })} disabled={busy}
                 style={{ fontSize: 11, whiteSpace: "nowrap", cursor: "pointer", border: "none",
                   color: active ? "#fff" : done ? "#0F6E56" : "var(--muted-foreground)",
                   background: active ? "#2E78F5" : s.is_won ? "#E1F5EE" : "var(--muted)",
@@ -267,8 +267,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
               <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Expected close</label><input type="date" value={draft.expected_close} onChange={(e) => setDraft({ ...draft, expected_close: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Source</label><input value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
               <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6 }}>
-                <button onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
-                <button onClick={() => setEditing(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
+                <button type="button" onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
+                <button type="button" onClick={() => setEditing(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           ) : (
@@ -283,7 +283,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                         <span style={{ fontWeight: 500, color: "var(--foreground)" }}>{companyName}</span>
                       </span>
                       {o.contact_crm_id && (
-                        <button
+                        <button type="button"
                           onClick={() => router.push(`/admin/sales/contacts/${o.contact_crm_id}`)}
                           title="Open the company's profile"
                           style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "none", borderRadius: 999, padding: "3px 9px", cursor: "pointer" }}
@@ -329,13 +329,13 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
 
           {/* Notes / extra tabs */}
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid #eef1f5", margin: "16px 0 12px" }}>
-            <button onClick={() => setTab("notes")} style={{ fontSize: 12, fontWeight: tab === "notes" ? 600 : 400, color: tab === "notes" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "notes" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Internal notes</button>
-            <button onClick={() => setTab("activity")} style={{ fontSize: 12, fontWeight: tab === "activity" ? 600 : 400, color: tab === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity{contactActivity.length ? ` · ${contactActivity.length}` : ""}</button>
-            <button onClick={() => setTab("extra")} style={{ fontSize: 12, fontWeight: tab === "extra" ? 600 : 400, color: tab === "extra" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "extra" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Extra info</button>
+            <button type="button" onClick={() => setTab("notes")} style={{ fontSize: 12, fontWeight: tab === "notes" ? 600 : 400, color: tab === "notes" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "notes" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Internal notes</button>
+            <button type="button" onClick={() => setTab("activity")} style={{ fontSize: 12, fontWeight: tab === "activity" ? 600 : 400, color: tab === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity{contactActivity.length ? ` · ${contactActivity.length}` : ""}</button>
+            <button type="button" onClick={() => setTab("extra")} style={{ fontSize: 12, fontWeight: tab === "extra" ? 600 : 400, color: tab === "extra" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "extra" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Extra info</button>
             {founderContact && (
-              <button onClick={() => setTab("founder")} style={{ fontSize: 12, fontWeight: tab === "founder" ? 600 : 400, color: tab === "founder" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "founder" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Founder Profile</button>
+              <button type="button" onClick={() => setTab("founder")} style={{ fontSize: 12, fontWeight: tab === "founder" ? 600 : 400, color: tab === "founder" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "founder" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Founder Profile</button>
             )}
-            <button onClick={openTasks} style={{ fontSize: 12, fontWeight: tab === "tasks" ? 600 : 400, color: tab === "tasks" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "tasks" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Tasks{tasksLoaded && oppTasks.length ? ` · ${oppTasks.length}` : ""}</button>
+            <button type="button" onClick={openTasks} style={{ fontSize: 12, fontWeight: tab === "tasks" ? 600 : 400, color: tab === "tasks" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "tasks" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Tasks{tasksLoaded && oppTasks.length ? ` · ${oppTasks.length}` : ""}</button>
           </div>
           {tab === "founder" && founderContact ? (
             <FounderProfileMirror contact={founderContact} />
@@ -348,7 +348,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                 <input type="date" value={taskDraft.dueDate} onChange={(e) => setTaskDraft({ ...taskDraft, dueDate: e.target.value })} style={inp} />
                 <select value={taskDraft.assigneeId} onChange={(e) => setTaskDraft({ ...taskDraft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <button onClick={createTask} disabled={busy || !taskDraft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !taskDraft.title.trim() ? 0.5 : 1 }}>Add task</button>
+                  <button type="button" onClick={createTask} disabled={busy || !taskDraft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !taskDraft.title.trim() ? 0.5 : 1 }}>Add task</button>
                 </div>
               </div>
 
@@ -367,8 +367,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                       <div key={ct.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
                         <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{ct.title}&rdquo;? This can&rsquo;t be undone.</span>
                         <span style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
-                          <button onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+                          <button type="button" onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
+                          <button type="button" onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
                         </span>
                       </div>
                     );
@@ -384,8 +384,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                       <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
                       <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
                       <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
-                        <button onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                        {!cdone && <button type="button" onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
+                        <button type="button" onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                       </span>
                     </div>
                   );
@@ -396,7 +396,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             <div>
               <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 48, resize: "vertical" }} />
               <div style={{ margin: "6px 0 12px" }}>
-                <button onClick={saveNote} disabled={busy || !noteInput.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !noteInput.trim() ? 0.5 : 1 }}>Save note</button>
+                <button type="button" onClick={saveNote} disabled={busy || !noteInput.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !noteInput.trim() ? 0.5 : 1 }}>Save note</button>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 11, whiteSpace: "pre-wrap", lineHeight: 1.6, minHeight: 40 }}>{o.notes || "No notes yet."}</div>
             </div>

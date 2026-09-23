@@ -104,7 +104,7 @@ export function MissionsManager({ initialMissions }: { initialMissions: Mission[
                 <span className="font-medium text-[var(--navy)]">{m.title}</span>
                 <span className="ml-2 text-xs text-[var(--text-muted)]">+{m.bonusPoints} pts · {m.requiredActions.length} actions</span>
               </div>
-              <button onClick={() => toggleActive(m)} className="text-xs font-medium text-[var(--blue)] hover:underline">
+              <button type="button" onClick={() => toggleActive(m)} className="text-xs font-medium text-[var(--blue)] hover:underline">
                 {m.isActive ? "Deactivate" : "Activate"}
               </button>
             </div>

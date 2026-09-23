@@ -43,7 +43,7 @@ export function NewSessionButton() {
   // Collapsed: just the button. Clicking it reveals the date + time picker inline.
   if (!open) {
     return (
-      <button onClick={() => { setErr(null); setOpen(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>New meeting session</button>
+      <button type="button" onClick={() => { setErr(null); setOpen(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>New meeting session</button>
     );
   }
 
@@ -52,8 +52,8 @@ export function NewSessionButton() {
       <input type="date" value={date} onChange={(e) => setDate(e.target.value)} autoFocus style={{ fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
       <input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Meeting time" style={{ fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
       {tz && <span style={{ fontSize: 12, color: "var(--muted-foreground)" }} title="Your local time zone">{tz}</span>}
-      <button onClick={() => void create()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy ? "Creating…" : "Create"}</button>
-      <button onClick={() => { setOpen(false); setErr(null); }} disabled={busy} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+      <button type="button" onClick={() => void create()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy ? "Creating…" : "Create"}</button>
+      <button type="button" onClick={() => { setOpen(false); setErr(null); }} disabled={busy} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
       {err && <span style={{ fontSize: 12, color: "#A32D2D" }}>{err}</span>}
     </div>
   );

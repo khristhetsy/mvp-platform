@@ -414,8 +414,8 @@ export function CompanySettingsForm({ company }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">{editControl(f)}</div>
-                        <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50"><i className="ti ti-check" aria-hidden="true" /></button>
-                        <button onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
+                        <button type="button" onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50"><i className="ti ti-check" aria-hidden="true" /></button>
+                        <button type="button" onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
                       </div>
                       {f.hint ? <p className="mt-1 text-xs text-slate-400">{f.hint}</p> : null}
                       {err ? <p className="mt-1 text-xs text-red-600">{err}</p> : null}

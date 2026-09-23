@@ -502,10 +502,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, company, email, phone…" style={{ ...inp, flex: 1, minWidth: 200 }} />
         )}
         {!odooSearch && activeFilters > 0 && (
-          <button onClick={clearColumnFilters} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
+          <button type="button" onClick={clearColumnFilters} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}
         <div style={{ position: "relative", display: odooSearch ? "none" : undefined }}>
-          <button onClick={() => { setFiltersOpen((v) => !v); setOpenColPicker(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: filterBadge ? "#fff" : "var(--foreground)", background: filterBadge ? "#2E78F5" : "transparent", border: filterBadge ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <button type="button" onClick={() => { setFiltersOpen((v) => !v); setOpenColPicker(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: filterBadge ? "#fff" : "var(--foreground)", background: filterBadge ? "#2E78F5" : "transparent", border: filterBadge ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <i className="ti ti-adjustments" style={{ fontSize: 15 }} aria-hidden="true" /> Filters
             {filterBadge > 0 && <span style={{ background: "rgba(255,255,255,.28)", borderRadius: 10, padding: "0 6px", fontSize: 10 }}>{filterBadge}</span>}
             <i className="ti ti-chevron-down" style={{ fontSize: 13 }} aria-hidden="true" />
@@ -516,7 +516,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                 <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Role</div>
                 <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                   {([["", "Any"], ["founder", "Founder"], ["investor", "Investor"], ["advisor", "Advisor"]] as const).map(([val, label]) => (
-                    <button key={val} onClick={() => { setRole(val); setOpenFacetKey(null); }} style={{ fontSize: 11.5, fontWeight: role === val ? 600 : 400, color: role === val ? "#fff" : "var(--muted-foreground)", background: role === val ? "#4338CA" : "transparent", border: "none", padding: "4px 10px", cursor: "pointer" }}>{label}</button>
+                    <button type="button" key={val} onClick={() => { setRole(val); setOpenFacetKey(null); }} style={{ fontSize: 11.5, fontWeight: role === val ? 600 : 400, color: role === val ? "#fff" : "var(--muted-foreground)", background: role === val ? "#4338CA" : "transparent", border: "none", padding: "4px 10px", cursor: "pointer" }}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -528,7 +528,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   const isOpen = openFacetKey === key;
                   return (
                     <div key={key} style={{ borderBottom: "0.5px solid #f1f5f9" }}>
-                      <button onClick={() => { setOpenFacetKey(isOpen ? null : key); setFacetSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, textAlign: "left" }}>
+                      <button type="button" onClick={() => { setOpenFacetKey(isOpen ? null : key); setFacetSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, textAlign: "left" }}>
                         <span style={{ flex: 1, color: "var(--foreground)" }}>{FACET_LABEL[key]}</span>
                         {sel.length > 0 && <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 10, padding: "1px 8px" }}>{sel.length}</span>}
                         <i className={isOpen ? "ti ti-chevron-up" : "ti ti-chevron-down"} style={{ color: "var(--muted-foreground)" }} aria-hidden="true" />
@@ -552,14 +552,14 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                 })}
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderTop: "0.5px solid #eef1f5" }}>
-                <button onClick={clearAllFilters} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Clear all</button>
+                <button type="button" onClick={clearAllFilters} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Clear all</button>
                 <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{filterBadge} active</span>
               </div>
             </div>
           )}
         </div>
         <div style={{ position: "relative" }}>
-          <button onClick={() => { setOpenColPicker((v) => !v); setOpenFilter(null); setFiltersOpen(false); }} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns</button>
+          <button type="button" onClick={() => { setOpenColPicker((v) => !v); setOpenFilter(null); setFiltersOpen(false); }} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns</button>
           {openColPicker && (
             <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 190, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
               <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 4px 6px" }}>Show columns</div>
@@ -573,7 +573,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           )}
         </div>
         <div style={{ position: "relative", display: odooSearch ? "none" : undefined }}>
-          <button onClick={() => { setGroupByOpen((v) => !v); setOpenColPicker(false); setFiltersOpen(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: groupBy !== "profile" ? "#fff" : "var(--foreground)", background: groupBy !== "profile" ? "#2E78F5" : "transparent", border: groupBy !== "profile" ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <button type="button" onClick={() => { setGroupByOpen((v) => !v); setOpenColPicker(false); setFiltersOpen(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: groupBy !== "profile" ? "#fff" : "var(--foreground)", background: groupBy !== "profile" ? "#2E78F5" : "transparent", border: groupBy !== "profile" ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <i className="ti ti-layout-list" style={{ fontSize: 15 }} aria-hidden="true" /> Group by: {groupByLabel}
             <i className="ti ti-chevron-down" style={{ fontSize: 13 }} aria-hidden="true" />
           </button>
@@ -587,7 +587,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   <div key={sec.key}>
                     <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "8px 13px 3px", background: "var(--muted)" }}>{sec.label}</div>
                     {rows.map((o) => (
-                      <button key={o.id} onClick={() => { setGroupBy(o.id); setGroupByOpen(false); }} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "8px 13px", background: groupBy === o.id ? "#EEF0F4" : "none", border: "none", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
+                      <button type="button" key={o.id} onClick={() => { setGroupBy(o.id); setGroupByOpen(false); }} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "8px 13px", background: groupBy === o.id ? "#EEF0F4" : "none", border: "none", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
                         {o.id === "profile" ? "Profile (Investor / Founder / Advisor)" : o.label}
                         {groupBy === o.id && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                       </button>
@@ -604,7 +604,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       {gearMsg && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, background: gearBusy ? "#E6F1FB" : /fail|couldn|no rows/i.test(gearMsg) ? "#FCEBEB" : "#E1F5EE", border: `0.5px solid ${gearBusy ? "#B5D4F4" : /fail|couldn|no rows/i.test(gearMsg) ? "#F7C1C1" : "#A7E0CE"}`, borderRadius: 10, padding: "9px 13px", marginBottom: 12, fontSize: 12.5, color: gearBusy ? "#0C447C" : /fail|couldn|no rows/i.test(gearMsg) ? "#A32D2D" : "#0F6E56" }}>
           <span style={{ fontWeight: 500 }}>{gearMsg}</span>
-          {!gearBusy && <button onClick={() => setGearMsg(null)} style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>}
+          {!gearBusy && <button type="button" onClick={() => setGearMsg(null)} style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>}
         </div>
       )}
 
@@ -629,11 +629,11 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             )}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               {csvPreview?.created != null ? (
-                <button onClick={() => { setCsvRows(null); setCsvPreview(null); }} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Done</button>
+                <button type="button" onClick={() => { setCsvRows(null); setCsvPreview(null); }} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Done</button>
               ) : (
                 <>
-                  <button onClick={() => { setCsvRows(null); setCsvPreview(null); }} disabled={gearBusy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
-                  <button onClick={() => void commitCsv()} disabled={gearBusy || !csvPreview || csvPreview.toCreate === 0} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: gearBusy || !csvPreview || csvPreview.toCreate === 0 ? 0.5 : 1 }}>{gearBusy ? "Importing…" : `Import ${csvPreview?.toCreate ?? 0} contacts`}</button>
+                  <button type="button" onClick={() => { setCsvRows(null); setCsvPreview(null); }} disabled={gearBusy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
+                  <button type="button" onClick={() => void commitCsv()} disabled={gearBusy || !csvPreview || csvPreview.toCreate === 0} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: gearBusy || !csvPreview || csvPreview.toCreate === 0 ? 0.5 : 1 }}>{gearBusy ? "Importing…" : `Import ${csvPreview?.toCreate ?? 0} contacts`}</button>
                 </>
               )}
             </div>
@@ -648,8 +648,8 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           <input value={addDraft.company} onChange={(e) => setAddDraft({ ...addDraft, company: e.target.value })} placeholder="Company" style={inp} />
           <input value={addDraft.phone} onChange={(e) => setAddDraft({ ...addDraft, phone: e.target.value })} placeholder="Phone" style={inp} />
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={addContact} disabled={busy || !addDraft.name.trim()} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !addDraft.name.trim() ? 0.5 : 1 }}>Save</button>
-            <button onClick={() => { setAdding(false); setErr(null); }} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+            <button type="button" onClick={addContact} disabled={busy || !addDraft.name.trim()} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !addDraft.name.trim() ? 0.5 : 1 }}>Save</button>
+            <button type="button" onClick={() => { setAdding(false); setErr(null); }} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
           </div>
           {err && <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: "#A32D2D" }}>{err}</div>}
         </div>
@@ -684,7 +684,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                       <select value={c.op} onChange={(e) => changeDraftOp(i, e.target.value as Operator)} style={{ ...inp, flex: 1 }}>
                         {(def?.ops ?? []).map((o) => <option key={o} value={o}>{OP_LABEL[o]}</option>)}
                       </select>
-                      <button onClick={() => removeDraftRow(i)} style={{ border: "0.5px solid #F0C0C0", color: "#A32D2D", background: "#fff", borderRadius: 7, padding: "6px 9px", cursor: "pointer" }}>×</button>
+                      <button type="button" onClick={() => removeDraftRow(i)} style={{ border: "0.5px solid #F0C0C0", color: "#A32D2D", background: "#fff", borderRadius: 7, padding: "6px 9px", cursor: "pointer" }}>×</button>
                     </div>
                     {needsValue && (
                       <div style={{ marginTop: 8 }}>
@@ -710,10 +710,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                 );
               })}
             </div>
-            <button onClick={addDraftRow} style={{ marginTop: 10, fontSize: 12, color: "#2E78F5", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>＋ New condition</button>
+            <button type="button" onClick={addDraftRow} style={{ marginTop: 10, fontSize: 12, color: "#2E78F5", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>＋ New condition</button>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
-              <button onClick={() => setCustomOpen(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
-              <button onClick={applyCustom} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Apply</button>
+              <button type="button" onClick={() => setCustomOpen(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={applyCustom} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Apply</button>
             </div>
           </div>
         </div>
@@ -744,7 +744,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   {h.sortable && sortActive && <i className={sort.dir === "asc" ? "ti ti-arrow-up" : "ti ti-arrow-down"} style={{ fontSize: 12 }} aria-hidden="true" />}
                 </span>
                 {h.kind !== "none" && (
-                  <button onClick={() => (h.kind === "country" ? (setOpenFilter(openFilter === "country" ? null : "country"), setOpenColPicker(false)) : openText(h.key))} aria-label={`Filter ${h.label}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: filterActive ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex" }}>
+                  <button type="button" onClick={() => (h.kind === "country" ? (setOpenFilter(openFilter === "country" ? null : "country"), setOpenColPicker(false)) : openText(h.key))} aria-label={`Filter ${h.label}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: filterActive ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex" }}>
                     <i className={filterActive ? "ti ti-filter-filled" : "ti ti-filter"} style={{ fontSize: 13 }} aria-hidden="true" />
                   </button>
                 )}
@@ -753,8 +753,8 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 6 }}>{h.label} contains</div>
                     <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && applyText(h.key)} autoFocus placeholder="Type to filter…" style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                      <button onClick={() => applyText(h.key)} style={{ flex: 1, fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Apply</button>
-                      <button onClick={() => clearText(h.key)} style={{ flex: 1, fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Clear</button>
+                      <button type="button" onClick={() => applyText(h.key)} style={{ flex: 1, fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Apply</button>
+                      <button type="button" onClick={() => clearText(h.key)} style={{ flex: 1, fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Clear</button>
                     </div>
                   </div>
                 )}
@@ -772,7 +772,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                         </label>
                       ))}
                     </div>
-                    {countries.length > 0 && <button onClick={() => setCondValues("country", "in", [])} style={{ width: "100%", marginTop: 8, fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Clear selection</button>}
+                    {countries.length > 0 && <button type="button" onClick={() => setCondValues("country", "in", [])} style={{ width: "100%", marginTop: 8, fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px", cursor: "pointer" }}>Clear selection</button>}
                   </div>
                 )}
               </div>
@@ -824,7 +824,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           const isOpen = !!expanded[g.id];
           return (
             <div key={g.id}>
-              <button onClick={() => toggleGroup(g.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderTop: "0.5px solid #e2e6ed", cursor: "pointer" }}>
+              <button type="button" onClick={() => toggleGroup(g.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderTop: "0.5px solid #e2e6ed", cursor: "pointer" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 120ms" }}><polyline points="9 6 15 12 9 18" /></svg>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{g.label}</span>
                 <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{count.toLocaleString()}</span>
@@ -856,10 +856,10 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                           <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
                             {(gs!.page * PAGE + 1).toLocaleString()}–{Math.min(gs!.total, gs!.page * PAGE + gs!.rows.length).toLocaleString()} / {gs!.total.toLocaleString()}
                           </span>
-                          <button onClick={() => goPage(g.id, -1)} disabled={gs!.loading || gs!.page === 0} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: gs!.page === 0 ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: gs!.page === 0 ? "not-allowed" : "pointer", opacity: gs!.page === 0 ? 0.5 : 1 }}>
+                          <button type="button" onClick={() => goPage(g.id, -1)} disabled={gs!.loading || gs!.page === 0} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: gs!.page === 0 ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: gs!.page === 0 ? "not-allowed" : "pointer", opacity: gs!.page === 0 ? 0.5 : 1 }}>
                             <i className="ti ti-chevron-left" aria-hidden="true" /> Prev
                           </button>
-                          <button onClick={() => goPage(g.id, 1)} disabled={gs!.loading || (gs!.page + 1) * PAGE >= gs!.total} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: (gs!.page + 1) * PAGE >= gs!.total ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: (gs!.page + 1) * PAGE >= gs!.total ? "not-allowed" : "pointer", opacity: (gs!.page + 1) * PAGE >= gs!.total ? 0.5 : 1 }}>
+                          <button type="button" onClick={() => goPage(g.id, 1)} disabled={gs!.loading || (gs!.page + 1) * PAGE >= gs!.total} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: (gs!.page + 1) * PAGE >= gs!.total ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: (gs!.page + 1) * PAGE >= gs!.total ? "not-allowed" : "pointer", opacity: (gs!.page + 1) * PAGE >= gs!.total ? 0.5 : 1 }}>
                             Next <i className="ti ti-chevron-right" aria-hidden="true" />
                           </button>
                         </div>
@@ -932,12 +932,12 @@ function OdooSearchBar(p: OdooSearchBarProps) {
   const activeFacetCount = (field: string) => { const c = p.spec.conditions.find((c) => c.field === field && c.op === "in"); return Array.isArray(c?.value) ? c!.value.length : 0; };
   const favRow = (s: SavedSearch) => (
     <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
-      <button onClick={() => p.applySaved(s)} style={{ ...item, flex: 1, paddingRight: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <button type="button" onClick={() => p.applySaved(s)} style={{ ...item, flex: 1, paddingRight: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         <i className="ti ti-star" style={{ color: "#7A5AA8", marginRight: 4 }} aria-hidden="true" />{s.name}
         {s.mine && s.isDefault ? <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}> · default</span> : null}
         {!s.mine ? <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}> · {s.ownerName ?? "Staff"}</span> : s.isShared ? <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}> · shared</span> : null}
       </button>
-      {(s.canDelete ?? s.mine) && <button onClick={() => { if (window.confirm(`Delete saved search “${s.name}”?`)) p.deleteSaved(s.id); }} aria-label={`Delete ${s.name}`} title="Delete" style={{ border: "none", background: "none", color: "#A32D2D", cursor: "pointer", padding: "0 10px" }}><i className="ti ti-trash" style={{ fontSize: 13 }} aria-hidden="true" /></button>}
+      {(s.canDelete ?? s.mine) && <button type="button" onClick={() => { if (window.confirm(`Delete saved search “${s.name}”?`)) p.deleteSaved(s.id); }} aria-label={`Delete ${s.name}`} title="Delete" style={{ border: "none", background: "none", color: "#A32D2D", cursor: "pointer", padding: "0 10px" }}><i className="ti ti-trash" style={{ fontSize: 13 }} aria-hidden="true" /></button>}
     </div>
   );
 
@@ -947,13 +947,13 @@ function OdooSearchBar(p: OdooSearchBarProps) {
         {p.spec.conditions.map((c, i) => (
           <span key={i} style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #B5D4F4", background: "#E6F1FB", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>
             <span style={{ padding: "3px 8px", color: "#0C447C" }}>{p.condLabel(c)}</span>
-            <button onClick={() => p.removeConditionAt(i)} style={{ border: "none", background: "#B5D4F4", color: "#0C447C", padding: "3px 6px", cursor: "pointer" }}>×</button>
+            <button type="button" onClick={() => p.removeConditionAt(i)} style={{ border: "none", background: "#B5D4F4", color: "#0C447C", padding: "3px 6px", cursor: "pointer" }}>×</button>
           </span>
         ))}
         {p.groupBy !== "profile" && (
           <span style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #E3C08A", background: "#FAEEDA", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>
             <span style={{ padding: "3px 8px", color: "#633806" }}>▤ {p.groupByLabel}</span>
-            <button onClick={() => p.setGroupBy("profile")} style={{ border: "none", background: "#E3C08A", color: "#633806", padding: "3px 6px", cursor: "pointer" }}>×</button>
+            <button type="button" onClick={() => p.setGroupBy("profile")} style={{ border: "none", background: "#E3C08A", color: "#633806", padding: "3px 6px", cursor: "pointer" }}>×</button>
           </span>
         )}
         <input
@@ -964,7 +964,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
           placeholder={p.spec.conditions.length ? "" : "Search…"}
           style={{ flex: 1, minWidth: 90, border: "none", outline: "none", fontSize: 13, padding: "4px 2px", background: "transparent" }}
         />
-        <button onClick={() => p.setSearchOpen(!p.searchOpen)} style={{ border: "none", background: "none", color: "#2E78F5", cursor: "pointer", fontSize: 14 }}><i className="ti ti-chevron-down" aria-hidden="true" /></button>
+        <button type="button" onClick={() => p.setSearchOpen(!p.searchOpen)} style={{ border: "none", background: "none", color: "#2E78F5", cursor: "pointer", fontSize: 14 }}><i className="ti ti-chevron-down" aria-hidden="true" /></button>
       </div>
 
       {p.searchOpen && (
@@ -974,7 +974,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
             {p.typed.trim() ? (
               <div style={{ padding: "4px 0" }}>
                 {TEXT_FIELDS.map(({ f, l }) => (
-                  <button key={f} onClick={() => p.addCondition({ field: f, op: "contains", value: p.typed.trim() })} style={{ ...item, paddingLeft: 12 }}>
+                  <button type="button" key={f} onClick={() => p.addCondition({ field: f, op: "contains", value: p.typed.trim() })} style={{ ...item, paddingLeft: 12 }}>
                     Search <b>{l}</b> for: <span style={{ color: "#185FA5" }}>{p.typed.trim()}</span>
                   </button>
                 ))}
@@ -985,12 +985,12 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                   <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#185FA5" }}><i className="ti ti-filter" aria-hidden="true" /> FILTERS</div>
                   {TYPE_QUICK.map((qf) => {
                     const on = p.quickActive(qf.cond);
-                    return <button key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
+                    return <button type="button" key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
                   })}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0" }} />
                   {QUICK.map((qf) => {
                     const on = p.quickActive(qf.cond);
-                    return <button key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
+                    return <button type="button" key={qf.label} onClick={() => p.toggleQuick(qf.cond)} style={{ ...item, background: on ? "#EEF4FF" : "none", color: on ? "#185FA5" : "var(--foreground)" }}>{on ? "✓ " : ""}{qf.label}</button>;
                   })}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0" }} />
                   {FACET_ROWS.map((f) => {
@@ -1000,7 +1000,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                     const opts = all.filter((o) => o.toLowerCase().includes(facetQ.toLowerCase()));
                     return (
                       <div key={f.field}>
-                        <button onClick={() => { setOpenFacet(isOpen ? null : f.field); setFacetQ(""); }} style={{ ...item, display: "flex", alignItems: "center", gap: 6, color: n ? "#185FA5" : "var(--foreground)" }}>
+                        <button type="button" onClick={() => { setOpenFacet(isOpen ? null : f.field); setFacetQ(""); }} style={{ ...item, display: "flex", alignItems: "center", gap: 6, color: n ? "#185FA5" : "var(--foreground)" }}>
                           <span style={{ flex: 1 }}>{f.label}</span>
                           {n > 0 && <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 10, padding: "0 7px" }}>{n}</span>}
                           <i className={`ti ti-chevron-${isOpen ? "down" : "right"}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }} aria-hidden="true" />
@@ -1023,13 +1023,13 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                     );
                   })}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
-                  <button onClick={p.openCustom} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Add custom filter</button>
+                  <button type="button" onClick={p.openCustom} style={{ ...item, color: "#2E78F5", fontWeight: 500, paddingLeft: 12 }}>＋ Add custom filter</button>
                 </div>
                 <div style={{ borderRight: "0.5px solid #eef1f5" }}>
                   <div style={{ padding: "9px 12px", fontSize: 11, fontWeight: 600, color: "#633806" }}><i className="ti ti-layout-list" aria-hidden="true" /> GROUP BY</div>
                   {groupOpts.map((o) => {
                     const on = p.groupBy === o.id;
-                    return <button key={o.id} onClick={() => { p.setGroupBy(o.id); }} style={{ ...item, background: on ? "#FBF3E6" : "none", color: on ? "#633806" : "var(--foreground)" }}>{on ? "✓ " : ""}{o.id === "profile" ? "Type" : o.label}</button>;
+                    return <button type="button" key={o.id} onClick={() => { p.setGroupBy(o.id); }} style={{ ...item, background: on ? "#FBF3E6" : "none", color: on ? "#633806" : "var(--foreground)" }}>{on ? "✓ " : ""}{o.id === "profile" ? "Type" : o.label}</button>;
                   })}
                 </div>
                 <div>
@@ -1041,7 +1041,7 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                   {shared.length === 0 && <div style={{ padding: "2px 12px 6px 26px", fontSize: 11.5, color: "var(--muted-foreground)" }}>Nothing shared by the team yet.</div>}
                   {shared.map(favRow)}
                   <div style={{ borderTop: "0.5px solid #eef1f5", margin: "5px 0 0" }} />
-                  <button onClick={() => p.save.setOpen(!p.save.open)} style={{ ...item, display: "flex", alignItems: "center", paddingLeft: 12, color: "var(--foreground)", fontWeight: 500 }}>
+                  <button type="button" onClick={() => p.save.setOpen(!p.save.open)} style={{ ...item, display: "flex", alignItems: "center", paddingLeft: 12, color: "var(--foreground)", fontWeight: 500 }}>
                     <span style={{ flex: 1 }}>Save current search</span>
                     <i className={`ti ti-chevron-${p.save.open ? "up" : "down"}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }} aria-hidden="true" />
                   </button>
@@ -1050,10 +1050,10 @@ function OdooSearchBar(p: OdooSearchBarProps) {
                       <input value={p.save.name} onChange={(e) => p.save.setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") p.save.submit(); }} autoFocus placeholder="Name this search" style={{ width: "100%", boxSizing: "border-box", fontSize: 12, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff", marginBottom: 7 }} />
                       <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 4, cursor: "pointer" }}><input type="checkbox" checked={p.save.isDefault} onChange={(e) => p.save.setDefault(e.target.checked)} style={{ width: 13, height: 13 }} /> Default filter</label>
                       <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, marginBottom: 8, cursor: "pointer" }}><input type="checkbox" checked={p.save.shared} onChange={(e) => p.save.setShared(e.target.checked)} style={{ width: 13, height: 13 }} /> Shared with team</label>
-                      <button onClick={p.save.submit} disabled={!p.save.name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#7A5AA8", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer", opacity: p.save.name.trim() ? 1 : 0.5 }}>Save</button>
+                      <button type="button" onClick={p.save.submit} disabled={!p.save.name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#7A5AA8", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer", opacity: p.save.name.trim() ? 1 : 0.5 }}>Save</button>
                     </div>
                   )}
-                  {p.spec.conditions.length > 0 && <button onClick={() => { p.clearAll(); }} style={{ ...item, color: "#A32D2D", paddingLeft: 12 }}>Clear all filters</button>}
+                  {p.spec.conditions.length > 0 && <button type="button" onClick={() => { p.clearAll(); }} style={{ ...item, color: "#A32D2D", paddingLeft: 12 }}>Clear all filters</button>}
                 </div>
               </div>
             )}

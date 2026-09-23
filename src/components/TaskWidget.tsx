@@ -142,7 +142,7 @@ export function TaskWidget() {
           {/* Filter toggle */}
           <div style={{ display: "flex", background: "var(--muted)", borderRadius: 6, padding: 2 }}>
             {(["active", "all"] as const).map((f) => (
-              <button
+              <button type="button"
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
@@ -157,7 +157,7 @@ export function TaskWidget() {
               </button>
             ))}
           </div>
-          <button
+          <button type="button"
             onClick={() => setShowForm(!showForm)}
             style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
           >
@@ -194,14 +194,14 @@ export function TaskWidget() {
               onChange={(e) => setForm({ ...form, due_date: e.target.value })}
               style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", flex: 1 }}
             />
-            <button
+            <button type="button"
               onClick={handleCreate}
               disabled={saving || !form.title.trim()}
               style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
             >
               {saving ? "…" : "Save"}
             </button>
-            <button
+            <button type="button"
               onClick={() => setShowForm(false)}
               style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}
             >
@@ -240,7 +240,7 @@ export function TaskWidget() {
                 }}
               >
                 {/* Checkbox */}
-                <button
+                <button type="button"
                   onClick={() => toggleDone(task)}
                   disabled={toggling === task.id}
                   style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0 }}
@@ -280,7 +280,7 @@ export function TaskWidget() {
                 </div>
 
                 {/* Delete */}
-                <button
+                <button type="button"
                   onClick={() => handleDelete(task.id)}
                   title={t("delete_task")}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "0 2px", fontSize: 12, flexShrink: 0, opacity: 0.5 }}

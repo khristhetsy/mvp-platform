@@ -85,12 +85,12 @@ export function OperationsAssistant({ entityType, entityId }: { entityType: stri
 
       <div style={{ padding: "0 12px 10px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-          {QUICK.map((q) => <button key={q} onClick={() => send(q)} style={{ fontSize: 10.5, padding: "3px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>{q}</button>)}
+          {QUICK.map((q) => <button type="button" key={q} onClick={() => send(q)} style={{ fontSize: 10.5, padding: "3px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>{q}</button>)}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(input)} placeholder="Ask the assistant…"
             style={{ flex: 1, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
-          <button onClick={() => send(input)} disabled={sending || !input.trim()} style={{ fontSize: 12, padding: "7px 13px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: sending || !input.trim() ? 0.5 : 1 }}>Send</button>
+          <button type="button" onClick={() => send(input)} disabled={sending || !input.trim()} style={{ fontSize: 12, padding: "7px 13px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: sending || !input.trim() ? 0.5 : 1 }}>Send</button>
         </div>
       </div>
     </div>

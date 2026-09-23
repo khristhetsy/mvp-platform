@@ -165,7 +165,7 @@ export function BannerEditor({ event }: { event: EventRecord }) {
       <div className="mt-4 flex items-center justify-end gap-3 border-t border-[var(--border-subtle)] pt-4">
         {msg && <span className="text-sm font-medium text-emerald-700">{msg}</span>}
         {error && <span className="text-sm text-rose-600">{error}</span>}
-        <button onClick={save} disabled={saving} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+        <button type="button" onClick={save} disabled={saving} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
           {saving ? t("saving") : t("save_banner")}
         </button>
       </div>

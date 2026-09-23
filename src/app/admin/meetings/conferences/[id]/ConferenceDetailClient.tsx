@@ -62,7 +62,7 @@ export function ConferenceDetailClient({ conference, sessions: initialSessions }
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Agenda · {sessions.length} session{sessions.length === 1 ? "" : "s"}</div>
-        <button onClick={() => setAdding(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ Add session</button>
+        <button type="button" onClick={() => setAdding(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ Add session</button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -79,7 +79,7 @@ export function ConferenceDetailClient({ conference, sessions: initialSessions }
                 </div>
                 {s.description && <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>{s.description}</div>}
               </div>
-              <button onClick={() => void removeSession(s.id)} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Remove</button>
+              <button type="button" onClick={() => void removeSession(s.id)} style={{ fontSize: 11, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Remove</button>
             </div>
           </div>
         ))}
@@ -135,7 +135,7 @@ function ChecklistPanel({ conferenceId }: { conferenceId: string }) {
         <div style={{ fontSize: 12, color: MUTED, marginBottom: 10 }}>Apply a checklist template to auto-create dated prep tasks (T-30 → T+1).</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {templates.map((t) => (
-            <button key={t.id} onClick={() => void apply(t.id)} disabled={applying} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{applying ? "Applying…" : `Apply ${t.name} (${t.item_count})`}</button>
+            <button type="button" key={t.id} onClick={() => void apply(t.id)} disabled={applying} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{applying ? "Applying…" : `Apply ${t.name} (${t.item_count})`}</button>
           ))}
         </div>
       </div>
@@ -201,7 +201,7 @@ function RegistrationsPanel({ conferenceId }: { conferenceId: string }) {
         <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Registrations</span>
         {data?.linked && data.event && <span style={{ fontSize: 10.5, background: "#E1F5EE", color: "#0F6E56", borderRadius: 5, padding: "1px 7px" }}>iCFO Event: {data.event.title}</span>}
         {data?.linked && data.event && <a href={`/events/${data.event.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BLUE, textDecoration: "none" }}>View event →</a>}
-        {data?.linked && <button onClick={() => void setLink(null)} style={{ marginLeft: "auto", fontSize: 11, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}>Unlink</button>}
+        {data?.linked && <button type="button" onClick={() => void setLink(null)} style={{ marginLeft: "auto", fontSize: 11, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}>Unlink</button>}
       </div>
 
       {data?.linked && data.stats ? (
@@ -219,7 +219,7 @@ function RegistrationsPanel({ conferenceId }: { conferenceId: string }) {
               <option value="">Select an iCFO Event…</option>
               {events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
             </select>
-            <button onClick={() => linking && void setLink(linking)} disabled={!linking} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Link event</button>
+            <button type="button" onClick={() => linking && void setLink(linking)} disabled={!linking} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Link event</button>
           </div>
         </div>
       )}
@@ -256,8 +256,8 @@ function AddSessionForm({ conferenceId, onDone, onCancel }: { conferenceId: stri
         <label style={{ fontSize: 10.5, color: MUTED }}>Ends<input type="datetime-local" value={ends} onChange={(e) => setEnds(e.target.value)} style={{ ...field, width: "100%", marginTop: 3 }} /></label>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <button onClick={() => void save()} disabled={busy || !title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Adding…" : "Add session"}</button>
-        <button onClick={onCancel} style={{ fontSize: 12, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Cancel</button>
+        <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Adding…" : "Add session"}</button>
+        <button type="button" onClick={onCancel} style={{ fontSize: 12, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Cancel</button>
       </div>
     </div>
   );

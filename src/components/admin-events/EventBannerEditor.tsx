@@ -135,7 +135,7 @@ export function EventBannerEditor({
 
       <div className="mt-4 flex items-center gap-3">
         {canEdit && url && (
-          <button onClick={remove} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
+          <button type="button" onClick={remove} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
             {t("removeBanner")}
           </button>
         )}

@@ -37,7 +37,7 @@ function InlineMultiSelect({ options, selected, onChange }: { options: { value: 
           return (
             <span key={v} className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700">
               {lbl}
-              <button onClick={() => toggle(v)} aria-label={`Remove ${lbl}`} className="text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>
+              <button type="button" onClick={() => toggle(v)} aria-label={`Remove ${lbl}`} className="text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>
             </span>
           );
         })}
@@ -144,14 +144,14 @@ function InlineField({ desc, value, onSave }: { desc: FieldDesc; value: unknown;
         <div>
           {editControl()}
           <div className="mt-1.5 flex items-center gap-2">
-            <button onClick={commit} disabled={saving} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+            <button type="button" onClick={commit} disabled={saving} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Save
             </button>
-            <button onClick={() => { setEditing(false); setDraft(value); }} className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">Cancel</button>
+            <button type="button" onClick={() => { setEditing(false); setDraft(value); }} className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">Cancel</button>
           </div>
         </div>
       ) : (
-        <button onClick={() => setEditing(true)} className="group flex w-full items-start justify-between gap-2 rounded-md border border-transparent px-1.5 py-1 text-left hover:border-slate-200 hover:bg-slate-50">
+        <button type="button" onClick={() => setEditing(true)} className="group flex w-full items-start justify-between gap-2 rounded-md border border-transparent px-1.5 py-1 text-left hover:border-slate-200 hover:bg-slate-50">
           <span className="min-w-0">{readDisplay()}</span>
           <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300 opacity-0 transition group-hover:opacity-100" />
         </button>

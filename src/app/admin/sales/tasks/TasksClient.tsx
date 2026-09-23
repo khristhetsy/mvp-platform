@@ -184,9 +184,9 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
             { key: "settings", icon: "ti-adjustments", label: "Task settings", href: "/admin/sales/settings" },
           ]} />
           <div style={{ display: "flex", background: "var(--muted)", borderRadius: 7, padding: 2 }}>
-            <button onClick={() => setScope("my")} style={scopeTab("my", "My")}>My</button>
-            <button onClick={() => setScope("all")} style={scopeTab("all", "All")}>All</button>
-            <button onClick={() => setScope("overdue")} style={scopeTab("overdue", "Overdue", true)}>Overdue{scope !== "overdue" && overdueCount ? ` ${overdueCount}` : ""}</button>
+            <button type="button" onClick={() => setScope("my")} style={scopeTab("my", "My")}>My</button>
+            <button type="button" onClick={() => setScope("all")} style={scopeTab("all", "All")}>All</button>
+            <button type="button" onClick={() => setScope("overdue")} style={scopeTab("overdue", "Overdue", true)}>Overdue{scope !== "overdue" && overdueCount ? ` ${overdueCount}` : ""}</button>
           </div>
           {odooCount > 0 && <span style={{ fontSize: 11, color: "#6B3FA0" }}>{odooCount} from Odoo</span>}
           <OdooSearchBar scope="tasks" state={search} onChange={setSearch} quick={TASK_QUICK} fields={searchFields} groups={TASK_GROUPS} noGroupId="none" placeholder="Search task, contact, deal…" width={440} />
@@ -200,8 +200,8 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
             <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} style={inp} />
             <select value={draft.assigneeId} onChange={(e) => setDraft({ ...draft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+              <button type="button" onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
+              <button type="button" onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
           </div>
         )}
@@ -244,8 +244,8 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#E6F1FB", color: "#185FA5", fontSize: 11, padding: "3px 9px", borderRadius: 999 }}>Due +3 business days</span>
 
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <button onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>Create task</button>
-                <button onClick={() => setNextStep(null)} style={{ fontSize: 12.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Skip</button>
+                <button type="button" onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>Create task</button>
+                <button type="button" onClick={() => setNextStep(null)} style={{ fontSize: 12.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Skip</button>
               </div>
 
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5", display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -287,8 +287,8 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
                   <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
                     <span style={{ fontSize: 12.5, color: "#A32D2D" }}><i className="ti ti-alert-triangle" aria-hidden="true" /> Delete &ldquo;{t.title}&rdquo;{t.contact_name ? ` for ${t.contact_name}` : ""}? This can&rsquo;t be undone.</span>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button onClick={async () => { await del(t.id); setConfirmId(null); }} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Delete</button>
-                      <button onClick={() => setConfirmId(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+                      <button type="button" onClick={async () => { await del(t.id); setConfirmId(null); }} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Delete</button>
+                      <button type="button" onClick={() => setConfirmId(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
                     </div>
                   </div>
                 );
@@ -301,8 +301,8 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
                     <input type="date" value={edit.dueDate} onChange={(e) => setEdit({ ...edit, dueDate: e.target.value })} style={inp} />
                     <select value={edit.assigneeId} onChange={(e) => setEdit({ ...edit, assigneeId: e.target.value })} style={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => saveEdit(t.id)} disabled={busy || !edit.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+                      <button type="button" onClick={() => saveEdit(t.id)} disabled={busy || !edit.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Save</button>
+                      <button type="button" onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
                     </div>
                   </div>
                 );
@@ -328,15 +328,15 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
                   <div className="tActions">
                     {t.source === "odoo" ? (
                       <>
-                        {!done && <button onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
+                        {!done && <button type="button" onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
                         {t.odoo_url && <a href={t.odoo_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10.5, color: "#6B3FA0", textDecoration: "none" }}>Open in Odoo ↗</a>}
                       </>
                     ) : (
                       <>
-                        <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-                        {!done && <button onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
-                        {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
-                        <button onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                        <button type="button" onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
+                        {!done && <button type="button" onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
+                        {!done && <button type="button" onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
+                        <button type="button" onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                       </>
                     )}
                   </div>

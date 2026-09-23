@@ -259,8 +259,8 @@ function EditablePrefRow({
                 </span>
               ))}
             </div>
-            <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
-            <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
+            <button type="button" onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
+            <button type="button" onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
           </div>
           <div style={{ marginTop: 5, border: "0.5px solid var(--border)", borderRadius: 8, background: "#fff", padding: 5, maxWidth: 320 }}>
             <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" style={{ width: "100%", boxSizing: "border-box", height: 28, fontSize: 12, border: "0.5px solid var(--border)", borderRadius: 5, padding: "0 8px", marginBottom: 4 }} />
@@ -305,8 +305,8 @@ function EditablePrefRow({
             style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
           />
         )}
-        <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
-        <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
+        <button type="button" onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
+        <button type="button" onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
       </div>
     );
   }
@@ -786,9 +786,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 0, padding: "0 16px", borderBottom: "0.5px solid #eef1f5" }}>
-          <button onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
+          <button type="button" onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
           {onePager ? (
-            <button onClick={() => setSection("onepager")} style={{ fontSize: 12.5, fontWeight: section === "onepager" ? 600 : 400, color: section === "onepager" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "onepager" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>One pager</button>
+            <button type="button" onClick={() => setSection("onepager")} style={{ fontSize: 12.5, fontWeight: section === "onepager" ? 600 : 400, color: section === "onepager" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "onepager" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>One pager</button>
           ) : null}
         </div>
 
@@ -950,7 +950,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                                 })}
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderTop: "0.5px solid #eef1f5" }}>
-                                <button onClick={saveLeadAssign} disabled={leadSaving} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer", opacity: leadSaving ? 0.6 : 1 }}>{leadSaving ? "Saving…" : "Save"}</button>
+                                <button type="button" onClick={saveLeadAssign} disabled={leadSaving} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer", opacity: leadSaving ? 0.6 : 1 }}>{leadSaving ? "Saving…" : "Save"}</button>
                                 <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{leadSel.length} selected</span>
                                 {leadMsg && <span style={{ fontSize: 11, color: "#A32D2D" }}>{leadMsg}</span>}
                               </div>
@@ -1003,10 +1003,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   {/* Founder/Investor Profile · Note Log · Activity strip */}
                   <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
                     {([["sendmsg", "Send message"], ["notelog", "Note Log"], ["profile", profile.title]] as const).map(([k, label]) => (
-                      <button key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
+                      <button type="button" key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
                     ))}
-                    <button onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
-                    <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
+                    <button type="button" onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
+                    <button type="button" onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
                   </div>
                   {profileSub === "profile" && (<>
                   {!hasInfoSection && formdBlock}
@@ -1115,8 +1115,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
                         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{changedKeys.length} unsaved change{changedKeys.length === 1 ? "" : "s"}</span>
                         <span style={{ marginLeft: "auto" }} />
-                        <button onClick={() => { setPrefEdits({ ...prefOrig }); setEditingKey(null); }} disabled={prefBusy} style={{ fontSize: 12, padding: "6px 12px", border: "0.5px solid #d7dbe3", borderRadius: 6, background: "none", color: "var(--muted-foreground)", cursor: "pointer" }}>Undo all</button>
-                        <button onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", border: "none", borderRadius: 6, background: "#0F6E56", color: "#fff", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>{prefBusy ? "Saving…" : "Save changes"}</button>
+                        <button type="button" onClick={() => { setPrefEdits({ ...prefOrig }); setEditingKey(null); }} disabled={prefBusy} style={{ fontSize: 12, padding: "6px 12px", border: "0.5px solid #d7dbe3", borderRadius: 6, background: "none", color: "var(--muted-foreground)", cursor: "pointer" }}>Undo all</button>
+                        <button type="button" onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", border: "none", borderRadius: 6, background: "#0F6E56", color: "#fff", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>{prefBusy ? "Saving…" : "Save changes"}</button>
                       </div>
                     );
                   })()}
@@ -1130,7 +1130,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
                         <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{assignableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                         <div style={{ gridColumn: "1 / -1" }}>
-                          <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button>
+                          <button type="button" onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button>
                         </div>
                       </div>
 
@@ -1149,8 +1149,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <div key={ct.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
                                 <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{ct.title}&rdquo;? This can&rsquo;t be undone.</span>
                                 <span style={{ display: "flex", gap: 6 }}>
-                                  <button onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
-                                  <button onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+                                  <button type="button" onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
+                                  <button type="button" onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
                                 </span>
                               </div>
                             );
@@ -1163,8 +1163,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
                               <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
                               <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
-                                <button onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                                {!cdone && <button type="button" onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
+                                <button type="button" onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                               </span>
                             </div>
                           );
@@ -1183,7 +1183,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         </div>
                         <div style={{ display: "inline-flex", gap: 2, background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 7, padding: 2 }}>
                           {(["icapos", "gmail"] as const).map((c) => (
-                            <button key={c} onClick={() => setMailChannel(c)} style={{ fontSize: 10.5, fontWeight: mailChannel === c ? 600 : 400, color: mailChannel === c ? "#fff" : "var(--muted-foreground)", background: mailChannel === c ? "#4338CA" : "transparent", border: "none", borderRadius: 5, padding: "3px 10px", cursor: "pointer" }}>{c === "icapos" ? "iCapOS" : "Gmail"}</button>
+                            <button type="button" key={c} onClick={() => setMailChannel(c)} style={{ fontSize: 10.5, fontWeight: mailChannel === c ? 600 : 400, color: mailChannel === c ? "#fff" : "var(--muted-foreground)", background: mailChannel === c ? "#4338CA" : "transparent", border: "none", borderRadius: 5, padding: "3px 10px", cursor: "pointer" }}>{c === "icapos" ? "iCapOS" : "Gmail"}</button>
                           ))}
                         </div>
                       </div>
@@ -1195,8 +1195,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <input value={mailSubject} onChange={(e) => setMailSubject(e.target.value)} placeholder="Subject… ({{first_name}}, {{company}})" style={{ ...inp, width: "100%", marginBottom: 8 }} />
                       <textarea value={mailBody} onChange={(e) => setMailBody(e.target.value)} placeholder="Write your email… (HTML ok · merge {{first_name}} {{company}})" style={{ ...inp, width: "100%", minHeight: 96, resize: "vertical", fontFamily: "var(--font-mono)" }} />
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        <button onClick={sendMail} disabled={mailBusy || !contact.email} title={contact.email ? "" : "Add an email to this contact to send"} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: mailBusy || !contact.email ? "not-allowed" : "pointer", opacity: mailBusy || !contact.email ? 0.5 : 1 }}><i className="ti ti-send" aria-hidden="true" /> Send email</button>
-                        <button onClick={sendMailTest} disabled={mailBusy} style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cdd9ec)", borderRadius: 6, padding: "6px 12px", cursor: mailBusy ? "not-allowed" : "pointer", opacity: mailBusy ? 0.5 : 1 }}>Send test to me</button>
+                        <button type="button" onClick={sendMail} disabled={mailBusy || !contact.email} title={contact.email ? "" : "Add an email to this contact to send"} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: mailBusy || !contact.email ? "not-allowed" : "pointer", opacity: mailBusy || !contact.email ? 0.5 : 1 }}><i className="ti ti-send" aria-hidden="true" /> Send email</button>
+                        <button type="button" onClick={sendMailTest} disabled={mailBusy} style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cdd9ec)", borderRadius: 6, padding: "6px 12px", cursor: mailBusy ? "not-allowed" : "pointer", opacity: mailBusy ? 0.5 : 1 }}>Send test to me</button>
                         {contact.phone && <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 6, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>}
                         {mailMsg && <span style={{ fontSize: 11, color: /sent|Sent/.test(mailMsg) ? "#0F6E56" : "#A32D2D" }}>{mailMsg}</span>}
                       </div>
@@ -1249,7 +1249,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
                         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 56, resize: "vertical" }} />
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                          <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
+                          <button type="button" onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
                           {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
                         </div>
                         {savedNotes ? <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, marginTop: 8 }}>{savedNotes}</div> : null}
@@ -1282,7 +1282,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         {/* Actions */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "12px 16px", borderTop: "0.5px solid #eef1f5", borderBottom: "0.5px solid #eef1f5" }}>
           <Link href={`/admin/sales/contacts/${contact.id}/convert`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", textDecoration: "none" }}><i className="ti ti-arrow-right" aria-hidden="true" /> Convert to opportunity</Link>
-          <button onClick={() => setShowTask((v) => !v)} style={outlineBtn}><i className="ti ti-calendar-plus" aria-hidden="true" /> Create task</button>
+          <button type="button" onClick={() => setShowTask((v) => !v)} style={outlineBtn}><i className="ti ti-calendar-plus" aria-hidden="true" /> Create task</button>
         </div>
 
         {showTask && (
@@ -1292,8 +1292,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
             <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+              <button type="button" onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
+              <button type="button" onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
           </div>
         )}
@@ -1305,7 +1305,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 56, resize: "vertical" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
+              <button type="button" onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
               {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
             </div>
           </div>
@@ -1370,7 +1370,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
             {([["all", "All"], ["call", "Calls"], ["note", "Notes"], ["task", "Tasks"], ["stage", "Stage changes"]] as const).map(([f, label]) => (
-              <button key={f} onClick={() => setActFilter(f)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 14, padding: "3px 11px", background: actFilter === f ? "#2E78F5" : "var(--muted)", color: actFilter === f ? "#fff" : "var(--muted-foreground)" }}>{label}</button>
+              <button type="button" key={f} onClick={() => setActFilter(f)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 14, padding: "3px 11px", background: actFilter === f ? "#2E78F5" : "var(--muted)", color: actFilter === f ? "#fff" : "var(--muted-foreground)" }}>{label}</button>
             ))}
           </div>
 
@@ -1381,7 +1381,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <select value={call.outcome} onChange={(e) => setCall({ ...call, outcome: e.target.value })} style={inp}><option value="connected">Connected</option><option value="voicemail">Voicemail</option><option value="no_answer">No answer</option><option value="wrong_number">Wrong number</option></select>
               <input value={call.duration} onChange={(e) => setCall({ ...call, duration: e.target.value })} placeholder="Duration" style={inp} />
               <input value={call.notes} onChange={(e) => setCall({ ...call, notes: e.target.value })} placeholder="Call notes / outcome…" style={inp} />
-              <button onClick={logCall} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>Log</button>
+              <button type="button" onClick={logCall} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>Log</button>
             </div>
           </div>
 
@@ -1413,7 +1413,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Linked opportunities</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {opportunities.map((o) => (
-                <button key={o.id} onClick={() => router.push(`/admin/sales/opportunities/${o.id}`)} style={{ textAlign: "left", background: "var(--muted)", border: "none", borderRadius: 8, padding: 10, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button type="button" key={o.id} onClick={() => router.push(`/admin/sales/opportunities/${o.id}`)} style={{ textAlign: "left", background: "var(--muted)", border: "none", borderRadius: 8, padding: 10, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 12, fontWeight: 500 }}>{o.title}</span>
                   <span style={{ fontSize: 11, color: "#185FA5" }}>{money(o.value_cents)}{o.probability != null ? ` · ${o.probability}%` : ""}{o.stage_name ? ` · ${o.stage_name}` : ""}</span>
                 </button>

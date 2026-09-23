@@ -149,7 +149,7 @@ function TodaysRun({ surfaces, onToggle, onJump }: { surfaces: HubSurface[]; onT
         <div key={s.navId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: i ? "0.5px solid #f1f5f9" : "none", background: s.checkedToday ? "#F6FBF9" : undefined }}>
           <input type="checkbox" checked={s.checkedToday} disabled={!s.moduleId} onChange={(e) => onToggle(s, e.target.checked)} style={{ width: 15, height: 15 }} aria-label={`Mark ${s.label} done`} />
           <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--muted-foreground)", width: 18 }}>{i + 1}</span>
-          <button onClick={() => s.block && onJump(s.block)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 500, color: s.checkedToday ? "var(--muted-foreground)" : "var(--foreground)", textDecoration: s.checkedToday ? "line-through" : "none" }}>{s.label}</button>
+          <button type="button" onClick={() => s.block && onJump(s.block)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 500, color: s.checkedToday ? "var(--muted-foreground)" : "var(--foreground)", textDecoration: s.checkedToday ? "line-through" : "none" }}>{s.label}</button>
           {s.pending != null && s.pending > 0 && <span style={{ fontSize: 10, color: "#185FA5", background: "#E6F1FB", borderRadius: 10, padding: "1px 7px" }}>{s.pending}</span>}
           {s.isGate && <span style={{ fontSize: 10, color: "#A32D2D", background: "#FCEBEB", borderRadius: 10, padding: "1px 7px" }}>Gate</span>}
           {!s.isGate && s.flags.length > 0 && <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>Guardrail</span>}
@@ -170,7 +170,7 @@ const TONE: Record<string, { bg: string; border: string; color: string; label: s
 function StatWidget({ tone, label, value, sub, onClick }: { tone: "alert" | "warn" | "info" | "ok"; label: string; value: string | number; sub: string; onClick: () => void }) {
   const t = TONE[tone];
   return (
-    <button onClick={onClick} style={{ textAlign: "left", background: t.bg, border: `0.5px solid ${t.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer" }}>
+    <button type="button" onClick={onClick} style={{ textAlign: "left", background: t.bg, border: `0.5px solid ${t.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer" }}>
       <div style={{ fontSize: 11.5, color: t.label, fontWeight: 600 }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 600, color: t.color, margin: "4px 0 2px" }}>{value}</div>
       <div style={{ fontSize: 11, color: t.color, opacity: 0.85 }}>{sub}</div>
@@ -196,7 +196,7 @@ function AdvisoryPanel({ suggestions, onAction, busy }: { suggestions: Suggestio
             {s.actions.map((a) => a.kind === "link" && a.href ? (
               <Link key={a.label} href={a.href} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", borderRadius: 7, padding: "5px 11px", textDecoration: "none" }}>{a.label}</Link>
             ) : (
-              <button key={a.label} disabled={busy} onClick={() => onAction(s, a)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>{a.label}</button>
+              <button type="button" key={a.label} disabled={busy} onClick={() => onAction(s, a)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>{a.label}</button>
             ))}
           </div>
         </div>
@@ -272,8 +272,8 @@ function SurfaceCard({ surface: s, isAdmin, onToggle, onRefresh }: { surface: Hu
             <Link href={s.href} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", textDecoration: "none" }}>Open →</Link>
             {isAdmin && (
               <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                <button onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [s.navId], ignored: true })) onRefresh(); }} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }} title="Hide this surface from the hub (reversible)">Remove</button>
-                <button onClick={() => setEditing(true)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Edit</button>
+                <button type="button" onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [s.navId], ignored: true })) onRefresh(); }} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }} title="Hide this surface from the hub (reversible)">Remove</button>
+                <button type="button" onClick={() => setEditing(true)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Edit</button>
               </div>
             )}
           </div>
@@ -284,8 +284,8 @@ function SurfaceCard({ surface: s, isAdmin, onToggle, onRefresh }: { surface: Hu
           <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Cadence</label><select value={cadence} onChange={(e) => setCadence(e.target.value)} style={inp}>{Object.entries(CADENCE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
           <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Steps (one per line)</label><textarea value={stepsText} onChange={(e) => setStepsText(e.target.value)} style={{ ...inp, minHeight: 90, resize: "vertical", lineHeight: 1.5 }} /></div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}>{saving ? "Saving…" : "Save"}</button>
-            <button onClick={() => setEditing(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}>Cancel</button>
+            <button type="button" onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}>{saving ? "Saving…" : "Save"}</button>
+            <button type="button" onClick={() => setEditing(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
       )}
@@ -344,7 +344,7 @@ function SettingsTab({ settings, isAdmin, onRefresh }: { settings: HubSettings; 
             <div key={navId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderTop: "0.5px solid #f1f5f9" }}>
               <code style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{navId}</code>
               {isAdmin && (
-                <button onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [navId], ignored: false })) { setS({ ...s, driftIgnored: s.driftIgnored.filter((x) => x !== navId) }); onRefresh(); } }} style={{ marginLeft: "auto", fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Restore</button>
+                <button type="button" onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [navId], ignored: false })) { setS({ ...s, driftIgnored: s.driftIgnored.filter((x) => x !== navId) }); onRefresh(); } }} style={{ marginLeft: "auto", fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Restore</button>
               )}
             </div>
           ))}
@@ -356,7 +356,7 @@ function SettingsTab({ settings, isAdmin, onRefresh }: { settings: HubSettings; 
 
 function Toggle({ on, disabled, onChange }: { on: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button onClick={() => !disabled && onChange(!on)} disabled={disabled} aria-pressed={on} style={{ width: 40, height: 22, borderRadius: 11, border: "none", background: on ? "#2E78F5" : "#cbd5e1", position: "relative", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1 }}>
+    <button type="button" onClick={() => !disabled && onChange(!on)} disabled={disabled} aria-pressed={on} style={{ width: 40, height: 22, borderRadius: 11, border: "none", background: on ? "#2E78F5" : "#cbd5e1", position: "relative", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1 }}>
       <span style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
     </button>
   );

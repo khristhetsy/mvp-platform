@@ -230,7 +230,7 @@ export function BusinessPlanGeneratorClient() {
         <p className="mt-1 text-sm text-emerald-700">
           Your business plan PDF is in your Documents and counts toward your Preparation completeness. Our team can now review it.
         </p>
-        <button onClick={() => setFinalized(false)} className="mt-4 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700">
+        <button type="button" onClick={() => setFinalized(false)} className="mt-4 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700">
           Keep editing
         </button>
       </div>
@@ -251,12 +251,12 @@ export function BusinessPlanGeneratorClient() {
         <div className="flex flex-wrap items-center gap-2">
           {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
           <PreviewButton onClick={() => setPreview(true)} />
-          <button onClick={() => save()} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
+          <button type="button" onClick={() => save()} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
             {saving ? "Saving…" : "Save"}
           </button>
-          <button onClick={downloadPdf} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">{t("pdf")}</button>
-          <button onClick={shareLink} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">{t("share_link")}</button>
-          <button onClick={finalize} disabled={finalizing} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
+          <button type="button" onClick={downloadPdf} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">{t("pdf")}</button>
+          <button type="button" onClick={shareLink} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">{t("share_link")}</button>
+          <button type="button" onClick={finalize} disabled={finalizing} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
             {finalizing ? "Finalizing…" : "Finalize"}
           </button>
         </div>
@@ -274,7 +274,7 @@ export function BusinessPlanGeneratorClient() {
               {visibleSections.filter((s) => s.group === g).map((s) => {
                 const done = s.id === PROJ_ID ? Boolean(assumptions) : (sections[s.id]?.content ?? "").trim().length > 0;
                 return (
-                  <button key={s.id} onClick={() => setActive(s.id)} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${activeId === s.id ? "bg-[var(--indigo-soft)] font-medium text-[var(--indigo)]" : "text-[var(--text-secondary)] hover:bg-slate-50"}`}>
+                  <button type="button" key={s.id} onClick={() => setActive(s.id)} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${activeId === s.id ? "bg-[var(--indigo-soft)] font-medium text-[var(--indigo)]" : "text-[var(--text-secondary)] hover:bg-slate-50"}`}>
                     <span className={`inline-block h-1.5 w-1.5 flex-none rounded-full ${done ? "bg-emerald-500" : "bg-slate-300"}`} />
                     <span className="flex-1">{s.title}</span>
                   </button>
@@ -283,7 +283,7 @@ export function BusinessPlanGeneratorClient() {
             </div>
           ))}
           {early && (
-            <button
+            <button type="button"
               onClick={() => setShowAll((v) => !v)}
               className="mt-1 w-full rounded-md border border-dashed border-[var(--border-subtle)] px-2 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-50"
             >
@@ -351,7 +351,7 @@ export function BusinessPlanGeneratorClient() {
           ) : (
             <>
               <div className="mt-3 flex items-center gap-2">
-                <button
+                <button type="button"
                   onClick={() => aiDraft(activeId)}
                   disabled={drafting === activeId}
                   className="inline-flex items-center gap-1.5 rounded-md border border-[var(--indigo)] bg-[var(--indigo-soft)] px-3 py-1.5 text-xs font-medium text-[var(--indigo)] disabled:opacity-50"

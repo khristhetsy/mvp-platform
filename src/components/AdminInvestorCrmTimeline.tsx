@@ -74,7 +74,7 @@ export function AdminInvestorCrmTimeline({ activities, canDelete = false }: Prop
           <p className="mt-1 text-sm text-slate-500">{t("latest_investor_actions_tracked_for_pipeline")}</p>
         </div>
         {canDelete && rows.length > 0 && (
-          <button
+          <button type="button"
             onClick={clearAll}
             disabled={clearing}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
@@ -117,7 +117,7 @@ export function AdminInvestorCrmTimeline({ activities, canDelete = false }: Prop
                   <p className="mt-1 text-xs text-slate-500">{formatDate(row.created_at)}</p>
                 </div>
                 {canDelete && (
-                  <button
+                  <button type="button"
                     onClick={() => deleteOne(row.id)}
                     disabled={busyId === row.id}
                     aria-label={t("delete_activity")}

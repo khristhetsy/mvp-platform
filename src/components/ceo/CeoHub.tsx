@@ -91,7 +91,7 @@ function Dashboard({ payload, onJump }: { payload: CeoPayload; onJump: (k: strin
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         {scores.map((s) => (
-          <button key={s.dept} onClick={() => onJump(s.dept)} style={{ textAlign: "left", background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: "14px 16px", cursor: "pointer" }}>
+          <button type="button" key={s.dept} onClick={() => onJump(s.dept)} style={{ textAlign: "left", background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: "14px 16px", cursor: "pointer" }}>
             <div style={{ fontSize: 11.5, fontWeight: 600, color: "#6B7690", textTransform: "uppercase", letterSpacing: ".05em" }}>{DEPT_LABEL[s.dept]}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: navy, margin: "4px 0 2px" }}>{s.score != null ? `${s.score}/10` : "n/a"}</div>
             <div style={{ fontSize: 11, color: "#6B7690" }}>{s.count} KPI{s.count === 1 ? "" : "s"} scored this week</div>
@@ -192,7 +192,7 @@ function DeptTab({ dept, kpis, meetings, sessions, onRefresh }: { dept: string; 
 
   const seg = (opts: [string, string][], val: string, on: (v: string) => void) => (
     <div style={{ display: "inline-flex", background: "#EEF1F7", borderRadius: 8, padding: 2 }}>
-      {opts.map(([k, l]) => <button key={k} onClick={() => on(k)} style={{ fontSize: 12, fontWeight: 600, padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", background: val === k ? "#fff" : "transparent", color: val === k ? navy : "#6B7690" }}>{l}</button>)}
+      {opts.map(([k, l]) => <button type="button" key={k} onClick={() => on(k)} style={{ fontSize: 12, fontWeight: 600, padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", background: val === k ? "#fff" : "transparent", color: val === k ? navy : "#6B7690" }}>{l}</button>)}
     </div>
   );
 
@@ -215,7 +215,7 @@ function DeptTab({ dept, kpis, meetings, sessions, onRefresh }: { dept: string; 
             <div>KPI</div><div>{P_LABEL[period]}</div><div>Target</div><div>vs {C_LABEL[cmp]}</div><div>Status</div>
           </div>
           {rows.map(({ kpi, v }) => (
-            <button key={kpi.key} onClick={() => setDrawer(kpi)} style={{ width: "100%", textAlign: "left", display: "grid", gridTemplateColumns: "1.8fr 1fr 1fr 1.1fr 1fr", padding: "10px 14px", borderTop: "1px solid #F1F4F9", alignItems: "center", background: "none", border: "none", borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: "#F1F4F9", cursor: "pointer" }}>
+            <button type="button" key={kpi.key} onClick={() => setDrawer(kpi)} style={{ width: "100%", textAlign: "left", display: "grid", gridTemplateColumns: "1.8fr 1fr 1fr 1.1fr 1fr", padding: "10px 14px", borderTop: "1px solid #F1F4F9", alignItems: "center", background: "none", border: "none", borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: "#F1F4F9", cursor: "pointer" }}>
               <div><div style={{ fontSize: 12.5, fontWeight: 600 }}>{kpi.label}</div><div style={{ fontSize: 11, color: "#6B7690" }}>{kpi.owner}</div></div>
               <div style={{ fontSize: 13, fontWeight: 600, color: navy }}>{v.na ? <span style={{ color: "#98A2B3" }}>n/a</span> : formatKpi(v.display, kpi.fmt)}</div>
               <div style={{ fontSize: 12, color: "#6B7690" }}>{formatKpi(kpi.target, kpi.fmt)}</div>
@@ -227,7 +227,7 @@ function DeptTab({ dept, kpis, meetings, sessions, onRefresh }: { dept: string; 
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
           {rows.map(({ kpi, v }) => (
-            <button key={kpi.key} onClick={() => setDrawer(kpi)} style={{ textAlign: "left", background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 14, cursor: "pointer" }}>
+            <button type="button" key={kpi.key} onClick={() => setDrawer(kpi)} style={{ textAlign: "left", background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 14, cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600 }}>{kpi.label}</span>
                 {!v.na && <span style={{ marginLeft: "auto", width: 8, height: 8, borderRadius: 99, background: ST[v.st].c }} />}
@@ -271,7 +271,7 @@ function KpiDrawer({ kpi, onClose }: { kpi: CeoKpi; onClose: () => void }) {
       <div onClick={(e) => e.stopPropagation()} style={{ width: "min(460px, 94vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <div><div style={{ fontSize: 15, fontWeight: 700, color: navy }}>{kpi.label}</div><div style={{ fontSize: 12, color: "#6B7690" }}>{kpi.owner} · target {formatKpi(kpi.target, kpi.fmt)}</div></div>
-          <button onClick={onClose} aria-label="Close" style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 18, color: "#6B7690", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 18, color: "#6B7690", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
 
         <div style={{ background: "#F6F8FB", borderRadius: 10, padding: 12, marginBottom: 14 }}>

@@ -178,7 +178,7 @@ export function CreateListWizard() {
           <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 10 }}>Where should this list come from?</p>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {SOURCES.map((s) => (
-              <button key={s.id} onClick={() => pickSource(s.id)}
+              <button type="button" key={s.id} onClick={() => pickSource(s.id)}
                 style={{ fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "9px 14px", cursor: "pointer",
                   border: source === s.id ? "1px solid #2E78F5" : "0.5px solid var(--border)",
                   background: source === s.id ? "#2E78F5" : "#fff", color: source === s.id ? "#fff" : "var(--muted-foreground)" }}>
@@ -229,12 +229,12 @@ export function CreateListWizard() {
               {allMatching ? `All ${total.toLocaleString()} matching selected` : `${seldIds.size.toLocaleString()} of ${total.toLocaleString()} selected`}
             </span>
             {total > rows.length ? (
-              <button onClick={() => setAllMatching(true)} style={{ fontSize: 10.5, fontWeight: 700, color: allMatching ? "#065F46" : "#fff", background: allMatching ? "#ECFDF5" : "#0F6E56", border: allMatching ? "0.5px solid #A7F3D0" : "none", borderRadius: 999, padding: "3px 10px", cursor: "pointer" }}>
+              <button type="button" onClick={() => setAllMatching(true)} style={{ fontSize: 10.5, fontWeight: 700, color: allMatching ? "#065F46" : "#fff", background: allMatching ? "#ECFDF5" : "#0F6E56", border: allMatching ? "0.5px solid #A7F3D0" : "none", borderRadius: 999, padding: "3px 10px", cursor: "pointer" }}>
                 {allMatching ? <><i className="ti ti-check" aria-hidden="true" /> All {total.toLocaleString()}</> : `Select all ${total.toLocaleString()}`}
               </button>
             ) : null}
-            {!allMatching && <button onClick={() => setSeldIds((prev) => new Set([...prev, ...rows.map((r) => r.id)]))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select page</button>}
-            <button onClick={() => { setAllMatching(false); setSeldIds(new Set()); }} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Unselect all</button>
+            {!allMatching && <button type="button" onClick={() => setSeldIds((prev) => new Set([...prev, ...rows.map((r) => r.id)]))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select page</button>}
+            <button type="button" onClick={() => { setAllMatching(false); setSeldIds(new Set()); }} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Unselect all</button>
           </div>
           <div style={{ border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 320, overflowY: "auto" }}>
             {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
@@ -252,9 +252,9 @@ export function CreateListWizard() {
           </div>
           {!isFounder && total > PAGE_SIZE ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 9 }}>
-              <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ fontSize: 11, border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "6px 11px", color: "var(--muted-foreground)", cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.5 : 1 }}>‹ Prev</button>
+              <button type="button" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ fontSize: 11, border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "6px 11px", color: "var(--muted-foreground)", cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.5 : 1 }}>‹ Prev</button>
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Page <b style={{ color: "var(--foreground)" }}>{page + 1}</b> of {pageCount.toLocaleString()} · {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, total).toLocaleString()} of {total.toLocaleString()}</span>
-              <button onClick={() => setPage(Math.min(pageCount - 1, page + 1))} disabled={page + 1 >= pageCount} style={{ fontSize: 11, fontWeight: 700, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 6, padding: "6px 11px", cursor: page + 1 >= pageCount ? "default" : "pointer", opacity: page + 1 >= pageCount ? 0.5 : 1 }}>Next page ›</button>
+              <button type="button" onClick={() => setPage(Math.min(pageCount - 1, page + 1))} disabled={page + 1 >= pageCount} style={{ fontSize: 11, fontWeight: 700, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 6, padding: "6px 11px", cursor: page + 1 >= pageCount ? "default" : "pointer", opacity: page + 1 >= pageCount ? 0.5 : 1 }}>Next page ›</button>
             </div>
           ) : null}
         </div>
@@ -268,8 +268,8 @@ export function CreateListWizard() {
               <span style={{ fontSize: 16 }}><i className="ti ti-check" aria-hidden="true" /></span>
               <div style={{ flex: 1, minWidth: 180 }}><div style={{ fontSize: 13, fontWeight: 700, color: "#065F46" }}>{msg}</div><div style={{ fontSize: 11.5, color: "#047857" }}>It&rsquo;s saved to your Contact Lists. Next: verify emails and fill missing details.</div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={goVerify} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Verify &amp; Correct →</button>
-                <button onClick={() => router.push("/admin/marketing/prospects?step=list")} style={{ fontSize: 12, fontWeight: 700, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7F3D0", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Go to Contact Lists</button>
+                <button type="button" onClick={goVerify} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Verify &amp; Correct →</button>
+                <button type="button" onClick={() => router.push("/admin/marketing/prospects?step=list")} style={{ fontSize: 12, fontWeight: 700, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7F3D0", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Go to Contact Lists</button>
               </div>
             </div>
           ) : (
@@ -278,17 +278,17 @@ export function CreateListWizard() {
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isFounder ? "e.g. Qualified FinTech founders" : "e.g. Odoo investors · valid"} style={{ ...sel, marginBottom: 12 }} />
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {allMatching ? (
-                  <button onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
+                  <button type="button" onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
                     style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || total === 0 ? 0.5 : 1 }}>
                     {saving ? "Creating…" : `Create from all ${total.toLocaleString()} matching`}
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => save("selected")} disabled={saving || !name.trim() || seldIds.size === 0}
+                    <button type="button" onClick={() => save("selected")} disabled={saving || !name.trim() || seldIds.size === 0}
                       style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || seldIds.size === 0 ? 0.5 : 1 }}>
                       {saving ? "Creating…" : `Create from ${seldIds.size} selected`}
                     </button>
-                    <button onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
+                    <button type="button" onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
                       style={{ fontSize: 12, fontWeight: 700, color: "#1A6CE4", background: "#fff", border: "0.5px solid #93C5FD", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || total === 0 ? 0.5 : 1 }}>
                       Create from all {total.toLocaleString()} matching
                     </button>
@@ -304,10 +304,10 @@ export function CreateListWizard() {
 
       {/* single nav button */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 12 }}>
-        {step > 0 ? <button onClick={() => { setStep(step - 1); setMsg(null); }} style={{ fontSize: 11, color: "var(--muted-foreground)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>‹ Back</button> : null}
+        {step > 0 ? <button type="button" onClick={() => { setStep(step - 1); setMsg(null); }} style={{ fontSize: 11, color: "var(--muted-foreground)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>‹ Back</button> : null}
         <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>sub-step {step + 1} of {SUB_STEPS.length}</span>
         {nextLabel ? (
-          <button onClick={() => canNext && setStep(step + 1)} disabled={!canNext}
+          <button type="button" onClick={() => canNext && setStep(step + 1)} disabled={!canNext}
             style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer", opacity: canNext ? 1 : 0.5 }}>
             {nextLabel}
           </button>

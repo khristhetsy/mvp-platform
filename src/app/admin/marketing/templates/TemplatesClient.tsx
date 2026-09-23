@@ -199,17 +199,17 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
           <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.subject}</div>
         </div>
         <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
-        <button onClick={() => setPreview(t)} style={ghostBtn}>Preview</button>
-        <button onClick={() => openEditor(t)} style={ghostBtn}>Edit</button>
+        <button type="button" onClick={() => setPreview(t)} style={ghostBtn}>Preview</button>
+        <button type="button" onClick={() => openEditor(t)} style={ghostBtn}>Edit</button>
         <div style={{ position: "relative" }}>
-          <button onClick={() => setMoveOpen(moveOpen === t.id ? null : t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #B5D4F4", background: "#E6F1FB", cursor: "pointer", color: "#185FA5" }}><i className="ti ti-arrows-exchange" aria-hidden="true" /> Move</button>
+          <button type="button" onClick={() => setMoveOpen(moveOpen === t.id ? null : t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #B5D4F4", background: "#E6F1FB", cursor: "pointer", color: "#185FA5" }}><i className="ti ti-arrows-exchange" aria-hidden="true" /> Move</button>
           {moveOpen === t.id && (
             <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 40, width: 200, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.14)", overflow: "hidden" }}>
               <div style={{ padding: "7px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>Move to department</div>
               {[...DEPARTMENTS, UNASSIGNED].map((d) => {
                 const cur = deptOf(t) === d;
                 return (
-                  <button key={d} onClick={() => void moveToDepartment(t, d)} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
+                  <button type="button" key={d} onClick={() => void moveToDepartment(t, d)} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
                     <i className={`ti ${DEPT_META[d].icon}`} style={{ color: DEPT_META[d].color, fontSize: 14 }} aria-hidden="true" /> {d}
                     {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                   </button>
@@ -218,8 +218,8 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
             </div>
           )}
         </div>
-        <button onClick={() => void handleDuplicate(t)} disabled={saving} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>⧉ Duplicate</button>
-        <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
+        <button type="button" onClick={() => void handleDuplicate(t)} disabled={saving} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>⧉ Duplicate</button>
+        <button type="button" onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
       </div>
     );
   };
@@ -381,19 +381,19 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
-            <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 10px", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /> List</button>
-            <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 10px", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /> Grid</button>
+            <button type="button" onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 10px", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /> List</button>
+            <button type="button" onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 10px", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /> Grid</button>
           </div>
-          <button onClick={() => setGroupByDept((v) => !v)} style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "#fff", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", fontWeight: 500 }}><i className="ti ti-layout-list" aria-hidden="true" /> Group: Department</button>
+          <button type="button" onClick={() => setGroupByDept((v) => !v)} style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "#fff", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", fontWeight: 500 }}><i className="ti ti-layout-list" aria-hidden="true" /> Group: Department</button>
           <div style={{ position: "relative" }} ref={sortRef}>
-            <button onClick={() => setSortOpen((v) => !v)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: sortOpen ? "#F5F9FF" : "#fff", color: "var(--foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <button type="button" onClick={() => setSortOpen((v) => !v)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: sortOpen ? "#F5F9FF" : "#fff", color: "var(--foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
               {SORT_LABELS[sort]} <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
             </button>
             {sortOpen && (
               <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, zIndex: 30, width: 220, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 9, boxShadow: "0 12px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
                 <div style={{ padding: "7px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>Sort by</div>
                 {(["edited", "name", "status", "department"] as const).map((val) => (
-                  <button key={val} onClick={() => { setSort(val); setSortOpen(false); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: sort === val ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
+                  <button type="button" key={val} onClick={() => { setSort(val); setSortOpen(false); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: sort === val ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
                     {SORT_LABELS[val]}{sort === val && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                   </button>
                 ))}
@@ -425,7 +425,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
               }}
             />
           </label>
-          <button
+          <button type="button"
             onClick={() => openEditor({ name: "", subject: "", html_body: "", status: "draft" }, "visual")}
             style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
             + New template
@@ -477,7 +477,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
           {/* Write / Preview tabs */}
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid var(--border)", marginBottom: 14 }}>
             {(["visual", "write", "preview"] as const).map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
+              <button type="button" key={tab} onClick={() => setActiveTab(tab)}
                 style={{ padding: "7px 16px", fontSize: 12, fontWeight: activeTab === tab ? 500 : 400, color: activeTab === tab ? "#2E78F5" : "var(--muted-foreground)", background: "transparent", border: "none", borderBottom: activeTab === tab ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>
                 {tab === "visual" ? <><i className="ti ti-photo" aria-hidden="true" /> Visual</> : tab === "write" ? "</> HTML" : "Preview"}
               </button>
@@ -548,11 +548,11 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
           ) : null}
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-            <button onClick={handleSave} disabled={saving}
+            <button type="button" onClick={handleSave} disabled={saving}
               style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
               {saving ? "Saving…" : "Save template"}
             </button>
-            <button onClick={() => setEditing(null)}
+            <button type="button" onClick={() => setEditing(null)}
               style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
               Cancel
             </button>
@@ -573,15 +573,15 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {/* Edit from the preview: opens the visual editor on this template. */}
-                <button onClick={() => { openEditor(preview); setPreview(null); }}
+                <button type="button" onClick={() => { openEditor(preview); setPreview(null); }}
                   style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #2E78F5", background: "#2E78F5", cursor: "pointer", color: "#ffffff", fontWeight: 600 }}>
                   Edit
                 </button>
-                <button onClick={() => void handleDuplicate(preview)} disabled={saving}
+                <button type="button" onClick={() => void handleDuplicate(preview)} disabled={saving}
                   style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>
                   ⧉ Duplicate
                 </button>
-                <button onClick={() => setPreview(null)}
+                <button type="button" onClick={() => setPreview(null)}
                   style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                   Close
                 </button>
@@ -604,7 +604,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
               const open = !!openDepts[dept];
               return (
                 <div key={dept} style={{ ...card, overflow: "hidden" }}>
-                  <button onClick={() => setOpenDepts((c) => ({ ...c, [dept]: !c[dept] }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
+                  <button type="button" onClick={() => setOpenDepts((c) => ({ ...c, [dept]: !c[dept] }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform 120ms" }}><polyline points="9 6 15 12 9 18" /></svg>
                     <i className={`ti ${DEPT_META[dept].icon}`} style={{ color: DEPT_META[dept].color, fontSize: 15 }} aria-hidden="true" />
                     <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--foreground)" }}>{dept}</span>
@@ -644,19 +644,19 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
 
                 {/* Actions */}
                 <div style={{ padding: "10px 16px", display: "flex", gap: 6, alignItems: "center" }}>
-                  <button onClick={() => setPreview(t)}
+                  <button type="button" onClick={() => setPreview(t)}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Preview
                   </button>
-                  <button onClick={() => openEditor(t)}
+                  <button type="button" onClick={() => openEditor(t)}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Edit
                   </button>
-                  <button onClick={() => void handleDuplicate(t)} disabled={saving}
+                  <button type="button" onClick={() => void handleDuplicate(t)} disabled={saving}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>
                     ⧉ Duplicate
                   </button>
-                  <button onClick={() => handleDelete(t.id)}
+                  <button type="button" onClick={() => handleDelete(t.id)}
                     style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
                     Delete
                   </button>

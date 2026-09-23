@@ -72,7 +72,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
     <div>
       <div className="flex flex-wrap gap-1 border-b border-slate-100">
         {TAB_ORDER.map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <button type="button" key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
             {TAB_LABELS[t]}{t === "schedule" && queue.length ? ` · ${queue.length}` : ""}
           </button>
         ))}
@@ -125,7 +125,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [showPreview, setShowPreview] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setCampaigns((d.campaigns ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))).catch(() => {}); }, []);
 
   async function saveNewCampaign() {
@@ -201,7 +201,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
         <div className="mt-1.5 flex flex-wrap gap-2">
           {ARCHETYPES.map((a) => (
             <span key={a.key} className="group relative">
-              <button onClick={() => setArchetype(a.key)} className={`${chip} inline-flex items-center gap-1.5 ${archetype === a.key ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>
+              <button type="button" onClick={() => setArchetype(a.key)} className={`${chip} inline-flex items-center gap-1.5 ${archetype === a.key ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>
                 {a.label}<span className="text-[10px] opacity-50">ⓘ</span>
               </button>
               <span role="tooltip" className="pointer-events-none invisible absolute left-0 top-[calc(100%+8px)] z-10 w-56 rounded-lg bg-slate-900 px-2.5 py-2 text-[11px] leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
@@ -252,11 +252,11 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
         <div className="mt-2 flex flex-wrap gap-2">
           {accounts.length === 0 ? <span className="text-[12px] text-slate-400">No accounts connected.</span> : accounts.map((a) => {
             const on = selected.includes(a.id);
-            return <button key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} inline-flex items-center gap-1.5 ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}{a.is_default ? <span className="text-[10px] opacity-60">default</span> : null}</button>;
+            return <button type="button" key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} inline-flex items-center gap-1.5 ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}{a.is_default ? <span className="text-[10px] opacity-60">default</span> : null}</button>;
           })}
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <button onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
+          <button type="button" onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
           <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
         </div>
       </div>
@@ -337,9 +337,9 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
 
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
-            <button onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
-            <button onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
-            <button onClick={() => save("schedule")} disabled={busy || !schedOn || !schedDate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Schedule post</button>
+            <button type="button" onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
+            <button type="button" onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
+            <button type="button" onClick={() => save("schedule")} disabled={busy || !schedOn || !schedDate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Schedule post</button>
           </div>
         </div>
       ) : null}
@@ -415,7 +415,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const [mrPreview, setMrPreview] = useState<{ upcoming: number[]; total: number } | null>(null);
   const [camps, setCamps] = useState<{ id: string; name: string }[]>([]);
   const [assignTo, setAssignTo] = useState<string>("");
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setCamps((d.campaigns ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))).catch(() => {}); }, []);
   const toggleSel = (postId: string) => setSelPosts((p) => { const n = new Set(p); if (n.has(postId)) n.delete(postId); else n.add(postId); return n; });
   async function assignCampaign() {
@@ -898,13 +898,13 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
         {slots.map((s) => (
           <span key={s.id} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-[13px] text-slate-700">
             {WD[s.weekday]} {s.time_local}
-            <button onClick={() => patch({ removeSlotId: s.id })} className="text-slate-400 hover:text-rose-600"><i className="ti ti-x" aria-hidden="true" /></button>
+            <button type="button" onClick={() => patch({ removeSlotId: s.id })} className="text-slate-400 hover:text-rose-600"><i className="ti ti-x" aria-hidden="true" /></button>
           </span>
         ))}
         <span className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 px-2 py-1">
           <select value={wd} onChange={(e) => setWd(Number(e.target.value))} className="bg-transparent text-[13px]">{WD.map((d, i) => <option key={d} value={i}>{d}</option>)}</select>
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="bg-transparent text-[13px]" />
-          <button onClick={() => patch({ addSlot: { weekday: wd, time_local: time } })} className="text-indigo-600"><i className="ti ti-plus" aria-hidden="true" /></button>
+          <button type="button" onClick={() => patch({ addSlot: { weekday: wd, time_local: time } })} className="text-indigo-600"><i className="ti ti-plus" aria-hidden="true" /></button>
         </span>
       </div>
       <p className="mt-2 text-[11.5px] text-slate-400">Rotation: {settings.rotation.map((r) => r.replace(/_/g, " ")).join(" → ")}. Slots suggest posting times on the Schedule calendar.</p>
@@ -912,7 +912,7 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
       <p className="mt-5 text-[13px] font-medium text-slate-700">Rules</p>
       <div className="mt-2 flex flex-col gap-2">
         {TOGGLES.map(([key, label]) => (
-          <button key={key} onClick={() => toggle(key)} className={`${card} flex items-center justify-between px-3 py-2.5 text-left text-[13px] text-slate-700`}>
+          <button type="button" key={key} onClick={() => toggle(key)} className={`${card} flex items-center justify-between px-3 py-2.5 text-left text-[13px] text-slate-700`}>
             <span>{label}</span>
             <span className={`relative inline-flex h-5 w-9 items-center rounded-full ${settings[key] ? "bg-emerald-600" : "bg-slate-300"}`}>
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings[key] ? "translate-x-4" : "translate-x-1"}`} />

@@ -80,7 +80,7 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
       {/* Side toggle */}
       <div style={{ display: "flex", background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 10, padding: 4, gap: 4, marginBottom: 14 }}>
         {(["founder", "investor"] as const).map((s) => (
-          <button key={s} onClick={() => { setSide(s); setForm((f) => ({ ...f, side: s })); }}
+          <button type="button" key={s} onClick={() => { setSide(s); setForm((f) => ({ ...f, side: s })); }}
             style={{ flex: 1, border: "none", borderRadius: 7, padding: "9px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
               background: side === s ? (s === "founder" ? "#2E78F5" : "#6C3FB5") : "transparent",
               color: side === s ? "#fff" : "var(--muted-foreground)" }}>
@@ -122,7 +122,7 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>Founder / investor signups not yet in the pipeline</div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 9 }}>
               <span style={{ fontSize: 10, color: "#1A6CE4", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{overview.signupsAvailable.toLocaleString()} available</span>
-              <button onClick={importSignups} disabled={busy === "signups" || overview.signupsAvailable === 0}
+              <button type="button" onClick={importSignups} disabled={busy === "signups" || overview.signupsAvailable === 0}
                 style={{ fontSize: 11, fontWeight: 700, padding: "6px 11px", borderRadius: 7, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: busy === "signups" || overview.signupsAvailable === 0 ? 0.5 : 1 }}>
                 {busy === "signups" ? "Importing…" : "Import"}
               </button>
@@ -210,7 +210,7 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 8 }}>
-        <button onClick={() => router.push("/admin/marketing/prospects?step=verify")}
+        <button type="button" onClick={() => router.push("/admin/marketing/prospects?step=verify")}
           style={{ fontSize: 12, fontWeight: 700, padding: "9px 16px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer" }}>
           Continue to Verify →
         </button>

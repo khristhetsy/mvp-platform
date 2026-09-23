@@ -127,7 +127,7 @@ export function NetworkingConnections({
     if (existing?.status === "requested") return <span className="text-xs text-[var(--text-muted)]">{t("pending")}</span>;
     if (existing?.status === "declined") return <span className="text-xs text-[var(--text-muted)]">—</span>;
     return (
-      <button
+      <button type="button"
         onClick={() => connect(s.profileId, s.displayName)}
         disabled={busy === s.profileId}
         className="rounded-md border border-[var(--indigo)] px-2.5 py-1 text-xs font-medium text-[var(--indigo)] hover:bg-[var(--indigo-soft)] disabled:opacity-50"
@@ -153,14 +153,14 @@ export function NetworkingConnections({
                   <span className="text-sm font-medium text-[var(--navy)]">{c.otherName}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <button type="button"
                     onClick={() => respond(c.id, "accept")}
                     disabled={busy === c.id}
                     className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
                   >
                     Accept
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => respond(c.id, "decline")}
                     disabled={busy === c.id}
                     className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
@@ -217,7 +217,7 @@ export function NetworkingConnections({
                 <span className="text-sm font-medium text-[var(--navy)]">{c.otherName}</span>
                 <div className="ml-auto flex items-center gap-2">
                   <span className="text-xs font-medium text-emerald-700">{t("connected")}</span>
-                  <button
+                  <button type="button"
                     onClick={() => startCall(c)}
                     disabled={busy === c.id}
                     className="rounded-md bg-[var(--blue)] px-2.5 py-1 text-xs font-medium text-white hover:bg-[var(--blue-hover)] disabled:opacity-50"

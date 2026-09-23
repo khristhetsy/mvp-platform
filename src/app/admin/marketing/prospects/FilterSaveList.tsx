@@ -103,7 +103,7 @@ export function FilterSaveList() {
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
           <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Active:</span>
           {active.map((a) => <span key={a} style={{ fontSize: 10.5, background: "#EFF6FF", color: "#1A6CE4", borderRadius: 999, padding: "2px 8px", fontWeight: 600 }}>{a}</span>)}
-          <button onClick={() => setF(EMPTY)} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}>Clear all</button>
+          <button type="button" onClick={() => setF(EMPTY)} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}>Clear all</button>
         </div>
       )}
 
@@ -127,7 +127,7 @@ export function FilterSaveList() {
       {/* Save / assign */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name this list — e.g. SaaS founders · valid email" style={{ flex: 1, minWidth: 200, ...sel }} />
-        <button onClick={() => save("new")} disabled={saving !== null || !name.trim() || !counts?.total}
+        <button type="button" onClick={() => save("new")} disabled={saving !== null || !name.trim() || !counts?.total}
           style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "9px 15px", cursor: "pointer", opacity: saving !== null || !name.trim() || !counts?.total ? 0.5 : 1 }}>
           {saving === "new" ? "Saving…" : "Save as new list"}
         </button>
@@ -139,7 +139,7 @@ export function FilterSaveList() {
             <option value="">Choose a list…</option>
             {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
-          <button onClick={() => save("add")} disabled={saving !== null || !existing || !counts?.total}
+          <button type="button" onClick={() => save("add")} disabled={saving !== null || !existing || !counts?.total}
             style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "8px 13px", cursor: "pointer", opacity: saving !== null || !existing || !counts?.total ? 0.5 : 1 }}>
             {saving === "add" ? "Adding…" : "Add to list"}
           </button>

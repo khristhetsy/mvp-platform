@@ -148,7 +148,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--muted-foreground)", textDecoration: "line-through" }}>{list.name}</div>
         <div style={{ fontSize: 11.5, color: "#1a7f4e", marginTop: 3 }}><i className="ti ti-check" aria-hidden="true" /> Deleted — will not reappear. Undo within 30 seconds.</div>
       </div>
-      <button onClick={() => undoDelete(list.id)}
+      <button type="button" onClick={() => undoDelete(list.id)}
         style={{ fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "#0A1A40", cursor: "pointer" }}>
         Undo
       </button>
@@ -168,20 +168,20 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <button onClick={() => setManageList(list)} title="Manage contacts in this list"
+        <button type="button" onClick={() => setManageList(list)} title="Manage contacts in this list"
           style={{ fontSize: 11, fontWeight: 500, padding: "3px 11px", borderRadius: 20, background: "#E6F1FB", color: "#0C447C", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
           {list.contact_count} contacts
         </button>
-        <button onClick={() => setManageList(list)}
+        <button type="button" onClick={() => setManageList(list)}
           style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", whiteSpace: "nowrap" }}>
           Add / manage
         </button>
-        <button onClick={() => openEdit(list)}
+        <button type="button" onClick={() => openEdit(list)}
           style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
           Edit
         </button>
         <div style={{ position: "relative" }}>
-          <button onClick={() => setMoveOpen(moveOpen === list.id ? null : list.id)} title="File this list under a department"
+          <button type="button" onClick={() => setMoveOpen(moveOpen === list.id ? null : list.id)} title="File this list under a department"
             style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
             <i className={`ti ${deptMeta(deptOf(list)).icon}`} style={{ color: deptMeta(deptOf(list)).color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
           </button>
@@ -193,7 +193,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
                 {[...DEPARTMENTS, UNASSIGNED].map((d) => {
                   const cur = deptOf(list) === d;
                   return (
-                    <button key={d} onClick={() => void moveToDepartment(list, d)}
+                    <button type="button" key={d} onClick={() => void moveToDepartment(list, d)}
                       style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
                       <i className={`ti ${deptMeta(d).icon}`} style={{ color: deptMeta(d).color, fontSize: 14 }} aria-hidden="true" /> {d}
                       {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
@@ -204,11 +204,11 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
             </>
           )}
         </div>
-        <button onClick={() => void toggleArchive(list)} disabled={busyId === list.id}
+        <button type="button" onClick={() => void toggleArchive(list)} disabled={busyId === list.id}
           style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>
           {list.archived ? "Unarchive" : "Archive"}
         </button>
-        <button onClick={() => del(list.id)}
+        <button type="button" onClick={() => del(list.id)}
           style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
           Delete
         </button>
@@ -271,7 +271,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
             const open = !!openDepts[dept];
             return (
               <div key={dept} style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "var(--muted)" }}>
-                <button onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
+                <button type="button" onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}><polyline points="9 6 15 12 9 18" /></svg>
                   <i className={`ti ${deptMeta(dept).icon}`} style={{ color: deptMeta(dept).color, fontSize: 15 }} aria-hidden="true" />
@@ -313,11 +313,11 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
               </select>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={closeModal}
+              <button type="button" onClick={closeModal}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                 Cancel
               </button>
-              <button onClick={save} disabled={saving || !form.name.trim()}
+              <button type="button" onClick={save} disabled={saving || !form.name.trim()}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: saving || !form.name.trim() ? 0.6 : 1 }}>
                 {saving ? "Saving…" : editId ? "Save changes" : "Create list"}
               </button>
@@ -401,7 +401,7 @@ function ManageContactsDrawer({ list, onClose, onCountChange }: { list: ListWith
       <div style={{ width: 470, maxWidth: "92vw", height: "100%", background: "#fff", borderLeft: "1px solid #e2e6ed", overflowY: "auto", padding: 22 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{list.name}</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)" }}>×</button>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)" }}>×</button>
         </div>
         <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 16 }}>{members.length} contacts in this list</div>
 
@@ -420,7 +420,7 @@ function ManageContactsDrawer({ list, onClose, onCountChange }: { list: ListWith
                 {memberIds.has(c.id) ? (
                   <span style={{ fontSize: 11, color: "#0F6E56", whiteSpace: "nowrap" }}><i className="ti ti-check" aria-hidden="true" /> Added</span>
                 ) : (
-                  <button onClick={() => add(c.id)} disabled={busyId === c.id}
+                  <button type="button" onClick={() => add(c.id)} disabled={busyId === c.id}
                     style={{ fontSize: 12, padding: "4px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", whiteSpace: "nowrap" }}>{busyId === c.id ? "…" : "Add"}</button>
                 )}
               </div>
@@ -441,7 +441,7 @@ function ManageContactsDrawer({ list, onClose, onCountChange }: { list: ListWith
                   <div style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.marketing_contacts ? name(m.marketing_contacts) : m.contact_id}</div>
                   {m.marketing_contacts && <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.marketing_contacts.email}</div>}
                 </div>
-                <button onClick={() => remove(m.contact_id)} disabled={busyId === m.contact_id}
+                <button type="button" onClick={() => remove(m.contact_id)} disabled={busyId === m.contact_id}
                   style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer", whiteSpace: "nowrap" }}>{busyId === m.contact_id ? "…" : "Remove"}</button>
               </div>
             ))}

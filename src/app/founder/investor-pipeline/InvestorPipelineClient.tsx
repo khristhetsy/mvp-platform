@@ -458,7 +458,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           count={filtered.length}
           countLabel="investors"
           placeholder="Search investor, firm, sector…"
-          primary={<button onClick={openAdd} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">+ Add Investor</button>}
+          primary={<button type="button" onClick={openAdd} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">+ Add Investor</button>}
           quick={[
             { key: "interested", label: "Interested" },
             { key: "has_meeting", label: "Meeting requested or booked" },
@@ -486,7 +486,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
         <div className="flex-1" />
         <div className="inline-flex overflow-hidden rounded-lg border" style={{ borderColor: "var(--border-subtle)" }}>
           {(["board", "table"] as const).map((m) => (
-            <button
+            <button type="button"
               key={m}
               onClick={() => setViewMode(m)}
               className="px-3 py-2 text-sm font-medium capitalize transition-colors"
@@ -498,10 +498,10 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             </button>
           ))}
         </div>
-        <button onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
+        <button type="button" onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
           Export CSV
         </button>
-        <button onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
           Import from Matches
         </button>
       </div>
@@ -548,7 +548,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                         <div className="flex items-start gap-2.5">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-1.5">
-                              <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                              <button type="button" onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
                               {inv.source === "platform_match" && !inv.platform_investor_id && (
                                 <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
                               )}
@@ -564,7 +564,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                           </span>
                         </div>
                         <div className="mt-2 flex items-center gap-1.5">
-                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
+                          <button type="button" onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
                           <select
                             value={inv.pipeline_stage ?? "new"}
                             onChange={(e) => handleStageChange(inv.id, e.target.value as PipelineStage)}
@@ -631,7 +631,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => setProfileOf(inv)} className="text-sm font-semibold text-left hover:underline" style={{ color: "var(--blue)" }}>
+                      <button type="button" onClick={() => setProfileOf(inv)} className="text-sm font-semibold text-left hover:underline" style={{ color: "var(--blue)" }}>
                         {inv.name}
                       </button>
                       {inv.source === "platform_match" && (
@@ -656,7 +656,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                     <OutreachBadge status={inv.outreach_status} editable onChange={(s) => handleOutreachChange(inv.id, s)} />
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => openEdit(inv)} title="Edit" className="rounded-md p-1.5 transition-colors hover:bg-slate-100" style={{ color: "var(--text-muted)" }}>
+                    <button type="button" onClick={() => openEdit(inv)} title="Edit" className="rounded-md p-1.5 transition-colors hover:bg-slate-100" style={{ color: "var(--text-muted)" }}>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
@@ -684,7 +684,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 </div>
                 {profileOf.location && <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>{profileOf.location}</p>}
               </div>
-              <button onClick={() => setProfileOf(null)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+              <button type="button" onClick={() => setProfileOf(null)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -740,7 +740,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Import from Platform Matches</h3>
                 <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>Select ranked investors to add to your pipeline. Already-imported investors are disabled.</p>
               </div>
-              <button onClick={() => setShowImport(false)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+              <button type="button" onClick={() => setShowImport(false)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -808,8 +808,8 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select investors to import"}
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setShowImport(false)} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
-                <button onClick={handleImport} disabled={selectedIds.size === 0 || importBusy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
+                <button type="button" onClick={() => setShowImport(false)} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
+                <button type="button" onClick={handleImport} disabled={selectedIds.size === 0 || importBusy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
                   {importBusy ? "Importing…" : `Import ${selectedIds.size > 0 ? selectedIds.size : ""} Investor${selectedIds.size !== 1 ? "s" : ""}`}
                 </button>
               </div>
@@ -824,7 +824,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           <div className="relative rounded-2xl bg-white w-full max-w-lg mx-4 shadow-2xl flex flex-col enterprise-animate-in" style={{ maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "var(--border-subtle)" }}>
               <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{editingId ? "Edit Investor" : "Add Investor"}</h3>
-              <button onClick={closeModal} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+              <button type="button" onClick={closeModal} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -894,8 +894,8 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 p-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
-              <button onClick={closeModal} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
-              <button onClick={handleSave} disabled={busy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
+              <button type="button" onClick={closeModal} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
+              <button type="button" onClick={handleSave} disabled={busy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
                 {busy ? "Saving…" : editingId ? "Save Changes" : "Add Investor"}
               </button>
             </div>

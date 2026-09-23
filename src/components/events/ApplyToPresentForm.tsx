@@ -67,7 +67,7 @@ export function ApplyToPresentForm({
         <p className="mt-1 text-sm text-emerald-700">
           Thanks — our team will review it and let you know. You&apos;ll get a notification with the decision.
         </p>
-        <button
+        <button type="button"
           onClick={() => router.push(`/events/${slug}`)}
           className="mt-4 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700"
         >

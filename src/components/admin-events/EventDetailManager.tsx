@@ -270,33 +270,33 @@ function SessionLiveControls({
                 {t("openLiveLink")}
               </a>
             )}
-            <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
+            <button type="button" onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
               {busy ? "…" : t("endSession")}
             </button>
             <span aria-hidden className="text-slate-300">·</span>
             {session.doorsOpen ? (
               <span className="inline-flex items-center gap-1.5">
                 <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Early access open</span>
-                <button onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--text-muted)] hover:underline disabled:opacity-50">
+                <button type="button" onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--text-muted)] hover:underline disabled:opacity-50">
                   Close
                 </button>
               </span>
             ) : (
-              <button onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50" title="Let attendees join before the scheduled start time">
+              <button type="button" onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50" title="Let attendees join before the scheduled start time">
                 {busy ? "…" : "Open early access"}
               </button>
             )}
           </>
         ) : session.status !== "ended" ? (
           <>
-            <button onClick={() => goLive({ useGoogleMeet: true })} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+            <button type="button" onClick={() => goLive({ useGoogleMeet: true })} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
               {busy ? t("starting") : t("createMeet")}
             </button>
-            <button onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+            <button type="button" onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
               {t("goLiveLink")}
             </button>
             {liveConfigured && (
-              <button onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+              <button type="button" onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
                 {t("wherebyRoom")}
               </button>
             )}
@@ -315,7 +315,7 @@ function SessionLiveControls({
             placeholder={t("pasteLinkPh")}
             className="min-w-[240px] flex-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs"
           />
-          <button
+          <button type="button"
             onClick={() => goLive({ liveUrl: liveUrl.trim() })}
             disabled={busy || !liveUrl.trim()}
             className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
@@ -332,7 +332,7 @@ function SessionLiveControls({
 
       <div className="mt-2 flex items-center gap-2 text-xs">
         <span className="text-[var(--text-muted)]">Attendee chat</span>
-        <button
+        <button type="button"
           onClick={toggleChat}
           disabled={busy}
           role="switch"
@@ -346,7 +346,7 @@ function SessionLiveControls({
         </button>
         <span className="mx-1 h-3 w-px bg-[var(--border-subtle)]" />
         <span className="text-[var(--text-muted)]">Call-in queue</span>
-        <button
+        <button type="button"
           onClick={toggleCallIn}
           disabled={busy}
           role="switch"
@@ -1038,7 +1038,7 @@ export function EventDetailManager({
                       {canEdit && (
                         <div className="flex items-center gap-3">
                           {s.type !== "talk_show" && (
-                            <button
+                            <button type="button"
                               onClick={() => setHeadline(s, !s.isHeadline)}
                               className={`text-xs font-medium hover:underline ${s.isHeadline ? "text-emerald-700" : "text-[var(--blue)]"}`}
                               title="Pin this session as the Main Stage headline — it stays on Main Stage even when other sessions go live"
@@ -1046,10 +1046,10 @@ export function EventDetailManager({
                               {s.isHeadline ? "Unpin Main Stage" : "Pin to Main Stage"}
                             </button>
                           )}
-                          <button onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
+                          <button type="button" onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
                             Edit
                           </button>
-                          <button onClick={() => removeSession(s)} className="text-xs text-rose-600 hover:underline">
+                          <button type="button" onClick={() => removeSession(s)} className="text-xs text-rose-600 hover:underline">
                             {t("remove")}
                           </button>
                         </div>
@@ -1138,7 +1138,7 @@ export function EventDetailManager({
                   <span className="ml-2 text-xs capitalize text-[var(--text-muted)]">{s.tier}</span>
                 </div>
                 {canEdit && (
-                  <button onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
+                  <button type="button" onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
                     {t("remove")}
                   </button>
                 )}
@@ -1208,7 +1208,7 @@ export function EventDetailManager({
       {removedSession && (
         <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg bg-[var(--navy)] px-4 py-2.5 text-sm text-white shadow-lg">
           <span>Session “{removedSession.title}” removed</span>
-          <button onClick={undoRemove} className="font-semibold text-[#7fdcc0] hover:underline">
+          <button type="button" onClick={undoRemove} className="font-semibold text-[#7fdcc0] hover:underline">
             Undo
           </button>
         </div>

@@ -50,7 +50,7 @@ export function PartnerScoresView({ items }: { items: PartnerItem[] }) {
   }, [items, typeFilter, sort]);
 
   const seg = (v: View, icon: string, label: string) => (
-    <button onClick={() => setView(v)} style={{ fontSize: 12, padding: "6px 12px", background: view === v ? ACCENT : "transparent", color: view === v ? "#fff" : MUTED, border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+    <button type="button" onClick={() => setView(v)} style={{ fontSize: 12, padding: "6px 12px", background: view === v ? ACCENT : "transparent", color: view === v ? "#fff" : MUTED, border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
       <i className={`ti ${icon}`} aria-hidden="true" /> {label}
     </button>
   );

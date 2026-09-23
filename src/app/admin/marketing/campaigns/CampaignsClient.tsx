@@ -361,17 +361,17 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{campaigns.length} total</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={testEmailConnection} disabled={testing}
+          <button type="button" onClick={testEmailConnection} disabled={testing}
             title="Check whether the Resend email provider is connected"
             style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--foreground)", cursor: "pointer", opacity: testing ? 0.5 : 1 }}>
             {testing ? "Testing…" : "Test email connection"}
           </button>
-          <button onClick={sendDueNow} disabled={sendingDue}
+          <button type="button" onClick={sendDueNow} disabled={sendingDue}
             title="Send any scheduled campaigns whose time has passed"
             style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--foreground)", cursor: "pointer", opacity: sendingDue ? 0.5 : 1 }}>
             {sendingDue ? "Sending…" : "Send due now"}
           </button>
-          <button
+          <button type="button"
             onClick={() => setShowCreate(!showCreate)}
             style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}
           >
@@ -473,8 +473,8 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                 <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "1px 7px" }}>Editing this campaign only</span>
                 {previewSaved && <span style={{ fontSize: 10.5, color: "#0F6E56" }}><i className="ti ti-check" aria-hidden="true" /> Saved</span>}
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                  <button onClick={undoPreview} style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>↩ Undo</button>
-                  <button onClick={savePreview} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>Save changes</button>
+                  <button type="button" onClick={undoPreview} style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>↩ Undo</button>
+                  <button type="button" onClick={savePreview} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>Save changes</button>
                 </div>
               </div>
               <div style={{ padding: "10px 14px", background: "#FAFBFC", borderBottom: "0.5px solid #e2e6ed", fontSize: 11.5, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 3 }}>
@@ -503,19 +503,19 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
             </div>
           )}
           <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={() => handleCreate(false)}
+            <button type="button" onClick={() => handleCreate(false)}
               disabled={saving || !form.name || !form.list_id || !form.template_id}
               style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "transparent", color: "var(--foreground)", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
               {saving ? "Saving…" : form.scheduled_at ? "Save as scheduled" : "Save as draft"}
             </button>
             {!form.scheduled_at && (
-              <button onClick={() => handleCreate(true)}
+              <button type="button" onClick={() => handleCreate(true)}
                 disabled={saving || !form.name || !form.list_id || !form.template_id}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
                 Send now
               </button>
             )}
-            <button onClick={() => setShowCreate(false)}
+            <button type="button" onClick={() => setShowCreate(false)}
               style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
               Cancel
             </button>
@@ -527,19 +527,19 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {(["all", "founder", "investor", "event"] as const).map((g) => (
-            <button key={g} onClick={() => setGroupFilter(g)}
+            <button type="button" key={g} onClick={() => setGroupFilter(g)}
               style={{ fontSize: 12, borderRadius: 20, padding: "5px 14px", border: groupFilter === g ? "1px solid #1A6CE4" : "1px solid #cdd9ec", background: groupFilter === g ? "#1A6CE4" : "transparent", color: groupFilter === g ? "#fff" : "#0A1A40", fontWeight: groupFilter === g ? 600 : 400, cursor: "pointer", textTransform: "capitalize" }}>{g}</button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={() => setGroupByDept((v) => !v)}
+          <button type="button" onClick={() => setGroupByDept((v) => !v)}
             title="Group campaigns under collapsible department headers"
             style={{ fontSize: 11.5, borderRadius: 6, padding: "5px 11px", border: groupByDept ? "0.5px solid #B5D4F4" : "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "transparent", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
             <i className="ti ti-layout-list" aria-hidden="true" /> {groupByDept ? "Group: Department" : "Group: Off"}
           </button>
           <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
-            <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 9px", background: view === "list" ? "#1A6CE4" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /></button>
-            <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 9px", background: view === "grid" ? "#1A6CE4" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
+            <button type="button" onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 9px", background: view === "list" ? "#1A6CE4" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /></button>
+            <button type="button" onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 9px", background: view === "grid" ? "#1A6CE4" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
           </div>
           <select value={sortKey} onChange={(e) => setSortKey(e.target.value as "created" | "name" | "opens")} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
             <option value="created">Newest</option>
@@ -547,7 +547,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
             <option value="opens">Most opened</option>
           </select>
           {campaigns.some((c) => c.archived) && (
-            <button onClick={() => setShowArchived((v) => !v)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+            <button type="button" onClick={() => setShowArchived((v) => !v)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
               {showArchived ? "Hide archived" : `Show archived (${campaigns.filter((c) => c.archived).length})`}
             </button>
           )}
@@ -572,7 +572,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                 {/* Card header */}
                 <div style={{ padding: "14px 16px 12px", borderBottom: "0.5px solid var(--border)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                    <button onClick={() => openAnalytics(c.id)}
+                    <button type="button" onClick={() => openAnalytics(c.id)}
                       style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", lineHeight: 1.4, paddingRight: 8, background: "none", border: "none", cursor: "pointer", textAlign: "left", textDecoration: "none" }}>
                       {c.name}
                     </button>
@@ -612,7 +612,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                 {/* Actions */}
                 <div style={{ padding: "10px 16px", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   {c.status === "draft" && (
-                    <button onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
+                    <button type="button" onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       {acting === c.id + "send" ? "Sending…" : "Send now"}
                     </button>
@@ -621,32 +621,32 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     <ScheduleButton onSchedule={(at) => handleAction(c.id, "schedule", at)} acting={acting === c.id + "schedule"} />
                   )}
                   {c.status === "sending" && (
-                    <button onClick={() => handleAction(c.id, "pause")} disabled={acting === c.id + "pause"}
+                    <button type="button" onClick={() => handleAction(c.id, "pause")} disabled={acting === c.id + "pause"}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                       Pause
                     </button>
                   )}
                   {c.status === "paused" && (
-                    <button onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
+                    <button type="button" onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Resume
                     </button>
                   )}
-                  <button onClick={() => openAnalytics(c.id)}
+                  <button type="button" onClick={() => openAnalytics(c.id)}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                     ↗ Details
                   </button>
-                  <button onClick={() => handleSendTest(c.id)} disabled={testingId === c.id || !resendReady}
+                  <button type="button" onClick={() => handleSendTest(c.id)} disabled={testingId === c.id || !resendReady}
                     title="Send one copy to your own email to validate delivery, opens, and clicks against a real inbox"
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: resendReady ? "pointer" : "not-allowed", color: "var(--muted-foreground)", opacity: resendReady ? 1 : 0.5 }}>
                     {testingId === c.id ? "Sending…" : <><i className="ti ti-mail" aria-hidden="true" /> Send test to me</>}
                   </button>
-                  <button onClick={() => setArchived(c.id, !c.archived)} disabled={acting === c.id + "archive"}
+                  <button type="button" onClick={() => setArchived(c.id, !c.archived)} disabled={acting === c.id + "archive"}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     {c.archived ? "Unarchive" : "Archive"}
                   </button>
                   <div style={{ position: "relative" }}>
-                    <button onClick={() => setMoveOpen(moveOpen === c.id ? null : c.id)}
+                    <button type="button" onClick={() => setMoveOpen(moveOpen === c.id ? null : c.id)}
                       title="File this campaign under a department"
                       style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       <i className={`ti ${deptMeta(deptOf(c)).icon}`} style={{ color: deptMeta(deptOf(c)).color }} aria-hidden="true" /> Move <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
@@ -659,7 +659,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                           {[...DEPARTMENTS, UNASSIGNED].map((d) => {
                             const cur = deptOf(c) === d;
                             return (
-                              <button key={d} onClick={() => void moveToDepartment(c, d)}
+                              <button type="button" key={d} onClick={() => void moveToDepartment(c, d)}
                                 style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: cur ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
                                 <i className={`ti ${deptMeta(d).icon}`} style={{ color: deptMeta(d).color, fontSize: 14 }} aria-hidden="true" /> {d}
                                 {cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
@@ -671,7 +671,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     )}
                   </div>
                   {["draft", "paused", "scheduled"].includes(c.status) && (
-                    <button onClick={() => handleAction(c.id, "cancel")} disabled={acting === c.id + "cancel"}
+                    <button type="button" onClick={() => handleAction(c.id, "cancel")} disabled={acting === c.id + "cancel"}
                       style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
                       Cancel
                     </button>
@@ -698,7 +698,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
           return (
             <div key={c.id} style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, alignItems: "center", padding: "9px 13px", fontSize: 12.5, borderTop: i > 0 ? "0.5px solid var(--border)" : "none", background: c.archived ? "#FAFBFC" : "#fff" }}>
               <div style={{ minWidth: 0 }}>
-                <button onClick={() => openAnalytics(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <button type="button" onClick={() => openAnalytics(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                   <span style={{ fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</span>
                   {c.group_type && <span style={{ flexShrink: 0, fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", background: c.group_type === "investor" ? "#f0edfd" : c.group_type === "event" ? "#e9f7ef" : "#eef4fe", color: c.group_type === "investor" ? "#5b3fd4" : c.group_type === "event" ? "#1a7f4e" : "#1A6CE4" }}>{c.group_type}</span>}
                 </button>
@@ -711,23 +711,23 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                 <b style={{ color: "var(--foreground)" }}>{n(c.stat_sent).toLocaleString()}</b> · {rate(c.stat_opened, c.stat_sent)} · {rate(c.stat_clicked, c.stat_sent)}
               </div>
               <div style={{ position: "relative", textAlign: "right" }}>
-                <button onClick={() => setRowMenuOpen(menuOpen ? null : c.id)} aria-label="Row actions" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, color: "var(--muted-foreground)", padding: "0 4px" }}>⋯</button>
+                <button type="button" onClick={() => setRowMenuOpen(menuOpen ? null : c.id)} aria-label="Row actions" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, color: "var(--muted-foreground)", padding: "0 4px" }}>⋯</button>
                 {menuOpen && (
                   <>
                     <div onClick={() => setRowMenuOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
                     <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 41, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, boxShadow: "0 6px 18px rgb(12 35 64 / 0.14)", minWidth: 200, overflow: "hidden", padding: "4px 0" }}>
-                      <button onClick={() => { setRowMenuOpen(null); void openAnalytics(c.id); }} style={rowMenuItem}>↗ Details</button>
+                      <button type="button" onClick={() => { setRowMenuOpen(null); void openAnalytics(c.id); }} style={rowMenuItem}>↗ Details</button>
                       {(c.status === "draft" || c.status === "paused") && (
-                        <button onClick={() => { setRowMenuOpen(null); void handleAction(c.id, "send"); }} style={rowMenuItem}>{c.status === "paused" ? "Resume" : "Send now"}</button>
+                        <button type="button" onClick={() => { setRowMenuOpen(null); void handleAction(c.id, "send"); }} style={rowMenuItem}>{c.status === "paused" ? "Resume" : "Send now"}</button>
                       )}
-                      <button disabled={!resendReady} onClick={() => { setRowMenuOpen(null); void handleSendTest(c.id); }} style={{ ...rowMenuItem, opacity: resendReady ? 1 : 0.5 }}><i className="ti ti-mail" aria-hidden="true" /> Send test to me</button>
-                      <button onClick={() => { setRowMenuOpen(null); void setArchived(c.id, !c.archived); }} style={rowMenuItem}>{c.archived ? "Unarchive" : "Archive"}</button>
+                      <button type="button" disabled={!resendReady} onClick={() => { setRowMenuOpen(null); void handleSendTest(c.id); }} style={{ ...rowMenuItem, opacity: resendReady ? 1 : 0.5 }}><i className="ti ti-mail" aria-hidden="true" /> Send test to me</button>
+                      <button type="button" onClick={() => { setRowMenuOpen(null); void setArchived(c.id, !c.archived); }} style={rowMenuItem}>{c.archived ? "Unarchive" : "Archive"}</button>
                       <div style={{ borderTop: "0.5px solid var(--border)", margin: "4px 0" }} />
                       <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted-foreground)", padding: "4px 12px 3px" }}>Move to department</div>
                       {[...DEPARTMENTS, UNASSIGNED].map((d) => {
                         const cur = deptOf(c) === d;
                         return (
-                          <button key={d} onClick={() => { setRowMenuOpen(null); void moveToDepartment(c, d); }} style={{ ...rowMenuItem, background: cur ? "#EEF0F4" : "transparent" }}>
+                          <button type="button" key={d} onClick={() => { setRowMenuOpen(null); void moveToDepartment(c, d); }} style={{ ...rowMenuItem, background: cur ? "#EEF0F4" : "transparent" }}>
                             <i className={`ti ${deptMeta(d).icon}`} style={{ color: deptMeta(d).color, fontSize: 14 }} aria-hidden="true" /> {d}{cur && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
                           </button>
                         );
@@ -749,7 +749,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               const open = !!openDepts[dept];
               return (
                 <div key={dept} style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "var(--muted)" }}>
-                  <button onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
+                  <button type="button" onClick={() => setOpenDepts((o) => ({ ...o, [dept]: !o[dept] }))}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", background: "#EEF0F4", border: "none", borderBottom: open ? "0.5px solid var(--border)" : "none", cursor: "pointer", textAlign: "left" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}><polyline points="9 6 15 12 9 18" /></svg>
                     <i className={`ti ${deptMeta(dept).icon}`} style={{ color: deptMeta(dept).color, fontSize: 15 }} aria-hidden="true" />
@@ -776,22 +776,22 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{editing ? "Edit campaign" : drawerTab === "preview" ? "Email preview" : "Campaign analytics"}</h3>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {analyticsData && !editing && EDITABLE_STATUSES.includes(analyticsData.status) && (
-                  <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
+                  <button type="button" onClick={startEdit} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
                 )}
-                <button onClick={() => setExpanded((v) => !v)} title={expanded ? "Collapse" : "Expand"}
+                <button type="button" onClick={() => setExpanded((v) => !v)} title={expanded ? "Collapse" : "Expand"}
                   style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>
                   {expanded ? "⤡ Collapse" : "⤢ Expand"}
                 </button>
-                <button onClick={closeDrawer} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)", paddingLeft: 2 }}>×</button>
+                <button type="button" onClick={closeDrawer} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)", paddingLeft: 2 }}>×</button>
               </div>
             </div>
 
             {loadingAnalytics && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>}
             {analyticsData && !editing && (
               <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
-                <button onClick={() => setDrawerTab("analytics")}
+                <button type="button" onClick={() => setDrawerTab("analytics")}
                   style={{ fontSize: 12, padding: "6px 14px", border: "none", background: drawerTab === "analytics" ? "#EFF6FF" : "#fff", color: drawerTab === "analytics" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: drawerTab === "analytics" ? 600 : 400, cursor: "pointer" }}>Analytics</button>
-                <button onClick={() => setDrawerTab("preview")}
+                <button type="button" onClick={() => setDrawerTab("preview")}
                   style={{ fontSize: 12, padding: "6px 14px", border: "none", borderLeft: "0.5px solid var(--border)", background: drawerTab === "preview" ? "#EFF6FF" : "#fff", color: drawerTab === "preview" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: drawerTab === "preview" ? 600 : 400, cursor: "pointer" }}>Preview</button>
               </div>
             )}
@@ -813,7 +813,7 @@ function ScheduleButton({ onSchedule, acting }: { onSchedule: (at: string) => vo
   const [at, setAt] = useState("");
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)}
+      <button type="button" onClick={() => setOpen(true)}
         style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
         <i className="ti ti-calendar" aria-hidden="true" /> Schedule
       </button>
@@ -823,12 +823,12 @@ function ScheduleButton({ onSchedule, acting }: { onSchedule: (at: string) => vo
     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
       <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)}
         style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
-      <button onClick={() => { if (at) { onSchedule(at); setOpen(false); } }}
+      <button type="button" onClick={() => { if (at) { onSchedule(at); setOpen(false); } }}
         disabled={!at || acting}
         style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "none", background: "#185FA5", color: "#fff", cursor: "pointer", opacity: (!at || acting) ? 0.5 : 1 }}>
         {acting ? "…" : "Set"}
       </button>
-      <button onClick={() => setOpen(false)}
+      <button type="button" onClick={() => setOpen(false)}
         style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
         ×
       </button>
@@ -907,11 +907,11 @@ function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onC
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 16, borderTop: "0.5px solid var(--border)" }}>
-        <button onClick={onSave} disabled={!canSave}
+        <button type="button" onClick={onSave} disabled={!canSave}
           style={{ fontSize: 13, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer", opacity: canSave ? 1 : 0.5 }}>
           {saving ? "Saving…" : "Save changes"}
         </button>
-        <button onClick={onCancel} disabled={saving}
+        <button type="button" onClick={onCancel} disabled={saving}
           style={{ fontSize: 13, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 18px", cursor: "pointer" }}>
           Cancel
         </button>

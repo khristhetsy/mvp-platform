@@ -46,7 +46,7 @@ export function BackfillInvestorTypeButton() {
           <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: 16, width: 560, maxWidth: "100%", maxHeight: "88vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Assign Investor Profile</p>
-              <button onClick={() => setOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
+              <button type="button" onClick={() => setOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
             </div>
             <p style={{ fontSize: 11.5, color: "var(--muted-foreground)", margin: "0 0 12px" }}>
               1 · Odoo <b>Investor Profile</b> → Investor profile. &nbsp; 2 · <b>SEC Form D</b> → Venture Capital + Fund Manager. Writes what the grid groups on; preview first.
@@ -55,7 +55,7 @@ export function BackfillInvestorTypeButton() {
             {applied ? (
               <div style={{ padding: 12, textAlign: "center" }}>
                 <p style={{ fontSize: 13, color: "#0F6E56", fontWeight: 500, margin: "0 0 12px" }}>✓ {applied}</p>
-                <button onClick={() => setOpen(false)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer" }}>Done</button>
+                <button type="button" onClick={() => setOpen(false)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer" }}>Done</button>
               </div>
             ) : (
               <>
@@ -96,8 +96,8 @@ export function BackfillInvestorTypeButton() {
 
                 {msg && <p style={{ fontSize: 11.5, color: "#A32D2D", margin: "0 0 10px" }}>{msg}</p>}
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                  <button onClick={() => run("preview")} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "…" : "Preview"}</button>
-                  <button onClick={() => run("apply")} disabled={busy || !preview || preview.willWrite === 0} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: !preview || preview.willWrite === 0 ? 0.5 : 1 }}>Apply{preview ? ` · ${preview.willWrite.toLocaleString()}` : ""}</button>
+                  <button type="button" onClick={() => run("preview")} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "…" : "Preview"}</button>
+                  <button type="button" onClick={() => run("apply")} disabled={busy || !preview || preview.willWrite === 0} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: !preview || preview.willWrite === 0 ? 0.5 : 1 }}>Apply{preview ? ` · ${preview.willWrite.toLocaleString()}` : ""}</button>
                 </div>
               </>
             )}

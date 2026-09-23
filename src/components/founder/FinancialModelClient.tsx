@@ -113,7 +113,7 @@ export function FinancialModelClient() {
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--navy)]">{t("your_drivers")}</h2>
-            <button onClick={reset} className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]">{t("reset")}</button>
+            <button type="button" onClick={reset} className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]">{t("reset")}</button>
           </div>
           <div className="mt-3 space-y-3">
             {ASSUMPTION_DEFS.map((d) => (
@@ -176,7 +176,7 @@ export function FinancialModelClient() {
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <PreviewButton onClick={() => setPreview(true)} />
-            <button onClick={generate} disabled={generating} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+            <button type="button" onClick={generate} disabled={generating} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
               {generating ? "Generating…" : "Generate Excel model"}
             </button>
             {done?.url && (

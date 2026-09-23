@@ -241,7 +241,7 @@ function TaskCard({
           </div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button
+          <button type="button"
             onClick={handleSave}
             disabled={saving || !form.title.trim()}
             style={{
@@ -252,7 +252,7 @@ function TaskCard({
           >
             {saving ? "Saving…" : "Save"}
           </button>
-          <button
+          <button type="button"
             onClick={handleCancel}
             style={{
               fontSize: 11, padding: "4px 10px", borderRadius: 6,
@@ -276,7 +276,7 @@ function TaskCard({
         </div>
         <div style={{ display: "flex", gap: 3, flexShrink: 0, alignItems: "center" }}>
           {googleConnected && task.due_date && (
-            <button
+            <button type="button"
               onClick={() => void handleCalendarToggle()}
               disabled={calLoading}
               title={task.google_calendar_event_id ? "Remove from Google Calendar" : "Add to Google Calendar"}
@@ -292,14 +292,14 @@ function TaskCard({
               {calLoading ? "…" : task.google_calendar_event_id ? <><i className="ti ti-calendar" aria-hidden="true" /> Synced</> : <><i className="ti ti-calendar" aria-hidden="true" /> Add</>}
             </button>
           )}
-          <button
+          <button type="button"
             onClick={() => setEditing(true)}
             title="Edit task"
             style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 13, opacity: 0.65, padding: "0 2px" }}
           >
             <i className="ti ti-pencil" aria-hidden="true" />
           </button>
-          <button
+          <button type="button"
             onClick={() => onDelete(task.id)}
             title="Delete task"
             style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 11, opacity: 0.55, padding: "0 2px" }}
@@ -364,7 +364,7 @@ function TaskCard({
           .map((s) => {
             const ssc = STATUS_MAP[s];
             return (
-              <button
+              <button type="button"
                 key={s}
                 onClick={() => onStatusChange(task.id, s)}
                 style={{
@@ -579,14 +579,14 @@ function ListView({
                 </td>
                 <td style={{ padding: "10px 12px", textAlign: "right" as const }}>
                   <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                    <button
+                    <button type="button"
                       onClick={() => setEditingId(task.id)}
                       style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 13, opacity: 0.65, padding: "0 2px" }}
                       title="Edit"
                     >
                       <i className="ti ti-pencil" aria-hidden="true" />
                     </button>
-                    <button
+                    <button type="button"
                       onClick={() => onDelete(task.id)}
                       style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 11, opacity: 0.55, padding: "0 2px" }}
                       title="Delete"
@@ -625,7 +625,7 @@ function CalendarCellButton({ task, onCalendarUpdate }: { task: Task; onCalendar
     }
   }
   return (
-    <button
+    <button type="button"
       onClick={() => void toggle()}
       disabled={loading}
       style={{
@@ -820,7 +820,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
           {/* View toggle */}
           <div style={{ display: "flex", border: "0.5px solid #e2e6ed", borderRadius: 8, overflow: "hidden" }}>
             {(["kanban", "list"] as ViewMode[]).map((v) => (
-              <button
+              <button type="button"
                 key={v}
                 onClick={() => setViewMode(v)}
                 style={{
@@ -835,7 +835,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
             ))}
           </div>
           {/* Assign button */}
-          <button
+          <button type="button"
             onClick={() => setShowForm(!showForm)}
             style={{
               display: "flex", alignItems: "center", gap: 5, fontSize: 12,
@@ -851,7 +851,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
       {/* ── Department tabs ── */}
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
         {/* All tasks tab */}
-        <button
+        <button type="button"
           onClick={() => setActiveCat("all")}
           style={{
             fontSize: 12, padding: "5px 14px", borderRadius: 20, cursor: "pointer",
@@ -872,7 +872,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
           const isActive = activeCat === k;
           const count = tasks.filter((t) => t.task_category === k).length;
           return (
-            <button
+            <button type="button"
               key={k}
               onClick={() => setActiveCat(k)}
               style={{
@@ -938,7 +938,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
           <option value="month">This month</option>
         </select>
         {(search || filterAssignee || filterPriority || filterDue) && (
-          <button
+          <button type="button"
             onClick={() => { setSearch(""); setFilterAssignee(""); setFilterPriority(""); setFilterDue(""); }}
             style={{ fontSize: 11, color: "#64748b", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
           >
@@ -1031,14 +1031,14 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
             </div>
           </div>
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-            <button
+            <button type="button"
               onClick={handleCreate}
               disabled={saving || !form.title.trim()}
               style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
             >
               {saving ? "Creating…" : "Create task"}
             </button>
-            <button
+            <button type="button"
               onClick={() => setShowForm(false)}
               style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "transparent", cursor: "pointer", color: "#0c2340" }}
             >

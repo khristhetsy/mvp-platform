@@ -50,7 +50,7 @@ export function CampaignsManager({ initial, canWrite, guardrailVersion }: { init
             {campaigns.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-slate-400">No campaigns yet.</p>
             ) : campaigns.map((c) => (
-              <button key={c.id} onClick={() => setSelectedId(c.id)} className={`flex w-full items-center justify-between gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 ${c.id === selectedId ? "bg-[var(--blue-muted)]" : ""}`}>
+              <button type="button" key={c.id} onClick={() => setSelectedId(c.id)} className={`flex w-full items-center justify-between gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 ${c.id === selectedId ? "bg-[var(--blue-muted)]" : ""}`}>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium" style={{ color: NAVY }}>{c.name}</span>
                   <span className="text-[11px] capitalize text-slate-400">{c.audience} · {c.variants.length} variant{c.variants.length === 1 ? "" : "s"}</span>
@@ -122,7 +122,7 @@ function NewCampaign({ onCreate, busy }: { onCreate: (name: string, audience: st
           <option value="founder">Founders</option>
           <option value="investor">Investors</option>
         </select>
-        <button onClick={() => { if (name.trim()) { onCreate(name.trim(), audience); setName(""); } }} disabled={busy || !name.trim()} className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+        <button type="button" onClick={() => { if (name.trim()) { onCreate(name.trim(), audience); setName(""); } }} disabled={busy || !name.trim()} className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         </button>
       </div>
@@ -358,7 +358,7 @@ function VariantEditor({ campaign, canWrite, busy, onAdd, onSave, onDelete }: {
           <div key={v.id} className="rounded-lg border border-slate-100 p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{v.label} · {v.trafficWeight}%</span>
-              {canWrite && <button onClick={() => onDelete(v.id)} disabled={busy} aria-label="Delete variant" className="text-slate-400 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>}
+              {canWrite && <button type="button" onClick={() => onDelete(v.id)} disabled={busy} aria-label="Delete variant" className="text-slate-400 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>}
             </div>
             {canWrite ? (
               <textarea defaultValue={v.openerScript ?? ""} onBlur={(e) => { if (e.target.value !== (v.openerScript ?? "")) onSave(v.id, { openerScript: e.target.value }); }} rows={3} placeholder="Opener script (the AI disclosure is added automatically)…" className="mt-2 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none" />
@@ -377,7 +377,7 @@ function VariantEditor({ campaign, canWrite, busy, onAdd, onSave, onDelete }: {
             <span className="self-center text-xs text-slate-400">% traffic</span>
           </div>
           <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={3} placeholder="Opener script…" className="mt-2 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none" />
-          <button onClick={() => { if (label.trim()) { onAdd(label.trim(), script, weight); setLabel(""); setScript(""); setWeight(100); } }} disabled={busy || !label.trim()} className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+          <button type="button" onClick={() => { if (label.trim()) { onAdd(label.trim(), script, weight); setLabel(""); setScript(""); setWeight(100); } }} disabled={busy || !label.trim()} className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
             <Plus className="h-4 w-4" /> Add variant
           </button>
         </div>

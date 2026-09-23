@@ -29,7 +29,7 @@ export function ConferencesClient({ initial, departments, staff }: { initial: Co
           <h1 style={{ fontSize: 21, fontWeight: 600, color: NAVY, margin: "6px 0 0" }}>Events</h1>
           <p style={{ fontSize: 12.5, color: MUTED, margin: "2px 0 0" }}>Conferences, summits, and talk shows with a session agenda.</p>
         </div>
-        <button onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>+ New event</button>
+        <button type="button" onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>+ New event</button>
       </div>
 
       {initial.length === 0 ? (
@@ -111,8 +111,8 @@ function NewConferenceModal({ departments, staff, onClose }: { departments: Dept
           <select value={host} onChange={(e) => setHost(e.target.value)} style={field}><option value="">Host…</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <button onClick={() => void create()} disabled={busy || !title.trim() || !start} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Creating…" : "Create event"}</button>
-          <button onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+          <button type="button" onClick={() => void create()} disabled={busy || !title.trim() || !start} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Creating…" : "Create event"}</button>
+          <button type="button" onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
         </div>
       </div>
     </div>

@@ -86,7 +86,7 @@ function InsightDrawer({ metricKey, label, onClose }: { metricKey: string; label
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`AI insight — ${label}`} style={{ width: "min(440px, 96vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}><i className="ti ti-sparkles" aria-hidden="true" /> AI IR Analyst — {label}</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
         </div>
         {loading ? <p style={{ fontSize: 12.5, color: MUTED }}>Analyzing…</p> : insight ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -100,13 +100,13 @@ function InsightDrawer({ metricKey, label, onClose }: { metricKey: string; label
             {insight.suggested_actions.length > 0 && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {insight.suggested_actions.map((a, i) => (
-                  <button key={i} onClick={() => { const href = ACTION_HREF[a.action_key]; if (href) window.location.href = href; }}
+                  <button type="button" key={i} onClick={() => { const href = ACTION_HREF[a.action_key]; if (href) window.location.href = href; }}
                     style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#EEF3FC", border: "none", borderRadius: 8, padding: "6px 11px", cursor: "pointer" }}>{a.text}</button>
                 ))}
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button onClick={() => { setLoading(true); load(true); }} style={{ fontSize: 12, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>↻ Regenerate</button>
+              <button type="button" onClick={() => { setLoading(true); load(true); }} style={{ fontSize: 12, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>↻ Regenerate</button>
               <span style={{ fontSize: 10.5, color: MUTED }}>{insight.model ? `${insight.cached ? "cached" : "fresh"} · ${insight.model}` : "heuristic (AI not configured)"}</span>
             </div>
           </div>

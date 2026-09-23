@@ -6,7 +6,7 @@ type Settings = { remindTaskDue: boolean; remindStalled: boolean; remindClosePas
 
 function ToggleSwitch({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} aria-label="toggle" style={{ width: 36, height: 20, borderRadius: 10, border: "none", background: on ? "#2E78F5" : "var(--muted)", position: "relative", cursor: "pointer" }}>
+    <button type="button" onClick={onClick} aria-label="toggle" style={{ width: 36, height: 20, borderRadius: 10, border: "none", background: on ? "#2E78F5" : "var(--muted)", position: "relative", cursor: "pointer" }}>
       <span style={{ position: "absolute", top: 2, left: on ? 18 : 2, width: 16, height: 16, background: "#fff", borderRadius: "50%", transition: "left .12s" }} />
     </button>
   );

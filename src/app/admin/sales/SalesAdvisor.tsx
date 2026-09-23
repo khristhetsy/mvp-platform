@@ -49,7 +49,7 @@ export function SalesAdvisor({ viewAs }: { viewAs?: string }) {
   return (
     <>
       {/* Collapsed card */}
-      <button onClick={() => setOpen(true)} style={{ textAlign: "left", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 12, padding: 16, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <button type="button" onClick={() => setOpen(true)} style={{ textAlign: "left", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 12, padding: 16, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ width: 26, height: 26, borderRadius: 8, background: "#fff", color: "#4338CA", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#3730A3" }}>AI sales advisor</div>
@@ -66,7 +66,7 @@ export function SalesAdvisor({ viewAs }: { viewAs?: string }) {
               <span style={{ width: 24, height: 24, borderRadius: 6, background: "#EEF2FF", color: "#4338CA", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
               <div style={{ fontSize: 13, fontWeight: 500 }}>AI sales advisor</div>
               <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#0F6E56", background: "#E1F5EE", borderRadius: 8, padding: "2px 8px" }}>grounded in your data</span>
-              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 16, marginLeft: 4 }}><i className="ti ti-x" aria-hidden="true" /></button>
+              <button type="button" onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 16, marginLeft: 4 }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
               {messages.map((m, i) => (
@@ -79,11 +79,11 @@ export function SalesAdvisor({ viewAs }: { viewAs?: string }) {
             </div>
             <div style={{ padding: "0 16px 12px" }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "10px 0" }}>
-                {QUICK.map((q) => <button key={q} onClick={() => send(q)} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>{q}</button>)}
+                {QUICK.map((q) => <button type="button" key={q} onClick={() => send(q)} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>{q}</button>)}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(input)} placeholder="Ask about your pipeline…" style={{ flex: 1, fontSize: 12.5, padding: "8px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
-                <button onClick={() => send(input)} disabled={sending || !input.trim()} style={{ fontSize: 12.5, padding: "8px 15px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: sending || !input.trim() ? 0.5 : 1 }}>Send</button>
+                <button type="button" onClick={() => send(input)} disabled={sending || !input.trim()} style={{ fontSize: 12.5, padding: "8px 15px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: sending || !input.trim() ? 0.5 : 1 }}>Send</button>
               </div>
               <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", marginTop: 8 }}>Suggests — you decide. Nothing sends automatically.</div>
             </div>

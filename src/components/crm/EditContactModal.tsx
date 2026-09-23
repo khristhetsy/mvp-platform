@@ -54,7 +54,7 @@ export function EditContactModal({ record: r, onClose }: { record: ContactFull; 
       <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-sm font-semibold text-slate-950">Edit contact in Odoo</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-3 px-5 py-4">
           {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}
@@ -66,8 +66,8 @@ export function EditContactModal({ record: r, onClose }: { record: ContactFull; 
           {field("City", city, setCity)}
           <p className="text-[11px] text-slate-400">Saves directly to Odoo (the system of record) and updates the CRM mirror.</p>
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save to Odoo
             </button>
           </div>

@@ -106,7 +106,7 @@ export function FounderOverrideEditor({ companyId, companyName, onClose, onSaved
     <div className="mt-3 rounded-xl border-2 border-indigo-200 bg-white p-4">
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold text-slate-900">Override for {companyName}</div>
-        <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-800">Close</button>
+        <button type="button" onClick={onClose} className="text-xs text-slate-500 hover:text-slate-800">Close</button>
       </div>
       <p className="mt-0.5 text-[11px] text-slate-500">Sections left Inherited use the global defaults{eff.planType ? ` · plan ${eff.planType.replace("founder_", "")}` : ""}. Customizing one affects only {companyName}.</p>
 
@@ -222,11 +222,11 @@ export function FounderOverrideEditor({ companyId, companyName, onClose, onSaved
       </div>
 
       <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
-        <button onClick={() => save({})} disabled={saving} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12px] text-slate-600 hover:bg-slate-50 disabled:opacity-60">Reset to global defaults</button>
+        <button type="button" onClick={() => save({})} disabled={saving} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12px] text-slate-600 hover:bg-slate-50 disabled:opacity-60">Reset to global defaults</button>
         {error && <span className="text-[11px] text-red-600">{error}</span>}
         <span className="ml-auto" />
-        <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-slate-500">Cancel</button>
-        <button onClick={() => save(ov)} disabled={saving} className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">{saving ? "Saving…" : `Save for ${companyName.split(/\s+/)[0]}`}</button>
+        <button type="button" onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-slate-500">Cancel</button>
+        <button type="button" onClick={() => save(ov)} disabled={saving} className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">{saving ? "Saving…" : `Save for ${companyName.split(/\s+/)[0]}`}</button>
       </div>
     </div>
   );

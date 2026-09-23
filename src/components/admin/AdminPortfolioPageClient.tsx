@@ -172,7 +172,7 @@ export function AdminPortfolioPageClient() {
             <strong style={{ fontWeight: 500 }}>{staleRows.length} investment{staleRows.length > 1 ? "s" : ""}</strong> have
             self-reported valuations older than {STALE_VAL_DAYS} days or no valuation on record.
           </p>
-          <button
+          <button type="button"
             onClick={handleNotify}
             disabled={notifySent || notifying}
             style={{
@@ -217,7 +217,7 @@ export function AdminPortfolioPageClient() {
               const label = s === "" ? "All deals" : s === "deal_room" ? "Deal room" : s === "self_reported" ? "Self-reported" : `Stale val.`;
               const active = filterSource === s;
               return (
-                <button
+                <button type="button"
                   key={s}
                   onClick={() => setFilterSource(s)}
                   style={{

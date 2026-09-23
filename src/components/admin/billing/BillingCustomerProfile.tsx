@@ -143,8 +143,8 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
           </div>
           {!editing && (
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setEditMsg(null); setEditing(true); }} disabled={busy} style={btn("#EEF3FC", blue)}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>
-              <button onClick={() => void removeCustomer()} disabled={busy} style={btn("#FCEBEB", "#A32D2D")}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
+              <button type="button" onClick={() => { setEditMsg(null); setEditing(true); }} disabled={busy} style={btn("#EEF3FC", blue)}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>
+              <button type="button" onClick={() => void removeCustomer()} disabled={busy} style={btn("#FCEBEB", "#A32D2D")}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
             </div>
           )}
         </div>
@@ -167,8 +167,8 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
               </label>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
-              <button onClick={() => void saveEdit()} disabled={busy} style={btn(navy, "#fff")}>{busy ? "Saving…" : "Save changes"}</button>
-              <button onClick={() => { setEditing(false); setEditMsg(null); }} disabled={busy} style={btn("#F1EFE8", navy)}>Cancel</button>
+              <button type="button" onClick={() => void saveEdit()} disabled={busy} style={btn(navy, "#fff")}>{busy ? "Saving…" : "Save changes"}</button>
+              <button type="button" onClick={() => { setEditing(false); setEditMsg(null); }} disabled={busy} style={btn("#F1EFE8", navy)}>Cancel</button>
               <span style={{ fontSize: 10.5, color: "#98A2B3" }}>Edits the local record only — never charges or refunds in Lemon Squeezy.</span>
             </div>
           </div>
@@ -223,13 +223,13 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
             <option value="founder_basic">Basic — {priceShort(pricing, "founder_basic")}</option>
             <option value="founder_professional">Professional — {priceShort(pricing, "founder_professional")}</option>
           </select>
-          <button onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
-          <button onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
+          <button type="button" onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
+          <button type="button" onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
         </div>
         {coUrl && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
             <input readOnly value={coUrl} style={{ flex: 1, fontSize: 11.5, padding: "6px 9px", borderRadius: 7, border: "1px solid #E4E8F0", color: "#475569" }} />
-            <button onClick={() => { void navigator.clipboard?.writeText(coUrl); setCoMsg("Link copied."); }} style={btn("#F1EFE8", navy)}>Copy</button>
+            <button type="button" onClick={() => { void navigator.clipboard?.writeText(coUrl); setCoMsg("Link copied."); }} style={btn("#F1EFE8", navy)}>Copy</button>
           </div>
         )}
         {coMsg && <div style={{ fontSize: 11.5, color: /Failed|didn't/.test(coMsg) ? "#A32D2D" : "#0F6E56", marginTop: 6 }}>{coMsg}</div>}

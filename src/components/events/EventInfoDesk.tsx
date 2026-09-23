@@ -90,7 +90,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
 
   if (!open) {
     return (
-      <button
+      <button type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-5 right-5 z-[90] flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white shadow-lg"
         style={{ background: "#0c2340" }}
@@ -113,7 +113,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
             <p className="text-[11px]" style={{ color: "#8e9bb0" }}>{t("info_help_desk")}</p>
           </div>
         </div>
-        <button onClick={() => setOpen(false)} aria-label="Close" className="text-white/70 hover:text-white">
+        <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-white/70 hover:text-white">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -138,7 +138,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
       {messages.length <= 1 && (
         <div className="flex flex-wrap gap-1.5 px-3.5 pb-2">
           {QUICK.map((q) => (
-            <button
+            <button type="button"
               key={q}
               onClick={() => send(q)}
               className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50"
@@ -150,7 +150,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
       )}
 
       <div className="border-t border-[var(--border-subtle)] px-2.5 pt-2">
-        <button
+        <button type="button"
           onClick={notifyDesk}
           disabled={notified}
           className="text-xs font-medium text-[var(--blue)] hover:underline disabled:text-[var(--text-muted)] disabled:no-underline"
@@ -168,7 +168,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
           maxLength={500}
           className="flex-1 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm"
         />
-        <button
+        <button type="button"
           onClick={() => send(input)}
           disabled={!input.trim() || busy}
           aria-label="Send"

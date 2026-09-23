@@ -38,7 +38,7 @@ export function NewProjectClient({ meId }: { meId: string }) {
 
   useEffect(() => {
     fetch("/api/admin/ir/projects").then((r) => r.json()).then((j) => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- after fetch
+       
       setSources(j.sources ?? []); setCompanies(j.companies ?? []); setStaff(j.staff ?? []);
       if (!(j.sources ?? []).length) setMode("company");
     }).catch(() => setError("Couldn't load Sales Hub deals."));

@@ -55,11 +55,11 @@ export function WizardShell({
       {/* single contextual nav button */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 12 }}>
         {step > 0 ? (
-          <button onClick={() => setStep(step - 1)} style={{ fontSize: 11, color: "var(--muted-foreground)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>‹ Back</button>
+          <button type="button" onClick={() => setStep(step - 1)} style={{ fontSize: 11, color: "var(--muted-foreground)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>‹ Back</button>
         ) : null}
         <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>sub-step {step + 1} of {steps.length}</span>
         {showNext ? (
-          <button onClick={onNext} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#fff", background: last ? "#0F6E56" : "#2E78F5", border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer" }}>
+          <button type="button" onClick={onNext} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#fff", background: last ? "#0F6E56" : "#2E78F5", border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer" }}>
             {nextLabel}
           </button>
         ) : null}

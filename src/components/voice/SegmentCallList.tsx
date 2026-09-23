@@ -61,7 +61,7 @@ export function SegmentCallList({ onChanged }: { onChanged?: () => void }) {
           {segments.map((s) => {
             const active = sel?.kind === s.kind && sel?.value === s.value;
             return (
-              <button key={`${s.kind}:${s.value}`} onClick={() => setSel(s)} className={`rounded-lg border p-3 text-left ${active ? "border-2 border-[#2E78F5] bg-[var(--blue-muted)]" : "border-slate-200 hover:bg-slate-50"}`}>
+              <button type="button" key={`${s.kind}:${s.value}`} onClick={() => setSel(s)} className={`rounded-lg border p-3 text-left ${active ? "border-2 border-[#2E78F5] bg-[var(--blue-muted)]" : "border-slate-200 hover:bg-slate-50"}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-800">{s.label}</span>
                   {active && <CircleCheck className="h-4 w-4" style={{ color: BLUE }} />}
@@ -92,7 +92,7 @@ export function SegmentCallList({ onChanged }: { onChanged?: () => void }) {
 
       <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
         <span className="text-xs text-slate-500">{sel ? <><strong className="text-slate-800">{sel.count.toLocaleString()} contacts</strong> in {sel.label} will be added.</> : "Select a segment above."}</span>
-        <button onClick={add} disabled={busy || !sel || !source.trim() || !attest} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+        <button type="button" onClick={add} disabled={busy || !sel || !source.trim() || !attest} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />} Add to call list
         </button>
       </div>

@@ -61,12 +61,12 @@ export function OpsSettingsClient() {
                 {assignees.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select></div>
             <div style={row}><span style={{ flex: 1, fontSize: 12, color: "var(--muted-foreground)" }}>Also email escalations</span>
-              <button onClick={() => setS({ ...s, emailEscalations: !s.emailEscalations })} aria-label="Toggle email" style={{ width: 36, height: 20, borderRadius: 10, border: "none", background: s.emailEscalations ? "#2E78F5" : "var(--muted)", position: "relative", cursor: "pointer" }}>
+              <button type="button" onClick={() => setS({ ...s, emailEscalations: !s.emailEscalations })} aria-label="Toggle email" style={{ width: 36, height: 20, borderRadius: 10, border: "none", background: s.emailEscalations ? "#2E78F5" : "var(--muted)", position: "relative", cursor: "pointer" }}>
                 <span style={{ position: "absolute", top: 2, left: s.emailEscalations ? 18 : 2, width: 16, height: 16, background: "#fff", borderRadius: "50%", transition: "left .12s" }} />
               </button></div>
             <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>Email delivery activates once the transactional sender is on a verified domain — for now escalations are in-app.</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-              <button onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: saving ? 0.5 : 1 }}>{saving ? "Saving…" : "Save"}</button>
+              <button type="button" onClick={save} disabled={saving} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: saving ? 0.5 : 1 }}>{saving ? "Saving…" : "Save"}</button>
               {msg && <span style={{ fontSize: 11.5, color: msg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{msg}</span>}
             </div>
           </div>

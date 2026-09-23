@@ -90,10 +90,10 @@ export function SalesHubTabs({ viewOnly = false, inline = false }: { viewOnly?: 
             <i className="ti ti-eye" style={{ fontSize: 14, color: "#4338CA" }} aria-hidden="true" />
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>View</span>
             <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
-              <button onClick={() => setView("me")} style={seg(mode === "me")}>Me</button>
-              <button onClick={() => setView("team")} style={seg(mode === "team")}>Team</button>
+              <button type="button" onClick={() => setView("me")} style={seg(mode === "me")}>Me</button>
+              <button type="button" onClick={() => setView("team")} style={seg(mode === "team")}>Team</button>
               {members.length > 0 && (
-                <button onClick={() => setMenuOpen((v) => !v)} style={{ ...seg(mode === "user"), display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <button type="button" onClick={() => setMenuOpen((v) => !v)} style={{ ...seg(mode === "user"), display: "inline-flex", alignItems: "center", gap: 4 }}>
                   {selectedMember ? selectedMember.name : "Someone else"}
                   <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
                 </button>
@@ -105,7 +105,7 @@ export function SalesHubTabs({ viewOnly = false, inline = false }: { viewOnly?: 
               <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
               <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 30, width: 220, maxHeight: 300, overflowY: "auto", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: 5 }}>
                 {members.map((m) => (
-                  <button key={m.id} onClick={() => setView(m.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: m.id === viewAs ? "#F7F6FE" : "transparent", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
+                  <button type="button" key={m.id} onClick={() => setView(m.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: m.id === viewAs ? "#F7F6FE" : "transparent", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
                     <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#EEEDFE", color: "#0A1A40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 500, flexShrink: 0 }}>{m.name.slice(0, 2).toUpperCase()}</span>
                     <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</span>
                     {m.id === viewAs && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#4338CA" }} aria-hidden="true" />}

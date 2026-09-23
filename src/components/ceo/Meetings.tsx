@@ -40,7 +40,7 @@ export function MeetingWorkflowCard({ meeting, sessions, onRefresh }: { meeting:
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
             {meeting.gcalEventId ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "#B9F6CA" }}><i className="ti ti-check" aria-hidden="true" /> Calendar synced</span>
-              : <button onClick={sync} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: navy, background: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Syncing…" : "Sync to Google Calendar"}</button>}
+              : <button type="button" onClick={sync} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: navy, background: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Syncing…" : "Sync to Google Calendar"}</button>}
           </div>
         </div>
         {msg && <div style={{ fontSize: 11.5, marginTop: 8, color: msg.includes("created") ? "#B9F6CA" : "#FFCDD2" }}>{msg}</div>}
@@ -89,7 +89,7 @@ function SessionJournal({ meetingKey, sessions, onRefresh }: { meetingKey: strin
     <div style={{ borderTop: "1px solid #F1F4F9", padding: "12px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".9px", textTransform: "uppercase", color: "#6B7690" }}>Session log</div>
-        <button onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>{adding ? "Cancel" : "+ New entry"}</button>
+        <button type="button" onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>{adding ? "Cancel" : "+ New entry"}</button>
       </div>
 
       {adding && (
@@ -101,7 +101,7 @@ function SessionJournal({ meetingKey, sessions, onRefresh }: { meetingKey: strin
           <textarea placeholder="Session narrative…" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} style={{ ...inp, minHeight: 70, resize: "vertical" }} />
           <textarea placeholder="Decisions — one per line" value={draft.decisions} onChange={(e) => setDraft({ ...draft, decisions: e.target.value })} style={{ ...inp, minHeight: 44, resize: "vertical" }} />
           <textarea placeholder="Tasks — one per line (sync to the Admin task board)" value={draft.tasks} onChange={(e) => setDraft({ ...draft, tasks: e.target.value })} style={{ ...inp, minHeight: 44, resize: "vertical" }} />
-          <button onClick={addSession} disabled={busy} style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Saving…" : "Save entry"}</button>
+          <button type="button" onClick={addSession} disabled={busy} style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Saving…" : "Save entry"}</button>
         </div>
       )}
 
@@ -124,7 +124,7 @@ function SessionEntry({ session, open, onToggle, editing, onEdit, onRefresh }: {
 
   return (
     <div style={{ border: "1px solid #E4E8F0", borderRadius: 10, marginBottom: 8, overflow: "hidden" }}>
-      <button onClick={onToggle} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "none", border: "none", cursor: "pointer" }}>
+      <button type="button" onClick={onToggle} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "none", border: "none", cursor: "pointer" }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: navy }}>{new Date(`${session.sessionDate}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
         {session.attendance && <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 99, background: "#EEF1F7", color: "#6B7690" }}>{session.attendance}</span>}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "#98A2B3" }}>{open ? "▲" : "▼"}</span>
@@ -137,8 +137,8 @@ function SessionEntry({ session, open, onToggle, editing, onEdit, onRefresh }: {
               <textarea value={note} onChange={(e) => setNote(e.target.value)} style={{ ...inp, minHeight: 70, resize: "vertical" }} />
               <textarea value={decisions} onChange={(e) => setDecisions(e.target.value)} placeholder="Decisions — one per line" style={{ ...inp, minHeight: 44, resize: "vertical" }} />
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={save} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
-                <button onClick={onEdit} style={{ fontSize: 12, color: "#6B7690", background: "transparent", border: "1px solid #E4E8F0", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
+                <button type="button" onClick={save} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
+                <button type="button" onClick={onEdit} style={{ fontSize: 12, color: "#6B7690", background: "transparent", border: "1px solid #E4E8F0", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           ) : (
@@ -151,8 +151,8 @@ function SessionEntry({ session, open, onToggle, editing, onEdit, onRefresh }: {
                 </div>
               )}
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button onClick={onEdit} style={{ fontSize: 11.5, color: royal, background: "#EEF3FC", border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Edit</button>
-                <button onClick={del} style={{ fontSize: 11.5, color: "#D6455D", background: "#FCE9EC", border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Delete</button>
+                <button type="button" onClick={onEdit} style={{ fontSize: 11.5, color: royal, background: "#EEF3FC", border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Edit</button>
+                <button type="button" onClick={del} style={{ fontSize: 11.5, color: "#D6455D", background: "#FCE9EC", border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Delete</button>
               </div>
             </>
           )}
@@ -195,8 +195,8 @@ export function MeetingLog({ meetings, sessions }: { meetings: CeoMeeting[]; ses
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        {filters.map(([k, l]) => <button key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === k ? royal : "#EEF1F7", color: filter === k ? "#fff" : "#6B7690" }}>{l}</button>)}
-        <button onClick={analyze} disabled={analyzing} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: analyzing ? "default" : "pointer", opacity: analyzing ? 0.7 : 1 }}>{analyzing ? "Analyzing…" : (<><i className="ti ti-sparkles" aria-hidden="true" /> Analyze with AI</>)}</button>
+        {filters.map(([k, l]) => <button type="button" key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === k ? royal : "#EEF1F7", color: filter === k ? "#fff" : "#6B7690" }}>{l}</button>)}
+        <button type="button" onClick={analyze} disabled={analyzing} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: analyzing ? "default" : "pointer", opacity: analyzing ? 0.7 : 1 }}>{analyzing ? "Analyzing…" : (<><i className="ti ti-sparkles" aria-hidden="true" /> Analyze with AI</>)}</button>
       </div>
 
       {analyzeMsg && <div style={{ fontSize: 12, color: "#D6455D", marginBottom: 12 }}>{analyzeMsg}</div>}
@@ -229,7 +229,7 @@ function AnalysisPanel({ a, onClose }: { a: MeetingAnalysis; onClose: () => void
     <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 16, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".8px", textTransform: "uppercase", color: royal }}>AI Chief of Staff · meeting-log analysis</div>
-        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 16, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss"><i className="ti ti-x" aria-hidden="true" /></button>
+        <button type="button" onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 16, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss"><i className="ti ti-x" aria-hidden="true" /></button>
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: navy, marginTop: 6, lineHeight: 1.5 }}>{a.headline}</div>
       {block("Recurring themes", a.themes, "#1A6CE4")}

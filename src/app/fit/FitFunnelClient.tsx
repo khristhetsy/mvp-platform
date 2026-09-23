@@ -43,7 +43,7 @@ function MatchCard({ m }: { m: MatchResult }) {
   const summaryLine = [m.sectors[0], m.stage, m.checkSize].filter(Boolean).join(" · ");
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 p-3 text-left">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 p-3 text-left">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-slate-900">{m.company}</p>
           {summaryLine ? <p className="mt-0.5 truncate text-[11px] text-slate-500">{summaryLine}</p> : null}
@@ -261,7 +261,7 @@ export function FitFunnelClient() {
             ) : null}
           </div>
 
-          <button onClick={() => setStep("method")} className="mt-4 w-full rounded-lg bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white hover:bg-indigo-700">See how we structure your raise</button>
+          <button type="button" onClick={() => setStep("method")} className="mt-4 w-full rounded-lg bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white hover:bg-indigo-700">See how we structure your raise</button>
         </>
       ) : (
         <>

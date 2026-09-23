@@ -132,13 +132,13 @@ export function CapTableClient() {
         <div className="flex flex-wrap items-center gap-2">
           {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
           <PreviewButton onClick={() => setPreview(true)} />
-          <button onClick={save} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
+          <button type="button" onClick={save} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
             {saving ? "Saving…" : "Save"}
           </button>
-          <button onClick={() => exportAs("xlsx")} disabled={exporting !== null} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
+          <button type="button" onClick={() => exportAs("xlsx")} disabled={exporting !== null} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
             {exporting === "xlsx" ? "Exporting…" : "Export Excel"}
           </button>
-          <button onClick={() => exportAs("pdf")} disabled={exporting !== null} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
+          <button type="button" onClick={() => exportAs("pdf")} disabled={exporting !== null} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
             {exporting === "pdf" ? "Exporting…" : "Export PDF"}
           </button>
         </div>
@@ -152,7 +152,7 @@ export function CapTableClient() {
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--navy)]">{t("shareholders")}</h2>
-            <button onClick={addHolder} className="inline-flex items-center gap-1 text-xs font-medium text-[var(--indigo)]">+ Add holder</button>
+            <button type="button" onClick={addHolder} className="inline-flex items-center gap-1 text-xs font-medium text-[var(--indigo)]">+ Add holder</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -190,7 +190,7 @@ export function CapTableClient() {
                     </td>
                     <td className="px-2 py-1.5 text-right tabular-nums text-[var(--text-secondary)]">{pct(row.pct)}</td>
                     <td className="px-2 py-1.5 text-right">
-                      <button onClick={() => removeHolder(row.holder.id)} aria-label="Remove holder" className="text-[var(--text-muted)] hover:text-rose-600">×</button>
+                      <button type="button" onClick={() => removeHolder(row.holder.id)} aria-label="Remove holder" className="text-[var(--text-muted)] hover:text-rose-600">×</button>
                     </td>
                   </tr>
                 ))}

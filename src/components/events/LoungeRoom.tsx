@@ -168,7 +168,7 @@ export function LoungeRoom({
           )}
           {tables.map((t) => (
             <li key={t.id}>
-              <button
+              <button type="button"
                 onClick={() => setSelectedId(t.id)}
                 className={`w-full rounded-lg px-2.5 py-2 text-left text-sm transition ${
                   selectedId === t.id
@@ -191,7 +191,7 @@ export function LoungeRoom({
             className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
             onKeyDown={(e) => e.key === "Enter" && createTable()}
           />
-          <button
+          <button type="button"
             onClick={createTable}
             disabled={!newTitle.trim()}
             className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
@@ -246,7 +246,7 @@ export function LoungeRoom({
                   maxLength={1000}
                   className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
                 />
-                <button onClick={send} disabled={!input.trim()} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+                <button type="button" onClick={send} disabled={!input.trim()} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
                   Send
                 </button>
               </div>

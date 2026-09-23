@@ -90,7 +90,7 @@ export function DefaultSenderCard() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14 }}>
-            <button onClick={() => void save()} disabled={saving} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: saving ? 0.6 : 1 }}>{saving ? "Saving…" : "Save sender settings"}</button>
+            <button type="button" onClick={() => void save()} disabled={saving} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: saving ? 0.6 : 1 }}>{saving ? "Saving…" : "Save sender settings"}</button>
             {msg && <span style={{ fontSize: 12, color: /fail|error|valid/i.test(msg) ? "#A32D2D" : "#0F6E56" }}>{msg}</span>}
           </div>
         </>

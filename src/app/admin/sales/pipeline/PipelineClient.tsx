@@ -353,7 +353,7 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
         <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", maxWidth: 620 }}>
           <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center" }}>
             <span style={{ fontSize: 12.5, fontWeight: 600 }}>Stages · {pipeline?.name}</span>
-            <button onClick={addStage} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>+ Add stage</button>
+            <button type="button" onClick={addStage} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>+ Add stage</button>
           </div>
           {stages.map((s, i) => {
             const wonCount = stages.filter((x) => x.is_won).length;
@@ -400,8 +400,8 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
             </select>
             {delErr && <p style={{ fontSize: 12, color: "#A32D2D", margin: "10px 0 0" }}>{delErr}</p>}
             <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
-              <button onClick={() => setDelTarget(null)} disabled={delBusy} style={{ fontSize: 12, padding: "7px 14px", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, background: "#fff", color: "var(--foreground)", cursor: "pointer" }}>Cancel</button>
-              <button onClick={confirmDeleteStage} disabled={delBusy} style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", border: "none", borderRadius: 8, background: "#A32D2D", color: "#fff", cursor: "pointer", opacity: delBusy ? 0.6 : 1 }}>{delBusy ? "Deleting…" : "Delete stage"}</button>
+              <button type="button" onClick={() => setDelTarget(null)} disabled={delBusy} style={{ fontSize: 12, padding: "7px 14px", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, background: "#fff", color: "var(--foreground)", cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={confirmDeleteStage} disabled={delBusy} style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", border: "none", borderRadius: 8, background: "#A32D2D", color: "#fff", cursor: "pointer", opacity: delBusy ? 0.6 : 1 }}>{delBusy ? "Deleting…" : "Delete stage"}</button>
             </div>
           </div>
         </div>

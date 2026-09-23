@@ -58,7 +58,7 @@ export function EventPollWidget({ slug }: { slug: string }) {
           const pct = total ? Math.round((c / total) * 100) : 0;
           const mine = myVote === i;
           return (
-            <button
+            <button type="button"
               key={i}
               onClick={() => vote(i)}
               disabled={voted || voting}

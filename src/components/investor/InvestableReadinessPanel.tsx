@@ -119,7 +119,7 @@ function FactorModal({
       <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-6 py-5">
-          <button
+          <button type="button"
             onClick={onClose}
             aria-label="Close"
             className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -226,7 +226,7 @@ function FactorModal({
         </div>
 
         <div className="sticky bottom-0 border-t border-slate-100 bg-white px-6 py-4">
-          <button
+          <button type="button"
             onClick={onClose}
             className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
@@ -847,7 +847,7 @@ function OverviewTab({
           const color = FACTOR_COLORS[f.key] ?? "#378ADD";
           const pct = score.pts / score.max;
           return (
-            <button
+            <button type="button"
               key={f.key}
               onClick={() => setActiveKey(f.key as FactorKey)}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -1275,7 +1275,7 @@ export function InvestableReadinessPanel({
                 )}
               </div>
               {/* PDF export button */}
-              <button
+              <button type="button"
                 onClick={() => window.print()}
                 className="print:hidden rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
                 title={t("export_as_pdf")}
@@ -1300,7 +1300,7 @@ export function InvestableReadinessPanel({
         {/* Tabs */}
         <div className="flex gap-0 border-b border-slate-100 print:hidden">
           {TABS.map((t) => (
-            <button
+            <button type="button"
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex-1 py-3 text-xs font-medium transition-colors ${

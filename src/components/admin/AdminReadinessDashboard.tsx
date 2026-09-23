@@ -127,7 +127,7 @@ function FactorPopup({
     >
       <div className="relative w-full max-w-lg max-h-[82vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-6 py-4">
-          <button
+          <button type="button"
             onClick={onClose}
             className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
           >
@@ -262,7 +262,7 @@ function FactorPopup({
         </div>
 
         <div className="sticky bottom-0 border-t border-slate-100 bg-white px-6 py-4">
-          <button
+          <button type="button"
             onClick={onClose}
             className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
@@ -340,7 +340,7 @@ function OverridePanel({
           <p className="text-sm font-semibold text-slate-900">{row.companyName}</p>
           <p className="mt-0.5 text-xs text-slate-400">{t("override_panel")}</p>
         </div>
-        <button
+        <button type="button"
           onClick={onCancel}
           className="text-xs text-slate-400 hover:text-slate-600"
         >
@@ -399,7 +399,7 @@ function OverridePanel({
       )}
 
       <div className="mt-4 flex gap-2">
-        <button
+        <button type="button"
           onClick={() => submit(false)}
           disabled={isPending}
           className="flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
@@ -407,7 +407,7 @@ function OverridePanel({
           {isPending ? "Saving…" : "Save override"}
         </button>
         {row.score.overrideScore !== null && (
-          <button
+          <button type="button"
             onClick={() => submit(true)}
             disabled={clearing}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-60"
@@ -631,7 +631,7 @@ export function AdminReadinessDashboard({ rows, metrics, weightSet }: Props) {
               <option value="locked">Outreach locked</option>
               <option value="overridden">Admin overridden</option>
             </select>
-            <button
+            <button type="button"
               onClick={backfillSummaries}
               disabled={summaryProgress !== null || rescoreAllProgress !== null}
               title="Generate AI summaries for documents that lack one, then re-score affected companies. Fixes low scores caused by missing document summaries."
@@ -639,7 +639,7 @@ export function AdminReadinessDashboard({ rows, metrics, weightSet }: Props) {
             >
               {summaryProgress ? `Summarizing… ${summaryProgress.done} done` : "Generate summaries"}
             </button>
-            <button
+            <button type="button"
               onClick={rescoreAll}
               disabled={rescoreAllProgress !== null || summaryProgress !== null}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
@@ -803,7 +803,7 @@ export function AdminReadinessDashboard({ rows, metrics, weightSet }: Props) {
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
+                          <button type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               rescore(row.companyId);
@@ -814,7 +814,7 @@ export function AdminReadinessDashboard({ rows, metrics, weightSet }: Props) {
                             {rescoring === row.companyId ? "Scoring…" : "Re-score"}
                           </button>
                           {s && (
-                            <button
+                            <button type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedRow(isSelected ? null : row);
