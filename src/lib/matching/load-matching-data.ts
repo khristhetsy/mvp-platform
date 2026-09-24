@@ -42,6 +42,7 @@ export function companyToMatchProfile(
     stage: combinedStage(company),
     geography: formatGeography(company),
     fundingAmount: company.funding_amount,
+    fundingBand: typeof cx.funding_amount_band === "string" && cx.funding_amount_band ? cx.funding_amount_band : null,
     readinessScore: input?.readinessScore ?? null,
     onboardingPercent: company.onboarding_progress_percent ?? 0,
     reviewStatus: company.review_status ? String(company.review_status) : company.status,

@@ -31,6 +31,8 @@ export function buildCompanyMatchProfile(company: {
   state?: string | null;
   country?: string | null;
   funding_amount?: number | null;
+  /** The amount-of-capital band picked in settings (companies.funding_amount_band). */
+  funding_amount_band?: string | null;
   review_status?: string | null;
   is_published?: boolean | null;
   marketplace_visible?: boolean | null;
@@ -58,6 +60,7 @@ export function buildCompanyMatchProfile(company: {
     stage: stageParts.length ? stageParts.join(", ") : (company.revenue_stage ?? null),
     geography: [company.state, company.country].filter(Boolean).join(", ") || null,
     fundingAmount: company.funding_amount ?? null,
+    fundingBand: company.funding_amount_band ?? null,
     readinessScore: company.readinessScore ?? null,
     onboardingPercent: 100,
     reviewStatus: company.review_status ?? null,

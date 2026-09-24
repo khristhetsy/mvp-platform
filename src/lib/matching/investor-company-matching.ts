@@ -27,6 +27,9 @@ export type CompanyMatchProfile = {
   stage: string | null;
   geography: string | null;
   fundingAmount: number | null;
+  /** The amount-of-capital band the founder picked, e.g. "$1m - $10m". When
+   *  present it wins over fundingAmount for check size scoring. */
+  fundingBand?: string | null;
   readinessScore: number | null;
   onboardingPercent: number;
   reviewStatus: string | null;
@@ -161,12 +164,32 @@ function scoreGeography(investor: InvestorMatchProfile, company: CompanyMatchPro
 function scoreCheckSize(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const min = investor.check_size_min;
   const max = investor.check_size_max;
-  const target = company.fundingAmount;
-  if ((min == null && max == null) || target == null || target <= 0) {
+  if (min == null && max == null) {
     return { points: 0, weight, evaluated: false, reason: null, missing: null };
   }
   const lower = min ?? 0;
   const upper = max ?? Number.MAX_SAFE_INTEGER;
+
+  // Founder picked a band: an overlap question, the same way ARR and MRR work.
+  const band = company.fundingBand ? parseMoneyBand(company.fundingBand) : null;
+  if (band) {
+    const bandMax = Number.isFinite(band.max) ? band.max : Number.MAX_SAFE_INTEGER;
+    if (band.min <= upper && lower <= bandMax) {
+      return { points: weight, weight, evaluated: true, reason: "Check size fit", missing: null };
+    }
+    const nearLower = bandMax >= lower * 0.5 && bandMax < lower;
+    const nearUpper = band.min > upper && band.min <= upper * 1.5;
+    if (nearLower || nearUpper) {
+      return { points: Math.round(weight * 0.5), weight, evaluated: true, reason: "Partial check size overlap", missing: null };
+    }
+    return { points: 0, weight, evaluated: true, reason: null, missing: "Target raise outside investor check size range" };
+  }
+
+  // No band: the original exact amount logic, unchanged.
+  const target = company.fundingAmount;
+  if (target == null || target <= 0) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  }
   if (target >= lower && target <= upper) {
     return { points: weight, weight, evaluated: true, reason: "Check size fit", missing: null };
   }

@@ -17,6 +17,9 @@ import {
   ARR_BAND_OPTIONS,
   MRR_BAND_OPTIONS,
   BUSINESS_ENTITY_OPTIONS,
+  FUNDING_AMOUNT_BAND_OPTIONS,
+  EBITDA_BAND_OPTIONS,
+  moneyBandFor,
   splitProfileCsv,
 } from "@/lib/profile/options";
 
@@ -73,7 +76,10 @@ function generateDescriptionDraft(company: Company | null): string {
 function generateUseOfFundsDraft(company: Company | null): string {
   const name = company?.company_name ?? "Your company";
   const stage = company?.revenue_stage ?? "pre_revenue";
-  const amount = company?.funding_amount ? `$${Number(company.funding_amount).toLocaleString()}` : "this round";
+  const band = (company as unknown as Record<string, unknown> | null)?.funding_amount_band;
+  const amount = company?.funding_amount
+    ? `$${Number(company.funding_amount).toLocaleString()}`
+    : typeof band === "string" && band ? `A raise of ${band}` : "this round";
 
   if (stage === "pre_revenue") {
     return `${amount} will be deployed over [12–18 months] across three areas:\n\n1. **Product development** (~40%) — complete [specific milestone, e.g. MVP v1 / beta launch / core feature set]\n2. **Early customer acquisition** (~35%) — [first X paying customers / pilot programme / design partners]\n3. **Operations & infrastructure** (~25%) — cloud costs, legal/compliance setup, and founding team salaries\n\nPrimary milestone: [your key proof point, e.g. "achieving $10K MRR" / "closing first enterprise contract" / "reaching 1,000 active users"]`;
@@ -134,13 +140,18 @@ const FIELDS: FieldDef[] = [
   { key: "seeking_investor_types", label: "Type of investor(s)", type: "chips-multi", options: INVESTOR_TYPE_OPTIONS, section: "Investor fit profile" },
   { key: "seeking_capital_types", label: "Type(s) of capital", type: "chips-multi", options: CAPITAL_TYPE_OPTIONS, section: "Investor fit profile" },
   { key: "active_investor_preference", label: "Active investor preference", type: "chips-multi", options: INVESTOR_PREFERENCE_OPTIONS, section: "Investor fit profile" },
-  { key: "funding_amount", label: "Amount of capital (USD)", type: "number", placeholder: "e.g. 1500000", section: "Investor fit profile" },
+  // A selection from the investment size bands already in the contact records,
+  // so founder and investor compare like for like. Saved to funding_amount_band;
+  // a database trigger keeps funding_amount (read by ~90 files) consistent.
+  { key: "funding_amount_band", label: "Amount of capital (USD)", type: "chips-single", options: FUNDING_AMOUNT_BAND_OPTIONS, section: "Investor fit profile" },
   { key: "founder_goals", label: "Investor-fit notes", type: "textarea", ai: "goals", hint: "What you want beyond capital — network, board experience, portfolio synergies.", section: "Investor fit profile" },
   { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds", section: "Investor fit profile" },
   { key: "funding_stage", label: "Funding stage", type: "chips-multi", options: FUNDING_STAGE_OPTIONS, section: "Investor fit profile" },
   { key: "industry", label: "Industry", type: "select-industry", required: true, section: "Investor fit profile" },
   { key: "revenue_stage", label: "Revenue stage", type: "select-stage", section: "Investor fit profile" },
-  { key: "annual_ebitda", label: "Annual EBITDA", type: "text", placeholder: "e.g. -$120,000 (0 if pre-revenue)", section: "Investor fit profile" },
+  // Current EBITDA only, never projected. Same bands the contact records use for
+  // entrepreneur EBITDA and investor EBITDA preferences.
+  { key: "annual_ebitda", label: "Annual EBITDA", type: "chips-single", options: EBITDA_BAND_OPTIONS, hint: "Current EBITDA only, not projected.", section: "Investor fit profile" },
   { key: "operating_stage", label: "Operating stage", type: "chips-multi", options: OPERATING_STAGE_OPTIONS, section: "Investor fit profile" },
   { key: "management_team", label: "Management team", type: "textarea", placeholder: "e.g. 2 co-founders, 3 full-time", section: "Investor fit profile" },
   // Traction — asked at onboarding step 8, editable here afterwards. Revenue
@@ -187,7 +198,8 @@ export function CompanySettingsForm({ company }: Props) {
     industry: company?.industry ?? "",
     logo_url: company?.logo_url ?? "",
     revenue_stage: company?.revenue_stage ?? "",
-    funding_amount: company?.funding_amount ? String(Number(company.funding_amount)) : "",
+    // The stored band, or the band an existing exact amount falls in.
+    funding_amount_band: str(cx.funding_amount_band) || (moneyBandFor(company?.funding_amount ?? null) ?? ""),
     use_of_funds: company?.use_of_funds ?? "",
     founder_goals: company?.founder_goals ?? "",
     team_summary: company?.team_summary ?? "",
@@ -221,7 +233,7 @@ export function CompanySettingsForm({ company }: Props) {
   const setVal = (k: string, v: string) => setValues((p) => ({ ...p, [k]: v }));
 
   const liveSnapshot: Company | null = company
-    ? { ...company, industry: values.industry, revenue_stage: values.revenue_stage || company.revenue_stage, funding_amount: values.funding_amount ? Number(values.funding_amount) : company.funding_amount }
+    ? ({ ...company, industry: values.industry, revenue_stage: values.revenue_stage || company.revenue_stage, funding_amount_band: values.funding_amount_band } as Company)
     : null;
 
   async function saveField(key: string) {
@@ -238,9 +250,7 @@ export function CompanySettingsForm({ company }: Props) {
     setIsSaving(true);
     setMessage(null);
     clearError(key);
-    const payload: Record<string, unknown> = key === "funding_amount"
-      ? (trimmed ? { funding_amount: Number(trimmed) } : {})
-      : { [key]: trimmed };
+    const payload: Record<string, unknown> = { [key]: trimmed };
     const res = await fetch(`/api/companies/${company.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -298,7 +308,6 @@ export function CompanySettingsForm({ company }: Props) {
         </span>
       );
     }
-    if (f.key === "funding_amount") return <span className="text-slate-800">${Number(v).toLocaleString()}</span>;
     if (f.type === "select-stage") {
       const s = STAGES.find((x) => x.id === v);
       return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{s ? `${s.label} · ${s.sub}` : v}</span>;

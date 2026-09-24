@@ -11,6 +11,9 @@ import { type InvestorPreferences, activeRatingScore } from "./preferences";
 export type CompanyMatchInput = {
   /** The company's raise / ask, USD. */
   fundingAmount: number | null;
+  /** The amount-of-capital band the founder picked, e.g. "$1m - $10m". When
+   *  present it wins over fundingAmount for the check size factor. */
+  fundingBand?: string | null;
   /** The company's annual revenue, USD, if known. */
   revenue: number | null;
   /** e.g. "early_revenue", "growing". */
@@ -186,7 +189,18 @@ export function scoreInvestorPreferenceMatch(
   // Check size vs. the raise (graded). Full credit when the whole raise sits
   // inside the investor's check band; partial when their typical check is a
   // plausible slice of a larger round (they can still participate).
-  if (pref.investmentSize.length > 0 && company.fundingAmount != null) {
+  const raiseBand = company.fundingBand ? parseMoneyBand(company.fundingBand) : null;
+  if (pref.investmentSize.length > 0 && raiseBand) {
+    // Founder picked a band: full credit when it overlaps one of the investor's
+    // bands, partial when their check could be a slice of a larger round.
+    if (pref.investmentSize.some((b) => bandsOverlap(company.fundingBand, b) === true)) {
+      points += W.checkSize;
+      reasons.push("Check size fits the raise");
+    } else if (pref.investmentSize.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= raiseBand.max; })) {
+      points += W.checkSize * 0.6;
+      reasons.push("Check fits as part of the round");
+    }
+  } else if (pref.investmentSize.length > 0 && company.fundingAmount != null) {
     const raise = company.fundingAmount;
     if (inAnyBand(raise, pref.investmentSize)) {
       points += W.checkSize;

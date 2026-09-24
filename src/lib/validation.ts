@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { MONEY_BAND_OPTIONS } from "@/lib/profile/options";
+
+/** One of the money bands, or "" to clear (stored as null). */
+const moneyBandField = z.union([z.enum(MONEY_BAND_OPTIONS), z.literal("").transform(() => null)]).optional();
 
 export const companyOnboardingSchema = z.object({
   company_name: z.string().min(2),
@@ -50,7 +54,10 @@ export const companyUpdateSchema = z.object({
   funding_stage: z.string().max(300).optional(),
   operating_stage: z.string().max(300).optional(),
   business_entity: z.string().max(120).optional(),
-  annual_ebitda: z.string().max(200).optional(),
+  // Current EBITDA as one of the money bands (never projected); "" clears it.
+  annual_ebitda: moneyBandField,
+  // Amount of capital as one of the money bands; "" clears it.
+  funding_amount_band: moneyBandField,
   management_team: z.string().max(1000).optional(),
   // Traction (onboarding step 8). Text, not numeric: founders write "$240k" or
   // "~20,000/mo", and coercing that loses the nuance and rejects honest answers.
