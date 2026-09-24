@@ -29,8 +29,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
 import type {
   FounderLearningModuleView,
-  LearningModuleRecord,
-  LearningProgressRecord,
   LearningReadinessStage,
   StageAccessMap,
 } from "@/lib/learning/types";

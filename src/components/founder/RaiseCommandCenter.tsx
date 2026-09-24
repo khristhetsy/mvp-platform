@@ -289,7 +289,6 @@ export function RaiseCommandCenter({
   readinessScore,
   pledgedAmount,
   fundingTarget,
-  companyName,
 }: CommandCenterProps) {
   const t = useTranslations("founderCmp");
   const [tab, setTab] = useState<TabKey>("rooms");

@@ -4,7 +4,6 @@ import type { NextBestAction } from "@/lib/next-best-actions/types";
 import { loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { getInvestorProfileByProfileId, isInvestorProfileComplete } from "@/lib/investor/profile";
 import { listInvestorParticipationRequirements } from "@/lib/spv/participation-requirements";
-import { loadInvestorSpvWorkspace } from "@/lib/spv/spv-workflow";
 import { countUnreadNotifications } from "@/lib/notifications/notifications";
 import type { Profile, Database } from "@/lib/supabase/types";
 

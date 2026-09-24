@@ -27,7 +27,6 @@ const CHARTS: Array<{ key: ChartType; label: string; note: string }> = [
 ];
 
 const CARD = "rounded-xl border border-[var(--border-subtle)] bg-white p-4";
-const LABEL = "text-[10.5px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]";
 const CHIP = "rounded-lg border px-3 py-1.5 text-[12px]";
 
 const on = "border-2 border-[var(--blue)] bg-[var(--blue-muted)] font-semibold text-[var(--navy)]";

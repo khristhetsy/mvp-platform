@@ -17,7 +17,6 @@ import {
 } from "@/lib/next-best-actions/lifecycle";
 import type {
   NextBestAction,
-  NextBestActionLifecycleStatus,
   NextBestActionRecord,
   NextBestActionRole,
 } from "@/lib/next-best-actions/types";

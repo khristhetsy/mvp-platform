@@ -43,17 +43,6 @@ export type SpvListSummaryRow = {
   closingPct: number;
 };
 
-function requirementsForSpv(
-  parts: SpvParticipationRecord[],
-  requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>,
-) {
-  const rows: SpvParticipationRequirementRecord[] = [];
-  for (const part of parts) {
-    rows.push(...(requirementsByParticipation[part.id] ?? []));
-  }
-  return rows;
-}
-
 export function buildSpvListSummaries(input: {
   opportunities: SpvOpportunityRecord[];
   participationsBySpv: Record<string, SpvParticipationRecord[]>;
@@ -68,7 +57,6 @@ export function buildSpvListSummaries(input: {
     const parts = input.participationsBySpv[spv.id] ?? [];
     const active = parts.filter((r) => !["declined", "canceled"].includes(r.status));
     const checklist = input.checklistBySpv[spv.id] ?? [];
-    const requirements = requirementsForSpv(parts, input.requirementsByParticipation);
     const closingSummary = input.closingReadinessBySpv[spv.id];
     const readinessCtx = buildSpvReadinessContext(spv, checklist, parts, input.requirementsByParticipation);
     const readiness =

@@ -80,12 +80,6 @@ function blockCategory(type: string): PaletteCategory {
   return BLOCK_CATEGORY[type] ?? "content";
 }
 
-function updateBlockProp(blocks: PageBlock[], blockId: string, key: string, value: unknown) {
-  return blocks.map((block) =>
-    block.id === blockId ? { ...block, props: { ...block.props, [key]: value } } : block,
-  );
-}
-
 function layoutFingerprint(doc: PageLayoutDocument) {
   return JSON.stringify(doc);
 }
@@ -768,7 +762,7 @@ function BlockEditor({
   selectedBlockId?: string | null;
   disabled?: boolean;
 }>) {
-  const t = useTranslations("sharedCmp");
+  useTranslations("sharedCmp");
   const def = getBlockDefinition(block.type);
 
   const field = (label: string, key: string, multiline = false) => {

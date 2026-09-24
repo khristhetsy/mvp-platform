@@ -17,7 +17,7 @@ export function buildDocumentPath(companyId: string, documentType: string, fileN
   return `${companyId}/${documentType.toLowerCase()}/${crypto.randomUUID()}-${safeFileName}`;
 }
 
-export function getStorageBucket(documentType: string) {
+export function getStorageBucket(_documentType: string) {
   // Canonical private bucket for all company documents.
   // Keep PITCH_DECKS_BUCKET only for backward-compatible downloads.
   return LEGACY_DOCUMENTS_BUCKET;

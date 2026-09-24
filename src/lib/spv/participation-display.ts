@@ -1,7 +1,6 @@
 import type {
   SpvParticipationRequirementRecord,
   SpvParticipationRequirementStatus,
-  SpvParticipationRequirementCategory,
 } from "@/lib/spv/types";
 
 const DONE_REQUIREMENT_STATUSES: SpvParticipationRequirementStatus[] = ["approved", "waived"];

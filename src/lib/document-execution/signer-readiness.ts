@@ -1,5 +1,5 @@
 import { areRequiredParticipationRequirementsComplete } from "@/lib/spv/participation-display";
-import type { SignerReadiness, SignerType } from "@/lib/document-execution/types";
+import type { SignerReadiness } from "@/lib/document-execution/types";
 import type {
   SpvClosingReviewRecord,
   SpvDocumentPackageRecord,

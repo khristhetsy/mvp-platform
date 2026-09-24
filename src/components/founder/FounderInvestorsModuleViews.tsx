@@ -36,7 +36,7 @@ const DONUT_COLORS = ["#2E78F5", "#3B6D11", "#0369a1", "#854F0B"] as const;
 const DONUT_LABELS = ["Interested", "Indicated", "Intro Req.", "Follow-up"] as const;
 
 function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, number] }>) {
-  const t = useTranslations("founderCmp");
+  useTranslations("founderCmp");
   const total = counts.reduce((s, v) => s + v, 0);
   if (total === 0) return null;
 

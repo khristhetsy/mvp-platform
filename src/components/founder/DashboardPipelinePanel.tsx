@@ -168,7 +168,6 @@ function DrawerContent({
   onClose: () => void;
 }) {
   const t = useTranslations("founderCmp");
-  const cfg = DRAWER_CFG[group];
   const interestCount = activity.interests.length;
   const introCount = activity.introRequests.length;
   const savedCount = activity.savedDeals.length;

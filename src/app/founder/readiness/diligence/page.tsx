@@ -8,7 +8,6 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { DiligenceReportPreview } from "@/components/founder/DiligenceReportPreview";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import {
-  buildDocumentChecklist,
   buildProfileCompletion,
   computeReadinessScore,
   formatReviewStatus,

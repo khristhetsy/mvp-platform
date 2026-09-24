@@ -3,7 +3,6 @@ import {
   computeInvestorClosingPublicStatus,
   formatFounderClosingStageFromPublicStatus,
   type ClosingReadinessCriterion,
-  type ClosingReadinessSummary,
 } from "@/lib/spv/closing-review-display";
 import {
   areRequiredChecklistItemsComplete,
@@ -458,9 +457,6 @@ export async function updateSpvClosingReview(
     : review.spv_opportunities;
   const spvName = spvNested?.name ?? "SPV";
   const companyId = review.company_id;
-  const companyName =
-    (Array.isArray(spvNested?.companies) ? spvNested?.companies[0] : spvNested?.companies)
-      ?.company_name ?? "Company";
 
   if (input.closingTargetOverride !== undefined) {
     await admin

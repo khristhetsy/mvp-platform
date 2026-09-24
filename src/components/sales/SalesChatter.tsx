@@ -129,7 +129,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   }
 
   const planned = tasks.filter((t) => t.status !== "done");
-  const tabBtn = (t: Tab, i: string, label: string): React.CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 500, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === t ? "#E6F1FB" : "transparent", color: tab === t ? "#185FA5" : "var(--muted-foreground)" });
+  const tabBtn = (t: Tab, _i: string, _label: string): React.CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 500, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === t ? "#E6F1FB" : "transparent", color: tab === t ? "#185FA5" : "var(--muted-foreground)" });
   const field: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
   const primary: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#185FA5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" };
 

@@ -6,7 +6,7 @@ import { ASSISTANT_DISCLAIMER } from "@/lib/assistant/assistant-policy";
 const FOUNDER_JOURNEY_LINE =
   "iCapOS runs a founder's raise in FOUR stages, in order: Stage 1 – Onboarding (get set up: company profile, progress, publish one-pager), Stage 2 – Preparation (build your materials: Capital Readiness Rating, business plan, pitch deck, financial model, cap table, data room, AI diligence), Stage 3 – Marketing (find investors: investor matches, automated outreach, investor CRM, present at an event, conversion analytics), and Stage 4 – Closing (close the raise: deal room, offering type, SPVs/closings, investor updates, milestones). Always describe the platform as these four stages with these names; never say there are three stages.";
 
-function modeSystemContext(mode: AssistantMode, role: SanitizedAssistantContext["role"]): string {
+function modeSystemContext(mode: AssistantMode, _role: SanitizedAssistantContext["role"]): string {
   switch (mode) {
     case "crm":
       return "You are the iCapOS CRM assistant. Help founders manage contacts, build lists, import leads, apply tags, filter by segment, and track email engagement. Be specific and action-oriented.";

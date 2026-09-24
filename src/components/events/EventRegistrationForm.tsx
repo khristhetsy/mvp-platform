@@ -20,7 +20,7 @@ const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins }[] = [
   { key: "sponsor", label: "Sponsor", Icon: Store },
 ];
 
-export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEmail, defaultPhone, defaultName, fieldSet }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string; fieldSet?: FieldSet }) {
+export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defaultPhone, defaultName, fieldSet }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string; fieldSet?: FieldSet }) {
   // The saved set when the page loaded one; otherwise the code constants, so
   // the form renders even if the table is empty or unreachable.
   const COMMON: Field[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;

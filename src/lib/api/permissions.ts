@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
-import { STAFF_ROLES, normalizeUserRole, requireStaffApi } from "@/lib/api/admin";
+import { STAFF_ROLES, normalizeUserRole } from "@/lib/api/admin";
 import { profileIsSuperAdmin } from "@/lib/api/super-admin";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import { canUser, getEffectivePermissions, isSuperAdmin } from "@/lib/rbac/effective-permissions";

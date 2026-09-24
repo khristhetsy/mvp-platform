@@ -202,7 +202,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [searchOpen, setSearchOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [draftSpec, setDraftSpec] = useState<FilterSpec>({ match: "all", conditions: [] });
-  const [valuePickerAt, setValuePickerAt] = useState<number | null>(null);
+  const [, setValuePickerAt] = useState<number | null>(null);
   const [saved, setSaved] = useState<SavedSearch[]>([]);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState("");

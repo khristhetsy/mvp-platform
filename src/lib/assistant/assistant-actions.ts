@@ -1,4 +1,4 @@
-import type { AssistantMode, AssistantRelatedLink, AssistantSuggestedAction, SanitizedAssistantContext } from "@/lib/assistant/types";
+import type { AssistantRelatedLink, AssistantSuggestedAction, SanitizedAssistantContext } from "@/lib/assistant/types";
 
 function pushAction(
   actions: AssistantSuggestedAction[],

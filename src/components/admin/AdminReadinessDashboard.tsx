@@ -67,12 +67,6 @@ type Props = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function scoreColor(n: number): string {
-  if (n >= 75) return "#1D9E75";
-  if (n >= 50) return "#E8922A";
-  return "#D9534F";
-}
-
 function scoreBadgeClass(n: number): string {
   if (n >= 75) return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
   if (n >= 50) return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";

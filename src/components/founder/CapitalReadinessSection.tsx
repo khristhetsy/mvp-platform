@@ -85,20 +85,6 @@ function DonutChart({
 // ---------------------------------------------------------------------------
 // Priority badge
 // ---------------------------------------------------------------------------
-function PriBadge({ level }: { level: "critical" | "high" | "medium" | "low" }) {
-  const cfg = {
-    critical: "bg-[#FCEBEB] text-[#A32D2D]",
-    high: "bg-[#FAEEDA] text-[#854F0B]",
-    medium: "bg-[#EEEDFE] text-[#1A6CE4]",
-    low: "bg-slate-100 text-slate-600",
-  };
-  return (
-    <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold capitalize ${cfg[level]}`}>
-      {level}
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Stat box
 // ---------------------------------------------------------------------------

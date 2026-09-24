@@ -305,7 +305,6 @@ export async function upsertComputedActions(
   computed: NextBestAction[],
 ): Promise<NextBestActionRecord[]> {
   const userId = profile.id;
-  const role = computed[0]?.role ?? (profile.role === "analyst" ? "analyst" : profile.role) as NextBestActionRole;
   const results: NextBestActionRecord[] = [];
 
   for (const action of computed) {

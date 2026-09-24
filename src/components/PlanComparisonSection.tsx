@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
-  FEATURE_COMPARISON,
-  FOUNDER_PRICING_PLANS,
   INVESTOR_PRICING_PLAN,
   featureComparison,
   founderPricingPlans,

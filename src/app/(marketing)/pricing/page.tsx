@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { pricing, pricingFor, pricingSummary } from "@/content/pricing";
+import { pricingFor, pricingSummary } from "@/content/pricing";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";

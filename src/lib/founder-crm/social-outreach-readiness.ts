@@ -10,7 +10,7 @@ export type SocialOutreachReadinessResult = {
 
 export async function evaluateSocialOutreachReadiness(company: Company): Promise<SocialOutreachReadinessResult> {
   const access = await getFounderFeatureAccess("investor_access");
-  const supabase = await createServerSupabaseClient();
+  await createServerSupabaseClient();
 
   const onboarding = computeFounderOnboardingProgress({
     company,

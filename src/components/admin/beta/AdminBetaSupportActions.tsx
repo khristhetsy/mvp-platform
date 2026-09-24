@@ -16,7 +16,6 @@ export function AdminBetaSupportActions({
   profileId,
   role,
   companyId,
-  investorProfileId,
   loginLink,
   signupLink,
 }: Props) {

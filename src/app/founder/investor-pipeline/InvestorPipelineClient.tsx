@@ -346,7 +346,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   }
 
   function toggleSelect(id: string) {
-    setSelectedIds((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    setSelectedIds((prev) => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
   }
 
   async function handleImport() {

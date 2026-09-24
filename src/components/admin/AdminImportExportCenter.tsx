@@ -340,7 +340,7 @@ export function AdminImportExportCenter({
               ["Warnings", preview.counts.warning, "amber"],
               ["Errors", preview.counts.error, "red"],
               ["Duplicates", preview.counts.duplicate, "slate"],
-            ].map(([label, value, tone]) => (
+            ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-slate-200 p-3">
                 <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>

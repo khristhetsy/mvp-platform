@@ -1,5 +1,4 @@
 import {
-  FOUNDER_BASIC_FEATURES,
   FOUNDER_PROFESSIONAL_FEATURES,
   type FeatureKey,
   type PlanType,
@@ -79,7 +78,7 @@ export function isSubscriptionActive(subscription: SubscriptionRecord, now = new
   return subscription.subscription_status === "active" || subscription.subscription_status === "trialing";
 }
 
-function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, now = new Date()): Set<FeatureKey> {
+function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, _now = new Date()): Set<FeatureKey> {
   // Signed up but hasn't paid. The plan row already says founder_basic, so
   // without this guard the feature set below would hand over the full product
   // before checkout — the exact hole the free tier used to leave open. Only the

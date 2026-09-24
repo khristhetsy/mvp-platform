@@ -367,7 +367,7 @@ const INVESTOR_TYPE_LABELS: Record<InvestorType, string> = {
 // ---------------------------------------------------------------------------
 
 function TouchCard({
-  touch, vars, investorType,
+  touch, vars,
 }: {
   touch: SequenceTouch;
   vars: TemplateVars;

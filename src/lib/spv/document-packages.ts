@@ -207,8 +207,6 @@ export async function syncSpvPackageReadiness(
     .eq("id", spvOpportunityId);
 
   if (notifyFounder) {
-    const companyName =
-      (Array.isArray(spv.companies) ? spv.companies[0] : spv.companies)?.company_name ?? "Company";
     void notifyFounderSpvPackagesApproved({
       companyId: spv.company_id,
       spvOpportunityId,

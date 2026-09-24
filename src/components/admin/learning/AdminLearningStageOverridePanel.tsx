@@ -62,8 +62,6 @@ export function AdminLearningStageOverridePanel({ founderId, companyId, adminNam
       <div className="divide-y divide-slate-100">
         {stages.map((row) => {
           const current = localOverrides[row.stage];
-          // Effective unlock: if override exists use it, else use auto
-          const effectiveUnlock = current !== undefined ? current : row.autoUnlocked;
           return (
             <div key={row.stage} className="px-6 py-4">
               <div className="flex items-start gap-4">

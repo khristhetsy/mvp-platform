@@ -10,7 +10,6 @@ export function OperationalMetric({
   label,
   value,
   detail,
-  accent = "slate",
   trend,
   sparklineValues,
   lastUpdated,
@@ -55,7 +54,6 @@ export function OperationalMetric({
   /** Small caption beside the value, e.g. "of 42", "gate 65". */
   unit?: string;
 }>) {
-  const border = metricAccentBorder[accent] ?? metricAccentBorder.slate;
   const trendSymbol =
     trend === "up" ? "↑" : trend === "down" ? "↓" : trend === "flat" ? "→" : null;
   const trendColor =

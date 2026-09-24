@@ -11,7 +11,6 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import {
   CAPITAL_STAGE_META,
-  CAPITAL_STAGE_MODULES,
   CAPITAL_STAGE_UNLOCK_THRESHOLD,
   computeCapitalStagePercent,
   computeCapitalStageAccess,

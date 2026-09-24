@@ -20,7 +20,7 @@ interface WherebyMeetingResponse {
 export class WherebyVideoProvider implements VideoProvider {
   readonly name = "whereby";
 
-  async createRoom(input: CreateRoomInput): Promise<CreatedRoom & { hostUrl?: string }> {
+  async createRoom(_input: CreateRoomInput): Promise<CreatedRoom & { hostUrl?: string }> {
     const apiKey = process.env.WHEREBY_API_KEY;
     if (!apiKey) throw new Error("Live video is not configured (missing WHEREBY_API_KEY).");
 

@@ -659,7 +659,7 @@ const TASK_SEARCH_FIELDS: SearchField<Task>[] = [
   { label: "category", get: (t) => t.task_category },
 ];
 
-export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected, googleStatus }: Props) {
+export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected }: Props) {
   const [tasks, setTasks]         = useState<Task[]>(initialTasks);
   const [viewMode, setViewMode]   = useState<ViewMode>("kanban");
   const [activeCat, setActiveCat] = useState<ActiveCat>("all");

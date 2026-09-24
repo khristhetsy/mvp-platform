@@ -2116,10 +2116,9 @@ function scoreDealStructure(
   has: (t: string) => boolean,
   getSummary: (t: string) => string | null,
   fundingAmount: number | null,
-  revenueStage: string | null,
+  _revenueStage: string | null,
 ): FactorScore {
   const hasBizPlan = has("BUSINESS_PLAN");
-  const hasPitch = has("PITCH_DECK");
   const bizSummary = getSummary("BUSINESS_PLAN");
   const pitchSummary = getSummary("PITCH_DECK");
 
@@ -2203,8 +2202,6 @@ function scoreImpactEsg(
     .join(" ");
 
   const hasEsgKeywords = containsKeywords(allSummaries, ESG_KEYWORDS);
-  const hasPitch = has("PITCH_DECK");
-  const hasBizPlan = has("BUSINESS_PLAN");
 
   const subScores: FactorSubScore[] = [
     { label: "ESG/impact keywords in docs", pts: hasEsgKeywords ? 1 : 0, max: 1 },

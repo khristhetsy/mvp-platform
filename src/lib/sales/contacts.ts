@@ -262,7 +262,10 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   if (Object.keys(ovPatch).length > 0) {
     const set: Record<string, unknown> = {};
     const remove: string[] = [];
-    for (const [k, v] of Object.entries(ovPatch)) (v === null ? remove.push(k) : (set[k] = v));
+    for (const [k, v] of Object.entries(ovPatch)) {
+      if (v === null) remove.push(k);
+      else set[k] = v;
+    }
     const merged = await mergeOverrides(id, { set, remove }, "updateContact");
     if (merged === null) throw new Error(`Could not update overrides for ${id}`);
   }

@@ -3,7 +3,6 @@ import { useTranslations } from "next-intl";
 import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import {
-  formatChecklistCategory,
   formatSpvCurrency,
   getSpvParticipationTotals,
 } from "@/lib/spv/display";
@@ -25,7 +24,6 @@ type PackageSummary = {
 export function FounderSpvStatusPanel({
   opportunities,
   participations,
-  checklistSummaryBySpv,
   packageSummaryBySpv = {},
   closingSummaryBySpv = {},
   executionSummaryBySpv = {},
@@ -64,7 +62,6 @@ export function FounderSpvStatusPanel({
             {opportunities.map((spv) => {
               const rows = bySpv.get(spv.id) ?? [];
               const totals = getSpvParticipationTotals(rows);
-              const categories = checklistSummaryBySpv[spv.id] ?? [];
               const packageSummary = packageSummaryBySpv[spv.id];
               const closingSummary = closingSummaryBySpv[spv.id];
               const executionSummary = executionSummaryBySpv[spv.id];

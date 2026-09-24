@@ -14,7 +14,7 @@ import {
 } from "@/lib/subscriptions/plans";
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { CODE_DEFAULT_PRICING, signupFounderPlans, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
+import { type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 type SignupRole = "founder" | "investor";
 
@@ -98,13 +98,11 @@ const BASE_INPUT =
 
 export function SignUpForm({
   privateBetaMode = false,
-  pricing = CODE_DEFAULT_PRICING,
 }: Readonly<{
   privateBetaMode?: boolean;
   /** Active pricing, passed by the server page. Defaults to the code constants. */
   pricing?: PricingCatalog;
 }>) {
-  const founderPlans = signupFounderPlans(pricing);
   const t = useTranslations("sharedCmp");
   const router = useRouter();
   const searchParams = useSearchParams();

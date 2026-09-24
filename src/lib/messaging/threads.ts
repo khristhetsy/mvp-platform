@@ -1,10 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import {
-  notifyMeetingAccepted,
-  notifyMeetingCanceled,
-  notifyMeetingDeclined,
-  notifyMeetingRequested,
   notifyMessageReceived,
   notifyThreadCreated,
 } from "@/lib/notifications/messaging-events";
