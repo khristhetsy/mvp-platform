@@ -9,6 +9,7 @@ import type {
   UpdateEventInput,
 } from "./schemas";
 import { slugify } from "./schemas";
+import { duplicateRoleOf } from "./duplicate-people";
 import { sanitizeBannerHtml, normalizeBannerBg } from "./sanitize-html";
 import { countEventSponsors } from "./sponsors";
 import type { VenueNavFlags } from "./venue";
@@ -263,6 +264,14 @@ export type DuplicateEventOptions = {
   sessions?: boolean;
   /** Copy sponsor links and their placements (default true). */
   sponsors?: boolean;
+  /** Copy roster rows labelled Presenter / Founder showcase / unlabelled (default true). */
+  presenters?: boolean;
+  /** Copy roster rows labelled Exhibitor (default true). */
+  exhibitors?: boolean;
+  /** Copy Guest CEO / Investor roster rows and talk show session guests (default true). */
+  talkShowGuests?: boolean;
+  /** Copy roster rows labelled Panelist (default true). */
+  panelists?: boolean;
 };
 
 /**
@@ -353,6 +362,7 @@ export async function duplicateEvent(
   }
 
   // Sessions / agenda — schedule and recordings reset for the new run.
+  const sessionMap = new Map<string, string>();
   if (options.sessions !== false) {
     const { data: sess } = await raw(supabase)
       .from("sessions")
@@ -360,8 +370,14 @@ export async function duplicateEvent(
       .eq("event_id", sourceId)
       .order("position", { ascending: true });
     if (sess && sess.length) {
-      await raw(supabase).from("sessions").insert(
-        (sess as EventRow[]).map((s) => ({
+      // Ids are assigned here so people can be re-attached to the copied sessions.
+      const rows = (sess as EventRow[]).map((s) => {
+        const copyId = crypto.randomUUID();
+        return { oldId: String(s.id), copyId, s };
+      });
+      const { error: sessErr } = await raw(supabase).from("sessions").insert(
+        rows.map(({ copyId, s }) => ({
+          id: copyId,
           event_id: newId,
           sector_slug: (s.sector_slug as string | null) ?? null,
           title: s.title,
@@ -377,6 +393,72 @@ export async function duplicateEvent(
           position: Number(s.position ?? 0),
         })),
       );
+      if (!sessErr) for (const r of rows) sessionMap.set(r.oldId, r.copyId);
+    }
+  }
+
+  // People — profiles travel; per-run details (slot time, meeting link, deck,
+  // video, application, invitation) stay with the original. Session slots are
+  // kept only when the sessions were copied too.
+  const peopleOn = {
+    presenters: options.presenters !== false,
+    exhibitors: options.exhibitors !== false,
+    talkShowGuests: options.talkShowGuests !== false,
+    panelists: options.panelists !== false,
+  };
+  if (Object.values(peopleOn).some(Boolean)) {
+    const { data: roster, error: rosterErr } = await raw(supabase)
+      .from("event_presenters")
+      .select("*")
+      .eq("event_id", sourceId)
+      .order("position", { ascending: true });
+    if (rosterErr) throw new Error(rosterErr.message);
+    const picked = ((roster ?? []) as EventRow[]).filter(
+      (r) => peopleOn[duplicateRoleOf((r.role_label as string | null) ?? null)],
+    );
+    if (picked.length) {
+      const { error } = await raw(supabase).from("event_presenters").insert(
+        picked.map((r) => ({
+          event_id: newId,
+          session_id: r.session_id ? (sessionMap.get(String(r.session_id)) ?? null) : null,
+          profile_id: (r.profile_id as string | null) ?? null,
+          display_name: r.display_name,
+          role_label: (r.role_label as string | null) ?? null,
+          headshot_path: (r.headshot_path as string | null) ?? null,
+          headline: (r.headline as string | null) ?? null,
+          bio: (r.bio as string | null) ?? null,
+          links: Array.isArray(r.links) ? r.links : [],
+          company_summary: (r.company_summary as string | null) ?? null,
+          email: (r.email as string | null) ?? null,
+          position: Number(r.position ?? 0),
+        })),
+      );
+      if (error) throw new Error(`Event copied, but people could not be copied: ${error.message}`);
+    }
+  }
+
+  // Talk show guest roster lives per session, so it needs the copied sessions.
+  if (peopleOn.talkShowGuests && sessionMap.size) {
+    const { data: guests, error: guestErr } = await raw(supabase)
+      .from("session_guests")
+      .select("*")
+      .eq("event_id", sourceId)
+      .order("position", { ascending: true });
+    if (guestErr) throw new Error(guestErr.message);
+    const mapped = ((guests ?? []) as EventRow[]).filter((g) => sessionMap.has(String(g.session_id)));
+    if (mapped.length) {
+      const { error } = await raw(supabase).from("session_guests").insert(
+        mapped.map((g) => ({
+          session_id: sessionMap.get(String(g.session_id)),
+          event_id: newId,
+          display_name: g.display_name,
+          role_label: (g.role_label as string | null) ?? null,
+          status: "backstage",
+          position: Number(g.position ?? 0),
+          profile_id: (g.profile_id as string | null) ?? null,
+        })),
+      );
+      if (error) throw new Error(`Event copied, but talk show guests could not be copied: ${error.message}`);
     }
   }
 

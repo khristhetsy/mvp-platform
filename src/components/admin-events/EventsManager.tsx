@@ -72,12 +72,14 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
   const [dupFor, setDupFor] = useState<EventRecord | null>(null);
   const [dupTitle, setDupTitle] = useState("");
   const [dupOpts, setDupOpts] = useState({ branding: true, sessions: true, sponsors: true });
+  const [dupPeople, setDupPeople] = useState({ presenters: true, exhibitors: true, talkShowGuests: true, panelists: true });
   const [duplicating, setDuplicating] = useState(false);
 
   function openDuplicate(ev: EventRecord) {
     setDupFor(ev);
     setDupTitle(`Copy of ${ev.title}`);
     setDupOpts({ branding: true, sessions: true, sponsors: true });
+    setDupPeople({ presenters: true, exhibitors: true, talkShowGuests: true, panelists: true });
     setError(null);
   }
 
@@ -89,7 +91,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
       const res = await fetch(`/api/admin/events/${dupFor.id}/duplicate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: dupTitle.trim() || undefined, ...dupOpts }),
+        body: JSON.stringify({ title: dupTitle.trim() || undefined, ...dupOpts, ...dupPeople }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(formatApiError(json.error, "Could not duplicate event."));
@@ -395,7 +397,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                 Start a new draft from “{dupFor.title}”. Choose what to carry over.
               </p>
             </div>
-            <div className="grid gap-4 px-5 py-4">
+            <div className="grid max-h-[70vh] gap-4 overflow-y-auto px-5 py-4">
               <label className="block">
                 <span className="text-sm font-medium text-[var(--text-secondary)]">New event name</span>
                 <input
@@ -406,6 +408,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                 />
               </label>
               <div className="grid gap-2">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">Event content</span>
                 {(
                   [
                     ["branding", "Branding & banner", "Cover, banner, and organiser details"],
@@ -430,9 +433,52 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   </label>
                 ))}
               </div>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">People</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !Object.values(dupPeople).every(Boolean);
+                      setDupPeople({ presenters: next, exhibitors: next, talkShowGuests: next, panelists: next });
+                    }}
+                    className="text-xs font-medium text-blue-600 hover:underline"
+                  >
+                    {Object.values(dupPeople).every(Boolean) ? "Clear all" : "Select all"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      ["presenters", "Presenters", "Profiles, bios, headshots"],
+                      ["exhibitors", "Exhibitors", "Company and profile details"],
+                      ["talkShowGuests", "Talk show guests", "Guest roster, all start backstage"],
+                      ["panelists", "Panelists", "Profiles, bios, headshots"],
+                    ] as const
+                  ).map(([key, label, desc]) => (
+                    <label
+                      key={key}
+                      className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2 hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={dupPeople[key]}
+                        onChange={(e) => setDupPeople((o) => ({ ...o, [key]: e.target.checked }))}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-[var(--text-primary)]">{label}</span>
+                        <span className="block text-xs text-[var(--text-muted)]">{desc}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Sector tracks are always copied. Attendees, registrations, poll results, and analytics are never copied —
-                the new event starts fresh as a <b>Draft</b>.
+                Sector tracks are always copied. People keep their session slots only when Sessions &amp; agenda is
+                also copied. Invitations, decks, and videos are not copied, so send new invites from the new event.
+                Attendees, registrations, poll results, and analytics are never copied. The new event starts fresh as
+                a <b>Draft</b>.
               </p>
             </div>
             <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
