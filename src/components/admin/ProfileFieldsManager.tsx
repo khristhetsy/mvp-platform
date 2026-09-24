@@ -33,6 +33,14 @@ import {
   type DraftOption,
 } from "@/lib/profile-fields/draft";
 import type { EngineWeights } from "@/lib/matching/investor-company-matching";
+import { fieldByName, appliesTo, type DisplaySurface, type ResolvedSurface } from "@/lib/profile-fields/display";
+
+/** Where used columns that have Shown and Required. */
+const DISPLAY_SURFACE_FOR: Partial<Record<Surface, DisplaySurface>> = {
+  "Founder onboarding": "founder_onboarding",
+  "Founder settings": "founder_settings",
+  Other: "admin_editors",
+};
 
 export type FieldVersion = { version: number; note: string | null; created_at: string };
 
@@ -48,6 +56,7 @@ type Props = {
   initial: Record<string, DraftOption[]>;
   counts: Record<string, Record<string, number>>;
   weights: EngineWeights;
+  display: Record<DisplaySurface, ResolvedSurface>;
 };
 
 const FACTOR_FOR_ROW: Record<string, keyof EngineWeights> = {
@@ -84,7 +93,8 @@ function download(name: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ProfileFieldsManager({ initial, counts, weights: initialWeights }: Readonly<Props>) {
+export function ProfileFieldsManager({ initial, counts, weights: initialWeights, display: initialDisplay }: Readonly<Props>) {
+  const [display, setDisplay] = useState(initialDisplay);
   const [tab, setTab] = useState<"options" | "used">("options");
   const [fields, setFields] = useState<Record<string, FieldState>>(() => {
     const out: Record<string, FieldState> = {};
@@ -181,6 +191,22 @@ export function ProfileFieldsManager({ initial, counts, weights: initialWeights 
     void post(section.list, { action: "restore", list: section.list, version }, `${section.title} restored to version ${version}.`);
   }
 
+  async function saveDisplay(surface: DisplaySurface, key: string, shown: boolean, required: boolean) {
+    setBusy("display");
+    setMsg(null);
+    const res = await fetch("/api/admin/profile-fields", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "display", surface, key, shown, required }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string; resolved?: ResolvedSurface };
+    setBusy(null);
+    if (!res.ok || !json.resolved) { setMsg({ kind: "bad", text: json.error ?? "Could not save the setting." }); return; }
+    setDisplay((d) => ({ ...d, [surface]: json.resolved! }));
+    setMsg({ kind: "ok", text: !shown ? "Hidden on that screen." : required ? "Shown and required." : "Shown, optional." });
+    setCellEdit(null);
+  }
+
   async function saveWeight(factor: keyof EngineWeights, weight: number) {
     setBusy("weight");
     setMsg(null);
@@ -263,8 +289,10 @@ export function ProfileFieldsManager({ initial, counts, weights: initialWeights 
           cellEdit={cellEdit}
           setCellEdit={setCellEdit}
           weights={weights}
-          busy={busy === "weight"}
+          display={display}
+          busy={busy === "weight" || busy === "display"}
           onSaveWeight={(f, w) => void saveWeight(f, w)}
+          onSaveDisplay={(sf, k, sh, rq) => void saveDisplay(sf, k, sh, rq)}
           toolbarFor={(u) => {
             const s = FIELD_SECTIONS.find((x) => x.list === u.list);
             if (!s) return null;
@@ -549,8 +577,10 @@ function WhereUsed(props: Readonly<{
   cellEdit: { row: string; surface: Surface } | null;
   setCellEdit: (v: { row: string; surface: Surface } | null) => void;
   weights: EngineWeights;
+  display: Record<DisplaySurface, ResolvedSurface>;
   busy: boolean;
   onSaveWeight: (factor: keyof EngineWeights, weight: number) => void;
+  onSaveDisplay: (surface: DisplaySurface, key: string, shown: boolean, required: boolean) => void;
   toolbarFor: (u: FieldUsage) => React.ReactNode;
 }>) {
   const editing = props.cellEdit ? FIELD_USAGE.find((u) => u.name === props.cellEdit!.row) : null;
@@ -592,6 +622,17 @@ function WhereUsed(props: Readonly<{
                           <td key={s} className={`border-l border-t border-slate-200 px-2 py-2 text-center ${selected ? "bg-blue-50 outline outline-2 -outline-offset-2 outline-blue-500" : ""}`}>
                             {c && c.kind !== "none" ? <span className={`rounded px-1.5 py-0.5 font-semibold ${PILL[c.kind]}`}>{PILL_TEXT[c.kind]}</span> : !c ? <span className="text-slate-300">—</span> : null}
                             {c?.note ? <span className="mt-0.5 block text-[11px] leading-tight text-slate-500">{c.note}{factor ? `, weight ${props.weights[factor]}` : ""}</span> : null}
+                            {(() => {
+                              const ds = DISPLAY_SURFACE_FOR[s];
+                              const df = fieldByName(u.name);
+                              const r = ds && df ? props.display[ds]?.[df.key] : undefined;
+                              if (!r) return null;
+                              return (
+                                <span className={`mt-0.5 block text-[11px] font-semibold ${r.shown ? "text-slate-600" : "text-rose-700"}`}>
+                                  {r.shown ? (r.required ? "Required" : "Optional") : "Hidden"}{r.locked ? " · locked" : ""}
+                                </span>
+                              );
+                            })()}
                             <button type="button" className="mt-1 rounded border border-slate-200 px-1.5 text-[11px] font-medium text-blue-700 hover:bg-slate-50" onClick={() => props.setCellEdit(selected ? null : { row: u.name, surface: s })}>
                               {selected ? "Editing" : "Edit"}
                             </button>
@@ -631,13 +672,15 @@ function WhereUsed(props: Readonly<{
 
       {editing && props.cellEdit ? (
         <CellEditor
-          key={`${editing.name}:${props.cellEdit.surface}:${props.weights[FACTOR_FOR_ROW[editing.name] ?? "sector"]}`}
+          key={`${editing.name}:${props.cellEdit.surface}:${props.weights[FACTOR_FOR_ROW[editing.name] ?? "sector"]}:${JSON.stringify(props.display)}`}
           usage={editing}
           surface={props.cellEdit.surface}
           weights={props.weights}
+          display={props.display}
           busy={props.busy}
           onClose={() => props.setCellEdit(null)}
           onSaveWeight={props.onSaveWeight}
+          onSaveDisplay={props.onSaveDisplay}
         />
       ) : null}
     </div>
@@ -648,11 +691,18 @@ function CellEditor(props: Readonly<{
   usage: FieldUsage;
   surface: Surface;
   weights: EngineWeights;
+  display: Record<DisplaySurface, ResolvedSurface>;
   busy: boolean;
   onClose: () => void;
   onSaveWeight: (factor: keyof EngineWeights, weight: number) => void;
+  onSaveDisplay: (surface: DisplaySurface, key: string, shown: boolean, required: boolean) => void;
 }>) {
   const { usage, surface } = props;
+  const displaySurface = DISPLAY_SURFACE_FOR[surface];
+  const dField = fieldByName(usage.name);
+  const dCurrent = displaySurface && dField && appliesTo(dField, displaySurface) ? props.display[displaySurface]?.[dField.key] : undefined;
+  const [shown, setShown] = useState(dCurrent?.shown ?? true);
+  const [required, setRequired] = useState(dCurrent?.required ?? false);
   const cell = usage.cells[surface];
   const factor = surface === "Matching" ? FACTOR_FOR_ROW[usage.name] : undefined;
   const current = factor ? props.weights[factor] : 0;
@@ -683,6 +733,34 @@ function CellEditor(props: Readonly<{
             <button type="button" className={BTN_PRIMARY} disabled={props.busy} onClick={() => props.onSaveWeight(factor, on ? weight : 0)}>{props.busy ? "Saving…" : "Save"}</button>
             <button type="button" className={BTN} onClick={props.onClose}>Cancel</button>
           </div>
+        </div>
+      ) : displaySurface && dField && dCurrent ? (
+        <div className="mt-3">
+          <label className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm">
+            <span>Shown on this screen{dCurrent.locked ? <span className="block text-xs text-slate-500">Locked: {dCurrent.lockReason}</span> : null}</span>
+            <input type="checkbox" checked={shown} disabled={dCurrent.locked} onChange={(e) => { setShown(e.target.checked); if (!e.target.checked) setRequired(false); }} />
+          </label>
+          <label className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm">
+            <span>
+              Required
+              <span className="block text-xs text-slate-500">
+                {displaySurface === "admin_editors" ? "Staff screens are never blocked." : displaySurface === "founder_onboarding" ? "Next stays disabled until it is answered." : "Save is blocked while it is empty."}
+              </span>
+            </span>
+            <input type="checkbox" checked={required} disabled={dCurrent.locked || !shown || displaySurface === "admin_editors"} onChange={(e) => setRequired(e.target.checked)} />
+          </label>
+          <div className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span>Question type<span className="block text-xs text-slate-500">Fixed in code: matching reads the stored value.</span></span>
+            <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold">{cell ? PILL_TEXT[cell.kind] || "Shown" : "—"} · fixed</span>
+          </div>
+          {displaySurface === "founder_onboarding" && dField.onboardingStep && [3, 4].includes(dField.onboardingStep) && !shown ? (
+            <p className="mt-1 text-xs text-slate-500">This is the only question on onboarding step {dField.onboardingStep}, so the step is skipped.</p>
+          ) : null}
+          <div className="mt-3 flex gap-2">
+            <button type="button" className={BTN_PRIMARY} disabled={props.busy || dCurrent.locked} onClick={() => props.onSaveDisplay(displaySurface, dField.key, shown, shown && required)}>{props.busy ? "Saving…" : "Apply"}</button>
+            <button type="button" className={BTN} onClick={props.onClose}>Cancel</button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">Applies immediately and is recorded in the audit log.</p>
         </div>
       ) : surface === "Event registration" ? (
         <div className="mt-3 text-sm text-slate-700">

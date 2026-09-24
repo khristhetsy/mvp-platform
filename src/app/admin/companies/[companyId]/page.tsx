@@ -1,3 +1,5 @@
+import { FieldDisplayProvider } from "@/lib/profile-fields/display-provider";
+import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import Link from "next/link";
@@ -118,6 +120,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 </Link>
               </div>
               <VocabularyProvider value={await loadVocabularies()}>
+              <FieldDisplayProvider value={await loadSurfaceDisplay("admin_editors")}>
               <AdminCompanyWorkspace
                 data={workspace}
                 nextBestActions={companyActions?.actions ?? []}
@@ -127,6 +130,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 founderContactId={founderContactId}
                 founderCanDistribute={founderCanDistribute}
               />
+              </FieldDisplayProvider>
               </VocabularyProvider>
             </>
           ) : null}

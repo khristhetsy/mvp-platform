@@ -4,6 +4,7 @@ import { useState } from "react";
 import { industryOptionsFor } from "@/lib/industries";
 import { isMoneyBand, moneyBandFor } from "@/lib/profile/options";
 import { useVocabularies } from "@/lib/vocabulary/provider";
+import { useFieldShown } from "@/lib/profile-fields/display-provider";
 import { labelOf, offered } from "@/lib/vocabulary/lists";
 import type { LinkedCompany } from "./ContactProfileClient";
 
@@ -113,7 +114,13 @@ export function CompanyLinkedRecordEditor({
   onePager?: { slug: string | null; published: boolean } | null;
 }) {
   // Money bands from Profile and fields: offered order and labels.
-  const moneyBands = useVocabularies().money_band;
+  const vocabAll = useVocabularies();
+  const moneyBands = vocabAll.money_band;
+  // Fields hidden for staff on Admin, Profile and fields.
+  const shown = useFieldShown();
+  /** Offered options of a managed list plus the value the record already holds. */
+  const listOptions = (list: "arr_band" | "mrr_band" | "revenue_size", held: string) =>
+    [...offered(vocabAll[list]), ...vocabAll[list].filter((o) => o.archived && o.slug === held)].map((o) => o.slug);
   const bandOptions = (held: string) => [...offered(moneyBands), ...moneyBands.filter((o) => o.archived && o.slug === held)].map((o) => o.slug);
   const bandLabel = (v: string) => labelOf(moneyBands, v);
   const [data, setData] = useState<Form>(() => fromCompany(company));
@@ -205,58 +212,110 @@ export function CompanyLinkedRecordEditor({
 
       {!editing ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 28px" }}>
+          {shown("industry") ? (
           <ViewRow label="Industry">{data.industry ? pill(data.industry) : null}</ViewRow>
+          ) : null}
+          {shown("revenue_stage") ? (
           <ViewRow label="Revenue stage" unasked={unasked}>{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
+          ) : null}
+          {shown("funding_amount_band") ? (
           <ViewRow label="Funding target" unasked={unasked}>{data.funding_amount_band ? bandLabel(data.funding_amount_band) : null}</ViewRow>
+          ) : null}
           <ViewRow label="Website">{data.website ? <a href={data.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{data.website}</a> : null}</ViewRow>
           <ViewRow label="Location">{[data.state, data.country].filter(Boolean).join(", ") || null}</ViewRow>
           <ViewRow label="One-pager">{onePager?.slug ? <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>/f/{onePager.slug}{onePager.published ? " · Published" : " · Draft"}</a> : null}</ViewRow>
+          {shown("funding_stage") ? (
           <ViewRow label="Funding stage" unasked={unasked}>{data.funding_stage.join(", ") || null}</ViewRow>
+          ) : null}
+          {shown("operating_stage") ? (
           <ViewRow label="Operating stage" unasked={unasked}>{data.operating_stage.join(", ") || null}</ViewRow>
+          ) : null}
+          {shown("business_entity") ? (
           <ViewRow label="Business entity" unasked={unasked}>{data.business_entity || null}</ViewRow>
-          <ViewRow label="Annual revenue size" unasked={unasked}>{data.annual_revenue_size || null}</ViewRow>
+          ) : null}
+          {shown("annual_revenue_size") ? (
+          <ViewRow label="Annual revenue size" unasked={unasked}>{data.annual_revenue_size ? labelOf(vocabAll.revenue_size, data.annual_revenue_size) : null}</ViewRow>
+          ) : null}
+          {shown("annual_ebitda") ? (
           <ViewRow label="Annual EBITDA" unasked={unasked}>{data.annual_ebitda ? bandLabel(data.annual_ebitda) : null}</ViewRow>
-          <ViewRow label="ARR" unasked={unasked}>{data.arr || null}</ViewRow>
-          <ViewRow label="MRR" unasked={unasked}>{data.mrr || null}</ViewRow>
+          ) : null}
+          {shown("arr") ? (
+          <ViewRow label="ARR" unasked={unasked}>{data.arr ? labelOf(vocabAll.arr_band, data.arr) : null}</ViewRow>
+          ) : null}
+          {shown("mrr") ? (
+          <ViewRow label="MRR" unasked={unasked}>{data.mrr ? labelOf(vocabAll.mrr_band, data.mrr) : null}</ViewRow>
+          ) : null}
+          {shown("seeking_investor_types") ? (
           <ViewRow label="Type of investor(s)" unasked={unasked}>{data.seeking_investor_types.join(", ") || null}</ViewRow>
+          ) : null}
+          {shown("seeking_capital_types") ? (
           <ViewRow label="Type(s) of capital" unasked={unasked}>{data.seeking_capital_types.join(", ") || null}</ViewRow>
+          ) : null}
           <ViewRow label="Active investor preference" unasked={unasked}>{data.active_investor_preference.join(", ") || null}</ViewRow>
           <ViewRow label="Management team" unasked={unasked}>{data.management_team || null}</ViewRow>
+          {shown("use_of_funds") ? (
           <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Use of funds" unasked={unasked}>{data.use_of_funds || null}</ViewRow></div>
+          ) : null}
           <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Description">{data.business_description || null}</ViewRow></div>
           <div style={{ gridColumn: "1 / -1" }}><ViewRow label="Key highlights" unasked={unasked}>{data.key_highlights || null}</ViewRow></div>
         </div>
       ) : (
         <div>
           <EditRow label="Company name"><input className={INPUT} style={inputStyle} value={form.company_name} onChange={(e) => set("company_name", e.target.value)} /></EditRow>
+          {shown("industry") ? (
           <EditRow label="Industry">
             <select className={INPUT} style={inputStyle} value={form.industry} onChange={(e) => set("industry", e.target.value)}>
               {!form.industry ? <option value="">— Select —</option> : null}
               {industryOptionsFor(form.industry).map((o) => (<option key={o} value={o}>{o}</option>))}
             </select>
           </EditRow>
+          ) : null}
+          {shown("revenue_stage") ? (
           <EditRow label="Revenue stage">
             <select className={INPUT} style={inputStyle} value={form.revenue_stage} onChange={(e) => set("revenue_stage", e.target.value)}>
               <option value="">— Select —</option>
               {REVENUE_STAGES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
             </select>
           </EditRow>
+          ) : null}
+          {shown("funding_amount_band") ? (
           <EditRow label="Funding target"><Chips options={bandOptions(form.funding_amount_band)} labelFor={bandLabel} value={form.funding_amount_band ? [form.funding_amount_band] : []} onToggle={(v) => set("funding_amount_band", form.funding_amount_band === v ? "" : v)} single /></EditRow>
+          ) : null}
           <EditRow label="Website"><input className={INPUT} style={inputStyle} value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="https://…" /></EditRow>
           <EditRow label="State / region"><input className={INPUT} style={inputStyle} value={form.state} onChange={(e) => set("state", e.target.value)} /></EditRow>
           <EditRow label="Country"><input className={INPUT} style={inputStyle} value={form.country} onChange={(e) => set("country", e.target.value)} /></EditRow>
+          {shown("funding_stage") ? (
           <EditRow label="Funding stage"><Chips options={FUNDING_STAGE_OPTS} value={form.funding_stage} onToggle={(v) => toggle("funding_stage", v)} /></EditRow>
+          ) : null}
+          {shown("operating_stage") ? (
           <EditRow label="Operating stage"><Chips options={OPERATING_STAGE_OPTS} value={form.operating_stage} onToggle={(v) => toggle("operating_stage", v)} /></EditRow>
+          ) : null}
+          {shown("business_entity") ? (
           <EditRow label="Business entity"><Chips options={BUSINESS_ENTITY_OPTS} value={form.business_entity ? [form.business_entity] : []} onToggle={(v) => set("business_entity", form.business_entity === v ? "" : v)} single /></EditRow>
-          <EditRow label="Annual revenue size"><input className={INPUT} style={inputStyle} value={form.annual_revenue_size} onChange={(e) => set("annual_revenue_size", e.target.value)} placeholder="e.g. $1.4M" /></EditRow>
+          ) : null}
+          {shown("annual_revenue_size") ? (
+          <EditRow label="Annual revenue size"><Chips options={listOptions("revenue_size", form.annual_revenue_size)} labelFor={(v) => labelOf(vocabAll.revenue_size, v)} value={form.annual_revenue_size ? [form.annual_revenue_size] : []} onToggle={(v) => set("annual_revenue_size", form.annual_revenue_size === v ? "" : v)} single />{form.annual_revenue_size && !vocabAll.revenue_size.some((o) => o.slug === form.annual_revenue_size) ? <p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current value &ldquo;{form.annual_revenue_size}&rdquo; is not in the list.</p> : null}</EditRow>
+          ) : null}
+          {shown("annual_ebitda") ? (
           <EditRow label="Annual EBITDA"><Chips options={bandOptions(form.annual_ebitda)} labelFor={bandLabel} value={form.annual_ebitda ? [form.annual_ebitda] : []} onToggle={(v) => set("annual_ebitda", form.annual_ebitda === v ? "" : v)} single /><p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current EBITDA only, not projected.</p></EditRow>
-          <EditRow label="ARR"><input className={INPUT} style={inputStyle} value={form.arr} onChange={(e) => set("arr", e.target.value)} placeholder="e.g. $840,000" /></EditRow>
-          <EditRow label="MRR"><input className={INPUT} style={inputStyle} value={form.mrr} onChange={(e) => set("mrr", e.target.value)} placeholder="e.g. $70,000" /></EditRow>
+          ) : null}
+          {shown("arr") ? (
+          <EditRow label="ARR"><Chips options={listOptions("arr_band", form.arr)} labelFor={(v) => labelOf(vocabAll.arr_band, v)} value={form.arr ? [form.arr] : []} onToggle={(v) => set("arr", form.arr === v ? "" : v)} single />{form.arr && !vocabAll.arr_band.some((o) => o.slug === form.arr) ? <p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current value &ldquo;{form.arr}&rdquo; is not in the list.</p> : null}</EditRow>
+          ) : null}
+          {shown("mrr") ? (
+          <EditRow label="MRR"><Chips options={listOptions("mrr_band", form.mrr)} labelFor={(v) => labelOf(vocabAll.mrr_band, v)} value={form.mrr ? [form.mrr] : []} onToggle={(v) => set("mrr", form.mrr === v ? "" : v)} single />{form.mrr && !vocabAll.mrr_band.some((o) => o.slug === form.mrr) ? <p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current value &ldquo;{form.mrr}&rdquo; is not in the list.</p> : null}</EditRow>
+          ) : null}
+          {shown("seeking_investor_types") ? (
           <EditRow label="Type of investor(s)"><Chips options={INVESTOR_TYPE_OPTS} value={form.seeking_investor_types} onToggle={(v) => toggle("seeking_investor_types", v)} /></EditRow>
+          ) : null}
+          {shown("seeking_capital_types") ? (
           <EditRow label="Type(s) of capital"><Chips options={CAPITAL_TYPE_OPTS} value={form.seeking_capital_types} onToggle={(v) => toggle("seeking_capital_types", v)} /></EditRow>
+          ) : null}
           <EditRow label="Active investor preference"><Chips options={INVESTOR_PREF_OPTS} value={form.active_investor_preference} onToggle={(v) => toggle("active_investor_preference", v)} /></EditRow>
           <EditRow label="Management team"><input className={INPUT} style={inputStyle} value={form.management_team} onChange={(e) => set("management_team", e.target.value)} placeholder="e.g. 2 co-founders, 3 full-time" /></EditRow>
+          {shown("use_of_funds") ? (
           <EditRow label="Use of funds"><input className={INPUT} style={inputStyle} value={form.use_of_funds} onChange={(e) => set("use_of_funds", e.target.value)} /></EditRow>
+          ) : null}
           <EditRow label="Description"><textarea className={INPUT} style={inputStyle} rows={3} value={form.business_description} onChange={(e) => set("business_description", e.target.value)} /></EditRow>
           <EditRow label="Key highlights"><textarea className={INPUT} style={inputStyle} rows={2} value={form.key_highlights} onChange={(e) => set("key_highlights", e.target.value)} placeholder="The three or four facts an investor should take away." /></EditRow>
 

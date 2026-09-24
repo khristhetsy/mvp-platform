@@ -10,6 +10,8 @@ import { sectionFor } from "@/lib/profile-fields/catalog";
 import { checkSave, type DraftOption } from "@/lib/profile-fields/draft";
 import { getInvestorMatchConfig, setInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import { DEFAULT_ENGINE_WEIGHTS, type EngineWeights } from "@/lib/matching/investor-company-matching";
+import { DISPLAY_SURFACES, applyDisplayChange, checkDisplayChange, resolveSurface } from "@/lib/profile-fields/display";
+import { loadDisplayConfig, loadMatchRequired, saveDisplayConfig } from "@/lib/profile-fields/display-store";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +104,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("save"), list: listSchema, options: z.array(optionSchema).min(1).max(200), note: z.string().max(200).optional() }),
   z.object({ action: z.literal("restore"), list: listSchema, version: z.number().int().min(1) }),
+  z.object({ action: z.literal("display"), surface: z.enum(DISPLAY_SURFACES), key: z.string().min(1).max(60), shown: z.boolean(), required: z.boolean() }),
   z.object({ action: z.literal("weight"), factor: z.enum(Object.keys(DEFAULT_ENGINE_WEIGHTS) as [keyof EngineWeights, ...(keyof EngineWeights)[]]), weight: z.number().int().min(0).max(100) }),
 ]);
 
@@ -113,6 +116,21 @@ export async function POST(req: NextRequest): Promise<Response> {
   const body = parsed.data;
 
   try {
+    if (body.action === "display") {
+      const matchRequired = await loadMatchRequired();
+      const change = { surface: body.surface, key: body.key, shown: body.shown, required: body.required };
+      const check = checkDisplayChange(change, matchRequired);
+      if (!check.ok) return NextResponse.json({ error: check.reason }, { status: 400 });
+      const before = await loadDisplayConfig();
+      const next = applyDisplayChange(before, change);
+      if (!(await saveDisplayConfig(next, auth.userId))) return NextResponse.json({ error: "Could not save the setting." }, { status: 500 });
+      await writeAuditLog(auth.supabase as never, {
+        userId: auth.userId, action: "profile_fields.display_updated", entityType: "profile_field_display",
+        entityId: `${body.surface}:${body.key}`, metadata: { ...change, before: before[body.surface]?.[body.key] ?? null },
+      });
+      return NextResponse.json({ ok: true, surface: body.surface, resolved: resolveSurface(next, body.surface, matchRequired) });
+    }
+
     if (body.action === "weight") {
       const cfg = await getInvestorMatchConfig();
       const before = cfg.engineWeights[body.factor];

@@ -8,6 +8,7 @@ import { CollaborationDiscussionPanel } from "@/components/collaboration/Collabo
 import { CompanySettingsForm } from "./settings-form";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
 import { FounderProfileTabs } from "@/components/founder/FounderProfileTabs";
@@ -22,6 +23,8 @@ export default async function FounderSettingsPage() {
   const { company } = await getActiveCompanyForUser(profile);
   // Option lists edited on Admin, Profile and fields.
   const vocabularies = await loadVocabularies();
+  // Shown and Required per field, from Admin, Profile and fields.
+  const display = await loadSurfaceDisplay("founder_settings");
 
   return (
     <FounderAppShell
@@ -62,7 +65,7 @@ export default async function FounderSettingsPage() {
                 <p className="mt-0.5 text-xs text-slate-500">{t("edit_your_public_listing_and_company_details")}</p>
               </div>
               <div className="p-6">
-                {company ? <VocabularyProvider value={vocabularies}><CompanySettingsForm company={company} /></VocabularyProvider> : null}
+                {company ? <VocabularyProvider value={vocabularies}><CompanySettingsForm company={company} display={display} /></VocabularyProvider> : null}
                 {company ? (
                   <div className="mt-8">
                     <CollaborationDiscussionPanel

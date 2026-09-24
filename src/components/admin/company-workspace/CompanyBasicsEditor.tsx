@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { industryOptionsFor, isCanonicalIndustry } from "@/lib/industries";
 import { isMoneyBand, moneyBandFor } from "@/lib/profile/options";
 import { useVocabularies } from "@/lib/vocabulary/provider";
+import { useFieldShown } from "@/lib/profile-fields/display-provider";
 import { offered } from "@/lib/vocabulary/lists";
 
 const STAGES: { id: string; label: string }[] = [
@@ -36,6 +37,8 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
   const router = useRouter();
   // Money bands from Profile and fields: offered order and labels.
   const moneyBands = useVocabularies().money_band;
+  // Fields hidden for staff on Admin, Profile and fields.
+  const shown = useFieldShown();
   const [b, setB] = useState<Basics | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -105,6 +108,7 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
         <label className={LABEL} htmlFor="cb-name">Company name</label>
         <input id="cb-name" value={b.company_name} onChange={(e) => patch({ company_name: e.target.value })} className={INPUT} placeholder="e.g. Doyle Organics, LLC" />
       </div>
+      {shown("industry") ? (
       <div>
         <label className={LABEL} htmlFor="cb-industry">Industry</label>
         <select id="cb-industry" value={b.industry} onChange={(e) => patch({ industry: e.target.value })} className={INPUT}>
@@ -120,10 +124,12 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
           Shared list — the founder picks from the same options, so matching and the marketplace stay in sync.
         </p>
       </div>
+      ) : null}
       <div>
         <label className={LABEL} htmlFor="cb-desc">Business description</label>
         <textarea id="cb-desc" rows={3} value={b.business_description} onChange={(e) => patch({ business_description: e.target.value })} className={INPUT} placeholder="One or two sentences about what the company does." />
       </div>
+      {shown("revenue_stage") ? (
       <div>
         <label className={LABEL} htmlFor="cb-stage">Revenue stage</label>
         <select id="cb-stage" value={b.revenue_stage ?? ""} onChange={(e) => patch({ revenue_stage: e.target.value || null })} className={INPUT}>
@@ -131,6 +137,8 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
           {STAGES.map((s) => (<option key={s.id} value={s.id}>{s.label}</option>))}
         </select>
       </div>
+      ) : null}
+      {shown("funding_amount_band") ? (
       <div>
         <p className={LABEL} id="cb-funding">Funding target ($)</p>
         <div className="mt-1.5 flex max-w-xl flex-wrap gap-1.5" role="group" aria-labelledby="cb-funding">
@@ -150,6 +158,7 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
           })}
         </div>
       </div>
+      ) : null}
 
       {error ? <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 

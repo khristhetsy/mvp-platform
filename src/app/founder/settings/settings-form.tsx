@@ -23,6 +23,7 @@ import {
 } from "@/lib/profile/options";
 import { useVocabularies } from "@/lib/vocabulary/provider";
 import { labelOf, offered, type VocabularyList, type VocabularyOption } from "@/lib/vocabulary/lists";
+import type { ResolvedSurface } from "@/lib/profile-fields/display";
 
 /* ── Draft generators ───────────────────────────────────────── */
 
@@ -165,23 +166,14 @@ const FIELDS: FieldDef[] = [
   { key: "business_entity", label: "Business entity", type: "chips-single", options: BUSINESS_ENTITY_OPTIONS, section: "Investor fit profile" },
 ];
 
-// The first field key of each section — used to render a section header above it
-// without mutating state during render.
-const SECTION_FIRST_KEYS: Set<string> = (() => {
-  const seen = new Set<string>();
-  const firsts = new Set<string>();
-  for (const f of FIELDS) {
-    if (f.section && !seen.has(f.section)) {
-      seen.add(f.section);
-      firsts.add(f.key);
-    }
-  }
-  return firsts;
-})();
 
-type Props = { company: Company | null };
+type Props = {
+  company: Company | null;
+  /** Shown and Required per field, from Admin, Profile and fields. Absent means every field shown with its built in requirement. */
+  display?: ResolvedSurface;
+};
 
-export function CompanySettingsForm({ company }: Props) {
+export function CompanySettingsForm({ company, display }: Props) {
   const router = useRouter();
   const { getError, setApiErrors, clearError } = useFormValidation();
   // Option lists from Profile and fields (falls back to the built in lists).
@@ -192,6 +184,8 @@ export function CompanySettingsForm({ company }: Props) {
     return [...offered(all), ...all.filter((o) => o.archived && o.slug === held)];
   };
   const stages = vocab.revenue_stage;
+  // Fields hidden on Admin, Profile and fields are left out entirely.
+  const visibleFields = FIELDS.filter((f) => display?.[f.key]?.shown !== false);
 
   // Seeking + Company & stage columns (migration 20260803002) aren't in the
   // generated Company type yet, so read them through a Record view.
@@ -249,7 +243,8 @@ export function CompanySettingsForm({ company }: Props) {
     if (trimmed === (orig[key] ?? "").trim()) { setEditingKey(null); return; }
 
     const def = FIELDS.find((f) => f.key === key);
-    if (def?.required && trimmed.length < (key === "business_description" ? 20 : 2)) {
+    const isRequired = display?.[key]?.required ?? def?.required;
+    if (isRequired && trimmed.length < (key === "business_description" ? 20 : 2)) {
       setApiErrors({ formErrors: [], fieldErrors: { [key]: [key === "business_description" ? "At least 20 characters." : "This field is required."] } });
       return;
     }
@@ -433,10 +428,12 @@ export function CompanySettingsForm({ company }: Props) {
       </div>
 
       <div>
-        {FIELDS.map((f) => {
+        {visibleFields.map((f, i) => {
             const editing = editingKey === f.key;
             const err = getError(f.key);
-            const header = f.section && SECTION_FIRST_KEYS.has(f.key) ? f.section : null;
+            // A section's header goes on its first visible field, so hiding
+            // the first one never drops the heading.
+            const header = f.section && (i === 0 || visibleFields[i - 1].section !== f.section) ? f.section : null;
 
             const sectionHeader = header ? (
               <p className="mb-1.5 mt-6 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 first:mt-0">{header}</p>

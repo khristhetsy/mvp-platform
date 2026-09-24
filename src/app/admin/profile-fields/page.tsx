@@ -6,6 +6,8 @@ import { ProfileFieldsManager } from "@/components/admin/ProfileFieldsManager";
 import { FIELD_SECTIONS } from "@/lib/profile-fields/catalog";
 import type { DraftOption } from "@/lib/profile-fields/draft";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
+import { loadDisplayConfig } from "@/lib/profile-fields/display-store";
+import { resolveSurface, DISPLAY_SURFACES, type DisplaySurface, type ResolvedSurface } from "@/lib/profile-fields/display";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +63,10 @@ async function loadCounts(): Promise<Record<string, Record<string, number>>> {
 export default async function AdminProfileFieldsPage() {
   const { profile } = await requirePermissionPage("manage_settings");
   const [options, counts, config] = await Promise.all([loadOptions(), loadCounts(), getInvestorMatchConfig()]);
+  const displayConfig = await loadDisplayConfig();
+  const display = Object.fromEntries(
+    DISPLAY_SURFACES.map((sf) => [sf, resolveSurface(displayConfig, sf, config.requiredFields)]),
+  ) as Record<DisplaySurface, ResolvedSurface>;
   const hasRows = Object.keys(options).length > 0;
 
   return (
@@ -84,7 +90,7 @@ export default async function AdminProfileFieldsPage() {
           </p>
         </div>
       ) : (
-        <ProfileFieldsManager initial={options} counts={counts} weights={config.engineWeights} />
+        <ProfileFieldsManager initial={options} counts={counts} weights={config.engineWeights} display={display} />
       )}
     </AppShell>
   );

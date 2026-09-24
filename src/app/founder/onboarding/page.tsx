@@ -7,6 +7,7 @@ import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onb
 import { requireRole } from "@/lib/supabase/auth";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 
@@ -48,6 +49,7 @@ export default async function FounderOnboardingPage() {
           <FounderConversationalOnboarding
             company={data.company}
             founderName={profile.full_name ?? profile.email ?? "Founder"}
+            display={await loadSurfaceDisplay("founder_onboarding")}
           />
         </VocabularyProvider>
       </div>
