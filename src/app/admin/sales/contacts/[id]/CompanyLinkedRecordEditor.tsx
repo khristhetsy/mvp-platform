@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { industryOptionsFor } from "@/lib/industries";
+import { MONEY_BAND_OPTIONS, isMoneyBand, moneyBandFor } from "@/lib/profile/options";
 import type { LinkedCompany } from "./ContactProfileClient";
 
 /**
@@ -27,7 +28,7 @@ const OPERATING_STAGE_OPTS = ["Idea", "Building / MVP", "Pre-revenue", "Revenue"
 const splitCsv = (v: string | null): string[] => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : []);
 
 type Form = {
-  company_name: string; industry: string; revenue_stage: string; funding_amount: string;
+  company_name: string; industry: string; revenue_stage: string; funding_amount_band: string;
   website: string; country: string; state: string; use_of_funds: string;
   funding_stage: string[]; operating_stage: string[]; business_entity: string;
   annual_ebitda: string; management_team: string;
@@ -39,10 +40,12 @@ type Form = {
 function fromCompany(c: LinkedCompany): Form {
   return {
     company_name: c.companyName ?? "", industry: c.industry ?? "",
-    revenue_stage: c.revenueStage ?? "", funding_amount: c.fundingAmount != null ? String(c.fundingAmount) : "",
+    revenue_stage: c.revenueStage ?? "",
+    // The stored band, or the band an existing exact amount falls in.
+    funding_amount_band: isMoneyBand(c.fundingBand) ? c.fundingBand : (moneyBandFor(c.fundingAmount) ?? ""),
     website: c.website ?? "", country: c.country ?? "", state: c.state ?? "", use_of_funds: c.useOfFunds ?? "",
     funding_stage: splitCsv(c.fundingStage), operating_stage: splitCsv(c.operatingStage), business_entity: c.businessEntity ?? "",
-    annual_ebitda: c.annualEbitda ?? "", management_team: c.managementTeam ?? "",
+    annual_ebitda: isMoneyBand(c.annualEbitda) ? c.annualEbitda : "", management_team: c.managementTeam ?? "",
     seeking_investor_types: splitCsv(c.seekingInvestorTypes), seeking_capital_types: splitCsv(c.seekingCapitalTypes),
     active_investor_preference: splitCsv(c.activeInvestorPreference), business_description: c.description ?? "",
     annual_revenue_size: c.annualRevenueSize ?? "", arr: c.arr ?? "", mrr: c.mrr ?? "",
@@ -133,7 +136,8 @@ export function CompanyLinkedRecordEditor({
           industry: form.industry.trim(),
           business_description: form.business_description.trim() || null,
           revenue_stage: form.revenue_stage || null,
-          funding_amount: form.funding_amount.trim() ? Number(form.funding_amount.replace(/[^0-9.]/g, "")) : null,
+          // The band; a database trigger keeps the exact funding_amount consistent.
+          funding_amount_band: form.funding_amount_band || null,
           website: form.website.trim() || null,
           country: form.country.trim() || null,
           state: form.state.trim() || null,
@@ -141,7 +145,7 @@ export function CompanyLinkedRecordEditor({
           funding_stage: form.funding_stage.join(", ") || null,
           operating_stage: form.operating_stage.join(", ") || null,
           business_entity: form.business_entity || null,
-          annual_ebitda: form.annual_ebitda.trim() || null,
+          annual_ebitda: form.annual_ebitda || null,
           management_team: form.management_team.trim() || null,
           seeking_investor_types: form.seeking_investor_types.join(", ") || null,
           seeking_capital_types: form.seeking_capital_types.join(", ") || null,
@@ -197,7 +201,7 @@ export function CompanyLinkedRecordEditor({
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 28px" }}>
           <ViewRow label="Industry">{data.industry ? pill(data.industry) : null}</ViewRow>
           <ViewRow label="Revenue stage" unasked={unasked}>{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
-          <ViewRow label="Funding target" unasked={unasked}>{data.funding_amount ? `$${Number(data.funding_amount).toLocaleString()}` : null}</ViewRow>
+          <ViewRow label="Funding target" unasked={unasked}>{data.funding_amount_band || null}</ViewRow>
           <ViewRow label="Website">{data.website ? <a href={data.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{data.website}</a> : null}</ViewRow>
           <ViewRow label="Location">{[data.state, data.country].filter(Boolean).join(", ") || null}</ViewRow>
           <ViewRow label="One-pager">{onePager?.slug ? <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>/f/{onePager.slug}{onePager.published ? " · Published" : " · Draft"}</a> : null}</ViewRow>
@@ -231,7 +235,7 @@ export function CompanyLinkedRecordEditor({
               {REVENUE_STAGES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
             </select>
           </EditRow>
-          <EditRow label="Funding target"><input className={INPUT} style={inputStyle} value={form.funding_amount} onChange={(e) => set("funding_amount", e.target.value)} placeholder="e.g. 2300000" /></EditRow>
+          <EditRow label="Funding target"><Chips options={[...MONEY_BAND_OPTIONS]} value={form.funding_amount_band ? [form.funding_amount_band] : []} onToggle={(v) => set("funding_amount_band", form.funding_amount_band === v ? "" : v)} single /></EditRow>
           <EditRow label="Website"><input className={INPUT} style={inputStyle} value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="https://…" /></EditRow>
           <EditRow label="State / region"><input className={INPUT} style={inputStyle} value={form.state} onChange={(e) => set("state", e.target.value)} /></EditRow>
           <EditRow label="Country"><input className={INPUT} style={inputStyle} value={form.country} onChange={(e) => set("country", e.target.value)} /></EditRow>
@@ -239,7 +243,7 @@ export function CompanyLinkedRecordEditor({
           <EditRow label="Operating stage"><Chips options={OPERATING_STAGE_OPTS} value={form.operating_stage} onToggle={(v) => toggle("operating_stage", v)} /></EditRow>
           <EditRow label="Business entity"><Chips options={BUSINESS_ENTITY_OPTS} value={form.business_entity ? [form.business_entity] : []} onToggle={(v) => set("business_entity", form.business_entity === v ? "" : v)} single /></EditRow>
           <EditRow label="Annual revenue size"><input className={INPUT} style={inputStyle} value={form.annual_revenue_size} onChange={(e) => set("annual_revenue_size", e.target.value)} placeholder="e.g. $1.4M" /></EditRow>
-          <EditRow label="Annual EBITDA"><input className={INPUT} style={inputStyle} value={form.annual_ebitda} onChange={(e) => set("annual_ebitda", e.target.value)} placeholder="e.g. -$120,000" /></EditRow>
+          <EditRow label="Annual EBITDA"><Chips options={[...MONEY_BAND_OPTIONS]} value={form.annual_ebitda ? [form.annual_ebitda] : []} onToggle={(v) => set("annual_ebitda", form.annual_ebitda === v ? "" : v)} single /><p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current EBITDA only, not projected.</p></EditRow>
           <EditRow label="ARR"><input className={INPUT} style={inputStyle} value={form.arr} onChange={(e) => set("arr", e.target.value)} placeholder="e.g. $840,000" /></EditRow>
           <EditRow label="MRR"><input className={INPUT} style={inputStyle} value={form.mrr} onChange={(e) => set("mrr", e.target.value)} placeholder="e.g. $70,000" /></EditRow>
           <EditRow label="Type of investor(s)"><Chips options={INVESTOR_TYPE_OPTS} value={form.seeking_investor_types} onToggle={(v) => toggle("seeking_investor_types", v)} /></EditRow>

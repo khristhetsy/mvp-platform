@@ -7,7 +7,7 @@ import { buildCompanyMatchProfile } from "@/lib/matching/contact-match";
 import { matchInvestorToCompany, type InvestorMatchProfile } from "@/lib/matching/investor-company-matching";
 import { scoreInvestorPreferenceMatch } from "@/lib/investors/preference-match";
 import { EMPTY_PREFERENCES } from "@/lib/investors/preferences";
-import { companyUpdateSchema } from "@/lib/validation";
+import { companyUpdateSchema, founderOnboardingStepSchema } from "@/lib/validation";
 
 describe("the money band vocabulary", () => {
   it("is exactly the nine bands already in the contact records", () => {
@@ -64,6 +64,25 @@ describe("saving the settings fields", () => {
     expect(companyUpdateSchema.safeParse({ annual_ebitda: "Projected EBITDA: ($230K) Year 1" }).success).toBe(false);
     expect(companyUpdateSchema.safeParse({ annual_ebitda: "Break-even" }).success).toBe(false);
     expect(companyUpdateSchema.safeParse({ funding_amount_band: "1500000" }).success).toBe(false);
+  });
+});
+
+describe("saving from onboarding", () => {
+  const base = { step: "funding_information" as const };
+
+  it("accepts bands for amount and EBITDA", () => {
+    const r = founderOnboardingStepSchema.safeParse({ ...base, funding_amount_band: "$1m - $10m", annual_ebitda: "Less than $50k" });
+    expect(r.success).toBe(true);
+  });
+
+  it("treats an empty answer as skipped", () => {
+    const r = founderOnboardingStepSchema.safeParse({ ...base, annual_ebitda: "" });
+    expect(r.success && r.data.annual_ebitda).toBeNull();
+  });
+
+  it("rejects typed amounts and projections", () => {
+    expect(founderOnboardingStepSchema.safeParse({ ...base, annual_ebitda: "-$120,000" }).success).toBe(false);
+    expect(founderOnboardingStepSchema.safeParse({ ...base, funding_amount_band: "1000000" }).success).toBe(false);
   });
 });
 

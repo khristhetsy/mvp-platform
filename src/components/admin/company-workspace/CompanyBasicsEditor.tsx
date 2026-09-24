@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { industryOptionsFor, isCanonicalIndustry } from "@/lib/industries";
+import { MONEY_BAND_OPTIONS, isMoneyBand, moneyBandFor } from "@/lib/profile/options";
 
 const STAGES: { id: string; label: string }[] = [
   { id: "pre_revenue", label: "Pre-revenue" },
@@ -16,7 +17,13 @@ type Basics = {
   industry: string;
   business_description: string;
   revenue_stage: string | null;
+  /** Amount of capital as one of the money bands ("" when not set). */
+  funding_amount_band: string;
+};
+
+type BasicsResponse = Omit<Basics, "funding_amount_band"> & {
   funding_amount: number | null;
+  funding_amount_band: string | null;
 };
 
 const INPUT =
@@ -35,13 +42,14 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
     let active = true;
     void fetch(`/api/admin/companies/${companyId}/basics`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Could not load company basics."))))
-      .then((d: Basics) => {
+      .then((d: BasicsResponse) => {
         if (active) setB({
           company_name: d.company_name ?? "",
           industry: d.industry ?? "",
           business_description: d.business_description ?? "",
           revenue_stage: d.revenue_stage,
-          funding_amount: d.funding_amount,
+          // The stored band, or the band an existing exact amount falls in.
+          funding_amount_band: isMoneyBand(d.funding_amount_band) ? d.funding_amount_band : (moneyBandFor(d.funding_amount) ?? ""),
         });
       })
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Load failed."); })
@@ -69,7 +77,8 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
           industry: b.industry.trim(),
           business_description: b.business_description.trim() || null,
           revenue_stage: b.revenue_stage,
-          funding_amount: b.funding_amount,
+          // The band; a database trigger keeps the exact funding_amount consistent.
+          funding_amount_band: b.funding_amount_band || null,
         }),
       });
       const j = (await res.json()) as { error?: string };
@@ -119,18 +128,23 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
         </select>
       </div>
       <div>
-        <label className={LABEL} htmlFor="cb-funding">Funding target ($)</label>
-        <input
-          id="cb-funding"
-          inputMode="numeric"
-          value={b.funding_amount ?? ""}
-          onChange={(e) => {
-            const raw = e.target.value.replace(/[^0-9.]/g, "");
-            patch({ funding_amount: raw ? Number(raw) : null });
-          }}
-          className={INPUT}
-          placeholder="e.g. 500000"
-        />
+        <p className={LABEL} id="cb-funding">Funding target ($)</p>
+        <div className="mt-1.5 flex max-w-xl flex-wrap gap-1.5" role="group" aria-labelledby="cb-funding">
+          {MONEY_BAND_OPTIONS.map((o) => {
+            const on = b.funding_amount_band === o;
+            return (
+              <button
+                key={o}
+                type="button"
+                aria-pressed={on}
+                onClick={() => patch({ funding_amount_band: on ? "" : o })}
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"}`}
+              >
+                {o}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {error ? <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}

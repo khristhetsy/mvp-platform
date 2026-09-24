@@ -92,7 +92,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
       const { data: comp, error: compError } = await admin
         .from("companies")
         .select(
-          "id, slug, is_published, company_name, industry, revenue_stage, funding_amount," +
+          "id, slug, is_published, company_name, industry, revenue_stage, funding_amount, funding_amount_band," +
             " business_description, website, country, state, use_of_funds, onboarding_step_state," +
             " funding_stage, operating_stage, business_entity, annual_ebitda, management_team," +
             " seeking_investor_types, seeking_capital_types, active_investor_preference,"  +
@@ -115,6 +115,7 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
           industry: comp.industry ?? null,
           revenueStage: comp.revenue_stage ?? null,
           fundingAmount: comp.funding_amount ?? null,
+          fundingBand: comp.funding_amount_band ?? null,
           description: comp.business_description ?? null,
           website: comp.website ?? null,
           country: comp.country ?? null,

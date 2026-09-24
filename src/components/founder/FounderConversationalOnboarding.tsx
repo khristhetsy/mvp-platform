@@ -15,6 +15,10 @@ import {
   FUNDING_STAGE_OPTIONS as FUNDING_STAGE_OPTS,
   OPERATING_STAGE_OPTIONS as OPERATING_STAGE_OPTS,
   REVENUE_SIZE_OPTIONS,
+  FUNDING_AMOUNT_BAND_OPTIONS,
+  EBITDA_BAND_OPTIONS,
+  moneyBandFor,
+  isMoneyBand,
 } from "@/lib/profile/options";
 
 /* ─────────────────────────── data ─────────────────────────── */
@@ -50,12 +54,6 @@ function raiseHint(stage: string | null): string {
 function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15;
-}
-
-function formatAmount(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n}`;
 }
 
 function generateOnboardingDraft(opts: {
@@ -127,7 +125,7 @@ function computeScore(opts: {
   if (opts.name.trim().length >= 2) s += 10;
   if (opts.industry) s += 15;
   if (opts.stage) s += 15;
-  if (Number(opts.amount) > 0) s += 10;
+  if (opts.amount) s += 10;
   if (opts.description.trim().length >= 20) s += 15;
   if (opts.useOfFunds.length > 0) s += 10;
   return Math.min(s, 100);
@@ -249,7 +247,12 @@ export function FounderConversationalOnboarding({
   const [phone, setPhone]             = useState(company.contact_phone ?? "");
   const [industry, setIndustry]       = useState<string | null>(company.industry ?? null);
   const [stage, setStage]             = useState<string | null>(company.revenue_stage ?? null);
-  const [amount, setAmount]           = useState(company.funding_amount?.toString() ?? "");
+  // Amount of capital as one of the money bands: the stored band, else the band an
+  // existing exact amount falls in.
+  const [amount, setAmount]           = useState<string>(() => {
+    const stored = (company as unknown as Record<string, unknown>).funding_amount_band;
+    return isMoneyBand(stored) ? stored : (moneyBandFor(company.funding_amount ?? null) ?? "");
+  });
   const [description, setDescription] = useState(
     !company.business_description || company.business_description.startsWith("Company profile created")
       ? ""
@@ -276,7 +279,8 @@ export function FounderConversationalOnboarding({
   const [fundingStage, setFundingStage] = useState<string[]>(splitCsv(cx.funding_stage));
   const [opStage, setOpStage]         = useState<string[]>(splitCsv(cx.operating_stage));
   const [bizEntity, setBizEntity]     = useState<string | null>(typeof cx.business_entity === "string" ? cx.business_entity : null);
-  const [ebitda, setEbitda]           = useState(typeof cx.annual_ebitda === "string" ? cx.annual_ebitda : "");
+  // Only a stored value that is one of the bands pre-selects a chip.
+  const [ebitda, setEbitda]           = useState(isMoneyBand(cx.annual_ebitda) ? cx.annual_ebitda : "");
   const [mgmtTeam, setMgmtTeam]       = useState(typeof cx.management_team === "string" ? cx.management_team : "");
   // Traction (step 8). All optional: forcing a number here would make
   // pre-revenue founders invent one, and the CRR engine would then score fiction.
@@ -302,14 +306,14 @@ export function FounderConversationalOnboarding({
       case 1: return companyName.trim().length >= 2 && isValidPhone(phone) && country.trim().length >= 2;
       case 2: return Boolean(industry);
       case 3: return Boolean(stage);
-      case 4: return Number(amount) > 0;
+      case 4: return isMoneyBand(amount);
       case 5: return description.trim().length >= 20;
       case 6: return true;
       case 7:
         return (
           invTypes.length > 0 && capTypes.length > 0 && invPref.length > 0 &&
           Boolean(bizEntity) && fundingStage.length > 0 && opStage.length > 0 &&
-          ebitda.trim().length > 0 && mgmtTeam.trim().length > 0
+          isMoneyBand(ebitda) && mgmtTeam.trim().length > 0
         );
       // Step 8 is skippable by design — see the note on the traction state above.
       case 8: return true;
@@ -348,7 +352,7 @@ export function FounderConversationalOnboarding({
         body: JSON.stringify({
           step: "funding_information",
           advanceToStep: "documents_uploaded",
-          funding_amount: Number(amount) || 0,
+          funding_amount_band: amount,
           revenue_stage: stage ?? "",
           use_of_funds: useOfFunds.join(", "),
           // Seeking + Company & stage (step 7)
@@ -358,7 +362,7 @@ export function FounderConversationalOnboarding({
           funding_stage: fundingStage.join(", "),
           operating_stage: opStage.join(", "),
           business_entity: bizEntity ?? "",
-          annual_ebitda: ebitda.trim(),
+          annual_ebitda: ebitda,
           management_team: mgmtTeam.trim(),
           // Traction (step 8)
           annual_revenue_size: revSize ?? "",
@@ -602,25 +606,12 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 How much are you looking to raise?
               </p>
-              <p className="mt-1 text-sm text-slate-500">{t("enter_the_total_target_for_this_round_in_usd")}</p>
-              <div className="mt-5 relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-slate-400">$</span>
-                <input
-                  autoFocus
-                  type="number"
-                  min={1}
-                  className="w-full rounded-xl border border-slate-200 py-3.5 pl-8 pr-4 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                  placeholder="1000000"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance()) void handleNext(); }}
-                />
+              <p className="mt-1 text-sm text-slate-500">Pick the range for the total target of this round, in USD.</p>
+              <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Amount to raise">
+                {FUNDING_AMOUNT_BAND_OPTIONS.map((o) => (
+                  <Chip key={o} selected={amount === o} onClick={() => setAmount(o)}>{o}</Chip>
+                ))}
               </div>
-              {Number(amount) > 0 ? (
-                <p className="mt-2 text-sm font-semibold" style={{ color: "#2E78F5" }}>
-                  {formatAmount(Number(amount))}
-                </p>
-              ) : null}
               <ContextCard>
                 {raiseHint(stage)}
                 {" "}Raising too little or too much for your stage can slow down conversations — we&apos;ll flag if your target is outside the typical range.
@@ -709,25 +700,19 @@ export function FounderConversationalOnboarding({
               <div className="mt-2 flex flex-wrap gap-2">
                 {OPERATING_STAGE_OPTS.map((o) => (<Chip key={o} selected={opStage.includes(o)} onClick={() => toggleIn(setOpStage, o)}>{o}</Chip>))}
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Annual EBITDA <span className="text-rose-600">*</span></label>
-                  <input
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    placeholder="e.g. -$120,000 (0 if pre-revenue)"
-                    value={ebitda}
-                    onChange={(e) => setEbitda(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span></label>
-                  <input
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    placeholder="e.g. 2 co-founders, 3 full-time"
-                    value={mgmtTeam}
-                    onChange={(e) => setMgmtTeam(e.target.value)}
-                  />
-                </div>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Annual EBITDA <span className="text-rose-600">*</span> <span className="font-normal text-slate-400">(pick one)</span></label>
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Annual EBITDA">
+                {EBITDA_BAND_OPTIONS.map((o) => (<Chip key={o} selected={ebitda === o} onClick={() => setEbitda(o)}>{o}</Chip>))}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">Current EBITDA only, not projected.</p>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span></label>
+                <input
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="e.g. 2 co-founders, 3 full-time"
+                  value={mgmtTeam}
+                  onChange={(e) => setMgmtTeam(e.target.value)}
+                />
               </div>
 
               <ContextCard>

@@ -96,6 +96,8 @@ export const founderOnboardingStepSchema = z.object({
   business_description: z.string().optional(),
   founder_goals: z.string().optional(),
   funding_amount: z.coerce.number().positive().optional(),
+  // Amount of capital as one of the money bands; "" means skip.
+  funding_amount_band: moneyBandField,
   revenue_stage: z.string().optional(),
   use_of_funds: z.string().optional(),
   // Seeking + Company & stage (onboarding "Raise & stage" step). Multi-selects
@@ -106,7 +108,8 @@ export const founderOnboardingStepSchema = z.object({
   funding_stage: z.string().optional(),
   operating_stage: z.string().optional(),
   business_entity: z.string().optional(),
-  annual_ebitda: z.string().optional(),
+  // Current EBITDA as one of the money bands (never projected); "" means skip.
+  annual_ebitda: moneyBandField,
   management_team: z.string().optional(),
   annual_revenue_size: z.string().optional(),
   arr: z.string().optional(),

@@ -362,6 +362,8 @@ export type LinkedCompany = {
   industry: string | null;
   revenueStage: string | null;
   fundingAmount: number | null;
+  /** Amount of capital band (companies.funding_amount_band). */
+  fundingBand: string | null;
   description: string | null;
   website: string | null;
   country: string | null;

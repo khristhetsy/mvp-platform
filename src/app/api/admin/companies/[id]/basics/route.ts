@@ -4,6 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireStaffApi } from "@/lib/api/admin";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { writeAuditLog } from "@/lib/data/audit";
+import { MONEY_BAND_OPTIONS } from "@/lib/profile/options";
+
+/** One of the nine contact-record money bands, or null to clear. */
+const MONEY_BAND = z.enum(MONEY_BAND_OPTIONS).nullable().optional();
 
 export const REVENUE_STAGES = ["pre_revenue", "early_revenue", "growing", "scaling"] as const;
 
@@ -15,6 +19,8 @@ const patchSchema = z.object({
   business_description: z.string().trim().max(2000).nullable().optional(),
   revenue_stage: z.enum(REVENUE_STAGES).nullable().optional(),
   funding_amount: z.number().nonnegative().nullable().optional(),
+  // Amount of capital as a band (20260924002); the trigger keeps funding_amount consistent.
+  funding_amount_band: MONEY_BAND,
   // Founder-profile fields (nullable text; multi-selects are comma-separated).
   website: z.string().trim().max(500).nullable().optional(),
   country: z.string().trim().max(120).nullable().optional(),
@@ -23,7 +29,8 @@ const patchSchema = z.object({
   funding_stage: OPTIONAL_TEXT,
   operating_stage: OPTIONAL_TEXT,
   business_entity: z.string().trim().max(120).nullable().optional(),
-  annual_ebitda: z.string().trim().max(120).nullable().optional(),
+  // Current EBITDA as one of the money bands, never projected.
+  annual_ebitda: MONEY_BAND,
   management_team: OPTIONAL_TEXT,
   seeking_investor_types: OPTIONAL_TEXT,
   seeking_capital_types: OPTIONAL_TEXT,
@@ -36,7 +43,7 @@ const patchSchema = z.object({
 
 const OPTIONAL_COLS = [
   "website", "country", "state", "use_of_funds", "funding_stage", "operating_stage",
-  "business_entity", "annual_ebitda", "management_team", "seeking_investor_types",
+  "business_entity", "annual_ebitda", "funding_amount_band", "management_team", "seeking_investor_types",
   "seeking_capital_types", "active_investor_preference",
   "annual_revenue_size", "arr", "mrr", "key_highlights",
 ] as const;
@@ -50,7 +57,7 @@ export async function GET(_req: Request, { params }: Readonly<{ params: Promise<
   const db = auth.supabase as unknown as SupabaseClient;
   const { data, error } = await db
     .from("companies")
-    .select("company_name, industry, business_description, revenue_stage, funding_amount")
+    .select("company_name, industry, business_description, revenue_stage, funding_amount, funding_amount_band")
     .eq("id", id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: apiErrorMessage(error) }, { status: 400 });
@@ -62,6 +69,7 @@ export async function GET(_req: Request, { params }: Readonly<{ params: Promise<
     business_description: string | null;
     revenue_stage: string | null;
     funding_amount: number | null;
+    funding_amount_band: string | null;
   };
   return NextResponse.json({
     company_name: row.company_name ?? "",
@@ -69,6 +77,7 @@ export async function GET(_req: Request, { params }: Readonly<{ params: Promise<
     business_description: row.business_description ?? "",
     revenue_stage: row.revenue_stage ?? null,
     funding_amount: row.funding_amount ?? null,
+    funding_amount_band: row.funding_amount_band ?? null,
   });
 }
 
@@ -105,7 +114,7 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
     .from("companies")
     .update(patch)
     .eq("id", id)
-    .select("company_name, industry, business_description, revenue_stage, funding_amount")
+    .select("company_name, industry, business_description, revenue_stage, funding_amount, funding_amount_band")
     .single();
   if (error) return NextResponse.json({ error: apiErrorMessage(error) }, { status: 400 });
 
@@ -119,6 +128,7 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
       industry: parsed.data.industry,
       revenue_stage: parsed.data.revenue_stage ?? null,
       funding_amount: parsed.data.funding_amount ?? null,
+      funding_amount_band: parsed.data.funding_amount_band ?? null,
     },
   });
 
