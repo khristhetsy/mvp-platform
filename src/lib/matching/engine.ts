@@ -17,6 +17,32 @@ export type MatchingPassResult = {
   suggestedWritten: number;
 };
 
+const INVESTOR_COLUMNS =
+  "id, profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, preferred_arr_range, preferred_mrr_range, approval_status";
+
+type InvestorRow = InvestorMatchProfile & { id: string; capital_types?: string[] | null };
+
+/**
+ * Approved investors, shaped for the core. capital_types (migration
+ * 20260924004) feeds the capital type factor; if the column is not there yet
+ * the load falls back to the columns that always existed, so the matching pass
+ * never stops for want of it.
+ */
+async function loadApprovedInvestors(admin: SupabaseClient): Promise<Array<InvestorMatchProfile & { id: string }>> {
+  const withCapital = await admin
+    .from("investor_profiles")
+    .select(`${INVESTOR_COLUMNS}, capital_types`)
+    .eq("approval_status", "approved");
+  const result = withCapital.error
+    ? await admin.from("investor_profiles").select(INVESTOR_COLUMNS).eq("approval_status", "approved")
+    : withCapital;
+  const rows = (result.data ?? []) as InvestorRow[];
+  return rows.map(({ capital_types, ...row }) => ({
+    ...row,
+    ...(capital_types && capital_types.length ? { capitalTypes: capital_types } : {}),
+  }));
+}
+
 /**
  * Generate `suggested` matches for eligible founders × approved investors.
  * Idempotent: existing pairs (any status) are never overwritten. Runs via
@@ -38,13 +64,7 @@ export async function runMatchingPass(opts?: {
     return { companiesEligible: 0, investorsConsidered: 0, suggestedWritten: 0 };
   }
 
-  const { data: investorRows } = await admin
-    .from("investor_profiles")
-    .select(
-      "id, profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, approval_status",
-    )
-    .eq("approval_status", "approved");
-  const investors = (investorRows ?? []) as Array<InvestorMatchProfile & { id: string }>;
+  const investors = await loadApprovedInvestors(admin);
   if (investors.length === 0) {
     return { companiesEligible: eligible.length, investorsConsidered: 0, suggestedWritten: 0 };
   }

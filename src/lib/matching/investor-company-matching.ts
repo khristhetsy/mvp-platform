@@ -237,49 +237,181 @@ function scoreActiveRating(investor: InvestorMatchProfile, weight: number): Fact
   return { points: Math.round(weight * fit), weight, evaluated: true, reason: rating >= 4 ? "Highly active investor" : null, missing: null };
 }
 
+/**
+ * An investor's preferred ARR or MRR range can now hold several bands, picked
+ * from the same list the founder picks from. They are stored in one text
+ * column joined with "; ". A single band, or free text saved before the pickers
+ * existed, splits to a list of one, so those records score exactly as before.
+ * Commas are not a separator here: older free text such as "$1,000,000" uses them.
+ */
+export const BAND_LIST_SEPARATOR = "; ";
+
+export function splitBandList(range: string | null | undefined): string[] {
+  return (range ?? "")
+    .split(/\s*[;|]\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function joinBandList(bands: readonly string[]): string {
+  return bands.map((b) => b.trim()).filter(Boolean).join(BAND_LIST_SEPARATOR);
+}
+
+/** Does the founder's band, or exact figure, fall in any of the investor's bands?
+ *  null when nothing on either side can be compared. */
+function anyBandFits(
+  ranges: string[],
+  founderBand: string | null | undefined,
+  founderAmount: number | null | undefined,
+): boolean | null {
+  let compared = false;
+  for (const range of ranges) {
+    const overlap = bandsOverlap(founderBand, range);
+    if (overlap === true) return true;
+    if (overlap === false) compared = true;
+  }
+  if (compared) return false;
+  if (founderAmount == null) return null;
+  // An exact figure is compared as before: a range that parses to nothing is a miss.
+  return ranges.some((range) => {
+    const band = parseMoneyBand(range);
+    return band != null && band.min <= founderAmount && founderAmount <= band.max;
+  });
+}
+
 /** ARR fit — the founder's actual ARR inside the investor's preferred ARR range.
  *  Independent of MRR. Unlike the fixed-rubric factors above, ARR/MRR count toward
  *  the denominator ONLY when evaluated (see matchInvestorToCompany), so they never
  *  lower scores for the common case where the founder has no ARR/MRR on file. */
 function scoreArr(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
-  const range = investor.preferred_arr_range;
-  if (!range?.trim()) return { points: 0, weight, evaluated: false, reason: null, missing: null };
-
-  // The founder's band, when that is what they gave — settings collects a band
-  // now, and an exact figure from a CRM contact still works below.
-  const overlap = bandsOverlap(company.arrBand, range);
-  if (overlap !== null) {
-    return overlap
-      ? { points: weight, weight, evaluated: true, reason: "ARR in target range", missing: null }
-      : { points: 0, weight, evaluated: true, reason: null, missing: "ARR outside target range" };
-  }
-
-  if (company.arr == null) return { points: 0, weight, evaluated: false, reason: null, missing: null };
-  const band = parseMoneyBand(range);
-  if (band && band.min <= company.arr && company.arr <= band.max) {
-    return { points: weight, weight, evaluated: true, reason: "ARR in target range", missing: null };
-  }
-  return { points: 0, weight, evaluated: true, reason: null, missing: "ARR outside target range" };
+  const ranges = splitBandList(investor.preferred_arr_range);
+  if (ranges.length === 0) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  const fits = anyBandFits(ranges, company.arrBand, company.arr);
+  if (fits === null) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  return fits
+    ? { points: weight, weight, evaluated: true, reason: "ARR in target range", missing: null }
+    : { points: 0, weight, evaluated: true, reason: null, missing: "ARR outside target range" };
 }
 
-/** MRR fit — the founder's actual MRR inside the investor's preferred MRR range. */
+/** MRR fit — the founder's MRR inside any of the investor's preferred MRR bands. */
 function scoreMrr(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
-  const range = investor.preferred_mrr_range;
-  if (!range?.trim()) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  const ranges = splitBandList(investor.preferred_mrr_range);
+  if (ranges.length === 0) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  const fits = anyBandFits(ranges, company.mrrBand, company.mrr);
+  if (fits === null) return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  return fits
+    ? { points: weight, weight, evaluated: true, reason: "MRR in target range", missing: null }
+    : { points: 0, weight, evaluated: true, reason: null, missing: "MRR outside target range" };
+}
 
-  const overlap = bandsOverlap(company.mrrBand, range);
-  if (overlap !== null) {
-    return overlap
-      ? { points: weight, weight, evaluated: true, reason: "MRR in target range", missing: null }
-      : { points: 0, weight, evaluated: true, reason: null, missing: "MRR outside target range" };
+export type MatchFactorKey = keyof EngineWeights;
+
+export const MATCH_FACTOR_LABELS: Record<MatchFactorKey, string> = {
+  sector: "Industry",
+  stage: "Stage",
+  checkSize: "Check size",
+  geography: "Geography",
+  investorType: "Investor type",
+  capitalType: "Capital type",
+  activeRating: "Active investor",
+  arr: "ARR",
+  mrr: "MRR",
+};
+
+/** One factor as the breakdown shows it. `counted` = its weight is in the
+ *  denominator. The seven fixed factors always count; ARR and MRR count only
+ *  when both sides had data. */
+export type MatchFactorLine = {
+  key: MatchFactorKey;
+  label: string;
+  points: number;
+  weight: number;
+  evaluated: boolean;
+  counted: boolean;
+  reason: string | null;
+  missing: string | null;
+};
+
+export type MatchBreakdown = InvestorCompanyMatchResult & {
+  earned: number;
+  totalWeight: number;
+  factors: MatchFactorLine[];
+};
+
+/**
+ * The full "why this match": every factor with its points and weight. This is
+ * the one computation; `matchInvestorToCompany` returns its summary, so a
+ * breakdown shown anywhere always adds up to the score shown next to it.
+ */
+export function explainMatch(
+  investor: InvestorMatchProfile,
+  company: CompanyMatchProfile,
+  weights: EngineWeights = DEFAULT_ENGINE_WEIGHTS,
+): MatchBreakdown {
+  if (investor.approval_status !== "approved") {
+    return {
+      companyId: company.id,
+      matchScore: 0,
+      matchReasons: [],
+      missingFitReasons: ["Investor account not approved for matching"],
+      earned: 0,
+      totalWeight: 0,
+      factors: [],
+    };
   }
 
-  if (company.mrr == null) return { points: 0, weight, evaluated: false, reason: null, missing: null };
-  const band = parseMoneyBand(range);
-  if (band && band.min <= company.mrr && company.mrr <= band.max) {
-    return { points: weight, weight, evaluated: true, reason: "MRR in target range", missing: null };
+  // Score against the FULL configured rubric: every fixed factor's weight is always
+  // in the denominator, so a factor with no data (on either side) or no match simply
+  // earns 0 of its weight. This means matching a single dimension can NEVER read as
+  // a 100% fit — the score is the true "% of the weighted match rubric satisfied,"
+  // and 100% is reserved for an investor who fits every weighted criterion.
+  // ARR/MRR are opt-in: they count toward the denominator ONLY when evaluated
+  // (both sides have data), so adding them never lowers scores for the common case
+  // where the founder has no ARR/MRR on file.
+  const fixed: Array<[MatchFactorKey, FactorResult]> = [
+    ["sector", scoreSector(investor, company, weights.sector)],
+    ["stage", scoreStage(investor, company, weights.stage)],
+    ["geography", scoreGeography(investor, company, weights.geography)],
+    ["checkSize", scoreCheckSize(investor, company, weights.checkSize)],
+    ["investorType", scoreInvestorType(investor, company, weights.investorType)],
+    ["capitalType", scoreCapitalType(investor, company, weights.capitalType)],
+    ["activeRating", scoreActiveRating(investor, weights.activeRating)],
+  ];
+  const optional: Array<[MatchFactorKey, FactorResult]> = [
+    ["arr", scoreArr(investor, company, weights.arr)],
+    ["mrr", scoreMrr(investor, company, weights.mrr)],
+  ];
+
+  const factors: MatchFactorLine[] = [
+    ...fixed.map(([key, f]) => ({ key, f, counted: true })),
+    ...optional.map(([key, f]) => ({ key, f, counted: f.evaluated })),
+  ].map(({ key, f, counted }) => ({
+    key,
+    label: MATCH_FACTOR_LABELS[key],
+    points: f.points,
+    weight: f.weight,
+    evaluated: f.evaluated,
+    counted,
+    reason: f.reason,
+    missing: f.missing,
+  }));
+
+  let earned = 0;
+  let totalWeight = 0;
+  for (const line of factors) {
+    if (!line.counted) continue;
+    earned += line.points;
+    totalWeight += line.weight;
   }
-  return { points: 0, weight, evaluated: true, reason: null, missing: "MRR outside target range" };
+
+  const base = totalWeight > 0 ? (earned / totalWeight) * 100 : 0;
+  const matchScore = Math.max(0, Math.round(base));
+
+  // Reasons keep their original order: fixed factors first, then ARR and MRR.
+  const matchReasons = factors.map((l) => l.reason).filter((v): v is string => Boolean(v));
+  const missingFitReasons = factors.map((l) => l.missing).filter((v): v is string => Boolean(v));
+
+  return { companyId: company.id, matchScore, matchReasons, missingFitReasons, earned, totalWeight, factors };
 }
 
 export function matchInvestorToCompany(
@@ -287,66 +419,8 @@ export function matchInvestorToCompany(
   company: CompanyMatchProfile,
   weights: EngineWeights = DEFAULT_ENGINE_WEIGHTS,
 ): InvestorCompanyMatchResult {
-  if (investor.approval_status !== "approved") {
-    return {
-      companyId: company.id,
-      matchScore: 0,
-      matchReasons: [],
-      missingFitReasons: ["Investor account not approved for matching"],
-    };
-  }
-
-  const sector = scoreSector(investor, company, weights.sector);
-  const stage = scoreStage(investor, company, weights.stage);
-  const geography = scoreGeography(investor, company, weights.geography);
-  const checkSize = scoreCheckSize(investor, company, weights.checkSize);
-  const investorType = scoreInvestorType(investor, company, weights.investorType);
-  const capitalType = scoreCapitalType(investor, company, weights.capitalType);
-  const activeRating = scoreActiveRating(investor, weights.activeRating);
-
-  // Score against the FULL configured rubric: every factor's weight is always in
-  // the denominator, so a factor with no data (on either side) or no match simply
-  // earns 0 of its weight. This means matching a single dimension can NEVER read as
-  // a 100% fit — the score is the true "% of the weighted match rubric satisfied,"
-  // and 100% is reserved for an investor who fits every weighted criterion.
-  // ARR/MRR are opt-in: they count toward the denominator ONLY when evaluated
-  // (both sides have data), so adding them never lowers scores for the common case
-  // where the founder has no ARR/MRR on file. The 7 fixed-rubric factors keep their
-  // always-in-denominator behavior unchanged.
-  const arr = scoreArr(investor, company, weights.arr);
-  const mrr = scoreMrr(investor, company, weights.mrr);
-
-  const fixedFactors = [sector, stage, geography, checkSize, investorType, capitalType, activeRating];
-  const factors = [...fixedFactors, arr, mrr];
-  let earned = 0;
-  let totalWeight = 0;
-  for (const f of fixedFactors) {
-    earned += f.points;
-    totalWeight += f.weight;
-  }
-  for (const f of [arr, mrr]) {
-    if (!f.evaluated) continue; // drops out entirely when no ARR/MRR data
-    earned += f.points;
-    totalWeight += f.weight;
-  }
-
-  const base = totalWeight > 0 ? (earned / totalWeight) * 100 : 0;
-  const matchScore = Math.max(0, Math.round(base));
-
-  const matchReasons = factors
-    .map((item) => item.reason)
-    .filter((value): value is string => Boolean(value));
-
-  const missingFitReasons = factors
-    .map((item) => item.missing)
-    .filter((value): value is string => Boolean(value));
-
-  return {
-    companyId: company.id,
-    matchScore,
-    matchReasons,
-    missingFitReasons,
-  };
+  const { companyId, matchScore, matchReasons, missingFitReasons } = explainMatch(investor, company, weights);
+  return { companyId, matchScore, matchReasons, missingFitReasons };
 }
 
 export function rankCompaniesForInvestor(

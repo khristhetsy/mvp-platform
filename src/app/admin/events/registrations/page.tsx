@@ -85,6 +85,7 @@ export default async function RegistrationPage({
       contactEmail: r.contactEmail,
       company: r.company,
       createdAt: r.createdAt,
+      registeredBy: r.registeredBy,
     }));
     return (
       <AllRegistrationsTable

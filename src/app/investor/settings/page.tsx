@@ -10,6 +10,9 @@ import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { ensureInvestorProfileForUser } from "@/lib/investor/profile";
 import { InvestorProfileCompletenessCard } from "@/components/investor/InvestorProfileCompletenessCard";
 import { InvestorSettingsNav } from "./InvestorSettingsNav";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +28,11 @@ export default async function InvestorSettingsPage({
   const { tab: rawTab } = await searchParams;
   const tab: Tab = rawTab === "integrations" || rawTab === "feedback" ? rawTab : "profile";
 
-  const [investorProfile, googleStatus] = await Promise.all([
+  const [investorProfile, googleStatus, vocabularies, matchConfig] = await Promise.all([
     ensureInvestorProfileForUser(profile.id),
     getGoogleConnectionStatus(supabase, investorId),
+    loadVocabularies(),
+    getInvestorMatchConfig(),
   ]);
 
   return (
@@ -56,10 +61,13 @@ export default async function InvestorSettingsPage({
           </div>
           <div className="p-6">
             <InvestorProfileCompletenessCard profile={investorProfile} />
-            <InvestorOnboardingWizard
-              investorProfile={investorProfile}
-              profileName={profile.full_name ?? profile.email ?? "Investor"}
-            />
+            <VocabularyProvider value={vocabularies}>
+              <InvestorOnboardingWizard
+                investorProfile={investorProfile}
+                profileName={profile.full_name ?? profile.email ?? "Investor"}
+                matchWeights={matchConfig.engineWeights}
+              />
+            </VocabularyProvider>
           </div>
         </section>
       )}

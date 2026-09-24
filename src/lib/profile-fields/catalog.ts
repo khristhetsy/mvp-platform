@@ -43,8 +43,8 @@ export const FIELD_SECTIONS: FieldSection[] = [
   { list: "money_band", title: "Annual EBITDA and Amount of capital", group: "Revenue and financials", note: "The nine contact record bands. Current EBITDA only, never projected. No Add: new options would not exist in the contact records.", factor: "checkSize", addable: false, slugIsLabel: true, wired: true, answerColumns: ["annual_ebitda", "funding_amount_band"] },
 
   { list: "investor_type", title: "Investor type", group: "Investor fit", note: "What the founder seeks, and what the investor is.", factor: "investorType", addable: true, slugIsLabel: false, wired: false },
-  { list: "capital_type", title: "Capital type", group: "Investor fit", note: "Founders answer it. No investor is asked, so the factor never scores.", factor: "capitalType", addable: true, slugIsLabel: false, wired: false },
-  { list: "geography", title: "Geography", group: "Investor fit", note: "Regions for matching. Not yet asked as a selection.", factor: "geography", addable: true, slugIsLabel: false, wired: false },
+  { list: "capital_type", title: "Capital type", group: "Investor fit", note: "Founders pick what they seek; investors pick what they offer (investor onboarding). Scored as capital type.", factor: "capitalType", addable: true, slugIsLabel: false, wired: false },
+  { list: "geography", title: "Geography", group: "Investor fit", note: "Regions for matching. Investors pick their preferred geographies from it.", factor: "geography", addable: true, slugIsLabel: false, wired: true },
   { list: "use_of_funds", title: "Use of funds", group: "Investor fit", note: "Founder onboarding. Read by the CRM investor scorer.", addable: true, slugIsLabel: false, wired: false },
   { list: "business_entity", title: "Business entity", group: "Investor fit", note: "Founder profile. Not scored.", addable: true, slugIsLabel: false, wired: false },
 ];
@@ -93,6 +93,7 @@ const SET = "src/app/founder/settings/settings-form.tsx";
 const ADM_CONTACT = "src/app/admin/sales/contacts/[id]/CompanyLinkedRecordEditor.tsx";
 const ADM_BASICS = "src/components/admin/company-workspace/CompanyBasicsEditor.tsx";
 const PIPE = "src/app/founder/investor-pipeline/InvestorPipelineClient.tsx";
+const INV_ONB = "src/components/InvestorOnboardingWizard.tsx";
 const ROUTES_COMPANY = ["PATCH /api/founder/onboarding", "PATCH /api/companies/[id]", "PATCH /api/admin/companies/[id]/basics"];
 
 export const FIELD_USAGE: FieldUsage[] = [
@@ -100,28 +101,28 @@ export const FIELD_USAGE: FieldUsage[] = [
     name: "Industry", list: "industry", summary: "companies.industry · investor preferred sectors · event sector",
     cells: {
       "Founder onboarding": { kind: "picks", note: "step 2" }, "Founder settings": { kind: "picks" },
-      "Investor onboarding": { kind: "typed", note: "sectors of interest" }, "Event registration": { kind: "picks", note: "separate event sector copy" },
+      "Investor onboarding": { kind: "picks", note: "preferred sectors" }, "Event registration": { kind: "picks", note: "separate event sector copy" },
       "Networking board": { kind: "scores", note: "sector pairing" }, Matching: { kind: "scores", note: "sector" },
       "Event introductions": { kind: "scores", note: "match reason" }, Other: { kind: "none", note: "admin editors, investor pipeline filter" },
     },
-    screens: ["/founder/onboarding step 2", "/founder/settings", "/admin/sales/contacts/[id]", "/admin/companies/[companyId]", "/investor/onboarding (typed)", "/events/[slug]/register (event sector copy)", "/founder/investor-pipeline (filter)"],
+    screens: ["/founder/onboarding step 2", "/founder/settings", "/admin/sales/contacts/[id]", "/admin/companies/[companyId]", "/investor/onboarding", "/events/[slug]/register (event sector copy)", "/founder/investor-pipeline (filter)"],
     stored: ["companies.industry", "investor_profiles.preferred_sectors", "event registration answer: sector"],
     saved: [...ROUTES_COMPANY, "POST /api/investor/onboarding"],
     read: ["investor-company-matching.ts · sector", "preference-match.ts · CRM scorer", "icfo-events/matching-rule.ts · networking pairing", "icfo-events/match-reason.ts · introduction reason"],
     optionList: ["src/lib/industries.ts", "src/lib/icfo-events/sectors.ts (second copy)"],
-    codeRefs: [SET, ADM_CONTACT, ADM_BASICS, PIPE],
+    codeRefs: [SET, ADM_CONTACT, ADM_BASICS, PIPE, INV_ONB],
   },
   {
     name: "Funding stage", list: "funding_stage", summary: "companies.funding_stage",
     cells: {
       "Founder onboarding": { kind: "picks", note: "step 7" }, "Founder settings": { kind: "picks" },
-      "Investor onboarding": { kind: "typed", note: "preferred stages" }, Matching: { kind: "scores", note: "stage" },
+      "Investor onboarding": { kind: "picks", note: "preferred stages" }, Matching: { kind: "scores", note: "stage" },
       Other: { kind: "none", note: "admin editor, investor pipeline filter" },
     },
-    screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred stages (typed)", "/founder/investor-pipeline (filter)"],
+    screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred stages", "/founder/investor-pipeline (filter)"],
     stored: ["companies.funding_stage", "investor_profiles.preferred_stages"],
-    saved: ROUTES_COMPANY, read: ["investor-company-matching.ts · stage", "contact-match.ts · stage"],
-    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts"], codeRefs: [ONB, SET, PIPE],
+    saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"], read: ["investor-company-matching.ts · stage", "contact-match.ts · stage"],
+    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB],
   },
   {
     name: "Operating stage", list: "operating_stage", summary: "companies.operating_stage",
@@ -148,17 +149,17 @@ export const FIELD_USAGE: FieldUsage[] = [
   },
   {
     name: "ARR", list: "arr_band", summary: "companies.arr · investor preferred ARR range",
-    cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "preferred ARR range" }, Matching: { kind: "scores", note: "ARR" }, Other: { kind: "none", note: "admin editor" } },
+    cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "preferred ARR range, one or more bands" }, Matching: { kind: "scores", note: "ARR" }, Other: { kind: "none", note: "admin editor" } },
     screens: ["/founder/onboarding step 8", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred ARR range"],
-    stored: ["companies.arr", "investor_profiles.preferred_arr_range"], saved: [...ROUTES_COMPANY, "POST /api/investor/onboarding"],
-    read: ["investor-company-matching.ts · ARR"], optionList: ["arr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT],
+    stored: ["companies.arr", "investor_profiles.preferred_arr_range"], saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"],
+    read: ["investor-company-matching.ts · ARR"], optionList: ["arr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, INV_ONB],
   },
   {
     name: "MRR", list: "mrr_band", summary: "companies.mrr · investor preferred MRR range",
-    cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "preferred MRR range" }, Matching: { kind: "scores", note: "MRR" }, Other: { kind: "none", note: "admin editor" } },
+    cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "preferred MRR range, one or more bands" }, Matching: { kind: "scores", note: "MRR" }, Other: { kind: "none", note: "admin editor" } },
     screens: ["/founder/onboarding step 8", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred MRR range"],
-    stored: ["companies.mrr", "investor_profiles.preferred_mrr_range"], saved: [...ROUTES_COMPANY, "POST /api/investor/onboarding"],
-    read: ["investor-company-matching.ts · MRR"], optionList: ["mrr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT],
+    stored: ["companies.mrr", "investor_profiles.preferred_mrr_range"], saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"],
+    read: ["investor-company-matching.ts · MRR"], optionList: ["mrr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, INV_ONB],
   },
   {
     name: "Annual EBITDA", list: "money_band", summary: "companies.annual_ebitda",
@@ -186,18 +187,18 @@ export const FIELD_USAGE: FieldUsage[] = [
   },
   {
     name: "Capital type", list: "capital_type", summary: "companies.seeking_capital_types",
-    cells: { "Founder onboarding": { kind: "picks", note: "step 7" }, "Founder settings": { kind: "picks" }, Matching: { kind: "never", note: "no investor side" }, Other: { kind: "none", note: "admin editor" } },
-    screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]"],
-    stored: ["companies.seeking_capital_types"], saved: ROUTES_COMPANY,
-    read: ["investor-company-matching.ts · capital type, never scores: no investor side"],
-    optionList: ["CAPITAL_TYPE_OPTIONS in profile/options.ts"], codeRefs: [ONB, SET],
+    cells: { "Founder onboarding": { kind: "picks", note: "step 7" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "capital types offered" }, Matching: { kind: "scores", note: "capital type" }, Other: { kind: "none", note: "admin editor" } },
+    screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding"],
+    stored: ["companies.seeking_capital_types", "investor_profiles.capital_types"], saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"],
+    read: ["investor-company-matching.ts · capital type", "matching/engine.ts · loads investor capital types"],
+    optionList: ["CAPITAL_TYPE_OPTIONS in profile/options.ts", "capital_type list on this page (investor onboarding)"], codeRefs: [ONB, SET, INV_ONB],
   },
   {
     name: "Geography", list: "geography", summary: "companies.country, state · investor preferred geographies",
-    cells: { "Founder onboarding": { kind: "typed", note: "country, state" }, "Founder settings": { kind: "typed" }, "Investor onboarding": { kind: "typed", note: "preferred geographies" }, Matching: { kind: "scores", note: "geography" } },
-    screens: ["/founder/onboarding step 1 (typed)", "/founder/settings (typed)", "/investor/onboarding (typed)"],
-    stored: ["companies.country, companies.state", "investor_profiles.preferred_geographies"], saved: ["PATCH /api/founder/onboarding", "PATCH /api/companies/[id]", "POST /api/investor/onboarding"],
-    read: ["investor-company-matching.ts · geography"], optionList: ["Geography list on this page is not used by any form yet"], codeRefs: [],
+    cells: { "Founder onboarding": { kind: "typed", note: "country, state" }, "Founder settings": { kind: "typed" }, "Investor onboarding": { kind: "picks", note: "preferred geographies" }, Matching: { kind: "scores", note: "geography" } },
+    screens: ["/founder/onboarding step 1 (typed)", "/founder/settings (typed)", "/investor/onboarding"],
+    stored: ["companies.country, companies.state", "investor_profiles.preferred_geographies"], saved: ["PATCH /api/founder/onboarding", "PATCH /api/companies/[id]", "PATCH /api/investor/onboarding"],
+    read: ["investor-company-matching.ts · geography"], optionList: ["geography list on this page (investor onboarding)"], codeRefs: [INV_ONB],
   },
   {
     name: "Use of funds", list: "use_of_funds", summary: "companies.use_of_funds",
@@ -231,6 +232,12 @@ export const LIST_CONSTANTS: Record<string, string> = {
   're:(vocab\\w*\\.|list: "|listOptions\\("|\\(\\)\\.)mrr_band\\b': "MRR",
   're:(vocab\\w*\\.|list: "|listOptions\\("|\\(\\)\\.)money_band\\b': "Amount of capital",
   MONEY_BAND_OPTIONS: "Amount of capital",
+  're:useVocabulary\\("industry"': "Industry",
+  're:useVocabulary\\("funding_stage"': "Funding stage",
+  're:useVocabulary\\("capital_type"': "Capital type",
+  're:useVocabulary\\("geography"': "Geography",
+  're:useVocabulary\\("arr_band"': "ARR",
+  're:useVocabulary\\("mrr_band"': "MRR",
   EBITDA_BAND_OPTIONS: "Annual EBITDA",
   FUNDING_AMOUNT_BAND_OPTIONS: "Amount of capital",
 };

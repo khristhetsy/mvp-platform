@@ -11,6 +11,8 @@ export type AllRegRow = {
   contactEmail: string | null;
   company: string | null;
   createdAt: string;
+  /** "staff" when added from an event's registrations board. */
+  registeredBy: "self" | "staff";
 };
 
 const I = "rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs";
@@ -46,22 +48,27 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
   const [q, setQ] = useState("");
   const [eventId, setEventId] = useState("");
   const [type, setType] = useState("");
+  const [by, setBy] = useState<"" | "self" | "staff">("");
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
       if (eventId && r.eventId !== eventId) return false;
       if (type && r.attendeeType !== type) return false;
+      if (by && r.registeredBy !== by) return false;
       if (!needle) return true;
       return [r.contactName, r.contactEmail, r.company, r.eventTitle]
         .filter(Boolean).join(" ").toLowerCase().includes(needle);
     });
-  }, [rows, q, eventId, type]);
+  }, [rows, q, eventId, type, by]);
+
+  // Staff-added registrations count in every total, and are shown separately.
+  const staffCount = shown.filter((r) => r.registeredBy === "staff").length;
 
   function exportCsv() {
-    const header = ["Name", "Email", "Company", "Type", "Event", "Registered"];
+    const header = ["Name", "Email", "Company", "Type", "Event", "Registered", "Registered by"];
     const body = shown.map((r) => [
-      r.contactName, r.contactEmail, r.company, r.attendeeType, r.eventTitle, r.createdAt,
+      r.contactName, r.contactEmail, r.company, r.attendeeType, r.eventTitle, r.createdAt, r.registeredBy,
     ].map(csvCell).join(","));
     const blob = new Blob([[header.join(","), ...body].join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -87,12 +94,18 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
           <option value="">Any type</option>
           {types.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
+        <select value={by} onChange={(e) => setBy(e.target.value as "" | "self" | "staff")} className={I} aria-label="Registered by">
+          <option value="">Registered by anyone</option>
+          <option value="staff">Registered by staff</option>
+          <option value="self">Registered themselves</option>
+        </select>
         <button type="button" onClick={exportCsv}
           className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
           Export CSV
         </button>
         <span className="text-[11.5px] text-[var(--text-muted)]">
           {shown.length === rows.length ? `${rows.length}` : `${shown.length} of ${rows.length}`}
+          {" · "}staff {staffCount} · self {shown.length - staffCount}
         </span>
       </div>
 
@@ -106,6 +119,7 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
             <tr className="bg-slate-50 text-left text-[10.4px] uppercase tracking-wide text-[var(--text-muted)]">
               <th className="px-3.5 py-2 font-bold">Attendee</th>
               <th className="px-3.5 py-2 font-bold">Type</th>
+              <th className="px-3.5 py-2 font-bold">Registered by</th>
               <th className="px-3.5 py-2 font-bold">Event</th>
               <th className="px-3.5 py-2 font-bold">Registered</th>
             </tr>
@@ -126,6 +140,7 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
                     </span>
                   ) : <span className="text-[var(--text-muted)]">—</span>}
                 </td>
+                <td className="px-3.5 py-2 text-[var(--text-secondary)]">{r.registeredBy === "staff" ? "Staff" : "Self"}</td>
                 <td className="px-3.5 py-2 text-[var(--text-secondary)]">{r.eventTitle ?? "—"}</td>
                 <td className="px-3.5 py-2 text-[var(--text-muted)]">{fmt(r.createdAt)}</td>
               </tr>

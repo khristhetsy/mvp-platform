@@ -51,6 +51,9 @@ export async function PATCH(request: Request) {
     check_size_max: parsed.data.check_size_max ?? null,
     preferred_arr_range: parsed.data.preferred_arr_range?.trim() || null,
     preferred_mrr_range: parsed.data.preferred_mrr_range?.trim() || null,
+    // Only written when the form sends it, so a client without the field never
+    // clears an existing answer.
+    ...(parsed.data.capital_types !== undefined ? { capital_types: parseCommaList(parsed.data.capital_types) } : {}),
     preferred_sectors: parseCommaList(parsed.data.preferred_sectors),
     preferred_geographies: parseCommaList(parsed.data.preferred_geographies),
     preferred_stages: parseCommaList(parsed.data.preferred_stages),

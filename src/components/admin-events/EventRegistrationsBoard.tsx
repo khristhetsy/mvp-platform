@@ -18,6 +18,18 @@ const TYPE_LABEL: Record<string, string> = {
   sponsor: "Sponsor",
 };
 const TYPE_KEYS = ["investor", "founder", "service", "sponsor"] as const;
+const BY_KEYS = ["all", "staff", "self"] as const;
+type ByFilter = (typeof BY_KEYS)[number];
+const BY_LABEL: Record<ByFilter, string> = { all: "Everyone", staff: "Staff", self: "Self" };
+
+/** Who registered the row. Staff-added registrations count like any other. */
+function RegisteredByTag({ by }: Readonly<{ by: EventRegistrationRow["registeredBy"] }>) {
+  return by === "staff" ? (
+    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">Staff</span>
+  ) : (
+    <span className="rounded bg-[var(--indigo-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--indigo)]">Self</span>
+  );
+}
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -33,6 +45,7 @@ function answerEntries(answers: Record<string, unknown>): [string, string][] {
 export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventId: string; initial: EventRegistrationRow[]; fieldSet?: FieldSet }) {
   const [rows, setRows] = useState<EventRegistrationRow[]>(initial);
   const [filter, setFilter] = useState<string>("all");
+  const [byFilter, setByFilter] = useState<ByFilter>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -46,7 +59,18 @@ export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventI
     return c;
   }, [rows]);
 
-  const visible = filter === "all" ? rows : rows.filter((r) => r.attendeeType === filter);
+  // Registered by staff vs by the attendee: counted separately, and every row
+  // still counts in the total.
+  const byCounts = useMemo(() => {
+    const staff = rows.filter((r) => r.registeredBy === "staff").length;
+    return { all: rows.length, staff, self: rows.length - staff } satisfies Record<ByFilter, number>;
+  }, [rows]);
+
+  const visible = rows.filter(
+    (r) =>
+      (filter === "all" || r.attendeeType === filter) &&
+      (byFilter === "all" || r.registeredBy === byFilter),
+  );
   const selectableEmails = useMemo(() => visible.filter((r) => r.contactEmail && selected.has(r.id)).map((r) => r.contactEmail as string), [visible, selected]);
 
   function toggleSelect(id: string) {
@@ -120,7 +144,22 @@ export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventI
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {([
+          ["Registrations", byCounts.all, "Everyone, counted together"],
+          ["Registered by staff", byCounts.staff, "Added from this board"],
+          ["Registered themselves", byCounts.self, "Through the event form"],
+        ] as const).map(([label, value, sub]) => (
+          <div key={label} className="rounded-lg border border-[var(--border-subtle)] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--navy)]">{value}</p>
+            <p className="text-xs text-[var(--text-muted)]">{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="w-24 text-xs text-[var(--text-muted)]">Type</span>
         {(["all", ...TYPE_KEYS] as const).map((k) => (
           <button
             key={k}
@@ -131,6 +170,22 @@ export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventI
             }`}
           >
             {k === "all" ? "All" : TYPE_LABEL[k]} · {counts[k] ?? 0}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="w-24 text-xs text-[var(--text-muted)]">Registered by</span>
+        {BY_KEYS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setByFilter(k)}
+            aria-pressed={byFilter === k}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              byFilter === k ? "bg-[var(--navy)] text-white" : "border border-[var(--border-subtle)] text-[var(--text-secondary)]"
+            }`}
+          >
+            {BY_LABEL[k]} · {byCounts[k]}
           </button>
         ))}
       </div>
@@ -151,16 +206,17 @@ export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventI
         <p className="mt-6 text-sm text-[var(--text-muted)]">No registrations in this view yet.</p>
       ) : view === "list" ? (
         <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border-subtle)]">
-          <div className="grid min-w-[640px] grid-cols-[28px_1.6fr_1fr_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">
+          <div className="grid min-w-[740px] grid-cols-[28px_1.6fr_1fr_90px_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">
             <input type="checkbox" checked={visible.length > 0 && visible.every((r) => selected.has(r.id))} onChange={toggleAll} className="h-3.5 w-3.5" aria-label="Select all" />
-            <span>Name</span><span>Type</span><span>Email</span><span>Registered</span><span className="text-right">Actions</span>
+            <span>Name</span><span>Type</span><span>Registered by</span><span>Email</span><span>Registered</span><span className="text-right">Actions</span>
           </div>
           {visible.map((r) => (
             <div key={r.id}>
-              <div className="grid min-w-[640px] grid-cols-[28px_1.6fr_1fr_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-xs">
+              <div className="grid min-w-[740px] grid-cols-[28px_1.6fr_1fr_90px_1.6fr_90px_96px] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-xs">
                 <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="h-3.5 w-3.5" aria-label="Select registration" />
                 <span className="truncate font-medium text-[var(--navy)]">{r.contactName || r.company || "Unnamed"}</span>
                 <span className="text-[var(--text-secondary)]">{r.attendeeType ? (TYPE_LABEL[r.attendeeType] ?? r.attendeeType) : "—"}</span>
+                <span><RegisteredByTag by={r.registeredBy} /></span>
                 <span className="truncate text-[var(--text-muted)]">{r.contactEmail ?? "—"}</span>
                 <span className="text-[var(--text-muted)]">{fmtDate(r.createdAt)}</span>
                 <span className="flex items-center justify-end gap-2">
@@ -194,6 +250,7 @@ export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventI
                           {TYPE_LABEL[r.attendeeType] ?? r.attendeeType}
                         </span>
                       )}
+                      <RegisteredByTag by={r.registeredBy} />
                     </div>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                       {r.company && <>{r.company} · </>}

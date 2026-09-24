@@ -1321,6 +1321,7 @@ export type Database = {
           check_size_max: number | null;
           preferred_arr_range: string | null;
           preferred_mrr_range: string | null;
+          capital_types: string[];
           preferred_sectors: string[];
           preferred_geographies: string[];
           preferred_stages: string[];
@@ -1359,6 +1360,7 @@ export type Database = {
           check_size_max?: number | null;
           preferred_arr_range?: string | null;
           preferred_mrr_range?: string | null;
+          capital_types?: string[];
           preferred_sectors?: string[];
           preferred_geographies?: string[];
           preferred_stages?: string[];
@@ -1395,6 +1397,7 @@ export type Database = {
           check_size_max?: number | null;
           preferred_arr_range?: string | null;
           preferred_mrr_range?: string | null;
+          capital_types?: string[];
           preferred_sectors?: string[];
           preferred_geographies?: string[];
           preferred_stages?: string[];

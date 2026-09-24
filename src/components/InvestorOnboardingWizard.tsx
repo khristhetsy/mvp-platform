@@ -2,11 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import { CONTACT_PREFERENCES, INVESTOR_TYPES, type InvestorProfileRecord } from "@/lib/investor/types";
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+import { useVocabulary } from "@/lib/vocabulary/provider";
+import { resolveSlug, type VocabularyOption } from "@/lib/vocabulary/lists";
+import {
+  DEFAULT_ENGINE_WEIGHTS,
+  joinBandList,
+  splitBandList,
+  type EngineWeights,
+} from "@/lib/matching/investor-company-matching";
+import { investorMeter } from "@/lib/matching/matchable-points";
+import { ChipMultiSelect, MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
 
 const investorProfileSchema = z.object({
   investor_type: z.string().min(1),
@@ -23,12 +33,39 @@ function joinList(values: string[] | null | undefined) {
   return (values ?? []).join(", ");
 }
 
+/**
+ * Stored values for a picker. Lists are stored as labels (the matcher compares
+ * text), so a saved value that names an option, by slug or label, maps to that
+ * option's label. A value that names no option is kept as it is, so an answer
+ * typed before the pickers existed is shown and saved back, never dropped.
+ */
+function toLabels(stored: readonly string[] | null | undefined, options: VocabularyOption[]): string[] {
+  return (stored ?? [])
+    .map((v) => {
+      const slug = resolveSlug(options, v);
+      return slug ? (options.find((o) => o.slug === slug)?.label ?? v) : v;
+    })
+    .filter((v) => v.trim());
+}
+
+/** Picker options: the offered list, plus any held value that is not on it. */
+function pickerOptions(options: VocabularyOption[], held: string[]) {
+  const labels = options.map((o) => o.label);
+  return [
+    ...options.map((o) => ({ value: o.label, label: o.label })),
+    ...held.filter((h) => !labels.includes(h)).map((h) => ({ value: h, label: h })),
+  ];
+}
+
 export function InvestorOnboardingWizard({
   investorProfile,
   profileName,
+  matchWeights = DEFAULT_ENGINE_WEIGHTS,
 }: Readonly<{
   investorProfile: InvestorProfileRecord;
   profileName: string;
+  /** The matching engine's weights (admin match settings), for the meter. */
+  matchWeights?: EngineWeights;
 }>) {
   const t = useTranslations("sharedCmp");
   const router = useRouter();
@@ -42,11 +79,33 @@ export function InvestorOnboardingWizard({
   const [checkSizeMax, setCheckSizeMax] = useState(
     investorProfile.check_size_max != null ? String(investorProfile.check_size_max) : "",
   );
-  const [preferredArrRange, setPreferredArrRange] = useState(investorProfile.preferred_arr_range ?? "");
-  const [preferredMrrRange, setPreferredMrrRange] = useState(investorProfile.preferred_mrr_range ?? "");
-  const [preferredSectors, setPreferredSectors] = useState(joinList(investorProfile.preferred_sectors));
-  const [preferredGeographies, setPreferredGeographies] = useState(joinList(investorProfile.preferred_geographies));
-  const [preferredStages, setPreferredStages] = useState(joinList(investorProfile.preferred_stages));
+  // Every field the matcher reads is a selection from the shared option lists
+  // (Admin, Profile and fields). The thesis stays free text, read by a person.
+  const industryList = useVocabulary("industry").options;
+  const geographyList = useVocabulary("geography").options;
+  const stageList = useVocabulary("funding_stage").options;
+  const capitalList = useVocabulary("capital_type").options;
+  const arrList = useVocabulary("arr_band").options;
+  const mrrList = useVocabulary("mrr_band").options;
+
+  const [preferredArrBands, setPreferredArrBands] = useState<string[]>(() =>
+    toLabels(splitBandList(investorProfile.preferred_arr_range), arrList),
+  );
+  const [preferredMrrBands, setPreferredMrrBands] = useState<string[]>(() =>
+    toLabels(splitBandList(investorProfile.preferred_mrr_range), mrrList),
+  );
+  const [preferredSectors, setPreferredSectors] = useState<string[]>(() =>
+    toLabels(investorProfile.preferred_sectors, industryList),
+  );
+  const [preferredGeographies, setPreferredGeographies] = useState<string[]>(() =>
+    toLabels(investorProfile.preferred_geographies, geographyList),
+  );
+  const [preferredStages, setPreferredStages] = useState<string[]>(() =>
+    toLabels(investorProfile.preferred_stages, stageList),
+  );
+  const [capitalTypes, setCapitalTypes] = useState<string[]>(() =>
+    toLabels(investorProfile.capital_types ?? [], capitalList),
+  );
   const [accreditedStatus, setAccreditedStatus] = useState(investorProfile.accredited_status);
   const [investmentThesis, setInvestmentThesis] = useState(investorProfile.investment_thesis ?? "");
   const [contactPreference, setContactPreference] = useState(investorProfile.contact_preference ?? "platform");
@@ -62,6 +121,26 @@ export function InvestorOnboardingWizard({
   const isApproved = investorProfile.approval_status === "approved";
 
   const BASE_INPUT = "rounded-xl border px-4 py-2.5 text-sm w-full";
+  const locked = isPending || isApproved;
+
+  const meter = useMemo(
+    () =>
+      investorMeter(
+        {
+          sectors: preferredSectors,
+          stages: preferredStages,
+          checkSizeMin,
+          checkSizeMax,
+          geographies: preferredGeographies,
+          investorType,
+          capitalTypes,
+          arrBands: preferredArrBands,
+          mrrBands: preferredMrrBands,
+        },
+        matchWeights,
+      ),
+    [preferredSectors, preferredStages, checkSizeMin, checkSizeMax, preferredGeographies, investorType, capitalTypes, preferredArrBands, preferredMrrBands, matchWeights],
+  );
 
   async function save(submit: boolean) {
     setIsSaving(true);
@@ -70,9 +149,9 @@ export function InvestorOnboardingWizard({
     if (submit) {
       const ok = validate(investorProfileSchema, {
         investor_type: investorType,
-        preferred_sectors: preferredSectors,
-        preferred_geographies: preferredGeographies,
-        preferred_stages: preferredStages,
+        preferred_sectors: joinList(preferredSectors),
+        preferred_geographies: joinList(preferredGeographies),
+        preferred_stages: joinList(preferredStages),
         investment_thesis: investmentThesis,
         accredited_status: accreditedStatus,
       });
@@ -90,11 +169,12 @@ export function InvestorOnboardingWizard({
         firm_name: firmName || undefined,
         check_size_min: checkSizeMin ? Number(checkSizeMin) : undefined,
         check_size_max: checkSizeMax ? Number(checkSizeMax) : undefined,
-        preferred_arr_range: preferredArrRange || undefined,
-        preferred_mrr_range: preferredMrrRange || undefined,
-        preferred_sectors: preferredSectors,
-        preferred_geographies: preferredGeographies,
-        preferred_stages: preferredStages,
+        preferred_arr_range: joinBandList(preferredArrBands) || undefined,
+        preferred_mrr_range: joinBandList(preferredMrrBands) || undefined,
+        capital_types: joinList(capitalTypes),
+        preferred_sectors: joinList(preferredSectors),
+        preferred_geographies: joinList(preferredGeographies),
+        preferred_stages: joinList(preferredStages),
         accredited_status: accreditedStatus,
         investment_thesis: investmentThesis,
         contact_preference: contactPreference,
@@ -133,6 +213,7 @@ export function InvestorOnboardingWizard({
   }
 
   return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
     <form
       className="space-y-8"
       onSubmit={(event) => {
@@ -256,51 +337,69 @@ export function InvestorOnboardingWizard({
           </FormField>
         </div>
 
+        <FormField label={t("preferred_sectors")} error={getError("preferred_sectors")} required hint="Pick every industry you invest in.">
+          <ChipMultiSelect
+            ariaLabel={t("preferred_sectors")}
+            options={pickerOptions(industryList, preferredSectors)}
+            selected={preferredSectors}
+            disabled={locked}
+            onChange={(v) => { setPreferredSectors(v); clearError("preferred_sectors"); }}
+          />
+        </FormField>
+
+        <FormField label={t("investment_stage_preference")} error={getError("preferred_stages")} required>
+          <ChipMultiSelect
+            ariaLabel={t("investment_stage_preference")}
+            options={pickerOptions(stageList, preferredStages)}
+            selected={preferredStages}
+            disabled={locked}
+            onChange={(v) => { setPreferredStages(v); clearError("preferred_stages"); }}
+          />
+        </FormField>
+
+        <FormField label={t("preferred_geographies")} error={getError("preferred_geographies")} required>
+          <ChipMultiSelect
+            ariaLabel={t("preferred_geographies")}
+            options={pickerOptions(geographyList, preferredGeographies)}
+            selected={preferredGeographies}
+            disabled={locked}
+            onChange={(v) => { setPreferredGeographies(v); clearError("preferred_geographies"); }}
+          />
+        </FormField>
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Preferred ARR range" error={getError("preferred_arr_range")} hint="Target company ARR — e.g. $1M – $5M">
-            <input
-              className={`${BASE_INPUT} ${inputCls("preferred_arr_range")}`}
-              value={preferredArrRange}
-              onChange={(e) => { setPreferredArrRange(e.target.value); clearError("preferred_arr_range"); }}
-              placeholder="$1M – $5M"
+          <FormField label="Preferred ARR range" error={getError("preferred_arr_range")} hint="The same bands founders pick from. Pick all that apply.">
+            <ChipMultiSelect
+              ariaLabel="Preferred ARR range"
+              options={pickerOptions(arrList, preferredArrBands)}
+              selected={preferredArrBands}
+              disabled={locked}
+              onChange={(v) => { setPreferredArrBands(v); clearError("preferred_arr_range"); }}
             />
           </FormField>
-          <FormField label="Preferred MRR range" error={getError("preferred_mrr_range")} hint="Target company MRR — e.g. $80k – $400k">
-            <input
-              className={`${BASE_INPUT} ${inputCls("preferred_mrr_range")}`}
-              value={preferredMrrRange}
-              onChange={(e) => { setPreferredMrrRange(e.target.value); clearError("preferred_mrr_range"); }}
-              placeholder="$80k – $400k"
+          <FormField label="Preferred MRR range" error={getError("preferred_mrr_range")} hint="The same bands founders pick from. Pick all that apply.">
+            <ChipMultiSelect
+              ariaLabel="Preferred MRR range"
+              options={pickerOptions(mrrList, preferredMrrBands)}
+              selected={preferredMrrBands}
+              disabled={locked}
+              onChange={(v) => { setPreferredMrrBands(v); clearError("preferred_mrr_range"); }}
             />
           </FormField>
         </div>
 
-        <FormField label={t("preferred_sectors")} error={getError("preferred_sectors")} required hint="Comma-separated — e.g. FinTech, SaaS, HealthTech">
-          <input
-            className={`${BASE_INPUT} ${inputCls("preferred_sectors")}`}
-            value={preferredSectors}
-            onChange={(e) => { setPreferredSectors(e.target.value); clearError("preferred_sectors"); }}
-          />
-        </FormField>
-
-        <FormField label={t("preferred_geographies")} error={getError("preferred_geographies")} required hint="Comma-separated — e.g. US, Europe, LATAM">
-          <input
-            className={`${BASE_INPUT} ${inputCls("preferred_geographies")}`}
-            value={preferredGeographies}
-            onChange={(e) => { setPreferredGeographies(e.target.value); clearError("preferred_geographies"); }}
-          />
-        </FormField>
-
-        <FormField label={t("investment_stage_preference")} error={getError("preferred_stages")} required hint="Comma-separated — e.g. Pre-seed, Seed, Series A">
-          <input
-            className={`${BASE_INPUT} ${inputCls("preferred_stages")}`}
-            value={preferredStages}
-            onChange={(e) => { setPreferredStages(e.target.value); clearError("preferred_stages"); }}
-            placeholder={t("pre_seed_seed_series_a")}
+        <FormField label="Capital type" error={getError("capital_types")} hint="What you offer. Matched against what founders are seeking.">
+          <ChipMultiSelect
+            ariaLabel="Capital type"
+            options={pickerOptions(capitalList, capitalTypes)}
+            selected={capitalTypes}
+            disabled={locked}
+            onChange={(v) => { setCapitalTypes(v); clearError("capital_types"); }}
           />
         </FormField>
 
         <FormField label={t("investment_thesis")} error={getError("investment_thesis")} required hint="Min 20 characters, max 5000">
+          <div className="-mt-1 mb-1"><ReadByPersonBadge /></div>
           <textarea
             className={`min-h-28 ${BASE_INPUT} ${inputCls("investment_thesis")}`}
             value={investmentThesis}
@@ -361,5 +460,7 @@ export function InvestorOnboardingWizard({
         </button>
       </div>
     </form>
+      <MatchablePointsMeter meter={meter} className="lg:sticky lg:top-6" />
+    </div>
   );
 }
