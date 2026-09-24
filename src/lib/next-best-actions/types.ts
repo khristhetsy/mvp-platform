@@ -110,6 +110,13 @@ export type ComputeNextBestActionsOptions = {
   sync?: boolean;
   /** Include dismissed/completed in response (default false). */
   includeInactive?: boolean;
+  /**
+   * Run the sync write after the response is sent instead of blocking it.
+   * The response still merges fresh computed actions with persisted rows.
+   */
+  syncInBackground?: boolean;
+  /** Admin role only: reuse data the caller already loaded. */
+  adminPreload?: import("@/lib/next-best-actions/compute-admin-actions").AdminNbaPreload;
 };
 
 export type NextBestActionsResult = {

@@ -14,7 +14,7 @@ function LoadingSpinner({ label }: Readonly<{ label: string }>) {
   );
 }
 
-function PanelSkeleton() {
+export function PanelSkeleton() {
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
       <div className="border-b border-slate-100 px-5 py-4">

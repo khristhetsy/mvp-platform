@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminDashboardShell } from "@/components/AdminDashboardShell";
@@ -27,15 +28,36 @@ import { canSeeCard, canActOnCard } from "@/lib/rbac/dashboard-cards";
 import { getPersonalDashboard } from "@/lib/dashboard/personal";
 import { PersonalDashboard } from "@/components/admin/PersonalDashboard";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
+import { MetricSkeletonRow } from "@/components/ui/Skeleton";
+import { PanelSkeleton } from "@/components/route-boundaries/RouteSegmentLoading";
 
 export const dynamic = "force-dynamic";
+
+type ServiceClient = ReturnType<typeof createServiceRoleClient>;
+type AdminRole = "admin" | "analyst";
+type AdminProfile = Awaited<ReturnType<typeof requireRole>>;
+type CardPermissions = Awaited<ReturnType<typeof getEffectivePermissions>>["permissions"];
+
+/**
+ * The four sources both the command center and Operational priorities need.
+ * Loaded once per request and shared, instead of each section querying them.
+ */
+function loadSharedCore(supabase: ServiceClient) {
+  return Promise.all([
+    getAdminDashboardMetrics(supabase),
+    getAdminQueueSummary(supabase).catch(() => []),
+    getComplianceMetrics(supabase),
+    getOperationalActivityFeed(supabase, { limit: 30 }).catch(() => ({ items: [], total: 0, hasMore: false })),
+  ]);
+}
+type SharedCore = Awaited<ReturnType<typeof loadSharedCore>>;
 
 export default async function AdminDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const t = await getTranslations("admin.dashboard");
   const supabase = createServiceRoleClient();
   const loadedAt = new Date().toISOString();
-  const adminRole = profile.role === "analyst" ? "analyst" : "admin";
+  const adminRole: AdminRole = profile.role === "analyst" ? "analyst" : "admin";
 
   // Resolve the viewer's effective permissions (role defaults + per-user
   // overrides + super-admin), then gate each dashboard card on them. This is
@@ -54,44 +76,120 @@ export default async function AdminDashboardPage() {
     );
   }
 
+  // Started once here; both streamed sections await the same promise.
+  const corePromise = loadSharedCore(supabase);
+
+  return (
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}>
+      <div className="mb-6 border-b border-slate-200 px-1 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">{t("eyebrow")}</p>
+            <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">{t("title")}</h1>
+          </div>
+          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#E6F1FB", color: "#1A6CE4" }}>
+            {profile.role}
+          </span>
+        </div>
+      </div>
+      {/* Operations Command Center — primary surface, pinned to the top. */}
+      <Suspense fallback={<CommandCenterFallback />}>
+        <CommandCenterSection
+          supabase={supabase}
+          corePromise={corePromise}
+          permissions={permissions}
+          userId={profile.id}
+          userRole={profile.role}
+          loadedAt={loadedAt}
+        />
+      </Suspense>
+      {showCard("platform_health") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-heartbeat" tone="teal" title="Platform health" subtitle="Reviews, intros, compliance & approvals at a glance">
+            <AdminPlatformHealthWidget headerless />
+          </WorkspaceSection>
+        </div>
+      ) : null}
+      {showCard("next_best_actions") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-checklist" tone="amber" title="Operational priorities" subtitle="Prioritized workflow actions with lifecycle tracking">
+            <Suspense fallback={<PanelSkeleton />}>
+              <OperationalPrioritiesSection
+                supabase={supabase}
+                profile={profile}
+                adminRole={adminRole}
+                corePromise={corePromise}
+                readOnly={!canActOnCard("next_best_actions", permissions)}
+              />
+            </Suspense>
+          </WorkspaceSection>
+        </div>
+      ) : null}
+      {showCard("upcoming_meetings") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-calendar" tone="blue" title="Upcoming meetings" subtitle="Your next scheduled calls">
+            <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
+          </WorkspaceSection>
+        </div>
+      ) : null}
+    </AppShell>
+  );
+}
+
+function CommandCenterFallback() {
+  return (
+    <div className="mb-6 px-1" aria-busy="true">
+      <MetricSkeletonRow />
+      <div className="grid gap-5 md:grid-cols-2">
+        <PanelSkeleton />
+        <PanelSkeleton />
+      </div>
+    </div>
+  );
+}
+
+async function CommandCenterSection({
+  supabase,
+  corePromise,
+  permissions,
+  userId,
+  userRole,
+  loadedAt,
+}: Readonly<{
+  supabase: ServiceClient;
+  corePromise: Promise<SharedCore>;
+  permissions: CardPermissions;
+  userId: string;
+  userRole: AdminProfile["role"];
+  loadedAt: string;
+}>) {
   const [
-    metrics,
+    [metrics, queueSummary, compliance, operationalFeed],
     companies,
     investorActivity,
     crmActivity,
-    operationalFeed,
-    queueSummary,
-    compliance,
     investorCount,
     pendingInvestorApprovals,
     pendingUpgrades,
     spvPipeline,
     reportsGenerated,
     notificationCount,
-    nextBestActions,
     orchestrationCounts,
     scheduledCounts,
     executionSummary,
     automationSummary,
   ] = await Promise.all([
-    getAdminDashboardMetrics(supabase),
+    corePromise,
     listAdminCompanies(supabase),
     listAdminInvestorActivity(supabase),
     listRecentInvestorCrmActivity(supabase),
-    getOperationalActivityFeed(supabase, { limit: 30 }).catch(() => ({ items: [], total: 0, hasMore: false })),
-    getAdminQueueSummary(supabase).catch(() => []),
-    getComplianceMetrics(supabase),
     supabase.from("profiles").select("id", { count: "exact", head: true }).ilike("role", "investor"),
     supabase.from("investor_profiles").select("id", { count: "exact", head: true }).eq("approval_status", "pending"),
     supabase.from("upgrade_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("spv_opportunities").select("id", { count: "exact", head: true }).neq("status", "closed"),
     supabase.from("diligence_reports").select("id", { count: "exact", head: true }),
     supabase.from("notifications").select("id", { count: "exact", head: true }),
-    loadAndMergeNextBestActions({
-      profile,
-      supabase,
-      options: { role: adminRole, limit: 5, sync: true },
-    }),
     getAdminOrchestrationCounts(supabase),
     getScheduledOperationalCounts(supabase),
     loadAdminOrchestrationExecutionSummary().catch(() => ({
@@ -138,76 +236,76 @@ export default async function AdminDashboardPage() {
   );
 
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
-          profileEmail={profile.email ?? undefined}>
-      <div className="mb-6 border-b border-slate-200 px-1 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">{t("eyebrow")}</p>
-            <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">{t("title")}</h1>
-          </div>
-          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#E6F1FB", color: "#1A6CE4" }}>
-            {profile.role}
-          </span>
-        </div>
-      </div>
-      {/* Operations Command Center — primary surface, pinned to the top. */}
-      <AdminDashboardShell
-        permissions={permissions}
-        userId={profile.id}
-        userRole={profile.role}
-        serviceRoleConfigured={Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}
-        loadedAt={loadedAt}
-        metrics={metrics}
-        snapshot={{
-          totalInvestors: investorCount.count ?? 0,
-          pendingInvestorApprovals: pendingInvestorApprovals.count ?? 0,
-          openComplianceEvents: compliance.openEvents,
-          pendingUpgradeRequests: pendingUpgrades.count ?? 0,
-          spvPipelineCount: spvPipeline.count ?? 0,
-          notificationCount: notificationCount.count ?? 0,
-          reportsGenerated: reportsGenerated.count ?? 0,
-        }}
-        pendingCount={pendingCompanies.length}
-        companyCards={companyCards}
-        investorActivity={investorActivity}
-        crmActivity={crmActivity}
-        operationalActivity={operationalFeed.items}
-        queueSummary={queueSummary}
-        orchestrationCounts={orchestrationCounts}
-        scheduledCounts={scheduledCounts}
-        executionSummary={executionSummary}
-        automationSummary={automationSummary}
-      />
-      {showCard("platform_health") ? (
-        <div className="mb-6 px-1">
-          <WorkspaceSection icon="ti-heartbeat" tone="teal" title="Platform health" subtitle="Reviews, intros, compliance & approvals at a glance">
-            <AdminPlatformHealthWidget headerless />
-          </WorkspaceSection>
-        </div>
-      ) : null}
-      {showCard("next_best_actions") ? (
-        <div className="mb-6 px-1">
-          <WorkspaceSection icon="ti-checklist" tone="amber" title="Operational priorities" subtitle="Prioritized workflow actions with lifecycle tracking">
-            <NextBestActionsPanel
-              role={adminRole}
-              initialActions={nextBestActions.actions}
-              limit={5}
-              showEscalate
-              hideHeader
-              readOnly={!canActOnCard("next_best_actions", permissions)}
-              viewAllHref="/admin/actions?priority=critical"
-            />
-          </WorkspaceSection>
-        </div>
-      ) : null}
-      {showCard("upcoming_meetings") ? (
-        <div className="mb-6 px-1">
-          <WorkspaceSection icon="ti-calendar" tone="blue" title="Upcoming meetings" subtitle="Your next scheduled calls">
-            <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
-          </WorkspaceSection>
-        </div>
-      ) : null}
-    </AppShell>
+    <AdminDashboardShell
+      permissions={permissions}
+      userId={userId}
+      userRole={userRole}
+      serviceRoleConfigured={Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}
+      loadedAt={loadedAt}
+      metrics={metrics}
+      snapshot={{
+        totalInvestors: investorCount.count ?? 0,
+        pendingInvestorApprovals: pendingInvestorApprovals.count ?? 0,
+        openComplianceEvents: compliance.openEvents,
+        pendingUpgradeRequests: pendingUpgrades.count ?? 0,
+        spvPipelineCount: spvPipeline.count ?? 0,
+        notificationCount: notificationCount.count ?? 0,
+        reportsGenerated: reportsGenerated.count ?? 0,
+      }}
+      pendingCount={pendingCompanies.length}
+      companyCards={companyCards}
+      investorActivity={investorActivity}
+      crmActivity={crmActivity}
+      operationalActivity={operationalFeed.items}
+      queueSummary={queueSummary}
+      orchestrationCounts={orchestrationCounts}
+      scheduledCounts={scheduledCounts}
+      executionSummary={executionSummary}
+      automationSummary={automationSummary}
+    />
+  );
+}
+
+async function OperationalPrioritiesSection({
+  supabase,
+  profile,
+  adminRole,
+  corePromise,
+  readOnly,
+}: Readonly<{
+  supabase: ServiceClient;
+  profile: AdminProfile;
+  adminRole: AdminRole;
+  corePromise: Promise<SharedCore>;
+  readOnly: boolean;
+}>) {
+  const [metrics, queueSummary, compliance, operationalFeed] = await corePromise;
+  const nextBestActions = await loadAndMergeNextBestActions({
+    profile,
+    supabase,
+    options: {
+      role: adminRole,
+      limit: 5,
+      sync: true,
+      syncInBackground: true,
+      adminPreload: {
+        metrics,
+        queueSummary,
+        compliance,
+        activityItems: operationalFeed.items,
+      },
+    },
+  });
+
+  return (
+    <NextBestActionsPanel
+      role={adminRole}
+      initialActions={nextBestActions.actions}
+      limit={5}
+      showEscalate
+      hideHeader
+      readOnly={readOnly}
+      viewAllHref="/admin/actions?priority=critical"
+    />
   );
 }

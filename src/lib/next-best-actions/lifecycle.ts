@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { after } from "next/server";
 import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
 import { limitNextBestActions, sortNextBestActions } from "@/lib/next-best-actions/priority";
 import {
@@ -432,7 +433,21 @@ export async function loadAndMergeNextBestActions(input: {
   const limit = input.options?.limit ?? 5;
 
   if (input.options?.sync !== false) {
-    await upsertComputedActions(input.supabase, input.profile, computedResult.actions);
+    if (input.options?.syncInBackground) {
+      // Persist after the response is sent so the page does not wait on the
+      // per-action write loop.
+      const { supabase, profile } = input;
+      const computedActions = computedResult.actions;
+      after(async () => {
+        try {
+          await upsertComputedActions(supabase, profile, computedActions);
+        } catch (error) {
+          console.error("[next-best-actions] background sync failed", error);
+        }
+      });
+    } else {
+      await upsertComputedActions(input.supabase, input.profile, computedResult.actions);
+    }
   }
 
   await markOverdueActions(input.supabase, input.profile.id, role);
