@@ -17,7 +17,15 @@ export type VocabularyList =
   | "use_of_funds"
   | "revenue_band"
   | "geography"
-  | "business_entity";
+  | "business_entity"
+  // Revenue and financials, split out of the shared revenue_band list
+  // (20260924003). Slugs are the exact values stored on companies today, so
+  // no stored answer changes; labels can be reworded freely.
+  | "revenue_size"
+  | "revenue_stage"
+  | "arr_band"
+  | "mrr_band"
+  | "money_band";
 
 export type VocabularyOption = {
   /** Stored on the record. Permanent — answers point at it. */
@@ -26,12 +34,19 @@ export type VocabularyOption = {
   label: string;
   /** Not offered to anyone new; still resolves for records that hold it. */
   archived: boolean;
+  /** Second line shown under the label. Only revenue stage uses it today. */
+  description?: string | null;
 };
 
 export type Vocabularies = Record<VocabularyList, VocabularyOption[]>;
 
 function offer(pairs: [string, string][]): VocabularyOption[] {
   return pairs.map(([slug, label]) => ({ slug, label, archived: false }));
+}
+
+/** A list whose stored value is its label, as the banded fields are. */
+function same(values: readonly string[]): VocabularyOption[] {
+  return values.map((v) => ({ slug: v, label: v, archived: false }));
 }
 
 /**
@@ -120,6 +135,21 @@ export const CODE_FALLBACK: Vocabularies = {
     ["s-corp", "S-Corp"],
     ["public-benefit-corp", "Public benefit corp"],
     ["not-yet-incorporated", "Not yet incorporated"],
+  ]),
+  // Keep these five identical to src/lib/profile/options.ts, which the matcher
+  // and validation read. A test enforces it.
+  revenue_size: same(["Pre-revenue", "Under $100k", "$100k – $500k", "$500k – $1M", "$1M – $5M", "$5M+"]),
+  revenue_stage: [
+    { slug: "pre_revenue", label: "Pre-revenue", archived: false, description: "Idea, prototype, or early development" },
+    { slug: "early_revenue", label: "Early revenue", archived: false, description: "Up to $100K ARR" },
+    { slug: "growing", label: "Growing", archived: false, description: "$100K – $1M ARR" },
+    { slug: "scaling", label: "Scaling", archived: false, description: "$1M+ ARR" },
+  ],
+  arr_band: same(["None", "Under $100k", "$100k – $500k", "$500k – $1M", "$1M – $5M", "$5M+"]),
+  mrr_band: same(["None", "Under $10k", "$10k – $50k", "$50k – $100k", "$100k+"]),
+  money_band: same([
+    "Less than $50k", "$50k - $100k", "$100k - $250k", "$250k - $500k", "$500k - $1m",
+    "$1m - $10m", "$10m - $50m", "$50m - $100m", "Over $100m",
   ]),
 };
 

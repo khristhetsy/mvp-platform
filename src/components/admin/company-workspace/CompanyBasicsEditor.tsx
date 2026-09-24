@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { industryOptionsFor, isCanonicalIndustry } from "@/lib/industries";
-import { MONEY_BAND_OPTIONS, isMoneyBand, moneyBandFor } from "@/lib/profile/options";
+import { isMoneyBand, moneyBandFor } from "@/lib/profile/options";
+import { useVocabularies } from "@/lib/vocabulary/provider";
+import { offered } from "@/lib/vocabulary/lists";
 
 const STAGES: { id: string; label: string }[] = [
   { id: "pre_revenue", label: "Pre-revenue" },
@@ -32,6 +34,8 @@ const LABEL = "block text-xs font-semibold text-slate-600";
 
 export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string }>) {
   const router = useRouter();
+  // Money bands from Profile and fields: offered order and labels.
+  const moneyBands = useVocabularies().money_band;
   const [b, setB] = useState<Basics | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -130,7 +134,7 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
       <div>
         <p className={LABEL} id="cb-funding">Funding target ($)</p>
         <div className="mt-1.5 flex max-w-xl flex-wrap gap-1.5" role="group" aria-labelledby="cb-funding">
-          {MONEY_BAND_OPTIONS.map((o) => {
+          {[...offered(moneyBands), ...moneyBands.filter((x) => x.archived && x.slug === b.funding_amount_band)].map(({ slug: o, label }) => {
             const on = b.funding_amount_band === o;
             return (
               <button
@@ -140,7 +144,7 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
                 onClick={() => patch({ funding_amount_band: on ? "" : o })}
                 className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"}`}
               >
-                {o}
+                {label}
               </button>
             );
           })}

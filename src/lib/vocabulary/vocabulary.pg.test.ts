@@ -15,6 +15,11 @@ const MIGRATION = readFileSync(
   join(process.cwd(), "supabase/migrations/20260923001_vocabulary_options.sql"),
   "utf8",
 );
+// The revenue lists are split out and seeded here (Profile and fields sections).
+const SECTIONS_MIGRATION = readFileSync(
+  join(process.cwd(), "supabase/migrations/20260924003_profile_field_sections.sql"),
+  "utf8",
+);
 
 let db: PGlite;
 
@@ -26,8 +31,10 @@ beforeAll(async () => {
       language sql stable as $$ select true $$;
     create or replace function public.touch_updated_at() returns trigger
       language plpgsql as $$ begin new.updated_at = now(); return new; end $$;
+    create table if not exists public.profiles (id uuid primary key);
   `);
   await db.exec(MIGRATION);
+  await db.exec(SECTIONS_MIGRATION);
 });
 
 afterAll(async () => { await db.close(); });

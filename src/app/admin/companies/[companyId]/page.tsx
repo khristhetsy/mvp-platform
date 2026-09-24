@@ -1,3 +1,5 @@
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
@@ -115,6 +117,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                   ← All companies
                 </Link>
               </div>
+              <VocabularyProvider value={await loadVocabularies()}>
               <AdminCompanyWorkspace
                 data={workspace}
                 nextBestActions={companyActions?.actions ?? []}
@@ -124,6 +127,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 founderContactId={founderContactId}
                 founderCanDistribute={founderCanDistribute}
               />
+              </VocabularyProvider>
             </>
           ) : null}
         </WorkspacePageContainer>

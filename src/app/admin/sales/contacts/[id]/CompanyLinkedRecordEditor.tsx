@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { industryOptionsFor } from "@/lib/industries";
-import { MONEY_BAND_OPTIONS, isMoneyBand, moneyBandFor } from "@/lib/profile/options";
+import { isMoneyBand, moneyBandFor } from "@/lib/profile/options";
+import { useVocabularies } from "@/lib/vocabulary/provider";
+import { labelOf, offered } from "@/lib/vocabulary/lists";
 import type { LinkedCompany } from "./ContactProfileClient";
 
 /**
@@ -57,7 +59,7 @@ const LBL = { width: 150, flexShrink: 0, color: "var(--muted-foreground)", fontS
 const INPUT = "w-full rounded-md border px-2.5 py-1.5 text-[12.5px]";
 const inputStyle = { borderColor: "#e2e8f0", background: "white", color: "var(--foreground)" } as const;
 
-function Chips({ options, value, onToggle, single = false }: { options: string[]; value: string[]; onToggle: (v: string) => void; single?: boolean }) {
+function Chips({ options, value, onToggle, single = false, labelFor }: { options: string[]; value: string[]; onToggle: (v: string) => void; single?: boolean; labelFor?: (v: string) => string }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
       {options.map((o) => {
@@ -66,7 +68,7 @@ function Chips({ options, value, onToggle, single = false }: { options: string[]
           <button key={o} type="button" onClick={() => onToggle(o)}
             style={{ borderRadius: 999, padding: "3px 10px", fontSize: 11.5, cursor: "pointer",
               border: on ? "1px solid #2E78F5" : "1px solid #e2e8f0", background: on ? "#EEEDFE" : "white", color: on ? "#0A1A40" : "#475569" }}>
-            {o}{single && on ? <> <i className="ti ti-check" aria-hidden="true" /></> : ""}
+            {labelFor ? labelFor(o) : o}{single && on ? <> <i className="ti ti-check" aria-hidden="true" /></> : ""}
           </button>
         );
       })}
@@ -110,6 +112,10 @@ export function CompanyLinkedRecordEditor({
   company: LinkedCompany;
   onePager?: { slug: string | null; published: boolean } | null;
 }) {
+  // Money bands from Profile and fields: offered order and labels.
+  const moneyBands = useVocabularies().money_band;
+  const bandOptions = (held: string) => [...offered(moneyBands), ...moneyBands.filter((o) => o.archived && o.slug === held)].map((o) => o.slug);
+  const bandLabel = (v: string) => labelOf(moneyBands, v);
   const [data, setData] = useState<Form>(() => fromCompany(company));
   const [form, setForm] = useState<Form>(data);
   const [editing, setEditing] = useState(false);
@@ -201,7 +207,7 @@ export function CompanyLinkedRecordEditor({
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 28px" }}>
           <ViewRow label="Industry">{data.industry ? pill(data.industry) : null}</ViewRow>
           <ViewRow label="Revenue stage" unasked={unasked}>{data.revenue_stage ? pill(stageLabel) : null}</ViewRow>
-          <ViewRow label="Funding target" unasked={unasked}>{data.funding_amount_band || null}</ViewRow>
+          <ViewRow label="Funding target" unasked={unasked}>{data.funding_amount_band ? bandLabel(data.funding_amount_band) : null}</ViewRow>
           <ViewRow label="Website">{data.website ? <a href={data.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{data.website}</a> : null}</ViewRow>
           <ViewRow label="Location">{[data.state, data.country].filter(Boolean).join(", ") || null}</ViewRow>
           <ViewRow label="One-pager">{onePager?.slug ? <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>/f/{onePager.slug}{onePager.published ? " · Published" : " · Draft"}</a> : null}</ViewRow>
@@ -209,7 +215,7 @@ export function CompanyLinkedRecordEditor({
           <ViewRow label="Operating stage" unasked={unasked}>{data.operating_stage.join(", ") || null}</ViewRow>
           <ViewRow label="Business entity" unasked={unasked}>{data.business_entity || null}</ViewRow>
           <ViewRow label="Annual revenue size" unasked={unasked}>{data.annual_revenue_size || null}</ViewRow>
-          <ViewRow label="Annual EBITDA" unasked={unasked}>{data.annual_ebitda || null}</ViewRow>
+          <ViewRow label="Annual EBITDA" unasked={unasked}>{data.annual_ebitda ? bandLabel(data.annual_ebitda) : null}</ViewRow>
           <ViewRow label="ARR" unasked={unasked}>{data.arr || null}</ViewRow>
           <ViewRow label="MRR" unasked={unasked}>{data.mrr || null}</ViewRow>
           <ViewRow label="Type of investor(s)" unasked={unasked}>{data.seeking_investor_types.join(", ") || null}</ViewRow>
@@ -235,7 +241,7 @@ export function CompanyLinkedRecordEditor({
               {REVENUE_STAGES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
             </select>
           </EditRow>
-          <EditRow label="Funding target"><Chips options={[...MONEY_BAND_OPTIONS]} value={form.funding_amount_band ? [form.funding_amount_band] : []} onToggle={(v) => set("funding_amount_band", form.funding_amount_band === v ? "" : v)} single /></EditRow>
+          <EditRow label="Funding target"><Chips options={bandOptions(form.funding_amount_band)} labelFor={bandLabel} value={form.funding_amount_band ? [form.funding_amount_band] : []} onToggle={(v) => set("funding_amount_band", form.funding_amount_band === v ? "" : v)} single /></EditRow>
           <EditRow label="Website"><input className={INPUT} style={inputStyle} value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="https://…" /></EditRow>
           <EditRow label="State / region"><input className={INPUT} style={inputStyle} value={form.state} onChange={(e) => set("state", e.target.value)} /></EditRow>
           <EditRow label="Country"><input className={INPUT} style={inputStyle} value={form.country} onChange={(e) => set("country", e.target.value)} /></EditRow>
@@ -243,7 +249,7 @@ export function CompanyLinkedRecordEditor({
           <EditRow label="Operating stage"><Chips options={OPERATING_STAGE_OPTS} value={form.operating_stage} onToggle={(v) => toggle("operating_stage", v)} /></EditRow>
           <EditRow label="Business entity"><Chips options={BUSINESS_ENTITY_OPTS} value={form.business_entity ? [form.business_entity] : []} onToggle={(v) => set("business_entity", form.business_entity === v ? "" : v)} single /></EditRow>
           <EditRow label="Annual revenue size"><input className={INPUT} style={inputStyle} value={form.annual_revenue_size} onChange={(e) => set("annual_revenue_size", e.target.value)} placeholder="e.g. $1.4M" /></EditRow>
-          <EditRow label="Annual EBITDA"><Chips options={[...MONEY_BAND_OPTIONS]} value={form.annual_ebitda ? [form.annual_ebitda] : []} onToggle={(v) => set("annual_ebitda", form.annual_ebitda === v ? "" : v)} single /><p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current EBITDA only, not projected.</p></EditRow>
+          <EditRow label="Annual EBITDA"><Chips options={bandOptions(form.annual_ebitda)} labelFor={bandLabel} value={form.annual_ebitda ? [form.annual_ebitda] : []} onToggle={(v) => set("annual_ebitda", form.annual_ebitda === v ? "" : v)} single /><p style={{ marginTop: 4, fontSize: 11, color: "var(--muted-foreground)" }}>Current EBITDA only, not projected.</p></EditRow>
           <EditRow label="ARR"><input className={INPUT} style={inputStyle} value={form.arr} onChange={(e) => set("arr", e.target.value)} placeholder="e.g. $840,000" /></EditRow>
           <EditRow label="MRR"><input className={INPUT} style={inputStyle} value={form.mrr} onChange={(e) => set("mrr", e.target.value)} placeholder="e.g. $70,000" /></EditRow>
           <EditRow label="Type of investor(s)"><Chips options={INVESTOR_TYPE_OPTS} value={form.seeking_investor_types} onToggle={(v) => toggle("seeking_investor_types", v)} /></EditRow>

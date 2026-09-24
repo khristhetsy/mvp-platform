@@ -5,6 +5,8 @@ import { FounderConversationalOnboarding } from "@/components/founder/FounderCon
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
 import { requireRole } from "@/lib/supabase/auth";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 
@@ -42,10 +44,12 @@ export default async function FounderOnboardingPage() {
 
         <FounderOnboardingProgressCard progress={data.progress} inPage />
 
-        <FounderConversationalOnboarding
-          company={data.company}
-          founderName={profile.full_name ?? profile.email ?? "Founder"}
-        />
+        <VocabularyProvider value={await loadVocabularies()}>
+          <FounderConversationalOnboarding
+            company={data.company}
+            founderName={profile.full_name ?? profile.email ?? "Founder"}
+          />
+        </VocabularyProvider>
       </div>
     </FounderAppShell>
   );

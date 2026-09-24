@@ -7,7 +7,6 @@ import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { industryOptionsFor } from "@/lib/industries";
 import {
-  REVENUE_STAGE_OPTIONS,
   INVESTOR_TYPE_OPTIONS,
   CAPITAL_TYPE_OPTIONS,
   INVESTOR_PREFERENCE_OPTIONS,
@@ -22,10 +21,8 @@ import {
   moneyBandFor,
   splitProfileCsv,
 } from "@/lib/profile/options";
-
-/* ── Revenue stage options (shared canonical list) ──────────── */
-
-const STAGES = REVENUE_STAGE_OPTIONS;
+import { useVocabularies } from "@/lib/vocabulary/provider";
+import { labelOf, offered, type VocabularyList, type VocabularyOption } from "@/lib/vocabulary/lists";
 
 /* ── Draft generators ───────────────────────────────────────── */
 
@@ -120,6 +117,8 @@ type FieldDef = {
   options?: readonly string[];
   section?: string;
   hint?: string;
+  /** Managed list on Profile and fields: labels, order and retired values come from there. */
+  list?: VocabularyList;
 };
 
 // Layout order: company basics first, then the 11 investor-fit categories in the
@@ -143,7 +142,7 @@ const FIELDS: FieldDef[] = [
   // A selection from the investment size bands already in the contact records,
   // so founder and investor compare like for like. Saved to funding_amount_band;
   // a database trigger keeps funding_amount (read by ~90 files) consistent.
-  { key: "funding_amount_band", label: "Amount of capital (USD)", type: "chips-single", options: FUNDING_AMOUNT_BAND_OPTIONS, section: "Investor fit profile" },
+  { key: "funding_amount_band", label: "Amount of capital (USD)", type: "chips-single", options: FUNDING_AMOUNT_BAND_OPTIONS, list: "money_band", section: "Investor fit profile" },
   { key: "founder_goals", label: "Investor-fit notes", type: "textarea", ai: "goals", hint: "What you want beyond capital — network, board experience, portfolio synergies.", section: "Investor fit profile" },
   { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds", section: "Investor fit profile" },
   { key: "funding_stage", label: "Funding stage", type: "chips-multi", options: FUNDING_STAGE_OPTIONS, section: "Investor fit profile" },
@@ -151,17 +150,17 @@ const FIELDS: FieldDef[] = [
   { key: "revenue_stage", label: "Revenue stage", type: "select-stage", section: "Investor fit profile" },
   // Current EBITDA only, never projected. Same bands the contact records use for
   // entrepreneur EBITDA and investor EBITDA preferences.
-  { key: "annual_ebitda", label: "Annual EBITDA", type: "chips-single", options: EBITDA_BAND_OPTIONS, hint: "Current EBITDA only, not projected.", section: "Investor fit profile" },
+  { key: "annual_ebitda", label: "Annual EBITDA", type: "chips-single", options: EBITDA_BAND_OPTIONS, list: "money_band", hint: "Current EBITDA only, not projected.", section: "Investor fit profile" },
   { key: "operating_stage", label: "Operating stage", type: "chips-multi", options: OPERATING_STAGE_OPTIONS, section: "Investor fit profile" },
   { key: "management_team", label: "Management team", type: "textarea", placeholder: "e.g. 2 co-founders, 3 full-time", section: "Investor fit profile" },
   // Traction — asked at onboarding step 8, editable here afterwards. Revenue
   // size and highlights are investor-facing; EBITDA above is not.
-  { key: "annual_revenue_size", label: "Annual revenue size", type: "chips-single", options: REVENUE_SIZE_OPTIONS, section: "Investor fit profile" },
+  { key: "annual_revenue_size", label: "Annual revenue size", type: "chips-single", options: REVENUE_SIZE_OPTIONS, list: "revenue_size", section: "Investor fit profile" },
   // Bands, not free text: the matcher compares ARR and MRR against the
   // investor's stated range, and "e.g. $240,000" could never be compared to
   // anything. Both factors were quietly dropping out of every match.
-  { key: "arr", label: "ARR", type: "chips-single", options: [...ARR_BAND_OPTIONS], section: "Investor fit profile" },
-  { key: "mrr", label: "MRR", type: "chips-single", options: [...MRR_BAND_OPTIONS], section: "Investor fit profile" },
+  { key: "arr", label: "ARR", type: "chips-single", options: [...ARR_BAND_OPTIONS], list: "arr_band", section: "Investor fit profile" },
+  { key: "mrr", label: "MRR", type: "chips-single", options: [...MRR_BAND_OPTIONS], list: "mrr_band", section: "Investor fit profile" },
   { key: "key_highlights", label: "Five key highlights", type: "textarea", placeholder: "One per line — these become the bullets on your one-pager", section: "Investor fit profile" },
   { key: "business_entity", label: "Business entity", type: "chips-single", options: BUSINESS_ENTITY_OPTIONS, section: "Investor fit profile" },
 ];
@@ -185,6 +184,14 @@ type Props = { company: Company | null };
 export function CompanySettingsForm({ company }: Props) {
   const router = useRouter();
   const { getError, setApiErrors, clearError } = useFormValidation();
+  // Option lists from Profile and fields (falls back to the built in lists).
+  const vocab = useVocabularies();
+  /** Offered options for a managed field, plus a retired value the record still holds. */
+  const managed = (list: VocabularyList, held: string): VocabularyOption[] => {
+    const all = vocab[list];
+    return [...offered(all), ...all.filter((o) => o.archived && o.slug === held)];
+  };
+  const stages = vocab.revenue_stage;
 
   // Seeking + Company & stage columns (migration 20260803002) aren't in the
   // generated Company type yet, so read them through a Record view.
@@ -299,7 +306,7 @@ export function CompanySettingsForm({ company }: Props) {
     const v = values[f.key] ?? "";
     if (!v) return <span className="text-slate-400">—</span>;
     if (f.type === "chips-multi" || f.type === "chips-single") {
-      const parts = f.type === "chips-multi" ? splitProfileCsv(v) : [v];
+      const parts = f.type === "chips-multi" ? splitProfileCsv(v) : [f.list ? labelOf(vocab[f.list], v) : v];
       return (
         <span className="flex flex-wrap gap-1">
           {parts.map((p) => (
@@ -309,8 +316,8 @@ export function CompanySettingsForm({ company }: Props) {
       );
     }
     if (f.type === "select-stage") {
-      const s = STAGES.find((x) => x.id === v);
-      return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{s ? `${s.label} · ${s.sub}` : v}</span>;
+      const s = stages.find((x) => x.slug === v);
+      return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{s ? (s.description ? `${s.label} · ${s.description}` : s.label) : v}</span>;
     }
     if (f.type === "select-industry") return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{v}</span>;
     if (f.key === "website") return <span className="text-[#185FA5]">{v}</span>;
@@ -324,6 +331,27 @@ export function CompanySettingsForm({ company }: Props) {
 
   function editControl(f: FieldDef) {
     const v = values[f.key] ?? "";
+    if (f.type === "chips-single" && f.list) {
+      const opts = managed(f.list, v);
+      return (
+        <div className="flex flex-wrap gap-2">
+          {opts.map((o) => {
+            const on = v === o.slug;
+            return (
+              <button
+                key={o.slug}
+                type="button"
+                onClick={() => setVal(f.key, on ? "" : o.slug)}
+                className="rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: on ? "#2E78F5" : "transparent", borderColor: on ? "#2E78F5" : "#e2e8f0", color: on ? "white" : "#475569" }}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
     if (f.type === "chips-multi" || f.type === "chips-single") {
       const opts = f.options ?? [];
       const selected = f.type === "chips-multi" ? splitProfileCsv(v) : (v ? [v] : []);
@@ -363,7 +391,7 @@ export function CompanySettingsForm({ company }: Props) {
       return (
         <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
           <option value="">— Select stage —</option>
-          {STAGES.map((s) => <option key={s.id} value={s.id}>{s.label} · {s.sub}</option>)}
+          {[...offered(stages), ...stages.filter((s) => s.archived && s.slug === v)].map((s) => <option key={s.slug} value={s.slug}>{s.description ? `${s.label} · ${s.description}` : s.label}</option>)}
         </select>
       );
     }

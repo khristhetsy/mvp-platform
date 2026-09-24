@@ -4,6 +4,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { loadContactPageProps } from "@/lib/sales/contact-page-data";
 import { SalesHubHeader } from "../../SalesHubHeader";
 import { ContactProfileClient } from "./ContactProfileClient";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,9 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <ContactProfileClient {...props} />
+      <VocabularyProvider value={await loadVocabularies()}>
+        <ContactProfileClient {...props} />
+      </VocabularyProvider>
     </AppShell>
   );
 }

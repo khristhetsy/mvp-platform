@@ -19,7 +19,7 @@ import {
   type VocabularyOption,
 } from "@/lib/vocabulary/lists";
 
-type Row = { list: string; slug: string; label: string; archived: boolean; sort_order: number };
+type Row = { list: string; slug: string; label: string; archived: boolean; sort_order: number; description?: string | null };
 
 function raw(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -36,7 +36,7 @@ export const loadVocabularies = cache(async (): Promise<Vocabularies> => {
   try {
     const { data, error } = await raw()
       .from("vocabulary_options")
-      .select("list, slug, label, archived, sort_order")
+      .select("list, slug, label, archived, sort_order, description")
       .order("sort_order", { ascending: true });
 
     if (error || !data?.length) return out;
@@ -44,7 +44,7 @@ export const loadVocabularies = cache(async (): Promise<Vocabularies> => {
     const byList = new Map<string, VocabularyOption[]>();
     for (const r of data as Row[]) {
       const bucket = byList.get(r.list) ?? [];
-      bucket.push({ slug: r.slug, label: r.label, archived: Boolean(r.archived) });
+      bucket.push({ slug: r.slug, label: r.label, archived: Boolean(r.archived), description: r.description ?? null });
       byList.set(r.list, bucket);
     }
 

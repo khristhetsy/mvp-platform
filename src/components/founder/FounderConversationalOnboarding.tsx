@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import {
-  REVENUE_STAGE_OPTIONS as STAGES,
   USE_OF_FUNDS_OPTIONS as FUND_USES,
   INVESTOR_TYPE_OPTIONS as INVESTOR_TYPE_OPTS,
   CAPITAL_TYPE_OPTIONS as CAPITAL_TYPE_OPTS,
@@ -14,12 +13,11 @@ import {
   BUSINESS_ENTITY_OPTIONS as BUSINESS_ENTITY_OPTS,
   FUNDING_STAGE_OPTIONS as FUNDING_STAGE_OPTS,
   OPERATING_STAGE_OPTIONS as OPERATING_STAGE_OPTS,
-  REVENUE_SIZE_OPTIONS,
-  FUNDING_AMOUNT_BAND_OPTIONS,
-  EBITDA_BAND_OPTIONS,
   moneyBandFor,
   isMoneyBand,
 } from "@/lib/profile/options";
+import { useVocabularies } from "@/lib/vocabulary/provider";
+import { offered, type VocabularyOption } from "@/lib/vocabulary/lists";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
@@ -237,6 +235,10 @@ export function FounderConversationalOnboarding({
   company: Company;
   founderName: string;
 }>) {
+  // Option lists edited on Admin, Profile and fields (built in lists if not provided).
+  const vocab = useVocabularies();
+  const menu = (all: VocabularyOption[], held: string | null): VocabularyOption[] =>
+    [...offered(all), ...all.filter((o) => o.archived && o.slug === held)];
   const t = useTranslations("founderCmp");
   const router = useRouter();
   const [step, setStep]             = useState<StepNum>(1);
@@ -587,13 +589,13 @@ export function FounderConversationalOnboarding({
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("this_calibrates_the_benchmarks_and_investor")}</p>
               <div className="mt-5 space-y-2">
-                {STAGES.map((s) => (
+                {menu(vocab.revenue_stage, stage).map((s) => (
                   <OptionCard
-                    key={s.id}
-                    selected={stage === s.id}
-                    onClick={() => setStage(s.id)}
+                    key={s.slug}
+                    selected={stage === s.slug}
+                    onClick={() => setStage(s.slug)}
                     label={s.label}
-                    sub={s.sub}
+                    sub={s.description ?? ""}
                   />
                 ))}
               </div>
@@ -608,8 +610,8 @@ export function FounderConversationalOnboarding({
               </p>
               <p className="mt-1 text-sm text-slate-500">Pick the range for the total target of this round, in USD.</p>
               <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Amount to raise">
-                {FUNDING_AMOUNT_BAND_OPTIONS.map((o) => (
-                  <Chip key={o} selected={amount === o} onClick={() => setAmount(o)}>{o}</Chip>
+                {menu(vocab.money_band, amount).map((o) => (
+                  <Chip key={o.slug} selected={amount === o.slug} onClick={() => setAmount(o.slug)}>{o.label}</Chip>
                 ))}
               </div>
               <ContextCard>
@@ -702,7 +704,7 @@ export function FounderConversationalOnboarding({
               </div>
               <label className="mt-4 block text-sm font-medium text-slate-700">Annual EBITDA <span className="text-rose-600">*</span> <span className="font-normal text-slate-400">(pick one)</span></label>
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Annual EBITDA">
-                {EBITDA_BAND_OPTIONS.map((o) => (<Chip key={o} selected={ebitda === o} onClick={() => setEbitda(o)}>{o}</Chip>))}
+                {menu(vocab.money_band, ebitda).map((o) => (<Chip key={o.slug} selected={ebitda === o.slug} onClick={() => setEbitda(o.slug)}>{o.label}</Chip>))}
               </div>
               <p className="mt-1.5 text-xs text-slate-400">Current EBITDA only, not projected.</p>
               <div className="mt-4">
@@ -739,8 +741,8 @@ export function FounderConversationalOnboarding({
                 Annual revenue size <span className="font-normal text-slate-400">· last 12 months</span>
               </label>
               <div className="mt-2 flex flex-wrap gap-2">
-                {REVENUE_SIZE_OPTIONS.map((o) => (
-                  <Chip key={o} selected={revSize === o} onClick={() => setRevSize(revSize === o ? null : o)}>{o}</Chip>
+                {menu(vocab.revenue_size, revSize).map((o) => (
+                  <Chip key={o.slug} selected={revSize === o.slug} onClick={() => setRevSize(revSize === o.slug ? null : o.slug)}>{o.label}</Chip>
                 ))}
               </div>
 
