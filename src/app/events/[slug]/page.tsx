@@ -162,53 +162,75 @@ async function Presenters({ presenters }: { presenters: EventPresenter[] }) {
   const t = await getTranslations("appPages");
   if (presenters.length === 0) return null;
   return (
-    <div className="mt-10">
+    <div className="mt-8">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("speakers")}</h2>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {presenters.map((p) => (
-          <div key={p.id} className="rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--indigo-soft)] text-sm font-semibold text-[var(--indigo)]">
+      {/* Compact: one line per speaker; bio, company, time and links open on click. */}
+      <ul className="mt-3 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] bg-white">
+        {presenters.map((p) => {
+          const hasMore = Boolean(p.bio || p.companySummary || p.startsAt || p.links.length);
+          const row = (
+            <>
+              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--indigo-soft)] text-[11px] font-semibold text-[var(--indigo)]">
                 {initials(p.displayName)}
-              </div>
-              <div>
-                <div className="font-medium text-[var(--navy)]">{p.displayName}</div>
-                {p.roleLabel && <div className="text-xs capitalize text-[var(--text-muted)]">{p.roleLabel}</div>}
-              </div>
-            </div>
-            {p.headline && <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">{p.headline}</p>}
-            {p.bio && <p className="mt-1 text-sm text-[var(--text-muted)]">{p.bio}</p>}
-            {p.companySummary && <CompanySummary text={p.companySummary} />}
-            {p.startsAt && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)]">🕐 {formatSlot(p.startsAt, p.timezone)}</span>
-                {p.meetingUrl && (
-                  <a href={p.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-[#1D9E75] px-2.5 py-1 text-xs font-medium text-white hover:brightness-95">
-                    Join
-                  </a>
-                )}
-                <a
-                  href={googleCalUrl({ title: `${p.displayName}${p.headline ? ` — ${p.headline}` : ""}`, startISO: p.startsAt, location: p.meetingUrl ?? undefined })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--blue)] hover:bg-slate-50"
-                >
-                  Add to calendar
-                </a>
-              </div>
-            )}
-            {p.links.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {p.links.map((l) => (
-                  <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--blue)] underline">
-                    {l.replace(/^https?:\/\//, "").slice(0, 32)}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+              </span>
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-medium text-[var(--navy)]">{p.displayName}</span>
+                {p.headline || p.roleLabel ? (
+                  <span className="text-xs text-[var(--text-muted)]"> · {p.headline || p.roleLabel}</span>
+                ) : null}
+              </span>
+              {p.startsAt ? <span className="hidden flex-none text-xs text-[var(--text-muted)] sm:inline">{formatSlot(p.startsAt, p.timezone)}</span> : null}
+            </>
+          );
+          return (
+            <li key={p.id}>
+              {hasMore ? (
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+                    {row}
+                    <span className="flex-none text-xs font-medium text-[var(--blue)] group-open:hidden">Bio</span>
+                    <span className="hidden flex-none text-xs font-medium text-[var(--blue)] group-open:inline">Close</span>
+                  </summary>
+                  <div className="px-3 pb-3 pl-[3.25rem]">
+                    {p.roleLabel && p.headline ? <p className="text-xs capitalize text-[var(--text-muted)]">{p.roleLabel}</p> : null}
+                    {p.bio && <p className="mt-1 text-sm text-[var(--text-muted)]">{p.bio}</p>}
+                    {p.companySummary && <CompanySummary text={p.companySummary} />}
+                    {p.startsAt && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-[var(--text-muted)]">🕐 {formatSlot(p.startsAt, p.timezone)}</span>
+                        {p.meetingUrl && (
+                          <a href={p.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-[#1D9E75] px-2.5 py-1 text-xs font-medium text-white hover:brightness-95">
+                            Join
+                          </a>
+                        )}
+                        <a
+                          href={googleCalUrl({ title: `${p.displayName}${p.headline ? ` — ${p.headline}` : ""}`, startISO: p.startsAt, location: p.meetingUrl ?? undefined })}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--blue)] hover:bg-slate-50"
+                        >
+                          Add to calendar
+                        </a>
+                      </div>
+                    )}
+                    {p.links.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {p.links.map((l) => (
+                          <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--blue)] underline">
+                            {l.replace(/^https?:\/\//, "").slice(0, 32)}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              ) : (
+                <div className="flex items-center gap-3 px-3 py-2">{row}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -451,19 +473,19 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         {event.sectors.length > 0 && (
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("sector_tracks")}</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Compact: one chip per track, with its session count. */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {event.sectors.map((s) => {
                 const count = event.sessions.filter((x) => x.sectorSlug === s.sectorSlug).length;
                 return (
                   <Link
                     key={s.id}
                     href={`/events/sectors/${s.sectorSlug}`}
-                    className="rounded-xl border border-[var(--border-subtle)] bg-white p-4 transition hover:border-[var(--indigo)]"
+                    className="rounded-full border border-[var(--border-subtle)] bg-white px-3 py-1 text-sm text-[var(--navy)] transition hover:border-[var(--indigo)]"
+                    title={count > 0 ? `${count} session${count === 1 ? "" : "s"}` : "Sector track"}
                   >
-                    <p className="font-medium text-[var(--navy)]">{s.label || sectorLabel(s.sectorSlug)}</p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      {count > 0 ? `${count} session${count === 1 ? "" : "s"}` : "Sector track"}
-                    </p>
+                    {s.label || sectorLabel(s.sectorSlug)}
+                    {count > 0 ? <span className="text-[var(--text-muted)]"> · {count}</span> : null}
                   </Link>
                 );
               })}
@@ -477,12 +499,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         <EventAttendees data={attendees} />
 
-        <div id="agenda" className="mt-10 scroll-mt-24">
+        <div id="agenda" className="mt-8 scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("agenda")}</h2>
           {visibleSessions.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">{t("sessions_will_be_announced_soon")}</p>
           ) : (
-            <ol className="mt-4 space-y-3">
+            <ol className="mt-3 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] bg-white">
               {visibleSessions.map((s) => {
                 // A live session opens to attendees only once its start time is
                 // reached — unless an admin has opened the doors early, or the
@@ -492,26 +514,37 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 const liveJoinable = s.status === "live" && (isStaffViewer || s.doorsOpen || startedForAttendee);
                 const liveWaiting = s.status === "live" && !liveJoinable;
                 return (
-                <li
-                  key={s.id}
-                  className="rounded-xl border border-[var(--border-subtle)] bg-white px-5 py-4 shadow-[var(--shadow-panel)]"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
+                <li key={s.id} className="px-3 py-2">
+                  {/* Compact: type, title, track and time on one line; the abstract opens on click. */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="flex-none rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
                       {SESSION_TYPE_LABEL[s.type]}
                     </span>
+                    <h3 className="min-w-0 font-medium text-[var(--navy)]">{s.title}</h3>
                     {s.sectorSlug && (
-                      <span className="text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>
+                      <span className="text-xs text-[var(--text-muted)]">· {sectorLabel(s.sectorSlug)}</span>
                     )}
+                    {s.hostSponsorId && sponsorNames.get(s.hostSponsorId) && (
+                      <span className="text-xs text-[var(--text-muted)]">· Hosted by {sponsorNames.get(s.hostSponsorId)}</span>
+                    )}
+                    {s.startsAt ? (
+                      <span className="ml-auto flex-none text-xs text-[var(--text-muted)]">
+                        {new Date(s.startsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    ) : null}
                   </div>
-                  <h3 className="mt-2 font-semibold text-[var(--navy)]">{s.title}</h3>
-                  {s.hostSponsorId && sponsorNames.get(s.hostSponsorId) && (
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">Hosted by {sponsorNames.get(s.hostSponsorId)}</p>
-                  )}
-                  {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
-                  {CREDITS_ENABLED && watchPts > 0 && (
-                    <div className="mt-2"><PointsChip points={watchPts} action="for watching this session" /></div>
-                  )}
+                  {s.abstract || (CREDITS_ENABLED && watchPts > 0) ? (
+                    <details className="group mt-0.5">
+                      <summary className="cursor-pointer list-none text-xs font-medium text-[var(--blue)] [&::-webkit-details-marker]:hidden">
+                        <span className="group-open:hidden">Details</span>
+                        <span className="hidden group-open:inline">Close</span>
+                      </summary>
+                      {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
+                      {CREDITS_ENABLED && watchPts > 0 && (
+                        <div className="mt-2"><PointsChip points={watchPts} action="for watching this session" /></div>
+                      )}
+                    </details>
+                  ) : null}
                   {liveWaiting ? (
                     <div className="mt-3 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-6 text-center">
                       <p className="text-sm font-medium text-[var(--navy)]">
@@ -572,7 +605,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         </div>
 
         {profile && (
-          <div id="networking" className="mt-10 scroll-mt-24">
+          <div id="networking" className="mt-8 scroll-mt-24">
             <NetworkingOptIn
               eventId={event.id}
               initialInterests={optin?.interests ?? []}
@@ -607,29 +640,29 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         )}
 
         {missions.length > 0 && (
-          <div className="mt-10">
+          <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("missions")}</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {/* Compact: one line per mission; the description shows as a tooltip. */}
+            <ul className="mt-3 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] bg-white">
               {missions.map((m) => (
-                <div key={m.id} className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-[var(--navy)]">{m.title}</span>
-                    {m.done ? (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Complete +{m.bonusPoints}</span>
-                    ) : (
-                      <span className="text-xs text-[var(--text-muted)]">{m.completedActions.length}/{m.requiredActions.length}</span>
-                    )}
-                  </div>
-                  {m.description && <p className="mt-1 text-xs text-[var(--text-muted)]">{m.description}</p>}
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-[var(--indigo)]"
-                      style={{ width: `${m.requiredActions.length ? (m.completedActions.length / m.requiredActions.length) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
+                <li key={m.id} className="flex items-center gap-3 px-3 py-2" title={m.description ?? undefined}>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--navy)]">{m.title}</span>
+                  {m.done ? (
+                    <span className="flex-none rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Complete +{m.bonusPoints}</span>
+                  ) : (
+                    <>
+                      <span className="h-1.5 w-20 flex-none overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                        <span
+                          className="block h-full rounded-full bg-[var(--indigo)]"
+                          style={{ width: `${m.requiredActions.length ? (m.completedActions.length / m.requiredActions.length) * 100 : 0}%` }}
+                        />
+                      </span>
+                      <span className="flex-none text-xs text-[var(--text-muted)]">{m.completedActions.length}/{m.requiredActions.length}</span>
+                    </>
+                  )}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 

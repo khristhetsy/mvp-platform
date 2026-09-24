@@ -138,16 +138,16 @@ export function NetworkingConnections({
   }
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-3 space-y-3">
       {error && <p className="text-sm text-rose-700">{error}</p>}
 
       {/* Incoming requests */}
       {incoming.length > 0 && (
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-          <h3 className="font-semibold text-[var(--navy)]">{t("connection_requests")}</h3>
-          <ul className="mt-3 space-y-2">
+        <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2.5">
+          <h3 className="text-sm font-semibold text-[var(--navy)]">{t("connection_requests")}</h3>
+          <ul className="mt-1.5 divide-y divide-[var(--border-subtle)]">
             {incoming.map((c) => (
-              <li key={c.id} className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+              <li key={c.id} className="flex items-center justify-between gap-3 py-1.5">
                 <div className="flex items-center gap-3">
                   <Avatar name={c.otherName} />
                   <span className="text-sm font-medium text-[var(--navy)]">{c.otherName}</span>
@@ -175,44 +175,42 @@ export function NetworkingConnections({
       )}
 
       {/* Suggestions */}
-      <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-        <h3 className="font-semibold text-[var(--navy)]">{t("suggested_connections")}</h3>
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2.5">
+        <h3 className="text-sm font-semibold text-[var(--navy)]">{t("suggested_connections")}</h3>
         {suggestions.length === 0 ? (
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             No matches yet. As more attendees opt in and share interests, sector-matched people will appear here.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-1.5 divide-y divide-[var(--border-subtle)]">
             {suggestions.map((s) => (
-              <li key={s.profileId} className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+              <li key={s.profileId} className="flex items-center justify-between gap-3 py-1.5">
                 <div className="flex items-center gap-3">
                   <Avatar name={s.displayName} />
-                  <div>
-                    <div className="text-sm font-medium text-[var(--navy)]">{s.displayName}</div>
+                  <span className="min-w-0 truncate text-sm">
+                    <span className="font-medium text-[var(--navy)]">{s.displayName}</span>
                     {s.sharedInterests.length > 0 && (
-                      <div className="text-xs text-[var(--text-muted)]">
-                        {s.sharedInterests.map((i) => sectorLabel(i)).join(", ")}
-                      </div>
+                      <span className="text-xs text-[var(--text-muted)]"> · shares {s.sharedInterests.map((i) => sectorLabel(i)).join(", ")}</span>
                     )}
-                  </div>
+                  </span>
                 </div>
                 {suggestionAction(s)}
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-[var(--text-muted)]">
+        <p className="mt-1.5 text-xs text-[var(--text-muted)]">
           Names only — no contact details are shared until both sides accept.
         </p>
       </div>
 
       {/* Accepted connections */}
       {accepted.length > 0 && (
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-          <h3 className="font-semibold text-[var(--navy)]">{t("your_connections")}</h3>
-          <ul className="mt-3 space-y-2">
+        <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2.5">
+          <h3 className="text-sm font-semibold text-[var(--navy)]">{t("your_connections")}</h3>
+          <ul className="mt-1.5 divide-y divide-[var(--border-subtle)]">
             {accepted.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+              <li key={c.id} className="flex items-center gap-3 py-1.5">
                 <Avatar name={c.otherName} />
                 <span className="text-sm font-medium text-[var(--navy)]">{c.otherName}</span>
                 <div className="ml-auto flex items-center gap-2">
@@ -229,7 +227,7 @@ export function NetworkingConnections({
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-[var(--text-muted)]">
+          <p className="mt-1.5 text-xs text-[var(--text-muted)]">
             Starting a call opens a Google Meet in a new tab and invites your connection to join.
           </p>
         </div>

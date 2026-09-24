@@ -48,16 +48,16 @@ export function NetworkingOptIn({
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-      <h3 className="font-semibold text-[var(--navy)]">{t("networking")}</h3>
-      <p className="text-sm text-[var(--text-muted)]">
+    <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2.5">
+      <h3 className="text-sm font-semibold text-[var(--navy)]">{t("networking")}</h3>
+      <p className="text-xs text-[var(--text-muted)]">
         You&rsquo;re matched with attendees by shared interests. Names only — no contact details shared until both
         sides accept. Update your interests any time.
       </p>
 
-      <div className="mt-4">
+      <div className="mt-2">
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{t("your_interests")}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
           {EVENT_SECTORS.map((s) => {
             const on = interests.includes(s.slug);
             return (
@@ -65,7 +65,7 @@ export function NetworkingOptIn({
                 key={s.slug}
                 type="button"
                 onClick={() => toggleInterest(s.slug)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
                   on
                     ? "border-[var(--indigo)] bg-[var(--indigo-soft)] text-[var(--indigo)]"
                     : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
@@ -80,7 +80,7 @@ export function NetworkingOptIn({
           type="button"
           onClick={save}
           disabled={busy}
-          className="mt-3 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50"
+          className="mt-2 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
         >
           {busy ? "Saving…" : "Save interests"}
         </button>
