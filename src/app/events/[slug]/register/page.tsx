@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
@@ -20,8 +20,8 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || event.status === "draft" || event.status === "archived") notFound();
 
-  const profile = await getCurrentUserProfile();
-  if (!profile) redirect(`/auth/sign-in?next=/events/${slug}/register`);
+  // Registration is open without an account; signed in users get their details prefilled.
+  const profile = await getCurrentUserProfile().catch(() => null);
 
   return (
     <MarketingShell>
@@ -33,7 +33,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
         <p className="mt-1 text-sm text-[var(--text-muted)]">{t("free_registration_a_few_quick_questions_so_we")}</p>
 
         <div className="mt-6">
-          <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile.email ?? undefined} defaultName={profile.full_name ?? undefined} fieldSet={await loadRegistrationFieldSet()} />
+          <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile?.email ?? undefined} defaultName={profile?.full_name ?? undefined} fieldSet={await loadRegistrationFieldSet()} signedIn={Boolean(profile)} />
         </div>
       </section>
       <MarketingFooter />

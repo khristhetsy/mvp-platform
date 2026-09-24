@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { requireUserProfile } from "@/lib/supabase/auth";
+import { getCurrentUserProfile } from "@/lib/supabase/auth";
+import { registerGuest } from "@/lib/icfo-events/registration-matches-server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/posthog";
 import { createNotification } from "@/lib/notifications/notifications";
@@ -13,13 +15,17 @@ import { applyRegistrationIntake, ATTENDEE_TYPES, type AttendeeType } from "@/li
 
 export const dynamic = "force-dynamic";
 
-/** Register the current user for an event. Idempotent. Optional typed intake
- *  body: { attendeeType, answers }. */
+/** Register for an event. Idempotent. Optional typed intake body:
+ *  { attendeeType, answers, interests }.
+ *
+ *  Signed in: registers the current user, as before. Not signed in: registers a
+ *  guest (no account) from the answers; name, email and role are required, and
+ *  repeat submissions with the same email update the same guest row. */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
-  const profile = await requireUserProfile();
+  const profile = await getCurrentUserProfile().catch(() => null);
   try {
     const { slug } = await params;
     const supabase = await createServerSupabaseClient();
@@ -41,6 +47,21 @@ export async function POST(
       : [];
     if (interests.length === 0) {
       return NextResponse.json({ error: "Pick at least one networking interest." }, { status: 400 });
+    }
+
+    if (!profile) {
+      const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+      const rl = checkRateLimit({ key: `event-guest-register:${ip}`, limit: 10, windowMs: 10 * 60_000 });
+      if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+      const answers = body?.answers ?? {};
+      const email = typeof answers.email === "string" ? answers.email.trim() : "";
+      const name = typeof answers.name === "string" ? answers.name.trim() : "";
+      if (!attendeeType) return NextResponse.json({ error: "Choose how you are attending." }, { status: 400 });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
+      if (name.length < 2) return NextResponse.json({ error: "Your name is required." }, { status: 400 });
+      const { created } = await registerGuest(event.id, attendeeType, { ...answers, email, name });
+      if (created) track("event_registered", { eventId: event.id, guest: true });
+      return NextResponse.json({ guest: true, created }, { status: created ? 201 : 200 });
     }
 
     const { registration, created } = await registerForEvent(supabase, event.id, profile.id);
