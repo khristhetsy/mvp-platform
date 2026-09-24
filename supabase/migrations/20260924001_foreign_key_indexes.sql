@@ -99,7 +99,6 @@ create index if not exists idx_ceo_meeting_task_suggestions_suggested_department
 create index if not exists idx_ceo_plan_milestones_owner_id on public.ceo_plan_milestones (owner_id);
 
 -- ceo_plan_objectives
-create index if not exists idx_ceo_plan_objectives_department_id on public.ceo_plan_objectives (department_id);
 
 -- collaboration_comments
 create index if not exists idx_collaboration_comments_author_user_id on public.collaboration_comments (author_user_id);
@@ -110,7 +109,6 @@ create index if not exists idx_collaboration_threads_investor_profile_id on publ
 create index if not exists idx_collaboration_threads_spv_id on public.collaboration_threads (spv_id);
 
 -- companies
-create index if not exists idx_companies_founder_id on public.companies (founder_id);
 
 -- company_invites
 create index if not exists idx_company_invites_accepted_by_user_id on public.company_invites (accepted_by_user_id);
@@ -193,7 +191,6 @@ create index if not exists idx_event_brochures_base_edition_id on public.event_b
 create index if not exists idx_event_help_requests_profile_id on public.event_help_requests (profile_id);
 
 -- event_introductions
-create index if not exists idx_event_introductions_founder_reg_id on public.event_introductions (founder_reg_id);
 create index if not exists idx_event_introductions_investor_reg_id on public.event_introductions (investor_reg_id);
 
 -- event_leads
@@ -357,7 +354,6 @@ create index if not exists idx_marketing_list_contacts_contact_id on public.mark
 
 -- marketing_sequence_batches
 create index if not exists idx_marketing_sequence_batches_approver_id on public.marketing_sequence_batches (approver_id);
-create index if not exists idx_marketing_sequence_batches_sequence_id on public.marketing_sequence_batches (sequence_id);
 create index if not exists idx_marketing_sequence_batches_step_id on public.marketing_sequence_batches (step_id);
 
 -- marketing_sequence_enrollments
@@ -444,7 +440,6 @@ create index if not exists idx_sales_opportunities_company_id on public.sales_op
 create index if not exists idx_sales_opportunities_contact_profile_id on public.sales_opportunities (contact_profile_id);
 create index if not exists idx_sales_opportunities_owner_id on public.sales_opportunities (owner_id);
 create index if not exists idx_sales_opportunities_pipeline_id on public.sales_opportunities (pipeline_id);
-create index if not exists idx_sales_opportunities_stage_id on public.sales_opportunities (stage_id);
 
 -- sales_settings
 create index if not exists idx_sales_settings_default_assignee_id on public.sales_settings (default_assignee_id);
@@ -453,7 +448,6 @@ create index if not exists idx_sales_settings_default_assignee_id on public.sale
 create index if not exists idx_sales_stages_sequence_id on public.sales_stages (sequence_id);
 
 -- sales_tasks
-create index if not exists idx_sales_tasks_assignee_id on public.sales_tasks (assignee_id);
 
 -- saved_deals
 create index if not exists idx_saved_deals_campaign_id on public.saved_deals (campaign_id);
