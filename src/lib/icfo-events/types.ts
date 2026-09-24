@@ -83,6 +83,7 @@ export type EventActivityType =
   | "published"
   | "unpublished"
   | "archived"
+  | "ended"
   | "session_added"
   | "presenter_approved"
   | "presenter_declined"

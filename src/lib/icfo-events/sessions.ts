@@ -140,6 +140,19 @@ export async function setSessionLiveRoom(
   return mapSession(data as Row);
 }
 
+/** End every live session of an event (used when the whole event is ended). */
+export async function endLiveSessionsForEvent(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+): Promise<void> {
+  const { error } = await raw(supabase)
+    .from("sessions")
+    .update({ status: "ended", doors_open: false })
+    .eq("event_id", eventId)
+    .eq("status", "live");
+  if (error) throw new Error(error.message);
+}
+
 /** End a live session (status → ended). The room URL stays for reference. */
 export async function endLiveSession(
   supabase: SupabaseClient<Database>,

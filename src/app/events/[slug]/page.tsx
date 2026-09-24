@@ -24,6 +24,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { effectiveStatus } from "@/lib/icfo-events/lifecycle";
 import { getLeaderboard, getMemberStats, getPointRules } from "@/lib/icfo-events/gamification";
 import type { LeaderboardEntry, MemberStats } from "@/lib/icfo-events/gamification";
 import { CREDITS_ENABLED } from "@/lib/icfo-events/credits";
@@ -220,6 +221,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   if (!event || event.status === "draft" || event.status === "archived") {
     notFound();
   }
+  // Past its end date counts as ended here too, so the page agrees with admin.
+  const shownStatus = effectiveStatus(event);
 
   const supabase = await createServerSupabaseClient();
   const profile = await getCurrentUserProfile();
@@ -350,16 +353,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   {fmtRange(event.startsAt, event.endsAt)}
                 </span>
                 <span className="capitalize">· {event.format.replace("_", " ")}</span>
-                {event.status === "live" && (
+                {shownStatus === "live" && (
                   <span className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: "#3a1d1d" }}>{t("live_now")}</span>
                 )}
-                {event.status === "ended" && (
+                {shownStatus === "ended" && (
                   <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">{t("concluded")}</span>
                 )}
               </div>
               {event.summary && <p className="mt-4 max-w-2xl text-sm" style={{ color: "#cdd6e4" }}>{event.summary}</p>}
               <div className="mt-5 flex flex-wrap items-center gap-3">
-                {event.status !== "ended" && (
+                {shownStatus !== "ended" && (
                   <RegisterButton
                     eventId={event.id}
                     slug={event.slug}
@@ -404,7 +407,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               href={r.href}
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-white px-4 py-2 text-sm font-medium text-[var(--navy)] transition hover:border-[var(--indigo)]"
             >
-              {event.status === "live" && <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#E24B4A" }} aria-hidden />}
+              {shownStatus === "live" && <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#E24B4A" }} aria-hidden />}
               {r.label}
             </Link>
           ))}
@@ -662,7 +665,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               organizerPhone={event.organizerPhone}
               organizerEmail={event.organizerEmail}
               alreadyRegistered={Boolean(registration)}
-              ended={event.status === "ended"}
+              ended={shownStatus === "ended"}
             />
           </aside>
         </div>

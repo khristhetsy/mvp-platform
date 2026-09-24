@@ -7,6 +7,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/posthog";
 import { createNotification } from "@/lib/notifications/notifications";
 import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
+import { effectiveStatus } from "@/lib/icfo-events/lifecycle";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
 import { upsertOptin } from "@/lib/icfo-events/networking";
@@ -33,6 +34,9 @@ export async function POST(
     const event = await getEventBySlug(supabase, slug);
     if (!event || !["published", "live", "ended"].includes(event.status)) {
       return NextResponse.json({ error: "Event not available for registration." }, { status: 404 });
+    }
+    if (effectiveStatus(event) === "ended") {
+      return NextResponse.json({ error: "This event has ended. Registration is closed." }, { status: 409 });
     }
 
     const body = (await req.json().catch(() => null)) as { attendeeType?: string; answers?: Record<string, unknown>; interests?: unknown } | null;

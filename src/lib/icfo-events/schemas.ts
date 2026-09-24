@@ -42,7 +42,7 @@ export const updateEventSchema = z.object({
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 export const publishEventSchema = z.object({
-  action: z.enum(["publish", "unpublish", "archive"]),
+  action: z.enum(["publish", "unpublish", "archive", "end"]),
 });
 export type PublishEventInput = z.infer<typeof publishEventSchema>;
 

@@ -4,6 +4,7 @@ import { requirePermissionApi } from "@/lib/api/permissions";
 import { track } from "@/lib/analytics/posthog";
 import { publishEventSchema } from "@/lib/icfo-events/schemas";
 import { getEventById, setEventStatus } from "@/lib/icfo-events/queries";
+import { endLiveSessionsForEvent } from "@/lib/icfo-events/sessions";
 import { logEventActivity } from "@/lib/icfo-events/activity";
 import type { EventStatus, EventActivityType } from "@/lib/icfo-events/types";
 
@@ -13,11 +14,13 @@ const ACTION_TO_STATUS: Record<string, EventStatus> = {
   publish: "published",
   unpublish: "draft",
   archive: "archived",
+  end: "ended",
 };
 const ACTION_TO_ACTIVITY: Record<string, EventActivityType> = {
   publish: "published",
   unpublish: "unpublished",
   archive: "archived",
+  end: "ended",
 };
 
 /** Move an event between lifecycle states (staff). */
@@ -45,7 +48,14 @@ export async function POST(
       );
     }
 
+    // Guard: only a published or live event can be ended. Ending a draft would
+    // make a never-published event publicly readable.
+    if (parsed.data.action === "end" && existing.status !== "published" && existing.status !== "live") {
+      return NextResponse.json({ error: "Only a published or live event can be ended." }, { status: 422 });
+    }
+
     const status = ACTION_TO_STATUS[parsed.data.action];
+    if (parsed.data.action === "end") await endLiveSessionsForEvent(auth.supabase, id);
     const event = await setEventStatus(auth.supabase, id, status);
     await logEventActivity(auth.supabase, id, auth.profile.id, ACTION_TO_ACTIVITY[parsed.data.action]);
     track("event_status_changed", { userId: auth.profile.id, eventId: id, action: parsed.data.action });

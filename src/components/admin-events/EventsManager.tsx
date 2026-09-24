@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { isPastDraft } from "@/lib/icfo-events/lifecycle";
 import type { EventFormat, EventRecord, EventStatus, EventVisibility } from "@/lib/icfo-events/types";
 
 const STATUS_STYLES: Record<EventStatus, string> = {
@@ -74,6 +75,8 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
   const [dupOpts, setDupOpts] = useState({ branding: true, sessions: true, sponsors: true });
   const [dupPeople, setDupPeople] = useState({ presenters: true, exhibitors: true, talkShowGuests: true, panelists: true });
   const [duplicating, setDuplicating] = useState(false);
+  // End event confirm dialog
+  const [endFor, setEndFor] = useState<EventRecord | null>(null);
 
   function openDuplicate(ev: EventRecord) {
     setDupFor(ev);
@@ -143,7 +146,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
     }
   }
 
-  async function changeStatus(id: string, action: "publish" | "unpublish" | "archive") {
+  async function changeStatus(id: string, action: "publish" | "unpublish" | "archive" | "end") {
     setBusyId(id);
     setError(null);
     try {
@@ -304,9 +307,14 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                     {(() => {
                       const shown = displayStatus(ev);
                       return (
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[shown]}`}>
-                          {shown}
-                        </span>
+                        <>
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[shown]}`}>
+                            {shown}
+                          </span>
+                          {isPastDraft(ev) && (
+                            <span className="mt-1 block text-[11px] text-amber-700">Date passed. Never published.</span>
+                          )}
+                        </>
                       );
                     })()}
                   </td>
@@ -314,7 +322,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                     <div className="flex justify-end gap-2">
                       {/* The page as the public sees it. A draft has none, so it
                           offers the staff-only preview rather than a 404. */}
-                      {ev.status === "published" || ev.status === "live" ? (
+                      {ev.status === "published" || ev.status === "live" || ev.status === "ended" ? (
                         <a
                           href={`/events/${ev.slug}`}
                           target="_blank"
@@ -355,6 +363,15 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                           Publish
                         </button>
                       )}
+                      {(ev.status === "published" || ev.status === "live") && displayStatus(ev) !== "ended" && (
+                        <button type="button"
+                          disabled={busyId === ev.id}
+                          onClick={() => setEndFor(ev)}
+                          className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          End event
+                        </button>
+                      )}
                       {(ev.status === "published" || ev.status === "live") && (
                         <button type="button"
                           disabled={busyId === ev.id}
@@ -381,6 +398,45 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
           </table>
         )}
       </div>
+
+      {endFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+          onClick={() => busyId !== endFor.id && setEndFor(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">End this event?</h2>
+              <p className="mt-1.5 text-sm text-[var(--text-muted)]">
+                “{endFor.title}” closes now. Live sessions end, registration closes, and the public page switches to
+                its ended view. You can still Archive it later.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
+              <button type="button"
+                onClick={() => setEndFor(null)}
+                disabled={busyId === endFor.id}
+                className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button type="button"
+                onClick={async () => {
+                  await changeStatus(endFor.id, "end");
+                  setEndFor(null);
+                }}
+                disabled={busyId === endFor.id}
+                className="rounded-md bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800 disabled:opacity-50"
+              >
+                {busyId === endFor.id ? "Ending…" : "End event"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {dupFor && (
         <div
