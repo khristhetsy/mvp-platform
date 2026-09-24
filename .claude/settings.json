@@ -11,7 +11,7 @@
     ],
     "ask": [
       "Edit(src/**)",
-      "Write(src/**)"
+      "Edit(src/**)"
     ]
   }
 }
