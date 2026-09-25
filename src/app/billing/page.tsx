@@ -109,8 +109,8 @@ export default async function BillingPage() {
             }`}
           >
             {daysLeft > 0
-              ? `You have full access — including investor distribution — for ${daysLeft} more day${daysLeft === 1 ? "" : "s"}. After that every tool stays free; a plan only adds distribution.`
-              : "Every founder tool stays free. Choose a plan when you're ready to reach investors."}
+              ? `You have full access, including investor distribution, for ${daysLeft} more day${daysLeft === 1 ? "" : "s"}. Choose a plan before then to keep access.`
+              : "Your trial has ended. Choose a plan to keep using iCapOS."}
           </p>
         ) : null}
 

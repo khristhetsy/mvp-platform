@@ -97,7 +97,7 @@ export function PlanComparisonSection({
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("founder_plans")}</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{t("choose_the_right_founder_workspace")}</h2>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {founderPlans.map((plan) => (
             <PlanCard
               key={plan.planType}
@@ -152,7 +152,6 @@ export function PlanComparisonSection({
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-6 py-3 font-medium">Feature</th>
-                  <th className="px-6 py-3 font-medium">Free</th>
                   <th className="px-6 py-3 font-medium">Basic</th>
                   <th className="px-6 py-3 font-medium">Professional</th>
                 </tr>
@@ -161,7 +160,6 @@ export function PlanComparisonSection({
                 {comparisonRows.map((row) => (
                   <tr key={row.label}>
                     <td className="px-6 py-3 font-medium text-slate-800">{row.label}</td>
-                    <td className="px-6 py-3 text-slate-600">{row.free ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                     <td className="px-6 py-3 text-slate-600">{row.basic ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                     <td className="px-6 py-3 text-slate-600">{row.professional ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</td>
                   </tr>
@@ -170,7 +168,7 @@ export function PlanComparisonSection({
             </table>
           </div>
           <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">
-            Every tool is free. Paid tiers add distribution — reaching investors, limits, and brokered intros.{" "}
+            Every plan includes all tools. Professional adds presentation slots and brokered intros.{" "}
             {PLAN_LABELS.founder_managed_ir} is done-for-you.
           </p>
         </section>

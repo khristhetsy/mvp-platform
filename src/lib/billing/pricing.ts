@@ -24,22 +24,9 @@ export type PricingPlanCard = {
   contactSales?: boolean;
 };
 
+// Founder Free was discontinued for new sign ups on 16 Sep 2026; existing free
+// accounts are grandfathered and are not shown a Free card.
 export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
-  {
-    planType: "founder_free",
-    title: "Free",
-    priceLabel: "$0",
-    priceSubtext: "Readiness",
-    monthlyPriceCents: PLAN_PRICES.founder_free,
-    badge: "Start here",
-    features: [
-      "All tools: CRR, valuation, data room, e-learning",
-      "See that matches exist — count, sector, fit tier",
-      "Investor identities hidden · no distribution",
-      "Your qualification layer, prescored for you",
-    ],
-    paidPlan: false,
-  },
   {
     planType: "founder_basic",
     title: "Basic",
@@ -47,7 +34,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_basic,
     features: [
-      "Everything in Free",
+      "All tools: CRR, valuation, data room, e-learning",
       "Up to 5 matched investors get your one-pager",
       "Attend the Investor Conference Virtual Event",
       "DIY outreach unlocked — you can now reach investors",
@@ -107,26 +94,25 @@ export const INVESTOR_PRICING_PLAN: PricingPlanCard = {
 
 export type FeatureComparisonRow = {
   label: string;
-  free: boolean;
   basic: boolean;
   professional: boolean;
 };
 
-// New model: all TOOLS are free; paid tiers add DISTRIBUTION.
+// Every plan includes all tools; Professional adds presentation slots and brokered intros.
 export const FEATURE_COMPARISON: FeatureComparisonRow[] = [
-  { label: "CRR / readiness", free: true, basic: true, professional: true },
-  { label: "Valuation studio", free: true, basic: true, professional: true },
-  { label: "Data room & documents", free: true, basic: true, professional: true },
-  { label: "e-Learning", free: true, basic: true, professional: true },
-  { label: "See matches exist (count · sector · fit tier)", free: true, basic: true, professional: true },
-  { label: "Investor identities revealed", free: false, basic: true, professional: true },
-  { label: "One-pager distributed to matches", free: false, basic: true, professional: true },
-  { label: "Event spotlight", free: false, basic: true, professional: true },
-  { label: "DIY outreach", free: false, basic: true, professional: true },
-  { label: "Matched investor cap", free: false, basic: true, professional: true },
-  { label: "Monthly presentation slot", free: false, basic: false, professional: true },
-  { label: "Brokered intro requests", free: false, basic: false, professional: true },
-  { label: "Additional company accounts ($800/mo)", free: false, basic: false, professional: true },
+  { label: "CRR / readiness", basic: true, professional: true },
+  { label: "Valuation studio", basic: true, professional: true },
+  { label: "Data room & documents", basic: true, professional: true },
+  { label: "e-Learning", basic: true, professional: true },
+  { label: "See matches exist (count · sector · fit tier)", basic: true, professional: true },
+  { label: "Investor identities revealed", basic: true, professional: true },
+  { label: "One-pager distributed to matches", basic: true, professional: true },
+  { label: "Event spotlight", basic: true, professional: true },
+  { label: "DIY outreach", basic: true, professional: true },
+  { label: "Matched investor cap", basic: true, professional: true },
+  { label: "Monthly presentation slot", basic: false, professional: true },
+  { label: "Brokered intro requests", basic: false, professional: true },
+  { label: "Additional company accounts ($800/mo)", basic: false, professional: true },
 ];
 
 export function formatMonthlyPrice(cents: number) {

@@ -133,7 +133,7 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     priceSubtext: "/month",
     paidPlan: true,
     features: [
-      "Everything in Free",
+      "All tools: CRR, valuation, data room, e-learning",
       "Up to 5 matched investors receive your one-pager",
       "Attend the Investor Conference Virtual Event",
       "DIY outreach unlocked — you can now reach investors",
