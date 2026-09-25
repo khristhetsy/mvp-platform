@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { recordFunnelEvent } from "@/lib/analytics/funnel";
 
 /**
  * Marketing signup intake (spec §3, §8). Writes a marketing_site_leads row via
@@ -24,7 +25,7 @@ const leadSchema = z.object({
   utm: z.record(z.string(), z.string()).optional(),
 });
 
-export async function POST(req: Request): Promise<Response> {
+export async function POST(req: NextRequest): Promise<Response> {
   const body = await req.json().catch(() => null);
   const parsed = leadSchema.safeParse(body);
   if (!parsed.success) {
@@ -49,6 +50,11 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     // Non-fatal — still hand off to auth so the founder isn't blocked.
   }
+
+  // Signup from someone who walked /fit in the last 30 days (fs_session cookie).
+  // Best-effort: recordFunnelEvent never throws.
+  const fitSessionId = req.cookies.get("fs_session")?.value;
+  if (fitSessionId) await recordFunnelEvent({ sessionId: fitSessionId, eventName: "fit_signup", properties: { source_page: parsed.data.source_page ?? null } });
 
   // Hand off to existing auth (spec §15); does not reimplement it.
   const redirect = `/auth/sign-up?email=${encodeURIComponent(parsed.data.email)}&role=founder`;

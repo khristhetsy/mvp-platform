@@ -142,6 +142,11 @@ function MethodSteps({ items, color, line }: { items: MethodStep[]; color: strin
   );
 }
 
+// Options screen telemetry. keepalive lets the request finish while the page navigates away.
+function logFitChoice(eventName: "fit_options_view" | "fit_spv_click" | "fit_crr_click") {
+  fetch("/api/fit/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventName }), keepalive: true }).catch(() => {});
+}
+
 const EMPTY: FitAnswers = { stage: [], raise: [], industry: [], revenue: [], investorType: [] };
 
 export function FitFunnelClient() {
@@ -173,6 +178,10 @@ export function FitFunnelClient() {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (step === "method") logFitChoice("fit_options_view");
+  }, [step]);
 
   const toggle = (field: keyof FitAnswers, value: string) =>
     setAnswers((a) => ({ ...a, [field]: a[field].includes(value) ? a[field].filter((v) => v !== value) : [...a[field], value] }));
@@ -234,7 +243,7 @@ export function FitFunnelClient() {
             <h1 className="mt-3 text-[20px] font-semibold leading-snug text-slate-900">Run your raise through an SPV</h1>
             <p className="mt-1.5 text-[13px] text-slate-500">One vehicle. One cap table line. One close, scoped to your raise.</p>
             <MethodSteps items={spvSteps} color="bg-indigo-600" line="bg-gradient-to-b from-indigo-600 to-indigo-200" />
-            <Link href="/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" className="mt-auto block rounded-lg bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-indigo-700">Book a structuring call</Link>
+            <Link href="/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" onClick={() => logFitChoice("fit_spv_click")} className="mt-auto block rounded-lg bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-indigo-700">Book a structuring call</Link>
           </div>
 
           <div className="flex flex-col rounded-xl border border-slate-200 p-5">
@@ -244,7 +253,7 @@ export function FitFunnelClient() {
             <h2 className="mt-3 text-[20px] font-semibold leading-snug text-slate-900">Raise your own capital</h2>
             <p className="mt-1.5 text-[13px] text-slate-500">Use the iCapOS tools to run your raise yourself, start to close.</p>
             <MethodSteps items={selfSteps} color="bg-emerald-700" line="bg-gradient-to-b from-emerald-700 to-emerald-200" />
-            <a href="https://icapos.com/start" className="mt-auto block rounded-lg border border-emerald-700 px-5 py-3 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Get my CRR score <i className="ti ti-arrow-right" aria-hidden="true" /></a>
+            <a href="https://icapos.com/start?src=fit" onClick={() => logFitChoice("fit_crr_click")} className="mt-auto block rounded-lg border border-emerald-700 px-5 py-3 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Get my CRR score <i className="ti ti-arrow-right" aria-hidden="true" /></a>
           </div>
         </div>
 

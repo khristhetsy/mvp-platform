@@ -23,9 +23,15 @@ export const FUNNEL_EVENTS = [
 
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 
+/** /fit options screen: which path a visitor picks, and whether they sign up after.
+ *  Kept out of FUNNEL_EVENTS so the weekly funnel report's steps don't change. */
+export const FIT_CHOICE_EVENTS = ["fit_options_view", "fit_spv_click", "fit_crr_click", "fit_signup"] as const;
+
+export type FitChoiceEventName = (typeof FIT_CHOICE_EVENTS)[number];
+
 export type FunnelEventInput = {
   sessionId: string;
-  eventName: FunnelEventName;
+  eventName: FunnelEventName | FitChoiceEventName;
   properties?: Record<string, unknown>;
   organizationId?: string | null;
 };
