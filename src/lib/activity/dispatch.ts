@@ -25,6 +25,16 @@ import {
 } from "@/lib/activity/stages";
 import { resolveRecipients } from "@/lib/activity/assignments";
 import { type ActivityChannelPrefs, activityPrefsFrom } from "@/lib/activity/preferences";
+import {
+  loadActorEmailContext,
+  loadCompanyEmailContext,
+  loadDocumentDetail,
+} from "@/lib/activity/email-context";
+import {
+  absoluteUrl,
+  companyHeadline,
+  renderAdminActivityEmail,
+} from "@/lib/activity/email-templates";
 
 export type DispatchInput = {
   eventId: string;
@@ -35,6 +45,9 @@ export type DispatchInput = {
   companyId: string | null;
   investorId: string | null;
   actorUserId: string | null;
+  /** The row the event is about. Lets the email name the file for a document event. */
+  entityType?: string | null;
+  entityId?: string | null;
 };
 
 function deepLinkFor(input: DispatchInput): string {
@@ -76,10 +89,36 @@ export async function dispatchActivityNotifications(input: DispatchInput): Promi
   // stage is three people each assuming one of the others has it.
   const leadName = leadUserId ? await displayName(leadUserId) : null;
   const message = usedFallback
-    ? `${stageLabel} · nobody is assigned to this stage`
+    ? `${stageLabel} · no owner assigned to this stage`
     : leadName
       ? `${stageLabel} · ${leadName} leads`
       : `${stageLabel} · no lead assigned`;
+
+  // Who and which company, loaded once for every recipient. Without these every
+  // alert reads "Uploaded pitch deck" and two founders' uploads look identical.
+  const company = input.companyId ? await loadCompanyEmailContext(input.companyId) : null;
+  const actor = input.actorUserId
+    ? await loadActorEmailContext(input.actorUserId, company?.founderId ?? null)
+    : null;
+  const documentDetail =
+    input.entityType === "document" && input.entityId ? await loadDocumentDetail(input.entityId) : null;
+  const headline = companyHeadline(company?.companyName ?? null, input.title);
+  const isDocumentClass = input.classKey.startsWith("document");
+  const email = renderAdminActivityEmail({
+    title: input.title,
+    stageLabel,
+    classDescription: cls.description,
+    critical,
+    companyName: company?.companyName ?? null,
+    actor: actor ? { name: actor.name, email: actor.email, roleLabel: actor.roleLabel } : null,
+    document: documentDetail,
+    checklist: isDocumentClass && company?.checklist.length ? company.checklist : null,
+    readinessScore: company?.readinessScore ?? null,
+    ownerName: leadName,
+    noOwner: usedFallback,
+    primaryUrl: absoluteUrl(link),
+    assignUrl: absoluteUrl("/admin/activity/assignments"),
+  });
 
   await Promise.all(
     userIds.map(async (userId) => {
@@ -97,7 +136,7 @@ export async function dispatchActivityNotifications(input: DispatchInput): Promi
           recipientUserId: userId,
           actorUserId: input.actorUserId,
           type: `activity_${input.classKey}`,
-          title: input.title,
+          title: headline,
           message,
           entityType: "operational_activity_event",
           entityId: input.eventId,
@@ -110,20 +149,14 @@ export async function dispatchActivityNotifications(input: DispatchInput): Promi
       if (!prefs.channel_email || !allowed(activityPrefs, input.classKey, "email")) return;
       if (isQuietNow(prefs) && !(critical && prefs.critical_override)) return;
 
-      const email = await emailOf(userId);
-      if (!email) return;
+      const address = await emailOf(userId);
+      if (!address) return;
 
       await sendTransactionalEmail({
-        to: email,
-        subject: critical ? `[Action needed] ${input.title}` : input.title,
-        body: [
-          input.title,
-          "",
-          message,
-          cls.description,
-          "",
-          `${process.env.NEXT_PUBLIC_APP_URL ?? ""}${link}`,
-        ].join("\n"),
+        to: address,
+        subject: email.subject,
+        body: email.text,
+        html: email.html,
         // Without RESEND_API_KEY this falls back to an in-app notification for
         // the addressee, so the recipient id is the staff member, not a founder.
         founderId: userId,

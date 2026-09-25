@@ -22,6 +22,7 @@ import { documentUploadSchema } from "@/lib/validation";
 import { getUploadLimits } from "@/lib/settings/platform-settings";
 import { validateFile, PDF_ONLY } from "@/lib/uploads/policy";
 import { emitActivity } from "@/lib/activity/emit";
+import { sendFounderUploadConfirmation } from "@/lib/activity/founder-upload-email";
 
 const uploadErrorMessages: Record<number, string> = {
   400: "Upload failed due to invalid input. Please check the file and try again.",
@@ -459,6 +460,21 @@ export async function POST(request: Request) {
       title: `${operation === "update" ? "Replaced" : "Uploaded"} ${label || normalizedDocumentType.replace(/_/g, " ").toLowerCase()}`,
       metadata: { document_type: normalizedDocumentType, operation },
     });
+  }
+
+  // The founder's own confirmation: which file landed, where they are in the
+  // raise, and the next core document. Sent after the response so it never
+  // slows the upload. Staff uploading on a founder's behalf do not get it.
+  if (documentId && companyId && auth.profile.role === "founder") {
+    const confirmation = {
+      userId: auth.profile.id,
+      companyId,
+      documentId,
+      documentLabel: normalizedDocumentType.replace(/_/g, " ").toLowerCase(),
+      fileName: uploadName,
+      replaced: operation === "update",
+    };
+    after(() => sendFounderUploadConfirmation(confirmation));
   }
 
   // Activation analytics for the founder funnel (best-effort; never blocks upload).

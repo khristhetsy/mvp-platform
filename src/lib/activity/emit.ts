@@ -194,6 +194,8 @@ export async function recordActivity(input: RecordActivityInput): Promise<string
       companyId: input.companyId ?? null,
       investorId: input.investorId ?? null,
       actorUserId: input.actorUserId,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
     });
 
     return result.id;
