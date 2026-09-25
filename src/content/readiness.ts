@@ -12,7 +12,7 @@ export const readiness = {
   hero: {
     eyebrow: "Capital Readiness Rating",
     title: "Find the gaps before an investor does.",
-    sub: "A structured score across five dimensions investors commonly screen on, with an ordered list of what to fix. Free, and you can re-run it as often as you like.",
+    sub: "A structured score across five dimensions investors commonly screen on, with an ordered list of what to fix. Included in every plan, and you can re-run it as often as you like.",
     cta: { label: "Start the rating", href: "/start" },
     compliance: "The rating is an assessment tool. It is not investment advice, a valuation, a credit opinion, or any indication that capital will be raised.",
   },

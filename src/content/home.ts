@@ -9,7 +9,7 @@ export const home = {
   hero: {
     eyebrow: "Investor relations, run as software",
     title: "Get your company in front of investors whose mandate fits.",
-    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. Every tool is always free; upgrade your plan when you're ready to raise capital.",
+    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. Every plan includes all the tools; choose Basic or Professional to get started.",
     primaryCta: { label: "Find the right fit investors", href: "/fit" },
     secondaryCta: { label: "See plans", href: "/pricing" },
     compliance:
@@ -39,7 +39,7 @@ export const home = {
     title: "Three steps, and we run two of them.",
     sub: "The sequence matters: we rate you first, so you find the weak spots before an investor does.",
     steps: [
-      { n: "01", h: "We rate your readiness", p: "The Capital Readiness Rating scores your company across the dimensions investors screen on, and tells you exactly what to fix. Free, and you can re-run it whenever something changes." },
+      { n: "01", h: "We rate your readiness", p: "The Capital Readiness Rating scores your company across the dimensions investors screen on, and tells you exactly what to fix. Included in every plan, and you can re-run it whenever something changes." },
       { n: "02", h: "We build your investor list", p: "Your profile is matched against investor mandates in the iCFO network. Every match carries an Investor Fit Score, so you can see why each name is on the list." },
       { n: "03", h: "We send on your behalf", p: "Your one-pager or investor newsletter goes out to the matched list, on a cadence each investor has agreed to accept. Replies come straight back to you." },
     ],
