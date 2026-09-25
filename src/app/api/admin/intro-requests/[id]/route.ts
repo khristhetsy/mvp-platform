@@ -87,6 +87,13 @@ export async function PATCH(
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
 
+  // Founder initiated requests (founder_to_investor) are brokered by iCFO: the
+  // investor never asked, so they get a plain introduction notice and nothing on decline.
+  const { data: fullRow } = await admin.from("intro_requests").select("*").eq("id", id).maybeSingle();
+  const founderInitiated =
+    (fullRow as unknown as { direction?: string | null } | null)?.direction === "founder_to_investor";
+  const noteSuffix = body.note ? ` Note from iCFO: ${body.note}` : "";
+
   // Derive related IDs
   const companyRow = Array.isArray(intro.companies)
     ? intro.companies[0]
@@ -102,8 +109,10 @@ export async function PATCH(
       recipientUserId: intro.investor_id,
       actorUserId: profile.id,
       type: "intro_facilitated",
-      title: "Intro request facilitated",
-      message: `Your intro request to ${companyName} has been facilitated. Check your inbox for next steps.`,
+      title: founderInitiated ? "New introduction from iCFO" : "Intro request facilitated",
+      message: founderInitiated
+        ? `iCFO introduced you to ${companyName}. Check your inbox for next steps.`
+        : `Your intro request to ${companyName} has been facilitated. Check your inbox for next steps.`,
       entityType: "intro_request",
       entityId: id,
       deepLink: "/investor/dashboard",
@@ -116,8 +125,10 @@ export async function PATCH(
         recipientUserId: founderId,
         actorUserId: profile.id,
         type: "intro_facilitated_founder",
-        title: "Investor intro is live",
-        message: "An investor intro request for your company has been facilitated. Expect a message soon.",
+        title: founderInitiated ? "Introduction made" : "Investor intro is live",
+        message: founderInitiated
+          ? `iCFO made your introduction. Watch your inbox for the connection email from iCFO.${noteSuffix}`
+          : "An investor intro request for your company has been facilitated. Expect a message soon.",
         entityType: "intro_request",
         entityId: id,
         deepLink: "/founder/capital-raise",
@@ -126,7 +137,35 @@ export async function PATCH(
     }
   }
 
-  if (newStatus === "declined") {
+  if (newStatus === "reviewing" && founderInitiated && founderId) {
+    await createNotification({
+      recipientUserId: founderId,
+      actorUserId: profile.id,
+      type: "intro_reviewing_founder",
+      title: "Introduction in review",
+      message: "iCFO is reviewing your introduction request.",
+      entityType: "intro_request",
+      entityId: id,
+      deepLink: "/founder/matches",
+      dedupeKey: `intro_reviewing_founder:${id}`,
+    });
+  }
+
+  if (newStatus === "declined" && founderInitiated && founderId) {
+    await createNotification({
+      recipientUserId: founderId,
+      actorUserId: profile.id,
+      type: "intro_declined_founder",
+      title: "Introduction not made",
+      message: `Your introduction request didn't go ahead, so it doesn't count toward your plan's limit.${noteSuffix}`,
+      entityType: "intro_request",
+      entityId: id,
+      deepLink: "/founder/matches",
+      dedupeKey: `intro_declined_founder:${id}`,
+    });
+  }
+
+  if (newStatus === "declined" && !founderInitiated) {
     await createNotification({
       recipientUserId: intro.investor_id,
       actorUserId: profile.id,

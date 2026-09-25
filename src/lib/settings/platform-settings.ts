@@ -348,10 +348,18 @@ export async function setAutomationConfig(cfg: AutomationConfig, updatedBy: stri
  */
 export type FounderConnectionConfig = {
   monthlyByPlan: { basic: number; professional: number };
+  /** Weekly cap per plan (weeks start Monday, UTC). null = no weekly cap. */
+  weeklyByPlan?: { basic: number | null; professional: number | null };
+};
+
+const DEFAULT_FOUNDER_WEEKLY_CAPS: { basic: number | null; professional: number | null } = {
+  basic: null,
+  professional: 5,
 };
 
 export const DEFAULT_FOUNDER_CONNECTION_CONFIG: FounderConnectionConfig = {
   monthlyByPlan: { basic: 5, professional: 20 },
+  weeklyByPlan: DEFAULT_FOUNDER_WEEKLY_CAPS,
 };
 
 const FOUNDER_CONNECTION_CONFIG_KEY = "founder_connection_config";
@@ -361,11 +369,20 @@ export async function getFounderConnectionConfig(): Promise<FounderConnectionCon
     const { data } = await db().from("platform_settings").select("value").eq("key", FOUNDER_CONNECTION_CONFIG_KEY).maybeSingle();
     const v = (data as { value?: Partial<FounderConnectionConfig> } | null)?.value;
     const mbp = (v?.monthlyByPlan ?? {}) as Partial<FounderConnectionConfig["monthlyByPlan"]>;
+    const wbp = (v?.weeklyByPlan ?? {}) as Partial<{ basic: number | null; professional: number | null }>;
+    // A number is a cap, an explicit null means no weekly cap, anything else falls back to the default.
+    const weekly = (k: "basic" | "professional"): number | null => {
+      const val = wbp[k];
+      if (typeof val === "number") return val;
+      if (val === null) return null;
+      return DEFAULT_FOUNDER_WEEKLY_CAPS[k];
+    };
     return {
       monthlyByPlan: {
         basic: typeof mbp.basic === "number" ? mbp.basic : DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.basic,
         professional: typeof mbp.professional === "number" ? mbp.professional : DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.professional,
       },
+      weeklyByPlan: { basic: weekly("basic"), professional: weekly("professional") },
     };
   } catch {
     return DEFAULT_FOUNDER_CONNECTION_CONFIG;

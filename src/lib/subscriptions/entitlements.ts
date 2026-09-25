@@ -4,17 +4,20 @@ import type { PlanType } from "@/lib/subscriptions/plans";
  * Distribution entitlements per founder tier (new pricing model). Tools are free
  * for everyone (see access.ts / featuresForPlan); THIS is the paid layer:
  *
- *  - Free        sees that matches exist (count/sector/tier) but not WHO; no distribution.
- *  - Basic       reveals identities, DIY outreach + one-pager to up to 5 matches.
- *  - Professional adds up to 50, monthly presentation slot, intro requests.
+ *  - Free        sees full matched investor profiles; no distribution, no intro requests.
+ *  - Basic       DIY outreach + one-pager to up to 5 matches, brokered intro requests.
+ *  - Professional adds up to 50, monthly presentation slot.
+ *
+ * Every tier sees investor profiles (name, firm, type, stage, check size). Investor
+ * contact details are never shown to founders: iCFO brokers the introduction.
  *  - Managed IR  done-for-you; everything Professional has, uncapped.
  */
 export type FounderEntitlements = {
-  /** Reveal investor identities. Free = false (count/sector/tier only). */
+  /** Reveal investor identities (name, firm). Every tier; contact details stay hidden. */
   revealInvestorIdentities: boolean;
   /** Distribute — one-pager sends + DIY outreach (Basic and up). */
   canDistribute: boolean;
-  /** Request brokered introductions (Professional and up). */
+  /** Request brokered introductions (Basic and up), within founder_connection_config limits. */
   canBrokerIntros: boolean;
   /** Monthly presentation slot (Professional and up). */
   canPresentMonthly: boolean;
@@ -25,7 +28,7 @@ export type FounderEntitlements = {
 };
 
 const FREE: FounderEntitlements = {
-  revealInvestorIdentities: false,
+  revealInvestorIdentities: true,
   canDistribute: false,
   canBrokerIntros: false,
   canPresentMonthly: false,
@@ -36,7 +39,7 @@ const FREE: FounderEntitlements = {
 const BASIC: FounderEntitlements = {
   revealInvestorIdentities: true,
   canDistribute: true,
-  canBrokerIntros: false,
+  canBrokerIntros: true,
   canPresentMonthly: false,
   canAddCompany: false,
   investorCap: 5,

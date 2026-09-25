@@ -64,33 +64,58 @@ export async function POST(request: Request) {
   // no-op and isn't charged).
   const [cfg, plan] = await Promise.all([getFounderConnectionConfig(), getUserPlan(founderId)]);
 
-  // Brokered introductions are a Professional (and Managed IR) capability. Free
-  // and Basic can't request them — Basic reaches investors via DIY outreach.
-  if (!founderEntitlements(plan).canBrokerIntros) {
+  // Brokered introductions are included from Basic up. Founders on the
+  // grandfathered free plan see every profile but need a plan to request.
+  const entitlements = founderEntitlements(plan);
+  if (!entitlements.canBrokerIntros) {
     return NextResponse.json(
       {
-        error:
-          "Brokered introductions are a Professional feature. Upgrade to request intros, or use DIY outreach on Basic.",
+        error: "Introduction requests are included in Basic and Professional. Upgrade to request introductions through iCFO.",
         code: "upgrade_required",
       },
       { status: 403 },
     );
   }
 
-  const cap = plan === "founder_professional" ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
+  const isPro = plan === "founder_professional";
+  const cap = isPro ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
+  const weeklyCap = cfg.weeklyByPlan ? (isPro ? cfg.weeklyByPlan.professional : cfg.weeklyByPlan.basic) : null;
   const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
-  async function overCap(): Promise<boolean> {
+  // Weeks start Monday (UTC).
+  const weekStart = (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
+  // Declined requests are given back, so they don't count toward the limit.
+  async function countSince(since: string): Promise<number> {
     const [member, prospect] = await Promise.all([
-      admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", company!.id).gte("created_at", monthStart),
-      admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).gte("created_at", monthStart),
+      admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", company!.id).neq("status", "declined").gte("created_at", since),
+      admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).gte("created_at", since),
     ]);
-    return ((member.count ?? 0) + (prospect.count ?? 0)) >= cap;
+    return (member.count ?? 0) + (prospect.count ?? 0);
   }
-  const capError = () =>
-    NextResponse.json(
-      { error: `You've reached your plan's limit of ${cap} investor connection requests this month. Upgrade your plan or try again next month.`, code: "connection_cap_reached", cap },
+  let capPeriod: "week" | "month" = "month";
+  async function overCap(): Promise<boolean> {
+    if (weeklyCap !== null && (await countSince(weekStart)) >= weeklyCap) {
+      capPeriod = "week";
+      return true;
+    }
+    capPeriod = "month";
+    return (await countSince(monthStart)) >= cap;
+  }
+  const capError = () => {
+    const limit = capPeriod === "week" ? weeklyCap : cap;
+    const proWeekly = cfg.weeklyByPlan?.professional ?? null;
+    const upsell = isPro
+      ? ""
+      : ` Upgrade to Professional for ${proWeekly !== null ? `${proWeekly} a week, ` : ""}up to ${cfg.monthlyByPlan.professional} a month.`;
+    return NextResponse.json(
+      {
+        error: `You've used all ${limit} introduction requests for this ${capPeriod}.${upsell}`,
+        code: "connection_cap_reached",
+        cap: limit,
+        period: capPeriod,
+      },
       { status: 429 },
     );
+  };
 
   if (isProspectInvestorId(ref)) {
     // Prospect isn't a platform user — queue a brokered-intro request for the team.
@@ -120,6 +145,8 @@ export async function POST(request: Request) {
       company_id: company.id,
       org_id: org?.id ?? null,
       investor_id: ref,
+      direction: "founder_to_investor",
+      requested_by: founderId,
       message: note || "Founder requested an introduction via the Matching Center.",
     } as never);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
