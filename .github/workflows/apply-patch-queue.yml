@@ -1,0 +1,79 @@
+# Applies tested changes from the private Supabase patch queue to main.
+#
+# Claude queues a patch (git format-patch output) after Khris approves it; this
+# job picks it up, applies it with `git am`, pushes to main (Vercel deploys as
+# usual) and reports the result back to the queue. A patch that doesn't apply
+# cleanly is marked failed and nothing is pushed.
+#
+# Needs one repository secret: DEV_PATCH_KEY. The Supabase URL and publishable
+# key below are public (the same ones the website ships to every browser); the
+# queue key is what authorizes reading the queue.
+name: Apply patch queue
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-patch-queue
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SB_URL: https://raowjbhbtmwkycmwvavd.supabase.co
+      SB_KEY: sb_publishable_lWJHBTGBiQDyvyP623Nyiw_SvAANeS2
+      DEV_PATCH_KEY: ${{ secrets.DEV_PATCH_KEY }}
+    steps:
+      - name: Check for pending patches
+        id: pending
+        run: |
+          if [ -z "$DEV_PATCH_KEY" ]; then echo "DEV_PATCH_KEY secret is not set"; exit 1; fi
+          curl -fsS -X POST "$SB_URL/rest/v1/rpc/dev_patch_pending" \
+            -H "apikey: $SB_KEY" -H "Content-Type: application/json" \
+            -d "$(jq -n --arg k "$DEV_PATCH_KEY" '{p_key:$k}')" > pending.json
+          echo "count=$(jq length pending.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out main
+        if: steps.pending.outputs.count != '0'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          path: repo
+
+      - name: Apply and push
+        if: steps.pending.outputs.count != '0'
+        working-directory: repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          report() {
+            curl -fsS -X POST "$SB_URL/rest/v1/rpc/dev_patch_report" \
+              -H "apikey: $SB_KEY" -H "Content-Type: application/json" \
+              -d "$(jq -n --arg k "$DEV_PATCH_KEY" --argjson id "$1" --arg s "$2" --arg r "$3" --arg sha "$4" \
+                    '{p_key:$k,p_id:$id,p_status:$s,p_result:$r,p_sha:$sha}')" > /dev/null
+          }
+          for i in $(jq -r 'keys[]' ../pending.json); do
+            id=$(jq -r ".[$i].id" ../pending.json)
+            title=$(jq -r ".[$i].title" ../pending.json)
+            jq -r ".[$i].patch" ../pending.json > "../patch-$id.patch"
+            echo "Applying #$id: $title"
+            if out=$(git am --committer-date-is-author-date "../patch-$id.patch" 2>&1); then
+              if push=$(git push origin HEAD:main 2>&1); then
+                report "$id" applied "Pushed $(git rev-parse --short HEAD)" "$(git rev-parse HEAD)"
+              else
+                git reset --hard origin/main
+                report "$id" failed "Push failed: $push" ""
+              fi
+            else
+              git am --abort || true
+              report "$id" failed "Did not apply cleanly: $out" ""
+            fi
+          done
