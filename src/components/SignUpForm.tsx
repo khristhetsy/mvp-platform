@@ -24,7 +24,8 @@ function signUpDestinationByRole(role: SignupRole, privateBetaMode: boolean) {
 }
 
 function defaultPlanForRole(role: SignupRole): PlanType {
-  return role === "founder" ? "founder_trial" : "investor_free";
+  // Founder Free and the trial are gone for new sign ups; Basic is the default.
+  return role === "founder" ? "founder_basic" : "investor_free";
 }
 
 function PlanCard({
@@ -109,7 +110,7 @@ export function SignUpForm({
   const { getError, inputCls, validate, clearError } = useFormValidation();
 
   const [role, setRole] = useState<SignupRole>("founder");
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_trial");
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_basic");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -122,6 +123,11 @@ export function SignUpForm({
     if (requestedRole === "founder" || requestedRole === "investor") {
       setRole(requestedRole);
       setSelectedPlan(defaultPlanForRole(requestedRole));
+    }
+    // /start passes the plan the founder chose; only paid founder plans are honored.
+    const requestedPlan = searchParams.get("plan");
+    if (requestedRole !== "investor" && (requestedPlan === "founder_basic" || requestedPlan === "founder_professional")) {
+      setSelectedPlan(requestedPlan);
     }
     const prefillEmail = searchParams.get("email");
     if (prefillEmail) setEmail(prefillEmail);

@@ -9,7 +9,7 @@ export const investors = {
     eyebrow: "For investors",
     title: "Rated deal flow, at a volume you set.",
     sub: "Accounts are free. You define your mandate and your monthly limit — and you never receive more than you agreed to. Every company arrives with a readiness rating already attached.",
-    primaryCta: { label: "Create a free account", href: "/start" },
+    primaryCta: { label: "Create a free account", href: "/investors/start" },
     secondaryCta: { label: "Attend the Expo", href: "/events" },
     compliance: "iCapOS is indication-only. No transactions, subscriptions, or funds are processed on the platform.",
     panel: {

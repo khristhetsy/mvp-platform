@@ -4,7 +4,7 @@ import { AssessmentFlow } from "@/components/marketing-site/AssessmentFlow";
 import { FunnelBeacon } from "@/components/marketing-site/FunnelBeacon";
 
 export const metadata: Metadata = {
-  title: "Free assessment — iCapOS",
+  title: "Readiness check — iCapOS",
   description:
     "See your score band in ten questions — no account, no card. iCapOS scores your capital readiness and matches you to investors from iCFO Capital's network. Create a free account any time for the full rating.",
   alternates: { canonical: "/assessment" },

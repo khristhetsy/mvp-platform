@@ -27,6 +27,7 @@ export default function FoundersPage() {
           <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75">{f.hero.sub}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={f.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{f.hero.primaryCta.label}</Link>
+            <Link href={f.hero.fitCta.href} className="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-site-navy transition-colors hover:bg-white/90">{f.hero.fitCta.label}</Link>
             <Link href={f.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{f.hero.secondaryCta.label}</Link>
             <BookDemoButton variant="onDark" />
           </div>

@@ -15,7 +15,7 @@ const FOUNDERS_LINKS = [
   { href: "/pricing", label: "Pricing" },
 ];
 const INVESTOR_LINKS = [
-  { href: "/start", label: "Free account" },
+  { href: "/start", label: "Get started" },
   { href: "/investors", label: "Private Market" },
   { href: "/events", label: "Events" },
 ];

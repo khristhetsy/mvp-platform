@@ -373,7 +373,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
             </p>
             <p className="text-sm text-slate-600">
               Complete your profile to unlock stronger investor visibility. Your onboarding data is always yours —
-              your account and tools are free, with no expiry.
+              your plan includes every tool.
             </p>
           </div>
         ) : null}

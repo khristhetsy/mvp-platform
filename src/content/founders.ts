@@ -8,7 +8,8 @@ export const founders = {
     eyebrow: "For founders",
     title: "The investor legwork, run for you.",
     sub: "You keep running the company. iCapOS rates your readiness, builds your matched investor list, sends your materials, and gets you onto the conference agenda. Both plans are fully self-serve — nothing requires a sales call. A demo is available if you want one.",
-    primaryCta: { label: "Start with the free rating", href: "/readiness" },
+    primaryCta: { label: "Get started today", href: "/start" },
+    fitCta: { label: "Find the right fit investors", href: "/fit" },
     secondaryCta: { label: "Compare plans", href: "/pricing" },
   },
 
@@ -107,8 +108,8 @@ export const founders = {
 
   closing: {
     title: "More meetings, faster, with fewer diligence deaths.",
-    sub: "That's the claim. Not “you'll raise” — nobody can promise that. Start with the free rating and see what's in your way.",
-    primaryCta: { label: "Run your free rating", href: "/readiness" },
+    sub: "That's the claim. Not “you'll raise” — nobody can promise that. Start today and see what's in your way.",
+    primaryCta: { label: "Find the right fit investors", href: "/fit" },
     secondaryCta: { label: "See pricing", href: "/pricing" },
     // Required cross-link (§3): Founders → Events, in the closing CTA.
     eventsCta: { label: "See the iCFO events", href: "/events" },

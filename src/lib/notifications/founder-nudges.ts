@@ -73,7 +73,7 @@ export async function nudgeStalledPreparationFounders(): Promise<{ nudged: numbe
         await sendEmail({
           to: f.email,
           subject: "You're one step from investor matching",
-          html: `<p>Hi ${name},</p><p>You've done the hard part. Finish your <b>Preparation</b> checklist — your documents and the rest of your materials — and iCapOS will match you with investors from the iCFO network.</p><p><a href="${PREP_URL}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every iCapOS tool is free. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
+          html: `<p>Hi ${name},</p><p>You've done the hard part. Finish your <b>Preparation</b> checklist — your documents and the rest of your materials — and iCapOS will match you with investors from the iCFO network.</p><p><a href="${PREP_URL}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every plan includes all tools. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
           text: `Hi ${name}, finish your Preparation checklist (documents and materials) to get matched with investors: ${PREP_URL}`,
           fromName: "iCapOS",
         });
@@ -169,7 +169,7 @@ export async function nudgeStalledJourneyFounders(): Promise<{ nudged: number }>
         await sendEmail({
           to: f.email,
           subject: copy.title,
-          html: `<p>Hi ${name},</p><p>${copy.email}</p><p><a href="${url}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every iCapOS tool is free. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
+          html: `<p>Hi ${name},</p><p>${copy.email}</p><p><a href="${url}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every plan includes all tools. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
           text: `Hi ${name}, ${copy.message} ${url}`,
           fromName: "iCapOS",
         });

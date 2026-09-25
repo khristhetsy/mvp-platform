@@ -27,7 +27,7 @@ export async function maybeNotifyTrialStatus(profileId: string, subscription: Su
         type: "trial_expired",
         title: "Full-access period ended",
         message:
-          "Your founder tools stay free, forever. Add a plan whenever you're ready to reach investors — reveal your matches and send your one-pager.",
+          "Choose Basic or Professional to keep access to your tools, reveal your matches and send your one-pager.",
         entityType: "subscription",
         entityId: subscription.id,
       });
@@ -59,8 +59,8 @@ export async function maybeNotifyTrialStatus(profileId: string, subscription: Su
       title: "Full access ending soon",
       message:
         daysLeft <= 0
-          ? "Your full-access period ends today. Your tools stay free — add a plan to keep reaching investors."
-          : `Your full-access period ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Your tools stay free — add a plan to keep reaching investors.`,
+          ? "Your full-access period ends today. Choose a plan to keep access."
+          : `Your full-access period ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Choose a plan to keep access.`,
       entityType: "subscription",
       entityId: subscription.id,
     });

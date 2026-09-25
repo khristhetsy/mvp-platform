@@ -50,7 +50,7 @@ export function SubscriptionLockedPanel({
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{t("plan_upgrade_required")}</p>
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-        {trialExpired ? "Your tools are still free" : "Upgrade when you're ready to raise capital"}
+        {trialExpired ? "Choose a plan to keep using iCapOS" : "Upgrade when you're ready to raise capital"}
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
         {reason ??

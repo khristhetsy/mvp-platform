@@ -52,7 +52,7 @@ export const readiness = {
     estimated: 58,
     band: "Developing",
     workOn: "Work on these first",
-    cta: { label: "Get your real rating — free", href: "/start" },
+    cta: { label: "Find the right fit investors", href: "/fit" },
     disclaimer: "Estimator only. Not a valuation, credit opinion, or prediction of any funding outcome.",
   },
   measures: {
@@ -84,6 +84,6 @@ export const readiness = {
   closing: {
     title: "Rough deck? Start anyway.",
     sub: "The rating is built to be run early. That's the point of it.",
-    cta: { label: "Run your free rating", href: "/start" },
+    cta: { label: "Find the right fit investors", href: "/fit" },
   },
 } as const;

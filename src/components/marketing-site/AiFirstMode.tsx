@@ -81,7 +81,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
 };
 
 const CARD_META: Record<Exclude<Card, "none">, { title: string; body: string; href?: string; cta: string; demo?: boolean }> = {
-  readiness: { title: "Capital Readiness Rating", body: "Free, structured, and scored across five dimensions investors screen on.", href: "/readiness", cta: "Open the rating" },
+  readiness: { title: "Capital Readiness Rating", body: "Structured and scored across five dimensions investors screen on.", href: "/readiness", cta: "Open the rating" },
   pricing: { title: "Plans & pricing", body: "Two self-serve plans unlock the tools and your investor distribution.", href: "/pricing", cta: "See pricing" },
   demo: { title: "Book a 30-minute demo", body: "Optional walkthrough — everything is self-serve without one.", cta: "Book a demo", demo: true },
   events: { title: "iCFO events", body: "Expos and conferences where matched founders meet investors in person.", href: "/events", cta: "See events" },
