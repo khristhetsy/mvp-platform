@@ -62,10 +62,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Non-fatal — still hand off to auth so the founder isn't blocked.
   }
 
-  // Signup from someone who walked /fit in the last 30 days (fs_session cookie).
-  // Best-effort: recordFunnelEvent never throws.
+  // Founder signup from someone who walked /fit in the last 30 days (fs_session cookie).
+  // Investor signups share this route and are skipped. Best-effort: recordFunnelEvent never throws.
   const fitSessionId = req.cookies.get("fs_session")?.value;
-  if (fitSessionId) await recordFunnelEvent({ sessionId: fitSessionId, eventName: "fit_signup", properties: { source_page: parsed.data.source_page ?? null } });
+  if (fitSessionId && parsed.data.role !== "investor") await recordFunnelEvent({ sessionId: fitSessionId, eventName: "fit_signup", properties: { source_page: parsed.data.source_page ?? null, start_choice: parsed.data.start_choice ?? null } });
 
   // Hand off to existing auth (spec §15); does not reimplement it.
   const email = encodeURIComponent(parsed.data.email);
