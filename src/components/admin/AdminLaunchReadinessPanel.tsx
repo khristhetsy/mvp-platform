@@ -132,9 +132,9 @@ export function AdminLaunchReadinessPanel({
             <StatusRow label={t("cron_secret_orchestration")} ok={environment.cronConfigured} />
             <StatusRow label={t("claude_ai_configured")} ok={environment.claudeConfigured} />
             <StatusRow
-              label={t("stripe_payments")}
-              ok={environment.stripeConfigured}
-              detail={environment.stripeConfigured ? "Enabled" : "Disabled (expected for private beta)"}
+              label={t("lemonsqueezy_payments")}
+              ok={environment.paymentsConfigured}
+              detail={environment.paymentsConfigured ? "Enabled" : "Disabled (expected for private beta)"}
             />
             <StatusRow label={t("google_oauth_configured")} ok={environment.googleOAuthConfigured} />
             <StatusRow label={t("private_beta_mode")} ok={environment.privateBetaMode} detail={environment.privateBetaMode ? "ON" : "OFF"} />

@@ -53,7 +53,8 @@ export type SubscriptionRecord = {
   ls_customer_id:     string | null;
   ls_subscription_id: string | null;
   ls_variant_id:      string | null;
-  // Stripe (legacy, kept for audit)
+  // Stripe columns: unused since the move to Lemon Squeezy; kept only because
+  // the database still has them. Nothing reads or writes them.
   stripe_customer_id:     string | null;
   stripe_subscription_id: string | null;
   stripe_price_id:        string | null;

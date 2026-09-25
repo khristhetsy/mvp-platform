@@ -35,7 +35,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@next/third-parties": "^16.2.9",
     "@sentry/nextjs": "^10.57.0",
-    "@stripe/stripe-js": "^9.8.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",
     "@tabler/icons-webfont": "^3.46.0",
@@ -56,7 +55,6 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
-    "stripe": "^22.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

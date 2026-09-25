@@ -331,7 +331,7 @@ const ANALYST_PLAYBOOK: Record<string, {
     ],
     resources: [
       { label: "LOI template", url: "https://www.ycombinator.com/documents" },
-      { label: "Stripe (payments/MRR tracking)", url: "https://stripe.com" },
+      { label: "Lemon Squeezy (payments/MRR tracking)", url: "https://www.lemonsqueezy.com" },
       { label: "Baremetrics (MRR analytics)", url: "https://baremetrics.com" },
     ],
     courses: ["investor-readiness-masterclass"],
@@ -362,7 +362,7 @@ const ANALYST_PLAYBOOK: Record<string, {
     ],
     resources: [
       { label: "Simple LOI template (Google Docs)", url: "https://docs.google.com" },
-      { label: "Stripe for pre-orders / deposits", url: "https://stripe.com" },
+      { label: "Lemon Squeezy for pre-orders / deposits", url: "https://www.lemonsqueezy.com" },
     ],
     courses: ["investor-readiness-masterclass"],
   },

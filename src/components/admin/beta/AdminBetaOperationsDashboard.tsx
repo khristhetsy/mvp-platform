@@ -59,7 +59,7 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
             <ReliabilityRow label={t("migrations_verified")} ok={reliability.migrationsVerified} />
             <ReliabilityRow label={t("private_beta_mode")} ok={reliability.privateBetaMode} detail={reliability.privateBetaMode ? "ON" : "OFF"} />
             <ReliabilityRow label={t("claude_ai")} ok={reliability.claudeConfigured} detail={reliability.claudeConfigured ? "Configured" : "Unconfigured"} />
-            <ReliabilityRow label={t("stripe")} ok={reliability.stripeConfigured} detail={reliability.stripeConfigured ? "Enabled" : "Disabled"} />
+            <ReliabilityRow label={t("lemonsqueezy")} ok={reliability.paymentsConfigured} detail={reliability.paymentsConfigured ? "Enabled" : "Disabled"} />
             <ReliabilityRow label={t("google_oauth")} ok={reliability.googleOAuthConfigured} />
             <ReliabilityRow label={t("cron_orchestration")} ok={reliability.cronOperational} />
             <ReliabilityRow

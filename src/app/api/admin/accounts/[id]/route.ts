@@ -26,11 +26,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "billing_status must be 'comped' or 'active'." }, { status: 400 });
     }
     patch.billing_status = body.billing_status;
-    // Comping clears the Stripe association (spec §4, internal/comped path).
-    if (body.billing_status === "comped") {
-      patch.stripe_customer_id = null;
-      patch.stripe_subscription_id = null;
-    }
+    // Comped accounts are billed outside Lemon Squeezy. Lemon Squeezy
+    // subscriptions live on the subscriptions table (per profile), not on the
+    // organization, so there is no provider link to clear here.
   }
 
   if (typeof body?.can_add_companies === "boolean") {
