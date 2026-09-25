@@ -123,6 +123,25 @@ function MultiQ({ n, title, options, selected, onToggle, onContinue, loading }: 
   );
 }
 
+type MethodStep = { t: string; d: string; done?: boolean };
+
+function MethodSteps({ items, color, line }: { items: MethodStep[]; color: string; line: string }) {
+  return (
+    <div className="relative mb-6 mt-5 pl-7">
+      <span className={`absolute bottom-1.5 left-[11px] top-1.5 w-0.5 ${line}`} aria-hidden="true" />
+      {items.map((s, i) => (
+        <div key={s.t} className={`relative ${i < items.length - 1 ? "mb-5" : ""}`}>
+          <span className={`absolute -left-7 top-0 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold text-white ${s.done ? "bg-emerald-600" : color}`}>
+            {s.done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
+          </span>
+          <p className="text-[14px] font-medium text-slate-900">{s.t}</p>
+          <p className="mt-0.5 text-[12px] text-slate-500">{s.d}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const EMPTY: FitAnswers = { stage: [], raise: [], industry: [], revenue: [], investorType: [] };
 
 export function FitFunnelClient() {
@@ -177,7 +196,12 @@ export function FitFunnelClient() {
   // Match screen
   const a = answers;
   const j = (arr: string[], map?: Record<string, string>) => arr.map((k) => (map ? map[k] ?? k : k)).join(", ");
-  const subline = `${j(a.industry)} · raising ${j(a.raise, RAISE_LABEL)} · ${j(a.revenue, REV_LABEL)} revenue · ${j(a.stage, STAGE_LABEL)}`;
+  // Revenue labels like "Pre-revenue" already say "revenue", and the stage answer can
+  // repeat the revenue answer word for word; skip both duplicates.
+  const revText = j(a.revenue, REV_LABEL);
+  const revPart = /revenue/i.test(revText) ? revText : `${revText} revenue`;
+  const stageText = j(a.stage, STAGE_LABEL);
+  const subline = [j(a.industry), `raising ${j(a.raise, RAISE_LABEL)}`, revPart, stageText.toLowerCase() === revPart.toLowerCase() ? "" : stageText].filter(Boolean).join(" · ");
   const count = result?.matched_count ?? 0;
   const thin = result?.thin ?? true;
 
@@ -186,39 +210,48 @@ export function FitFunnelClient() {
   // figures), the verbatim disclaimer, and one CTA to the structuring-call scheduler
   // (which links back to this funnel session via the fs_session cookie).
   if (step === "method") {
+    const spvSteps = [
+      { t: "Form the vehicle", d: "We structure the SPV. Due diligence runs in parallel." },
+      { t: "Reach matched investors", d: "The opportunity goes to investors whose stage, sector, and check size fit." },
+      { t: "Investors subscribe", d: "Participation flows directly into the SPV as limited partners." },
+      { t: "Funded", d: "Capital deploys on a rolling basis, first in, first out.", done: true },
+    ];
+    const selfSteps = [
+      { t: "Get your CRR score", d: "See your Capital Readiness Rating and what to fix before you pitch." },
+      { t: "Outreach to investors", d: "Reach investors matched to your stage, sector, and raise size." },
+      { t: "Manage in your deal room", d: "Share documents, track interest, and answer diligence in one place." },
+      { t: "Close the Deal", d: "You negotiate terms and close directly with your investors.", done: true },
+    ];
     return (
-      <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <FunnelHeader subtitle={null} />
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-          <i className="ti ti-building-bank" aria-hidden="true" /> iCFO Capital · Advisory
-        </span>
-        <h1 className="mt-3 text-[22px] font-semibold leading-snug text-slate-900">Run your raise through an SPV</h1>
-        <p className="mt-1.5 text-[13px] text-slate-500">One vehicle. One cap-table line. One close — scoped to your raise.</p>
+      <div className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <FunnelHeader subtitle="Two ways to raise. Pick the one that fits." />
 
-        <div className="relative mt-6 pl-7">
-          <span className="absolute bottom-1.5 left-[11px] top-1.5 w-0.5 bg-gradient-to-b from-indigo-600 to-indigo-200" aria-hidden="true" />
-          {[
-            { t: "Form the vehicle", d: "We structure the SPV. Due diligence runs in parallel." },
-            { t: "Reach matched investors", d: "The opportunity goes to investors whose stage, sector, and check size fit." },
-            { t: "Investors subscribe", d: "Participation flows directly into the SPV as limited partners." },
-            { t: "Funded", d: "Capital deploys on a rolling basis — first in, first out.", done: true },
-          ].map((s, i) => (
-            <div key={s.t} className={`relative ${i < 3 ? "mb-5" : ""}`}>
-              <span className={`absolute -left-7 top-0 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold text-white ${s.done ? "bg-emerald-600" : "bg-indigo-600"}`}>
-                {s.done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
-              </span>
-              <p className="text-[14px] font-medium text-slate-900">{s.t}</p>
-              <p className="mt-0.5 text-[12px] text-slate-500">{s.d}</p>
-            </div>
-          ))}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col rounded-xl border border-slate-200 p-5">
+            <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+              <i className="ti ti-building-bank" aria-hidden="true" /> Option 1 · iCFO Capital advisory
+            </span>
+            <h1 className="mt-3 text-[20px] font-semibold leading-snug text-slate-900">Run your raise through an SPV</h1>
+            <p className="mt-1.5 text-[13px] text-slate-500">One vehicle. One cap table line. One close, scoped to your raise.</p>
+            <MethodSteps items={spvSteps} color="bg-indigo-600" line="bg-gradient-to-b from-indigo-600 to-indigo-200" />
+            <Link href="/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" className="mt-auto block rounded-lg bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-indigo-700">Book a structuring call</Link>
+          </div>
+
+          <div className="flex flex-col rounded-xl border border-slate-200 p-5">
+            <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+              <i className="ti ti-rocket" aria-hidden="true" /> Option 2 · Self-serve on iCapOS
+            </span>
+            <h2 className="mt-3 text-[20px] font-semibold leading-snug text-slate-900">Raise your own capital</h2>
+            <p className="mt-1.5 text-[13px] text-slate-500">Use the iCapOS tools to run your raise yourself, start to close.</p>
+            <MethodSteps items={selfSteps} color="bg-emerald-700" line="bg-gradient-to-b from-emerald-700 to-emerald-200" />
+            <a href="https://icapos.com/start" className="mt-auto block rounded-lg border border-emerald-700 px-5 py-3 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Get my CRR score <i className="ti ti-arrow-right" aria-hidden="true" /></a>
+          </div>
         </div>
 
-        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-[13px] font-medium text-slate-700">Scoped to your raise</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{subline}. We structure the vehicle and manage outreach against your matched mandates.</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{subline}</p>
         </div>
-
-        <Link href="/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" className="mt-6 block rounded-lg bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-indigo-700">Book a structuring call</Link>
 
         <p className="mt-6 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-400">
           iCFO Capital Global, Inc. is not a registered broker-dealer, funding portal, investment adviser, or placement agent. It does not offer or sell securities, effect securities transactions, hold or transmit customer funds, or receive transaction-based compensation.
