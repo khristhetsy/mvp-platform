@@ -207,3 +207,62 @@ deploy. Every change ends with a `## Ship it` section that prints the commands f
 to run — see the rule below (also available as the `/ship` command).
 
 @.claude/ship-output.md
+
+## Verification and product rules
+
+Repo for **iCapOS** (product), owned by **iCFO Capital Global, Inc.** (parent company). Two-sided capital readiness SaaS: founders get a Capital Readiness Rating, investors get an Investor Fit Score. A Stop hook (`.claude/hooks/verify.sh`) runs the checks below whenever TypeScript files changed.
+
+### Stack (summary)
+
+- Next.js App Router + TypeScript
+- Supabase (Postgres, Auth, RLS, Storage)
+- Vercel (hosting and deploys)
+
+### Verify your work (IMPORTANT)
+
+A task is not done until all of these pass. Run them yourself and read the output. Do not report success based on the code "looking right".
+
+```bash
+npx tsc --noEmit        # type check, must be zero errors
+npm run lint            # lint, must be zero errors
+npm run build           # run before any change touching routing, config, or server components
+```
+
+- If a check fails, fix the cause. Do not silence it with `// @ts-ignore`, `eslint-disable`, or `any` unless I approve it.
+- For UI changes, run `npm run dev` and describe what changed on screen, or take a screenshot if a browser tool is available.
+- After any schema change, regenerate types:
+  `npx supabase gen types typescript --project-id raowjbhbtmwkycmwvavd --schema public > src/lib/supabase/database.types.ts`
+  Never write generated output to `src/lib/supabase/types.ts`: it is hand-maintained and imported by ~280 files. (The `db:types` npm script currently targets that file; do not run it until it is repointed.)
+- When you finish, list which checks you ran and their result.
+
+### Database rules
+
+- **Migrations: show before running.** Write the migration file, show me the SQL, and wait for approval before applying it. Never apply a migration unasked.
+- Every new table gets RLS enabled and explicit policies in the same migration.
+- CRM ownership is scoped through the `contact_assignees` junction table (multi assignee). Respect it in queries and policies.
+- Investor matching sources investors from Investor Contact records, not the Investor CRM. `investor_profiles` and `prospect_investors` are separate tables; do not merge them.
+
+### Naming rules
+
+- Pre-score field is always `lead_prescore`. Never `crr`. The rubric lives in `/lib/prescore/rubric.ts`.
+- The `organizations.type` enum value `SPV` stays as is in the back end. In user facing UI it is labeled **"Deal Company"**.
+- Product name in UI copy is "iCapOS". Do not write "CapitalOS" in user facing text.
+
+### Behavior rules
+
+- **AI features draft, humans confirm.** Any AI agent or assistant inside iCapOS may draft content but must never write to or mutate tables without explicit user confirmation.
+- **Demo and internal Founder accounts never send real email.** Distribution sends and introduction requests from these accounts must not dispatch to real investors. Check this whenever you touch email, distribution, or intro request code.
+- **Document uploads are PDF only**, with a user facing message on rejection. Logos, pitch video, avatars, and contact imports keep their own formats.
+- No transactions or fund movement anywhere on the platform. Pledges and indications of interest only.
+
+### Brand
+
+- Colors: navy `#0A1A40`, blue `#1A6CE4`, hover/active `#2E78F5`, steel secondary `#185FA5`
+- Type: Archivo (headlines), Inter (body), IBM Plex Mono (mono)
+- Teal `#0D9488` is legacy. Do not use it in the app.
+
+### Working style
+
+- For anything beyond a small fix, propose a short plan first and wait for a go ahead.
+- Keep changes scoped to the task. Do not refactor unrelated files.
+- Never commit secrets. Environment variables go in `.env.local` and Vercel project settings.
