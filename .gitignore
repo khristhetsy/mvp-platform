@@ -53,4 +53,5 @@ next-env.d.ts
 .claude/*
 !.claude/settings.json
 !.claude/commands/
+!.claude/hooks/
 !.claude/ship-output.md
