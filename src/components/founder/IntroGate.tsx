@@ -2,9 +2,22 @@ import Link from "next/link";
 import type { OpenRatingItem } from "@/lib/crr/open-items";
 import type { IntroQuota } from "@/lib/matching/intro-quota";
 
+/** One plan's reach once introductions unlock. Every value comes from config. */
+export type PlanReach = {
+  monthlyIntros: number;
+  /** null = no weekly cap. */
+  weeklyIntros: number | null;
+  /** null = uncapped. */
+  investorCap: number | null;
+  presentsMonthly: boolean;
+  price: string;
+};
+
 /**
  * Shown below the outreach gate: the rating against the gate, and the open
- * items from the founder's own rating that stand between them and it.
+ * items from the founder's own rating that stand between them and it. For a
+ * Basic founder it also shows what Professional adds once they unlock, and
+ * says plainly that upgrading does not skip the rating.
  */
 export function IntroGateLockedCard({
   score,
@@ -12,12 +25,14 @@ export function IntroGateLockedCard({
   pointsToGate,
   matchCount,
   items,
+  upgrade,
 }: {
   score: number | null;
   gate: number;
   pointsToGate: number;
   matchCount: number;
   items: OpenRatingItem[];
+  upgrade?: { basic: PlanReach; professional: PlanReach } | null;
 }) {
   const pct = score === null ? 0 : Math.max(0, Math.min(100, Math.round((score / Math.max(gate, 1)) * 100)));
   return (
@@ -59,6 +74,58 @@ export function IntroGateLockedCard({
         className="mt-3 inline-block rounded-lg bg-[#1A6CE4] px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-[#2E78F5]"
       >
         {score === null ? "Run your rating" : `See the ${pointsToGate} points`}
+      </Link>
+
+      {upgrade ? <PlanReachTable gate={gate} basic={upgrade.basic} professional={upgrade.professional} /> : null}
+    </div>
+  );
+}
+
+function reachCap(n: number | null): string {
+  return n === null ? "No cap" : `Up to ${n}`;
+}
+
+function PlanReachTable({ gate, basic, professional }: { gate: number; basic: PlanReach; professional: PlanReach }) {
+  const rows: Array<[string, string, string]> = [
+    ["Introductions per month", String(basic.monthlyIntros), String(professional.monthlyIntros)],
+    [
+      "Introductions per week",
+      basic.weeklyIntros === null ? "No weekly cap" : String(basic.weeklyIntros),
+      professional.weeklyIntros === null ? "No weekly cap" : String(professional.weeklyIntros),
+    ],
+    ["Matched investors reached", reachCap(basic.investorCap), reachCap(professional.investorCap)],
+    ["Monthly presentation slot", basic.presentsMonthly ? "Yes" : "No", professional.presentsMonthly ? "Yes" : "No"],
+    ["Price", basic.price, professional.price],
+  ];
+  return (
+    <div className="mt-4 border-t border-[#E3E8F2] pt-3.5">
+      <div className="text-[13px] font-semibold text-[#0A1A40]">When you unlock, your plan decides how far you reach</div>
+      <table className="mt-2 w-full table-fixed text-[13px] text-[#16223F]">
+        <thead>
+          <tr className="text-left text-[12px]">
+            <th className="w-[44%] pb-1 font-normal" />
+            <th className="pb-1 font-normal text-[#5A6782]">Basic · yours</th>
+            <th className="pb-1 font-semibold text-[#1A6CE4]">Professional</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, b, p]) => (
+            <tr key={label}>
+              <td className="py-1">{label}</td>
+              <td className="py-1">{b}</td>
+              <td className="py-1 font-semibold">{p}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2 text-[12px] text-[#5A6782]">
+        Introductions open at CRR {gate} on every plan. Upgrading does not skip the rating.
+      </p>
+      <Link
+        href="/founder/settings/billing"
+        className="mt-2 inline-block rounded-lg border border-[#C9D6EE] px-3.5 py-2 text-[13px] font-semibold text-[#1A6CE4] hover:bg-[#F4F6FB]"
+      >
+        Compare plans
       </Link>
     </div>
   );

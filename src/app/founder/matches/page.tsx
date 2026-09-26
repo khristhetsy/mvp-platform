@@ -22,6 +22,8 @@ import { openRatingItems } from "@/lib/crr/open-items";
 import { FACTOR_LABEL } from "@/lib/crr/weight-sets";
 import { loadIntroQuota } from "@/lib/matching/intro-quota";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +69,32 @@ export default async function FounderMatchesPage() {
   const introQuota =
     crr?.outreachUnlocked && founderEntitlements(plan).canBrokerIntros
       ? await loadIntroQuota(createServiceRoleClient(), { companyId: company.id, founderId: profile.id, plan })
+      : null;
+  // Basic founders below the gate see what Professional adds once they unlock.
+  // Every figure comes from config: caps, entitlements and the pricing catalog.
+  const upgrade =
+    crr && !crr.outreachUnlocked && plan === "founder_basic"
+      ? await (async () => {
+          const pricing = await loadPricing();
+          const b = founderEntitlements("founder_basic");
+          const p = founderEntitlements("founder_professional");
+          return {
+            basic: {
+              monthlyIntros: connectionCfg.monthlyByPlan.basic,
+              weeklyIntros: connectionCfg.weeklyByPlan.basic,
+              investorCap: b.investorCap,
+              presentsMonthly: b.canPresentMonthly,
+              price: priceShort(pricing, "founder_basic"),
+            },
+            professional: {
+              monthlyIntros: connectionCfg.monthlyByPlan.professional,
+              weeklyIntros: connectionCfg.weeklyByPlan.professional,
+              investorCap: p.investorCap,
+              presentsMonthly: p.canPresentMonthly,
+              price: priceShort(pricing, "founder_professional"),
+            },
+          };
+        })()
       : null;
   // Free sees matches (count · sector · fit tier) but not identities or actions.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;
@@ -175,6 +203,7 @@ export default async function FounderMatchesPage() {
             pointsToGate={crr.pointsToGate}
             matchCount={cards.length}
             items={openRatingItems(crr.factorScores, FACTOR_LABEL)}
+            upgrade={upgrade}
           />
         ) : introQuota ? (
           <IntroQuotaStrip quota={introQuota} plan={plan} professionalMonthlyCap={connectionCfg.monthlyByPlan.professional} />
