@@ -21,7 +21,17 @@ fi
 TSC_OUT=$(npx tsc --noEmit 2>&1); TSC_RC=$?
 LINT_OUT=$(npm run lint --silent 2>&1); LINT_RC=$?
 
-if [ $TSC_RC -ne 0 ] || [ $LINT_RC -ne 0 ]; then
+# Tests that import the changed files (directly or through other modules).
+# Deleted files are left out; vitest finds the related test files itself.
+TEST_RC=0
+TEST_OUT=""
+FILES=$(printf '%s\n%s\n' "$CHANGED" "$UNTRACKED" | grep -v '^$' | while read -r f; do [ -f "$f" ] && echo "$f"; done)
+if [ -n "$FILES" ]; then
+  # shellcheck disable=SC2086
+  TEST_OUT=$(npx vitest related --run --passWithNoTests $FILES 2>&1); TEST_RC=$?
+fi
+
+if [ $TSC_RC -ne 0 ] || [ $LINT_RC -ne 0 ] || [ $TEST_RC -ne 0 ]; then
   {
     echo "Verification failed. Fix these errors before finishing. Do not suppress them."
     if [ $TSC_RC -ne 0 ]; then
@@ -31,6 +41,10 @@ if [ $TSC_RC -ne 0 ] || [ $LINT_RC -ne 0 ]; then
     if [ $LINT_RC -ne 0 ]; then
       echo "--- Lint (npm run lint) ---"
       echo "$LINT_OUT" | head -40
+    fi
+    if [ $TEST_RC -ne 0 ]; then
+      echo "--- Related tests (npx vitest related) ---"
+      echo "$TEST_OUT" | grep -E "FAIL|✗|×|AssertionError|Error:|expected|Test Files|Tests " | head -40
     fi
   } >&2
   exit 2

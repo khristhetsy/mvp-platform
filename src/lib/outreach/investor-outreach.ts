@@ -11,6 +11,7 @@ import { buildCompanyMatchProfile, scoreContactAgainstCompany } from "@/lib/matc
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
 function formatRaise(amount: number | null | undefined): string | null {
@@ -280,6 +281,16 @@ export async function setCampaignWeeklyCap(campaignId: string, cap: number): Pro
 }
 
 /**
+ * Whether a campaign run emails investors or only advances the log. Real email
+ * goes out only when outreach automation is live AND the founder's account may
+ * send email: demo and internal accounts (email_dispatch_enabled off) never
+ * reach real investors.
+ */
+export function outreachDispatchMode(live: boolean, dispatchAllowed: boolean): "send" | "log" {
+  return live && dispatchAllowed ? "send" : "log";
+}
+
+/**
  * Weekly send pass. For each APPROVED, non-paused campaign that hasn't run in the
  * last ~6 days, advance up to `weekly_cap` queued recipients. Real email dispatch
  * only happens when INVESTOR_OUTREACH_LIVE=true; otherwise the log advances
@@ -323,10 +334,15 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     // Resolve this founder's EFFECTIVE config (global defaults + plan cap +
     // per-founder override): the monthly cap, schedule, pause, and message.
     let eff: EffectiveOutreachConfig | null = null;
+    let dispatchAllowed = true;
     {
       const { data: cRow } = await db.from("companies").select("founder_id").eq("id", campaign.company_id).maybeSingle();
       const founderId = (cRow as { founder_id?: string } | null)?.founder_id ?? null;
-      if (founderId) eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: founderId }, globals);
+      if (founderId) {
+        eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: founderId }, globals);
+        // Demo and internal founder accounts never email real investors.
+        if (live) dispatchAllowed = await emailDispatchAllowedForUser(db, founderId);
+      }
     }
 
     // Gate BEFORE claiming so we don't burn last_run_at: automation pause (global
@@ -381,8 +397,9 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       continue;
     }
 
-    if (!live) {
-      // Flag OFF: advance the log without dispatching real email (safe testing).
+    if (outreachDispatchMode(live, dispatchAllowed) === "log") {
+      // Flag OFF, or a demo/internal account: advance the log without
+      // dispatching real email (safe testing, never reaches investors).
       await db
         .from("investor_outreach_recipients")
         .update({ status: "sent", sent_at: now })

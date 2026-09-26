@@ -224,6 +224,7 @@ A task is not done until all of these pass. Run them yourself and read the outpu
 
 ```bash
 npx tsc --noEmit        # type check, must be zero errors
+npx vitest related --run <changed files>   # related tests, must pass (the Stop hook runs this)
 npm run lint            # lint, must be zero errors
 npm run build           # run before any change touching routing, config, or server components
 ```
@@ -232,27 +233,27 @@ npm run build           # run before any change touching routing, config, or ser
 - For UI changes, run `npm run dev` and describe what changed on screen, or take a screenshot if a browser tool is available.
 - After any schema change, regenerate types:
   `npx supabase gen types typescript --project-id raowjbhbtmwkycmwvavd --schema public > src/lib/supabase/database.types.ts`
-  Never write generated output to `src/lib/supabase/types.ts`: it is hand-maintained and imported by ~280 files. (The `db:types` npm script currently targets that file; do not run it until it is repointed.)
+  (`npm run db:types` does the same, reading `SUPABASE_PROJECT_ID`.) Never write generated output to `src/lib/supabase/types.ts`: it is hand-maintained and imported by ~280 files.
 - When you finish, list which checks you ran and their result.
 
 ### Database rules
 
 - **Migrations: show before running.** Write the migration file, show me the SQL, and wait for approval before applying it. Never apply a migration unasked.
 - Every new table gets RLS enabled and explicit policies in the same migration.
-- CRM ownership is scoped through the `contact_assignees` junction table (multi assignee). Respect it in queries and policies.
+- CRM ownership is scoped through the `crm_contacts.assignee_ids` uuid array (multi assignee). There is no assignee junction table. Respect the array in queries and policies.
 - Investor matching sources investors from Investor Contact records, not the Investor CRM. `investor_profiles` and `prospect_investors` are separate tables; do not merge them.
 
 ### Naming rules
 
-- Pre-score field is always `lead_prescore`. Never `crr`. The rubric lives in `/lib/prescore/rubric.ts`.
-- The `organizations.type` enum value `SPV` stays as is in the back end. In user facing UI it is labeled **"Deal Company"**.
+- Pre-score field is always `lead_prescore`. Never `crr`. The rubric lives in `src/lib/prescore/rubric.ts`.
+- The `organizations.type` values are lowercase `founder` and `spv`. The value `spv` stays as is in the back end. In user facing UI it is labeled **"Deal Company"**.
 - Product name in UI copy is "iCapOS". Do not write "CapitalOS" in user facing text.
 
 ### Behavior rules
 
 - **AI features draft, humans confirm.** Any AI agent or assistant inside iCapOS may draft content but must never write to or mutate tables without explicit user confirmation.
 - **Demo and internal Founder accounts never send real email.** Distribution sends and introduction requests from these accounts must not dispatch to real investors. Check this whenever you touch email, distribution, or intro request code.
-- **Document uploads are PDF only**, with a user facing message on rejection. Logos, pitch video, avatars, and contact imports keep their own formats.
+- **Founder document uploads are PDF only** (data room, event decks, signatures, brochure import), with a user facing message on rejection. Exceptions keep their own formats: investor KYC and prior deal proof (PDF or JPEG, PNG, WebP), e-learning media, logos, pitch video, avatars, and contact imports.
 - No transactions or fund movement anywhere on the platform. Pledges and indications of interest only.
 
 ### Brand

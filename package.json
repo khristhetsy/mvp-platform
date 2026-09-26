@@ -12,7 +12,7 @@
     "audit:crawl": "node scripts/crawl-links.mjs",
     "check:predeploy": "node scripts/predeploy-check.mjs",
     "check:predeploy:full": "node scripts/predeploy-check.mjs --render --require-built",
-    "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > src/lib/supabase/types.ts",
+    "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > src/lib/supabase/database.types.ts",
     "db:types:check": "node scripts/check-types-fresh.mjs",
     "start": "next start",
     "lint": "eslint",
