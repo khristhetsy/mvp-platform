@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { OdooSearchBar, EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { SearchCount, Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
@@ -257,6 +257,7 @@ function GroupRows({
   selected: Set<string>; onToggleRow: (p: string) => void; onSwitch: (r: JobRow) => void; busy: boolean; cell: React.CSSProperties;
   query: string;
 }) {
+  const [open, setOpen] = useState<string | null>(null);
   return (
     <>
       {group && (
@@ -273,12 +274,21 @@ function GroupRows({
         list.map((r) => {
           const tone = r.last ? TONE[r.last.tone]! : TONE.neutral!;
           return (
-            <tr key={r.path} style={{ borderTop: "0.5px solid #eef1f5", background: r.paused ? "#FFFBF3" : undefined }}>
+            <Fragment key={r.path}>
+            <tr style={{ borderTop: "0.5px solid #eef1f5", background: r.paused ? "#FFFBF3" : undefined }}>
               <td style={cell}>
                 <input type="checkbox" aria-label={`Select ${r.name}`} checked={selected.has(r.path)} onChange={() => onToggleRow(r.path)} />
               </td>
               <td style={cell}>
-                <div style={{ fontWeight: 500, color: "var(--foreground)" }}><Highlight text={r.name} query={query} /></div>
+                <button
+                  type="button"
+                  aria-expanded={open === r.path}
+                  onClick={() => setOpen((o) => (o === r.path ? null : r.path))}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 500, fontSize: 13, color: "var(--foreground)", display: "inline-flex", alignItems: "center", gap: 4, textAlign: "left" }}
+                >
+                  <Highlight text={r.name} query={query} />
+                  <i className={`ti ti-chevron-${open === r.path ? "up" : "down"}`} style={{ fontSize: 13, color: "var(--muted-foreground)" }} aria-hidden="true" />
+                </button>
                 {r.paused ? (
                   <div style={{ fontSize: 12, color: "#854F0B" }}><Highlight text={`Paused by ${r.paused.byName ?? "staff"}`} query={query} /> · {r.paused.when}</div>
                 ) : r.description ? (
@@ -309,8 +319,101 @@ function GroupRows({
                 </button>
               </td>
             </tr>
+            {open === r.path && (
+              <tr style={{ background: "#FAFBFD" }}>
+                <td />
+                <td colSpan={4} style={{ padding: "4px 12px 12px" }}>
+                  <RunHistory path={r.path} />
+                </td>
+              </tr>
+            )}
+            </Fragment>
           );
         })}
     </>
+  );
+}
+
+type HistoryRun = {
+  started_at: string;
+  duration_ms: number | null;
+  outcome: "ok" | "error" | "skipped" | "running" | "timed_out";
+  http_status: number | null;
+  detail: string | null;
+  step: string | null;
+};
+
+const OUTCOME: Record<HistoryRun["outcome"], { text: string; color: string }> = {
+  ok: { text: "OK", color: "#27500A" },
+  error: { text: "Failed", color: "#791F1F" },
+  timed_out: { text: "Timed out", color: "#791F1F" },
+  skipped: { text: "Skipped · paused", color: "#633806" },
+  running: { text: "Running", color: "#5F5E5A" },
+};
+
+const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+function duration(ms: number | null): string {
+  if (ms === null) return "·";
+  return ms < 1000 ? `${ms} ms` : ms < 120_000 ? `${Math.round(ms / 1000)} s` : `${Math.round(ms / 60_000)} min`;
+}
+
+/** The last runs of one job, loaded when its row is opened. */
+function RunHistory({ path }: { path: string }) {
+  const [runs, setRuns] = useState<HistoryRun[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/admin/scheduled-jobs/history?job=${encodeURIComponent(path)}`)
+      .then(async (res) => {
+        const body = (await res.json().catch(() => null)) as { runs?: HistoryRun[]; error?: string } | null;
+        if (!live) return;
+        if (!res.ok || !body?.runs) setError(body?.error ?? "Couldn't load the run history. Try again.");
+        else setRuns(body.runs);
+      })
+      .catch(() => live && setError("Couldn't load the run history. Try again."));
+    return () => {
+      live = false;
+    };
+  }, [path]);
+  const hasSteps = runs?.some((r) => r.step) ?? false;
+  const th: React.CSSProperties = { textAlign: "left", fontWeight: 500, fontSize: 12, color: "var(--muted-foreground)", padding: "4px 12px 4px 0" };
+  const td: React.CSSProperties = { fontSize: 12, padding: "3px 12px 3px 0", verticalAlign: "top" };
+  return (
+    <div>
+      <p style={{ margin: "4px 0 6px", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)" }}>Last runs</p>
+      {error ? (
+        <p style={{ margin: 0, fontSize: 12, color: "#791F1F" }}>{error}</p>
+      ) : runs === null ? (
+        <p style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>Loading…</p>
+      ) : runs.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>Not run yet since the run log started.</p>
+      ) : (
+        <table style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th style={th}>Started</th>
+              {hasSteps && <th style={th}>Step reached</th>}
+              <th style={th}>Result</th>
+              <th style={th}>Took</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr key={run.started_at}>
+                <td style={td}>{WHEN.format(new Date(run.started_at))}</td>
+                {hasSteps && <td style={td}>{run.step ?? "·"}</td>}
+                <td style={{ ...td, color: OUTCOME[run.outcome].color }}>
+                  {OUTCOME[run.outcome].text}
+                  {run.http_status && run.outcome === "error" ? ` (${run.http_status})` : ""}
+                  {run.detail ? ` · ${run.detail}` : ""}
+                </td>
+                <td style={td}>{duration(run.duration_ms)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }
