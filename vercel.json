@@ -69,6 +69,10 @@
       "schedule": "0 13 * * 1"
     },
     {
+      "path": "/api/cron/founder-nudges",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/points-expiry",
       "schedule": "0 9 * * *"
     },

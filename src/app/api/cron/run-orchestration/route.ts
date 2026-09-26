@@ -7,10 +7,7 @@ import {
 } from "@/lib/notifications/cron/auth";
 import { runCronOrchestrationPass } from "@/lib/notifications/orchestration/run-cron-pass";
 import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
-import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { refreshPartnerScoreSnapshots } from "@/lib/investor-rating/snapshot";
-import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges";
-import { runStageGateReminderPass } from "@/lib/notifications/stage-gate-reminders";
 import { digestStalledFoundersForStaff } from "@/lib/notifications/staff-journey-digest";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -22,15 +19,6 @@ async function captureMetricSnapshotsSafely(): Promise<{ captured: number } | { 
     return await captureCompanyMetricSnapshots(createServiceRoleClient());
   } catch (error) {
     return { error: error instanceof Error ? error.message.slice(0, 200) : "snapshot failed" };
-  }
-}
-
-/** Best-effort data-room reminder cadence. Never allowed to fail the cron pass. */
-async function runDataRoomRemindersSafely() {
-  try {
-    return await runDataRoomReminderPass();
-  } catch (error) {
-    return { error: error instanceof Error ? error.message.slice(0, 200) : "data-room reminders failed" };
   }
 }
 
@@ -65,13 +53,13 @@ async function handleCron(request: Request) {
   try {
     const result = await runCronOrchestrationPass({ triggerSource: "cron", forceDigest });
     const snapshots = await captureMetricSnapshotsSafely();
-    const dataRoomReminders = await runDataRoomRemindersSafely();
+    // Data room reminders, journey nudges and stage gate reminders run in
+    // /api/cron/founder-nudges with their own budget; this pass hit its 60s limit
+    // before reaching them.
     // Leave ~15s of headroom under the 60s function limit for the partner-score refresh.
     const partnerScores = await refreshPartnerScoresSafely(startedAt + 45_000);
-    const journeyNudges = await nudgeStalledJourneyFounders().catch(() => ({ nudged: 0 }));
     const journeyDigest = await digestStalledFoundersForStaff().catch(() => ({ staffNotified: 0, stalled: 0 }));
-    const gateReminders = await runStageGateReminderPass().catch(() => ({ sent: 0, resolved: 0 }));
-    return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores, journeyNudges, journeyDigest, gateReminders }, { status: result.success ? 200 : 207 });
+    return NextResponse.json({ ...result, snapshots, partnerScores, journeyDigest }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(
