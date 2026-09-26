@@ -31,6 +31,20 @@ function titleCase(s: string): string {
   return s.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * Open items for the locked gate card, in rating points. openRatingItems ranks
+ * by each factor's raw gap, but a factor is scored against its own maximum,
+ * not this stage's weight; factorGaps carries the same points the gate counts,
+ * so the card shows and ranks by those.
+ */
+function gateItems(crr: { factorScores: Parameters<typeof openRatingItems>[0]; factorGaps: Array<{ label: string; pts: number; max: number }> }) {
+  const ratingGap = new Map(crr.factorGaps.map((g) => [g.label, Math.round(Math.max(0, g.max - g.pts))]));
+  return openRatingItems(crr.factorScores, FACTOR_LABEL, Number.MAX_SAFE_INTEGER)
+    .map((item) => ({ ...item, gap: ratingGap.get(item.factor) ?? 0 }))
+    .sort((a, b) => b.gap - a.gap)
+    .slice(0, 3);
+}
+
 export default async function FounderMatchesPage() {
   const profile = await requireRole(["founder"]);
   // Matching is a founder-raise surface; a Deal Company (null company) shows none
@@ -159,6 +173,8 @@ export default async function FounderMatchesPage() {
       reasons: c.reasons,
       introRef: reveal ? c.ref : undefined,
       connected: reveal ? c.connected : false,
+      introStatus: reveal ? c.introStatus : null,
+      introNote: reveal ? c.introNote : null,
       followUp: reveal ? { name: c.name, firm: c.firm, investorType: c.investorType } : undefined,
       detail: {
         name: displayName,
@@ -202,7 +218,7 @@ export default async function FounderMatchesPage() {
             gate={crr.gate}
             pointsToGate={crr.pointsToGate}
             matchCount={cards.length}
-            items={openRatingItems(crr.factorScores, FACTOR_LABEL)}
+            items={gateItems(crr)}
             upgrade={upgrade}
           />
         ) : introQuota ? (

@@ -63,6 +63,7 @@ export function IntroGateLockedCard({
                 <span>
                   <span className="font-medium">{item.factor}</span> · {item.label}
                 </span>
+                {item.gap > 0 ? <span className="ml-auto whitespace-nowrap text-[12px] text-[#5A6782]">up to {item.gap} pts</span> : null}
               </li>
             ))}
           </ul>

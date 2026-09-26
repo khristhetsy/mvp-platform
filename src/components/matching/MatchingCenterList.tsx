@@ -20,6 +20,10 @@ export type MatchCenterCard = {
   detail?: InvestorDetail;
   /** True once an intro has been facilitated — enables the Follow-up action. */
   connected?: boolean;
+  /** Where the founder's own introduction request stands. Absent or null = none sent. */
+  introStatus?: "reviewing" | "introduced" | "declined" | null;
+  /** iCFO's note on a declined request. */
+  introNote?: string | null;
   /** Data used to create the founder-CRM lead on "Add to follow-up". */
   followUp?: { name: string; firm: string | null; investorType: string | null };
 };
@@ -50,6 +54,21 @@ function IntroLocked({ gate, score }: { gate: number; score: number | null }) {
   );
 }
 
+/** The founder's request, once sent: iCFO reviewing, introduced, or declined with iCFO's note. */
+function IntroStatusPill({ status, note }: { status: "reviewing" | "introduced" | "declined"; note?: string | null }) {
+  if (status === "introduced") {
+    return <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><i className="ti ti-check" aria-hidden="true" /> Introduced</span>;
+  }
+  if (status === "declined") {
+    return (
+      <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600" title={note || "iCFO declined this introduction."}>
+        Declined{note ? ` · ${note.length > 60 ? `${note.slice(0, 60)}…` : note}` : ""}
+      </span>
+    );
+  }
+  return <span className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900"><i className="ti ti-clock" aria-hidden="true" /> iCFO reviewing</span>;
+}
+
 function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: string }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -76,9 +95,7 @@ function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: strin
     }
   }
 
-  if (state === "done") {
-    return <span className="text-xs font-medium text-emerald-600">Requested · with iCFO</span>;
-  }
+  if (state === "done") return <IntroStatusPill status="reviewing" />;
   if (state === "error" && message) {
     return <span className="max-w-[16rem] text-[11px] leading-snug text-amber-800">{message}</span>;
   }
@@ -272,7 +289,9 @@ export function MatchingCenterList({
                 <div className="flex items-center gap-2 sm:justify-end" onClick={(e) => e.stopPropagation()}>
                   {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
                   {introEndpoint && c.introRef && (
-                    gate && !gate.unlocked
+                    c.introStatus
+                      ? <IntroStatusPill status={c.introStatus} note={c.introNote} />
+                      : gate && !gate.unlocked
                       ? <IntroLocked gate={gate.gate} score={gate.score} />
                       : <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
                   )}
@@ -324,7 +343,9 @@ export function MatchingCenterList({
             <div className="mt-4 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
               {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
               {introEndpoint && c.introRef && (
-                gate && !gate.unlocked
+                c.introStatus
+                  ? <IntroStatusPill status={c.introStatus} note={c.introNote} />
+                  : gate && !gate.unlocked
                   ? <IntroLocked gate={gate.gate} score={gate.score} />
                   : <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
               )}
