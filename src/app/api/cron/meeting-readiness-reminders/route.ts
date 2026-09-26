@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { getCronSecret, validateCronSecret, cronMisconfiguredResponse, cronUnauthorizedResponse } from "@/lib/notifications/cron/auth";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
@@ -61,7 +62,7 @@ async function run(): Promise<{ sent: number }> {
   return { sent };
 }
 
-export async function GET(request: Request): Promise<Response> {
+async function scheduledGET(request: Request): Promise<Response> {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
   return NextResponse.json(await run());
@@ -72,3 +73,6 @@ export async function POST(): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   return NextResponse.json(await run());
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/meeting-readiness-reminders", scheduledGET);

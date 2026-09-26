@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import * as Sentry from "@sentry/nextjs";
 import {
   cronMisconfiguredResponse,
@@ -32,9 +33,12 @@ async function handle(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+async function scheduledGET(request: Request) {
   return handle(request);
 }
 export async function POST(request: Request) {
   return handle(request);
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/marketing-notifications", scheduledGET);

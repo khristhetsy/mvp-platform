@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { getCronSecret, validateCronSecret, cronUnauthorizedResponse, cronMisconfiguredResponse } from "@/lib/notifications/cron/auth";
 import { evaluateAlertRules } from "@/lib/social/alerts-eval";
 import { materializeDueRecurrences } from "@/lib/social/recurrence";
@@ -18,7 +19,7 @@ export const maxDuration = 60;
 //     newly due more often than once a day, let alone every five minutes.
 //
 // Publishing stayed on the 5-minute schedule because it is genuinely minute-sensitive.
-export async function GET(request: Request): Promise<Response> {
+async function scheduledGET(request: Request): Promise<Response> {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
 
@@ -28,3 +29,6 @@ export async function GET(request: Request): Promise<Response> {
   const alerts = await evaluateAlertRules().catch((err) => ({ error: err instanceof Error ? err.message : "alerts failed" }));
   return NextResponse.json({ recurrences, alerts });
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/social-maintenance", scheduledGET);

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
 import { sendCampaign } from "@/lib/marketing/campaigns";
 
 // Called by cron or admin trigger — fires campaigns whose scheduled_at is in the past
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function scheduledGET(req: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     return NextResponse.json({ error: "Misconfigured" }, { status: 503 });
@@ -59,3 +60,6 @@ export async function POST(): Promise<NextResponse> {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/marketing/process-scheduled", scheduledGET);

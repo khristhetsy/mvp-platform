@@ -215,6 +215,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/integrations",    label: "Integrations"    },
           { href: "/admin/queues",          label: "Queues"          },
           { href: "/admin/automation",      label: "Automation"      },
+          { href: "/admin/scheduled-jobs",  label: "Scheduled jobs"  },
           { href: "/admin/page-builder-lab", label: "Page Builder"   },
           { href: "/admin/system-health",   label: "System Health"   },
           { href: "/admin/imports",         label: "Import / Export" },

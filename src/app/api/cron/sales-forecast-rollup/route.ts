@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { getCronSecret, validateCronSecret, cronMisconfiguredResponse, cronUnauthorizedResponse } from "@/lib/notifications/cron/auth";
 import { requireRole } from "@/lib/supabase/auth";
 import { addSystemJournalEntry } from "@/lib/forecast/journal";
@@ -16,7 +17,7 @@ async function runRollup(): Promise<{ newOpportunities: number; week: string | n
 }
 
 // Scheduled weekly (vercel.json). Cron-secret protected.
-export async function GET(request: Request): Promise<Response> {
+async function scheduledGET(request: Request): Promise<Response> {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
   return NextResponse.json(await runRollup());
@@ -28,3 +29,6 @@ export async function POST(): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   return NextResponse.json(await runRollup());
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/sales-forecast-rollup", scheduledGET);

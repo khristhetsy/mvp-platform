@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import * as Sentry from "@sentry/nextjs";
 import { cronMisconfiguredResponse, cronUnauthorizedResponse, getCronSecret, validateCronSecret } from "@/lib/notifications/cron/auth";
 import { runIrSummaries } from "@/lib/ir/summaries";
@@ -18,5 +19,8 @@ async function handle(request: Request) {
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message.slice(0, 200) : "IR summaries failed." }, { status: 500 });
   }
 }
-export async function GET(request: Request) { return handle(request); }
+async function scheduledGET(request: Request) { return handle(request); }
 export async function POST(request: Request) { return handle(request); }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/ir-summaries", scheduledGET);

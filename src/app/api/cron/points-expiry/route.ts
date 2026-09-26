@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import {
   cronMisconfiguredResponse,
   cronUnauthorizedResponse,
@@ -12,9 +13,12 @@ export const maxDuration = 60;
 
 /** Daily iCFO Points expiry sweep. No-op unless the program is enabled and an
  *  expiry window is configured (POINTS_EXPIRY_MONTHS). */
-export async function GET(request: Request): Promise<Response> {
+async function scheduledGET(request: Request): Promise<Response> {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
   const result = await runPointsExpiry();
   return NextResponse.json({ ok: true, ...result });
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/points-expiry", scheduledGET);

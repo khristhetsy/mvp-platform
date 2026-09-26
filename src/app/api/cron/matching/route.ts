@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { validateCronSecret, cronUnauthorizedResponse, cronMisconfiguredResponse, getCronSecret } from "@/lib/notifications/cron/auth";
 import { runMatchingPass, promoteSuggestedMatches } from "@/lib/matching/engine";
 
@@ -12,7 +13,7 @@ export const maxDuration = 300;
  *
  * Schedule via vercel.json, e.g. GET /api/cron/matching daily.
  */
-export async function GET(request: Request) {
+async function scheduledGET(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
 
@@ -27,3 +28,6 @@ export async function GET(request: Request) {
     );
   }
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/matching", scheduledGET);

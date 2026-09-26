@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import {
   cronMisconfiguredResponse,
   cronUnauthorizedResponse,
@@ -22,10 +23,13 @@ async function handleCron(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+async function scheduledGET(request: Request) {
   return handleCron(request);
 }
 
 export async function POST(request: Request) {
   return handleCron(request);
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/meeting-reminders", scheduledGET);

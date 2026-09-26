@@ -6,12 +6,13 @@
  * `last_reminded_at` already guards, but there is no reason to lean on it.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { runInviteReminderPass } from "@/lib/icfo-events/invite-reminders";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function scheduledGET(req: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return NextResponse.json({ error: "Misconfigured" }, { status: 503 });
   if (req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
@@ -19,3 +20,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   return NextResponse.json({ ok: true, ...(await runInviteReminderPass()) });
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/event-invite-reminders", scheduledGET);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import * as Sentry from "@sentry/nextjs";
 import { voiceOutboundEnabled } from "@/lib/voice/gate";
 import { runCadenceTick } from "@/lib/voice/cadence";
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // Cron: fire due multichannel cadence steps. Guarded by CRON_SECRET (Vercel cron
 // sends it as a Bearer token). No-ops when the master kill-switch is off.
-export async function GET(req: NextRequest): Promise<Response> {
+async function scheduledGET(req: NextRequest): Promise<Response> {
   const secret = process.env.CRON_SECRET?.trim();
   if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,3 +22,6 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Cadence tick failed." }, { status: 500 });
   }
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/voice-cadence", scheduledGET);

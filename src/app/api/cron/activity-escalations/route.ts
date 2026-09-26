@@ -6,13 +6,14 @@
  * would make that setting a lie.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { runActivityEscalationPass } from "@/lib/activity/escalation";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function scheduledGET(req: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return NextResponse.json({ error: "Misconfigured" }, { status: 503 });
   if (req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
@@ -27,3 +28,6 @@ export async function POST(): Promise<NextResponse> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   return NextResponse.json({ ok: true, ...(await runActivityEscalationPass()) });
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/activity-escalations", scheduledGET);
