@@ -9,7 +9,6 @@ import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
-import Link from "next/link";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
 import { crrFor } from "@/lib/crr/crr-for";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
@@ -18,6 +17,11 @@ import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
 import { getRatingConfig } from "@/lib/investor-rating/weights";
 import { tierFromScore } from "@/lib/investor-rating/scoring";
+import { IntroGateLockedCard, IntroQuotaStrip } from "@/components/founder/IntroGate";
+import { openRatingItems } from "@/lib/crr/open-items";
+import { FACTOR_LABEL } from "@/lib/crr/weight-sets";
+import { loadIntroQuota } from "@/lib/matching/intro-quota";
+import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +61,13 @@ export default async function FounderMatchesPage() {
   // page. The admin model already says this surface is CRR-qualified; now the
   // button agrees with it.
   const crr = company ? await crrFor(company.id) : null;
+  // Intro quota, shown once the founder is through the gate on a plan that can
+  // request introductions. Same counter the intro route enforces.
+  const connectionCfg = await getFounderConnectionConfig();
+  const introQuota =
+    crr?.outreachUnlocked && founderEntitlements(plan).canBrokerIntros
+      ? await loadIntroQuota(createServiceRoleClient(), { companyId: company.id, founderId: profile.id, plan })
+      : null;
   // Free sees matches (count · sector · fit tier) but not identities or actions.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;
 
@@ -158,15 +169,15 @@ export default async function FounderMatchesPage() {
 
         {/* Investor search — the full named directory with per-investor actions. */}
         {crr && !crr.outreachUnlocked ? (
-          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-[12.5px] text-amber-900">
-            <span>
-              {cards.length} match{cards.length === 1 ? "" : "es"}. Introductions unlock at CRR {crr.gate}
-              {crr.score === null ? " — you have not been scored yet." : ` — you are at ${crr.score}.`}
-            </span>
-            <Link href="/founder/readiness/wizard" className="font-semibold underline">
-              {crr.score === null ? "Run your rating" : `See the ${crr.pointsToGate} points`}
-            </Link>
-          </div>
+          <IntroGateLockedCard
+            score={crr.score}
+            gate={crr.gate}
+            pointsToGate={crr.pointsToGate}
+            matchCount={cards.length}
+            items={openRatingItems(crr.factorScores, FACTOR_LABEL)}
+          />
+        ) : introQuota ? (
+          <IntroQuotaStrip quota={introQuota} plan={plan} professionalMonthlyCap={connectionCfg.monthlyByPlan.professional} />
         ) : null}
 
         <MatchingCenterList

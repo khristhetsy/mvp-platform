@@ -391,6 +391,10 @@ export async function getFounderConnectionConfig(): Promise<FounderConnectionCon
 
 export async function setFounderConnectionConfig(cfg: FounderConnectionConfig, updatedBy: string | null): Promise<boolean> {
   try {
+    // A save that carries monthly caps only keeps the stored weekly caps.
+    if (!cfg.weeklyByPlan) {
+      cfg = { ...cfg, weeklyByPlan: (await getFounderConnectionConfig()).weeklyByPlan };
+    }
     const { error } = await db()
       .from("platform_settings")
       .upsert({ key: FOUNDER_CONNECTION_CONFIG_KEY, value: cfg, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });

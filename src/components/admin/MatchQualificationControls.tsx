@@ -21,6 +21,8 @@ type AutomationConfig = {
 };
 type ConnectionConfig = {
   monthlyByPlan: { basic: number; professional: number };
+  /** null = no weekly cap for that plan. */
+  weeklyByPlan?: { basic: number | null; professional: number | null };
 };
 
 const WEIGHT_LABELS: [keyof EngineWeights, string][] = [
@@ -193,7 +195,7 @@ export function MatchQualificationControls({ pricing = CODE_DEFAULT_PRICING }: {
       {conn && (
         <div className="mt-4 rounded-lg border border-slate-200 p-3">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Founder connection requests</div>
-          <p className="mt-0.5 text-[11px] leading-5 text-slate-500">How many investor connection requests a founder can send per month, by subscription plan. Resets on the 1st. When the cap is reached, the founder&rsquo;s request is blocked with an upgrade prompt.</p>
+          <p className="mt-0.5 text-[11px] leading-5 text-slate-500">How many investor connection requests a founder can send per month and per week, by subscription plan. Monthly resets on the 1st, weekly on Monday (UTC). Leave a weekly cap empty for none. When the cap is reached, the founder&rsquo;s request is blocked with an upgrade prompt.</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             <label className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-700">
               <span>Basic <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_basic")}</span></span>
@@ -202,6 +204,11 @@ export function MatchQualificationControls({ pricing = CODE_DEFAULT_PRICING }: {
                   onChange={(e) => setConn({ ...conn, monthlyByPlan: { ...conn.monthlyByPlan, basic: Number(e.target.value) } })}
                   onBlur={() => saveConn(conn)} className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
                 <span className="text-[11px] text-slate-500">/ mo</span>
+                <input type="number" min={0} max={100000} placeholder="None" aria-label="Basic weekly cap"
+                  value={conn.weeklyByPlan?.basic ?? ""}
+                  onChange={(e) => setConn({ ...conn, weeklyByPlan: { ...{ basic: conn.weeklyByPlan?.basic ?? null, professional: conn.weeklyByPlan?.professional ?? null }, basic: e.target.value === "" ? null : Number(e.target.value) } })}
+                  onBlur={() => saveConn(conn)} className="ml-2 w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
+                <span className="text-[11px] text-slate-500">/ wk</span>
               </span>
             </label>
             <label className="flex items-center justify-between gap-2 rounded-lg border-2 border-indigo-300 px-3 py-2 text-[13px] text-slate-700">
@@ -211,6 +218,11 @@ export function MatchQualificationControls({ pricing = CODE_DEFAULT_PRICING }: {
                   onChange={(e) => setConn({ ...conn, monthlyByPlan: { ...conn.monthlyByPlan, professional: Number(e.target.value) } })}
                   onBlur={() => saveConn(conn)} className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
                 <span className="text-[11px] text-slate-500">/ mo</span>
+                <input type="number" min={0} max={100000} placeholder="None" aria-label="Professional weekly cap"
+                  value={conn.weeklyByPlan?.professional ?? ""}
+                  onChange={(e) => setConn({ ...conn, weeklyByPlan: { ...{ basic: conn.weeklyByPlan?.basic ?? null, professional: conn.weeklyByPlan?.professional ?? null }, professional: e.target.value === "" ? null : Number(e.target.value) } })}
+                  onBlur={() => saveConn(conn)} className="ml-2 w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
+                <span className="text-[11px] text-slate-500">/ wk</span>
               </span>
             </label>
           </div>
