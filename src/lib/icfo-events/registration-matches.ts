@@ -2,15 +2,15 @@
  * Matches with other registrations, shown while someone registers and on the
  * confirmation screen.
  *
- * Uses the event's existing pairing rule (matching-rule.ts: shared sectors,
- * plus a bonus when a founder meets an investor). No new scoring. Only founder
+ * Uses the event's pairing rule (matching-rule.ts: shared sectors, a bonus when
+ * a founder meets an investor, and stage and check size fit between them). Only founder
  * and investor registrations take part, as on the networking board.
  *
  * Anonymous by design: a match carries the other person's role, their type and
  * the sectors they share with you. Never a name, company, email or phone.
  */
 
-import { pairScore, sectorsOf, sharedSectors, type Matchable } from "@/lib/icfo-events/matching-rule";
+import { matchableFromAnswers, pairScore, sharedSectors, type Matchable } from "@/lib/icfo-events/matching-rule";
 
 export type MatchRole = Matchable["role"];
 
@@ -44,7 +44,7 @@ function typeOf(e: PoolEntry): string | null {
 export function rankMatches(me: Matchable, pool: PoolEntry[], limit = 20): RegistrationMatch[] {
   const out: RegistrationMatch[] = [];
   for (const e of pool) {
-    const other: Matchable = { role: e.role, sectors: sectorsOf(e.answers) };
+    const other: Matchable = matchableFromAnswers(e.role, e.answers);
     const shared = sharedSectors(me, other);
     // The rule's complementary bonus alone would pair every founder with every
     // investor; a match here also needs at least one shared sector, so the list

@@ -14,7 +14,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listIntroductions } from "@/lib/icfo-events/introductions-server";
-import { pairScore, sectorsOf, sharedSectors } from "@/lib/icfo-events/matching-rule";
+import { matchableFromAnswers, pairScore, sectorsOf, sharedSectors, type Matchable } from "@/lib/icfo-events/matching-rule";
 import {
   DEFAULT_PAIR_TYPES, PAIR_TYPES, matchableRoles, medianScore, pairTypeOf, sanitizeRules, scoreBands,
   type PairTypeKey, type Role, type ScoreBand,
@@ -127,7 +127,9 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
     const rules = sanitizeRules((rulesRes.data as Row | null)?.pair_types);
 
     const rows = (regsRes.data ?? []) as Row[];
-    const people: { side: Side; sectors: string[] }[] = [];
+    // `extra` carries stage and check size for real investors and founders; other
+    // roles (service, sponsor, presenter) have none and score as before.
+    const people: { side: Side; sectors: string[]; extra?: Pick<Matchable, "stages" | "money"> }[] = [];
 
     for (const r of rows) {
       const role = String(r.attendee_type ?? "").toLowerCase();
@@ -147,6 +149,12 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
           company: company || null,
         },
         sectors: sectorsOf(answers),
+        ...(role === "investor" || role === "founder"
+          ? (() => {
+              const m = matchableFromAnswers(role, answers);
+              return { extra: { stages: m.stages, money: m.money } };
+            })()
+          : {}),
       });
     }
 
@@ -198,8 +206,8 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
         // The same scoring rule the public event page counts with, so the two
         // numbers can never disagree. Roles beyond investor/founder score on
         // shared sectors alone.
-        const left = { role: scoreRole(x.side.role), sectors: x.sectors };
-        const right = { role: scoreRole(y.side.role), sectors: y.sectors };
+        const left: Matchable = { role: scoreRole(x.side.role), sectors: x.sectors, ...x.extra };
+        const right: Matchable = { role: scoreRole(y.side.role), sectors: y.sectors, ...y.extra };
         const score = pairScore(left, right);
 
         if (anyType && score > 0) {

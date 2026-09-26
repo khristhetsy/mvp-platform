@@ -19,12 +19,14 @@ function formatGeography(company: Pick<Company, "state" | "country">) {
 
 /** Combine funding stage + operating stage + revenue stage into one haystack so
  *  all three feed the engine's stage factor (token overlap vs investor stages). */
+/**
+ * The company's stage for matching: its funding stage (Pre-seed, Seed, Series A,
+ * Series B, Growth), the one stage vocabulary investors pick from. Operating and
+ * revenue stage no longer feed this factor; revenue is scored by ARR and MRR.
+ */
 function combinedStage(company: Company): string | null {
-  const cx = company as unknown as Record<string, unknown>;
-  const parts = [cx.funding_stage, cx.operating_stage, company.revenue_stage]
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean);
-  return parts.length ? parts.join(", ") : company.revenue_stage;
+  const raw = (company as unknown as Record<string, unknown>).funding_stage;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
 export function companyToMatchProfile(

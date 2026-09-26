@@ -46,10 +46,9 @@ export function buildCompanyMatchProfile(company: {
   arr?: number | string | null;
   mrr?: number | string | null;
 }): CompanyMatchProfile {
-  // Funding stage + operating stage + revenue stage all feed the stage factor.
-  const stageParts = [company.funding_stage, company.operating_stage, company.revenue_stage]
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean);
+  // Funding stage is the one stage vocabulary investors pick from, so it alone
+  // feeds the stage factor (same rule as companyToMatchProfile).
+  const fundingStage = typeof company.funding_stage === "string" && company.funding_stage.trim() ? company.funding_stage.trim() : null;
   const soughtInvestorTypes = splitProfileCsv(company.seeking_investor_types);
   const soughtCapitalTypes = splitProfileCsv(company.seeking_capital_types);
   return {
@@ -57,7 +56,7 @@ export function buildCompanyMatchProfile(company: {
     companyName: company.company_name ?? "",
     slug: company.slug ?? null,
     industry: company.industry ?? null,
-    stage: stageParts.length ? stageParts.join(", ") : (company.revenue_stage ?? null),
+    stage: fundingStage,
     geography: [company.state, company.country].filter(Boolean).join(", ") || null,
     fundingAmount: company.funding_amount ?? null,
     fundingBand: company.funding_amount_band ?? null,

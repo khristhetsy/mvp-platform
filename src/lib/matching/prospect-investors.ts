@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { InvestorMatchProfile } from "@/lib/matching/investor-company-matching";
+import {
+  ODOO_ACTIVE_FIELD,
+  ODOO_SIZE_FIELD,
+  activeRatingFromOdoo,
+  capitalTypesFromOdoo,
+  checkSizeFromOdoo,
+} from "@/lib/matching/odoo-mandate";
 
 export const PROSPECT_ID_PREFIX = "prospect:";
 
@@ -17,6 +24,10 @@ export type ProspectInvestor = {
   preferred_geographies: string[];
   check_size_min: number | null;
   check_size_max: number | null;
+  /** Capital types offered, as platform labels (from Odoo on import). */
+  capital_types?: string[] | null;
+  /** iCFO's 1 to 5 "Active investor" rating from Odoo. */
+  active_rating?: number | null;
   notes: string | null;
   source: string | null;
   created_at: string;
@@ -153,14 +164,20 @@ export async function importInvestorContactsAsProspects(
     const investorTypes = asList(prof?.investorTypes);
     const industries = asList(prof?.industries);
     const country = contactCountry(r.raw);
+    const extra = (prof?.extra ?? {}) as Record<string, unknown>;
+    const size = checkSizeFromOdoo(extra[ODOO_SIZE_FIELD]);
     return {
       name: (r.name || r.email || "Unknown investor").slice(0, 200),
       investor_type: investorTypes[0] ?? null,
       preferred_sectors: industries,
+      // Odoo holds no stage preference for investors (1 of 7,184 contacts), so
+      // stage stays empty rather than guessed.
       preferred_stages: [] as string[],
       preferred_geographies: country ? [country] : [],
-      check_size_min: null,
-      check_size_max: null,
+      check_size_min: size.min,
+      check_size_max: size.max,
+      capital_types: capitalTypesFromOdoo(prof?.capital),
+      active_rating: activeRatingFromOdoo(extra[ODOO_ACTIVE_FIELD]),
       notes: r.company ?? null,
       source: "investor_crm",
       source_ref: r.id,
@@ -210,6 +227,8 @@ export async function loadProspectInvestorMatchProfiles(): Promise<{
       preferred_arr_range: null,
       preferred_mrr_range: null,
       approval_status: "approved",
+      ...(p.capital_types && p.capital_types.length ? { capitalTypes: p.capital_types } : {}),
+      ...(typeof p.active_rating === "number" ? { activeRating: p.active_rating } : {}),
     });
     names.set(id, `${p.name} · prospect`);
   }
