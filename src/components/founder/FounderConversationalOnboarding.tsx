@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
@@ -19,6 +19,10 @@ import {
 import { useVocabularies } from "@/lib/vocabulary/provider";
 import { offered, type VocabularyOption } from "@/lib/vocabulary/lists";
 import { SKIPPABLE_STEPS, type ResolvedSurface } from "@/lib/profile-fields/display";
+import { nextQuestion, previousQuestion, questionPosition, type QuestionNum } from "@/lib/onboarding/question-order";
+import { founderMeter, type Meter } from "@/lib/matching/matchable-points";
+import type { EngineWeights } from "@/lib/matching/investor-company-matching";
+import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
@@ -221,6 +225,20 @@ type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 // stops at 8 — the progress bar should never count the confirmation as a step.
 const TOTAL = 8;
 
+// Asked in QUESTION_ORDER: scored questions first, prose last. Question
+// numbers are unchanged, so canAdvance, SKIPPABLE_STEPS and the save are too.
+/** Meter rows keyed by the Profile and fields key that hides them. */
+const METER_FIELD_KEYS: Record<string, string | null> = {
+  Industry: null,
+  Stage: "funding_stage",
+  "Amount of capital": "funding_amount_band",
+  "Headquarters location": null,
+  "Seeking investor type": "seeking_investor_types",
+  "Seeking capital type": "seeking_capital_types",
+  ARR: "arr",
+  MRR: "mrr",
+};
+
 const HIGHLIGHT_PLACEHOLDERS = [
   "Pilot line running at 400 units/month",
   "Two LOIs signed with tier-1 manufacturers",
@@ -233,11 +251,14 @@ export function FounderConversationalOnboarding({
   company,
   founderName,
   display,
+  engineWeights,
 }: Readonly<{
   company: Company;
   founderName: string;
   /** Shown and Required per field, from Admin, Profile and fields. Absent means today's behaviour. */
   display?: ResolvedSurface;
+  /** The matching engine's weights, for the matchable points meter. Absent hides the meter. */
+  engineWeights?: EngineWeights;
 }>) {
   /** Whether a managed field is asked. */
   const shows = (key: string) => display?.[key]?.shown !== false;
@@ -348,10 +369,9 @@ export function FounderConversationalOnboarding({
   }
 
   async function handleNext() {
-    if (step < TOTAL) {
-      let n = step + 1;
-      while (n < TOTAL && skipped(n)) n += 1;
-      setStep(n as StepNum);
+    const next = nextQuestion(step as QuestionNum, skipped);
+    if (next !== null) {
+      setStep(next);
       return;
     }
     // step 6 → save & show done
@@ -411,6 +431,37 @@ export function FounderConversationalOnboarding({
       setSaving(false);
     }
   }
+
+  // The meter: a point shown is a point the matcher scores. Rows for fields
+  // hidden on Profile and fields are left out, since they cannot be answered.
+  const meter: Meter | null = useMemo(() => {
+    if (!engineWeights) return null;
+    const full = founderMeter(
+      {
+        industry,
+        stages: fundingStage,
+        amountBand: amount || null,
+        country,
+        state: companyState,
+        seekingInvestorTypes: invTypes,
+        seekingCapitalTypes: capTypes,
+        arr: arr || null,
+        mrr: mrr || null,
+      },
+      engineWeights,
+    );
+    const rows = full.rows.filter((r) => {
+      const key = METER_FIELD_KEYS[r.label];
+      return !key || shows(key);
+    });
+    return {
+      rows,
+      answeredPoints: rows.reduce((n, r) => n + (r.answered ? r.weight : 0), 0),
+      totalPoints: rows.reduce((n, r) => n + r.weight, 0),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engineWeights, industry, fundingStage, amount, country, companyState, invTypes, capTypes, arr, mrr, display]);
+  const position = step === 9 ? TOTAL : questionPosition(step);
 
   const firstName = founderName.split(" ")[0] || founderName;
   const actionPlan = computeActionPlan({ stage, amount, timeline });
@@ -498,23 +549,33 @@ export function FounderConversationalOnboarding({
     <>
       <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
+      <div className={meter ? "grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start" : ""}>
+      {meter ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] lg:hidden" aria-label="Matchable points">
+          <span className="text-slate-500">Matchable points</span>
+          <span className="font-semibold text-[#0A1A40]">{meter.answeredPoints} of {meter.totalPoints}</span>
+          <div className="h-1.5 flex-1 rounded-full bg-slate-200" aria-hidden="true">
+            <div className="h-1.5 rounded-full bg-[#1A6CE4]" style={{ width: `${meter.totalPoints ? Math.round((meter.answeredPoints / meter.totalPoints) * 100) : 0}%` }} />
+          </div>
+        </div>
+      ) : null}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         {/* Progress */}
         <div className="mb-8 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Step {step} of {TOTAL}
+            Step {position} of {TOTAL}
           </p>
           <div className="flex gap-1.5">
             {Array.from({ length: TOTAL }, (_, i) => (
               <div
                 key={i}
                 style={{
-                  width: i + 1 <= step ? 20 : 8,
+                  width: i + 1 <= position ? 20 : 8,
                   height: 8,
                   borderRadius: 4,
-                  background: i + 1 < step ? "#2E78F5" : i + 1 === step ? "#2E78F5" : "#e2e8f0",
+                  background: i + 1 <= position ? "#2E78F5" : "#e2e8f0",
                   transition: "all 0.3s ease",
-                  opacity: i + 1 <= step ? 1 : 0.5,
+                  opacity: i + 1 <= position ? 1 : 0.5,
                 }}
               />
             ))}
@@ -653,6 +714,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What does your company do?
               </p>
+              <div className="mt-2"><ReadByPersonBadge /></div>
               <p className="mt-1 text-sm text-slate-500">2–3 sentences is all you need. Lead with the problem you solve.</p>
               <textarea
                 autoFocus
@@ -673,6 +735,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What will you use this funding for?
               </p>
+              <div className="mt-2"><ReadByPersonBadge /></div>
               <p className="mt-1 text-sm text-slate-500">{t("select_all_that_apply_then_tell_us_your_time")}</p>
               {shows("use_of_funds") ? (
                 <div className="mt-5 flex flex-wrap gap-2">
@@ -763,7 +826,7 @@ export function FounderConversationalOnboarding({
                 </>
               ) : null}
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span></label>
+                <label className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span> <ReadByPersonBadge /></label>
                 <input
                   className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
                   placeholder="e.g. 2 co-founders, 3 full-time"
@@ -864,13 +927,12 @@ export function FounderConversationalOnboarding({
         ) : null}
 
         <div className="mt-8 flex items-center justify-between">
-          {step > 1 ? (
+          {position > 1 ? (
             <button
               type="button"
               onClick={() => {
-                let n = step - 1;
-                while (n > 1 && skipped(n)) n -= 1;
-                setStep(n as StepNum);
+                const prev = previousQuestion(step as QuestionNum, skipped);
+                if (prev !== null) setStep(prev);
               }}
               className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
             >
@@ -888,11 +950,13 @@ export function FounderConversationalOnboarding({
           >
             {saving
               ? "Saving…"
-              : step === TOTAL
+              : position === TOTAL
               ? "Finish →"
               : "Continue →"}
           </button>
         </div>
+      </div>
+      {meter ? <MatchablePointsMeter meter={meter} className="hidden lg:sticky lg:top-6 lg:block" /> : null}
       </div>
     </>
   );

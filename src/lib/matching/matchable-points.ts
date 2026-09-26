@@ -29,7 +29,7 @@ const any = (v: readonly string[] | null | undefined) => Boolean(v && v.some((x)
 
 export type FounderMeterInput = {
   industry: string | null;
-  /** Funding, operating and revenue stage all feed the core's stage factor. */
+  /** Funding stage: the only stage the core's stage factor reads. */
   stages: string[];
   amountBand: string | null;
   country: string | null;

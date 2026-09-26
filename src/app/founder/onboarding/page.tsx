@@ -10,6 +10,7 @@ import { loadVocabularies } from "@/lib/vocabulary/store";
 import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export default async function FounderOnboardingPage() {
             company={data.company}
             founderName={profile.full_name ?? profile.email ?? "Founder"}
             display={await loadSurfaceDisplay("founder_onboarding")}
+            engineWeights={(await getInvestorMatchConfig()).engineWeights}
           />
         </VocabularyProvider>
       </div>
