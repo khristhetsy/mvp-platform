@@ -52,23 +52,35 @@ function IntroLocked({ gate, score }: { gate: number; score: number | null }) {
 
 function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: string }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
 
   async function request() {
     setState("loading");
+    setMessage(null);
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ref: introRef }),
       });
-      setState(res.ok ? "done" : "error");
+      if (res.ok) {
+        setState("done");
+        return;
+      }
+      // Show why (plan limit, plan required, gate) instead of a bare retry.
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setMessage(body?.error ?? null);
+      setState("error");
     } catch {
       setState("error");
     }
   }
 
   if (state === "done") {
-    return <span className="text-xs font-medium text-emerald-600">Requested — the iCapOS team will follow up.</span>;
+    return <span className="text-xs font-medium text-emerald-600">Requested · with iCFO</span>;
+  }
+  if (state === "error" && message) {
+    return <span className="max-w-[16rem] text-[11px] leading-snug text-amber-800">{message}</span>;
   }
   return (
     <button

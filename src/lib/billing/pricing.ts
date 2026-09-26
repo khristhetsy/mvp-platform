@@ -38,6 +38,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
       "Up to 5 matched investors get your one-pager",
       "Attend the Investor Conference Virtual Event",
       "DIY outreach unlocked — you can now reach investors",
+      "Up to 5 intro requests a month, through iCFO",
       "Fully self-serve",
     ],
     paidPlan: true,
@@ -54,7 +55,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
       "Everything in Basic",
       "Up to 50 investors",
       "Monthly live presentation slot",
-      "Investors intro requests",
+      "Up to 20 intro requests a month",
       "Self-serve, with a call available",
     ],
     paidPlan: true,
@@ -111,7 +112,7 @@ export const FEATURE_COMPARISON: FeatureComparisonRow[] = [
   { label: "DIY outreach", basic: true, professional: true },
   { label: "Matched investor cap", basic: true, professional: true },
   { label: "Monthly presentation slot", basic: false, professional: true },
-  { label: "Brokered intro requests", basic: false, professional: true },
+  { label: "Intro requests through iCFO (5 or 20 a month)", basic: true, professional: true },
   { label: "Additional company accounts ($800/mo)", basic: false, professional: true },
 ];
 

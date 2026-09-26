@@ -32,12 +32,12 @@ export const start = {
         {
           value: "founder_basic",
           label: "Basic",
-          features: ["All tools: CRR, valuation, data room, e-learning", "Up to 5 matched investors get your one-pager", "Investor Conference virtual event"],
+          features: ["All tools: CRR, valuation, data room, e-learning", "Up to 5 matched investors get your one-pager", "Up to 5 intro requests a month", "Investor Conference virtual event"],
         },
         {
           value: "founder_professional",
           label: "Professional",
-          features: ["Everything in Basic", "Monthly presentation slot", "Brokered introduction requests"],
+          features: ["Everything in Basic", "Monthly presentation slot", "Up to 20 intro requests a month"],
         },
       ],
     },

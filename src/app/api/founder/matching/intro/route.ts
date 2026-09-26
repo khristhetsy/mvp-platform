@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   async function countSince(since: string): Promise<number> {
     const [member, prospect] = await Promise.all([
       admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", company!.id).neq("status", "declined").gte("created_at", since),
-      admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).gte("created_at", since),
+      admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).neq("status", "dismissed").gte("created_at", since),
     ]);
     return (member.count ?? 0) + (prospect.count ?? 0);
   }

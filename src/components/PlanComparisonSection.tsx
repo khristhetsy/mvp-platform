@@ -168,7 +168,7 @@ export function PlanComparisonSection({
             </table>
           </div>
           <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">
-            Every plan includes all tools. Professional adds presentation slots and brokered intros.{" "}
+            Every plan includes all tools. Professional adds presentation slots and more intro requests.{" "}
             {PLAN_LABELS.founder_managed_ir} is done-for-you.
           </p>
         </section>
