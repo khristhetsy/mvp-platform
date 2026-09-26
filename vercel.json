@@ -5,6 +5,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/scheduled-reach-outs",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/social-maintenance",
       "schedule": "7 * * * *"
     },

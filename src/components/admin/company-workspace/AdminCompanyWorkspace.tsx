@@ -24,6 +24,7 @@ import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
 import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import { CompanyActivityLog } from "@/components/admin/company-workspace/CompanyActivityLog";
+import { ScheduledReachOuts } from "@/components/admin/company-workspace/ScheduledReachOuts";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
@@ -346,6 +347,8 @@ export function AdminCompanyWorkspace({
           <WorkspaceSection icon="ti-robot" tone="purple" title={t("ai_company_assessment_2")} subtitle={t("structured_review_recommendation_strengths_c")}>
             <AdminCompanyAIAssessment companyId={data.company.id} />
           </WorkspaceSection>
+
+          <ScheduledReachOuts companyId={data.company.id} founderName={founderName} />
 
           <WorkspaceSection icon="ti-timeline" tone="blue" title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
             <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />

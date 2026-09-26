@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { arrivalLabel, type UsZone } from "@/lib/founder-outreach/us-time-zone";
 
 type Via = "icapos" | "gmail";
 
@@ -50,6 +51,13 @@ export function ReachOutPanel({
   const [via, setVia] = useState<Via>("icapos");
   const [busy, setBusy] = useState<null | "draft" | "save" | "send">(null);
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  // Schedule for later: the same control as the stage reminders (date and time in
+  // the staff member's local time), plus when it lands in the founder's zone.
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("09:00");
+  const [scheduling, setScheduling] = useState(false);
+  const [zone, setZone] = useState<(UsZone & { stateName: string }) | null>(null);
 
   async function loadDraft() {
     setBusy("draft");
@@ -116,7 +124,42 @@ export function ReachOutPanel({
   async function openPanel() {
     setOpen(true);
     setNotice(null);
+    setScheduleOpen(false);
+    void fetch(`/api/admin/companies/${companyId}/reach-out`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setZone(j?.zone ?? null))
+      .catch(() => {});
     if (!body) await loadDraft();
+  }
+
+  const schedWhen = schedDate && schedTime ? new Date(`${schedDate}T${schedTime}`) : null;
+  const schedValid = schedWhen !== null && !Number.isNaN(schedWhen.getTime());
+
+  async function submitSchedule() {
+    if (!schedValid || !schedWhen) {
+      setNotice({ kind: "err", text: "Pick a date and time first." });
+      return;
+    }
+    setScheduling(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}/reach-out`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "schedule", subject, body, appendSignature, alsoNudge, via, sendAt: schedWhen.toISOString() }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setNotice({ kind: "ok", text: "Email scheduled." });
+        setScheduleOpen(false);
+        // Refreshes the Scheduled emails card on the company page.
+        window.dispatchEvent(new CustomEvent("reach-out-scheduled", { detail: { companyId } }));
+      } else {
+        setNotice({ kind: "err", text: j.error ?? "Could not schedule that email." });
+      }
+    } finally {
+      setScheduling(false);
+    }
   }
 
   return (
@@ -225,6 +268,29 @@ export function ReachOutPanel({
                 : "From your own Gmail address and saved in your Sent folder."}
             </p>
 
+            {scheduleOpen ? (
+              <div className="mt-3 rounded-lg border border-slate-200 bg-white p-2.5">
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Schedule this email <span className="font-normal normal-case text-slate-400">· your local time</span></div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="date" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} className="rounded border border-slate-300 px-2 py-1 text-[11.5px]" />
+                  <input type="time" value={schedTime} onChange={(e) => setSchedTime(e.target.value)} className="rounded border border-slate-300 px-2 py-1 text-[11.5px]" />
+                  <button
+                    type="button"
+                    disabled={scheduling || busy !== null || !subject || !body}
+                    onClick={() => void submitSchedule()}
+                    className="rounded-lg bg-[#5B2AD6] px-3 py-1.5 text-[11.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {scheduling ? "Scheduling…" : "Set schedule"}
+                  </button>
+                </div>
+                {schedValid && schedWhen && zone ? (
+                  <p className="mt-2 rounded-md bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-800">
+                    Arrives <b>{arrivalLabel(schedWhen.toISOString(), zone)}</b> for {founderName.split(" ")[0]} ({zone.stateName})
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="mt-4 flex items-center gap-2">
               <button type="button" onClick={loadDraft} disabled={busy !== null} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-60">
                 <i className="ti ti-sparkles" aria-hidden="true" /> Redraft
@@ -236,6 +302,13 @@ export function ReachOutPanel({
                   {busy === "save" ? "Saving…" : "Save to Gmail drafts"}
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={() => setScheduleOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+              >
+                <i className="ti ti-calendar-plus" aria-hidden="true" /> Schedule
+              </button>
               <button type="button" onClick={() => act("send")} disabled={busy !== null || !subject || !body} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
                 {busy === "send" ? "Sending…" : via === "icapos" ? "Send with iCapOS" : "Send from my Gmail"}
               </button>

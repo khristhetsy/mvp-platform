@@ -4,11 +4,16 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { claudeComplete, isClaudeConfigured } from "@/lib/claude";
-import { sendViaGmail } from "@/lib/integrations/gmail-send";
 import { createGmailDraft } from "@/lib/integrations/gmail-drafts";
-import { sendTransactionalEmail } from "@/lib/email/transactional-send";
 import { loadSignature, effectiveSignature } from "@/lib/email/signature";
-import { createNotification } from "@/lib/notifications/notifications";
+import { deliverReachOut, gmailError, logOutreach } from "@/lib/founder-outreach/deliver-reach-out";
+import {
+  cancelScheduledReachOut,
+  listScheduledReachOuts,
+  sendScheduledReachOutNow,
+  validSendAt,
+} from "@/lib/founder-outreach/scheduled-reach-outs";
+import { usZoneForState } from "@/lib/founder-outreach/us-time-zone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -30,7 +35,7 @@ const schema = z.discriminatedUnion("action", [
     facts: z.array(z.string()).max(40).default([]),
   }),
   z.object({
-    action: z.enum(["save-draft", "send"]),
+    action: z.enum(["save-draft", "send", "schedule"]),
     subject: z.string().min(1).max(200),
     body: z.string().min(1).max(8000),
     appendSignature: z.boolean().default(true),
@@ -38,6 +43,12 @@ const schema = z.discriminatedUnion("action", [
     /** iCapOS sends from the platform address with reply-to the staff member and
      *  needs no Google connection; gmail sends as the staff member personally. */
     via: z.enum(["icapos", "gmail"]).default("icapos"),
+    /** For "schedule": when to send, as an ISO instant. */
+    sendAt: z.string().optional(),
+  }),
+  z.object({
+    action: z.enum(["cancel-scheduled", "send-scheduled-now"]),
+    scheduledId: z.string().uuid(),
   }),
 ]);
 
@@ -64,6 +75,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
+  const input = parsed.data;
+
+  // ---- Scheduled emails: cancel, or send now ----
+  if ("scheduledId" in input) {
+    if (input.action === "cancel-scheduled") {
+      const ok = await cancelScheduledReachOut(id, input.scheduledId);
+      return ok
+        ? NextResponse.json({ ok: true })
+        : NextResponse.json({ error: "This email has already been sent or canceled." }, { status: 409 });
+    }
+    const r = await sendScheduledReachOutNow(id, input.scheduledId);
+    return r.ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: r.error }, { status: 400 });
+  }
+
   const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
   const { data: company } = await admin
     .from("companies")
@@ -78,10 +103,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!f?.email) return NextResponse.json({ error: "Founder has no email on file." }, { status: 400 });
 
   // ---- Draft with AI from the stage's diagnosis ----
-  if (parsed.data.action === "draft") {
+  if (input.action === "draft") {
     const first = (f.full_name ?? "there").split(" ")[0];
-    const { items, facts, situation } = parsed.data;
-    const stage = parsed.data.stage ?? "this stage";
+    const { items, facts, situation } = input;
+    const stage = input.stage ?? "this stage";
 
     const subject =
       situation === "cleared"
@@ -138,16 +163,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   // ---- Save to Gmail drafts / Send from Gmail ----
   const supabase = await createServerSupabaseClient();
-  let html = esc(parsed.data.body).replace(/\n/g, "<br>");
-  if (parsed.data.appendSignature) {
+  let html = esc(input.body).replace(/\n/g, "<br>");
+  if (input.appendSignature) {
     const sig = effectiveSignature(await loadSignature(supabase, profile.id));
     html += `<br><br>${sig}`;
   }
 
-  const msg = { to: f.email, subject: parsed.data.subject, body: parsed.data.body, html };
-  const via = parsed.data.via;
+  const msg = { to: f.email, subject: input.subject, body: input.body, html };
+  const via = input.via;
 
-  if (parsed.data.action === "save-draft") {
+  if (input.action === "save-draft") {
     // Only Gmail has a drafts folder to save into. Sending with iCapOS is
     // immediate, so a draft there would have nowhere to live.
     if (via === "icapos") {
@@ -158,75 +183,59 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
     const r = await createGmailDraft(profile.id, msg);
     if ("error" in r) return NextResponse.json({ error: gmailError(r.error) }, { status: 400 });
-    await logOutreach(admin, id, profile.id, "draft", via);
+    await logOutreach(admin as unknown as SupabaseClient, id, profile.id, "draft", via);
     return NextResponse.json({ ok: true, draftId: r.id });
   }
 
-  // send
-  if (via === "icapos") {
-    try {
-      // Replies go to the staff member, so a platform-addressed email still
-      // reaches a person. Degrades to an in-app notification without Resend.
-      const sent = await sendTransactionalEmail({
-        to: f.email,
-        subject: parsed.data.subject,
-        body: parsed.data.body,
-        html,
-        replyTo: profile.email ?? null,
-        founderId: f.id,
-        notificationType: "founder_outreach",
-        entityType: "company",
-        entityId: id,
-      });
-      await logOutreach(admin, id, profile.id, "sent", via);
-      return NextResponse.json({ ok: true, channel: sent.channel });
-    } catch (e) {
-      return NextResponse.json(
-        { error: e instanceof Error ? e.message : "iCapOS could not send that email." },
-        { status: 400 },
-      );
-    }
-  }
-
-  const r = await sendViaGmail({ userId: profile.id, to: f.email, subject: parsed.data.subject, body: parsed.data.body, html });
-  if ("error" in r) return NextResponse.json({ error: gmailError(r.error) }, { status: 400 });
-
-  if (parsed.data.alsoNudge) {
-    await createNotification({
-      recipientUserId: f.id,
-      type: "founder_outreach_nudge",
-      title: "A note from the iCapOS team",
-      message: parsed.data.subject,
-      entityType: "company",
-      entityId: id,
-    }).catch(() => {});
-  }
-  await logOutreach(admin, id, profile.id, "sent", via);
-  return NextResponse.json({ ok: true });
-}
-
-function gmailError(e: Error): string {
-  return /token|scope|connect|auth/i.test(e.message)
-    ? "Your Gmail isn't connected. Connect Google in Integrations, then try again."
-    : "Gmail request failed. Try again.";
-}
-
-async function logOutreach(
-  admin: SupabaseClient<Database>,
-  id: string,
-  actorId: string,
-  kind: "draft" | "sent",
-  via: "icapos" | "gmail" = "gmail",
-) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin as unknown as SupabaseClient<any>).from("operational_activity_events").insert({
-      event_type: kind === "sent" ? "founder_outreach_sent" : "founder_outreach_drafted",
-      actor_user_id: actorId,
-      entity_id: id,
-      metadata: { company_id: id, via },
+  // schedule: stored now, sent by /api/cron/scheduled-reach-outs at sendAt
+  if (input.action === "schedule") {
+    const sendAt = input.sendAt ?? "";
+    const invalid = validSendAt(sendAt);
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
+    const { error } = await (admin as unknown as SupabaseClient).from("scheduled_reach_outs").insert({
+      company_id: id,
+      founder_id: f.id,
+      created_by: profile.id,
+      to_email: f.email,
+      subject: input.subject,
+      body: input.body,
+      html,
+      via,
+      reply_to: profile.email ?? null,
+      also_nudge: input.alsoNudge,
+      send_at: new Date(sendAt).toISOString(),
     });
-  } catch {
-    /* best-effort */
+    if (error) return NextResponse.json({ error: "Could not schedule that email." }, { status: 500 });
+    return NextResponse.json({ ok: true, sendAt: new Date(sendAt).toISOString() });
   }
+
+  // send
+  const r = await deliverReachOut(admin as unknown as SupabaseClient, {
+    companyId: id,
+    founderId: f.id,
+    actorId: profile.id,
+    actorEmail: profile.email ?? null,
+    to: f.email,
+    subject: input.subject,
+    body: input.body,
+    html,
+    via,
+    alsoNudge: input.alsoNudge,
+  });
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
+  return NextResponse.json(r.channel ? { ok: true, channel: r.channel } : { ok: true });
+}
+
+/** Scheduled emails for this company, and the founder's US time zone. */
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  const profile = await requireRole(["admin", "analyst"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
+  const { id } = await ctx.params;
+  const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
+  const [{ data: company }, items] = await Promise.all([
+    admin.from("companies").select("state, country").eq("id", id).maybeSingle(),
+    listScheduledReachOuts(id),
+  ]);
+  const co = company as { state: string | null; country: string | null } | null;
+  return NextResponse.json({ items, zone: usZoneForState(co?.state, co?.country) });
 }
