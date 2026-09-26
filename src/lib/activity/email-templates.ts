@@ -103,14 +103,14 @@ export function companyHeadline(companyName: string | null, title: string): stri
   return `${companyName}: ${clean}`;
 }
 
-function button(label: string, url: string, primary: boolean): string {
+export function button(label: string, url: string, primary: boolean): string {
   const style = primary
     ? `background:${BLUE};color:#ffffff;border:1px solid ${BLUE};`
     : `background:#ffffff;color:${BLUE};border:1px solid #C9D6EE;`;
   return `<a href="${escapeHtml(url)}" style="${style}display:inline-block;padding:10px 16px;border-radius:8px;font-family:${FONT};font-size:14px;font-weight:bold;text-decoration:none;margin:0 8px 8px 0;">${escapeHtml(label)}</a>`;
 }
 
-function shell(inner: string): string {
+export function shell(inner: string): string {
   return [
     `<div style="background:#F4F6FB;padding:24px 12px;">`,
     `<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #E3E8F2;border-radius:12px;overflow:hidden;">`,
