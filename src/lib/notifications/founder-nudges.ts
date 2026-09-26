@@ -9,6 +9,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createNotification, hasRecentNotification } from "@/lib/notifications/notifications";
 import { sendEmail } from "@/lib/email/send-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildPreparationDocNudge, type UploadedDoc } from "@/lib/notifications/preparation-doc-nudge";
 
 const INACTIVE_DAYS = 5; // no company movement for this long
 const DEDUPE_HOURS = 24 * 7; // at most one nudge a week
@@ -142,11 +143,36 @@ export async function nudgeStalledJourneyFounders(): Promise<{ nudged: number }>
       if (c.founder_id) companyByFounder.set(c.founder_id, c);
     }
 
+    // Preparation founders get the document nudge: their own uploads, matched the
+    // same way as the Preparation checklist (documents they uploaded).
+    const prepIds = actionable.filter((f) => f.journey_stage === "qualify").map((f) => f.id);
+    const uploadsByFounder = new Map<string, UploadedDoc[]>();
+    if (prepIds.length) {
+      const { data: docs } = await db
+        .from("documents")
+        .select("uploaded_by, document_type, created_at")
+        .in("uploaded_by", prepIds);
+      for (const d of (docs ?? []) as Array<UploadedDoc & { uploaded_by: string }>) {
+        const list = uploadsByFounder.get(d.uploaded_by) ?? [];
+        list.push({ document_type: d.document_type, created_at: d.created_at });
+        uploadsByFounder.set(d.uploaded_by, list);
+      }
+    }
+
     for (const f of actionable) {
       const company = companyByFounder.get(f.id);
       if (!company || (company.updated_at && company.updated_at >= inactiveCutoff)) continue;
 
       const copy = STAGE_NUDGE[f.journey_stage as string];
+      // Null when every required document is in; the general copy applies then.
+      const docNudge =
+        f.journey_stage === "qualify"
+          ? buildPreparationDocNudge({
+              firstName: f.full_name?.split(" ")[0] ?? null,
+              companyName: company.company_name,
+              uploads: uploadsByFounder.get(f.id) ?? [],
+            })
+          : null;
       const already = await hasRecentNotification({
         recipientUserId: f.id,
         type: "journey_nudge",
@@ -157,13 +183,22 @@ export async function nudgeStalledJourneyFounders(): Promise<{ nudged: number }>
       await createNotification({
         recipientUserId: f.id,
         type: "journey_nudge",
-        title: copy.title,
-        message: copy.message,
+        title: docNudge?.title ?? copy.title,
+        message: docNudge?.message ?? copy.message,
         entityType: "company",
         entityId: null,
+        ...(docNudge ? { deepLink: copy.path } : {}),
       });
 
-      if (f.email) {
+      if (f.email && docNudge) {
+        await sendEmail({
+          to: f.email,
+          subject: docNudge.subject,
+          html: docNudge.html,
+          text: docNudge.text,
+          fromName: "iCapOS",
+        });
+      } else if (f.email) {
         const name = f.full_name?.split(" ")[0] ?? "there";
         const url = `${SITE_URL}${copy.path}`;
         await sendEmail({
