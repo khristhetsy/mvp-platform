@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { arrivalLabel, type UsZone } from "@/lib/founder-outreach/us-time-zone";
+import { ReachOutEmailViewer } from "@/components/admin/ReachOutEmailViewer";
 
 type Item = {
   id: string;
@@ -32,6 +33,7 @@ export function ScheduledReachOuts({ companyId, founderName }: Readonly<{ compan
   const [zone, setZone] = useState<UsZone | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
 
   const apply = useCallback((j: { items?: Item[]; zone?: UsZone | null } | null) => {
     if (!j) return;
@@ -54,7 +56,7 @@ export function ScheduledReachOuts({ companyId, founderName }: Readonly<{ compan
     };
   }, [companyId, apply, load]);
 
-  async function act(id: string, action: "send-scheduled-now" | "cancel-scheduled") {
+  async function act(id: string, action: "send-scheduled-now" | "cancel-scheduled"): Promise<string | null> {
     setBusy(id + action);
     setMessage(null);
     try {
@@ -64,8 +66,10 @@ export function ScheduledReachOuts({ companyId, founderName }: Readonly<{ compan
         body: JSON.stringify({ action, scheduledId: id }),
       });
       const j = await res.json().catch(() => ({}));
-      setMessage(res.ok ? (action === "cancel-scheduled" ? "Scheduled email canceled." : "Email sent.") : (j.error ?? "Something went wrong."));
+      const err = res.ok ? null : (j.error ?? "Something went wrong.");
+      setMessage(err ?? (action === "cancel-scheduled" ? "Scheduled email canceled." : "Email sent."));
       await load();
+      return err;
     } finally {
       setBusy(null);
     }
@@ -95,6 +99,9 @@ export function ScheduledReachOuts({ companyId, founderName }: Readonly<{ compan
             </div>
             {it.status !== "sending" ? (
               <div className="flex gap-3 whitespace-nowrap text-[12px] font-semibold">
+                <button type="button" onClick={() => setViewing(it.id)} className="text-indigo-700 hover:underline">
+                  View
+                </button>
                 <button type="button" disabled={busy !== null} onClick={() => void act(it.id, "send-scheduled-now")} className="text-indigo-700 hover:underline disabled:opacity-50">
                   {busy === it.id + "send-scheduled-now" ? "Sending…" : "Send now"}
                 </button>
@@ -107,6 +114,13 @@ export function ScheduledReachOuts({ companyId, founderName }: Readonly<{ compan
         ))}
       </div>
       <p className="mt-2 text-[11.5px] text-slate-400">Once sent it moves to the company timeline, like any other reach out.</p>
+      {viewing ? (
+        <ReachOutEmailViewer
+          detailUrl={`/api/admin/companies/${companyId}/reach-out?scheduledId=${viewing}`}
+          onClose={() => setViewing(null)}
+          onAction={(kind) => act(viewing, kind === "cancel" ? "cancel-scheduled" : "send-scheduled-now")}
+        />
+      ) : null}
     </section>
   );
 }

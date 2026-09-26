@@ -9,6 +9,7 @@ import { loadSignature, effectiveSignature } from "@/lib/email/signature";
 import { deliverReachOut, gmailError, logOutreach } from "@/lib/founder-outreach/deliver-reach-out";
 import {
   cancelScheduledReachOut,
+  getScheduledReachOut,
   listScheduledReachOuts,
   sendScheduledReachOutNow,
   validSendAt,
@@ -227,10 +228,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 /** Scheduled emails for this company, and the founder's US time zone. */
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
   const { id } = await ctx.params;
+  // ?scheduledId=<uuid>: one scheduled email in full, for its View link.
+  const scheduledId = new URL(req.url).searchParams.get("scheduledId");
+  if (scheduledId) {
+    if (!z.string().uuid().safeParse(scheduledId).success) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    const email = await getScheduledReachOut(scheduledId, id);
+    return email ? NextResponse.json({ email }) : NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
   const [{ data: company }, items] = await Promise.all([
     admin.from("companies").select("state, country").eq("id", id).maybeSingle(),

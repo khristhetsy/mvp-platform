@@ -8,6 +8,7 @@ import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 import { SelectionBar, ActionResult } from "@/components/admin/sales/SelectionBar";
 import { CRON_GROUP_ORDER } from "@/lib/cron/jobs";
+import { ScheduledReachOutEmails } from "@/components/admin/ScheduledReachOutEmails";
 
 export type JobRow = {
   path: string;
@@ -323,6 +324,7 @@ function GroupRows({
               <tr style={{ background: "#FAFBFD" }}>
                 <td />
                 <td colSpan={4} style={{ padding: "4px 12px 12px" }}>
+                  {r.path === "/api/cron/scheduled-reach-outs" ? <ScheduledReachOutEmails /> : null}
                   <RunHistory path={r.path} />
                 </td>
               </tr>
