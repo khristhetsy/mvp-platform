@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   completeOrchestrationRun,
+  createPhaseTracker,
   startOrchestrationRun,
   type CronPassLogInput,
   type OrchestrationRunStatus,
@@ -73,6 +74,8 @@ export async function runCronOrchestrationPass(options?: {
 
   const supabase = createServiceRoleClient();
   const runId = await startOrchestrationRun(supabase, triggerSource);
+  // Records which step is running, so a run killed at the time limit shows where.
+  const phase = createPhaseTracker(supabase, runId, startMs);
 
   let remindersGenerated = 0;
   let digestsGenerated = 0;
@@ -80,7 +83,7 @@ export async function runCronOrchestrationPass(options?: {
   let failuresCount = 0;
 
   try {
-    const orchestration = await runNotificationOrchestration(supabase, { includeInactivity: true });
+    const orchestration = await phase.run("notification_orchestration", () => runNotificationOrchestration(supabase, { includeInactivity: true }));
     remindersGenerated += orchestration.notificationsCreated;
     orchestrationSkippedDuplicates = orchestration.skippedDuplicates;
   } catch (error) {
@@ -89,7 +92,7 @@ export async function runCronOrchestrationPass(options?: {
   }
 
   try {
-    const digest = await runScheduledDigestPass(supabase, { force: options?.forceDigest ?? false });
+    const digest = await phase.run("scheduled_digest_pass", () => runScheduledDigestPass(supabase, { force: options?.forceDigest ?? false }));
     remindersGenerated += digest.remindersSent;
     digestsGenerated = digest.digestsGenerated;
     orchestrationSkippedDuplicates += digest.remindersSkipped;
@@ -99,7 +102,7 @@ export async function runCronOrchestrationPass(options?: {
   }
 
   try {
-    const matches = await runMatchNotificationPass();
+    const matches = await phase.run("match_notifications", () => runMatchNotificationPass());
     remindersGenerated += matches.companiesNotified;
   } catch (error) {
     failuresCount += 1;
@@ -107,14 +110,14 @@ export async function runCronOrchestrationPass(options?: {
   }
 
   try {
-    await processApprovedOutreach();
+    await phase.run("investor_outreach_send", () => processApprovedOutreach());
   } catch (error) {
     failuresCount += 1;
     errors.push({ step: "investor_outreach_send", message: safeErrorMessage(error) });
   }
 
   try {
-    await processManualOutreach();
+    await phase.run("manual_outreach_send", () => processManualOutreach());
   } catch (error) {
     failuresCount += 1;
     errors.push({ step: "manual_outreach_send", message: safeErrorMessage(error) });
@@ -124,7 +127,7 @@ export async function runCronOrchestrationPass(options?: {
   let overdueWorkflowsDetected = 0;
 
   try {
-    const signals = await countWorkflowSignals(supabase);
+    const signals = await phase.run("workflow_signal_count", () => countWorkflowSignals(supabase));
     escalationsDetected = signals.escalationsDetected;
     overdueWorkflowsDetected = signals.overdueWorkflowsDetected;
   } catch (error) {
@@ -136,7 +139,7 @@ export async function runCronOrchestrationPass(options?: {
   let automationActionsCreated = 0;
   let automationFailures = 0;
   try {
-    const automation = await runBoundedAutomationPass(false);
+    const automation = await phase.run("workflow_automation", () => runBoundedAutomationPass(false));
     automationsTriggered = automation.automationsTriggered;
     automationActionsCreated = automation.actionsCreated;
     automationFailures = automation.failures;
@@ -175,6 +178,7 @@ export async function runCronOrchestrationPass(options?: {
     triggerSource,
     errors,
     orchestrationSkippedDuplicates,
+    phases: phase.phases,
   };
 
   await completeOrchestrationRun(supabase, runId, logInput);

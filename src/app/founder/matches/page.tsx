@@ -81,14 +81,14 @@ export default async function FounderMatchesPage() {
           return {
             basic: {
               monthlyIntros: connectionCfg.monthlyByPlan.basic,
-              weeklyIntros: connectionCfg.weeklyByPlan.basic,
+              weeklyIntros: connectionCfg.weeklyByPlan?.basic ?? null,
               investorCap: b.investorCap,
               presentsMonthly: b.canPresentMonthly,
               price: priceShort(pricing, "founder_basic"),
             },
             professional: {
               monthlyIntros: connectionCfg.monthlyByPlan.professional,
-              weeklyIntros: connectionCfg.weeklyByPlan.professional,
+              weeklyIntros: connectionCfg.weeklyByPlan?.professional ?? null,
               investorCap: p.investorCap,
               presentsMonthly: p.canPresentMonthly,
               price: priceShort(pricing, "founder_professional"),

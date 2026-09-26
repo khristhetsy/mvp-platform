@@ -40,6 +40,8 @@ export type CronPassLogInput = {
   triggerSource: "cron" | "manual";
   errors: Array<{ step: string; message: string }>;
   orchestrationSkippedDuplicates?: number;
+  /** Per-step durations in ms, kept on the completed run for comparison. */
+  phases?: Record<string, number>;
 };
 
 export async function startOrchestrationRun(
@@ -58,6 +60,50 @@ export async function startOrchestrationRun(
 
   if (error || !data) return null;
   return data.id;
+}
+
+/**
+ * Phase markers: which step a run is in, and how long each finished step took.
+ * Written to the run's metadata before and after every step, so a run the
+ * platform kills at its time limit still shows where it stopped. Diagnostic
+ * only: a failed write is ignored and never affects the pass.
+ */
+export type PhaseTracker = {
+  run<T>(step: string, work: () => Promise<T>): Promise<T>;
+  /** Finished steps and their durations, in order. */
+  readonly phases: Record<string, number>;
+};
+
+export function createPhaseTracker(
+  supabase: SupabaseClient<Database>,
+  runId: string | null,
+  startMs: number,
+): PhaseTracker {
+  const phases: Record<string, number> = {};
+  const write = async (phase: string) => {
+    if (!runId) return;
+    try {
+      await supabase
+        .from("orchestration_runs")
+        .update({ metadata: { phase, phases, elapsed_ms: Date.now() - startMs } })
+        .eq("id", runId);
+    } catch {
+      /* diagnostic only */
+    }
+  };
+  return {
+    phases,
+    async run(step, work) {
+      await write(`${step}:running`);
+      const t0 = Date.now();
+      try {
+        return await work();
+      } finally {
+        phases[step] = Date.now() - t0;
+        await write(`${step}:done`);
+      }
+    },
+  };
 }
 
 export async function completeOrchestrationRun(
@@ -81,6 +127,7 @@ export async function completeOrchestrationRun(
       metadata: {
         errors: input.errors,
         orchestration_skipped_duplicates: input.orchestrationSkippedDuplicates ?? 0,
+        ...(input.phases ? { phases: input.phases } : {}),
       },
     })
     .eq("id", runId);
