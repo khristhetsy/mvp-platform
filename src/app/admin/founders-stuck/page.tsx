@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { preparationDocStatus, type DocStatus, type UploadedDoc } from "@/lib/notifications/preparation-doc-nudge";
+import { notSentReason, nudgeSummary, nudgedWithin } from "@/lib/admin/stuck-founder-nudge";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,7 @@ export default async function AdminStuckFoundersPage() {
 
   const founderIds = [...new Set(companies.map((c) => c.founder_id as string).filter(Boolean))];
   const { data: profilesData } = founderIds.length
-    ? await admin.from("profiles").select("id, full_name, email, journey_stage, last_seen_at").in("id", founderIds)
+    ? await admin.from("profiles").select("id, full_name, email, journey_stage, last_seen_at, stage_approval_status").in("id", founderIds)
     : { data: [] as Row[] };
   const profileById = new Map<string, Row>();
   for (const p of (profilesData ?? []) as Row[]) profileById.set(p.id as string, p);
@@ -50,6 +52,32 @@ export default async function AdminStuckFoundersPage() {
     if (!scoreByCompany.has(cid)) scoreByCompany.set(cid, s);
   }
 
+  // Required Preparation documents (the founder's own uploads, as on their
+  // checklist) and the latest weekly nudge, for the Documents and Last nudge columns.
+  const uploadsByFounder = new Map<string, UploadedDoc[]>();
+  const lastNudgeByFounder = new Map<string, { title: string; createdAt: string }>();
+  if (founderIds.length) {
+    const [{ data: docsData }, { data: nudgeData }] = await Promise.all([
+      admin.from("documents").select("uploaded_by, document_type, created_at").in("uploaded_by", founderIds),
+      admin
+        .from("notifications")
+        .select("recipient_user_id, title, created_at")
+        .eq("type", "journey_nudge")
+        .in("recipient_user_id", founderIds)
+        .order("created_at", { ascending: false }),
+    ]);
+    for (const d of (docsData ?? []) as Row[]) {
+      const id = d.uploaded_by as string;
+      const list = uploadsByFounder.get(id) ?? [];
+      list.push({ document_type: (d.document_type as string | null) ?? null, created_at: (d.created_at as string | null) ?? null });
+      uploadsByFounder.set(id, list);
+    }
+    for (const n of (nudgeData ?? []) as Row[]) {
+      const id = n.recipient_user_id as string;
+      if (!lastNudgeByFounder.has(id)) lastNudgeByFounder.set(id, { title: String(n.title ?? ""), createdAt: String(n.created_at) });
+    }
+  }
+
   type StuckRow = {
     companyId: string;
     companyName: string;
@@ -60,6 +88,9 @@ export default async function AdminStuckFoundersPage() {
     score: number | null;
     fundable: boolean;
     signedUp: string | null;
+    docs: DocStatus[] | null;
+    lastNudge: { summary: string; createdAt: string } | null;
+    notSent: string;
   };
 
   const rows: StuckRow[] = [];
@@ -83,6 +114,16 @@ export default async function AdminStuckFoundersPage() {
       score: score ? Number((score.effective_score ?? score.total_score) as number) : null,
       fundable: Boolean(score?.outreach_unlocked),
       signedUp: (c.created_at as string | null) ?? null,
+      docs: stage === "qualify" && c.founder_id ? preparationDocStatus(uploadsByFounder.get(c.founder_id as string) ?? []) : null,
+      lastNudge: (() => {
+        const n = c.founder_id ? lastNudgeByFounder.get(c.founder_id as string) : undefined;
+        return n ? { summary: nudgeSummary(n.title), createdAt: n.createdAt } : null;
+      })(),
+      notSent: notSentReason({
+        stage,
+        companyUpdatedAt: (c.updated_at as string | null) ?? null,
+        approvalStatus: (founder?.stage_approval_status as string | null) ?? null,
+      }),
     });
   }
   rows.sort((a, b) => (b.idleDays ?? -1) - (a.idleDays ?? -1));
@@ -90,6 +131,9 @@ export default async function AdminStuckFoundersPage() {
   const total = rows.length;
   const idle7 = rows.filter((r) => (r.idleDays ?? 0) >= 7).length;
   const notFundable = rows.filter((r) => !r.fundable).length;
+  const nudged7 = rows.filter((r) => r.lastNudge && nudgedWithin(r.lastNudge.createdAt, 7)).length;
+  const shortDoc: Record<string, string> = { PITCH_DECK: "Deck", FINANCIAL_STATEMENTS: "Financials", CAP_TABLE: "Cap table" };
+  const nudgeDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
   const metric = (label: string, value: number | string, tone = "text-slate-950") => (
     <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
@@ -115,14 +159,15 @@ export default async function AdminStuckFoundersPage() {
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {metric("Pre-Match founders", total)}
         {metric("Idle 7+ days", idle7, idle7 > 0 ? "text-amber-600" : "text-slate-950")}
         {metric("Not yet fundable", notFundable, notFundable > 0 ? "text-rose-600" : "text-slate-950")}
+        {metric("Nudged in the last 7 days", nudged7)}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <th className="px-4 py-2.5">Company</th>
@@ -130,13 +175,15 @@ export default async function AdminStuckFoundersPage() {
               <th className="px-4 py-2.5">Stage</th>
               <th className="px-4 py-2.5">Readiness</th>
               <th className="px-4 py-2.5">Idle</th>
+              <th className="px-4 py-2.5">Documents</th>
+              <th className="px-4 py-2.5">Last nudge</th>
               <th className="px-4 py-2.5"></th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
+                <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
                   No founders are stuck before Match right now.
                 </td>
               </tr>
@@ -175,6 +222,36 @@ export default async function AdminStuckFoundersPage() {
                     <span className={(r.idleDays ?? 0) >= 7 ? "font-medium text-amber-600" : "text-slate-600"}>
                       {r.idleDays === null ? "—" : r.idleDays === 0 ? "today" : `${r.idleDays}d`}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.docs ? (
+                      <div className="flex flex-wrap gap-1">
+                        {r.docs.map((d) => (
+                          <span
+                            key={d.code}
+                            title={d.done ? `${d.label} uploaded` : `${d.label} missing`}
+                            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.done ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                          >
+                            {shortDoc[d.code] ?? d.label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Not in Ready yet</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.lastNudge ? (
+                      <div>
+                        <p className="font-medium text-slate-950">{nudgeDay(r.lastNudge.createdAt)}</p>
+                        <p className="text-xs text-slate-500">{r.lastNudge.summary}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-slate-400">Not sent</p>
+                        {r.stage === "qualify" ? <p className="text-xs text-slate-500">{r.notSent}</p> : null}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
