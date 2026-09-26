@@ -48,6 +48,18 @@ export async function startOrchestrationRun(
   supabase: SupabaseClient<Database>,
   triggerSource: "cron" | "manual",
 ): Promise<string | null> {
+  // Runs killed at the function time limit never reach completeOrchestrationRun
+  // and stay "running" forever, which the admin dashboard shows as live. Close
+  // any older than 15 minutes as failed; their phase markers are kept.
+  try {
+    await supabase
+      .from("orchestration_runs")
+      .update({ status: "failed" })
+      .eq("status", "running")
+      .lt("started_at", new Date(Date.now() - 15 * 60_000).toISOString());
+  } catch {
+    /* housekeeping only */
+  }
   const { data, error } = await supabase
     .from("orchestration_runs")
     .insert({
