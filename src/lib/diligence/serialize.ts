@@ -71,8 +71,10 @@ export function applyRoleFilter(raw: ReportPayload, role: DiligenceRole, gate: G
       ...eng,
       posture: show("verdict") ? eng.posture : null,
       recommendation: show("verdict") ? eng.recommendation : null,
+      confidence_pct: show("verdict") ? eng.confidence_pct : null, // confidence is a judgement: released with the verdict
       owner_id: undefined,
     },
+    confidence: show("verdict") ? raw.confidence : 0,
   };
 }
 

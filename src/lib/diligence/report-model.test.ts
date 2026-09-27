@@ -59,6 +59,7 @@ describe("buildReportModel", () => {
     expect(m.generatedBy).toBeNull();
     expect(m.verdict.released).toBe(false);
     expect(m.verdict.placeholder).toBe("Not released to this recipient");
+    expect(m.confidence).toBeNull();
     const json = JSON.stringify(m);
     for (const leak of [SECRET, REVIEW, "CLAIM-TEXT", "AUDIT-ACTOR", "Needs more", "Risk level"]) expect(json).not.toContain(leak);
   });
@@ -66,6 +67,7 @@ describe("buildReportModel", () => {
   it("investor copy shows the verdict but not the data room by default", () => {
     const m = buildReportModel(applyRoleFilter(fullPayload(), "investor", gate), "investor", {});
     expect(m.verdict.recommendation).toBe("Proceed with conditions");
+    expect(m.confidence).toBe(64);
     expect(keys(m)).not.toContain("dataroom");
   });
 
@@ -109,7 +111,7 @@ describe("renderDiligenceMemoPdf", () => {
     const text = await pdfText(buf);
     expect(text).toContain("Founder copy");
     expect(text).toContain("F-01");
-    for (const leak of [SECRET, "CLAIM-TEXT", "AUDIT-ACTOR", "Proceed with conditions", "Needs more", "Not scored", "Risk level"]) expect(text).not.toContain(leak);
+    for (const leak of [SECRET, "CLAIM-TEXT", "AUDIT-ACTOR", "Proceed with conditions", "Needs more", "Not scored", "Risk level", "Confidence"]) expect(text).not.toContain(leak);
   });
 
   it("paginates long registers without losing rows", async () => {

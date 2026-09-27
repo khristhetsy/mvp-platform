@@ -412,10 +412,10 @@ export function buildReportModel(payload: ReportPayload, role: DiligenceRole, ex
         ],
         rows: [
           ["Findings, domains and conditions", yn(g("findings").founder), yn(g("findings").investor)],
+          ["Verdict", yn(g("verdict").founder), yn(g("verdict").investor)],
           ["Founder responses", yn(g("responses").founder), yn(g("responses").investor)],
           ["Data room requests", yn(g("data_room").founder), yn(g("data_room").investor)],
-          ["Verdict", yn(g("verdict").founder), yn(g("verdict").investor)],
-          ["Confidence score", "Yes", "Yes"],
+          ["Confidence score", yn(g("verdict").founder), yn(g("verdict").investor)],
           ["Analyst notes", "No", "No"],
           ["iCFO review", "No", "No"],
           ["Claims ledger", "No", "No"],
@@ -471,7 +471,8 @@ export function buildReportModel(payload: ReportPayload, role: DiligenceRole, ex
     stages: STAGES.map((s) => s.label),
     stageIndex,
     verdict,
-    confidence: extras.noEngagement ? null : num(eng.confidence_pct ?? payload.confidence),
+    // Non-admin payloads carry confidence_pct = null when the verdict gate is closed.
+    confidence: extras.noEngagement || (!isAdmin && eng.confidence_pct == null) ? null : num(eng.confidence_pct ?? payload.confidence),
     riskLevel: snapshot?.risk_score ?? null,
     readiness: snapshot ? { score: snapshot.latest_readiness_score ?? null } : null,
     findingCounts: counts,

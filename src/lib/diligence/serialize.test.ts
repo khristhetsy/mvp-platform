@@ -59,6 +59,8 @@ describe("applyRoleFilter", () => {
   it("shows verdict only when the verdict gate is on", () => {
     const founder = applyRoleFilter(payload(), "founder", openGate); // verdict off for founder
     expect((founder.engagement as Record<string, unknown>).posture).toBeNull();
+    expect((founder.engagement as Record<string, unknown>).confidence_pct).toBeNull(); // confidence follows the verdict gate
+    expect(founder.confidence).toBe(0);
     const investor = applyRoleFilter(payload(), "investor", openGate); // verdict on for investor
     expect((investor.engagement as Record<string, unknown>).posture).toBe("Proceed");
   });
