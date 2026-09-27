@@ -270,12 +270,23 @@
     "diligence": {
       "hello": "Hola,",
       "openHere": "Ábrelo aquí:",
-      "founderReadySubject": "La diligencia está lista para tu revisión — {company}",
+      "founderReadySubject": "La diligencia está lista para tu revisión: {company}",
       "founderReadyLine": "El informe de diligencia de {company} está listo para tu revisión y respuesta.",
-      "documentsRequestedSubject": "Documentos solicitados — {company}",
+      "documentsRequestedSubject": "Documentos solicitados: diligencia de {company}",
       "documentsRequestedLine": "Se han solicitado nuevos documentos para la diligencia de {company}.",
-      "releasedSubject": "Operación disponible — {company}",
-      "releasedLine": "El paquete de diligencia de {company} ya está disponible."
+      "releasedSubject": "Operación disponible: paquete de diligencia de {company}",
+      "releasedLine": "El paquete de diligencia de {company} ya está disponible.",
+      "eyebrow": "Diligencia debida",
+      "founderReadyHeadline": "Tu informe de diligencia está listo",
+      "founderReadyCta": "Revisar y responder",
+      "documentsRequestedHeadline": "Se solicitaron nuevos documentos",
+      "documentsRequestedCta": "Subir documentos",
+      "releasedHeadline": "El paquete de diligencia de {company} está listo",
+      "releasedCta": "Abrir la operación",
+      "footerFounder": "Recibes esto porque {company} tiene una diligencia abierta en iCapOS.",
+      "footerInvestor": "Recibes avisos de operaciones porque tienes una cuenta de inversionista en iCapOS.",
+      "noOffer": "Nada en este correo es una oferta de venta ni una solicitud de compra de ningún valor.",
+      "notBrokerDealer": "iCapOS no es un broker-dealer y no recauda capital ni garantiza financiamiento."
     }
   },
   "eventsAdmin": {

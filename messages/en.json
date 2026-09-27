@@ -270,12 +270,23 @@
     "diligence": {
       "hello": "Hello,",
       "openHere": "Open it here:",
-      "founderReadySubject": "Diligence ready for your input — {company}",
+      "founderReadySubject": "Diligence ready for your input: {company}",
       "founderReadyLine": "The diligence report for {company} is ready for your review and response.",
-      "documentsRequestedSubject": "Documents requested — {company}",
+      "documentsRequestedSubject": "Documents requested: {company} diligence",
       "documentsRequestedLine": "New documents have been requested for the {company} diligence.",
-      "releasedSubject": "Deal available — {company}",
-      "releasedLine": "The diligence package for {company} is now available."
+      "releasedSubject": "Deal available: {company} diligence package",
+      "releasedLine": "The diligence package for {company} is now available.",
+      "eyebrow": "Due diligence",
+      "founderReadyHeadline": "Your diligence report is ready",
+      "founderReadyCta": "Review and respond",
+      "documentsRequestedHeadline": "New documents requested",
+      "documentsRequestedCta": "Upload documents",
+      "releasedHeadline": "The {company} diligence package is ready",
+      "releasedCta": "Open the deal",
+      "footerFounder": "You get this because {company} has an open diligence engagement on iCapOS.",
+      "footerInvestor": "You get deal notices because you hold an investor account on iCapOS.",
+      "noOffer": "Nothing in this email is an offer to sell or a solicitation to buy any security.",
+      "notBrokerDealer": "iCapOS is not a broker-dealer and does not raise capital or guarantee funding."
     }
   },
   "eventsAdmin": {
