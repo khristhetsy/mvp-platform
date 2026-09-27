@@ -8,6 +8,8 @@
  *   EMAIL_FROM       — e.g. "iCapOS <no-reply@mail.icapos.com>"
  */
 
+import { recordDelivery } from "@/lib/cron/job-deliveries";
+
 const RESEND_API = "https://api.resend.com/emails";
 
 /** Split a comma/semicolon-separated recipient string (or array) into clean addresses. */
@@ -45,6 +47,20 @@ function baseFromAddress(): string {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
+  const result = await sendEmailNow(payload);
+  // Inside a scheduled job, the send is recorded for its Sent tab. No-op otherwise.
+  await recordDelivery({
+    channel: "email",
+    toEmail: parseRecipients(payload.to).join(", ") || null,
+    subject: payload.subject,
+    bodyHtml: payload.html,
+    status: result.ok ? "sent" : result.skipped ? "skipped" : "failed",
+    error: result.error ?? null,
+  });
+  return result.ok;
+}
+
+async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = payload.fromName
     ? `${payload.fromName.replace(/[<>"]/g, "").trim()} <${baseFromAddress()}>`
@@ -55,7 +71,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     if (process.env.NODE_ENV !== "production") {
       console.info("[email] RESEND_API_KEY not set — skipping email:", payload.subject);
     }
-    return false;
+    return { ok: false, skipped: true, error: "Email sending is not configured" };
   }
 
   try {
@@ -81,12 +97,12 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       console.error("[email] Resend error:", res.status, body);
-      return false;
+      return { ok: false, error: `Email provider error ${res.status}` };
     }
 
-    return true;
+    return { ok: true };
   } catch (err) {
     console.error("[email] Failed to send email:", err);
-    return false;
+    return { ok: false, error: err instanceof Error ? err.message : "Send failed" };
   }
 }

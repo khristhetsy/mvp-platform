@@ -2,6 +2,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { NotificationRecord, NotificationType } from "@/lib/notifications/types";
 import { shouldDeliverInApp } from "@/lib/notifications/preferences";
+import { recordDelivery } from "@/lib/cron/job-deliveries";
 
 export type CreateNotificationInput = {
   recipientUserId: string;
@@ -24,6 +25,7 @@ export async function createNotification(input: CreateNotificationInput) {
     // Unmapped notification types are always delivered (no user toggle exists).
     const allowed = await shouldDeliverInApp(input.recipientUserId, String(input.type), input.severity ?? null);
     if (!allowed) {
+      await recordDelivery({ channel: "in_app", recipientUserId: input.recipientUserId, subject: input.title, message: input.message, status: "skipped", error: "Turned off in the recipient's notification settings" });
       return null;
     }
 
@@ -48,9 +50,11 @@ export async function createNotification(input: CreateNotificationInput) {
       .single();
 
     if (error) {
+      await recordDelivery({ channel: "in_app", recipientUserId: input.recipientUserId, subject: input.title, message: input.message, status: "failed", error: error.message });
       return null;
     }
 
+    await recordDelivery({ channel: "in_app", recipientUserId: input.recipientUserId, subject: input.title, message: input.message, status: "sent" });
     return data as NotificationRecord;
   } catch {
     return null;

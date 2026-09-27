@@ -116,98 +116,129 @@ const STAGE_NUDGE: Record<string, { title: string; message: string; path: string
  * pending (they're waiting on staff, not themselves). In-app + email, deduped
  * weekly across all stages. Best-effort — never throws into the cron.
  */
+/** One journey nudge the next run would send: the in-app note and, when the founder has an email, the email. */
+export type JourneyNudgePlan = {
+  founderId: string;
+  founderName: string | null;
+  email: string | null;
+  companyName: string | null;
+  stage: string;
+  notification: { title: string; message: string; deepLink?: string };
+  mail: { subject: string; html: string; text: string } | null;
+};
+
+/**
+ * Who the journey nudge would contact right now, and with what, without sending
+ * anything. The daily job sends exactly this list; Scheduled jobs shows it as the
+ * Next run preview.
+ */
+export async function planJourneyNudges(): Promise<JourneyNudgePlan[]> {
+  const plan: JourneyNudgePlan[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createServiceRoleClient() as unknown as SupabaseClient<any>;
+
+  const { data: profs } = await db
+    .from("profiles")
+    .select("id, email, full_name, journey_stage, stage_approval_status")
+    .in("journey_stage", ["qualify", "deploy", "optimize"])
+    .limit(400);
+  const founders = (profs ?? []) as (ProfileRow & { journey_stage: string | null; stage_approval_status: string | null })[];
+  // Skip founders awaiting staff approval — they've done their part.
+  const actionable = founders.filter((f) => f.stage_approval_status !== "pending" && f.journey_stage && STAGE_NUDGE[f.journey_stage]);
+  if (actionable.length === 0) return plan;
+
+  const ids = actionable.map((f) => f.id);
+  const inactiveCutoff = new Date(Date.now() - INACTIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data: comps } = await db
+    .from("companies")
+    .select("founder_id, company_name, updated_at")
+    .in("founder_id", ids);
+  const companyByFounder = new Map<string, CompanyRow>();
+  for (const c of (comps ?? []) as CompanyRow[]) {
+    if (c.founder_id) companyByFounder.set(c.founder_id, c);
+  }
+
+  // Preparation founders get the document nudge: their own uploads, matched the
+  // same way as the Preparation checklist (documents they uploaded).
+  const prepIds = actionable.filter((f) => f.journey_stage === "qualify").map((f) => f.id);
+  const uploadsByFounder = new Map<string, UploadedDoc[]>();
+  if (prepIds.length) {
+    const { data: docs } = await db
+      .from("documents")
+      .select("uploaded_by, document_type, created_at")
+      .in("uploaded_by", prepIds);
+    for (const d of (docs ?? []) as Array<UploadedDoc & { uploaded_by: string }>) {
+      const list = uploadsByFounder.get(d.uploaded_by) ?? [];
+      list.push({ document_type: d.document_type, created_at: d.created_at });
+      uploadsByFounder.set(d.uploaded_by, list);
+    }
+  }
+
+  for (const f of actionable) {
+    const company = companyByFounder.get(f.id);
+    if (!company || (company.updated_at && company.updated_at >= inactiveCutoff)) continue;
+
+    const copy = STAGE_NUDGE[f.journey_stage as string];
+    // Null when every required document is in; the general copy applies then.
+    const docNudge =
+      f.journey_stage === "qualify"
+        ? buildPreparationDocNudge({
+            firstName: f.full_name?.split(" ")[0] ?? null,
+            companyName: company.company_name,
+            uploads: uploadsByFounder.get(f.id) ?? [],
+          })
+        : null;
+    const already = await hasRecentNotification({
+      recipientUserId: f.id,
+      type: "journey_nudge",
+      withinHours: DEDUPE_HOURS,
+    });
+    if (already) continue;
+
+    let mail: JourneyNudgePlan["mail"] = null;
+    if (f.email && docNudge) {
+      mail = { subject: docNudge.subject, html: docNudge.html, text: docNudge.text };
+    } else if (f.email) {
+      const name = f.full_name?.split(" ")[0] ?? "there";
+      const url = `${SITE_URL}${copy.path}`;
+      mail = {
+        subject: copy.title,
+        html: `<p>Hi ${name},</p><p>${copy.email}</p><p><a href="${url}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every plan includes all tools. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
+        text: `Hi ${name}, ${copy.message} ${url}`,
+      };
+    }
+    plan.push({
+      founderId: f.id,
+      founderName: f.full_name,
+      email: f.email,
+      companyName: company.company_name,
+      stage: f.journey_stage as string,
+      notification: {
+        title: docNudge?.title ?? copy.title,
+        message: docNudge?.message ?? copy.message,
+        ...(docNudge ? { deepLink: copy.path } : {}),
+      },
+      mail,
+    });
+  }
+  return plan;
+}
+
 export async function nudgeStalledJourneyFounders(): Promise<{ nudged: number }> {
   let nudged = 0;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = createServiceRoleClient() as unknown as SupabaseClient<any>;
-
-    const { data: profs } = await db
-      .from("profiles")
-      .select("id, email, full_name, journey_stage, stage_approval_status")
-      .in("journey_stage", ["qualify", "deploy", "optimize"])
-      .limit(400);
-    const founders = (profs ?? []) as (ProfileRow & { journey_stage: string | null; stage_approval_status: string | null })[];
-    // Skip founders awaiting staff approval — they've done their part.
-    const actionable = founders.filter((f) => f.stage_approval_status !== "pending" && f.journey_stage && STAGE_NUDGE[f.journey_stage]);
-    if (actionable.length === 0) return { nudged: 0 };
-
-    const ids = actionable.map((f) => f.id);
-    const inactiveCutoff = new Date(Date.now() - INACTIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    const { data: comps } = await db
-      .from("companies")
-      .select("founder_id, company_name, updated_at")
-      .in("founder_id", ids);
-    const companyByFounder = new Map<string, CompanyRow>();
-    for (const c of (comps ?? []) as CompanyRow[]) {
-      if (c.founder_id) companyByFounder.set(c.founder_id, c);
-    }
-
-    // Preparation founders get the document nudge: their own uploads, matched the
-    // same way as the Preparation checklist (documents they uploaded).
-    const prepIds = actionable.filter((f) => f.journey_stage === "qualify").map((f) => f.id);
-    const uploadsByFounder = new Map<string, UploadedDoc[]>();
-    if (prepIds.length) {
-      const { data: docs } = await db
-        .from("documents")
-        .select("uploaded_by, document_type, created_at")
-        .in("uploaded_by", prepIds);
-      for (const d of (docs ?? []) as Array<UploadedDoc & { uploaded_by: string }>) {
-        const list = uploadsByFounder.get(d.uploaded_by) ?? [];
-        list.push({ document_type: d.document_type, created_at: d.created_at });
-        uploadsByFounder.set(d.uploaded_by, list);
-      }
-    }
-
-    for (const f of actionable) {
-      const company = companyByFounder.get(f.id);
-      if (!company || (company.updated_at && company.updated_at >= inactiveCutoff)) continue;
-
-      const copy = STAGE_NUDGE[f.journey_stage as string];
-      // Null when every required document is in; the general copy applies then.
-      const docNudge =
-        f.journey_stage === "qualify"
-          ? buildPreparationDocNudge({
-              firstName: f.full_name?.split(" ")[0] ?? null,
-              companyName: company.company_name,
-              uploads: uploadsByFounder.get(f.id) ?? [],
-            })
-          : null;
-      const already = await hasRecentNotification({
-        recipientUserId: f.id,
-        type: "journey_nudge",
-        withinHours: DEDUPE_HOURS,
-      });
-      if (already) continue;
-
+    for (const p of await planJourneyNudges()) {
       await createNotification({
-        recipientUserId: f.id,
+        recipientUserId: p.founderId,
         type: "journey_nudge",
-        title: docNudge?.title ?? copy.title,
-        message: docNudge?.message ?? copy.message,
+        title: p.notification.title,
+        message: p.notification.message,
         entityType: "company",
         entityId: null,
-        ...(docNudge ? { deepLink: copy.path } : {}),
+        ...(p.notification.deepLink ? { deepLink: p.notification.deepLink } : {}),
       });
-
-      if (f.email && docNudge) {
-        await sendEmail({
-          to: f.email,
-          subject: docNudge.subject,
-          html: docNudge.html,
-          text: docNudge.text,
-          fromName: "iCapOS",
-        });
-      } else if (f.email) {
-        const name = f.full_name?.split(" ")[0] ?? "there";
-        const url = `${SITE_URL}${copy.path}`;
-        await sendEmail({
-          to: f.email,
-          subject: copy.title,
-          html: `<p>Hi ${name},</p><p>${copy.email}</p><p><a href="${url}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every plan includes all tools. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
-          text: `Hi ${name}, ${copy.message} ${url}`,
-          fromName: "iCapOS",
-        });
+      if (p.email && p.mail) {
+        await sendEmail({ to: p.email, subject: p.mail.subject, html: p.mail.html, text: p.mail.text, fromName: "iCapOS" });
       }
       nudged += 1;
     }

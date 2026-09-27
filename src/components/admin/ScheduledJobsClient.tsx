@@ -9,6 +9,7 @@ import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/Tool
 import { SelectionBar, ActionResult } from "@/components/admin/sales/SelectionBar";
 import { CRON_GROUP_ORDER } from "@/lib/cron/jobs";
 import { ScheduledReachOutEmails } from "@/components/admin/ScheduledReachOutEmails";
+import { JobActivity } from "@/components/admin/JobActivity";
 
 export type JobRow = {
   path: string;
@@ -326,7 +327,7 @@ function GroupRows({
                 <td />
                 <td colSpan={4} style={{ padding: "4px 12px 12px" }}>
                   {r.path === "/api/cron/scheduled-reach-outs" ? <ScheduledReachOutEmails /> : null}
-                  <RunHistory path={r.path} />
+                  <JobActivity path={r.path} runs={<RunHistory path={r.path} />} />
                 </td>
               </tr>
             )}

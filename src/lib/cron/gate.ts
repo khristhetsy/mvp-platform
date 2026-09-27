@@ -16,6 +16,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { validateCronSecret } from "@/lib/notifications/cron/auth";
+import { runInJob } from "@/lib/cron/job-context";
 
 const PAUSED_KEY = "paused_crons";
 const LOG_RETENTION_DAYS = 14;
@@ -113,7 +114,8 @@ export function withCronGate<R extends Request, Res extends Response>(
     const startedMs = Date.now();
     const runId = await logStart(path, "running");
     try {
-      const res = await handler(req);
+      // Everything the job sends is recorded against this run (job_deliveries).
+      const res = await runInJob({ job: path, runId }, () => handler(req));
       // A job may describe what it did in a short "x-cron-summary" header
       // (e.g. "0 matches: no company at CRR 60 or above"); it is kept on the run.
       const summary = res.headers.get(CRON_SUMMARY_HEADER);
