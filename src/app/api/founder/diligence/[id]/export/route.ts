@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { assertFounderMember, NotAMemberError } from "@/lib/diligence/founder-actions";
 import { serializeReport } from "@/lib/diligence/serialize";
 import { renderDiligenceMemoPdf } from "@/lib/diligence/pdf";
+import { loadReportExtras } from "@/lib/diligence/report-extras";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -25,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const payload = await serializeReport(service, id, "founder");
   if (!payload) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  const pdf = await renderDiligenceMemoPdf(payload, "founder");
+  const pdf = await renderDiligenceMemoPdf(payload, "founder", await loadReportExtras(service, id, "founder"));
   const name = `diligence-${String(payload.engagement.report_code ?? id)}.pdf`;
   return new Response(new Uint8Array(pdf), {
     headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${name}"` },

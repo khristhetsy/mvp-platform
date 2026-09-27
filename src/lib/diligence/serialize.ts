@@ -62,6 +62,7 @@ export function applyRoleFilter(raw: ReportPayload, role: DiligenceRole, gate: G
   return {
     ...raw,
     claims: undefined, // never to non-admin
+    domains: show("findings") ? raw.domains : [], // domain ratings/conclusions follow the findings gate (matches dd_dom_* RLS)
     findings: show("findings") ? raw.findings.map(stripCandor) : [],
     responses: show("responses") ? raw.responses.map(stripReview) : [],
     docRequests: show("data_room") ? raw.docRequests : [],

@@ -53,6 +53,7 @@ describe("applyRoleFilter", () => {
     const out = applyRoleFilter(payload(), "founder", closed);
     expect(out.findings).toHaveLength(0);
     expect(out.conditions).toHaveLength(0); // conditions follow the findings gate
+    expect(out.domains).toHaveLength(0); // domains follow the findings gate
   });
 
   it("shows verdict only when the verdict gate is on", () => {

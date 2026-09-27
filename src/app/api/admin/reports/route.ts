@@ -10,6 +10,12 @@ import {
 } from "@/lib/reports/admin-reports";
 import { reportFilename, rowsToCsv } from "@/lib/reports/export";
 import { buildDueDiligencePdf, buildSpvReadinessPdf } from "@/lib/reports/pdf-export";
+import { renderDiligenceMemoPdf } from "@/lib/diligence/pdf";
+import { serializeReport } from "@/lib/diligence/serialize";
+import { findEngagementForCompany, loadReportExtras } from "@/lib/diligence/report-extras";
+import { emptyReportPayload, type CompanySnapshot } from "@/lib/diligence/report-model";
+import { canUser } from "@/lib/rbac/effective-permissions";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { adminReportGenerateSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -104,10 +110,13 @@ export async function POST(request: Request) {
     };
     let pdfBuffer: Buffer;
     try {
+      const singleCompanyId = reportType === "due_diligence" ? filters?.companyId : undefined;
       pdfBuffer =
         reportType === "spv_readiness"
           ? await buildSpvReadinessPdf(payload, pdfContext)
-          : await buildDueDiligencePdf(payload, pdfContext);
+          : singleCompanyId
+            ? await buildSingleCompanyDiligencePdf(auth.profile.id, auth.profile, singleCompanyId, payload, pdfContext.generatedBy)
+            : await buildDueDiligencePdf(payload, pdfContext);
     } catch (error) {
       recordOperationalError("admin.report_pdf_export_failed", error, {
         reportType,
@@ -152,4 +161,29 @@ export async function POST(request: Request) {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+/**
+ * One company selected: render the v2 diligence report (engagement findings, claims,
+ * responses) with the company's platform metrics. Engagement detail is included only
+ * for staff holding manage_diligence; others get the company summary alone.
+ */
+async function buildSingleCompanyDiligencePdf(
+  userId: string,
+  profile: Parameters<typeof canUser>[3],
+  companyId: string,
+  payload: Awaited<ReturnType<typeof generateAdminReport>>,
+  generatedBy: string,
+): Promise<Buffer> {
+  const snapshot = (payload.sections.company_diligence?.[0] as CompanySnapshot | undefined) ?? null;
+  const companyName = String(snapshot?.company_name ?? "Company");
+  const service = createServiceRoleClient();
+  const canSeeDiligence = await canUser(service, userId, "manage_diligence", profile);
+  const engagement = canSeeDiligence ? await findEngagementForCompany(service, companyId) : null;
+  const report = engagement ? await serializeReport(service, engagement.id, "admin") : null;
+  if (engagement && report) {
+    const extras = await loadReportExtras(service, engagement.id, "admin");
+    return renderDiligenceMemoPdf(report, "admin", { ...extras, snapshot, generatedBy });
+  }
+  return renderDiligenceMemoPdf(emptyReportPayload(companyName), "admin", { snapshot, generatedBy, noEngagement: canSeeDiligence });
 }
