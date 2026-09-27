@@ -1,4 +1,5 @@
 import { createNotification } from "@/lib/notifications/notifications";
+import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -24,10 +25,7 @@ export async function sendTransactionalEmail(input: {
   replyTo?: string | null;
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from =
-    process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ??
-    process.env.EMAIL_FROM?.trim() ??
-    "iCapOS <no-reply@mail.icapos.com>";
+  const from = resolveFrom({ envKeys: TRANSACTIONAL_FROM_ENV });
 
   if (apiKey && input.to.includes("@")) {
     const response = await fetch(RESEND_API_URL, {

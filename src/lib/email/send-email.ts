@@ -5,7 +5,8 @@
  *
  * Required env vars:
  *   RESEND_API_KEY   — from https://resend.com/api-keys
- *   EMAIL_FROM       — e.g. "iCapOS <no-reply@mail.icapos.com>"
+ *   EMAIL_FROM       — e.g. "iCapOS <no-reply@icapos.com>" (must be on a domain
+ *                      verified in Resend; see resolveFrom below)
  */
 
 import { recordDelivery } from "@/lib/cron/job-deliveries";
@@ -37,14 +38,55 @@ export type EmailPayload = {
 
 // Must be an address on a domain verified for sending in Resend. icapos.com is
 // verified; mail.icapos.com and resend.dev are NOT — sending from those 403s.
-const DEFAULT_FROM = "iCapOS <no-reply@icapos.com>";
+export const VERIFIED_FROM_ADDRESS = "no-reply@icapos.com";
+const DEFAULT_FROM_NAME = "iCapOS";
+const UNVERIFIED_SENDING_DOMAINS = new Set(["mail.icapos.com", "resend.dev"]);
 
-/** Bare address from EMAIL_FROM, whether it's "Name <addr>" or just "addr". */
-function baseFromAddress(): string {
-  const raw = process.env.EMAIL_FROM ?? DEFAULT_FROM;
-  const m = raw.match(/<([^>]+)>/);
-  return (m ? m[1] : raw).trim();
+type ParsedFrom = { name: string | null; address: string };
+
+/** Parse "Name <addr>" or a bare "addr". Blank or address-less values return null. */
+export function parseFromHeader(raw: string | null | undefined): ParsedFrom | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const m = value.match(/^(.*?)<([^>]+)>\s*$/);
+  const address = (m ? m[2] : value).trim();
+  if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)) return null;
+  const name = m ? m[1].replace(/"/g, "").trim() || null : null;
+  return { name, address };
 }
+
+/**
+ * The From header for every platform email. Tries each env var in `envKeys`
+ * in order and uses the first usable one; a blank value, a value with no
+ * address, or an address on a domain Resend has not verified is skipped, so a
+ * missing or mistyped env var can never make a send 403. With nothing usable,
+ * falls back to VERIFIED_FROM_ADDRESS. `displayName` replaces the configured
+ * name (the address always stays the verified one).
+ */
+export function resolveFrom(
+  opts: { displayName?: string | null; envKeys?: readonly string[] } = {},
+): string {
+  const keys = opts.envKeys ?? ["EMAIL_FROM"];
+  let picked: ParsedFrom | null = null;
+  for (const key of keys) {
+    const parsed = parseFromHeader(process.env[key]);
+    if (!parsed) continue;
+    const domain = parsed.address.split("@")[1]?.toLowerCase() ?? "";
+    if (UNVERIFIED_SENDING_DOMAINS.has(domain)) {
+      console.warn(`[email] ${key} uses ${domain}, which is not verified in Resend. Sending from ${VERIFIED_FROM_ADDRESS} instead.`);
+      continue;
+    }
+    picked = parsed;
+    break;
+  }
+  const address = picked?.address ?? VERIFIED_FROM_ADDRESS;
+  const clean = (v: string | null | undefined) => (v ?? "").replace(/[<>"]/g, "").trim();
+  const name = clean(opts.displayName) || clean(picked?.name) || DEFAULT_FROM_NAME;
+  return `${name} <${address}>`;
+}
+
+/** Env vars for transactional mail, most specific first. */
+export const TRANSACTIONAL_FROM_ENV = ["TRANSACTIONAL_EMAIL_FROM", "EMAIL_FROM"] as const;
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const result = await sendEmailNow(payload);
@@ -62,9 +104,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
 async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = payload.fromName
-    ? `${payload.fromName.replace(/[<>"]/g, "").trim()} <${baseFromAddress()}>`
-    : process.env.EMAIL_FROM ?? DEFAULT_FROM;
+  const from = resolveFrom({ displayName: payload.fromName });
 
   if (!apiKey) {
     // Not configured — log in dev, skip silently in prod

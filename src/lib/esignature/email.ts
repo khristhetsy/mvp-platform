@@ -4,6 +4,7 @@
 
 import { getResendApiKey, getAppUrl } from "@/lib/env";
 import { BRAND } from "./types";
+import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -21,12 +22,7 @@ export function buildSealedDocUrl(token: string): string {
 
 /** From header — branded sender name "iCFO Venture Group" over the configured address. */
 function brandedFrom(): string {
-  const configured =
-    process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? process.env.EMAIL_FROM?.trim() ?? "";
-  // Extract a bare address if EMAIL_FROM is in "Name <addr>" form.
-  const addrMatch = configured.match(/<([^>]+)>/);
-  const address = addrMatch?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.icapos.com");
-  return `${BRAND.emailSender} <${address}>`;
+  return resolveFrom({ displayName: BRAND.emailSender, envKeys: TRANSACTIONAL_FROM_ENV });
 }
 
 async function send(input: { to: string; subject: string; text: string }): Promise<{ delivered: boolean }> {

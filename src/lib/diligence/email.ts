@@ -3,15 +3,13 @@
 import { getResendApiKey, getAppUrl } from "@/lib/env";
 import { getUserLocaleByEmail } from "@/lib/i18n/user-locale";
 import { emailTranslator } from "@/lib/i18n/email-i18n";
+import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const SENDER = "iCFO Venture Group";
 
 function brandedFrom(): string {
-  const configured = process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? process.env.EMAIL_FROM?.trim() ?? "";
-  const m = configured.match(/<([^>]+)>/);
-  const address = m?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.icapos.com");
-  return `${SENDER} <${address}>`;
+  return resolveFrom({ displayName: SENDER, envKeys: TRANSACTIONAL_FROM_ENV });
 }
 
 export function diligenceLink(role: "founder" | "investor", eid: string): string {

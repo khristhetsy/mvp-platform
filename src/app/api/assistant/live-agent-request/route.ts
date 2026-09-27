@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
+import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? "iCapOS <info@myicfos.com>",
+        from: resolveFrom({ envKeys: TRANSACTIONAL_FROM_ENV }),
         to: [adminEmail],
         subject: `Live agent requested — ${founderName}`,
         text: [
