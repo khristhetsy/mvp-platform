@@ -2,8 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { PREVIEW_JOB_PATHS } from "@/lib/cron/preview-paths";
+import { MatchingSettings } from "@/components/admin/MatchingSettings";
 
-type Tab = "next" | "sent" | "runs";
+/** Jobs with a Settings tab. */
+const SETTINGS_JOB = "/api/cron/matching";
+
+type Tab = "next" | "sent" | "runs" | "settings";
 
 type PreviewItem = {
   recipientName: string | null;
@@ -100,9 +104,12 @@ export function JobActivity({ path, runs }: Readonly<{ path: string; runs: React
         {hasPreview ? tabBtn("next", `Next run${preview.data ? ` · ${preview.data.items.length} ${preview.data.items.length === 1 ? "person" : "people"}` : ""}`) : null}
         {tabBtn("sent", `Sent${sent.data ? ` · ${sent.data.deliveries.length}` : ""}`)}
         {tabBtn("runs", "Last runs")}
+        {path === SETTINGS_JOB ? tabBtn("settings", "Settings") : null}
       </div>
 
       {tab === "runs" ? runs : null}
+
+      {tab === "settings" ? <MatchingSettings /> : null}
 
       {tab === "next" ? (
         preview.error ? <p className="m-0 text-xs text-red-700">{preview.error}</p>
