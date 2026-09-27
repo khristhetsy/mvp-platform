@@ -19,6 +19,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/ir-summaries": { name: "Founder summaries", group: "Founders", description: "Weekly and milestone summaries that are due" },
   "/api/cron/matching": { name: "Matching pass", group: "Platform", description: "Suggested matches for eligible founders and approved investors" },
   "/api/cron/run-orchestration": { name: "Orchestration", group: "Platform", description: "Digests, match notices, outreach sends and automations" },
+  "/api/cron/job-dispatcher": { name: "Schedule dispatcher", group: "Platform", description: "Starts jobs with a custom schedule or a set next run" },
   "/api/cron/activity-escalations": { name: "Activity escalations", group: "Platform", description: "Chases account activity alerts nobody has opened" },
   "/api/cron/operations-escalations": { name: "Operations escalations", group: "Platform" },
   "/api/cron/sync-contacts": { name: "Contact sync", group: "Platform", description: "Pulls changed contacts from each configured source" },

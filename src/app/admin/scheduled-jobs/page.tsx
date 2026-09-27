@@ -7,6 +7,8 @@ import { listCronJobs } from "@/lib/cron/jobs";
 import { loadLatestCronRuns, loadPausedCrons } from "@/lib/cron/gate";
 import { DISPLAY_TZ, describeSchedule, formatWhen, nextRun } from "@/lib/cron/schedule";
 import { KILLED_AFTER_MS, loadCodeUpdates } from "@/lib/cron/run-history";
+import { DISPATCHER_PATH, loadScheduleOverrides } from "@/lib/cron/schedule-overrides";
+import { nextRunsInZone, splitCron, utcToZonedLocal } from "@/lib/cron/zoned-schedule";
 import { ScheduledJobsClient, type JobRow } from "@/components/admin/ScheduledJobsClient";
 import { CodeUpdatesClient, type CodeUpdateRow } from "@/components/admin/CodeUpdatesClient";
 
@@ -44,14 +46,21 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
   const now = new Date();
 
   const jobs = listCronJobs();
-  const [paused, runs, updates] = await Promise.all([
+  const [paused, runs, updates, overrides] = await Promise.all([
     loadPausedCrons(),
     loadLatestCronRuns(jobs.map((j) => j.path)),
     loadCodeUpdates(),
+    loadScheduleOverrides(),
   ]);
 
   const rows: JobRow[] = jobs.map((j) => {
-    const next = nextRun(j.schedules, now);
+    // A custom schedule (Edit) replaces the vercel.json one; a one-off next run
+    // comes on top of whichever applies. Custom schedules are kept in Paris time.
+    const o = overrides.get(j.path);
+    const custom = splitCron(o?.cron ?? null);
+    const oneOff = o?.next_run_at ? new Date(o.next_run_at) : null;
+    const regular = custom.length ? (nextRunsInZone(custom, now)[0] ?? null) : nextRun(j.schedules, now);
+    const next = oneOff && (!regular || oneOff < regular) ? oneOff : regular;
     const run = runs.get(j.path) ?? null;
     let last: JobRow["last"] = null;
     if (run) {
@@ -68,8 +77,12 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
       name: j.name,
       group: j.group,
       description: j.description ?? null,
-      schedule: describeSchedule(j.schedules, now),
-      next: next ? formatWhen(next, now) : null,
+      schedule: custom.length ? describeSchedule(custom, now, "UTC") : describeSchedule(j.schedules, now),
+      next: next ? `${formatWhen(next, now)}${next === oneOff ? " (one time)" : ""}` : null,
+      defaultSchedule: describeSchedule(j.schedules, now),
+      defaultCron: j.schedules,
+      custom: o ? { cron: custom.length ? custom : null, nextRunLocal: oneOff ? utcToZonedLocal(oneOff) : null } : null,
+      editable: j.path !== DISPATCHER_PATH,
       last,
       paused: p ? { byName: p.byName, when: formatWhen(new Date(p.at), now) } : null,
     };

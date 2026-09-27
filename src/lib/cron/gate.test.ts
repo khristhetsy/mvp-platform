@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // A tiny in-memory stand-in for the two tables the gate touches.
-const state: { paused: Record<string, unknown>; runs: Array<Record<string, unknown>> } = { paused: {}, runs: [] };
+const state: { paused: Record<string, unknown>; runs: Array<Record<string, unknown>>; customCron: string | null } = { paused: {}, runs: [], customCron: null };
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({
   createServiceRoleClient: () => ({
     from(table: string) {
+      if (table === "cron_schedule_overrides") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: state.customCron ? { cron: state.customCron } : null }) }) }) };
+      }
       if (table === "platform_settings") {
         return {
           select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { value: state.paused } }) }) }),
@@ -47,6 +50,7 @@ beforeEach(() => {
   process.env.CRON_SECRET = "s3cret";
   state.paused = {};
   state.runs = [];
+  state.customCron = null;
 });
 afterEach(() => {
   delete process.env.CRON_SECRET;
@@ -86,6 +90,18 @@ describe("withCronGate", () => {
     expect(res.status).toBe(401);
     expect(handler).toHaveBeenCalledOnce();
     expect(state.runs).toHaveLength(0);
+  });
+
+  it("skips the vercel.json trigger of a job on a custom schedule, but runs the dispatcher's call", async () => {
+    state.customCron = "0 11 * * *";
+    const handler = vi.fn(async () => new Response("ok"));
+    const res = await withCronGate(JOB, handler)(authed());
+    expect(handler).not.toHaveBeenCalled();
+    expect(await res.json()).toMatchObject({ skipped: "custom schedule" });
+    const dispatched = new Request("https://icapos.com" + JOB, { headers: { authorization: "Bearer s3cret", "x-cron-dispatch": "1" } });
+    await withCronGate(JOB, handler)(dispatched);
+    expect(handler).toHaveBeenCalledOnce();
+    expect(state.runs[0]).toMatchObject({ job: JOB, status: "ok" });
   });
 
   it("logs a failed status and a thrown error", async () => {

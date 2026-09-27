@@ -10,6 +10,7 @@ import { SelectionBar, ActionResult } from "@/components/admin/sales/SelectionBa
 import { CRON_GROUP_ORDER } from "@/lib/cron/jobs";
 import { ScheduledReachOutEmails } from "@/components/admin/ScheduledReachOutEmails";
 import { JobActivity } from "@/components/admin/JobActivity";
+import { JobScheduleEditor, type EditableJob } from "@/components/admin/JobScheduleEditor";
 
 export type JobRow = {
   path: string;
@@ -20,6 +21,12 @@ export type JobRow = {
   next: string | null;
   last: { tone: "success" | "error" | "warning" | "neutral"; text: string; detail?: string | null } | null;
   paused: { byName: string | null; when: string } | null;
+  /** The vercel.json schedule, in words and as expressions (UTC). */
+  defaultSchedule: string;
+  defaultCron: string[];
+  /** Set on Scheduled jobs (Edit): custom schedule in Paris time and/or one-off next run. */
+  custom: EditableJob["custom"];
+  editable: boolean;
 };
 
 const QUICK = [
@@ -62,6 +69,7 @@ export function ScheduledJobsClient({ rows }: { rows: JobRow[] }) {
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [editing, setEditing] = useState<JobRow | null>(null);
 
   const groupOptions = useMemo(() => CRON_GROUP_ORDER.filter((g) => rows.some((r) => r.group === g)), [rows]);
   const fields = useMemo(() => [{ key: "group", label: "Group", options: groupOptions }], [groupOptions]);
@@ -173,6 +181,17 @@ export function ScheduledJobsClient({ rows }: { rows: JobRow[] }) {
           ]}
         />
         <ActionResult text={result} onClose={() => setResult(null)} />
+        {editing && (
+          <JobScheduleEditor
+            job={editing}
+            onClose={() => setEditing(null)}
+            onDone={(message) => {
+              setEditing(null);
+              setResult(message);
+              router.refresh();
+            }}
+          />
+        )}
 
         <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
           <thead>
@@ -221,6 +240,7 @@ export function ScheduledJobsClient({ rows }: { rows: JobRow[] }) {
                 selected={selected}
                 onToggleRow={toggleRow}
                 onSwitch={(r) => (r.paused ? resume([r]) : askPause([r]))}
+                onEdit={setEditing}
                 busy={busy}
                 cell={cell}
                 query={query}
@@ -254,10 +274,10 @@ export function ScheduledJobsClient({ rows }: { rows: JobRow[] }) {
 }
 
 function GroupRows({
-  group, list, collapsed, onToggleGroup, selected, onToggleRow, onSwitch, busy, cell, query,
+  group, list, collapsed, onToggleGroup, selected, onToggleRow, onSwitch, onEdit, busy, cell, query,
 }: {
   group: string; list: readonly JobRow[]; collapsed: boolean; onToggleGroup: () => void;
-  selected: Set<string>; onToggleRow: (p: string) => void; onSwitch: (r: JobRow) => void; busy: boolean; cell: React.CSSProperties;
+  selected: Set<string>; onToggleRow: (p: string) => void; onSwitch: (r: JobRow) => void; onEdit: (r: JobRow) => void; busy: boolean; cell: React.CSSProperties;
   query: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -300,7 +320,15 @@ function GroupRows({
                 <div style={{ fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono, monospace)" }}><Highlight text={r.path} query={query} /></div>
               </td>
               <td style={cell}>
-                <div><Highlight text={r.schedule} query={query} /></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <Highlight text={r.schedule} query={query} />
+                  {r.custom?.cron ? <span title={`Default: ${r.defaultSchedule}`} style={{ fontSize: 10.5, fontWeight: 600, color: "#4F46E5", background: "#EEF0FF", borderRadius: 4, padding: "0 5px" }}>Custom</span> : null}
+                  {r.editable ? (
+                    <button type="button" onClick={() => onEdit(r)} aria-label={`Edit schedule for ${r.name}`} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#4F46E5" }}>
+                      Edit
+                    </button>
+                  ) : null}
+                </div>
                 {r.next && <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Next <Highlight text={r.next} query={query} /></div>}
               </td>
               <td style={cell}>

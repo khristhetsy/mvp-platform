@@ -17,6 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { validateCronSecret } from "@/lib/notifications/cron/auth";
 import { runInJob } from "@/lib/cron/job-context";
+import { DISPATCH_HEADER, hasCustomSchedule } from "@/lib/cron/schedule-overrides";
 
 const PAUSED_KEY = "paused_crons";
 const LOG_RETENTION_DAYS = 14;
@@ -104,6 +105,12 @@ export function withCronGate<R extends Request, Res extends Response>(
     // Only a genuine scheduled call is gated and logged; anything else is the
     // handler's to accept or refuse, exactly as before.
     if (!validateCronSecret(req)) return handler(req);
+
+    // A job on a custom schedule (Scheduled jobs, Edit) is started by the
+    // dispatcher; its vercel.json trigger does nothing, so it never runs twice.
+    if (req.headers.get(DISPATCH_HEADER) !== "1" && (await hasCustomSchedule(path))) {
+      return NextResponse.json({ ok: true, skipped: "custom schedule" });
+    }
 
     const paused = await loadPausedCrons();
     if (paused[path]) {
