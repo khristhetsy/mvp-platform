@@ -10,6 +10,7 @@ import { createNotification, hasRecentNotification } from "@/lib/notifications/n
 import { sendEmail } from "@/lib/email/send-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildPreparationDocNudge, type UploadedDoc } from "@/lib/notifications/preparation-doc-nudge";
+import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 
 const INACTIVE_DAYS = 5; // no company movement for this long
 const DEDUPE_HOURS = 24 * 7; // at most one nudge a week
@@ -139,12 +140,15 @@ export async function planJourneyNudges(): Promise<JourneyNudgePlan[]> {
 
   const { data: profs } = await db
     .from("profiles")
-    .select("id, email, full_name, journey_stage, stage_approval_status")
+    .select("id, email, full_name, role, journey_stage, stage_approval_status")
     .in("journey_stage", ["qualify", "deploy", "optimize"])
     .limit(400);
-  const founders = (profs ?? []) as (ProfileRow & { journey_stage: string | null; stage_approval_status: string | null })[];
-  // Skip founders awaiting staff approval — they've done their part.
-  const actionable = founders.filter((f) => f.stage_approval_status !== "pending" && f.journey_stage && STAGE_NUDGE[f.journey_stage]);
+  const founders = (profs ?? []) as (ProfileRow & { role: string | null; journey_stage: string | null; stage_approval_status: string | null })[];
+  // Skip founders awaiting staff approval (they've done their part) and staff or
+  // test accounts (@myicfos.com, non-founder roles).
+  const actionable = founders.filter(
+    (f) => f.stage_approval_status !== "pending" && f.journey_stage && STAGE_NUDGE[f.journey_stage] && !isInternalAccount(f),
+  );
   if (actionable.length === 0) return plan;
 
   const ids = actionable.map((f) => f.id);
