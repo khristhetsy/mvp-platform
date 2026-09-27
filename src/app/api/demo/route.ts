@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
 import { generateDemoSlots, FIRM_TIMEZONE } from "@/lib/marketing-site/demo-slots";
+import { renderEmail } from "@/lib/email/layout";
 
 /**
  * Demo booking (spec §9). GET → available slots (server-generated in the firm's
@@ -112,11 +113,24 @@ export async function POST(req: Request): Promise<Response> {
 
   // Real confirmation email with the .ics attached (best-effort; silent without RESEND_API_KEY).
   const icsBase64 = Buffer.from(ics, "utf-8").toString("base64");
+  const mail = renderEmail({
+    audience: "shared",
+    subject: `Your ${walkthroughLabel(d.role)} is requested`,
+    preheader: "We'll confirm by email. The calendar invite is attached.",
+    context: "Walkthrough",
+    eyebrow: "Walkthrough request",
+    headline: `Thanks, ${d.name.split(" ")[0]}. Your walkthrough is requested`,
+    intro: note,
+    blocks: [{ type: "note", text: "The walkthrough is optional. Everything on iCapOS is self-serve without one." }],
+    primary: { label: "Explore iCapOS now", url: origin },
+    footer: { reason: "You get this because you requested a walkthrough on icapos.com.", lines: ["iCapOS does not offer or sell securities or process transactions."] },
+  });
   await sendEmail({
     to: d.email,
-    subject: `Your ${walkthroughLabel(d.role)} — requested`,
-    html: `<p>${note.replace(/</g, "&lt;")}</p><p style="color:#5B6B85;font-size:12px">The walkthrough is optional and everything on iCapOS is self-serve without one. iCapOS does not offer or sell securities or process transactions.</p>`,
-    text: `${note}\n\nThe walkthrough is optional and everything on iCapOS is self-serve without one.`,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    fromName: "iCapOS",
     attachments: [{ filename: "icapos-walkthrough.ics", content: icsBase64 }],
   }).catch(() => false);
 

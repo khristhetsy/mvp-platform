@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
+import { renderEmail } from "@/lib/email/layout";
 
 // calendar_events isn't in the generated types — raw client.
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
@@ -71,18 +72,27 @@ async function sendTier(
     for (const a of event.attendees ?? []) if (a.email) recipients.add(a.email);
     if (recipients.size > 0) {
       const when = formatWhen(event.start_time, event.timezone);
-      const meet = event.meet_url ? `<p>Join Google Meet: <a href="${event.meet_url}">${event.meet_url}</a></p>` : "";
-      const loc = event.location ? `<p><strong>Location:</strong> ${event.location}</p>` : "";
-      const ok = await sendEmail({
-        to: Array.from(recipients),
-        subject: `Reminder: ${event.title} — ${tier === "24h" ? "tomorrow" : when}`,
-        html: [
-          `<p>This is a reminder for your upcoming meeting ${lead}.</p>`,
-          `<p><strong>${event.title}</strong></p>`,
-          `<p><strong>When:</strong> ${when}</p>`,
-          loc, meet,
-        ].join(""),
+      const mail = renderEmail({
+        audience: "shared",
+        subject: `Reminder: ${event.title}, ${tier === "24h" ? "tomorrow" : when}`,
+        preheader: `${when}${event.meet_url ? ". Google Meet link inside." : event.location ? `. ${event.location}` : ""}`,
+        context: "Scheduling",
+        eyebrow: "Reminder",
+        headline: tier === "24h" ? "Your meeting is tomorrow" : "Your meeting starts in about an hour",
+        intro: `This is a reminder for your upcoming meeting ${lead}.`,
+        blocks: [{
+          type: "facts",
+          rows: [
+            { label: "Meeting", value: event.title },
+            { label: "When", value: when },
+            ...(event.location ? [{ label: "Where", value: event.location }] : []),
+            ...(event.meet_url ? [{ label: "Video", value: "Google Meet" }] : []),
+          ],
+        }],
+        primary: event.meet_url ? { label: "Join Google Meet", url: event.meet_url } : null,
+        footer: { reason: "You get this because this meeting is on your iCapOS calendar." },
       });
+      const ok = await sendEmail({ to: Array.from(recipients), subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS" });
       if (ok) reminded += 1;
     }
     done.push(event.id);

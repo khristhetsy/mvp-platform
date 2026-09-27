@@ -11,12 +11,12 @@ import { sendEmail } from "@/lib/email/send-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildPreparationDocNudge, type UploadedDoc } from "@/lib/notifications/preparation-doc-nudge";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
+import { NOT_A_BROKER_DEALER, renderEmail, type RenderedEmail } from "@/lib/email/layout";
 
 const INACTIVE_DAYS = 5; // no company movement for this long
 const DEDUPE_HOURS = 24 * 7; // at most one nudge a week
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://icapos.com").replace(/\/$/, "");
-const PREP_URL = `${SITE_URL}/founder/stages/preparation`;
 
 type ProfileRow = { id: string; email: string | null; full_name: string | null };
 type CompanyRow = { founder_id: string | null; company_name: string | null; updated_at: string | null };
@@ -71,14 +71,8 @@ export async function nudgeStalledPreparationFounders(): Promise<{ nudged: numbe
       });
 
       if (f.email) {
-        const name = f.full_name?.split(" ")[0] ?? "there";
-        await sendEmail({
-          to: f.email,
-          subject: "You're one step from investor matching",
-          html: `<p>Hi ${name},</p><p>You've done the hard part. Finish your <b>Preparation</b> checklist — your documents and the rest of your materials — and iCapOS will match you with investors from the iCFO network.</p><p><a href="${PREP_URL}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every plan includes all tools. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
-          text: `Hi ${name}, finish your Preparation checklist (documents and materials) to get matched with investors: ${PREP_URL}`,
-          fromName: "iCapOS",
-        });
+        const mail = stageNudgeEmail(f.full_name?.split(" ")[0] ?? null, "qualify");
+        if (mail) await sendEmail({ to: f.email, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS" });
       }
       nudged += 1;
     }
@@ -90,26 +84,49 @@ export async function nudgeStalledPreparationFounders(): Promise<{ nudged: numbe
 
 // Per-stage nudge copy for the generalized journey nudge. Onboarding is handled
 // by the workflow-inactivity detector, so it's intentionally omitted here.
-const STAGE_NUDGE: Record<string, { title: string; message: string; path: string; email: string }> = {
+const STAGE_NUDGE: Record<string, { title: string; message: string; path: string; stage: string; lead: string }> = {
   qualify: {
     title: "You're one step from investor matching",
     message: "Finish your Preparation checklist — your documents and materials — to get matched with investors.",
     path: "/founder/stages/preparation",
-    email: "Finish your <b>Preparation</b> checklist — your documents and the rest of your materials — and iCapOS will match you with investors from the iCFO network.",
+    stage: "Preparation",
+    lead: "You've done the hard part. Finish your Preparation checklist, your documents and the rest of your materials, and iCapOS will match you with investors from the iCFO network.",
   },
   deploy: {
     title: "Keep your investor outreach moving",
     message: "Your matches and outreach are ready in Marketing — pick them back up to keep momentum with investors.",
     path: "/founder/stages/marketing",
-    email: "Your investor matches and outreach are live in <b>Marketing</b>. Jump back in to keep momentum with investors.",
+    stage: "Marketing",
+    lead: "Your investor matches and outreach are live in Marketing. Jump back in to keep momentum with investors.",
   },
   optimize: {
     title: "Finish closing your round",
     message: "You're in the Closing stage — keep your deal room, updates, and milestones moving to close.",
     path: "/founder/stages/closing",
-    email: "You're in the <b>Closing</b> stage. Keep your deal room, investor updates, and milestones moving to close your round.",
+    stage: "Closing",
+    lead: "You're in the Closing stage. Keep your deal room, investor updates, and milestones moving to close your round.",
   },
 };
+
+/** The stage nudge email for a founder whose company has gone quiet. Pure. */
+export function stageNudgeEmail(firstName: string | null, stage: string): RenderedEmail | null {
+  const copy = STAGE_NUDGE[stage];
+  if (!copy) return null;
+  return renderEmail({
+    audience: "founder",
+    subject: copy.title,
+    preheader: copy.message,
+    eyebrow: `Your raise · ${copy.stage}`,
+    headline: copy.title,
+    intro: `${firstName ? `Hi ${firstName}, ` : ""}${copy.lead}`,
+    primary: { label: "Pick up where you left off", url: `${SITE_URL}${copy.path}` },
+    footer: {
+      reason: `You get this because your company has had no activity on iCapOS for ${INACTIVE_DAYS} days or more. At most one reminder a week.`,
+      preferencesUrl: `${SITE_URL}/founder/settings`,
+      lines: [`Every plan includes all tools. ${NOT_A_BROKER_DEALER}`],
+    },
+  });
+}
 
 /**
  * Generalizes the Preparation nudge to every stage a founder can stall in
@@ -203,13 +220,7 @@ export async function planJourneyNudges(): Promise<JourneyNudgePlan[]> {
     if (f.email && docNudge) {
       mail = { subject: docNudge.subject, html: docNudge.html, text: docNudge.text };
     } else if (f.email) {
-      const name = f.full_name?.split(" ")[0] ?? "there";
-      const url = `${SITE_URL}${copy.path}`;
-      mail = {
-        subject: copy.title,
-        html: `<p>Hi ${name},</p><p>${copy.email}</p><p><a href="${url}">Pick up where you left off →</a></p><p style="color:#667;font-size:12px">Every plan includes all tools. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`,
-        text: `Hi ${name}, ${copy.message} ${url}`,
-      };
+      mail = stageNudgeEmail(f.full_name?.split(" ")[0] ?? null, f.journey_stage as string);
     }
     plan.push({
       founderId: f.id,

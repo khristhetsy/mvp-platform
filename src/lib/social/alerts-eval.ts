@@ -13,6 +13,7 @@ import { listAlertRules, type AlertRule } from "./goals-io";
 import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { renderEmail } from "@/lib/email/layout";
 
 const STAGE_METRICS: StageKey[] = ["outreach", "clicks", "meetings", "conversions"];
 
@@ -125,12 +126,18 @@ export async function evaluateAlertRules(now = new Date()): Promise<AlertEvalRes
         withinHours: 24,
       });
       if ((rule.channel === "email" || rule.channel === "both") && emails.length) {
-        const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://icapos.com";
-        await sendEmail({
-          to: emails,
-          subject: `iCapOS · ${title}`,
-          html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:#0f172a"><p>${message}</p><p><a href="${base}/admin/social" style="color:#4338CA">Open the Social Media Hub →</a></p><p style="color:#94a3b8;font-size:12px">You're receiving this because a Social Hub alert rule matched.</p></div>`,
-        }).catch(() => false);
+        const mail = renderEmail({
+          audience: "admin",
+          subject: title,
+          preheader: message,
+          context: "Social Media Hub",
+          eyebrow: rule.direction === "up" ? "Social alert" : "Social alert · Needs attention",
+          headline: title,
+          intro: message,
+          primary: { label: "Open the Social Media Hub", url: "/admin/social" },
+          footer: { reason: "Internal. You're receiving this because a Social Hub alert rule matched." },
+        });
+        await sendEmail({ to: emails, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" }).catch(() => false);
       }
       await db().from("social_alert_rules").update({ last_fired_at: now.toISOString() }).eq("id", rule.id);
       fired += 1;

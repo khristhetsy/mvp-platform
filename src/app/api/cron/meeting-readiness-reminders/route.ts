@@ -4,6 +4,7 @@ import { getCronSecret, validateCronSecret, cronMisconfiguredResponse, cronUnaut
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
+import { renderEmail } from "@/lib/email/layout";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -47,12 +48,20 @@ async function run(): Promise<{ sent: number }> {
 
         const { data: person } = await db().from("profiles").select("email, full_name").eq("id", sec.default_presenter_id).maybeSingle();
         if (person?.email) {
-          const ok = await sendEmail({
-            to: person.email,
-            subject: `Meeting prep reminder — ${sec.title}`,
-            html: `<p>Hi ${person.full_name ? String(person.full_name).split(" ")[0] : "there"},</p><p>Your section <strong>${sec.title}</strong> for the ${w.date} team meeting isn't marked ready yet. Please finish your prep in iCapOS.</p><p>iCapOS — Powered by iCFO Capital Global, Inc.</p>`,
-            text: `Reminder: your section "${sec.title}" for the ${w.date} team meeting isn't ready yet.`,
-          }).catch(() => false);
+          const first = person.full_name ? String(person.full_name).split(" ")[0] : null;
+          const mail = renderEmail({
+            audience: "admin",
+            subject: `Your section for the ${w.date} team meeting isn't ready yet`,
+            preheader: `${sec.title}. Mark it ready in iCapOS.`,
+            context: `Team meeting · ${w.date}`,
+            eyebrow: "Meeting prep",
+            headline: `Finish your section: ${sec.title}`,
+            intro: `${first ? `Hi ${first}, y` : "Y"}our section for the ${w.date} team meeting isn't marked ready yet.`,
+            blocks: [{ type: "facts", rows: [{ label: "Meeting date", value: w.date }, { label: "Your section", value: sec.title }, { label: "Status", value: "Not ready" }] }],
+            primary: { label: "Finish my prep", url: "/admin/ceo" },
+            footer: { reason: "Internal. Sent to section owners before each team meeting." },
+          });
+          const ok = await sendEmail({ to: person.email, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" }).catch(() => false);
           if (ok) sent++;
         }
         await db().from("ceo_meeting_reminder_log").insert({ session_id: s.id, section_id: r.section_id, threshold: w.threshold });

@@ -5,6 +5,7 @@ import {
   resolveReplyForward,
 } from "@/lib/outreach/manual-outreach";
 import { sendEmail } from "@/lib/email/send-email";
+import { NOT_A_BROKER_DEALER, renderEmail } from "@/lib/email/layout";
 
 export const dynamic = "force-dynamic";
 
@@ -67,12 +68,25 @@ export async function POST(request: Request) {
         const subject = firstString(data.subject, payload.subject) || "Investor reply";
         const bodyText = firstString(data.text, payload.text, data.html, payload.html) || "(no message body)";
         const from = fwd.investorName ?? fromEmail ?? "an investor";
+        const plain = bodyText.replace(/<[^>]*>/g, " ").replace(/[ \t]+\n/g, "\n").trim().slice(0, 6000);
+        const mail = renderEmail({
+          audience: "founder",
+          subject: `Reply from ${from}: ${subject}`,
+          preheader: "Their outreach sequence has been stopped, so they get no more automated emails.",
+          context: fwd.companyName ?? "Outreach",
+          eyebrow: "Outreach · Reply",
+          headline: `${from} replied to your outreach`,
+          intro: `${from}${fromEmail && from !== fromEmail ? ` (${fromEmail})` : ""} replied to your outreach${fwd.companyName ? ` for ${fwd.companyName}` : ""}. Their sequence has been stopped. Reply to this email to answer them directly.`,
+          blocks: [{ type: "quote", label: from, meta: subject, text: plain || "(no message body)" }],
+          footer: { reason: "You get this because an investor replied to outreach you sent from iCapOS.", lines: [NOT_A_BROKER_DEALER] },
+        });
         await sendEmail({
           to: fwd.founderEmail,
           replyTo: fromEmail ?? undefined,
-          subject: `Reply from ${from}: ${subject}`,
-          html: `<p><strong>${from}</strong> replied to your outreach${fwd.companyName ? ` for ${fwd.companyName}` : ""}. Their sequence has been stopped.</p><hr/><div style="white-space:pre-wrap">${bodyText.replace(/[<>]/g, "")}</div>`,
-          text: `${from} replied to your outreach. Their sequence has been stopped.\n\n${bodyText}`,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          fromName: "iCapOS",
         });
       }
     } catch {

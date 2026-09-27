@@ -13,6 +13,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { listSocialAccounts } from "@/lib/social/queries";
 import { sendEmail } from "@/lib/email/send-email";
 import { originFromRequest } from "@/lib/social/request-origin";
+import { renderEmail } from "@/lib/email/layout";
 import {
   accountActivity, createInvite, deleteInvite, disconnectAccount, listOpenInvites, listStaff, queuedCountForAccount, updateAccount, INVITE_TTL_DAYS,
 } from "@/lib/social/account-admin";
@@ -85,14 +86,28 @@ export async function POST(req: NextRequest): Promise<Response> {
     const link = `${origin}/connect/social/${invite.token}`;
     const platformName = platform === "linkedin" ? "LinkedIn" : platform === "instagram" ? "Instagram" : "Facebook";
     const who = profile.full_name ?? profile.email ?? "Your team";
+    const viaName = platform === "instagram" ? "Facebook" : platformName;
+    const mail = renderEmail({
+      audience: "shared",
+      subject: `Connect your ${platformName} to iCapOS`,
+      preheader: `${who} asked you to connect ${label ?? `your ${platformName} account`}. The link expires in ${INVITE_TTL_DAYS} days.`,
+      context: "Social Media Hub",
+      eyebrow: "Social Media Hub",
+      headline: `Connect your ${platformName} account`,
+      intro: `${who} asked you to connect your ${platformName} account${label ? ` (${label})` : ""} to the iCapOS Social Hub so posts can be published from it.`,
+      blocks: [
+        ...(platform === "instagram" ? [{ type: "paragraph" as const, text: "Instagram connects through the Facebook Page it's linked to, so Facebook will ask you to sign in and approve." }] : []),
+        { type: "note", text: `You'll sign in to iCapOS, then ${viaName} will ask you to approve. Your password stays with ${platformName}. iCapOS only stores the access token it hands back. This link works once and expires in ${INVITE_TTL_DAYS} days.` },
+      ],
+      primary: { label: `Connect ${platformName}`, url: link },
+      footer: { reason: "Sent at the request of an iCapOS admin. If you weren't expecting it, ignore this email." },
+    });
     const sent = await sendEmail({
       to: email,
-      subject: `Connect your ${platformName} to iCapOS`,
-      html: `<p>${who} asked you to connect your ${platformName} account${label ? ` (<b>${label}</b>)` : ""} to the iCapOS Social Hub so posts can be published from it.</p>
-<p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#0A66C2;color:#fff;border-radius:8px;text-decoration:none">Connect ${platformName}</a></p>
-${platform === "instagram" ? "<p>Instagram connects through the Facebook Page it's linked to, so Facebook will ask you to sign in and approve.</p>" : ""}<p>You'll sign in to iCapOS, then ${platform === "instagram" ? "Facebook" : platformName} will ask you to approve. Your password stays with ${platformName} — iCapOS only stores the access token it hands back.</p>
-<p style="color:#666;font-size:12px">This link works once and expires in ${INVITE_TTL_DAYS} days. If you weren't expecting it, ignore this email.</p>`,
-      text: `${who} asked you to connect your ${platformName} account to the iCapOS Social Hub.\n\nOpen this link (works once, expires in ${INVITE_TTL_DAYS} days):\n${link}\n\nYou'll sign in to iCapOS, then ${platformName} will ask you to approve.`,
+      subject: mail.subject,
+      html: mail.html,
+      fromName: "iCapOS",
+      text: mail.text,
     });
     return NextResponse.json({ ok: true, sent, invite: { id: invite.id, email, expiresAt: invite.expiresAt }, link: sent ? undefined : link });
   } catch (e) {
