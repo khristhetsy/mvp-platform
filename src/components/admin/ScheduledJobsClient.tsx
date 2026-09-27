@@ -152,7 +152,7 @@ export function ScheduledJobsClient({ rows }: { rows: JobRow[] }) {
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <ToolbarGear heading="Scheduled jobs" items={gear} />
-          <OdooSearchBar scope="scheduled-jobs" state={search} onChange={setSearch} quick={QUICK} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search jobs" width={440} />
+          <OdooSearchBar scope="scheduled-jobs" state={search} onChange={setSearch} quick={QUICK} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search jobs" width={440} groupChipPrefix="Grouped by " />
           <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 10 }}>
             <SearchCount result={{ ...searched, active: searched.active || filtered.length !== rows.length }} noun="jobs" />
             <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{rows.filter((r) => r.paused).length} paused</span>
@@ -207,7 +207,8 @@ export function ScheduledJobsClient({ rows }: { rows: JobRow[] }) {
                 key={group || "all"}
                 group={group}
                 list={list}
-                collapsed={collapsed.has(group)}
+                // While searching, every group with a match is open, so a match is never hidden.
+                collapsed={!query.trim() && collapsed.has(group)}
                 onToggleGroup={() =>
                   setCollapsed((c) => {
                     const n = new Set(c);

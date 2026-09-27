@@ -19,6 +19,8 @@ import { validateCronSecret } from "@/lib/notifications/cron/auth";
 
 const PAUSED_KEY = "paused_crons";
 const LOG_RETENTION_DAYS = 14;
+/** Response header a job can set to describe its run on Scheduled jobs. */
+export const CRON_SUMMARY_HEADER = "x-cron-summary";
 
 export type PausedEntry = { by: string | null; byName: string | null; at: string };
 export type PausedCrons = Record<string, PausedEntry>;
@@ -112,7 +114,10 @@ export function withCronGate<R extends Request, Res extends Response>(
     const runId = await logStart(path, "running");
     try {
       const res = await handler(req);
-      await logFinish(runId, path, startedMs, res.status, null);
+      // A job may describe what it did in a short "x-cron-summary" header
+      // (e.g. "0 matches: no company at CRR 60 or above"); it is kept on the run.
+      const summary = res.headers.get(CRON_SUMMARY_HEADER);
+      await logFinish(runId, path, startedMs, res.status, summary ? summary.slice(0, 200) : null);
       return res;
     } catch (err) {
       await logFinish(runId, path, startedMs, null, err instanceof Error ? err.message.slice(0, 300) : "threw");

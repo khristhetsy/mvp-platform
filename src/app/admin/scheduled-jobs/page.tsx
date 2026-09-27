@@ -59,7 +59,7 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
       const age = now.getTime() - new Date(run.started_at).getTime();
       if (run.status === "running") last = age > KILLED_AFTER_MS ? { tone: "error", text: `Timed out · ${when}` } : { tone: "neutral", text: `Running since ${when}` };
       else if (run.status === "skipped") last = { tone: "warning", text: `Skipped · paused · ${when}` };
-      else if (run.status === "ok") last = { tone: "success", text: `OK · ${when}` };
+      else if (run.status === "ok") last = { tone: "success", text: `OK · ${when}${run.detail ? ` · ${run.detail}` : ""}` };
       else last = { tone: "error", text: `Failed · ${when}${run.http_status ? ` (${run.http_status})` : ""}`, detail: run.detail };
     }
     const p = paused[j.path];

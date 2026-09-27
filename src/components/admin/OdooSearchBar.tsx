@@ -54,6 +54,8 @@ type Props = {
   api?: string;
   /** Hide the shared-filters section and the "share with team" box (founder lists). */
   personalOnly?: boolean;
+  /** Text before the group-by chip's label, e.g. "Grouped by " (default none). */
+  groupChipPrefix?: string;
 };
 
 const chipBase: React.CSSProperties = { display: "inline-flex", alignItems: "center", borderRadius: 6, overflow: "hidden", fontSize: 11.5 };
@@ -68,7 +70,7 @@ function Chip({ text, color, bg, border, onRemove, icon }: { text: string; color
   );
 }
 
-export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, noGroupId = "", placeholder = "Search…", applyDefault = true, width = 560, api = "/api/marketing/saved-searches", personalOnly = false }: Props) {
+export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, noGroupId = "", placeholder = "Search…", applyDefault = true, width = 560, api = "/api/marketing/saved-searches", personalOnly = false, groupChipPrefix = "" }: Props) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   /** True while `q` is being driven by the live input rather than a committed chip. */
@@ -181,7 +183,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
         {state.q && !typed && <Chip text={`Search: ${state.q}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => set({ q: "" })} />}
         {state.quick.map((k) => <Chip key={k} text={quickLabel(k)} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => toggleQuick(k)} />)}
         {Object.entries(state.fields).map(([f, vals]) => <Chip key={f} text={`${fieldLabel(f)}: ${vals.join(", ")}`} color="#0C447C" bg="#E6F1FB" border="#B5D4F4" onRemove={() => { const copy = { ...state.fields }; delete copy[f]; set({ fields: copy }); }} />)}
-        {state.groupBy && state.groupBy !== noGroupId && <Chip icon="ti-layout-list" text={groupLabel} color="#633806" bg="#FAEEDA" border="#E3C08A" onRemove={() => set({ groupBy: noGroupId })} />}
+        {state.groupBy && state.groupBy !== noGroupId && <Chip icon="ti-layout-list" text={`${groupChipPrefix}${groupLabel}`} color="#633806" bg="#FAEEDA" border="#E3C08A" onRemove={() => set({ groupBy: noGroupId })} />}
         <input
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
