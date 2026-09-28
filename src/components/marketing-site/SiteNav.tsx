@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type MouseEvent } from "react";
 import { SiteWordmark } from "@/components/marketing-site/SiteWordmark";
+import { useSiteViewer, type SiteViewer } from "@/components/marketing-site/useSiteViewer";
 
 /**
  * Public marketing-site top nav (spec §3). Client component for the dropdowns +
@@ -11,7 +12,11 @@ import { SiteWordmark } from "@/components/marketing-site/SiteWordmark";
  *   Home · Founders ▾ · Investors · Events · About ▾
  *   Founders ▾ : How it works · Readiness Rating · Pricing  (Pricing lives here only)
  *   About ▾    : About us · Disclosures
- *   Right side : AI Mode · Sign in · Get started
+ *   Right side : AI Mode · Sign in · Get started   (signed out)
+ *                AI Mode · Dashboard · avatar menu (signed in)
+ * The session is read in the browser (useSiteViewer) so public pages stay
+ * cacheable; while it loads the right side reserves space instead of flashing
+ * "Sign in" at a signed-in visitor.
  * AI Mode opens the full-screen AI-first surface (icapos:open-ai-first). On pages
  * that don't mount it (events, deals, sign in) the link goes to "/?ai=1" instead.
  * Below md the links move into a menu button so phones can reach every page.
@@ -37,6 +42,19 @@ export function SiteNav() {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState<"founders" | "about" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [viewer, setViewer] = useSiteViewer();
+  const router = useRouter();
+
+  const signOut = async () => {
+    setMobileOpen(false);
+    try {
+      await fetch("/auth/logout", { method: "POST" });
+    } finally {
+      setViewer({ status: "signed-out" });
+      router.push("/");
+      router.refresh();
+    }
+  };
 
   // Open the overlay in place when this page mounts it; otherwise follow the link
   // to "/?ai=1", which opens it on the home page.
@@ -96,15 +114,31 @@ export function SiteNav() {
           >
             AI Mode
           </Link>
-          <Link href="/auth/sign-in" className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi sm:inline-flex">
-            Sign in
-          </Link>
-          <Link
-            href="/start"
-            className="whitespace-nowrap rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi"
-          >
-            Get started
-          </Link>
+          {viewer.status === "signed-in" ? (
+            <>
+              <Link
+                href={viewer.dashboardHref}
+                className="whitespace-nowrap rounded-lg border border-site-line px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:border-site-blue-hi hover:text-site-blue-hi"
+              >
+                Dashboard
+              </Link>
+              <AccountMenu viewer={viewer} onSignOut={signOut} />
+            </>
+          ) : viewer.status === "signed-out" ? (
+            <>
+              <Link href={`/auth/sign-in?next=${encodeURIComponent(pathname)}`} className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi sm:inline-flex">
+                Sign in
+              </Link>
+              <Link
+                href="/start"
+                className="whitespace-nowrap rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi"
+              >
+                Get started
+              </Link>
+            </>
+          ) : (
+            <span className="inline-block h-9 w-28 sm:w-44" aria-hidden="true" />
+          )}
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
@@ -133,7 +167,11 @@ export function SiteNav() {
               { href: "/investors", label: "Investors" },
               { href: "/events", label: "Events" },
               ...ABOUT.map((i) => ({ ...i, label: i.href === "/about" ? "About" : i.label, indent: i.href !== "/about" })),
-              { href: "/auth/sign-in", label: "Sign in" },
+              ...(viewer.status === "signed-in"
+                ? [{ href: viewer.dashboardHref, label: "Dashboard" }]
+                : viewer.status === "signed-out"
+                  ? [{ href: `/auth/sign-in?next=${encodeURIComponent(pathname)}`, label: "Sign in" }]
+                  : []),
             ].map((i) => (
               <li key={i.href}>
                 <Link
@@ -151,6 +189,14 @@ export function SiteNav() {
                 AI Mode
               </Link>
             </li>
+            {viewer.status === "signed-in" ? (
+              <li className="mt-2 border-t border-site-line pt-3">
+                <p className="truncate text-sm text-site-ink/70">Signed in as {viewer.email}</p>
+                <button type="button" onClick={signOut} className="mt-1 block w-full rounded-lg py-2.5 text-left text-[15px] font-medium text-site-ink transition-colors hover:text-site-blue-hi">
+                  Log out
+                </button>
+              </li>
+            ) : null}
           </ul>
         </div>
       ) : null}
@@ -202,6 +248,58 @@ function Dropdown({
               </li>
             ))}
           </ul>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function AccountMenu({
+  viewer,
+  onSignOut,
+}: {
+  viewer: Extract<SiteViewer, { status: "signed-in" }>;
+  onSignOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative hidden sm:block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Account menu for ${viewer.name}`}
+        className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-site-blue-pale text-xs font-semibold text-site-blue-hi">
+          {viewer.initials}
+        </span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div role="menu" className="absolute right-0 top-full z-20 mt-1 w-64 rounded-xl border border-site-line bg-white py-1.5 shadow-lg">
+            <div className="border-b border-site-line px-4 pb-2.5 pt-1.5">
+              <p className="truncate text-sm font-semibold text-site-ink">{viewer.name}</p>
+              <p className="truncate text-xs text-site-ink/70">{viewer.email}</p>
+            </div>
+            <Link role="menuitem" href={viewer.dashboardHref} onClick={() => setOpen(false)} className="block px-4 py-2 text-sm text-site-ink transition-colors hover:bg-site-blue-pale hover:text-site-blue-hi">
+              Dashboard
+            </Link>
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSignOut();
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-site-ink transition-colors hover:bg-site-blue-pale hover:text-site-blue-hi"
+            >
+              Log out
+            </button>
+          </div>
         </>
       ) : null}
     </div>
