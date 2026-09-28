@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   // must stay external — bundling them for the serverless runtime breaks their
   // runtime imports on Vercel (works in dev, fails in prod → no text extracted).
   serverExternalPackages: ["pdfkit", "pdfjs-dist", "exceljs"],
+  // pdfjs loads its main-thread worker from this file at runtime. extract-text.ts
+  // now imports it statically, and this keeps it in every server bundle as well.
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+  },
   turbopack: {
     root: __dirname,
   },
