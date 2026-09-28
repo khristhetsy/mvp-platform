@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { randomBytes } from "crypto";
 import { gateBusinessPlanApi } from "@/lib/business-plan/gate";
 import { getPitchDeck, upsertPitchDeck } from "@/lib/pitch-deck/store";
+import { appOrigin } from "@/lib/activity/email-templates";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function POST(): Promise<Response> {
       token = randomBytes(16).toString("hex");
       await upsertPitchDeck(g.supabase, g.company.id, g.profile.id, { shareToken: token });
     }
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const base = appOrigin();
     return NextResponse.json({ url: `${base}/deck/${token}`, token });
   } catch (err) {
     Sentry.captureException(err);

@@ -2,9 +2,12 @@
 
 import { sendEmail } from "@/lib/email/send-email";
 import { insertNotification } from "./store";
+import { appOrigin } from "@/lib/activity/email-templates";
 import { renderEmail } from "@/lib/email/layout";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.icapos.com";
+// Same origin helper every other email uses. Production sets NEXT_PUBLIC_SITE_URL, not
+// NEXT_PUBLIC_APP_URL, and app.icapos.com is not a live domain (DEPLOYMENT_NOT_FOUND).
+const APP_URL = appOrigin();
 
 export interface DeliveryPayload {
   adminId: string;

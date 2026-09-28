@@ -60,7 +60,7 @@ function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): M
         { kind: "link", label: "iCFO Points", href: "/credits", icon: <PieChart className="h-4 w-4" /> },
         { kind: "link", label: "Feedback", href: "/founder/settings/feedback", icon: <Terminal className="h-4 w-4" /> },
         { kind: "divider" },
-        { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
+        { kind: "link", label: "Help & support", href: "/founder/support", icon: <HelpCircle className="h-4 w-4" /> },
         { kind: "divider" },
         { kind: "signout" },
       ];
@@ -71,7 +71,7 @@ function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): M
       { kind: "link", label: "Capital raise", href: "/founder/capital-raise", icon: <CreditCard className="h-4 w-4" /> },
       { kind: "link", label: "Documents", href: "/founder/documents", icon: <Terminal className="h-4 w-4" /> },
       { kind: "divider" },
-      { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
+      { kind: "link", label: "Help & support", href: "/founder/support", icon: <HelpCircle className="h-4 w-4" /> },
       { kind: "divider" },
       { kind: "signout" },
     ];
@@ -85,7 +85,7 @@ function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): M
       { kind: "link", label: "Audit log", href: "/admin/audit", icon: <Terminal className="h-4 w-4" />, perm: "view_audit_logs" },
       { kind: "divider" },
       { kind: "chrome" },
-      { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
+      { kind: "link", label: "Help & support", href: "/admin/support", icon: <HelpCircle className="h-4 w-4" /> },
       { kind: "divider" },
       { kind: "signout" },
     ];
@@ -98,7 +98,7 @@ function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): M
     { kind: "link", label: "Watchlist", href: "/investor/watchlist", icon: <Bell className="h-4 w-4" /> },
     { kind: "link", label: "Opportunities", href: "/investor/opportunities", icon: <PieChart className="h-4 w-4" /> },
     { kind: "divider" },
-    { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
+    { kind: "link", label: "Help & support", href: "mailto:team@icapos.com?subject=iCapOS%20investor%20support", icon: <HelpCircle className="h-4 w-4" /> },
     { kind: "divider" },
     { kind: "signout" },
   ];
