@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export type ActivityKind = "note" | "call" | "email" | "message" | "contact_edit" | "task_created" | "task_done" | "converted" | "stage_changed" | "won" | "lost" | "opp_note" | "email_draft" | "odoo_message" | "odoo_note";
+export type ActivityKind = "note" | "call" | "email" | "message" | "contact_edit" | "task_created" | "task_done" | "converted" | "stage_changed" | "won" | "lost" | "opp_note" | "email_draft" | "odoo_message" | "odoo_note" | "note_edited" | "note_deleted" | "note_restored";
 export type Activity = { id: string; kind: ActivityKind; summary: string; actor_name: string | null; created_at: string };
 
 export async function logActivity(input: {
@@ -65,6 +65,7 @@ export async function listOpportunityActivity(opportunityId: string): Promise<Ac
     .from("sales_activity_log")
     .select("id, kind, summary, created_at, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)")
     .eq("opportunity_id", opportunityId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
@@ -85,6 +86,7 @@ export async function listContactActivity(contactCrmId: string): Promise<Activit
     .from("sales_activity_log")
     .select("id, kind, summary, created_at, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)")
     .eq("contact_crm_id", contactCrmId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
