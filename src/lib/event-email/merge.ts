@@ -10,6 +10,7 @@ import { getEventById } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
+import { presenterImageSignedUrl } from "@/lib/icfo-events/presenter-images";
 import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
 import { listEventAttendees } from "@/lib/icfo-events/attendees";
 
@@ -54,6 +55,8 @@ export const eventMergeSchema = z.object({
       role: z.string(),
       company: z.string(),
       headshotUrl: z.string().nullable(),
+      /** Avatar fallback when there is no headshot; also shown in the company box. */
+      companyLogoUrl: z.string().nullable().default(null),
       initials: z.string(),
       bio: z.string().default(""),
       companySummary: z.string().default(""),
@@ -169,13 +172,24 @@ export async function loadEventMergeData(
   const tierOf = (p: string) => (p === "presenting" ? "presenting" : p === "track" ? "track" : "community");
   const sponsorTiers: EventMergeData["sponsorTiers"] = { presenting: [], track: [], community: [] };
   for (const s of sponsors) sponsorTiers[tierOf(s.placement)].push({ name: s.name, logoUrl: s.logoUrl ?? null });
-  const presenters = presenterRows
-    .sort((a, b) => a.position - b.position)
-    .map((p) => ({
+  const sortedPresenters = presenterRows.sort((a, b) => a.position - b.position);
+  // Signed URLs for headshots and company logos (private bucket, 1 hour).
+  const presenterImages = await Promise.all(
+    sortedPresenters.map(async (p) => {
+      const [headshotUrl, companyLogoUrl] = await Promise.all([
+        presenterImageSignedUrl(p.headshotPath),
+        presenterImageSignedUrl(p.companyLogoPath),
+      ]);
+      return { headshotUrl, companyLogoUrl };
+    }),
+  );
+  const presenters = sortedPresenters
+    .map((p, i) => ({
       name: p.displayName,
       role: p.roleLabel ?? "",
       company: p.headline ?? "",
-      headshotUrl: null as string | null,
+      headshotUrl: presenterImages[i].headshotUrl,
+      companyLogoUrl: presenterImages[i].companyLogoUrl,
       initials: initialsOf(p.displayName),
       bio: p.bio ?? "",
       companySummary: p.companySummary ?? "",

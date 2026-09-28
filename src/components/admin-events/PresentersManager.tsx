@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventPresenter } from "@/lib/icfo-events/types";
 import { ReusePresentersDrawer } from "@/components/admin-events/ReusePresentersDrawer";
 
@@ -60,6 +60,77 @@ type FormState = {
   sessionId: string;
 };
 
+// Headshot or company logo for the booklet. The booklet avatar shows the
+// headshot, then the company logo, then initials.
+function PresenterImageField({ presenter, kind, url, onChange }: {
+  presenter: EventPresenter;
+  kind: "headshot" | "logo";
+  url: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const endpoint = `/api/admin/events/${presenter.eventId}/presenters/${presenter.id}/image?kind=${kind}`;
+  const label = kind === "headshot" ? "Headshot" : "Company logo";
+  const hint = kind === "headshot" ? "Square photo, PNG or JPG, up to 5 MB." : "Used when there is no headshot. PNG or JPG, up to 5 MB.";
+
+  async function upload(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(endpoint, { method: "POST", body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Upload failed.");
+      onChange((json.url as string | null) ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(typeof j.error === "string" ? j.error : "Remove failed."); }
+      onChange(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Remove failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] ${url ? "bg-white" : "bg-slate-50"}`}>
+        {url
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={url} alt={label} className={kind === "headshot" ? "h-full w-full object-cover" : "h-[70%] w-[70%] object-contain"} />
+          : <i className={`ti ${kind === "headshot" ? "ti-user" : "ti-building"} text-xl text-[var(--text-muted)]`} aria-hidden="true" />}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-[var(--text-secondary)]">{label}</p>
+        <p className="text-[10.5px] text-[var(--text-muted)]">{hint}</p>
+        <div className="mt-1 flex gap-2">
+          <input ref={input} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+          <button type="button" onClick={() => input.current?.click()} disabled={busy} className="rounded-md border border-[var(--border-subtle)] bg-white px-2 py-1 text-[11px] font-medium text-[var(--blue)] disabled:opacity-50">
+            {busy ? "Working…" : url ? "Replace" : "Upload"}
+          </button>
+          {url && <button type="button" onClick={remove} disabled={busy} className="text-[11px] text-rose-600 disabled:opacity-50">Remove</button>}
+        </div>
+        {error && <p className="mt-1 text-[10.5px] text-rose-700">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
 function PresenterForm({ mode, events, sessions, presenter, onSaved, onCancel }: {
   mode: "add" | "edit";
   events?: EventOpt[];
@@ -87,6 +158,18 @@ function PresenterForm({ mode, events, sessions, presenter, onSaved, onCancel }:
   });
   const [busy, setBusy] = useState(false);
   const [creatingMeet, setCreatingMeet] = useState(false);
+  const [images, setImages] = useState<{ headshotUrl: string | null; logoUrl: string | null }>({ headshotUrl: null, logoUrl: null });
+
+  // Signed preview URLs for the stored headshot and logo (edit mode only).
+  useEffect(() => {
+    if (mode !== "edit" || !presenter) return;
+    let live = true;
+    fetch(`/api/admin/events/${presenter.eventId}/presenters/${presenter.id}/image`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (live && j) setImages({ headshotUrl: j.headshotUrl ?? null, logoUrl: j.logoUrl ?? null }); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [mode, presenter]);
   const [error, setError] = useState<string | null>(null);
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) { setF((s) => ({ ...s, [k]: v })); }
@@ -186,6 +269,17 @@ function PresenterForm({ mode, events, sessions, presenter, onSaved, onCancel }:
         <label className="block"><span className={L}>Talk topic / headline</span><input value={f.headline} onChange={(e) => set("headline", e.target.value)} className={I} /></label>
         <label className="block sm:col-span-2"><span className={L}>Short bio</span><textarea rows={2} value={f.bio} onChange={(e) => set("bio", e.target.value)} className={I} /></label>
         <label className="block sm:col-span-2"><span className={L}>Company summary</span><textarea rows={2} value={f.companySummary} onChange={(e) => set("companySummary", e.target.value)} placeholder="What the company does, stage, traction…" className={I} /></label>
+        <div className="sm:col-span-2 mt-1 rounded-md border border-[var(--border-subtle)] bg-white p-2.5">
+          <p className="mb-1.5 text-[11px] font-medium text-[var(--text-secondary)]"><i className="ti ti-photo" aria-hidden="true" /> Booklet images</p>
+          {mode === "edit" && presenter ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PresenterImageField presenter={presenter} kind="headshot" url={images.headshotUrl} onChange={(u) => setImages((s) => ({ ...s, headshotUrl: u }))} />
+              <PresenterImageField presenter={presenter} kind="logo" url={images.logoUrl} onChange={(u) => setImages((s) => ({ ...s, logoUrl: u }))} />
+            </div>
+          ) : (
+            <p className="text-[10.5px] text-[var(--text-muted)]">Save the presenter first, then add a headshot and company logo.</p>
+          )}
+        </div>
         <label className="block sm:col-span-2"><span className={L}>Links (comma-separated)</span><input value={f.links} onChange={(e) => set("links", e.target.value)} placeholder="https://…, https://…" className={I} /></label>
 
         <div className="sm:col-span-2 mt-1 rounded-md border border-[var(--border-subtle)] bg-white p-2.5">

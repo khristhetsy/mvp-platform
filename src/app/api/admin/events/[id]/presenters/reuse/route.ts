@@ -66,6 +66,7 @@ export async function POST(
         displayName: String(row.display_name),
         roleLabel: (row.role_label as string | null) ?? null,
         headshotPath: (row.headshot_path as string | null) ?? null,
+        companyLogoPath: (row.company_logo_path as string | null) ?? null,
         headline: (row.headline as string | null) ?? null,
         bio: (row.bio as string | null) ?? null,
         links: Array.isArray(row.links) ? (row.links as string[]) : [],
