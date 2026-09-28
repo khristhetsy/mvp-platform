@@ -22,12 +22,14 @@ import { IR_STAGE_LABEL, type IrMilestone, type IrProject, type IrStage, type Ir
 
 type Opt = { key: string; label: string };
 type Outreach = { matchId: string; stage: IrStage; stageChangedAt: string; projectTitle: string };
-type Row = { contactId: string; name: string | null; firm: string; fit: number; tier: "high" | "medium" | "low"; summary: string; sectors: string[]; types: string[]; dataSource: string | null; verifiedAt?: string | null; alsoOn: string[]; founderOutreach: Outreach | null };
+/** fit < 0 marks a row found by "Search all investors" rather than scored by the engine. */
+type Row = { contactId: string; name: string | null; firm: string; fit: number; tier: "high" | "medium" | "low"; summary: string; sectors: string[]; types: string[]; dataSource: string | null; verifiedAt?: string | null; alsoOn: string[]; founderOutreach: Outreach | null; onProject?: boolean };
 type Filters = { industry: string[]; stage: string[]; raise: string[]; revenue: string[]; investorType: string[]; source: string; tier: string };
 type Payload = {
   project: IrProject; task: IrTask | null; week: IrMilestone | null; onTask: number;
   options: { sectors: string[]; stages: Opt[]; raises: Opt[]; revenues: Opt[]; types: Opt[] };
   filters: Filters; rows: Row[]; total: number; thin: boolean;
+  defaults?: { from?: "company" | "founder_profile" | "both" };
 };
 const TIER_CLS = { high: "bg-emerald-50 text-emerald-700", medium: "bg-amber-50 text-amber-700", low: "bg-slate-100 text-slate-600" };
 const SOURCE_OPTS: Opt[] = [{ key: "verified", label: "Verified" }, { key: "self_reported", label: "Self-reported" }];
@@ -80,6 +82,25 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   const [colsOpen, setColsOpen] = useState(false);
   const [hideContacted, setHideContacted] = useState(false);
   const [profile, setProfile] = useState<Row | null>(null);
+  const [mode, setMode] = useState<"match" | "search">("match");
+  const [sq, setSq] = useState("");
+  const [found, setFound] = useState<Row[]>([]);
+  const [searching, setSearching] = useState(false);
+  useEffect(() => {
+    if (mode !== "search" || sq.trim().length < 2) return;
+    let live = true;
+    const h = setTimeout(() => {
+      setSearching(true);
+      void fetch(`/api/admin/ir/investors?${new URLSearchParams({ q: sq.trim(), project: projectId })}`).then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (!live) return;
+        setSearching(false);
+        type Hit = { id: string; name: string | null; firm: string | null; dataSource: string | null; alsoOn: string[]; onThisProject: boolean; founderOutreach: Outreach | null };
+        setFound(((j.investors ?? []) as Hit[]).map((x) => ({ contactId: x.id, name: x.name, firm: x.firm ?? "", fit: -1, tier: "low", summary: "Found by search", sectors: [], types: [], dataSource: x.dataSource, alsoOn: x.alsoOn, founderOutreach: x.founderOutreach, onProject: x.onThisProject })));
+      });
+    }, 250);
+    return () => { live = false; clearTimeout(h); };
+  }, [mode, sq, projectId]);
   const [seq, setSeq] = useState<null | { setupNeeded: boolean; staff: Array<{ id: string; name: string }>; template: string; via: "icapos" | "gmail"; manager: string; notifyEmail: boolean }>(null);
 
   async function openSequence() {
@@ -137,7 +158,9 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
     { key: "tier", label: "Fit tier", options: TIER_OPTS.map((o) => o.label) },
   ] : [], [data]);
 
-  const rows = useMemo(() => (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), [data, search, hideContacted]);
+  const rows = useMemo(() => mode === "search"
+    ? (sq.trim().length >= 2 ? found : []).filter((r) => !(hideContacted && r.founderOutreach))
+    : (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), [data, search, hideContacted, mode, found, sq]);
   const grouped = useMemo(() => {
     const g = search?.groupBy && search.groupBy !== "none" ? search.groupBy : null;
     if (!g) return [{ label: null as string | null, rows }];
@@ -148,8 +171,8 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   }, [rows, search]);
 
   const contacted = useMemo(() => (data?.rows ?? []).filter((r) => r.founderOutreach).length, [data]);
-  const pickedContacted = useMemo(() => (data?.rows ?? []).filter((r) => picked.has(r.contactId) && r.founderOutreach).length, [data, picked]);
-  const visibleIds = rows.map((r) => r.contactId);
+  const pickedContacted = useMemo(() => [...new Map([...(data?.rows ?? []), ...found].map((r) => [r.contactId, r])).values()].filter((r) => picked.has(r.contactId) && r.founderOutreach).length, [data, found, picked]);
+  const visibleIds = rows.filter((r) => !r.onProject).map((r) => r.contactId);
   const pickedVisible = visibleIds.filter((id) => picked.has(id)).length;
   const allVisible = visibleIds.length > 0 && pickedVisible === visibleIds.length;
   function toggleAll(on: boolean) {
@@ -190,7 +213,11 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={720} />
+        <div className="flex overflow-hidden rounded-lg border border-slate-200" role="group" aria-label="How to find investors">
+          {([["match", "Proposed matches"], ["search", "Search all investors"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={mode === k} onClick={() => setMode(k)} className={`px-3 py-1.5 text-[12.5px] ${mode === k ? "bg-indigo-50 font-semibold text-indigo-800" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>)}
+        </div>
+        {mode === "match" ? <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={620} />
+          : <input autoFocus value={sq} onChange={(e) => setSq(e.target.value)} placeholder="Search any investor by name, firm or email domain…" aria-label="Search all investors" className="w-[420px] max-w-full rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />}
         <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHideContacted(e.target.checked)} /> Hide already contacted</label>
         <div className="relative" data-cols-menu>
           <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{cols.length}/{COLS.length}</span></button>
@@ -210,11 +237,12 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
             </div>
           ) : null}
         </div>
-        <span className="ml-auto text-[12px] text-slate-600">{loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
+        <span className="ml-auto text-[12px] text-slate-600">{mode === "search" ? (sq.trim().length < 2 ? "Type at least 2 letters" : searching ? "Searching…" : `${rows.length} found${found.length >= 50 ? " (first 50)" : ""}`) : loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
       </div>
 
       {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales Hub › Settings, then reload.</p> : null}
-      {noSector ? <p className="mb-3 text-[12.5px] text-slate-500">Add at least one Sector under Filters to see proposals.</p> : null}
+      {mode === "match" && noSector ? <p className="mb-3 text-[12.5px] text-slate-500">Add at least one Sector under Filters to see proposals{data.project.company_id ? "" : ". This project has no iCapOS company and the founder's Odoo questionnaire names no industry, so there was nothing to start from"}. Or use Search all investors.</p> : null}
+      {mode === "match" && !noSector && (data.defaults?.from === "founder_profile" || data.defaults?.from === "both") ? <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-900">Filters start from the founder&rsquo;s Odoo questionnaire (industries, capital sought, revenue, stage and investor types). Change them under Filters.</p> : null}
       {contacted ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"><b>{contacted} of these investors were already worked for {data.project.founder_name ?? data.project.title}</b> on another of the founder&rsquo;s projects. They are flagged in the Outreach column; click a status to open that match.</p> : null}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -229,7 +257,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
               g.label ? <tr key={`g:${g.label}`} className="bg-slate-50/70"><td colSpan={cols.length + 2} className="px-3 py-1.5 text-[11.5px] font-semibold text-slate-700">{g.label} <span className="font-normal text-slate-400">({g.rows.length})</span></td></tr> : null,
               ...g.rows.map((r) => (
                 <tr key={r.contactId} className={picked.has(r.contactId) ? "bg-indigo-50/40" : r.founderOutreach ? "bg-amber-50/40 hover:bg-amber-50" : "hover:bg-slate-50"}>
-                  <td className="px-3 py-2"><input type="checkbox" checked={picked.has(r.contactId)} onChange={(e) => setPicked((p) => { const n = new Set(p); if (e.target.checked) n.add(r.contactId); else n.delete(r.contactId); return n; })} aria-label={`Select ${r.name ?? r.firm}`} /></td>
+                  <td className="px-3 py-2"><input type="checkbox" disabled={r.onProject} title={r.onProject ? "Already on this project" : undefined} checked={picked.has(r.contactId)} onChange={(e) => setPicked((p) => { const n = new Set(p); if (e.target.checked) n.add(r.contactId); else n.delete(r.contactId); return n; })} aria-label={`Select ${r.name ?? r.firm}`} /></td>
                   <td className="py-2 pr-2 font-medium text-slate-900">
                     <button type="button" onClick={() => setProfile(r)} className="text-left hover:text-indigo-700 hover:underline">{r.name ?? r.firm ?? "—"}</button>
                     {r.founderOutreach ? <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white" title="Already worked for this founder">!</span> : null}
@@ -238,7 +266,8 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
                 </tr>
               )),
             ])}
-            {rows.length === 0 && !noSector ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{loading ? "Scoring…" : hideContacted && contacted ? "Every proposal here was already worked for this founder. Untick “Hide already contacted” to see them." : "No proposals for these filters — widen the sector or drop the tier / source filter."}</td></tr> : null}
+            {mode === "search" && rows.length === 0 ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{sq.trim().length < 2 ? "Search by an investor's name, firm or email domain." : searching ? "Searching…" : "No investors match that search."}</td></tr> : null}
+            {mode === "match" && rows.length === 0 && !noSector ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{loading ? "Scoring…" : hideContacted && contacted ? "Every proposal here was already worked for this founder. Untick “Hide already contacted” to see them." : "No proposals for these filters — widen the sector or drop the tier / source filter."}</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -285,9 +314,9 @@ function OutreachPill({ o }: { o: Outreach | null }) {
 
 function cell(k: ColKey, r: Row) {
   switch (k) {
-    case "outreach": return <OutreachPill o={r.founderOutreach} />;
+    case "outreach": return r.onProject ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">On this project</span> : <OutreachPill o={r.founderOutreach} />;
     case "firm": return r.firm || "—";
-    case "fit": return <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[r.tier]}`}>{r.fit}% · {r.tier}</span>;
+    case "fit": return r.fit < 0 ? <span className="text-slate-400">not scored</span> : <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[r.tier]}`}>{r.fit}% · {r.tier}</span>;
     case "why": return r.summary;
     case "sectors": return r.sectors.length ? r.sectors.join(", ") : "—";
     case "types": return r.types.length ? r.types.join(", ") : "—";
@@ -338,7 +367,7 @@ function InvestorPanel({ row, onClose, picked, onPick }: { row: Row; onClose: ()
           <section>
             <h4 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Fit for this project</h4>
             <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5">
-              <dt className="text-slate-500">Fit</dt><dd><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[row.tier]}`}>{row.fit}% · {row.tier}</span></dd>
+              <dt className="text-slate-500">Fit</dt><dd>{row.fit < 0 ? <span className="text-slate-500">Not scored: found by search</span> : <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[row.tier]}`}>{row.fit}% · {row.tier}</span>}</dd>
               <dt className="text-slate-500">Why</dt><dd className="text-slate-700">{row.summary || "—"}</dd>
               <dt className="text-slate-500">Sectors</dt><dd className="text-slate-700">{row.sectors.join(", ") || "—"}</dd>
               <dt className="text-slate-500">Investor type</dt><dd className="text-slate-700">{row.types.join(", ") || "—"}</dd>

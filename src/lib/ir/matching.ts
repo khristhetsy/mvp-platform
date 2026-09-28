@@ -9,6 +9,7 @@ import { offerableSectors, rankScorables } from "@/lib/fit/match-investors";
 import { scorablesForIndustries } from "@/lib/fit/match-index";
 import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, Q5_INVESTOR_TYPE, type FitAnswers } from "@/lib/fit/options";
 import { IR_STAGES, type IrStage } from "@/lib/ir/types";
+import { fitDefaultsFromProfile, founderOdooProfile } from "@/lib/ir/founder-profile";
 
 export type QueueFilters = FitAnswers & { source: "any" | "verified" | "self_reported"; tier: "any" | "high" | "medium" | "low" };
 /** The furthest this investor has got with the same founder on another of the founder's projects (e.g. an earlier month). */
@@ -21,9 +22,27 @@ export type QueueRow = {
 
 export const fitTier = (fit: number): "high" | "medium" | "low" => (fit >= 70 ? "high" : fit >= 50 ? "medium" : "low");
 
-/** Sensible defaults from the founder company: its industry, raise band, revenue stage. */
-export async function projectDefaults(companyId: string | null): Promise<Partial<FitAnswers>> {
-  if (!companyId) return {};
+/**
+ * Sensible defaults: the founder company's industry, raise band and revenue stage, then
+ * anything still missing from the founder's Odoo questionnaire (industries, capital sought,
+ * revenue, operating stage, investor types). Odoo-imported projects have no company, so
+ * without the questionnaire the queue had no sector and proposed nothing.
+ */
+export async function projectDefaults(companyId: string | null, founderContactId: string | null = null): Promise<Partial<FitAnswers> & { from?: "company" | "founder_profile" | "both" }> {
+  const out: Partial<FitAnswers> & { from?: "company" | "founder_profile" | "both" } = companyId ? await companyDefaults(companyId) : {};
+  if (Object.keys(out).length) out.from = "company";
+  if (!founderContactId) return out;
+  const { data } = await db().from("crm_contacts").select("raw").eq("id", founderContactId).maybeSingle();
+  const fromProfile = fitDefaultsFromProfile(founderOdooProfile((data as { raw: Record<string, unknown> | null } | null)?.raw), await offerableSectors().catch(() => undefined));
+  let used = false;
+  for (const k of ["industry", "raise", "revenue", "stage", "investorType"] as const) {
+    if (!out[k]?.length && fromProfile[k]?.length) { out[k] = fromProfile[k]; used = true; }
+  }
+  if (used) out.from = out.from ? "both" : "founder_profile";
+  return out;
+}
+
+async function companyDefaults(companyId: string): Promise<Partial<FitAnswers>> {
   const { data } = await db().from("companies").select("industry, funding_amount, revenue_stage").eq("id", companyId).maybeSingle();
   const c = data as { industry: string | null; funding_amount: number | null; revenue_stage: string | null } | null;
   if (!c) return {};

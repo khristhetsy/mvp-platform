@@ -56,16 +56,62 @@ export function BlockersPanel({ blockers, dealTitle, onChange, busy }: { blocker
 
 export function EntrepreneurTab({ e }: { e: EntrepreneurProfile | null }) {
   if (!e) return <p className="text-[12.5px] text-slate-400">No founder company linked to this project.</p>;
+  const o = e.odoo;
   return (
-    <div className="grid gap-x-8 gap-y-0 text-[12.5px] sm:grid-cols-2">
-      <Row label="Company" value={e.company} /><Row label="Founder" value={e.founder} />
-      <Row label="Membership type" value={e.membershipType} /><Row label="Member portal plan" value={e.portalPlan} />
-      <Row label="Raise" value={e.raise} /><Row label="Stage" value={e.stage} />
-      <Row label="Industry" value={e.industry} />
-      <div className="sm:col-span-2 mt-1 flex gap-4">
-        {e.companyId ? <Link href={`/admin/companies/${e.companyId}`} className="text-indigo-700 hover:underline">Open company →</Link> : null}
-        {e.founderContactId ? <Link href={`/admin/sales/contacts/${e.founderContactId}`} className="text-indigo-700 hover:underline">Founder in Sales Hub →</Link> : null}
+    <div className="text-[12.5px]">
+      <div className="grid gap-x-8 gap-y-0 sm:grid-cols-2">
+        <Row label="Company" value={e.company} /><Row label="Founder" value={e.founder} />
+        <Row label="Membership type" value={e.membershipType} /><Row label="Member portal plan" value={e.portalPlan} />
+        <Row label="Raise" value={e.raise} /><Row label="Stage" value={e.stage} />
+        <Row label="Industry" value={e.industry} />
+        {e.website ? <div className="flex gap-3 py-1"><span className="w-36 shrink-0 text-slate-500">Website</span><a href={e.website.startsWith("http") ? e.website : `https://${e.website}`} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-indigo-700 hover:underline">{e.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}</a></div> : null}
       </div>
+      {o ? (
+        <>
+          {o.sections.map((sec) => (
+            <section key={sec.title} className="mt-4">
+              <h4 className="mb-1 border-b border-slate-200 pb-1.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-800">{sec.title}</h4>
+              <div className={sec.title === "Entrepreneur" ? "grid gap-x-8 sm:grid-cols-2" : "grid gap-x-8 sm:grid-cols-2"}>
+                {sec.rows.filter((r) => !r.long).map((r) => <OdooRow key={r.label} label={r.label} value={r.value} />)}
+              </div>
+              {sec.rows.filter((r) => r.long).map((r) => <LongRow key={r.label} label={r.label} value={typeof r.value === "string" ? r.value : Array.isArray(r.value) ? r.value.join("\n") : null} />)}
+            </section>
+          ))}
+          <p className="mt-3 text-[11.5px] text-slate-400">
+            {o.hasQuestionnaire ? "From the founder's Odoo contact" : "The founder hasn't filled in the Odoo entrepreneur questionnaire"}{e.syncedAt ? `, synced ${new Date(e.syncedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}.
+            {e.founderContactId ? <> Edit on the <Link href={`/admin/sales/contacts/${e.founderContactId}`} className="text-indigo-700 hover:underline">Sales Hub contact</Link>.</> : null}
+          </p>
+        </>
+      ) : null}
+      <div className="mt-2 flex gap-4">
+        {e.companyId ? <Link href={`/admin/companies/${e.companyId}`} className="text-indigo-700 hover:underline">Open company →</Link> : null}
+        {e.founderContactId && !o ? <Link href={`/admin/sales/contacts/${e.founderContactId}`} className="text-indigo-700 hover:underline">Founder in Sales Hub →</Link> : null}
+      </div>
+    </div>
+  );
+}
+
+function OdooRow({ label, value }: { label: string; value: string | string[] | null }) {
+  const list = Array.isArray(value) ? value : null;
+  return (
+    <div className="grid grid-cols-[minmax(0,190px)_1fr] gap-3 py-1.5">
+      <span className="text-slate-600">{label}</span>
+      {list ? <span className="flex min-w-0 flex-wrap gap-1">{list.map((v) => <span key={v} className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11.5px] text-indigo-700">{v}</span>)}</span>
+        : <span className={`min-w-0 break-words ${value ? "text-slate-800" : "text-slate-400"}`}>{value ?? "—"}</span>}
+    </div>
+  );
+}
+
+function LongRow({ label, value }: { label: string; value: string | null }) {
+  const [all, setAll] = useState(false);
+  const long = (value ?? "").length > 320;
+  return (
+    <div className="grid grid-cols-[minmax(0,190px)_1fr] gap-3 py-1.5">
+      <span className="text-slate-600">{label}</span>
+      <span className={`min-w-0 whitespace-pre-line ${value ? "text-slate-800" : "text-slate-400"}`}>
+        {value ? (all || !long ? value : `${value.slice(0, 320).trimEnd()}…`) : "—"}
+        {long ? <button type="button" onClick={() => setAll((a) => !a)} className="ml-2 text-[12px] text-indigo-700 hover:underline">{all ? "Show less" : "Show all"}</button> : null}
+      </span>
     </div>
   );
 }

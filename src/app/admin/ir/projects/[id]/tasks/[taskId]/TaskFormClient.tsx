@@ -12,6 +12,7 @@ import { formatRange } from "@/lib/ir/milestones";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../../../_shared/RecordPanels";
+import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 
 type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
 type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
@@ -19,11 +20,37 @@ type Tab = "agent" | "subtasks" | "blocked" | "extra" | "founder" | "matching" |
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none";
 const STAGE_LABEL: Record<IrTask["status"], string> = { new: "New", in_progress: "In progress", done: "Done" };
+/** Matching tab columns (Odoo's contact columns first). Name is always shown; the choice is remembered in this browser. */
+type MatchColKey = "firm" | "membership" | "phone" | "email" | "activities" | "country" | "stage" | "fit" | "source" | "assignee";
+const MATCH_COLS: Array<{ key: MatchColKey; label: string; on: boolean }> = [
+  { key: "firm", label: "Company name", on: true }, { key: "membership", label: "Membership", on: true }, { key: "phone", label: "Phone", on: true },
+  { key: "email", label: "Email", on: true }, { key: "activities", label: "Activities", on: true }, { key: "country", label: "Country", on: true },
+  { key: "stage", label: "Stage", on: false }, { key: "fit", label: "Fit tier", on: false }, { key: "source", label: "Data source", on: false }, { key: "assignee", label: "Assignee", on: false },
+];
+const MATCH_DEFAULT = MATCH_COLS.filter((c) => c.on).map((c) => c.key);
+const MATCH_COLS_KEY = "ir.task.matching.columns";
 
 export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = null }: { taskId: string; meId: string; initialTab: string | null; added: number; sequenced?: number | null }) {
   const [now] = useState(() => Date.now());
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mcols, setMcols] = useState<MatchColKey[]>(MATCH_DEFAULT);
+  const [colsOpen, setColsOpen] = useState(false);
+  const [contact, setContact] = useState<{ contactId: string; matchId: string } | null>(null);
+  useEffect(() => {
+    let saved: MatchColKey[] | null = null;
+    try { const v = JSON.parse(window.localStorage.getItem(MATCH_COLS_KEY) ?? "null"); if (Array.isArray(v)) saved = v.filter((k): k is MatchColKey => MATCH_COLS.some((c) => c.key === k)); } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the column choice after mount (localStorage isn't available during SSR)
+    if (saved) setMcols(saved);
+  }, []);
+  useEffect(() => {
+    if (!colsOpen) return;
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest("[data-cols-menu]")) setColsOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setColsOpen(false); };
+    document.addEventListener("mousedown", close); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [colsOpen]);
+  function setMatchCols(next: MatchColKey[]) { setMcols(next); try { window.localStorage.setItem(MATCH_COLS_KEY, JSON.stringify(next)); } catch { /* ignore */ } }
   const [tab, setTab] = useState<Tab>((["agent", "subtasks", "blocked", "extra", "founder", "matching", "meetings"].includes(initialTab ?? "") ? initialTab : "agent") as Tab);
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
@@ -151,30 +178,53 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                 <p className="text-[12px] text-slate-500">Investors matched in this week. The queue opens in this week&rsquo;s context so new matches land here.</p>
                 <Link href={`${base}/${t.id}/matching`} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Add investors from matching queue</Link>
               </div>
-              <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1.5 pr-2 font-medium">Name</th><th className="py-1.5 pr-2 font-medium">Company name</th><th className="py-1.5 pr-2 font-medium">Membership</th><th className="py-1.5 pr-2 font-medium">Phone</th><th className="py-1.5 pr-2 font-medium">Email</th><th className="py-1.5 pr-2 font-medium">Activities</th><th className="py-1.5 pr-2 font-medium">Country</th><th className="py-1.5 font-medium"></th></tr></thead>
+              <div className="mb-2 flex justify-end">
+                <div className="relative" data-cols-menu>
+                  <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{mcols.length}/{MATCH_COLS.length}</span></button>
+                  {colsOpen ? (
+                    <div role="menu" className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                      <p className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Show columns</p>
+                      <label className="flex items-center gap-2 px-2 py-1.5 text-[12.5px] text-slate-400"><input type="checkbox" checked disabled /> Name <span className="ml-auto text-[10.5px]">Always on</span></label>
+                      {MATCH_COLS.map((c) => <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50"><input type="checkbox" checked={mcols.includes(c.key)} onChange={(e) => setMatchCols(e.target.checked ? MATCH_COLS.filter((x) => x.key === c.key || mcols.includes(x.key)).map((x) => x.key) : mcols.filter((k) => k !== c.key))} /> {c.label}</label>)}
+                      <div className="mt-1 flex justify-between border-t border-slate-100 px-2 pt-2 text-[12px]"><button type="button" onClick={() => setMatchCols(MATCH_DEFAULT)} className="text-indigo-700 hover:underline">Reset to default</button><button type="button" onClick={() => setMatchCols(MATCH_COLS.map((c) => c.key))} className="text-indigo-700 hover:underline">Show all</button></div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+              <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1.5 pr-2 font-medium">Name</th>{mcols.map((k) => <th key={k} className="py-1.5 pr-2 font-medium">{MATCH_COLS.find((c) => c.key === k)?.label}</th>)}<th className="py-1.5 font-medium"></th></tr></thead>
                 <tbody className="divide-y divide-slate-100">{data.matches.map((m) => {
                   const c = data.contacts[m.investor_contact_id];
                   const nx = open.find((a) => a.match_id === m.id);
                   const last = done.find((a) => a.match_id === m.id);
                   const late = nx?.due_at ? nx.due_at < new Date(now).toISOString() : false;
+                  const cellOf = (k: MatchColKey) => {
+                    switch (k) {
+                      case "firm": return m.investor_firm ?? "—";
+                      case "membership": return c?.membership ?? "Investor";
+                      case "phone": return c?.phone ?? "—";
+                      case "email": return <span className="block max-w-[220px] truncate" title={c?.email ?? ""}>{c?.email ?? "—"}</span>;
+                      case "activities": return nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
+                        : last ? <span className="inline-flex items-center gap-1 text-emerald-700"><i className="ti ti-check" aria-hidden="true" />{last.subject}{last.done_at ? <span className="text-slate-400"> · {fmt(last.done_at)}</span> : null}</span>
+                        : <span className="text-slate-400">{IR_STAGE_LABEL[m.stage]}</span>;
+                      case "country": return c?.country ?? "—";
+                      case "stage": return <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">{IR_STAGE_LABEL[m.stage]}</span>;
+                      case "fit": return m.fit_tier ? `${m.fit_tier[0].toUpperCase()}${m.fit_tier.slice(1)}` : "—";
+                      case "source": return m.data_source === "verified" ? "Verified" : m.data_source === "self_reported" ? "Self-reported" : "Unverified";
+                      case "assignee": return m.assignee_name ?? "—";
+                    }
+                  };
                   return (
                     <tr key={m.id} className="hover:bg-slate-50">
-                      <td className="py-2 pr-2"><Link href={`/admin/ir/matches/${m.id}`} className="font-medium text-slate-900 hover:text-indigo-700">{m.investor_name ?? "—"}</Link></td>
-                      <td className="py-2 pr-2 text-slate-700">{m.investor_firm ?? "—"}</td>
-                      <td className="py-2 pr-2 text-slate-600">{c?.membership ?? "Investor"}</td>
-                      <td className="py-2 pr-2 text-slate-600">{c?.phone ?? "—"}</td>
-                      <td className="max-w-[200px] truncate py-2 pr-2 text-slate-600" title={c?.email ?? ""}>{c?.email ?? "—"}</td>
-                      <td className="py-2 pr-2">
-                        {nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
-                          : last ? <span className="inline-flex items-center gap-1 text-emerald-700"><i className="ti ti-check" aria-hidden="true" />{last.subject}{last.done_at ? <span className="text-slate-400"> · {fmt(last.done_at)}</span> : null}</span>
-                          : <span className="text-slate-400">{IR_STAGE_LABEL[m.stage]}</span>}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-600">{c?.country ?? "—"}</td>
+                      <td className="whitespace-nowrap py-2 pr-2"><button type="button" onClick={() => setContact({ contactId: m.investor_contact_id, matchId: m.id })} className="text-left font-medium text-slate-900 hover:text-indigo-700 hover:underline">{m.investor_name ?? m.investor_firm ?? "—"}</button></td>
+                      {mcols.map((k) => <td key={k} className="whitespace-nowrap py-2 pr-2 text-slate-600">{cellOf(k)}</td>)}
                       <td className="py-2 text-right"><button type="button" disabled={busy} onClick={() => removeMatch(m)} aria-label={`Remove ${m.investor_name ?? "investor"}`} className="text-slate-400 hover:text-rose-600">✕</button></td>
                     </tr>
                   ); })}
-                  <tr><td colSpan={8} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
+                  <tr><td colSpan={mcols.length + 2} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
                 </tbody></table>
+              </div>
+              {contact ? <InvestorContactDialog contactId={contact.contactId} matchId={contact.matchId} onClose={() => setContact(null)} /> : null}
             </div>
           ) : null}
           {tab === "blocked" ? <BlockersPanel blockers={data.task.blockers ?? []} dealTitle={data.project.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}

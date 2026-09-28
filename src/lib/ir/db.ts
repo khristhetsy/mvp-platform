@@ -8,6 +8,7 @@ import { generateMilestones } from "@/lib/ir/milestones";
 import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
 import type { GoalMetric, PeriodKind } from "@/lib/ir/metrics";
 import { INTRO_DUE_DAYS, INTRO_SUBJECT, type IrActivity, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrStage, type IrTask, type StaffOption } from "@/lib/ir/types";
+import { founderOdooProfile, type FounderOdooProfile } from "@/lib/ir/founder-profile";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function db(): any { return createServiceRoleClient(); }
@@ -357,9 +358,10 @@ export async function founderEmail(project: { founder_contact_id: string | null;
 }
 
 // ── Entrepreneur profile (Share Project + Task form tab) ────────────────────
-export type EntrepreneurProfile = { company: string; founder: string | null; membershipType: string | null; portalPlan: string | null; raise: string | null; stage: string | null; industry: string | null; companyId: string | null; founderContactId: string | null };
+/** `odoo` is the founder's Odoo entrepreneur questionnaire (null when there is no founder contact). */
+export type EntrepreneurProfile = { company: string; founder: string | null; membershipType: string | null; portalPlan: string | null; raise: string | null; stage: string | null; industry: string | null; companyId: string | null; founderContactId: string | null; website?: string | null; odoo?: FounderOdooProfile | null; syncedAt?: string | null };
 export async function entrepreneurProfile(project: IrProject): Promise<EntrepreneurProfile> {
-  const out: EntrepreneurProfile = { company: project.title, founder: project.founder_name, membershipType: null, portalPlan: null, raise: null, stage: null, industry: null, companyId: project.company_id, founderContactId: project.founder_contact_id };
+  const out: EntrepreneurProfile = { company: project.title, founder: project.founder_name, membershipType: null, portalPlan: null, raise: null, stage: null, industry: null, companyId: project.company_id, founderContactId: project.founder_contact_id, website: null, odoo: null, syncedAt: null };
   if (project.company_id) {
     const { data } = await db().from("companies").select("company_name, founder_id, industry, funding_amount, revenue_stage").eq("id", project.company_id).maybeSingle();
     const c = data as { company_name: string; founder_id: string | null; industry: string | null; funding_amount: number | null; revenue_stage: string | null } | null;
@@ -374,14 +376,22 @@ export async function entrepreneurProfile(project: IrProject): Promise<Entrepren
     }
   }
   if (project.founder_contact_id) {
-    const { data } = await db().from("crm_contacts").select("profile, company").eq("id", project.founder_contact_id).maybeSingle();
-    const c = data as { profile: Record<string, unknown> | null; company: string | null } | null;
+    const { data } = await db().from("crm_contacts").select("profile, company, raw, website, synced_at").eq("id", project.founder_contact_id).maybeSingle();
+    const c = data as { profile: Record<string, unknown> | null; company: string | null; raw: Record<string, unknown> | null; website: string | null; synced_at: string | null } | null;
+    const odoo = founderOdooProfile(c?.raw);
+    out.odoo = odoo; out.syncedAt = c?.synced_at ?? null; out.website = c?.website ?? odoo?.website ?? null;
+    if (!project.company_id && (odoo?.companyName || c?.company)) out.company = odoo?.companyName ?? c?.company ?? out.company;
     const p = c?.profile ?? {};
     out.membershipType = (p.membershipType as string | undefined) ?? (p.membership_type as string | undefined) ?? null;
     out.portalPlan = out.portalPlan ?? ((p.plan as string | undefined) ?? null);
     if (!out.raise && typeof p.raise === "string") out.raise = p.raise;
     if (!out.stage) { const st = p.operatingStages ?? p.fundingStages; out.stage = Array.isArray(st) ? (st as string[]).join(", ") : typeof st === "string" ? st : null; }
     if (!out.industry) { const ind = p.industries; out.industry = Array.isArray(ind) ? (ind as string[]).join(", ") : null; }
+    // Imported founders carry these only in the Odoo questionnaire.
+    out.membershipType = out.membershipType ?? odoo?.membership ?? null;
+    if (!out.raise && odoo?.seekingAmount.length) out.raise = odoo.seekingAmount.join(", ");
+    if (!out.stage && odoo?.operatingStage.length) out.stage = odoo.operatingStage.join(", ");
+    if (!out.industry && odoo?.industries.length) out.industry = odoo.industries.join(", ");
   }
   return out;
 }
