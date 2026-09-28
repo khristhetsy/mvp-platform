@@ -16,12 +16,19 @@
  * Field, an undated entry taking the note's own date; a completed Odoo activity (Call,
  * Meeting, Email…) becomes one entry of that type; an email on the task becomes one email.
  * System messages (stage changes, "Task created") classify as notes and are skipped.
+ *
+ * Third source: each investor's own contact chatter (res.partner). Staff log calls, emails
+ * and completed activities on the investor, naming the founder or company ("Doyle Organics",
+ * "Holo MD – call no answer"). A message counts for this project only when it names the
+ * founder, a co-founder or the company; it lands on that investor's record, on the task the
+ * investor was on at that date. Open (not yet done) Odoo activities are counted, not imported.
  */
 import { db, updateMatch } from "@/lib/ir/db";
 import { discover, inferStage, odooTasks, taskEntries, type OdooTaskLite } from "@/lib/ir/odoo-import";
 import { attributeEntries, classifyEntry, parseAgentField, parseTag, stripHtml, type ParsedEntry } from "@/lib/ir/odoo-parse";
 import { executeKw } from "@/lib/crm-connectors/odoo/client";
 import { IR_STAGES, type IrStage } from "@/lib/ir/types";
+import { founderOdooProfile } from "@/lib/ir/founder-profile";
 
 export type ResyncActivity = { taskId: string; matchId: string | null; type: string; subject: string; outcome: string; date: string; assigneeId: string | null };
 export type ResyncCounts = { email: number; call: number; voicemail: number; meeting: number; term_sheet: number; document: number };
@@ -29,6 +36,7 @@ export type ResyncResult = {
   projectId: string; dryRun: boolean;
   odooTasks: number; tasksWithNotes: number; entries: number; chatterMessages: number; chatterEntries: number;
   toAdd: ResyncCounts & { total: number; onInvestor: number; onTask: number };
+  partnerMessages: number; partnerEntries: number; openOdooActivities: number; keywords: string[];
   alreadyPresent: number; skippedUndated: number; skippedNotes: number; tasksNotImported: number;
   stagesAdvanced: number; sample: Array<{ date: string; type: string; outcome: string; investor: string | null }>;
 };
@@ -60,14 +68,67 @@ export function messageEntries(msgs: OdooMessage[], tags: Array<{ name: string }
   return out;
 }
 
+
+const GENERIC = new Set(["inc", "llc", "ltd", "corp", "group", "capital", "partners", "holdings", "company", "ventures", "global", "the", "and", "design", "business", "month", "week", "project"]);
+const lc = (s: string) => s.toLowerCase().replace(/[^a-z0-9& ]+/g, " ").replace(/\s+/g, " ").trim();
+
+/** Words that identify this founder in free text: every full name / company given, plus each person's surname. */
+export function founderKeywords(names: Array<string | null | undefined>): string[] {
+  const out = new Set<string>();
+  for (const raw of names) {
+    if (!raw) continue;
+    for (const part of raw.split(/\s*(?:\/|&|,|\band\b|\+)\s*/i)) {
+      const p = lc(part.replace(/\b(\d+(st|nd|rd|th)?[- ]?month|month[- ]?\d+)\b/gi, "").replace(/-/g, " "));
+      if (p.length >= 4 && !GENERIC.has(p)) out.add(p);
+      const words = p.split(" ").filter(Boolean);
+      const last = words[words.length - 1];
+      if (words.length >= 2 && last && last.length >= 4 && !GENERIC.has(last)) out.add(last);
+    }
+  }
+  return [...out];
+}
+
+/** Keywords found in the text (whole words), ignoring any that are part of the investor's own name. */
+export function mentions(text: string, keywords: string[], investorName = ""): boolean {
+  const t = ` ${lc(text)} `; const own = ` ${lc(investorName)} `;
+  return keywords.some((k) => !own.includes(` ${k} `) && t.includes(` ${k} `));
+}
+
+/**
+ * Entries from the investors' own chatter that name this founder, keyed by the Odoo task
+ * they belong to: the latest task (holding that investor) created on or before the message,
+ * else the earliest such task. `msgs[].res_id` is the investor's res.partner id.
+ */
+export function partnerEntries(msgs: Array<OdooMessage & { subject?: string }>, tasks: Array<Pick<OdooTaskLite, "id" | "createDate" | "tags">>, keywords: string[]) {
+  const byPartner = new Map<number, Array<{ id: number; createDate: string; key: string }>>();
+  for (const t of tasks) for (const g of t.tags) byPartner.set(g.id, [...(byPartner.get(g.id) ?? []), { id: t.id, createDate: t.createDate, key: g.name }]);
+  for (const l of byPartner.values()) l.sort((a, b) => a.createDate.localeCompare(b.createDate));
+  const out = new Map<number, Array<ParsedEntry & { investorKey: string | null }>>();
+  let matched = 0;
+  for (const m of msgs) {
+    const holders = byPartner.get(m.res_id); if (!holders?.length) continue;
+    const text = `${m.subject ?? ""} ${m.activityType ?? ""} ${stripHtml(m.body ?? "")}`;
+    if (!mentions(text, keywords, parseTag(holders[0].key).name ?? "")) continue;
+    matched++;
+    const day = m.date ? m.date.slice(0, 10) : "";
+    const owner = [...holders].reverse().find((h) => h.createDate.slice(0, 10) <= day) ?? holders[0];
+    let es = messageEntries([{ ...m, body: m.subject && !m.activityType ? `${m.subject}\n${m.body ?? ""}` : m.body }], [{ name: owner.key }])
+      .map((e) => ({ ...e, investorKey: owner.key }));
+    // A note covering several founders keeps only the lines that name this one.
+    if (!m.activityType && es.length > 1) { const own = es.filter((e) => mentions(e.text, keywords)); if (own.length) es = own; }
+    out.set(owner.id, [...(out.get(owner.id) ?? []), ...es]);
+  }
+  return { byTask: out, matched };
+}
+
 type IrTask = { id: string; odoo_task_id: number; assignee_id: string | null };
 type IrMatch = { id: string; odoo_tag: string | null; stage: IrStage };
 
 /** Pure: what the pass would add, given Odoo tasks and what the IR Hub already holds. */
-export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agentText">>, irTasks: IrTask[], matches: IrMatch[], existingKeys: Set<string>, messages: OdooMessage[] = []) {
+export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agentText">>, irTasks: IrTask[], matches: IrMatch[], existingKeys: Set<string>, messages: OdooMessage[] = [], fromPartners: Map<number, Array<ParsedEntry & { investorKey: string | null }>> = new Map()) {
   const msgsByTask = new Map<number, OdooMessage[]>();
   for (const m of messages) msgsByTask.set(m.res_id, [...(msgsByTask.get(m.res_id) ?? []), m]);
-  let chatterEntries = 0;
+  let chatterEntries = 0, partnerCount = 0;
   const byOdoo = new Map(irTasks.map((t) => [t.odoo_task_id, t]));
   const byTag = new Map(matches.filter((m) => m.odoo_tag).map((m) => [m.odoo_tag as string, m]));
   const seen = new Set(existingKeys);
@@ -77,7 +138,9 @@ export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agen
   for (const t of tasks) {
     const fromChatter = messageEntries(msgsByTask.get(t.id) ?? [], t.tags);
     chatterEntries += fromChatter.length;
-    const es = [...taskEntries(t as OdooTaskLite), ...fromChatter];
+    const fromPartner = fromPartners.get(t.id) ?? [];
+    partnerCount += fromPartner.length;
+    const es = [...taskEntries(t as OdooTaskLite), ...fromChatter, ...fromPartner];
     if (es.length) tasksWithNotes++;
     entries += es.length;
     const ir = byOdoo.get(t.id);
@@ -100,12 +163,13 @@ export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agen
     const to = inferStage(es as Parameters<typeof inferStage>[0]);
     if (m.stage !== "passed" && IR_STAGES.indexOf(to) > IR_STAGES.indexOf(m.stage)) stageMoves.push({ matchId: m.id, to });
   }
-  return { add, stageMoves, entries, tasksWithNotes, already, undated, notes, notImported, chatterEntries };
+  return { add, stageMoves, entries, tasksWithNotes, already, undated, notes, notImported, chatterEntries, partnerEntries: partnerCount };
 }
 
 export async function resyncProject(projectId: string, by: string, dryRun = true): Promise<ResyncResult> {
-  const { data: p } = await db().from("ir_projects").select("id, odoo_project_ids").eq("id", projectId).single();
-  const ids = ((p as { odoo_project_ids: number[] | null } | null)?.odoo_project_ids) ?? [];
+  const { data: p } = await db().from("ir_projects").select("id, title, odoo_project_ids, founder_contact_id").eq("id", projectId).single();
+  const proj = p as { title: string; odoo_project_ids: number[] | null; founder_contact_id: string | null } | null;
+  const ids = proj?.odoo_project_ids ?? [];
   if (!ids.length) throw new Error("This project was not imported from Odoo.");
   const d = await discover();
   if (!d.configured) throw new Error("Odoo isn't configured on this environment.");
@@ -122,13 +186,37 @@ export async function resyncProject(projectId: string, by: string, dryRun = true
   const raw = tasks.length ? await executeKw<RawMsg[]>("mail.message", "search_read", [[["model", "=", "project.task"], ["res_id", "in", tasks.map((t) => t.id)], ["message_type", "in", ["comment", "email", "notification"]]]], { fields: ["res_id", "date", "body", "message_type", "mail_activity_type_id"], limit: 20000, order: "date asc" }).catch(() => [] as RawMsg[]) : [];
   const messages: OdooMessage[] = raw.map((m) => ({ res_id: m.res_id, date: m.date, body: m.body || "", message_type: m.message_type, activityType: m.mail_activity_type_id ? m.mail_activity_type_id[1] : null }))
     .filter((m) => m.activityType || m.message_type !== "notification");
-  const plan = planResync(tasks, (tRes.data ?? []) as IrTask[], (mRes.data ?? []) as IrMatch[], existing, messages);
+
+  // Investors' own chatter (res.partner), read-only; only when the task's investor fields are contacts.
+  const partnersAreContacts = d.investorFields.some((f) => f.relation === "res.partner");
+  const partnerIds = partnersAreContacts ? [...new Set(tasks.flatMap((t) => t.tags.map((g) => g.id)))] : [];
+  let keywords: string[] = [];
+  let partnerRaw: Array<RawMsg & { subject: string | false }> = [];
+  let openOdooActivities = 0;
+  if (partnerIds.length) {
+    const fc = proj?.founder_contact_id ? (await db().from("crm_contacts").select("name, company, raw").eq("id", proj.founder_contact_id).maybeSingle()).data as { name: string | null; company: string | null; raw: Record<string, unknown> | null } | null : null;
+    // The founder as Odoo knows them: the customer on the tasks and that customer's company.
+    const custIds = d.hasPartner ? await executeKw<Array<{ partner_id: [number, string] | false }>>("project.task", "read", [tasks.map((t) => t.id), ["partner_id"]]).then((r) => [...new Set(r.map((x) => (x.partner_id ? x.partner_id[0] : 0)).filter(Boolean))]).catch(() => [] as number[]) : [];
+    const cust = custIds.length ? await executeKw<Array<{ name: string; commercial_company_name?: string | false; company_name?: string | false }>>("res.partner", "read", [custIds, ["name", "commercial_company_name", "company_name"]]).catch(() => []) : [];
+    keywords = founderKeywords([proj?.title, fc?.name, fc?.company, fc?.raw ? founderOdooProfile(fc.raw)?.companyName : null, ...cust.flatMap((c) => [c.name, c.commercial_company_name || null, c.company_name || null])]);
+    if (keywords.length) {
+      partnerRaw = await executeKw<Array<RawMsg & { subject: string | false }>>("mail.message", "search_read", [[["model", "=", "res.partner"], ["res_id", "in", partnerIds], ["message_type", "in", ["comment", "email", "notification"]]]], { fields: ["res_id", "date", "body", "message_type", "mail_activity_type_id", "subject"], limit: 50000, order: "date asc" }).catch(() => []);
+      const open = await executeKw<Array<{ summary: string | false; note: string | false; activity_type_id: [number, string] | false; res_id: number }>>("mail.activity", "search_read", [[["res_model", "=", "res.partner"], ["res_id", "in", partnerIds]]], { fields: ["summary", "note", "activity_type_id", "res_id"], limit: 20000 }).catch(() => []);
+      openOdooActivities = open.filter((a) => mentions(`${a.summary || ""} ${stripHtml(a.note || "")}`, keywords)).length;
+    }
+  }
+  const partnerMsgs = partnerRaw.map((m) => ({ res_id: m.res_id, date: m.date, body: m.body || "", subject: m.subject || "", message_type: m.message_type, activityType: m.mail_activity_type_id ? m.mail_activity_type_id[1] : null }))
+    .filter((m) => m.activityType || m.message_type !== "notification");
+  const fromPartners = partnerEntries(partnerMsgs, tasks, keywords);
+
+  const plan = planResync(tasks, (tRes.data ?? []) as IrTask[], (mRes.data ?? []) as IrMatch[], existing, messages, fromPartners.byTask);
 
   const counts: ResyncCounts = { email: 0, call: 0, voicemail: 0, meeting: 0, term_sheet: 0, document: 0 };
   for (const a of plan.add) if (a.type in counts) counts[a.type as keyof ResyncCounts]++;
   const result: ResyncResult = {
     projectId, dryRun, odooTasks: tasks.length, tasksWithNotes: plan.tasksWithNotes, entries: plan.entries, chatterMessages: messages.length, chatterEntries: plan.chatterEntries,
     toAdd: { ...counts, total: plan.add.length, onInvestor: plan.add.filter((a) => a.matchId).length, onTask: plan.add.filter((a) => !a.matchId).length },
+    partnerMessages: fromPartners.matched, partnerEntries: plan.partnerEntries, openOdooActivities, keywords,
     alreadyPresent: plan.already, skippedUndated: plan.undated, skippedNotes: plan.notes, tasksNotImported: plan.notImported,
     stagesAdvanced: plan.stageMoves.length,
     sample: plan.add.slice(0, 12).map((a) => ({ date: a.date, type: a.type, outcome: a.outcome.slice(0, 120), investor: a.investor })),
