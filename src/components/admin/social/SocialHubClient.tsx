@@ -46,6 +46,14 @@ const TAB_LABELS: Record<Tab, string> = {
 };
 
 /** Display label + colors per variant status (parked/scheduled/published…). */
+/** Plain-language note for a post that went live with a side issue (e.g. first comment). */
+function publishedNote(error: string): string {
+  if (/LinkedIn comment 403/.test(error) && /partnerApiSocialActions/.test(error)) {
+    return "Note: the first comment was not posted. The LinkedIn app does not have comment access yet, so new LinkedIn posts carry the comment text in the post itself.";
+  }
+  return `Note: ${error.replace(/^Published — /, "")}`;
+}
+
 function statusMeta(status: string): { label: string; cls: string; dot: string } {
   switch (status) {
     case "published": return { label: "Published", cls: "bg-blue-50 text-blue-700", dot: "#2563EB" };
@@ -737,7 +745,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
                 </div>
                 <p className="mt-1 text-[11.5px] text-slate-500">{q.account_name ?? q.platform ?? "—"}{iso ? ` · ${new Date(iso).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : " · no date"}</p>
-                {q.error ? <p className={`mt-1 text-[11px] ${live ? "text-amber-700" : "text-rose-600"}`}>{live ? `Note: ${q.error.replace(/^Published — /, "")}` : q.error}</p> : null}
+                {q.error ? <p className={`mt-1 text-[11px] ${live ? "text-amber-700" : "text-rose-600"}`}>{live ? publishedNote(q.error) : q.error}</p> : null}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="text-[10.5px] text-slate-400">Event color</span>
                   {["#1A6CE4", "#185FA5", "#0F6E56", "#CA8A04", "#A32D2D"].map((c) => (
