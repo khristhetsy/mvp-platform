@@ -11,9 +11,16 @@ export type Preflight = {
 export function computePreflight(merge: EventMergeData): Preflight {
   const warnings: Preflight["warnings"] = [];
 
-  const noHeadshots = merge.presenters.filter((p) => !p.headshotUrl).length;
-  if (merge.presenters.length && noHeadshots) {
-    warnings.push({ level: "warn", text: `${noHeadshots} presenter${noHeadshots === 1 ? "" : "s"} missing a headshot — initials fallback will be used.` });
+  // Avatar order: headshot, then company logo, then initials.
+  const noHeadshot = merge.presenters.filter((p) => !p.headshotUrl);
+  const logoFallback = noHeadshot.filter((p) => p.companyLogoUrl).length;
+  const initialsFallback = noHeadshot.length - logoFallback;
+  if (merge.presenters.length && noHeadshot.length) {
+    const n = noHeadshot.length;
+    const parts: string[] = [];
+    if (logoFallback) parts.push(`company logo used for ${logoFallback}`);
+    if (initialsFallback) parts.push(`initials used for ${initialsFallback}`);
+    warnings.push({ level: "warn", text: `${n} presenter${n === 1 ? "" : "s"} missing a headshot: ${parts.join(", ")}.` });
   }
 
   const allSponsors = [...merge.sponsorTiers.presenting, ...merge.sponsorTiers.track, ...merge.sponsorTiers.community];

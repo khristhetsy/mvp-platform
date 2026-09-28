@@ -120,6 +120,7 @@ export type PresenterCopy = {
   email: string | null;
   links: string[];
   headshotPath: string | null;
+  companyLogoPath: string | null;
   bio: string | null;
   companySummary: string | null;
   headline: string | null;
@@ -142,6 +143,7 @@ export function copyFrom(p: EventPresenter, opts: CarryOptions): PresenterCopy {
     email: p.email,
     links: p.links ?? [],
     headshotPath: p.headshotPath,
+    companyLogoPath: p.companyLogoPath ?? null,
     bio: opts.keepBio ? p.bio : null,
     companySummary: opts.keepBio ? p.companySummary : null,
     headline: opts.keepHeadline ? p.headline : null,

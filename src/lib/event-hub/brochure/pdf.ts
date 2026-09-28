@@ -29,13 +29,22 @@ const DISCLAIMERS = [
   "Prospective investors should consult their own legal, tax, and financial advisers before making any investment decision.",
 ];
 
+export type PresenterImages = { headshot?: Buffer; logo?: Buffer };
+
 /** Render the booklet to a PDF Buffer. */
 export function renderBrochurePdf(
   merge: EventMergeData,
   pages: BrochurePage[],
   overrides: Record<string, Record<string, string>>,
   size: BrochureSize,
-  opts: { bleed?: boolean; qr?: Buffer; theme?: BrochureTheme; coverImage?: Buffer } = {},
+  opts: {
+    bleed?: boolean;
+    qr?: Buffer;
+    theme?: BrochureTheme;
+    coverImage?: Buffer;
+    /** Per presenter, same order as merge.presenters. PNG or JPEG buffers. */
+    presenterImages?: PresenterImages[];
+  } = {},
 ): Promise<Buffer> {
   const theme = THEMES[opts.theme ?? "navy"];
   const primary = theme.primary;
@@ -53,6 +62,39 @@ export function renderBrochurePdf(
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
   });
+
+  // Presenter avatar, in order: headshot (cropped to the circle), company logo
+  // (contained on white), then initials. doc.y is preserved so layout is unchanged.
+  const drawAvatar = (i: number, initials: string, cx: number, cy: number, r: number, fontSize: number) => {
+    const img = opts.presenterImages?.[i];
+    const keepY = doc.y;
+    let drawn = false;
+    if (img?.headshot) {
+      try {
+        doc.save();
+        doc.circle(cx, cy, r).clip();
+        doc.image(img.headshot, cx - r, cy - r, { cover: [r * 2, r * 2], align: "center", valign: "center" });
+        doc.restore();
+        drawn = true;
+      } catch { doc.restore(); }
+    }
+    if (!drawn && img?.logo) {
+      try {
+        doc.save();
+        doc.circle(cx, cy, r).lineWidth(0.75).fillAndStroke("#ffffff", "#d9e1ec");
+        doc.circle(cx, cy, r).clip();
+        const s = r * 1.4;
+        doc.image(img.logo, cx - s / 2, cy - s / 2, { fit: [s, s], align: "center", valign: "center" });
+        doc.restore();
+        drawn = true;
+      } catch { doc.restore(); }
+    }
+    if (!drawn) {
+      doc.circle(cx, cy, r).fill(primary);
+      doc.fillColor("#fff").font("Helvetica-Bold").fontSize(fontSize).text(initials, cx - r, cy - fontSize * 0.55, { width: r * 2, align: "center" });
+    }
+    doc.y = keepY;
+  };
 
   const ov = (key: string, field: string, fallback: string) => overrides?.[key]?.[field] ?? fallback;
   const included = pages.filter((p) => p.included);
@@ -191,11 +233,10 @@ export function renderBrochurePdf(
 
         if (detailed) {
           // Full-detail stacked entries (avatar + name/meta, bio, company summary).
-          for (const pr of merge.presenters) {
+          for (const [pi, pr] of merge.presenters.entries()) {
             if (doc.y + 130 > oy + th - 40) { footer(); newPage(); cropMarks(); heading(`${presHeading} (cont.)`); }
             const ay = doc.y;
-            doc.circle(ox + MARGIN + 18, ay + 18, 18).fill(primary);
-            doc.fillColor("#fff").font("Helvetica-Bold").fontSize(13).text(pr.initials, ox + MARGIN, ay + 11, { width: 36, align: "center" });
+            drawAvatar(pi, pr.initials, ox + MARGIN + 18, ay + 18, 18, 13);
             doc.fillColor(primary).font("Helvetica-Bold").fontSize(13).text(pr.name, ox + MARGIN + 48, ay + 2, { width: contentW - 48 });
             const meta = [pr.role, pr.company].filter(Boolean).join(" · ");
             if (meta) doc.fillColor(MUTED).font("Helvetica").fontSize(10).text(meta, ox + MARGIN + 48, doc.y, { width: contentW - 48 });
@@ -203,8 +244,22 @@ export function renderBrochurePdf(
             if (pr.bio) doc.fillColor(INK).font("Helvetica").fontSize(11).text(pr.bio, ox + MARGIN, doc.y + 4, { width: contentW });
             if (pr.companySummary) {
               doc.moveDown(0.4);
-              doc.fillColor(MUTED).font("Helvetica-Bold").fontSize(8.5).text("COMPANY", ox + MARGIN, doc.y, { width: contentW, characterSpacing: 0.5 });
-              doc.fillColor(INK).font("Helvetica").fontSize(10.5).text(pr.companySummary, ox + MARGIN, doc.y + 1, { width: contentW });
+              const logo = opts.presenterImages?.[pi]?.logo;
+              const cy0 = doc.y;
+              let indent = 0;
+              if (logo) {
+                try {
+                  doc.save();
+                  doc.roundedRect(ox + MARGIN, cy0, 30, 30, 4).lineWidth(0.75).fillAndStroke("#ffffff", "#d9e1ec");
+                  doc.image(logo, ox + MARGIN + 4, cy0 + 4, { fit: [22, 22], align: "center", valign: "center" });
+                  doc.restore();
+                  indent = 40;
+                } catch { doc.restore(); }
+                doc.y = cy0;
+              }
+              doc.fillColor(MUTED).font("Helvetica-Bold").fontSize(8.5).text("COMPANY", ox + MARGIN + indent, cy0, { width: contentW - indent, characterSpacing: 0.5 });
+              doc.fillColor(INK).font("Helvetica").fontSize(10.5).text(pr.companySummary, ox + MARGIN + indent, doc.y + 1, { width: contentW - indent });
+              if (indent) doc.y = Math.max(doc.y, cy0 + 30);
             }
             doc.moveDown(0.7);
             doc.moveTo(ox + MARGIN, doc.y).lineTo(ox + tw - MARGIN, doc.y).lineWidth(0.5).strokeColor("#e2e8f2").stroke();
@@ -217,10 +272,9 @@ export function renderBrochurePdf(
         const colW = (contentW - 24) / 2;
         let col = 0;
         let rowY = doc.y;
-        for (const pr of merge.presenters) {
+        for (const [pi, pr] of merge.presenters.entries()) {
           const x = ox + MARGIN + col * (colW + 24);
-          doc.circle(x + 20, rowY + 20, 20).fill(primary);
-          doc.fillColor("#fff").font("Helvetica-Bold").fontSize(13).text(pr.initials, x, rowY + 13, { width: 40, align: "center" });
+          drawAvatar(pi, pr.initials, x + 20, rowY + 20, 20, 13);
           doc.fillColor(primary).font("Helvetica-Bold").fontSize(12).text(pr.name, x + 48, rowY + 6, { width: colW - 48 });
           if (pr.role) doc.fillColor("#4a5568").font("Helvetica").fontSize(10).text(pr.role, x + 48, doc.y, { width: colW - 48 });
           if (pr.company) doc.fillColor(MUTED).font("Helvetica").fontSize(9.5).text(pr.company, x + 48, doc.y, { width: colW - 48 });

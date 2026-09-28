@@ -50,6 +50,7 @@ function mapPresenter(r: Row): EventPresenter {
     displayName: String(r.display_name),
     roleLabel: (r.role_label as string | null) ?? null,
     headshotPath: (r.headshot_path as string | null) ?? null,
+    companyLogoPath: (r.company_logo_path as string | null) ?? null,
     headline: (r.headline as string | null) ?? null,
     bio: (r.bio as string | null) ?? null,
     links: Array.isArray(r.links) ? (r.links as string[]) : [],
@@ -180,6 +181,7 @@ export async function createPresenter(
     timezone?: string | null;
     /** Carried over when reusing a presenter — the stored file, not a re-upload. */
     headshotPath?: string | null;
+    companyLogoPath?: string | null;
   },
 ): Promise<EventPresenter> {
   const { data, error } = await raw(supabase)
@@ -195,6 +197,7 @@ export async function createPresenter(
       bio: input.bio ?? null,
       company_summary: input.companySummary ?? null,
       headshot_path: input.headshotPath ?? null,
+      company_logo_path: input.companyLogoPath ?? null,
       links: input.links ?? [],
       email: input.email ?? null,
       meeting_url: input.meetingUrl ?? null,
