@@ -223,6 +223,8 @@ async function sendOnThread(
     text: fullBody,
     replyTo: replyAddress(thread.reply_token),
     fromName: owner.name ?? owner.email ?? undefined,
+    // Send as the person (their own address) when their domain is verified in Resend.
+    fromAddress: owner.email ?? null,
     attachments: resendAttachments,
   });
 

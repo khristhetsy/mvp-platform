@@ -11,6 +11,7 @@
 
 import { recordDelivery } from "@/lib/cron/job-deliveries";
 import { logOutboundEmail, type EmailRole } from "@/lib/email/email-log";
+import { personalFromHeader, verifiedSenderDomains } from "@/lib/email/sender-domains";
 
 const RESEND_API = "https://api.resend.com/emails";
 
@@ -33,6 +34,9 @@ export type EmailPayload = {
   /** Personalize the From display name (e.g. the sender's name) while keeping
    *  the verified platform sending address. */
   fromName?: string;
+  /** Send as this person's own address (with fromName) when its domain is verified
+   *  in Resend. Falls back to the platform address when it isn't. */
+  fromAddress?: string | null;
   /** File attachments — base64 content (Resend format). */
   attachments?: Array<{ filename: string; content: string }>;
   /** Resend tags, echoed back on webhook events (letters, digits, _ and - only). */
@@ -98,6 +102,12 @@ export function resolveFrom(
 /** Env vars for transactional mail, most specific first. */
 export const TRANSACTIONAL_FROM_ENV = ["TRANSACTIONAL_EMAIL_FROM", "EMAIL_FROM"] as const;
 
+/** The From header a send would use: the person's own address when allowed, else the platform one. */
+export async function previewFrom(name: string | null | undefined, email: string | null | undefined): Promise<{ from: string; personal: boolean }> {
+  const personal = personalFromHeader(name, email, await verifiedSenderDomains());
+  return personal ? { from: personal, personal: true } : { from: resolveFrom({ displayName: name }), personal: false };
+}
+
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const result = await sendEmailNow(payload);
   // Inside a scheduled job, the send is recorded for its Sent tab. No-op otherwise.
@@ -127,7 +137,10 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
 async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipped?: boolean; error?: string; providerId?: string | null }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = resolveFrom({ displayName: payload.fromName });
+  const personal = payload.fromAddress
+    ? personalFromHeader(payload.fromName, payload.fromAddress, await verifiedSenderDomains())
+    : null;
+  const from = personal ?? resolveFrom({ displayName: payload.fromName });
 
   if (!apiKey) {
     // Not configured — log in dev, skip silently in prod

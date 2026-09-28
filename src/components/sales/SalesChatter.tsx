@@ -17,7 +17,7 @@ type Activity = {
   editable?: boolean; edited_at?: string | null; deleted_at?: string | null; odoo_synced?: boolean; via?: string | null;
 };
 type Via = "icapos" | "gmail";
-type Senders = { icapos: { from: string }; gmail: { connected: boolean; canSend: boolean; email: string | null } };
+type Senders = { icapos: { from: string; personal: boolean }; gmail: { connected: boolean; canSend: boolean; email: string | null } };
 const VIA_KEY = "icapos.sales.sendVia";
 function readVia(): Via | null { try { const v = window.localStorage.getItem(VIA_KEY); return v === "icapos" || v === "gmail" ? v : null; } catch { return null; } }
 function saveVia(v: Via) { try { window.localStorage.setItem(VIA_KEY, v); } catch { /* storage unavailable */ } }
@@ -318,6 +318,9 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
               <span style={{ color: "var(--muted-foreground)", width: 58, flexShrink: 0 }}>From</span>
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{via === "icapos" ? (senders?.icapos.from ?? "iCapOS") : (senders?.gmail.email ?? "Your Google account")}</span>
             </div>
+            {via === "icapos" && senders && !senders.icapos.personal && (
+              <div style={{ fontSize: 11, color: "#854F0B", paddingLeft: 68 }}>Sending from the iCapOS address with your name. To send from your own address, verify its domain in Resend.</div>
+            )}
             <div style={{ fontSize: 12, display: "flex", gap: 10 }}>
               <span style={{ color: "var(--muted-foreground)", width: 58, flexShrink: 0 }}>Replies</span>
               <span style={{ color: "var(--muted-foreground)" }}>{via === "icapos" ? "Land in your iCapOS inbox" : "Land in your Gmail"}</span>

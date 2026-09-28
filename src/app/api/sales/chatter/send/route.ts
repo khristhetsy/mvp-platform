@@ -3,8 +3,9 @@
  *  GET  → which mailboxes the signed-in person can send from
  *  POST { via: "icapos" | "gmail", to, cc?, subject, body }
  *
- * iCapOS: starts an iCapOS inbox thread (Resend, your name on the platform address,
- * your saved signature), so the contact's replies land in the iCapOS inbox.
+ * iCapOS: starts an iCapOS inbox thread (Resend, sent as you from your own address when
+ * its domain is verified in Resend, else your name on the platform address; your saved
+ * signature), so the contact's replies land in the iCapOS inbox.
  * Gmail: sends from the person's connected Google account, like the Gmail send route.
  * Either way the send is logged on the contact's timeline with a "via" badge.
  */
@@ -15,7 +16,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { sendViaGmail } from "@/lib/integrations/gmail-send";
 import { composeThread } from "@/lib/email/inbox";
-import { parseRecipients, resolveFrom } from "@/lib/email/send-email";
+import { parseRecipients, previewFrom } from "@/lib/email/send-email";
 import { logOutboundEmailActivity } from "@/lib/sales/activity";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export async function GET(): Promise<Response> {
   const { supabase, profile } = auth;
   const google = await getGoogleConnectionStatus(supabase, profile.id);
   return NextResponse.json({
-    icapos: { from: resolveFrom({ displayName: profile.full_name ?? profile.email ?? null }) },
+    icapos: await previewFrom(profile.full_name ?? profile.email ?? null, profile.email),
     gmail: {
       connected: google.connected,
       canSend: google.connected && google.scopes.includes(GMAIL_SEND_SCOPE),
