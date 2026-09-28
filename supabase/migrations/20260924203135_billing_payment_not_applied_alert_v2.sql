@@ -49,4 +49,11 @@ $$;
 
 revoke all on function public.flag_unapplied_payments() from public, anon, authenticated;
 
-select cron.schedule('billing-payment-not-applied', '*/15 * * * *', $$select public.flag_unapplied_payments();$$);
+-- pg_cron is enabled in the hosted project but not on a fresh local database
+-- (CI), so only schedule when the cron schema exists.
+do $do$
+begin
+  if to_regnamespace('cron') is not null then
+    perform cron.schedule('billing-payment-not-applied', '*/15 * * * *', $$select public.flag_unapplied_payments();$$);
+  end if;
+end $do$;
