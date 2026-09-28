@@ -5,7 +5,8 @@
  * tag, SPV tag, footer with task count / assignee / status dot). Card body opens the
  * pipeline; the task count opens the weekly Task board. The ⋮ menu (Odoo style) jumps to
  * Tasks, Milestones, Pipeline, Dashboard, Burndown, Founder report, Share, Duplicate and
- * Settings, sets the card colour, and stars it.
+ * Settings, sets the card colour, and stars it. Edit project opens a panel for the name,
+ * founder, owner, status, SPV, founder visibility and description.
  */
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -29,6 +30,29 @@ export function ProjectsClient({ meId }: { meId: string }) {
   const [status, setStatus] = useState<string>("active");
   const [menu, setMenu] = useState<string | null>(null);
   const [dupBusy, setDupBusy] = useState(false);
+  const [edit, setEdit] = useState<null | { id: string; title: string; founderName: string; ownerId: string; status: string; isSpv: boolean; founderReportVisible: boolean; description: string; range: string }>(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  function openEdit(p: IrProject) {
+    setMenu(null); setEditError(null);
+    setEdit({ id: p.id, title: p.title, founderName: p.founder_name ?? "", ownerId: p.owner_id, status: p.status, isSpv: p.is_spv, founderReportVisible: p.founder_report_visible, description: p.description ?? "", range: `${formatRange(p.start_date, p.end_date)} · ${p.term_months} mo` });
+  }
+  async function saveEdit() {
+    if (!edit) return;
+    if (!edit.title.trim()) { setEditError("The project needs a name."); return; }
+    setSaving(true); setEditError(null);
+    const r = await fetch(`/api/admin/ir/projects/${edit.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: edit.title.trim(), founderName: edit.founderName.trim() || null, ownerId: edit.ownerId, status: edit.status, isSpv: edit.isSpv, founderReportVisible: edit.founderReportVisible, description: edit.description.trim() || null }) });
+    const j = await r.json().catch(() => ({}));
+    setSaving(false);
+    if (!r.ok) { setEditError(j.error ?? "Couldn't save the project."); return; }
+    setEdit(null); void load();
+  }
+  useEffect(() => {
+    if (!edit) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setEdit(null); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [edit]);
   const router = useRouter();
   async function setColor(p: IrProject, color: string | null) {
     setMenu(null);
@@ -100,9 +124,10 @@ export function ProjectsClient({ meId }: { meId: string }) {
             <div key={p.id} className="group relative rounded-xl border border-slate-200 bg-white p-3.5 transition-shadow hover:shadow-md" style={p.color ? { borderLeft: `5px solid ${p.color}` } : undefined}>
               <div className="absolute right-2 top-2" data-project-menu>
                 <button type="button" onClick={() => setMenu(menu === p.id ? null : p.id)} aria-label="Project menu" aria-haspopup="true" aria-expanded={menu === p.id}
-                  className={`rounded-md px-1.5 py-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:opacity-100 ${menu === p.id ? "bg-slate-100 text-slate-700 opacity-100" : "opacity-0 group-hover:opacity-100"}`}><i className="ti ti-dots-vertical" aria-hidden="true" /></button>
+                  title="Project menu" className={`flex h-8 w-8 items-center justify-center rounded-lg border text-[18px] ${menu === p.id ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"}`}><i className="ti ti-dots-vertical" aria-hidden="true" /></button>
                 {menu === p.id ? (
                   <div role="menu" className="absolute right-0 z-20 mt-1 w-80 rounded-xl border border-slate-200 bg-white p-3 text-[12.5px] shadow-lg">
+                    <button role="menuitem" type="button" onClick={() => openEdit(p)} className="mb-2 flex w-full items-center gap-2 rounded-lg bg-indigo-50 px-2.5 py-2 text-left font-semibold text-indigo-800 hover:bg-indigo-100"><i className="ti ti-pencil" aria-hidden="true" /> Edit project</button>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="mb-1 text-[12px] font-semibold text-slate-900">View</p>
@@ -136,7 +161,7 @@ export function ProjectsClient({ meId }: { meId: string }) {
                   </div>
                 ) : null}
               </div>
-              <div className="flex items-start gap-2 pr-6">
+              <div className="flex items-start gap-2 pr-9">
                 <button type="button" onClick={() => star(p)} aria-label={p.starred ? "Unstar" : "Star"} className={`mt-0.5 ${p.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}><i className={`ti ${p.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
                 <Link href={`/admin/ir/projects/${p.id}`} className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-semibold text-slate-900 hover:text-indigo-700">{p.title}</p>
@@ -164,6 +189,31 @@ export function ProjectsClient({ meId }: { meId: string }) {
           );
         })}
       </div>
+      {edit ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 p-6" onMouseDown={(e) => { if (e.target === e.currentTarget) setEdit(null); }}>
+          <form role="dialog" aria-modal="true" aria-labelledby="edit-project-title" onSubmit={(e) => { e.preventDefault(); void saveEdit(); }} className="mt-10 w-full max-w-xl rounded-2xl bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-center">
+              <h2 id="edit-project-title" className="text-[17px] font-semibold text-slate-900">Edit project</h2>
+              <button type="button" onClick={() => setEdit(null)} aria-label="Close" className="ml-auto rounded-md px-2 py-0.5 text-[18px] text-slate-500 hover:bg-slate-100">×</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-[13px]">
+              <label className="col-span-2 flex flex-col gap-1"><span className="font-medium text-slate-700">Project name</span><input autoComplete="off" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} maxLength={160} className="rounded-lg border border-slate-200 px-3 py-2 focus:border-indigo-400 focus:outline-none" /></label>
+              <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Founder</span><input autoComplete="off" value={edit.founderName} onChange={(e) => setEdit({ ...edit, founderName: e.target.value })} maxLength={160} className="rounded-lg border border-slate-200 px-3 py-2 focus:border-indigo-400 focus:outline-none" /></label>
+              <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Owner</span><select value={edit.ownerId} onChange={(e) => setEdit({ ...edit, ownerId: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-3 py-2">{(data?.staff ?? []).some((s) => s.id === edit.ownerId) ? null : <option value={edit.ownerId}>Current owner</option>}{(data?.staff ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+              <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Status</span><select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-3 py-2"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
+              <div className="flex flex-col gap-1"><span className="font-medium text-slate-700">Dates</span><span className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-slate-500">{edit.range}</span></div>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={edit.isSpv} onChange={(e) => setEdit({ ...edit, isSpv: e.target.checked })} /> SPV</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={edit.founderReportVisible} onChange={(e) => setEdit({ ...edit, founderReportVisible: e.target.checked })} /> Founder can see reports</label>
+              <label className="col-span-2 flex flex-col gap-1"><span className="font-medium text-slate-700">Description</span><textarea rows={3} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="What this raise is, and anything the team should know" className="resize-y rounded-lg border border-slate-200 px-3 py-2 focus:border-indigo-400 focus:outline-none" /></label>
+            </div>
+            {editError ? <p role="alert" className="mt-3 text-[12.5px] text-rose-700">{editError}</p> : null}
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setEdit(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="submit" disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{saving ? "Saving…" : "Save changes"}</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -94,7 +94,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   return { id: project.id };
 }
 
-export async function updateProject(id: string, patch: Partial<{ status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; weekly_summary: boolean; monthly_summary: boolean; description: string | null; color: string | null }>): Promise<void> {
+export async function updateProject(id: string, patch: Partial<{ status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; founder_name: string | null; weekly_summary: boolean; monthly_summary: boolean; description: string | null; color: string | null }>): Promise<void> {
   const { error } = await db().from("ir_projects").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateProject: ${error.message}`);
 }

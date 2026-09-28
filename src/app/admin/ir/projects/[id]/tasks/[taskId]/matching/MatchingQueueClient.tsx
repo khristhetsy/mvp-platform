@@ -33,7 +33,9 @@ type Payload = {
 };
 const TIER_CLS = { high: "bg-emerald-50 text-emerald-700", medium: "bg-amber-50 text-amber-700", low: "bg-slate-100 text-slate-600" };
 const SOURCE_OPTS: Opt[] = [{ key: "verified", label: "Verified" }, { key: "self_reported", label: "Self-reported" }];
+const SEARCH_FIELDS: FieldFilter[] = [{ key: "source", label: "Data source", options: ["Verified", "Self-reported", "Unverified"] }];
 const TIER_OPTS: Opt[] = [{ key: "high", label: "High (≥70)" }, { key: "medium", label: "Medium (50–69)" }, { key: "low", label: "Low" }];
+const SEARCH_GROUPS: GroupOption[] = [{ id: "none", label: "None" }, { id: "firm", label: "Firm" }, { id: "source", label: "Data source" }];
 const GROUPS: GroupOption[] = [{ id: "none", label: "None" }, { id: "firm", label: "Firm" }, { id: "tier", label: "Fit tier" }, { id: "type", label: "Investor type" }, { id: "source", label: "Data source" }];
 const srcLabel = (s: string | null) => (s === "verified" ? "Verified" : s === "self_reported" ? "Self-reported" : "Unverified");
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -83,7 +85,9 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   const [hideContacted, setHideContacted] = useState(false);
   const [profile, setProfile] = useState<Row | null>(null);
   const [mode, setMode] = useState<"match" | "search">("match");
-  const [sq, setSq] = useState("");
+  // "Search all investors" uses the same search bar as Proposed matches; its text is the server query.
+  const [sa, setSa] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
+  const sq = sa.q;
   const [found, setFound] = useState<Row[]>([]);
   const [searching, setSearching] = useState(false);
   useEffect(() => {
@@ -159,16 +163,17 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   ] : [], [data]);
 
   const rows = useMemo(() => mode === "search"
-    ? (sq.trim().length >= 2 ? found : []).filter((r) => !(hideContacted && r.founderOutreach))
-    : (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), [data, search, hideContacted, mode, found, sq]);
+    ? (sq.trim().length >= 2 ? found : []).filter((r) => !(hideContacted && r.founderOutreach) && (!sa.fields.source?.length || sa.fields.source.includes(srcLabel(r.dataSource))))
+    : (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), [data, search, hideContacted, mode, found, sq, sa.fields.source]);
   const grouped = useMemo(() => {
-    const g = search?.groupBy && search.groupBy !== "none" ? search.groupBy : null;
+    const gb = mode === "search" ? sa.groupBy : search?.groupBy;
+    const g = gb && gb !== "none" ? gb : null;
     if (!g) return [{ label: null as string | null, rows }];
     const keyOf = (r: Row) => g === "firm" ? r.firm || "—" : g === "tier" ? `${r.tier[0].toUpperCase()}${r.tier.slice(1)} fit` : g === "type" ? (r.types[0] ?? "—") : srcLabel(r.dataSource);
     const m = new Map<string, Row[]>();
     for (const r of rows) m.set(keyOf(r), [...(m.get(keyOf(r)) ?? []), r]);
     return [...m.entries()].map(([label, rs]) => ({ label, rows: rs }));
-  }, [rows, search]);
+  }, [rows, search, mode, sa.groupBy]);
 
   const contacted = useMemo(() => (data?.rows ?? []).filter((r) => r.founderOutreach).length, [data]);
   const pickedContacted = useMemo(() => [...new Map([...(data?.rows ?? []), ...found].map((r) => [r.contactId, r])).values()].filter((r) => picked.has(r.contactId) && r.founderOutreach).length, [data, found, picked]);
@@ -217,7 +222,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
           {([["match", "Proposed matches"], ["search", "Search all investors"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={mode === k} onClick={() => setMode(k)} className={`px-3 py-1.5 text-[12.5px] ${mode === k ? "bg-indigo-50 font-semibold text-indigo-800" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>)}
         </div>
         {mode === "match" ? <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={620} />
-          : <input autoFocus value={sq} onChange={(e) => setSq(e.target.value)} placeholder="Search any investor by name, firm or email domain…" aria-label="Search all investors" className="w-[420px] max-w-full rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />}
+          : <OdooSearchBar scope="ir-investor-search" state={sa} onChange={setSa} quick={[]} fields={SEARCH_FIELDS} groups={SEARCH_GROUPS} noGroupId="none" applyDefault={false} placeholder="Search any investor by name, firm or email domain…" width={620} />}
         <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHideContacted(e.target.checked)} /> Hide already contacted</label>
         <div className="relative" data-cols-menu>
           <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{cols.length}/{COLS.length}</span></button>

@@ -186,6 +186,10 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
         {state.groupBy && state.groupBy !== noGroupId && <Chip icon="ti-layout-list" text={`${groupChipPrefix}${groupLabel}`} color="#633806" bg="#FAEEDA" border="#E3C08A" onRemove={() => set({ groupBy: noGroupId })} />}
         <input
           value={typed}
+          name="odoo-search"
+          autoComplete="off"
+          spellCheck={false}
+          aria-label={placeholder}
           onChange={(e) => setTyped(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => {
