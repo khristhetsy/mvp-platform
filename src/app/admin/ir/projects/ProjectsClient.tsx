@@ -92,7 +92,7 @@ export function ProjectsClient({ meId }: { meId: string }) {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {rows.map((p) => {
           const c = data?.counts[p.id];
           const mine = p.owner_id === meId;
