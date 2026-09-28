@@ -1,8 +1,9 @@
 /**
  * LinkedIn adapter (build-spec §9). Publishes to a personal profile with
  * w_member_social (self-serve, no partner approval). The tagged link goes in the
- * post body; the first comment is best-effort (LinkedIn's socialActions comment API
- * is partner-gated and 403s without Community Management access).
+ * post body. LinkedIn's socialActions comment API is partner-gated and 403s without
+ * Community Management access, so comments are OFF until LINKEDIN_COMMENTS_ENABLED=true.
+ * While off, the first-comment text is appended to the post body instead of being lost.
  *
  * Credential-gated: until LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET are set, every
  * method throws AdapterNotConfiguredError, which the queue treats as a skip. Live
@@ -22,6 +23,24 @@ function configured(): boolean {
   return Boolean(process.env.LINKEDIN_CLIENT_ID?.trim() && process.env.LINKEDIN_CLIENT_SECRET?.trim());
 }
 
+/** True only once the app has Community Management API access and the flag is set. */
+export function linkedInCommentsEnabled(): boolean {
+  return process.env.LINKEDIN_COMMENTS_ENABLED?.trim().toLowerCase() === "true";
+}
+
+/**
+ * Build the post text. The tagged link always goes in the body. When comments are off,
+ * the first-comment text goes in the body too, and the link is not repeated if the
+ * comment text already contains it.
+ */
+export function linkedInCommentary(v: Pick<Variant, "body" | "commentText" | "linkUrl">, commentsEnabled: boolean): string {
+  const parts = [v.body.trim()];
+  const comment = v.commentText?.trim() || "";
+  if (!commentsEnabled && comment) parts.push(comment);
+  if (v.linkUrl && !(!commentsEnabled && comment.includes(v.linkUrl))) parts.push(v.linkUrl);
+  return parts.filter(Boolean).join("\n\n");
+}
+
 function requireConfigured(): void {
   if (!configured()) throw new AdapterNotConfiguredError("linkedin");
 }
@@ -36,13 +55,15 @@ function headers(token: string): Record<string, string> {
 }
 
 export const linkedInAdapter: SocialAdapter = {
+  supportsComments: linkedInCommentsEnabled,
+
   async publish(v: Variant, a: Account): Promise<{ externalId: string; url: string }> {
     requireConfigured();
     if (!a.accessToken || !a.externalMemberId) throw new Error("LinkedIn account is missing a token or member id.");
     // The tagged link goes in the post body. LinkedIn's first-comment API
     // (socialActions) is partner-gated (403 without Community Management access),
     // so the body is the only reliable place to deliver the link self-serve.
-    const commentary = v.linkUrl ? `${v.body}\n\n${v.linkUrl}` : v.body;
+    const commentary = linkedInCommentary(v, linkedInCommentsEnabled());
     const res = await fetch(`${REST_BASE}/posts`, {
       method: "POST",
       headers: headers(a.accessToken),

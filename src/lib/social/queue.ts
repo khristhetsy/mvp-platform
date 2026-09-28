@@ -171,7 +171,9 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
       // fail the variant or trigger a re-publish (which would double-post). Record a
       // soft note instead, and still mark the post published.
       let commentNote: string | null = null;
-      if (variant.commentText) {
+      // Adapters that can't comment yet (LinkedIn without Community Management access)
+      // already carried the comment text in the body, so don't make a call that 403s.
+      if (variant.commentText && adapter.supportsComments?.() !== false) {
         try {
           await withTimeout(adapter.comment(externalId, variant.commentText, toAccount(account as AccountRow)), "first comment");
         } catch (ce) {

@@ -34,6 +34,9 @@ export interface SocialAdapter {
   publish(v: Variant, a: Account): Promise<{ externalId: string; url: string }>;
   /** Post the tagged-link comment against a published post. */
   comment(externalId: string, text: string, a: Account): Promise<void>;
+  /** False when the platform app can't post comments yet. The queue then skips the
+   *  comment call entirely, and the adapter carries the comment text in the body. */
+  supportsComments?(): boolean;
   /** Read engagement metrics for a published post. */
   metrics(externalId: string, a: Account): Promise<Metrics>;
   /** Refresh an expiring token set. */
