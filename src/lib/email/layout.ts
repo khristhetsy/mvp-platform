@@ -62,7 +62,8 @@ export type EmailSpec = {
   primary?: EmailLink | null;
   secondary?: EmailLink | null;
   footer: {
-    /** Why this person got the email. Required: every email says it. */
+    /** Why this person got the email. Every email says it; pass "" only when
+     *  the body already does and the copy is fixed (counsel-reviewed emails). */
     reason: string;
     /** Absolute link to the notification settings for this recipient. */
     preferencesUrl?: string | null;
@@ -93,6 +94,9 @@ const SOFT = "#F4F6FB";
 const GREEN = "#2F6B12";
 const FONT = EMAIL_BRAND.fontStack;
 const JOURNEY = ["Rate", "Ready", "Match", "Raise"] as const;
+
+/** Legal name and postal address, as printed under every email. */
+export const EMAIL_BRAND_LEGAL_LINE = `${EMAIL_BRAND.company.legalName} · ${EMAIL_BRAND.company.addressLine}`;
 
 /** The fixed line founder and investor emails carry. */
 export const NOT_A_BROKER_DEALER =
@@ -411,7 +415,7 @@ export function renderEmail(spec: EmailSpec): RenderedEmail {
         : ""
     }`,
     ...(spec.footer.lines ?? []).map(esc),
-  ];
+  ].filter((l) => l !== "");
 
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>${esc(spec.subject)}</title></head>
@@ -427,7 +431,7 @@ export function renderEmail(spec: EmailSpec): RenderedEmail {
   )}</td></tr>
 <tr><td style="height:3px;background:${color};font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td style="padding:28px;font-family:${FONT};color:${TEXT};">${table(body)}</td></tr>
-<tr><td style="border-top:1px solid ${LINE};padding:16px 28px;font-family:${FONT};font-size:12px;line-height:19px;color:${MUTED};">${footerLines.join("<br>")}</td></tr>
+${footerLines.length ? `<tr><td style="border-top:1px solid ${LINE};padding:16px 28px;font-family:${FONT};font-size:12px;line-height:19px;color:${MUTED};">${footerLines.join("<br>")}</td></tr>` : ""}
 </table>
 <div style="font-family:${FONT};font-size:12px;color:${MUTED};padding:14px 0 0;">${esc(brand.company.legalName)} · ${esc(brand.company.addressLine)}</div>
 </td></tr></table>

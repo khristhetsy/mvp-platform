@@ -5,7 +5,7 @@
 import type { ReportPayload } from "./serialize";
 import type { DiligenceRole } from "./types";
 import { buildReportModel, type ReportExtras, type ReportModel, type Tone } from "./report-model";
-import { ALERT_INK, HEAD_INK, M, MUTED, NAVY, PAGE_W, RULE, SANS, SANS_B, SERIF, MONO, INK, W, createCanvas, docToBuffer, newReportDoc, safe } from "./pdf-primitives";
+import { ALERT_INK, M, MUTED, NAVY, RULE, SANS, SANS_B, SERIF, MONO, INK, W, createCanvas, docToBuffer, masthead, newReportDoc, safe } from "./pdf-primitives";
 
 export async function renderDiligenceMemoPdf(
   payload: ReportPayload,
@@ -22,23 +22,14 @@ export async function renderModel(model: ReportModel): Promise<Buffer> {
     const c = createCanvas(doc);
 
     // ── Page 1: masthead ────────────────────────────────────────────────
-    const bandH = 112;
-    doc.rect(0, 0, PAGE_W, bandH).fill(NAVY);
-    c.text("iCapOS", M, 28, { font: "Times-Roman", size: 11, color: HEAD_INK, lineGap: 0 });
-    c.text("Due Diligence Report", M, 42, { font: SERIF, size: 26, color: "#FFFFFF", lineGap: 0 });
-    c.text(`${model.company} · ${model.audienceLabel}`, M, 76, { size: 10, color: HEAD_INK, width: 300, lineGap: 0 });
     const meta: [string, string][] = [
       ["Report code", model.reportCode],
       ["Version", model.versionLabel],
       ["Generated", model.generatedAt.toISOString().slice(0, 16).replace("T", " ") + " UTC"],
       ...(model.generatedBy ? ([["Prepared by", model.generatedBy]] as [string, string][]) : []),
     ];
-    meta.forEach(([k, v], i) => {
-      const my = 36 + i * 13;
-      c.text(k, PAGE_W - M - 200, my, { size: 8, color: HEAD_INK, width: 70, lineGap: 0 });
-      c.text(v, PAGE_W - M - 128, my, { size: 8, color: "#FFFFFF", width: 128, lineGap: 0 });
-    });
-    c.y = bandH + 20;
+    masthead(c, { title: "Due Diligence Report", subtitle: `${model.company} · ${model.audienceLabel}`, meta, titleSize: 26 });
+    c.y -= 2;
 
     // Stage tracker
     c.label("Engagement stage", M, c.y);

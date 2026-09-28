@@ -13,6 +13,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
+import { renderEmail } from "@/lib/email/layout";
 
 export function marketplaceInterestEmailsEnabled(): boolean {
   return process.env.MARKETPLACE_INTEREST_EMAILS_LIVE === "true";
@@ -26,12 +27,19 @@ function template(companyName: string, portalName: string): { subject: string; h
     `iCapOS is a software platform. It is not a registered broker-dealer, funding portal, or investment adviser, ` +
     `is not involved in this offering, and does not offer, sell, or recommend securities. Investing involves risk, ` +
     `including possible loss of capital.`;
-  return {
+  // Layout only: the body is one fixed paragraph, kept whole so the risk
+  // disclosure stays in the body and is not moved to small footer print.
+  return renderEmail({
+    audience: "investor",
     subject,
-    text: body,
-    html: `<p>${body}</p>`,
-  };
+    preheader: `The offering you expressed interest in, ${companyName}, is now live on ${portalName}.`,
+    blocks: [{ type: "paragraph", text: body }],
+    footer: { reason: "" },
+  });
 }
+
+/** Exposed for tests and the admin preview. */
+export const offeringLiveEmail = template;
 
 export type InterestNotifyResult = { intended: number; sent: number; live: boolean };
 

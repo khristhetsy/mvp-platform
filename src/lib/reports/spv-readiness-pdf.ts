@@ -4,7 +4,7 @@
 
 import type { AdminReportPayload } from "@/lib/reports/admin-reports";
 import type { Cell, Metric, Section, Takeaway, Tone } from "@/lib/diligence/report-model";
-import { HEAD_INK, M, MONO, NAVY, PAGE_W, SERIF, W, createCanvas, docToBuffer, newReportDoc, safe } from "@/lib/diligence/pdf-primitives";
+import { M, MONO, NAVY, SERIF, W, createCanvas, docToBuffer, masthead, newReportDoc, safe } from "@/lib/diligence/pdf-primitives";
 import { describeFilters } from "@/lib/reports/portfolio-diligence-pdf";
 
 type Row = Record<string, unknown>;
@@ -210,16 +210,12 @@ export async function buildSpvReadinessV2Pdf(payload: AdminReportPayload, contex
     const c = createCanvas(doc);
     const stamp = model.generatedAt.toISOString().slice(0, 16).replace("T", " ") + " UTC";
 
-    const bandH = 112;
-    doc.rect(0, 0, PAGE_W, bandH).fill(NAVY);
-    c.text("iCapOS", M, 28, { font: "Times-Roman", size: 11, color: HEAD_INK, lineGap: 0 });
-    c.text("SPV Readiness Report", M, 42, { font: SERIF, size: 22, color: "#FFFFFF", width: 330, lineGap: 0 });
-    c.text(`${model.filterLines.join(" · ")} · Internal staff use only`, M, 76, { size: 10, color: HEAD_INK, width: 320, lineGap: 0 });
-    ([["SPVs", String(model.spvCount)], ["Generated", stamp], ["Prepared by", model.generatedBy]] as [string, string][]).forEach(([k, v], i) => {
-      c.text(k, PAGE_W - M - 200, 40 + i * 13, { size: 8, color: HEAD_INK, width: 70, lineGap: 0 });
-      c.text(v, PAGE_W - M - 128, 40 + i * 13, { size: 8, color: "#FFFFFF", width: 128, lineGap: 0 });
+    masthead(c, {
+      title: "SPV Readiness Report",
+      subtitle: `${model.filterLines.join(" · ")} · Internal staff use only`,
+      meta: [["SPVs", String(model.spvCount)], ["Generated", stamp], ["Prepared by", model.generatedBy]],
+      titleSize: 22,
     });
-    c.y = bandH + 22;
 
     c.label("Key metrics", M, c.y);
     c.y += 14;

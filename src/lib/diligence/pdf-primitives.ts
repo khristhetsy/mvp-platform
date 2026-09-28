@@ -77,6 +77,8 @@ export type MastheadInput = {
   subtitle?: string;
   /** Up to four label/value pairs on the right. */
   meta?: [string, string][];
+  /** Fixed title size; by default 24, or 20 when the title is wide. */
+  titleSize?: number;
 };
 
 /**
@@ -88,7 +90,7 @@ export function masthead(c: Canvas, m: MastheadInput, bandH = 112): number {
   doc.rect(0, 0, PAGE_W, bandH).fill(NAVY);
   c.text(m.kicker ?? "iCapOS", M, 28, { font: "Times-Roman", size: 11, color: HEAD_INK, lineGap: 0 });
   doc.font(SERIF).fontSize(24);
-  const size = doc.widthOfString(safe(m.title)) > 330 ? 20 : 24;
+  const size = m.titleSize ?? (doc.widthOfString(safe(m.title)) > 330 ? 20 : 24);
   c.text(m.title, M, 42, { font: SERIF, size, color: "#FFFFFF", width: 330, lineGap: 0 });
   if (m.subtitle) c.text(m.subtitle, M, 76, { size: 10, color: HEAD_INK, width: 320, lineGap: 0 });
   (m.meta ?? []).slice(0, 4).forEach(([k, v], i) => {
