@@ -22,7 +22,7 @@ const RECENTLY_DELETED_DAYS = 30;
 
 function toRow(r: Record<string, unknown>): NativeRow {
   const a = r.actor as { full_name?: string | null; email?: string | null } | null;
-  const meta = (r.meta ?? null) as { odoo_author?: string | null } | null;
+  const meta = (r.meta ?? null) as { odoo_author?: string | null; via?: string | null } | null;
   return {
     id: String(r.id),
     kind: String(r.kind),
@@ -33,6 +33,7 @@ function toRow(r: Record<string, unknown>): NativeRow {
     deleted_at: (r.deleted_at as string | null) ?? null,
     odoo_message_id: r.odoo_message_id == null ? null : Number(r.odoo_message_id),
     odoo_author: meta?.odoo_author ?? null,
+    via: meta?.via ?? null,
   };
 }
 

@@ -35,6 +35,8 @@ export async function logOutboundEmailActivity(
   subject: string,
   actorId?: string | null,
   limit = 25,
+  /** Which mailbox sent it, shown as a badge on the timeline. */
+  via?: "gmail" | "icapos",
 ): Promise<void> {
   try {
     const emails = [...new Set(recipients.map((e) => e.trim().toLowerCase()).filter(Boolean))].slice(0, limit);
@@ -51,9 +53,9 @@ export async function logOutboundEmailActivity(
         .eq("status", "open");
       const openOpps = (opps ?? []) as Array<{ id: string }>;
       if (openOpps.length > 0) {
-        for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id });
+        for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id, meta: via ? { via } : undefined });
       } else {
-        await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId });
+        await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId, meta: via ? { via } : undefined });
       }
     }
   } catch { /* never block the send */ }

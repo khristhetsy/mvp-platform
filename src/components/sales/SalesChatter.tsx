@@ -14,8 +14,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
   group?: "note" | "message" | "system"; source?: "icapos" | "odoo"; origin?: string | null;
-  editable?: boolean; edited_at?: string | null; deleted_at?: string | null; odoo_synced?: boolean;
+  editable?: boolean; edited_at?: string | null; deleted_at?: string | null; odoo_synced?: boolean; via?: string | null;
 };
+type Via = "icapos" | "gmail";
+type Senders = { icapos: { from: string; personal: boolean }; gmail: { connected: boolean; canSend: boolean; email: string | null } };
+const VIA_KEY = "icapos.sales.sendVia";
+function readVia(): Via | null { try { const v = window.localStorage.getItem(VIA_KEY); return v === "icapos" || v === "gmail" ? v : null; } catch { return null; } }
+function saveVia(v: Via) { try { window.localStorage.setItem(VIA_KEY, v); } catch { /* storage unavailable */ } }
 type OdooTarget = { model: string; id: number; label: string } | null;
 type Undo =
   | { type: "delete"; id: string; label: string; left: number }
@@ -79,6 +84,10 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [cc, setCc] = useState("");
+  const [showCc, setShowCc] = useState(false);
+  const [senders, setSenders] = useState<Senders | null>(null);
+  const [via, setVia] = useState<Via>("icapos");
   const [note, setNote] = useState("");
   const [syncOdoo, setSyncOdoo] = useState(true);
   const [task, setTask] = useState({ title: "", taskType: taskTypes[0] ?? "Call", dueDate: "", assigneeId: "" });
@@ -120,6 +129,16 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
   useEffect(() => { void load(); }, [load]);
   useEffect(() => () => { if (undoTimer.current) clearInterval(undoTimer.current); }, []);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/sales/chatter/send").then((r) => (r.ok ? r.json() : null)).then((d: Senders | null) => {
+      if (!live || !d) return;
+      setSenders(d);
+      // Last choice wins; otherwise Gmail when it can send, else iCapOS.
+      setVia(readVia() ?? (d.gmail.canSend ? "gmail" : "icapos"));
+    }).catch(() => { /* keep defaults */ });
+    return () => { live = false; };
+  }, []);
 
   function flash(kind: "ok" | "err", msg: string) {
     if (kind === "ok") { setOk(msg); setErr(null); } else { setErr(msg); setOk(null); }
@@ -203,18 +222,23 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
     if (next) await loadDeleted();
   }
 
+  function pickVia(v: Via) { setVia(v); saveVia(v); }
+
   async function sendMessage() {
     if (!contactEmail) { flash("err", "This contact has no email."); return; }
     if (!subject.trim() || !body.trim()) { flash("err", "Add a subject and message."); return; }
+    if (via === "gmail" && senders && !senders.gmail.canSend) { flash("err", "Gmail isn't ready. Connect Google, or send via iCapOS."); return; }
     setBusy(true);
     try {
-      const res = await fetch("/api/integrations/google/gmail/send", {
+      const res = await fetch("/api/sales/chatter/send", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: contactEmail, subject: subject.trim(), body: body.trim() }),
+        body: JSON.stringify({ via, to: contactEmail, toName: contactName ?? null, cc: cc.trim() || null, subject: subject.trim(), body: body.trim() }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { flash("err", data.error ?? "Couldn't send. Connect Google in Settings."); return; }
-      setSubject(""); setBody(""); flash("ok", "Message sent."); await load();
+      if (!res.ok) { flash("err", data.error ?? "Couldn't send. Try again."); return; }
+      setSubject(""); setBody(""); setCc(""); setShowCc(false);
+      flash("ok", via === "icapos" ? "Sent via iCapOS. Replies will land in your iCapOS inbox." : "Sent via Gmail.");
+      await load();
     } catch { flash("err", "Send failed. Try again."); }
     finally { setBusy(false); }
   }
@@ -263,6 +287,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   const sectionLabel: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" };
   const iconBtn: React.CSSProperties = { background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 14, padding: 2, lineHeight: 1 };
   const ghostBtn: React.CSSProperties = { fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "4px 10px", cursor: "pointer" };
+  const viaBadge: React.CSSProperties = { fontSize: 10, color: "#185FA5", background: "#E6F1FB", borderRadius: 4, padding: "1px 6px", whiteSpace: "nowrap" };
   const odooBadge: React.CSSProperties = { fontSize: 10, color: "#6B21A8", background: "#F3E8FF", borderRadius: 4, padding: "1px 6px", whiteSpace: "nowrap" };
   const tabBtn = (t: Tab, _i: string, _label: string): React.CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 500, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === t ? "#E6F1FB" : "transparent", color: tab === t ? "#185FA5" : "var(--muted-foreground)" });
   const field: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
@@ -279,11 +304,45 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
       <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
         {tab === "message" && (
           <>
-            <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>To: {contactEmail ?? "no email on file"}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", width: 58 }}>Send via</span>
+              <div role="radiogroup" aria-label="Send via" style={{ display: "inline-flex", border: "0.5px solid #d7dbe3", borderRadius: 8, overflow: "hidden" }}>
+                {(["icapos", "gmail"] as const).map((v) => (
+                  <button key={v} type="button" role="radio" aria-checked={via === v} onClick={() => pickVia(v)} style={{ fontSize: 12, padding: "5px 12px", border: "none", cursor: "pointer", background: via === v ? "#E6F1FB" : "#fff", color: via === v ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <i className={`ti ${v === "icapos" ? "ti-building" : "ti-brand-gmail"}`} aria-hidden="true" /> {v === "icapos" ? "iCapOS" : "Gmail"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ fontSize: 12, borderTop: "0.5px solid #eef1f5", paddingTop: 6, display: "flex", gap: 10 }}>
+              <span style={{ color: "var(--muted-foreground)", width: 58, flexShrink: 0 }}>From</span>
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{via === "icapos" ? (senders?.icapos.from ?? "iCapOS") : (senders?.gmail.email ?? "Your Google account")}</span>
+            </div>
+            {via === "icapos" && senders && !senders.icapos.personal && (
+              <div style={{ fontSize: 11, color: "#854F0B", paddingLeft: 68 }}>Sending from the iCapOS address with your name. To send from your own address, verify its domain in Resend.</div>
+            )}
+            <div style={{ fontSize: 12, display: "flex", gap: 10 }}>
+              <span style={{ color: "var(--muted-foreground)", width: 58, flexShrink: 0 }}>Replies</span>
+              <span style={{ color: "var(--muted-foreground)" }}>{via === "icapos" ? "Land in your iCapOS inbox" : "Land in your Gmail"}</span>
+            </div>
+            <div style={{ fontSize: 12, display: "flex", gap: 10, alignItems: "center" }}>
+              <span style={{ color: "var(--muted-foreground)", width: 58, flexShrink: 0 }}>To</span>
+              <span style={{ flex: 1 }}>{contactEmail ?? "no email on file"}</span>
+              {!showCc && <button type="button" onClick={() => setShowCc(true)} style={{ fontSize: 11.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Cc</button>}
+            </div>
+            {showCc && <input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="Cc (comma separated)" style={field} />}
             <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" style={field} />
             <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a message to the contact…" rows={4} style={field} />
-            <div style={{ display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={sendMessage} disabled={busy || !contactEmail} style={{ ...primary, opacity: busy || !contactEmail ? 0.5 : 1 }}>Send</button></div>
-            <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>Sends from your connected Google account and logs to the timeline. Connect Google in Settings if sending fails.</p>
+            {via === "gmail" && senders && !senders.gmail.canSend && (
+              <div style={{ fontSize: 12, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "8px 10px" }}>
+                <i className="ti ti-plug-connected-x" aria-hidden="true" /> {senders.gmail.connected ? "Gmail send permission isn't granted." : "Gmail isn't connected for your account."}{" "}
+                <a href={`/api/integrations/google/connect?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/admin/sales")}`} style={{ color: "#854F0B", textDecoration: "underline" }}>Connect Google</a> or send via iCapOS.
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{via === "icapos" ? "Sent by iCapOS with your saved signature. Logged to the timeline." : "Sent from your Gmail and shown in its Sent folder. Logged to the timeline."}</span>
+              <button type="button" onClick={sendMessage} disabled={busy || !contactEmail} style={{ ...primary, opacity: busy || !contactEmail ? 0.5 : 1 }}>{via === "icapos" ? "Send via iCapOS" : "Send via Gmail"}</button>
+            </div>
           </>
         )}
         {tab === "note" && (
@@ -425,6 +484,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span>{a.actor_name ? `${a.actor_name} · ` : ""}{ago(a.created_at)}</span>
                       {a.source === "odoo" || a.kind === "odoo_message" ? <span style={odooBadge}><i className="ti ti-refresh" aria-hidden="true" /> {a.origin ?? "Odoo"}</span> : null}
+                      {a.via === "icapos" ? <span style={viaBadge}><i className="ti ti-building" aria-hidden="true" /> via iCapOS</span> : a.via === "gmail" ? <span style={viaBadge}><i className="ti ti-brand-gmail" aria-hidden="true" /> via Gmail</span> : null}
                     </div>
                   </div>
                 </div>
