@@ -17,6 +17,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/founder-match-digest": { name: "Weekly match email", group: "Founders", description: "New investor matches for paying founders" },
   "/api/cron/intro-follow-ups": { name: "Intro follow ups", group: "Founders", description: "Chases introductions in both directions" },
   "/api/cron/ir-summaries": { name: "Founder summaries", group: "Founders", description: "Weekly and milestone summaries that are due" },
+  "/api/cron/ir-odoo-history": { name: "Odoo activity history", group: "Founders", description: "Adds new dated Odoo notes (calls, emails, meetings, term sheets) to imported IR projects" },
   "/api/cron/ir-sequences": { name: "IR auto sequences", group: "Founders", description: "Sends due auto sequence emails to investors" },
   "/api/cron/matching": { name: "Matching pass", group: "Platform", description: "Suggested matches for eligible founders and approved investors" },
   "/api/cron/run-orchestration": { name: "Orchestration", group: "Platform", description: "Digests, match notices, outreach sends and automations" },
