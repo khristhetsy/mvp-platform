@@ -99,6 +99,39 @@ export async function updateProject(id: string, patch: Partial<{ status: string;
   if (error) throw new Error(`updateProject: ${error.message}`);
 }
 
+/**
+ * Move a project's start date and/or term. Months and weeks keep their rows (tasks and
+ * investors stay attached) and get the new dates; a longer term adds months and weeks, a
+ * shorter one removes the last ones, refused while any task sits in a week that would go.
+ * Activity and task dates are not moved.
+ */
+export async function rescheduleProject(id: string, startDate: string, termMonths: number): Promise<void> {
+  const drafts = generateMilestones(startDate, termMonths);
+  const existing = (must(await db().from("ir_milestones").select("id, kind, sort_order").eq("project_id", id), "reschedule read") ?? []) as Array<{ id: string; kind: "month" | "week"; sort_order: number }>;
+  const want = new Set(drafts.map((d) => `${d.kind}:${d.sortOrder}`));
+  const gone = existing.filter((m) => !want.has(`${m.kind}:${m.sort_order}`));
+  if (gone.length) {
+    const goneIds = gone.map((m) => m.id);
+    const { count } = await db().from("ir_tasks").select("id", { count: "exact", head: true }).eq("project_id", id).in("milestone_id", goneIds);
+    if (count) throw new Error(`${count} task${count === 1 ? " sits" : "s sit"} in the weeks a shorter term would remove. Move ${count === 1 ? "it" : "them"} first.`);
+  }
+  must(await db().from("ir_projects").update({ start_date: startDate, term_months: termMonths, updated_at: new Date().toISOString() }).eq("id", id).select("id"), "reschedule project");
+  const byKey = new Map(existing.map((m) => [`${m.kind}:${m.sort_order}`, m.id]));
+  // Months first, so new weeks can be parented to them.
+  const monthId = new Map<number, string>();
+  for (const d of drafts.filter((x) => x.kind === "month")) {
+    const cur = byKey.get(`month:${d.sortOrder}`);
+    if (cur) { must(await db().from("ir_milestones").update({ starts_on: d.startsOn, ends_on: d.endsOn }).eq("id", cur).select("id"), "reschedule month"); monthId.set(d.sortOrder, cur); }
+    else { const r = must(await db().from("ir_milestones").insert({ project_id: id, kind: "month", label: d.label, starts_on: d.startsOn, ends_on: d.endsOn, sort_order: d.sortOrder }).select("id").single(), "reschedule add month") as { id: string }; monthId.set(d.sortOrder, r.id); }
+  }
+  for (const d of drafts.filter((x) => x.kind === "week")) {
+    const cur = byKey.get(`week:${d.sortOrder}`);
+    if (cur) must(await db().from("ir_milestones").update({ starts_on: d.startsOn, ends_on: d.endsOn }).eq("id", cur).select("id"), "reschedule week");
+    else must(await db().from("ir_milestones").insert({ project_id: id, parent_id: monthId.get(d.monthIndex) ?? null, kind: "week", label: d.label, starts_on: d.startsOn, ends_on: d.endsOn, sort_order: d.sortOrder }).select("id"), "reschedule add week");
+  }
+  if (gone.length) must(await db().from("ir_milestones").delete().in("id", gone.map((m) => m.id)).select("id"), "reschedule remove");
+}
+
 /** Closed-won Sales Hub opportunities that don't have an IR project yet (the "source deal" picker). */
 export async function listClosedWonSources(): Promise<Array<{ id: string; title: string; contact_name: string | null; contact_crm_id: string | null; company_id: string | null; won_at: string }>> {
   const [{ data: opps }, { data: used }] = await Promise.all([

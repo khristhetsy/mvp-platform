@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatRange } from "@/lib/ir/milestones";
+import { addDays, DAYS_PER_MONTH, formatRange, TERM_OPTIONS } from "@/lib/ir/milestones";
 import type { IrProject } from "@/lib/ir/types";
 import { ActivityClock } from "../_shared/ActivityClock";
 
@@ -30,18 +30,18 @@ export function ProjectsClient({ meId }: { meId: string }) {
   const [status, setStatus] = useState<string>("active");
   const [menu, setMenu] = useState<string | null>(null);
   const [dupBusy, setDupBusy] = useState(false);
-  const [edit, setEdit] = useState<null | { id: string; title: string; founderName: string; ownerId: string; status: string; isSpv: boolean; founderReportVisible: boolean; description: string; range: string }>(null);
+  const [edit, setEdit] = useState<null | { id: string; title: string; founderName: string; ownerId: string; status: string; isSpv: boolean; founderReportVisible: boolean; description: string; startDate: string; termMonths: number }>(null);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   function openEdit(p: IrProject) {
     setMenu(null); setEditError(null);
-    setEdit({ id: p.id, title: p.title, founderName: p.founder_name ?? "", ownerId: p.owner_id, status: p.status, isSpv: p.is_spv, founderReportVisible: p.founder_report_visible, description: p.description ?? "", range: `${formatRange(p.start_date, p.end_date)} · ${p.term_months} mo` });
+    setEdit({ id: p.id, title: p.title, founderName: p.founder_name ?? "", ownerId: p.owner_id, status: p.status, isSpv: p.is_spv, founderReportVisible: p.founder_report_visible, description: p.description ?? "", startDate: p.start_date, termMonths: p.term_months });
   }
   async function saveEdit() {
     if (!edit) return;
     if (!edit.title.trim()) { setEditError("The project needs a name."); return; }
     setSaving(true); setEditError(null);
-    const r = await fetch(`/api/admin/ir/projects/${edit.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: edit.title.trim(), founderName: edit.founderName.trim() || null, ownerId: edit.ownerId, status: edit.status, isSpv: edit.isSpv, founderReportVisible: edit.founderReportVisible, description: edit.description.trim() || null }) });
+    const r = await fetch(`/api/admin/ir/projects/${edit.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: edit.title.trim(), founderName: edit.founderName.trim() || null, ownerId: edit.ownerId, status: edit.status, isSpv: edit.isSpv, founderReportVisible: edit.founderReportVisible, description: edit.description.trim() || null, startDate: edit.startDate, termMonths: edit.termMonths }) });
     const j = await r.json().catch(() => ({}));
     setSaving(false);
     if (!r.ok) { setEditError(j.error ?? "Couldn't save the project."); return; }
@@ -201,7 +201,9 @@ export function ProjectsClient({ meId }: { meId: string }) {
               <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Founder</span><input autoComplete="off" value={edit.founderName} onChange={(e) => setEdit({ ...edit, founderName: e.target.value })} maxLength={160} className="rounded-lg border border-slate-200 px-3 py-2 focus:border-indigo-400 focus:outline-none" /></label>
               <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Owner</span><select value={edit.ownerId} onChange={(e) => setEdit({ ...edit, ownerId: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-3 py-2">{(data?.staff ?? []).some((s) => s.id === edit.ownerId) ? null : <option value={edit.ownerId}>Current owner</option>}{(data?.staff ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
               <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Status</span><select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-3 py-2"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
-              <div className="flex flex-col gap-1"><span className="font-medium text-slate-700">Dates</span><span className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-slate-500">{edit.range}</span></div>
+              <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Start date</span><input type="date" value={edit.startDate} onChange={(e) => e.target.value && setEdit({ ...edit, startDate: e.target.value })} className="rounded-lg border border-slate-200 px-3 py-2 focus:border-indigo-400 focus:outline-none" /></label>
+              <label className="flex flex-col gap-1"><span className="font-medium text-slate-700">Term</span><select value={edit.termMonths} onChange={(e) => setEdit({ ...edit, termMonths: Number(e.target.value) })} className="rounded-lg border border-slate-200 bg-white px-3 py-2">{TERM_OPTIONS.map((t) => <option key={t} value={t}>{t} months</option>)}</select></label>
+              <p className="col-span-2 -mt-1 text-[12px] text-slate-500">Ends {formatRange(edit.startDate, addDays(edit.startDate, edit.termMonths * DAYS_PER_MONTH)).split(" to ")[1] ?? ""}. Changing the start or term moves the month and week milestones; tasks and activities keep their dates.</p>
               <label className="flex items-center gap-2"><input type="checkbox" checked={edit.isSpv} onChange={(e) => setEdit({ ...edit, isSpv: e.target.checked })} /> SPV</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={edit.founderReportVisible} onChange={(e) => setEdit({ ...edit, founderReportVisible: e.target.checked })} /> Founder can see reports</label>
               <label className="col-span-2 flex flex-col gap-1"><span className="font-medium text-slate-700">Description</span><textarea rows={3} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="What this raise is, and anything the team should know" className="resize-y rounded-lg border border-slate-200 px-3 py-2 focus:border-indigo-400 focus:outline-none" /></label>

@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
-import { getProject, listActivities, listMatches, listMilestones, listStaff, listTasks, updateProject } from "@/lib/ir/db";
+import { getProject, listActivities, listMatches, listMilestones, listStaff, listTasks, rescheduleProject, updateProject } from "@/lib/ir/db";
 import { loadEvents } from "@/lib/ir/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,8 @@ const schema = z.object({
   isSpv: z.boolean().optional(),
   title: z.string().min(1).max(160).optional(),
   founderName: z.string().trim().max(160).nullable().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  termMonths: z.number().int().min(4).max(6).optional(),
   weeklySummary: z.boolean().optional(),
   monthlySummary: z.boolean().optional(),
   description: z.string().max(20000).nullable().optional(),
@@ -45,6 +47,14 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const d = parsed.data;
   try {
+    if (d.startDate || d.termMonths) {
+      const cur = await getProject(id);
+      if (!cur) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      const start = d.startDate ?? cur.start_date, term = d.termMonths ?? cur.term_months;
+      if (start !== cur.start_date || term !== cur.term_months) {
+        try { await rescheduleProject(id, start, term); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't move the dates." }, { status: 409 }); }
+      }
+    }
     await updateProject(id, { status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, founder_name: d.founderName === undefined ? undefined : d.founderName || null, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description, color: d.color });
     return NextResponse.json({ ok: true });
   } catch (e) { return failed(e, "Couldn't update the project."); }
