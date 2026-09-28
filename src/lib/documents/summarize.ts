@@ -88,7 +88,7 @@ export async function summarizeDocumentById(
         ],
         { model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM, locale: "en" },
       );
-    } else if (isPdfDoc(doc.mime_type, doc.file_name) && bytes.byteLength <= MAX_DIRECT_PDF_BYTES) {
+    } else if (isPdfDoc(doc.mime_type, doc.file_name) && bytes.byteLength > 0 && bytes.byteLength <= MAX_DIRECT_PDF_BYTES) {
       // No text layer (scanned or image-only PDF), or local extraction failed:
       // let Claude read the PDF pages directly.
       summary = await claudeCompleteWithPdf(

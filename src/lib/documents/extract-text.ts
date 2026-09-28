@@ -55,7 +55,10 @@ async function extractPdf(bytes: Uint8Array): Promise<string> {
   // Dynamic import of the legacy (main-thread) build — no worker thread in Node.
   await ensurePdfWorker();
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false, useSystemFonts: true }).promise;
+  // pdfjs takes ownership of the buffer it is given and detaches it, leaving the
+  // caller's array at 0 bytes. summarize.ts sends those same bytes to Claude when
+  // no text comes back, so hand pdfjs a copy and leave the original intact.
+  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, useSystemFonts: true }).promise;
   const pages = Math.min(doc.numPages, MAX_PDF_PAGES);
   const chunks: string[] = [];
   for (let i = 1; i <= pages; i++) {
