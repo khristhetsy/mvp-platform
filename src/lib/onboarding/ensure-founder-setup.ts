@@ -174,7 +174,8 @@ export async function ensureFounderCompanyForUser(profile: Profile): Promise<Com
       role: "owner",
     });
 
-    if (linkError) {
+    // 23505 = a parallel onboarding request already linked this owner; that is fine.
+    if (linkError && linkError.code !== "23505") {
       throw new Error(`Failed to link company membership: ${linkError.message}`);
     }
   }

@@ -46,7 +46,11 @@ export function EventSideRail({
   organizerEmail,
   alreadyRegistered,
   ended,
+  shareUrl,
 }: {
+  /** Absolute public URL of the event page, computed on the server so the
+   *  share and calendar links are filled in the server-rendered HTML. */
+  shareUrl: string;
   title: string;
   startsAt: string | null;
   endsAt: string | null;
@@ -61,7 +65,6 @@ export function EventSideRail({
   const t = useTranslations("appPages");
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const start = startsAt ? new Date(startsAt) : null;
   const tz = timezone ?? undefined;
   const tzAbbrev =

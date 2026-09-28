@@ -297,7 +297,11 @@ export type Contact = {
  */
 export async function contactsFor(regIds: string[]): Promise<Map<string, Contact>> {
   const out = new Map<string, Contact>();
-  const ids = [...new Set(regIds.filter(Boolean))];
+  // Presenters appear on the board as `presenter:<id>` (they have no
+  // registration). Querying those as registration ids failed the whole lookup,
+  // so only real ids go to the database; presenters use their board details.
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const ids = [...new Set(regIds.filter((id) => Boolean(id) && UUID.test(id)))];
   if (!ids.length) return out;
 
   const { data, error } = await raw()

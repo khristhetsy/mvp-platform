@@ -1,13 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Clock, Video, Check, Globe, ChevronLeft, ChevronRight } from "lucide-react";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
 import type { TimeInterval, ScheduleQuestion, ContactFieldConfig } from "@/lib/scheduling/types";
 import { DEFAULT_CONTACT_FIELDS } from "@/lib/scheduling/types";
 
-const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+/** The visitor's timezone. Read on the client only: the server renders an empty
+ *  label, which avoids a hydration mismatch (the server's zone is UTC). */
+const noopSubscribe = () => () => {};
+function useLocalTimeZone(): string {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    () => "",
+  );
+}
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function ymd(d: Date): string {
@@ -64,6 +73,7 @@ export function BookingClient({
     return [parts[0] ?? "", parts.slice(1).join(" ")];
   })();
 
+  const localTz = useLocalTimeZone();
   const [anchor, setAnchor] = useState(() => new Date());
   const [selectedDuration, setSelectedDuration] = useState<number>(durations[0]);
   const [slots, setSlots] = useState<TimeInterval[]>([]);
@@ -90,7 +100,14 @@ export function BookingClient({
     try {
       const now = new Date();
       const from = new Date(Math.max(grid[0].getTime(), now.getTime())).toISOString();
-      const to = new Date(grid[41].getTime() + 86400000).toISOString();
+      const toMs = grid[41].getTime() + 86400000;
+      // A month entirely in the past has nothing to book: show it empty rather
+      // than asking the API for a range that ends before it starts (a 400 error).
+      if (toMs <= now.getTime()) {
+        setSlots([]);
+        return;
+      }
+      const to = new Date(toMs).toISOString();
       const res = await fetch(`/api/scheduling/slots?host=${hostId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&duration=${selectedDuration}`);
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to load times.");
@@ -164,7 +181,7 @@ export function BookingClient({
           hostId,
           startTime: pending.start,
           endTime: pending.end,
-          timezone: LOCAL_TZ,
+          timezone: localTz || "UTC",
           name: `${firstName} ${lastName}`.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,
@@ -188,7 +205,7 @@ export function BookingClient({
     } finally {
       setBooking(false);
     }
-  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, sourceTag, load]);
+  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, sourceTag, load, localTz]);
 
   if (confirmed) {
     return (
@@ -264,7 +281,7 @@ export function BookingClient({
                   );
                 })}
               </div>
-              <p className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400"><Globe className="h-3.5 w-3.5" /> {LOCAL_TZ}</p>
+              <p className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400"><Globe className="h-3.5 w-3.5" /> {localTz}</p>
             </div>
 
             {/* Right panel: times, or details + custom questions */}

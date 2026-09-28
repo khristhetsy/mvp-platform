@@ -115,24 +115,35 @@ async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipp
   }
 
   try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: parseRecipients(payload.to),
-        cc: parseRecipients(payload.cc).length ? parseRecipients(payload.cc) : undefined,
-        bcc: parseRecipients(payload.bcc).length ? parseRecipients(payload.bcc) : undefined,
-        subject: payload.subject,
-        html: payload.html,
-        text: payload.text,
-        reply_to: payload.replyTo,
-        attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
-      }),
-    });
+    // Resend allows 10 requests/second. Bulk sends (event introductions) can
+    // exceed that, so a 429 waits (Retry-After, else a short backoff) and retries.
+    const MAX_ATTEMPTS = 4;
+    let res: Response | null = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      res = await fetch(RESEND_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: parseRecipients(payload.to),
+          cc: parseRecipients(payload.cc).length ? parseRecipients(payload.cc) : undefined,
+          bcc: parseRecipients(payload.bcc).length ? parseRecipients(payload.bcc) : undefined,
+          subject: payload.subject,
+          html: payload.html,
+          text: payload.text,
+          reply_to: payload.replyTo,
+          attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
+        }),
+      });
+      if (res.status !== 429 || attempt === MAX_ATTEMPTS) break;
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 5000) : 400 * attempt;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+    if (!res) return { ok: false, error: "Send failed" };
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");

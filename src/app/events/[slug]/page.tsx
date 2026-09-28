@@ -17,6 +17,7 @@ import { OnStageGuests } from "@/components/events/OnStageGuests";
 import { EventCountdown } from "@/components/events/EventCountdown";
 import { EventRoomStats } from "@/components/events/EventRoomStats";
 import { EventSideRail } from "@/components/events/EventSideRail";
+import { absoluteUrl } from "@/lib/activity/email-templates";
 import { sanitizeBannerHtml } from "@/lib/icfo-events/sanitize-html";
 import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
 import type { SessionQuestion, SessionChatMessage, CallInEntry } from "@/lib/icfo-events/live-session";
@@ -689,6 +690,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
           <aside className="lg:sticky lg:top-6 lg:self-start">
             <EventSideRail
+              shareUrl={absoluteUrl(`/events/${event.slug}`)}
               title={event.title}
               startsAt={event.startsAt}
               endsAt={event.endsAt}
