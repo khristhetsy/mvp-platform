@@ -33,3 +33,16 @@ describe("planResync", () => {
     expect(p.notImported).toBe(1);
   });
 });
+
+describe("chatter", () => {
+  it("dates notes by the message, types completed activities, keeps one entry per email", async () => {
+    const { messageEntries } = await import("./odoo-resync");
+    const es = messageEntries([
+      { res_id: 10, date: "2026-05-04 09:00:00", body: "<p>Called Dan Farrell, left voicemail</p>", message_type: "comment", activityType: null },
+      { res_id: 10, date: "2026-05-05 09:00:00", body: "<p>Discussed terms</p>", message_type: "notification", activityType: "Meeting" },
+      { res_id: 10, date: "2026-05-06 09:00:00", body: "<p>Thanks, see attached deck.</p><p>Best</p>", message_type: "email", activityType: null },
+      { res_id: 10, date: "2026-05-07 09:00:00", body: "<p>Stage changed</p>", message_type: "comment", activityType: null },
+    ], [tag("Dan Farrell (Acme) dan@acme.com")]);
+    expect(es.map((e) => [e.type, e.date])).toEqual([["voicemail", "2026-05-04"], ["meeting", "2026-05-05"], ["email", "2026-05-06"], ["note", "2026-05-07"]]);
+  });
+});
