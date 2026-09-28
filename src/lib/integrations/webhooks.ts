@@ -1,4 +1,4 @@
-import type { IntegrationProvider, SanitizedOutboundPayload } from "@/lib/integrations/types";
+import { WEBHOOK_SCHEMA_VERSION, type IntegrationProvider, type SanitizedOutboundPayload } from "@/lib/integrations/types";
 import { decryptIntegrationSecret } from "@/lib/integrations/signatures";
 import { signWebhookPayload } from "@/lib/integrations/signatures";
 
@@ -49,7 +49,8 @@ function slackEscape(s: string): string {
  */
 export function buildSlackMessage(payload: SanitizedOutboundPayload): Record<string, unknown> {
   const meta = payload.metadata ?? {};
-  const companyName = typeof meta.company_name === "string" && meta.company_name.trim() ? meta.company_name.trim() : null;
+  const companyName =
+    payload.company_name?.trim() || (typeof meta.company_name === "string" && meta.company_name.trim() ? meta.company_name.trim() : null);
   const title = companyName && !payload.title.includes(companyName) ? `${companyName}: ${payload.title}` : payload.title;
   const url = payload.company_id ? `${appOrigin()}/admin/companies/${payload.company_id}` : `${appOrigin()}/admin`;
   const severity = payload.severity ? payload.severity.charAt(0).toUpperCase() + payload.severity.slice(1) : "Info";
@@ -90,6 +91,7 @@ export async function postWebhookDelivery(
       provider === "slack"
         ? JSON.stringify(buildSlackMessage(payload))
         : JSON.stringify({
+            schema_version: WEBHOOK_SCHEMA_VERSION,
             event_type: payload.event_type,
             occurred_at: payload.occurred_at,
             title: payload.title,
@@ -97,6 +99,7 @@ export async function postWebhookDelivery(
             entity_type: payload.entity_type,
             entity_id: payload.entity_id,
             company_id: payload.company_id,
+            company_name: payload.company_name ?? null,
             metadata: payload.metadata,
           });
 
@@ -104,6 +107,7 @@ export async function postWebhookDelivery(
       "Content-Type": "application/json",
       "User-Agent": "iCapOS-Integrations/1.0",
       "X-iCapOS-Event": payload.event_type,
+      "X-iCapOS-Schema-Version": String(WEBHOOK_SCHEMA_VERSION),
     };
 
     if (target.signingSecret) {

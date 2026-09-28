@@ -235,6 +235,17 @@ export async function emitOutboundIntegrationEvent(params: {
 
   if (!connections?.length) return;
 
+  // Name the company once, here, rather than in every receiver.
+  if (payload.company_id) {
+    const fromMeta = typeof params.metadata?.company_name === "string" ? params.metadata.company_name.trim() : "";
+    if (fromMeta) {
+      payload.company_name = fromMeta;
+    } else {
+      const { data: company } = await client.from("companies").select("company_name").eq("id", payload.company_id).maybeSingle();
+      payload.company_name = (company as { company_name: string | null } | null)?.company_name ?? null;
+    }
+  }
+
   for (const connection of connections as IntegrationConnectionRow[]) {
     if (!isActiveDeliveryProvider(connection.provider)) continue;
 

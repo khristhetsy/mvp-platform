@@ -64,8 +64,13 @@ export type SanitizedOutboundPayload = {
   entity_type: string | null;
   entity_id: string | null;
   company_id: string | null;
+  /** Looked up at emit time so receivers need no second call. Absent on older logs. */
+  company_name?: string | null;
   metadata: Record<string, unknown>;
 };
+
+/** Bumped when the webhook JSON shape changes. v2 adds company_name and schema_version. */
+export const WEBHOOK_SCHEMA_VERSION = 2;
 
 export type IntegrationHealthSummary = {
   activeConnections: number;

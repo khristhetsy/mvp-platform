@@ -36,3 +36,10 @@ describe("buildSlackMessage", () => {
     expect(JSON.stringify(m)).toContain('"Open iCapOS"');
   });
 });
+
+describe("company name on the payload", () => {
+  it("prefers the looked-up company_name", () => {
+    const m = buildSlackMessage({ ...(base as object), company_name: "Northstar Robotics" } as never) as { text: string };
+    expect(m.text).toBe("Northstar Robotics: Diligence document submitted (Info)");
+  });
+});
