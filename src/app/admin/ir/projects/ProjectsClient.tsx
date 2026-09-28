@@ -19,7 +19,7 @@ type Counts = { matches: number; tasks: number; tasksDone: number; openActivitie
 type Payload = { projects: IrProject[]; counts: Record<string, Counts>; staff: Array<{ id: string; name: string }> };
 
 const STATUS_DOT: Record<string, string> = { active: "#16A34A", paused: "#CA8A04", completed: "#2563EB", cancelled: "#94A3B8" };
-const COLORS: Array<string | null> = [null, "#E5484D", "#EA580C", "#CA8A04", "#16A34A", "#0D9488", "#2563EB", "#4F46E5", "#7C3AED", "#DB2777", "#64748B", "#0F172A"];
+const COLORS: Array<string | null> = [null, "#E5484D", "#EA580C", "#CA8A04", "#16A34A", "#0F766E", "#2563EB", "#4F46E5", "#7C3AED", "#DB2777", "#64748B", "#0F172A"];
 const mi = "-mx-2 block rounded-md px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-indigo-700";
 const initials = (n: string | null) => (n ?? "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 

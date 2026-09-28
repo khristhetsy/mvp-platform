@@ -16,6 +16,7 @@ const person = (over: Partial<EventMergeData["presenters"][number]> = {}) => ({
   role: "Presenter",
   company: "Acme",
   headshotUrl: null,
+  companyLogoUrl: null,
   initials: "JD",
   bio: "",
   companySummary: "",
