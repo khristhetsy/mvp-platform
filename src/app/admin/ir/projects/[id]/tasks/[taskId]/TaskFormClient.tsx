@@ -20,7 +20,7 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US",
 const inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none";
 const STAGE_LABEL: Record<IrTask["status"], string> = { new: "New", in_progress: "In progress", done: "Done" };
 
-export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: string; meId: string; initialTab: string | null; added: number }) {
+export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = null }: { taskId: string; meId: string; initialTab: string | null; added: number; sequenced?: number | null }) {
   const [now] = useState(() => Date.now());
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added }: { taskId: st
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
   const [stageMenu, setStageMenu] = useState(false);
-  const [notice, setNotice] = useState<string | null>(added ? `${added} investor${added === 1 ? "" : "s"} added to this week.` : null);
+  const [notice, setNotice] = useState<string | null>(added ? `${added} investor${added === 1 ? "" : "s"} added to this week.${sequenced != null ? ` ${sequenced} started on an auto sequence; the first emails go out within 15 minutes.` : ""}` : null);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/ir/tasks/${taskId}`);

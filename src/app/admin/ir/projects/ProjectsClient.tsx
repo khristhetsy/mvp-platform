@@ -3,17 +3,23 @@
 /**
  * Projects — one card per founder raise (Odoo card layout: star, title, date range, owner
  * tag, SPV tag, footer with task count / assignee / status dot). Card body opens the
- * pipeline; the task count opens the weekly Task board.
+ * pipeline; the task count opens the weekly Task board. The ⋮ menu (Odoo style) jumps to
+ * Tasks, Milestones, Pipeline, Dashboard, Burndown, Founder report, Share, Duplicate and
+ * Settings, sets the card colour, and stars it.
  */
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatRange } from "@/lib/ir/milestones";
 import type { IrProject } from "@/lib/ir/types";
+import { ActivityClock } from "../_shared/ActivityClock";
 
 type Counts = { matches: number; tasks: number; tasksDone: number; openActivities: number; lateActivities: number; meetingsHeld: number; termSheets: number };
 type Payload = { projects: IrProject[]; counts: Record<string, Counts>; staff: Array<{ id: string; name: string }> };
 
 const STATUS_DOT: Record<string, string> = { active: "#16A34A", paused: "#CA8A04", completed: "#2563EB", cancelled: "#94A3B8" };
+const COLORS: Array<string | null> = [null, "#E5484D", "#EA580C", "#CA8A04", "#16A34A", "#0D9488", "#2563EB", "#4F46E5", "#7C3AED", "#DB2777", "#64748B", "#0F172A"];
+const mi = "-mx-2 block rounded-md px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-indigo-700";
 const initials = (n: string | null) => (n ?? "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
 export function ProjectsClient({ meId }: { meId: string }) {
@@ -21,6 +27,30 @@ export function ProjectsClient({ meId }: { meId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("active");
+  const [menu, setMenu] = useState<string | null>(null);
+  const [dupBusy, setDupBusy] = useState(false);
+  const router = useRouter();
+  async function setColor(p: IrProject, color: string | null) {
+    setMenu(null);
+    const r = await fetch(`/api/admin/ir/projects/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ color }) });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); setError(/color/i.test(j.error ?? "") ? "Card colours need migration 20260928110000_ir_project_color.sql run in Supabase." : j.error ?? "Couldn't set the colour."); return; }
+    void load();
+  }
+  async function duplicate(p: IrProject) {
+    setDupBusy(true);
+    const r = await fetch(`/api/admin/ir/projects/${p.id}/duplicate`, { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    setDupBusy(false); setMenu(null);
+    if (!r.ok) { setError(j.error ?? "Couldn't duplicate the project."); return; }
+    router.push(`/admin/ir/projects/${j.id}`);
+  }
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest("[data-project-menu]")) setMenu(null); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setMenu(null); };
+    document.addEventListener("mousedown", close); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [menu]);
 
   async function load() {
     const r = await fetch(`/api/admin/ir/projects${status ? `?status=${status}` : ""}`);
@@ -67,8 +97,46 @@ export function ProjectsClient({ meId }: { meId: string }) {
           const c = data?.counts[p.id];
           const mine = p.owner_id === meId;
           return (
-            <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3.5 transition-shadow hover:shadow-md">
-              <div className="flex items-start gap-2">
+            <div key={p.id} className="group relative rounded-xl border border-slate-200 bg-white p-3.5 transition-shadow hover:shadow-md" style={p.color ? { borderLeft: `5px solid ${p.color}` } : undefined}>
+              <div className="absolute right-2 top-2" data-project-menu>
+                <button type="button" onClick={() => setMenu(menu === p.id ? null : p.id)} aria-label="Project menu" aria-haspopup="true" aria-expanded={menu === p.id}
+                  className={`rounded-md px-1.5 py-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:opacity-100 ${menu === p.id ? "bg-slate-100 text-slate-700 opacity-100" : "opacity-0 group-hover:opacity-100"}`}><i className="ti ti-dots-vertical" aria-hidden="true" /></button>
+                {menu === p.id ? (
+                  <div role="menu" className="absolute right-0 z-20 mt-1 w-80 rounded-xl border border-slate-200 bg-white p-3 text-[12.5px] shadow-lg">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="mb-1 text-[12px] font-semibold text-slate-900">View</p>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}/tasks`} className={mi}>Tasks</Link>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}/milestones`} className={mi}>Milestones</Link>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}/pipeline`} className={mi}>Pipeline</Link>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-[12px] font-semibold text-slate-900">Reporting</p>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}?tab=analytics`} className={mi}>Dashboard</Link>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}/burndown`} className={mi}>Burndown chart</Link>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}/report`} className={mi}>Founder report</Link>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-[auto_1fr] gap-3 border-t border-slate-100 pt-2">
+                      <div className="grid grid-cols-4 content-start gap-1.5" role="group" aria-label="Card colour">
+                        {COLORS.map((c) => (
+                          <button key={c ?? "none"} type="button" onClick={() => void setColor(p, c)} aria-label={c ? `Colour ${c}` : "No colour"} aria-pressed={(p.color ?? null) === c}
+                            className={`h-5 w-5 rounded border ${(p.color ?? null) === c ? "ring-2 ring-slate-800 ring-offset-1" : "border-slate-300"}`} style={{ background: c ?? "#fff" }}>
+                            {c ? null : <i className="ti ti-slash text-[11px] text-slate-400" aria-hidden="true" />}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="border-l border-slate-100 pl-3">
+                        <Link role="menuitem" href={`/admin/ir/matches?project=${p.id}`} className={mi}>Share Project</Link>
+                        <button role="menuitem" type="button" disabled={dupBusy} onClick={() => void duplicate(p)} className={`${mi} w-[calc(100%+1rem)] text-left disabled:opacity-50`}>{dupBusy ? "Duplicating…" : "Duplicate"}</button>
+                        <Link role="menuitem" href={`/admin/ir/projects/${p.id}?tab=settings`} className={mi}>Settings</Link>
+                        <button role="menuitem" type="button" onClick={() => { setMenu(null); void star(p); }} className={`${mi} w-[calc(100%+1rem)] text-left`}>{p.starred ? "Remove from favorites" : "Add to favorites"}</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex items-start gap-2 pr-6">
                 <button type="button" onClick={() => star(p)} aria-label={p.starred ? "Unstar" : "Star"} className={`mt-0.5 ${p.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}><i className={`ti ${p.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
                 <Link href={`/admin/ir/projects/${p.id}`} className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-semibold text-slate-900 hover:text-indigo-700">{p.title}</p>
@@ -88,7 +156,8 @@ export function ProjectsClient({ meId }: { meId: string }) {
               <div className="mt-2.5 flex items-center gap-3 text-[11.5px] text-slate-500">
                 <span><i className="ti ti-users" aria-hidden="true" /> {c?.matches ?? 0} matches</span>
                 <span><i className="ti ti-calendar-check" aria-hidden="true" /> {c?.meetingsHeld ?? 0} held</span>
-                <span className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700" title={p.owner_name ?? ""}>{initials(p.owner_name)}</span>
+                <span className="ml-auto"><ActivityClock projectId={p.id} meId={meId} openCount={c?.openActivities ?? 0} lateCount={c?.lateActivities ?? 0} onChange={() => void load()} /></span>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700" title={p.owner_name ?? ""}>{initials(p.owner_name)}</span>
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_DOT[p.status] ?? "#94A3B8" }} title={p.status} />
               </div>
             </div>

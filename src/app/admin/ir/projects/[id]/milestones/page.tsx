@@ -1,18 +1,18 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
-import { IrHubHeader } from "../IrHubTabs";
-import { MatchesListClient } from "./MatchesListClient";
+import { IrHubHeader } from "../../../IrHubTabs";
+import { MilestonesClient } from "./MilestonesClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Share Project" };
+export const metadata = { title: "IR Milestones" };
 
-export default async function IrMatchesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
-  const { project } = await searchParams;
+  const { id } = await params;
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
       <IrHubHeader />
-      <MatchesListClient initialProject={project ?? ""} />
+      <MilestonesClient projectId={id} />
     </AppShell>
   );
 }

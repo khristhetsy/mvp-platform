@@ -31,11 +31,11 @@ const fmtAt = (ts: string) => new Date(ts).toLocaleString("en-US", { month: "sho
 const dayOf = (ts: string) => new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const METRICS: Array<{ key: keyof MetricCounts; label: string }> = [{ key: "intros", label: "Intros sent" }, { key: "emails", label: "Emails" }, { key: "calls", label: "Calls" }, { key: "contacted", label: "Contacted" }, { key: "meetings_booked", label: "Meetings booked" }, { key: "meetings_held", label: "Meetings held" }, { key: "term_sheets", label: "Term sheets" }, { key: "commitments", label: "Commitments" }];
 
-export function ProjectFormClient({ projectId }: { projectId: string }) {
+export function ProjectFormClient({ projectId, initialTab }: { projectId: string; initialTab?: string | null }) {
   const router = useRouter();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("description");
+  const [tab, setTab] = useState<Tab>(initialTab === "settings" || initialTab === "analytics" ? initialTab : "description");
   const [busy, setBusy] = useState(false);
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
 

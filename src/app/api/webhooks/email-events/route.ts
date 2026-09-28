@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { recordEmailOpen, recordEmailClick } from "@/lib/outreach/email-events";
+import { recordEngagement } from "@/lib/ir/sequences";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,16 @@ export async function POST(request: Request) {
   }
 
   const data = (payload.data as Record<string, unknown>) ?? {};
+
+  // IR auto sequence emails carry ir_seq / ir_step tags (object or [{ name, value }]).
+  const rawTags = data.tags;
+  const tags: Record<string, string> = Array.isArray(rawTags)
+    ? Object.fromEntries((rawTags as Array<{ name?: string; value?: string }>).filter((t) => t?.name).map((t) => [String(t.name), String(t.value ?? "")]))
+    : rawTags && typeof rawTags === "object" ? Object.fromEntries(Object.entries(rawTags as Record<string, unknown>).map(([k, v]) => [k, String(v)])) : {};
+  if (tags.ir_seq) {
+    const step = Number.parseInt(tags.ir_step ?? "", 10);
+    await recordEngagement(tags.ir_seq, type === "email.clicked" ? "click" : "open", Number.isFinite(step) ? step : null).catch(() => false);
+  }
   const toEmails = [...collectEmails(data.to), ...collectEmails(payload.to)];
   const { marked } =
     type === "email.clicked" ? await recordEmailClick(toEmails) : await recordEmailOpen(toEmails);

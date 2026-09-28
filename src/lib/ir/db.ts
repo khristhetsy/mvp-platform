@@ -93,7 +93,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   return { id: project.id };
 }
 
-export async function updateProject(id: string, patch: Partial<{ status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; weekly_summary: boolean; monthly_summary: boolean; description: string | null }>): Promise<void> {
+export async function updateProject(id: string, patch: Partial<{ status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; weekly_summary: boolean; monthly_summary: boolean; description: string | null; color: string | null }>): Promise<void> {
   const { error } = await db().from("ir_projects").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateProject: ${error.message}`);
 }
@@ -193,6 +193,9 @@ export async function updateMatch(id: string, patch: Partial<{ stage: IrStage; a
   // setting into the update); stamp it here so "who moved it" is on the record.
   if (patch.stage) {
     await client.from("ir_match_stage_events").update({ changed_by: actor }).eq("match_id", id).is("changed_by", null);
+    // A meeting stage stops an auto sequence and alerts its manager. Best-effort: a stage
+    // change never fails because of it. Loaded lazily (sequences imports this module).
+    try { const { onStageChanged } = await import("@/lib/ir/sequences"); await onStageChanged(id, patch.stage, actor); } catch { /* sequences unavailable */ }
   }
 }
 

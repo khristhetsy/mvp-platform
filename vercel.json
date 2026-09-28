@@ -13,6 +13,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/ir-sequences",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/social-maintenance",
       "schedule": "7 * * * *"
     },

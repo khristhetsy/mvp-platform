@@ -34,6 +34,8 @@ export type EmailPayload = {
   fromName?: string;
   /** File attachments — base64 content (Resend format). */
   attachments?: Array<{ filename: string; content: string }>;
+  /** Resend tags, echoed back on webhook events (letters, digits, _ and - only). */
+  tags?: Array<{ name: string; value: string }>;
 };
 
 // Must be an address on a domain verified for sending in Resend. icapos.com is
@@ -136,6 +138,7 @@ async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipp
           text: payload.text,
           reply_to: payload.replyTo,
           attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
+          tags: payload.tags && payload.tags.length > 0 ? payload.tags : undefined,
         }),
       });
       if (res.status !== 429 || attempt === MAX_ATTEMPTS) break;

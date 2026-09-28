@@ -1,25 +1,28 @@
 "use client";
 
-/** Hub-level Tasks: the weekly board with a founder picker on top. Remembers the last founder used. */
+/** Hub-level Tasks: the weekly board with a founder picker on top ("All founders" or one). Remembers the last choice. */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TasksClient } from "../projects/[id]/tasks/TasksClient";
+import { AllFoundersBoard } from "./AllFoundersBoard";
 
 const KEY = "ir.tasks.project";
+const ALL = "all";
 
 export function HubTasksClient({ meId, projects }: { meId: string; projects: Array<{ id: string; title: string; founder_name: string | null }> }) {
   const router = useRouter();
   const sp = useSearchParams();
   const fromUrl = sp.get("project");
-  const [projectId, setProjectId] = useState<string>(() => fromUrl && projects.some((p) => p.id === fromUrl) ? fromUrl : projects[0]?.id ?? "");
+  const valid = (id: string | null) => !!id && (id === ALL || projects.some((p) => p.id === id));
+  const [projectId, setProjectId] = useState<string>(() => valid(fromUrl) ? fromUrl! : projects[0]?.id ?? "");
   useEffect(() => {
     if (fromUrl) return;
     let saved: string | null = null;
     try { saved = window.localStorage.getItem(KEY); } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the last founder after mount (localStorage isn't available during SSR)
-    if (saved && projects.some((p) => p.id === saved)) setProjectId(saved);
-  }, [fromUrl, projects]);
+    if (valid(saved)) setProjectId(saved!);
+  }, [fromUrl, projects]); // eslint-disable-line react-hooks/exhaustive-deps
   function pick(id: string) {
     setProjectId(id);
     try { window.localStorage.setItem(KEY, id); } catch { /* ignore */ }
@@ -36,11 +39,12 @@ export function HubTasksClient({ meId, projects }: { meId: string; projects: Arr
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <label className="text-[12.5px] text-slate-600">Founder
           <select value={projectId} onChange={(e) => pick(e.target.value)} className="ml-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none">
+            <option value={ALL}>All founders ({projects.length})</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.title}{p.founder_name ? ` · ${p.founder_name}` : ""}</option>)}
           </select>
         </label>
       </div>
-      {projectId ? <TasksClient key={projectId} projectId={projectId} meId={meId} initialMonth={null} /> : null}
+      {projectId === ALL ? <AllFoundersBoard /> : projectId ? <TasksClient key={projectId} projectId={projectId} meId={meId} initialMonth={null} /> : null}
     </div>
   );
 }

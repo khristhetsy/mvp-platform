@@ -7,16 +7,22 @@
  * data source and fit tier (the engine re-runs on every change), Group By groups the
  * proposals, Favorites saves a search per user or shared. Confirm creates the matches
  * and returns to the task form's Matching tab.
+ *
+ * Columns can be shown or hidden (remembered in this browser). The Outreach column shows
+ * how far each investor already got with this founder on another of the founder's
+ * projects and links to that match; the investor name opens a profile panel.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type FieldFilter, type GroupOption, type SearchState } from "@/components/admin/OdooSearchBar";
 import { formatRange } from "@/lib/ir/milestones";
-import type { IrMilestone, IrProject, IrTask } from "@/lib/ir/types";
+import { SEQUENCE_TEMPLATES } from "@/lib/ir/sequence-templates";
+import { IR_STAGE_LABEL, type IrMilestone, type IrProject, type IrStage, type IrTask } from "@/lib/ir/types";
 
 type Opt = { key: string; label: string };
-type Row = { contactId: string; name: string | null; firm: string; fit: number; tier: "high" | "medium" | "low"; summary: string; sectors: string[]; types: string[]; dataSource: string | null; alsoOn: string[] };
+type Outreach = { matchId: string; stage: IrStage; stageChangedAt: string; projectTitle: string };
+type Row = { contactId: string; name: string | null; firm: string; fit: number; tier: "high" | "medium" | "low"; summary: string; sectors: string[]; types: string[]; dataSource: string | null; verifiedAt?: string | null; alsoOn: string[]; founderOutreach: Outreach | null };
 type Filters = { industry: string[]; stage: string[]; raise: string[]; revenue: string[]; investorType: string[]; source: string; tier: string };
 type Payload = {
   project: IrProject; task: IrTask | null; week: IrMilestone | null; onTask: number;
@@ -28,6 +34,18 @@ const SOURCE_OPTS: Opt[] = [{ key: "verified", label: "Verified" }, { key: "self
 const TIER_OPTS: Opt[] = [{ key: "high", label: "High (≥70)" }, { key: "medium", label: "Medium (50–69)" }, { key: "low", label: "Low" }];
 const GROUPS: GroupOption[] = [{ id: "none", label: "None" }, { id: "firm", label: "Firm" }, { id: "tier", label: "Fit tier" }, { id: "type", label: "Investor type" }, { id: "source", label: "Data source" }];
 const srcLabel = (s: string | null) => (s === "verified" ? "Verified" : s === "self_reported" ? "Self-reported" : "Unverified");
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const STAGE_CLS: Partial<Record<IrStage, string>> = { passed: "bg-rose-50 text-rose-700", committed: "bg-emerald-50 text-emerald-700", meeting_scheduled: "bg-indigo-50 text-indigo-700", meeting_held: "bg-indigo-50 text-indigo-700" };
+
+/** Optional columns. Investor and the checkbox are always shown. */
+type ColKey = "outreach" | "firm" | "fit" | "why" | "sectors" | "types" | "source" | "also";
+const COLS: Array<{ key: ColKey; label: string; on: boolean }> = [
+  { key: "outreach", label: "Outreach", on: true }, { key: "firm", label: "Firm", on: true }, { key: "fit", label: "Fit", on: true },
+  { key: "why", label: "Why", on: true }, { key: "sectors", label: "Sectors", on: false }, { key: "types", label: "Investor type", on: false },
+  { key: "source", label: "Data source", on: true }, { key: "also", label: "Also matched", on: true },
+];
+const COLS_KEY = "ir.matching.columns";
+const DEFAULT_COLS = COLS.filter((c) => c.on).map((c) => c.key);
 
 /** Filters ↔ search-bar field state (labels in the bar, keys on the wire). */
 function toState(f: Filters, o: Payload["options"]): SearchState {
@@ -58,6 +76,35 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cols, setCols] = useState<ColKey[]>(DEFAULT_COLS);
+  const [colsOpen, setColsOpen] = useState(false);
+  const [hideContacted, setHideContacted] = useState(false);
+  const [profile, setProfile] = useState<Row | null>(null);
+  const [seq, setSeq] = useState<null | { setupNeeded: boolean; staff: Array<{ id: string; name: string }>; template: string; via: "icapos" | "gmail"; manager: string; notifyEmail: boolean }>(null);
+
+  async function openSequence() {
+    if (seq) { setSeq(null); return; }
+    const [s, pr] = await Promise.all([fetch("/api/admin/ir/sequences").then((r) => r.json()).catch(() => ({ setupNeeded: true })), fetch(`/api/admin/ir/projects/${projectId}`).then((r) => r.json()).catch(() => ({}))]);
+    setSeq({ setupNeeded: !!s.setupNeeded, staff: pr.staff ?? [], template: Object.keys(SEQUENCE_TEMPLATES)[0], via: "icapos", manager: pr.project?.owner_id ?? "", notifyEmail: true });
+  }
+
+  useEffect(() => {
+    let saved: ColKey[] | null = null;
+    try { const raw = window.localStorage.getItem(COLS_KEY); const v = raw ? JSON.parse(raw) : null; if (Array.isArray(v)) saved = v.filter((k): k is ColKey => COLS.some((c) => c.key === k)); } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the column choice after mount (localStorage isn't available during SSR)
+    if (saved) setCols(saved);
+  }, []);
+  function setColumns(next: ColKey[]) {
+    setCols(next);
+    try { window.localStorage.setItem(COLS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+  useEffect(() => {
+    if (!colsOpen) return;
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest("[data-cols-menu]")) setColsOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setColsOpen(false); };
+    document.addEventListener("mousedown", close); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [colsOpen]);
 
   const load = useCallback(async (filters: Filters | null) => {
     setLoading(true);
@@ -90,7 +137,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
     { key: "tier", label: "Fit tier", options: TIER_OPTS.map((o) => o.label) },
   ] : [], [data]);
 
-  const rows = useMemo(() => (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary)), [data, search]);
+  const rows = useMemo(() => (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), [data, search, hideContacted]);
   const grouped = useMemo(() => {
     const g = search?.groupBy && search.groupBy !== "none" ? search.groupBy : null;
     if (!g) return [{ label: null as string | null, rows }];
@@ -100,15 +147,31 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
     return [...m.entries()].map(([label, rs]) => ({ label, rows: rs }));
   }, [rows, search]);
 
-  async function confirm() {
+  const contacted = useMemo(() => (data?.rows ?? []).filter((r) => r.founderOutreach).length, [data]);
+  const pickedContacted = useMemo(() => (data?.rows ?? []).filter((r) => picked.has(r.contactId) && r.founderOutreach).length, [data, picked]);
+  const visibleIds = rows.map((r) => r.contactId);
+  const pickedVisible = visibleIds.filter((id) => picked.has(id)).length;
+  const allVisible = visibleIds.length > 0 && pickedVisible === visibleIds.length;
+  function toggleAll(on: boolean) {
+    setPicked((p) => { const n = new Set(p); for (const id of visibleIds) { if (on) n.add(id); else n.delete(id); } return n; });
+  }
+
+  async function confirm(withSequence = false) {
     if (!data || !picked.size) { setError("Select at least one investor."); return; }
+    if (withSequence && (!seq || seq.setupNeeded || !seq.manager)) { setError("Pick an account manager for the sequence."); return; }
     setBusy(true); setError(null);
     const meta = Object.fromEntries(data.rows.filter((r) => picked.has(r.contactId)).map((r) => [r.contactId, { fitTier: r.tier, dataSource: r.dataSource }]));
     const r = await fetch("/api/admin/ir/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, taskId, investorContactIds: [...picked], meta }) });
     const j = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setError(j.error ?? "Couldn't confirm the matches."); return; }
-    router.push(`/admin/ir/projects/${projectId}/tasks/${taskId}?tab=matching&added=${(j.created ?? []).length}`);
+    let sequenced = "";
+    if (withSequence && seq && (j.created ?? []).length) {
+      const s = await fetch("/api/admin/ir/sequences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ matchIds: j.created, template: seq.template, via: seq.via, managerId: seq.manager, notifyEmail: seq.notifyEmail }) });
+      const sj = await s.json().catch(() => ({}));
+      sequenced = `&sequenced=${s.ok ? sj.started ?? 0 : 0}`;
+    }
+    router.push(`/admin/ir/projects/${projectId}/tasks/${taskId}?tab=matching&added=${(j.created ?? []).length}${sequenced}`);
   }
 
   if (error && !data) return <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>;
@@ -124,46 +187,184 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
           <p className="text-[12px] text-indigo-800">{data.week ? `${formatRange(data.week.starts_on, data.week.ends_on)} · ` : ""}{data.onTask} investor{data.onTask === 1 ? "" : "s"} already on this task. Confirmed investors land in Matched with a &ldquo;Send intro email&rdquo; to-do.</p>
         </div>
         <button type="button" disabled={loading} onClick={() => void load(toFilters(search, data.options))} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60">{loading ? "Scoring…" : "Run matching again"}</button>
-        <Link href={back} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100">← Back to task</Link>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={720} />
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHideContacted(e.target.checked)} /> Hide already contacted</label>
+        <div className="relative" data-cols-menu>
+          <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{cols.length}/{COLS.length}</span></button>
+          {colsOpen ? (
+            <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg" role="menu">
+              <p className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Show columns</p>
+              <label className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-400"><input type="checkbox" checked disabled /> Investor <span className="ml-auto text-[10.5px]">Always on</span></label>
+              {COLS.map((c) => (
+                <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">
+                  <input type="checkbox" checked={cols.includes(c.key)} onChange={(e) => setColumns(e.target.checked ? COLS.filter((x) => x.key === c.key || cols.includes(x.key)).map((x) => x.key) : cols.filter((k) => k !== c.key))} /> {c.label}
+                </label>
+              ))}
+              <div className="mt-1 flex justify-between border-t border-slate-100 px-2 pt-2 text-[12px]">
+                <button type="button" onClick={() => setColumns(DEFAULT_COLS)} className="text-indigo-700 hover:underline">Reset to default</button>
+                <button type="button" onClick={() => setColumns(COLS.map((c) => c.key))} className="text-indigo-700 hover:underline">Show all</button>
+              </div>
+            </div>
+          ) : null}
+        </div>
         <span className="ml-auto text-[12px] text-slate-600">{loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
       </div>
 
       {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales Hub › Settings, then reload.</p> : null}
       {noSector ? <p className="mb-3 text-[12.5px] text-slate-500">Add at least one Sector under Filters to see proposals.</p> : null}
+      {contacted ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"><b>{contacted} of these investors were already worked for {data.project.founder_name ?? data.project.title}</b> on another of the founder&rsquo;s projects. They are flagged in the Outreach column; click a status to open that match.</p> : null}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-[12.5px]">
-          <thead><tr className="bg-slate-50 text-left text-[11px] text-slate-500"><th className="w-8 px-3 py-2"></th><th className="py-2 pr-2 font-medium">Investor</th><th className="py-2 pr-2 font-medium">Firm</th><th className="py-2 pr-2 font-medium">Fit</th><th className="py-2 pr-2 font-medium">Why</th><th className="py-2 pr-2 font-medium">Data source</th><th className="py-2 pr-3 font-medium">Also matched</th></tr></thead>
+          <thead><tr className="bg-slate-50 text-left text-[11px] text-slate-500">
+            <th className="w-8 px-3 py-2"><input type="checkbox" checked={allVisible} ref={(el) => { if (el) el.indeterminate = pickedVisible > 0 && !allVisible; }} onChange={(e) => toggleAll(e.target.checked)} disabled={!visibleIds.length} aria-label={allVisible ? "Unselect all" : "Select all"} title={allVisible ? "Unselect all" : "Select all"} /></th>
+            <th className="py-2 pr-2 font-medium">Investor</th>
+            {cols.map((k) => <th key={k} className="py-2 pr-2 font-medium">{COLS.find((c) => c.key === k)?.label}</th>)}
+          </tr></thead>
           <tbody className="divide-y divide-slate-100">
             {grouped.map((g) => [
-              g.label ? <tr key={`g:${g.label}`} className="bg-slate-50/70"><td colSpan={7} className="px-3 py-1.5 text-[11.5px] font-semibold text-slate-700">{g.label} <span className="font-normal text-slate-400">({g.rows.length})</span></td></tr> : null,
+              g.label ? <tr key={`g:${g.label}`} className="bg-slate-50/70"><td colSpan={cols.length + 2} className="px-3 py-1.5 text-[11.5px] font-semibold text-slate-700">{g.label} <span className="font-normal text-slate-400">({g.rows.length})</span></td></tr> : null,
               ...g.rows.map((r) => (
-                <tr key={r.contactId} className={picked.has(r.contactId) ? "bg-indigo-50/40" : "hover:bg-slate-50"}>
+                <tr key={r.contactId} className={picked.has(r.contactId) ? "bg-indigo-50/40" : r.founderOutreach ? "bg-amber-50/40 hover:bg-amber-50" : "hover:bg-slate-50"}>
                   <td className="px-3 py-2"><input type="checkbox" checked={picked.has(r.contactId)} onChange={(e) => setPicked((p) => { const n = new Set(p); if (e.target.checked) n.add(r.contactId); else n.delete(r.contactId); return n; })} aria-label={`Select ${r.name ?? r.firm}`} /></td>
-                  <td className="py-2 pr-2 font-medium text-slate-900">{r.name ?? "—"}</td>
-                  <td className="py-2 pr-2 text-slate-700">{r.firm}</td>
-                  <td className="py-2 pr-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[r.tier]}`}>{r.fit}% · {r.tier}</span></td>
-                  <td className="max-w-[260px] truncate py-2 pr-2 text-slate-500" title={r.summary}>{r.summary}</td>
-                  <td className="py-2 pr-2 text-slate-600">{srcLabel(r.dataSource)}</td>
-                  <td className="py-2 pr-3 text-slate-500">{r.alsoOn.length ? r.alsoOn.join(", ") : "—"}</td>
+                  <td className="py-2 pr-2 font-medium text-slate-900">
+                    <button type="button" onClick={() => setProfile(r)} className="text-left hover:text-indigo-700 hover:underline">{r.name ?? r.firm ?? "—"}</button>
+                    {r.founderOutreach ? <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white" title="Already worked for this founder">!</span> : null}
+                  </td>
+                  {cols.map((k) => <td key={k} className={k === "why" ? "max-w-[260px] truncate py-2 pr-2 text-slate-500" : "py-2 pr-2 text-slate-600"} title={k === "why" ? r.summary : undefined}>{cell(k, r)}</td>)}
                 </tr>
               )),
             ])}
-            {rows.length === 0 && !noSector ? <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{loading ? "Scoring…" : "No proposals for these filters — widen the sector or drop the tier / source filter."}</td></tr> : null}
+            {rows.length === 0 && !noSector ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{loading ? "Scoring…" : hideContacted && contacted ? "Every proposal here was already worked for this founder. Untick “Hide already contacted” to see them." : "No proposals for these filters — widen the sector or drop the tier / source filter."}</td></tr> : null}
           </tbody>
         </table>
       </div>
 
-      <div className="sticky bottom-0 mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+      <div className="sticky bottom-0 mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
         <span className="text-[12.5px] text-slate-600">{picked.size} selected</span>
+        {picked.size ? <button type="button" onClick={() => setPicked(new Set())} className="text-[12.5px] text-indigo-700 hover:underline">Unselect all</button> : null}
+        {pickedContacted ? <span className="rounded-md bg-amber-50 px-2 py-1 text-[12px] text-amber-900">{pickedContacted} already worked for this founder</span> : null}
         {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
         <Link href={back} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Cancel</Link>
-        <button type="button" disabled={busy || !picked.size} onClick={confirm} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size || ""} investor${picked.size === 1 ? "" : "s"}`}</button>
+        <button type="button" disabled={busy || !picked.size} onClick={() => void openSequence()} aria-expanded={!!seq} className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-50 disabled:opacity-60"><i className="ti ti-bolt" aria-hidden="true" /> Confirm + auto sequence</button>
+        <button type="button" disabled={busy || !picked.size} onClick={() => void confirm()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size || ""} investor${picked.size === 1 ? "" : "s"}`}</button>
       </div>
+
+      {seq ? (
+        <div className="fixed bottom-20 right-6 z-30 w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-xl" role="dialog" aria-label="Auto sequence for the selected investors">
+          <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
+          {seq.setupNeeded ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">Auto sequences need migration <code>20260928100000_ir_sequences.sql</code> run in the Supabase SQL editor first.</p> : (
+            <div className="space-y-2">
+              <label className="block text-[11.5px] text-slate-500">Sequence<select value={seq.template} onChange={(e) => setSeq({ ...seq, template: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}</select></label>
+              <label className="block text-[11.5px] text-slate-500">Account manager to alert<select value={seq.manager} onChange={(e) => setSeq({ ...seq, manager: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{seq.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+              <div className="flex gap-4">{(["icapos", "gmail"] as const).map((k) => <label key={k} className="inline-flex items-center gap-1.5"><input type="radio" name="bulk-via" checked={seq.via === k} onChange={() => setSeq({ ...seq, via: k })} /> {k === "icapos" ? "iCapOS" : "Gmail"}</label>)}</div>
+              {seq.via === "gmail" ? <p className="text-[11.5px] text-amber-700">Opens and clicks can&rsquo;t be tracked on Gmail sends.</p> : null}
+              <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={seq.notifyEmail} onChange={(e) => setSeq({ ...seq, notifyEmail: e.target.checked })} /> Email the alerts too (always in iCapOS notifications)</label>
+              <p className="text-[11.5px] text-slate-500">Alerts on opens, clicks, replies and meetings; stops on a reply or meeting. Edit any one of them later from its record. The first emails go out within 15 minutes.</p>
+              <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size} and start sequence`}</button>
+            </div>
+          )}
+        </div>
+      ) : null}
+      {profile ? <InvestorPanel row={profile} onClose={() => setProfile(null)} picked={picked.has(profile.contactId)} onPick={(on) => setPicked((p) => { const n = new Set(p); if (on) n.add(profile.contactId); else n.delete(profile.contactId); return n; })} /> : null}
+    </div>
+  );
+}
+
+function OutreachPill({ o }: { o: Outreach | null }) {
+  if (!o) return <span className="text-slate-400">Not contacted</span>;
+  return (
+    <Link href={`/admin/ir/matches/${o.matchId}`} title={`Open the match on ${o.projectTitle}`} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium hover:ring-1 hover:ring-current ${STAGE_CLS[o.stage] ?? "bg-sky-50 text-sky-700"}`}>
+      {IR_STAGE_LABEL[o.stage]} <span className="font-normal opacity-75">{fmtDay(o.stageChangedAt)}</span> <i className="ti ti-arrow-right" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function cell(k: ColKey, r: Row) {
+  switch (k) {
+    case "outreach": return <OutreachPill o={r.founderOutreach} />;
+    case "firm": return r.firm || "—";
+    case "fit": return <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[r.tier]}`}>{r.fit}% · {r.tier}</span>;
+    case "why": return r.summary;
+    case "sectors": return r.sectors.length ? r.sectors.join(", ") : "—";
+    case "types": return r.types.length ? r.types.join(", ") : "—";
+    case "source": return srcLabel(r.dataSource);
+    case "also": return r.alsoOn.length ? r.alsoOn.join(", ") : "—";
+  }
+}
+
+type History = { investor: { id: string; name: string | null; firm: string | null; dataSource: string | null; verifiedAt: string | null; website: string | null }; matches: Array<{ matchId: string; projectId: string; projectTitle: string; founderName: string | null; stage: IrStage; stageChangedAt: string }> };
+
+/** Side panel for one proposed investor: what the queue knows plus every IR match they are on. */
+function InvestorPanel({ row, onClose, picked, onPick }: { row: Row; onClose: () => void; picked: boolean; onPick: (on: boolean) => void }) {
+  const [hist, setHist] = useState<History | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetch(`/api/admin/ir/investors/${row.contactId}`).then(async (r) => {
+      const j = await r.json().catch(() => ({}));
+      if (!live) return;
+      if (!r.ok) setErr(j.error ?? "Couldn't load the investor."); else setHist(j);
+    });
+    return () => { live = false; };
+  }, [row.contactId]);
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [onClose]);
+  const name = row.name ?? row.firm ?? "Investor";
+  return (
+    <div className="fixed inset-0 z-40">
+      <div className="absolute inset-0 bg-slate-900/30" onClick={onClose} aria-hidden="true" />
+      <aside role="dialog" aria-modal="true" aria-label={`${name} profile`} className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+        <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+          <span className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-indigo-50 text-[15px] font-semibold text-indigo-700">{name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[16px] font-semibold text-slate-900">{name}</p>
+            <p className="truncate text-[12.5px] text-slate-500">{row.firm && row.firm !== row.name ? row.firm : "Independent"}{hist?.investor.website ? <> · <a href={hist.investor.website.startsWith("http") ? hist.investor.website : `https://${hist.investor.website}`} target="_blank" rel="noreferrer" className="text-indigo-700 hover:underline">website</a></> : null}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg bg-slate-100 px-2 py-1 text-slate-600 hover:bg-slate-200"><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4 text-[12.5px]">
+          <section>
+            <h4 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Outreach for this founder</h4>
+            <OutreachPill o={row.founderOutreach} />
+            {row.founderOutreach ? <p className="mt-1.5 text-slate-500">On {row.founderOutreach.projectTitle}.</p> : <p className="mt-1.5 text-slate-500">No match with this founder on any of their projects.</p>}
+          </section>
+          <section>
+            <h4 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Fit for this project</h4>
+            <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5">
+              <dt className="text-slate-500">Fit</dt><dd><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[row.tier]}`}>{row.fit}% · {row.tier}</span></dd>
+              <dt className="text-slate-500">Why</dt><dd className="text-slate-700">{row.summary || "—"}</dd>
+              <dt className="text-slate-500">Sectors</dt><dd className="text-slate-700">{row.sectors.join(", ") || "—"}</dd>
+              <dt className="text-slate-500">Investor type</dt><dd className="text-slate-700">{row.types.join(", ") || "—"}</dd>
+              <dt className="text-slate-500">Data source</dt><dd className="text-slate-700">{srcLabel(row.dataSource)}{hist?.investor.verifiedAt ? ` · verified ${fmtDay(hist.investor.verifiedAt)}` : ""}</dd>
+            </dl>
+          </section>
+          <section>
+            <h4 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">On other projects</h4>
+            {err ? <p className="text-rose-600">{err}</p> : !hist ? <p className="text-slate-400">Loading…</p> : hist.matches.length === 0 ? <p className="text-slate-500">Not matched on any IR project yet.</p> : (
+              <ul className="space-y-1.5">
+                {hist.matches.map((m) => (
+                  <li key={m.matchId} className="flex items-center gap-2">
+                    <Link href={`/admin/ir/matches/${m.matchId}`} className="min-w-0 flex-1 truncate text-slate-800 hover:text-indigo-700">{m.projectTitle}</Link>
+                    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${STAGE_CLS[m.stage] ?? "bg-slate-100 text-slate-600"}`}>{IR_STAGE_LABEL[m.stage]}</span>
+                    <span className="w-14 text-right text-[11px] text-slate-400">{fmtDay(m.stageChangedAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+        <div className="flex gap-2 border-t border-slate-100 px-5 py-3">
+          <button type="button" onClick={() => onPick(!picked)} className={`rounded-lg px-3.5 py-1.5 text-[12.5px] font-semibold ${picked ? "border border-slate-200 text-slate-700 hover:bg-slate-50" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>{picked ? "Unselect" : "Select for this task"}</button>
+          <button type="button" onClick={onClose} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Close</button>
+        </div>
+      </aside>
     </div>
   );
 }

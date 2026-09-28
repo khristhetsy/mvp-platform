@@ -28,6 +28,8 @@ export type IrProject = {
   owner_id: string; owner_name: string | null; source_opportunity_id: string | null;
   start_date: string; term_months: number; end_date: string; status: IrProjectStatus;
   founder_report_visible: boolean; is_spv: boolean; starred: boolean; weekly_summary: boolean; monthly_summary: boolean; description: string | null; created_at: string;
+  /** Card colour; absent until migration 20260928110000 is applied. */
+  color?: string | null;
 };
 
 export type IrMilestone = {

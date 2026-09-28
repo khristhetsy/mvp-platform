@@ -11,8 +11,8 @@ const inp = "rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] focu
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
 const STAGE_CLS: Partial<Record<IrStage, string>> = { committed: "bg-emerald-50 text-emerald-800", passed: "bg-slate-100 text-slate-600", meeting_scheduled: "bg-amber-50 text-amber-800", meeting_held: "bg-amber-50 text-amber-800" };
 
-export function MatchesListClient() {
-  const [project, setProject] = useState(""); const [stage, setStage] = useState(""); const [assignee, setAssignee] = useState(""); const [q, setQ] = useState("");
+export function MatchesListClient({ initialProject = "" }: { initialProject?: string }) {
+  const [project, setProject] = useState(initialProject); const [stage, setStage] = useState(""); const [assignee, setAssignee] = useState(""); const [q, setQ] = useState("");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now] = useState(() => Date.now());

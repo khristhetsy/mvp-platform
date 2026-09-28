@@ -6,11 +6,15 @@
  * founder visibility), tabs (Tasks, Meetings, Investor profile, History), and a chatter
  * (log note / schedule activity / planned activities / dated log). Phone and email never
  * appear here — the investor profile links to the Sales Hub contact instead.
+ *
+ * "Send email" / "Send one-pager" open a composer that sends with iCapOS or the sender's
+ * Gmail (the address is resolved on the server) and logs a done Email activity.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
 import { MeetingPanel } from "./MeetingPanel";
+import { SequencePanel } from "./SequencePanel";
 import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../_shared/RecordPanels";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrNote, type IrProject, type IrStage } from "@/lib/ir/types";
@@ -24,6 +28,7 @@ type Payload = {
   entrepreneur: EntrepreneurProfile | null;
   siblings: Array<{ id: string; name: string }>;
   investor: { id: string; name: string | null; firm: string | null; country: string | null; dataSource: string | null; verifiedAt: string | null; investorTypes: string[]; industries: string[] } | null;
+  send: { hasEmail: boolean; onePagerUrl: string | null };
 };
 type Tab = "tasks" | "meetings" | "blocked" | "investor" | "founder" | "history";
 
@@ -39,6 +44,8 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
   const [notice, setNotice] = useState<string | null>(null);
   const [introOpen, setIntroOpen] = useState(false);
   const [introNote, setIntroNote] = useState("");
+  const [compose, setCompose] = useState<null | { onePager: boolean }>(null);
+  const [seqOpen, setSeqOpen] = useState(false);
   const router = useRouter();
 
   const load = useCallback(async () => {
@@ -90,7 +97,9 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
         {error ? <span className="text-rose-600">{error}</span> : null}{notice ? <span className="text-emerald-700">{notice}</span> : null}
         <span className="ml-auto flex items-center gap-1.5">
           <button type="button" disabled={busy} onClick={() => setTab("meetings")} className="rounded-md bg-indigo-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">Book meeting</button>
-          <button type="button" disabled={busy} onClick={() => setIntroOpen((v) => !v)} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-60">Send intro email</button>
+          <button type="button" disabled={busy} onClick={() => { setIntroOpen(false); setCompose(compose && !compose.onePager ? null : { onePager: false }); }} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-60">{m.stage === "matched" ? "Send intro email" : "Send email"}</button>
+          <button type="button" disabled={busy} onClick={() => { setCompose(null); setIntroOpen(false); setSeqOpen((v) => !v); }} className="rounded-md border border-indigo-200 bg-white px-2.5 py-1 text-[12px] text-indigo-800 hover:bg-indigo-50 disabled:opacity-60"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence</button>
+          {data.send.onePagerUrl ? <button type="button" disabled={busy} onClick={() => { setIntroOpen(false); setCompose(compose?.onePager ? null : { onePager: true }); }} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-60"><i className="ti ti-file-text" aria-hidden="true" /> Send one-pager</button> : null}
           {(() => { const i = data.siblings.findIndex((x) => x.id === matchId); const prev = i > 0 ? data.siblings[i - 1] : null; const next = i >= 0 && i < data.siblings.length - 1 ? data.siblings[i + 1] : null; return <>
             <span className="ml-2 text-slate-500">{i >= 0 ? i + 1 : "–"} / {data.siblings.length}</span>
             <button type="button" disabled={!prev} onClick={() => prev && router.push(`/admin/ir/matches/${prev.id}`)} aria-label="Previous record" title={prev?.name} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-40">‹</button>
@@ -98,6 +107,10 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
           </>; })()}
         </span>
       </div>
+      <SequencePanel matchId={matchId} stage={m.stage} staff={data.staff} meId={meId} defaultManager={m.assignee_id ?? p.owner_id} onePagerUrl={data.send.onePagerUrl} open={seqOpen} onClose={() => setSeqOpen(false)} onChange={load} />
+      {compose ? <EmailComposer key={compose.onePager ? "op" : "mail"} matchId={matchId} investorName={m.investor_name ?? m.investor_firm ?? "the investor"} founder={p.founder_name ?? p.title} stage={m.stage}
+        hasEmail={data.send.hasEmail} onePagerUrl={data.send.onePagerUrl} onePager={compose.onePager} investorContactId={m.investor_contact_id}
+        onLogInstead={() => { setCompose(null); setIntroOpen(true); }} onClose={() => setCompose(null)} onSent={async (msg) => { setCompose(null); setNotice(msg); await load(); }} /> : null}
       {introOpen ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[12.5px]">
           <span className="text-indigo-900">Mark the intro email as sent from your mailbox — the &ldquo;Send intro email&rdquo; to-do is completed and the stage moves to Intro sent.</span>
@@ -304,6 +317,72 @@ function Chatter({ projectId, matchId, open, done, notes, staff, meId, onChange,
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+const VIA_KEY = "ir.send.via";
+
+/** Composer for emailing the investor. Sends with iCapOS or the sender's Gmail; the choice is remembered in this browser. */
+function EmailComposer({ matchId, investorName, founder, stage, hasEmail, onePagerUrl, onePager, investorContactId, onLogInstead, onClose, onSent }: {
+  matchId: string; investorName: string; founder: string; stage: IrStage; hasEmail: boolean; onePagerUrl: string | null; onePager: boolean; investorContactId: string;
+  onLogInstead: () => void; onClose: () => void; onSent: (msg: string) => Promise<void>;
+}) {
+  const first = investorName.split(/\s+/)[0];
+  const [subject, setSubject] = useState(onePager ? `${founder}: one-pager` : stage === "matched" ? `Introduction: ${founder}` : `Following up: ${founder}`);
+  const [body, setBody] = useState(onePager
+    ? `Hi ${first},\n\nHere is the one-pager for ${founder}. Happy to set up a call if it fits your thesis.\n\nBest,`
+    : stage === "matched" ? `Hi ${first},\n\nI'd like to introduce you to ${founder}. Would you be open to a 20 minute call next week?\n\nBest,` : `Hi ${first},\n\nFollowing up on ${founder}. Happy to share more or set up a call.\n\nBest,`);
+  const [withOnePager, setWithOnePager] = useState(onePager && !!onePagerUrl);
+  const [via, setVia] = useState<"icapos" | "gmail">(() => { try { return window.localStorage.getItem(VIA_KEY) === "gmail" ? "gmail" : "icapos"; } catch { return "icapos"; } });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  function pickVia(v: "icapos" | "gmail") { setVia(v); try { window.localStorage.setItem(VIA_KEY, v); } catch { /* ignore */ } }
+
+  async function send() {
+    setBusy(true); setErr(null);
+    const r = await fetch(`/api/admin/ir/matches/${matchId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send_email", subject, body, via, includeOnePager: withOnePager }) });
+    const j = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) { setErr(j.error ?? "Couldn't send the email."); return; }
+    await onSent(`Email sent to ${investorName} with ${via === "gmail" ? "Gmail" : "iCapOS"}${j.onePager ? ", one-pager linked" : ""}. Logged in the chatter.`);
+  }
+
+  return (
+    <div className="mb-3 rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-sm">
+      <div className="mb-2 flex items-center gap-2">
+        <p className="text-[14px] font-semibold text-slate-900">{onePager ? "Send one-pager" : "Email"} to {investorName}</p>
+        <button type="button" onClick={onClose} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
+      </div>
+      {!hasEmail ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">This investor has no email on file. <Link href={`/admin/sales/contacts/${investorContactId}`} className="font-medium underline">Add one on their Sales Hub contact</Link>, then send from here.</p>
+      ) : (
+        <>
+          <label className="mb-1 block text-[11.5px] text-slate-500" htmlFor="ir-mail-subject">Subject</label>
+          <input id="ir-mail-subject" value={subject} onChange={(e) => setSubject(e.target.value)} className={inp} />
+          <label className="mb-1 mt-2 block text-[11.5px] text-slate-500" htmlFor="ir-mail-body">Message</label>
+          <textarea id="ir-mail-body" value={body} onChange={(e) => setBody(e.target.value)} rows={7} className={inp} />
+          {onePagerUrl ? (
+            <label className="mt-2 flex items-center gap-2 text-slate-700"><input type="checkbox" checked={withOnePager} onChange={(e) => setWithOnePager(e.target.checked)} /> Include the founder&rsquo;s one-pager link <a href={onePagerUrl} target="_blank" rel="noreferrer" className="text-indigo-700 hover:underline">preview</a></label>
+          ) : <p className="mt-2 text-slate-500">The founder&rsquo;s one-pager isn&rsquo;t published, so it can&rsquo;t be linked yet.</p>}
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Send with</p>
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Send with">
+              {([["icapos", "iCapOS", "From the verified iCapOS address; replies come to you"], ["gmail", "Gmail", "From your own connected Gmail"]] as const).map(([k, l, d]) => (
+                <button key={k} type="button" role="radio" aria-checked={via === k} onClick={() => pickVia(k)} className={`rounded-lg border px-3 py-2 text-left ${via === k ? "border-indigo-400 bg-indigo-50 ring-1 ring-indigo-300" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                  <span className="block text-[12.5px] font-semibold text-slate-900">{l}</span><span className="block text-[11px] text-slate-500">{d}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {err ? <p className="mt-2 text-rose-600">{err}</p> : null}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" disabled={busy || !subject.trim() || !body.trim()} onClick={() => void send()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Sending…" : `Send with ${via === "gmail" ? "Gmail" : "iCapOS"}`}</button>
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 hover:bg-slate-50">Discard</button>
+            {stage === "matched" ? <button type="button" onClick={onLogInstead} className="ml-auto text-[12px] text-slate-500 hover:text-indigo-700 hover:underline">Already sent it from your mailbox? Log it instead</button> : null}
+          </div>
+        </>
+      )}
     </div>
   );
 }

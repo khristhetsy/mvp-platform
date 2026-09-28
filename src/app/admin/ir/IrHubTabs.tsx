@@ -3,7 +3,7 @@
 /** IR Hub tab strip — rendered in the compact top bar (AdminHubTabsInline) and, on the
  *  classic chrome, at the top of each IR page (IrHubHeader). */
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAdminChrome } from "@/lib/ui/admin-chrome";
 
 /** Hub tabs in the mockup's order. Dashboard / Projects / Tasks / Share Project / Founder report / Odoo import. */
@@ -26,10 +26,25 @@ export function activeHubTab(tabs: { href: string }[], pathname: string, root: s
   return best;
 }
 
+/** "← Back" on IR detail pages (anything below a hub tab): returns to the previous screen,
+ *  or to the parent path when the page was opened directly. Hidden on the hub tabs themselves. */
+export function IrBackButton() {
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
+  if (IR_HUB_TABS.some((t) => t.href === pathname) || !pathname.startsWith("/admin/ir/")) return null;
+  const parent = pathname.replace(/\/[^/]+$/, "") || "/admin/ir";
+  return (
+    <button type="button" onClick={() => { if (window.history.length > 1) router.back(); else router.push(parent); }}
+      className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50" title="Back to the previous screen">
+      <i className="ti ti-arrow-left" aria-hidden="true" /> Back
+    </button>
+  );
+}
+
 export function IrHubHeader({ title = "Investor Relations Hub" }: { title?: string }) {
   const chrome = useAdminChrome();
   const pathname = usePathname() ?? "";
-  if (chrome === "compact") return null;
+  if (chrome === "compact") return <IrBackButton />;
   return (
     <>
       <div style={{ marginBottom: 14 }}>
@@ -42,6 +57,7 @@ export function IrHubHeader({ title = "Investor Relations Hub" }: { title?: stri
           return <Link key={t.href} href={t.href} className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium ${active ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{t.label}</Link>;
         })}
       </div>
+      <IrBackButton />
     </>
   );
 }
