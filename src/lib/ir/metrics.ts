@@ -7,7 +7,8 @@
  *   Emails           activities type=email, done in period
  *   Meetings booked  activities type=meeting, created in period
  *   Meetings held    activities type=meeting, done in period
- *   Term sheets      matches with term_sheet_received_at in period
+ *   Term sheets      done term_sheet activities in period (sent, or logged from Odoo notes)
+ *                    + matches with term_sheet_received_at in period
  *   Commitments      stage events to `committed` in period
  *   Contacted        distinct matches with a done email/call/voicemail/meeting in period
  *   Pipeline as of D latest stage event per match with changed_at < D
@@ -86,6 +87,7 @@ export function countMetrics(acts: ActivityLite[], matches: MatchLite[], events:
     if (a.type === "email") { c.emails++; if (a.subject === INTRO_SUBJECT) c.intros++; }
     if (a.type === "call" || a.type === "voicemail") c.calls++;
     if (a.type === "meeting") c.meetings_held++;
+    if (a.type === "term_sheet") c.term_sheets++;
     if (a.match_id && CONTACT_TYPES.has(a.type)) contacted.add(a.match_id);
   }
   c.contacted = contacted.size;

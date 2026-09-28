@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { logActivity } from "@/lib/sales/activity";
+import { logIrCall } from "@/lib/ir/call-log";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ const schema = z.object({
 
 const LABEL: Record<string, string> = { connected: "connected", voicemail: "voicemail", no_answer: "no answer", wrong_number: "wrong number" };
 
-// POST /api/sales/contacts/[id]/call — log a call outcome to the activity timeline.
+// POST /api/sales/contacts/[id]/call — log a call outcome to the activity timeline (and the IR record when the contact is an investor on a project).
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
@@ -25,5 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (duration) parts.push(duration);
   if (notes) parts.push(`"${notes.trim()}"`);
   await logActivity({ kind: "call", summary: parts.join(" · "), actorId: profile.id, contactCrmId: id, meta: { outcome, duration: duration ?? null } });
-  return NextResponse.json({ ok: true });
+  // Investors on an IR project: the call also counts on their IR record (dashboard Calls card).
+  const irMatchId = await logIrCall({ crmContactId: id, outcome, duration: duration ?? null, notes: notes ?? null, source: "sales", actorId: profile.id });
+  return NextResponse.json({ ok: true, irMatchId });
 }

@@ -22,6 +22,8 @@ export type IrProjectStatus = (typeof IR_PROJECT_STATUSES)[number];
 /** The intro email every match starts with; the dashboard's "Intros sent" counts activities with this subject. */
 export const INTRO_SUBJECT = "Send intro email";
 export const INTRO_DUE_DAYS = 7;
+/** Logged when a term sheet goes out to an investor; the dashboard's "Term sheets" counts these plus term sheets received. */
+export const TERM_SHEET_SENT_SUBJECT = "Term sheet sent";
 
 export type IrProject = {
   id: string; company_id: string | null; founder_contact_id: string | null; title: string; founder_name: string | null;

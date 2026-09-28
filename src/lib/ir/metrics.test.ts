@@ -31,10 +31,11 @@ describe("countMetrics", () => {
       act({ id: "5", type: "meeting", created_at: "2026-09-01T00:00:00Z", done_at: "2026-09-18T00:00:00Z" }), // held only
       act({ id: "6", type: "email", done_at: "2026-09-22T00:00:00Z" }),           // outside
       act({ id: "7", type: "email", subject: "Founder report sent · Week 3", match_id: null }), // excluded
+      act({ id: "8", type: "term_sheet", subject: "Term sheet sent", match_id: "m2" }),      // term sheet sent
     ];
     const matches: MatchLite[] = [{ id: "m1", project_id: "p", stage: "committed", term_sheet_received_at: "2026-09-15T00:00:00Z" }, { id: "m2", project_id: "p", stage: "contacted", term_sheet_received_at: "2026-08-01T00:00:00Z" }];
     const events: StageEventLite[] = [{ match_id: "m1", to_stage: "committed", changed_at: "2026-09-19T00:00:00Z" }, { match_id: "m2", to_stage: "committed", changed_at: "2026-08-19T00:00:00Z" }];
-    expect(countMetrics(acts, matches, events, P)).toEqual({ intros: 1, calls: 2, emails: 1, meetings_booked: 1, meetings_held: 1, term_sheets: 1, commitments: 1, contacted: 2 });
+    expect(countMetrics(acts, matches, events, P)).toEqual({ intros: 1, calls: 2, emails: 1, meetings_booked: 1, meetings_held: 1, term_sheets: 2, commitments: 1, contacted: 2 });
   });
 });
 

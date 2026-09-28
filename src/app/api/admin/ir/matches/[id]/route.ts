@@ -4,6 +4,7 @@
  *   PATCH { stage?, assigneeId?, starred?, founderVisible?, termSheetReceivedAt?, taskId?, blockers? } → { ok }
  *   POST  { action: "intro_sent", note? }   → marks the intro email sent (to-do done, stage → Intro sent)
  *   POST  { action: "message", body }       → message to followers (owner + assignee), kept on the record
+ *   POST  { action: "term_sheet_sent", note? } → logs a done Term sheet activity (counts on the dashboard's Term sheets card)
  *   POST  { action: "send_email", subject, body, via: icapos|gmail, includeOnePager } → emails the investor,
  *         logs a done Email activity (completing the intro to-do) and moves Matched → Intro sent
  */
@@ -13,7 +14,7 @@ import { irStaff, forbidden, failed } from "@/lib/ir/auth";
 import { alsoMatched, createActivity, db, entrepreneurProfile, getMatch, getProject, listActivities, listMatches, listNotes, listStaff, listStageEvents, updateActivity, updateMatch } from "@/lib/ir/db";
 import { sendRecordMessage } from "@/lib/ir/messages";
 import { investorHasEmail, onePagerFor, sendInvestorEmail } from "@/lib/ir/send-email";
-import { INTRO_SUBJECT, IR_STAGES } from "@/lib/ir/types";
+import { INTRO_SUBJECT, IR_STAGES, TERM_SHEET_SENT_SUBJECT } from "@/lib/ir/types";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 const postSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("intro_sent"), note: z.string().max(1000).nullish() }),
   z.object({ action: z.literal("message"), body: z.string().min(1).max(4000) }),
+  z.object({ action: z.literal("term_sheet_sent"), note: z.string().trim().max(1000).nullish() }),
   z.object({ action: z.literal("send_email"), subject: z.string().trim().min(1).max(200), body: z.string().trim().min(1).max(8000), via: z.enum(["icapos", "gmail"]), includeOnePager: z.boolean().default(false) }),
 ]);
 
@@ -85,6 +87,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       else await createActivity({ projectId: match.project_id, matchId: id, taskId: match.task_id, type: "email", subject: INTRO_SUBJECT, outcome: parsed.data.note ?? "Intro email sent", doneAt: now, founderVisible: true, assigneeId: me.id, createdBy: me.id });
       if (match.stage === "matched") await updateMatch(id, { stage: "intro_sent" }, me.id);
       return NextResponse.json({ ok: true });
+    }
+    if (parsed.data.action === "term_sheet_sent") {
+      const a = await createActivity({ projectId: match.project_id, matchId: id, taskId: match.task_id, type: "term_sheet", subject: TERM_SHEET_SENT_SUBJECT, outcome: parsed.data.note || "Term sheet sent to the investor", doneAt: new Date().toISOString(), founderVisible: true, assigneeId: me.id, createdBy: me.id });
+      return NextResponse.json({ ok: true, activityId: a.id });
     }
     if (parsed.data.action === "send_email") {
       const d = parsed.data;

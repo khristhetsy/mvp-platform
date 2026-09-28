@@ -70,6 +70,15 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
     await load();
   }
 
+  async function termSheetSent() {
+    setBusy(true); setError(null);
+    const r = await fetch(`/api/admin/ir/matches/${matchId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "term_sheet_sent" }) });
+    setBusy(false);
+    if (!r.ok) { setError((await r.json().catch(() => ({}))).error ?? "Couldn't log the term sheet."); return; }
+    setNotice("Term sheet logged as sent.");
+    await load();
+  }
+
   async function introSent() {
     setBusy(true); setError(null);
     const r = await fetch(`/api/admin/ir/matches/${matchId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "intro_sent", note: introNote.trim() || null }) });
@@ -139,6 +148,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
             <p className="text-[12.5px] text-slate-500">{m.investor_firm ?? "—"} · <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">{IR_STAGE_LABEL[m.stage]}</span>{m.term_sheet_received_at ? <span className="ml-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Term sheet {fmtDay(m.term_sheet_received_at)}</span> : null}</p>
           </div>
           <div className="flex gap-1">
+            <button type="button" disabled={busy} onClick={termSheetSent} className="rounded-md border border-slate-200 px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-60"><i className="ti ti-file-certificate" aria-hidden="true" /> Term sheet sent</button>
             <button type="button" disabled={busy} onClick={() => patch({ termSheetReceivedAt: m.term_sheet_received_at ? null : new Date().toISOString() })} className="rounded-md border border-slate-200 px-2.5 py-1 text-[12px] text-slate-700 hover:bg-slate-50">{m.term_sheet_received_at ? "Clear term sheet" : "Term sheet received"}</button>
           </div>
         </div>

@@ -65,8 +65,8 @@ export async function dashboardPayload(q: DashboardQuery): Promise<DashboardPayl
   const cards: DashboardCard[] = (["meetings_held", "term_sheets", "calls", "emails"] as GoalMetric[]).map((metric) => {
     const target = goalTarget(goals, { projectId: null, metric, kind: q.period, start: period.start });
     const perAgent = new Map<string, number>();
-    if (metric === "term_sheets") { for (const m of matches) if (m.term_sheet_received_at && m.term_sheet_received_at >= toTs(period.start) && m.term_sheet_received_at < toTs(period.end) && m.assignee_id) perAgent.set(m.assignee_id, (perAgent.get(m.assignee_id) ?? 0) + 1); }
-    else for (const a of acts) { const who = agentOf(a); if (!who) continue; const c = countMetrics([a], [], [], period); if (c[metric]) perAgent.set(who, (perAgent.get(who) ?? 0) + c[metric]); }
+    if (metric === "term_sheets") for (const m of matches) if (m.term_sheet_received_at && m.term_sheet_received_at >= toTs(period.start) && m.term_sheet_received_at < toTs(period.end) && m.assignee_id) perAgent.set(m.assignee_id, (perAgent.get(m.assignee_id) ?? 0) + 1);
+    for (const a of acts) { const who = agentOf(a); if (!who) continue; const c = countMetrics([a], [], [], period); if (c[metric]) perAgent.set(who, (perAgent.get(who) ?? 0) + c[metric]); }
     return {
       metric, actual: all[metric], target, attainment: attainment(all[metric], target),
       perProject: projects.map((p) => ({ projectId: p.id, title: p.title, actual: perProjectCounts.get(p.id)![metric], target: goalTarget(goals, { projectId: p.id, metric, kind: q.period, start: period.start }) })),
