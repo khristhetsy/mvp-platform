@@ -2,6 +2,7 @@ import { marketingDb } from "./db";
 import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured } from "./send";
 import { isUnsubscribed } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
+import { needsEmailReview } from "./recipient";
 
 export async function getSequences(): Promise<MarketingSequence[]> {
   const db = await marketingDb();
@@ -463,12 +464,16 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string, 
       continue;
     }
     const token = makeUnsubscribeToken(contact.email);
-    const result = await sendMarketingEmail({
-      to: contact.email, first_name: contact.first_name, company: contact.company,
-      from_name: step.from_name, from_email: step.from_email,
-      subject: step.template.subject, html_body: step.template.html_body, text_body: step.template.text_body,
-      unsubscribe_token: token,
-    });
+    // Contacts flagged by the email cleanup are held back (logged as a skipped recipient)
+    // until someone fixes the address, so they never get a duplicate or bounced send.
+    const result = needsEmailReview(contact.tags)
+      ? { resend_id: null, ok: false, error: `Invalid recipient address: ${contact.email} (flagged for review)` }
+      : await sendMarketingEmail({
+          to: contact.email, first_name: contact.first_name, company: contact.company,
+          from_name: step.from_name, from_email: step.from_email,
+          subject: step.template.subject, html_body: step.template.html_body, text_body: step.template.text_body,
+          unsubscribe_token: token,
+        });
     await db.from("marketing_events").insert({
       sequence_id: e.sequence_id, step_id: step.id, contact_id: contact.id, email: contact.email,
       resend_id: result.resend_id, event_type: result.ok ? "sent" : "failed",
