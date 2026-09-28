@@ -119,7 +119,10 @@ export function parseAgentField(text: string): ParsedEntry[] {
   for (const line of clean.split(/\n+/)) {
     let rest = line.trim(); if (!rest) continue;
     let hint: string | null = null;
-    const lead = rest.match(/^([A-Z][\w.'-]+(?:\s+[A-Z][\w.'-]+){0,3})\s*[:–—-]\s+(.*)$/);
+    // "(Nick Mysore)- Sent intro email": the investor in brackets at the start of the line.
+    const paren = rest.match(/^\(([^()]{2,80})\)\s*[:–—-]*\s*(.*)$/);
+    if (paren && paren[2]) { hint = paren[1].trim(); rest = paren[2]; }
+    const lead = hint ? null : rest.match(/^([A-Z][\w.'-]+(?:\s+[A-Z][\w.'-]+){0,3})\s*[:–—-]\s+(.*)$/);
     if (lead && !/^(sent|called|left|emailed|met|spoke|follow|intro|meeting|no|replied)\b/i.test(lead[1])) { hint = lead[1].trim(); rest = lead[2]; }
     for (const seg of rest.split(/\s*\|\s*|\s*;\s+|\s+\/\/\s+/)) {
       const s = seg.trim(); if (!s) continue;

@@ -77,3 +77,31 @@ describe("investor chatter", () => {
     expect(mentions("Williams intro sent", ["williams"], "Dan Farrell")).toBe(true);
   });
 });
+
+describe("investor in brackets", () => {
+  const irTasks = [{ id: "T1", odoo_task_id: 10, assignee_id: "U1" }];
+  const matches = [{ id: "M1", odoo_tag: "Nick Mysore (Acme) nick@acme.com", stage: "matched" as const }, { id: "M2", odoo_tag: "Ann Lee ann@x.com", stage: "matched" as const }];
+  const tasks = [{ id: 10, tags: [tag("Nick Mysore (Acme) nick@acme.com"), tag("Ann Lee ann@x.com")], agentText: "(Nick Mysore)- Sent intro email 9/8/26" }];
+
+  it("reads a leading (Name) as the investor", () => {
+    const p = planResync(tasks, irTasks, matches, new Set(), [], new Map(), new Map(), "2026-09-28");
+    expect(p.add.map((a) => [a.matchId, a.outcome])).toEqual([["M1", "Sent intro email"]]);
+    expect(p.stageMoves).toEqual([{ matchId: "M1", to: "intro_sent" }]);
+  });
+
+  it("moves an entry stored on the task onto the investor instead of adding it again", async () => {
+    const { looseKey, activityKey: key } = await import("./odoo-resync");
+    const old = { taskId: "T1", matchId: null, type: "email", date: "2026-09-08", outcome: "(Nick Mysore)- Sent intro email" };
+    const p = planResync(tasks, irTasks, matches, new Set([key(old)]), [], new Map(), new Map([[looseKey(old), "A1"]]), "2026-09-28");
+    expect(p.add).toEqual([]);
+    expect(p.attach).toEqual([{ id: "A1", matchId: "M1", outcome: "Sent intro email" }]);
+    expect(p.stageMoves).toEqual([{ matchId: "M1", to: "intro_sent" }]);
+  });
+
+  it("treats typo dates as undated", () => {
+    const t = [{ id: 10, tags: [tag("Ann Lee ann@x.com")], agentText: "Sent intro email 8/3/07 | Talked, will call 2/6/30" }];
+    const p = planResync(t, irTasks, matches, new Set(), [], new Map(), new Map(), "2026-09-28");
+    expect(p.add).toEqual([]);
+    expect(p.undated).toBe(2);
+  });
+});

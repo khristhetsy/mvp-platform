@@ -38,12 +38,23 @@ export type ResyncResult = {
   toAdd: ResyncCounts & { total: number; onInvestor: number; onTask: number };
   partnerMessages: number; partnerEntries: number; openOdooActivities: number; keywords: string[];
   alreadyPresent: number; skippedUndated: number; skippedNotes: number; tasksNotImported: number;
-  stagesAdvanced: number; sample: Array<{ date: string; type: string; outcome: string; investor: string | null }>;
+  stagesAdvanced: number; movedToInvestor: number; sample: Array<{ date: string; type: string; outcome: string; investor: string | null }>;
 };
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 200);
 export const activityKey = (a: { taskId: string | null; matchId: string | null; type: string; date: string; outcome: string }) =>
   `${a.taskId ?? ""}|${a.matchId ?? ""}|${a.type}|${a.date}|${norm(a.outcome)}`;
+
+/** The same entry as first stored, before its "(Investor)-" lead was read as the investor: text without that lead. */
+export const looseKey = (a: { taskId: string | null; type: string; date: string; outcome: string }) =>
+  `${a.taskId ?? ""}|${a.type}|${a.date}|${norm(a.outcome.replace(/^\(([^()]{2,80})\)\s*[:–—-]*\s*/, ""))}`;
+
+/** A date an entry can really carry: from 2024 up to tomorrow. Typos ("8/3/07", "2/6/30") read as undated. */
+export const plausibleDate = (d: string | null, today: string = new Date().toISOString().slice(0, 10)) => {
+  if (!d) return false;
+  const max = new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  return d >= "2024-01-01" && d <= max;
+};
 
 export type OdooMessage = { res_id: number; date: string; body: string; message_type: string; activityType: string | null };
 
@@ -125,7 +136,7 @@ type IrTask = { id: string; odoo_task_id: number; assignee_id: string | null };
 type IrMatch = { id: string; odoo_tag: string | null; stage: IrStage };
 
 /** Pure: what the pass would add, given Odoo tasks and what the IR Hub already holds. */
-export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agentText">>, irTasks: IrTask[], matches: IrMatch[], existingKeys: Set<string>, messages: OdooMessage[] = [], fromPartners: Map<number, Array<ParsedEntry & { investorKey: string | null }>> = new Map()) {
+export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agentText">>, irTasks: IrTask[], matches: IrMatch[], existingKeys: Set<string>, messages: OdooMessage[] = [], fromPartners: Map<number, Array<ParsedEntry & { investorKey: string | null }>> = new Map(), unattributed: Map<string, string> = new Map(), today?: string) {
   const msgsByTask = new Map<number, OdooMessage[]>();
   for (const m of messages) msgsByTask.set(m.res_id, [...(msgsByTask.get(m.res_id) ?? []), m]);
   let chatterEntries = 0, partnerCount = 0;
@@ -133,6 +144,9 @@ export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agen
   const byTag = new Map(matches.filter((m) => m.odoo_tag).map((m) => [m.odoo_tag as string, m]));
   const seen = new Set(existingKeys);
   const add: Array<ResyncActivity & { investor: string | null }> = [];
+  // Entries stored on the task before their investor could be read: moved onto the investor, not added again.
+  const attach: Array<{ id: string; matchId: string; outcome: string }> = [];
+  const loose = new Map(unattributed);
   const stageEntries = new Map<string, Array<{ type: ResyncActivity["type"] & string; outcome: string; subject: string }>>();
   let entries = 0, tasksWithNotes = 0, already = 0, undated = 0, notes = 0, notImported = 0;
   for (const t of tasks) {
@@ -147,12 +161,20 @@ export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agen
     if (!ir) { if (es.length) notImported++; continue; }
     for (const e of es) {
       if (e.type === "note") { notes++; continue; }
-      if (!e.date) { undated++; continue; }
+      if (!e.date || !plausibleDate(e.date, today)) { undated++; continue; }
       const match = e.investorKey ? byTag.get(e.investorKey) ?? null : null;
       const a: ResyncActivity = { taskId: ir.id, matchId: match?.id ?? null, type: e.type, subject: e.subject, outcome: e.outcome.slice(0, 2000), date: e.date, assigneeId: ir.assignee_id };
       const k = activityKey(a);
       if (seen.has(k)) { already++; continue; }
       seen.add(k);
+      if (match) {
+        const lk = looseKey(a); const rowId = loose.get(lk);
+        if (rowId) {
+          loose.delete(lk); attach.push({ id: rowId, matchId: match.id, outcome: a.outcome }); already++;
+          stageEntries.set(match.id, [...(stageEntries.get(match.id) ?? []), { type: e.type, outcome: e.outcome, subject: e.subject }]);
+          continue;
+        }
+      }
       add.push({ ...a, investor: match ? e.investorKey : null });
       if (match) stageEntries.set(match.id, [...(stageEntries.get(match.id) ?? []), { type: e.type, outcome: e.outcome, subject: e.subject }]);
     }
@@ -163,7 +185,7 @@ export function planResync(tasks: Array<Pick<OdooTaskLite, "id" | "tags" | "agen
     const to = inferStage(es as Parameters<typeof inferStage>[0]);
     if (m.stage !== "passed" && IR_STAGES.indexOf(to) > IR_STAGES.indexOf(m.stage)) stageMoves.push({ matchId: m.id, to });
   }
-  return { add, stageMoves, entries, tasksWithNotes, already, undated, notes, notImported, chatterEntries, partnerEntries: partnerCount };
+  return { add, attach, stageMoves, entries, tasksWithNotes, already, undated, notes, notImported, chatterEntries, partnerEntries: partnerCount };
 }
 
 export async function resyncProject(projectId: string, by: string, dryRun = true): Promise<ResyncResult> {
@@ -177,10 +199,11 @@ export async function resyncProject(projectId: string, by: string, dryRun = true
     odooTasks(ids, d, d.agentField),
     db().from("ir_tasks").select("id, odoo_task_id, assignee_id").eq("project_id", projectId).not("odoo_task_id", "is", null),
     db().from("ir_matches").select("id, odoo_tag, stage").eq("project_id", projectId),
-    db().from("ir_activities").select("task_id, match_id, type, done_at, outcome").eq("project_id", projectId).not("done_at", "is", null).limit(50000),
+    db().from("ir_activities").select("id, task_id, match_id, type, done_at, outcome").eq("project_id", projectId).not("done_at", "is", null).limit(50000),
   ]);
-  const existing = new Set(((aRes.data ?? []) as Array<{ task_id: string | null; match_id: string | null; type: string; done_at: string; outcome: string | null }>)
-    .map((a) => activityKey({ taskId: a.task_id, matchId: a.match_id, type: a.type, date: a.done_at.slice(0, 10), outcome: a.outcome ?? "" })));
+  const stored = (aRes.data ?? []) as Array<{ id: string; task_id: string | null; match_id: string | null; type: string; done_at: string; outcome: string | null }>;
+  const existing = new Set(stored.map((a) => activityKey({ taskId: a.task_id, matchId: a.match_id, type: a.type, date: a.done_at.slice(0, 10), outcome: a.outcome ?? "" })));
+  const unattributed = new Map(stored.filter((a) => !a.match_id && a.task_id).map((a) => [looseKey({ taskId: a.task_id, type: a.type, date: a.done_at.slice(0, 10), outcome: a.outcome ?? "" }), a.id] as const));
   // Task chatter, read-only. A failure here never blocks the Agent Field pass.
   type RawMsg = { res_id: number; date: string; body: string | false; message_type: string; mail_activity_type_id: [number, string] | false };
   const raw = tasks.length ? await executeKw<RawMsg[]>("mail.message", "search_read", [[["model", "=", "project.task"], ["res_id", "in", tasks.map((t) => t.id)], ["message_type", "in", ["comment", "email", "notification"]]]], { fields: ["res_id", "date", "body", "message_type", "mail_activity_type_id"], limit: 20000, order: "date asc" }).catch(() => [] as RawMsg[]) : [];
@@ -209,7 +232,7 @@ export async function resyncProject(projectId: string, by: string, dryRun = true
     .filter((m) => m.activityType || m.message_type !== "notification");
   const fromPartners = partnerEntries(partnerMsgs, tasks, keywords);
 
-  const plan = planResync(tasks, (tRes.data ?? []) as IrTask[], (mRes.data ?? []) as IrMatch[], existing, messages, fromPartners.byTask);
+  const plan = planResync(tasks, (tRes.data ?? []) as IrTask[], (mRes.data ?? []) as IrMatch[], existing, messages, fromPartners.byTask, unattributed);
 
   const counts: ResyncCounts = { email: 0, call: 0, voicemail: 0, meeting: 0, term_sheet: 0, document: 0 };
   for (const a of plan.add) if (a.type in counts) counts[a.type as keyof ResyncCounts]++;
@@ -218,10 +241,15 @@ export async function resyncProject(projectId: string, by: string, dryRun = true
     toAdd: { ...counts, total: plan.add.length, onInvestor: plan.add.filter((a) => a.matchId).length, onTask: plan.add.filter((a) => !a.matchId).length },
     partnerMessages: fromPartners.matched, partnerEntries: plan.partnerEntries, openOdooActivities, keywords,
     alreadyPresent: plan.already, skippedUndated: plan.undated, skippedNotes: plan.notes, tasksNotImported: plan.notImported,
-    stagesAdvanced: plan.stageMoves.length,
+    stagesAdvanced: plan.stageMoves.length, movedToInvestor: plan.attach.length,
     sample: plan.add.slice(0, 12).map((a) => ({ date: a.date, type: a.type, outcome: a.outcome.slice(0, 120), investor: a.investor })),
   };
-  if (dryRun || !plan.add.length) return result;
+  if (dryRun || (!plan.add.length && !plan.attach.length && !plan.stageMoves.length)) return result;
+
+  for (const t of plan.attach) {
+    const { error } = await db().from("ir_activities").update({ match_id: t.matchId, outcome: t.outcome }).eq("id", t.id).is("match_id", null);
+    if (error) throw new Error(`Couldn't move an activity onto its investor: ${error.message}`);
+  }
 
   for (let i = 0; i < plan.add.length; i += 500) {
     const rows = plan.add.slice(i, i + 500).map((a) => ({

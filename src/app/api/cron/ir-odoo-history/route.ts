@@ -19,13 +19,13 @@ async function historyGET(request: Request): Promise<Response> {
   for (const p of projects) {
     try {
       const r = await resyncProject(p.id, p.owner_id, false);
-      results.push({ project: p.title, odooTasks: r.odooTasks, tasksWithNotes: r.tasksWithNotes, entries: r.entries, chatter: r.chatterMessages, partnerMsgs: r.partnerMessages, openInOdoo: r.openOdooActivities, keywords: r.keywords, notImported: r.tasksNotImported, notes: r.skippedNotes, added: r.toAdd.total, calls: r.toAdd.call + r.toAdd.voicemail, emails: r.toAdd.email, meetings: r.toAdd.meeting, termSheets: r.toAdd.term_sheet, onTask: r.toAdd.onTask, alreadyPresent: r.alreadyPresent, undated: r.skippedUndated, stagesAdvanced: r.stagesAdvanced });
+      results.push({ project: p.title, odooTasks: r.odooTasks, tasksWithNotes: r.tasksWithNotes, entries: r.entries, chatter: r.chatterMessages, partnerMsgs: r.partnerMessages, openInOdoo: r.openOdooActivities, keywords: r.keywords, notImported: r.tasksNotImported, notes: r.skippedNotes, added: r.toAdd.total, calls: r.toAdd.call + r.toAdd.voicemail, emails: r.toAdd.email, meetings: r.toAdd.meeting, termSheets: r.toAdd.term_sheet, onTask: r.toAdd.onTask, alreadyPresent: r.alreadyPresent, undated: r.skippedUndated, stagesAdvanced: r.stagesAdvanced, movedToInvestor: r.movedToInvestor });
     } catch (e) {
       results.push({ project: p.title, error: e instanceof Error ? e.message : "failed" });
     }
   }
   // Short per-project line kept on the run (+added/entries, task chatter msgs, investor msgs naming the founder, open Odoo activities) (Admin, System, Scheduled jobs) and in the logs.
-  const summary = results.map((r) => "error" in r ? `${r.project.slice(0, 18)}: ${(r.error ?? "failed").slice(0, 40)}` : `${r.project.slice(0, 12)}: +${r.added}/${r.entries} chat ${r.chatter} inv ${r.partnerMsgs} open ${r.openInOdoo}`).join(" | ");
+  const summary = results.map((r) => "error" in r ? `${r.project.slice(0, 18)}: ${(r.error ?? "failed").slice(0, 40)}` : `${r.project.slice(0, 12)}: +${r.added} moved ${r.movedToInvestor} stages ${r.stagesAdvanced} open ${r.openInOdoo}`).join(" | ");
   console.log("[ir-odoo-history]", JSON.stringify(results));
   return NextResponse.json({ projects: results.length, results }, { headers: { "x-cron-summary": (summary || "no imported projects").slice(0, 200) } });
 }
