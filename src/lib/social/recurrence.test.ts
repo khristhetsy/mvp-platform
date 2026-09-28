@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateOccurrences, nextAfter, upcoming, totalCount, type RecurrenceRule } from "./recurrence";
+import { generateOccurrences, nextAfter, upcoming, totalCount, shiftRuleTime, type RecurrenceRule } from "./recurrence";
 
 const base: RecurrenceRule = { freq: "weekly", interval: 1, weekdays: [], timeLocal: "08:15", startDate: "2026-09-14", endType: "never" };
 const dayName = (ms: number) => new Date(ms).getDay();
@@ -63,5 +63,33 @@ describe("nextAfter / upcoming / totalCount", () => {
   it("never recurrence is bounded by horizon (no infinite loop)", () => {
     expect(totalCount({ ...base, weekdays: [1], endType: "never" })).toBeGreaterThan(0);
     expect(totalCount({ ...base, weekdays: [1], endType: "never" })).toBeLessThanOrEqual(500);
+  });
+});
+
+describe("shiftRuleTime", () => {
+  it("moves the time within the same day", () => {
+    const r = shiftRuleTime({ ...base, weekdays: [3], timeLocal: "16:00" }, -120);
+    expect(r.timeLocal).toBe("14:00");
+    expect(r.weekdays).toEqual([3]);
+    expect(r.startDate).toBe(base.startDate);
+  });
+  it("rolls weekdays and dates forward past midnight", () => {
+    const r = shiftRuleTime({ ...base, weekdays: [6], timeLocal: "23:30", endType: "on_date", endDate: "2026-12-31" }, 60);
+    expect(r.timeLocal).toBe("00:30");
+    expect(r.weekdays).toEqual([0]);
+    expect(r.startDate).toBe("2026-09-15");
+    expect(r.endDate).toBe("2027-01-01");
+  });
+  it("rolls weekdays and dates back before midnight", () => {
+    const r = shiftRuleTime({ ...base, weekdays: [0, 3], timeLocal: "00:15" }, -30);
+    expect(r.timeLocal).toBe("23:45");
+    expect(r.weekdays).toEqual([6, 2]);
+    expect(r.startDate).toBe("2026-09-13");
+  });
+  it("shifted rule produces occurrences exactly delta later", () => {
+    const rule = { ...base, weekdays: [3], timeLocal: "23:00", endType: "after" as const, endCount: 5 };
+    const before = generateOccurrences(rule);
+    const after = generateOccurrences(shiftRuleTime(rule, 90));
+    expect(after.map((ms, i) => ms - before[i])).toEqual(before.map(() => 90 * 60000));
   });
 });

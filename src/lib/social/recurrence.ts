@@ -5,6 +5,7 @@
  * the IO (create/materialize/pause/end) is server-only.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { syncPostEvent } from "@/lib/social/gcal-sync";
 
 export type Freq = "daily" | "weekly" | "monthly";
 export type EndType = "never" | "on_date" | "after";
@@ -104,6 +105,34 @@ export function upcoming(rule: RecurrenceRule, fromMs: number, n = 6): number[] 
 /** Total occurrences a rule will ever produce (capped), for the preview count. */
 export function totalCount(rule: RecurrenceRule): number {
   return generateOccurrences(rule).length;
+}
+
+function addDaysYmd(s: string, days: number): string {
+  const [y, m, d] = ymd(s);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * Shift a rule's time of day by `deltaMin` minutes. When the shift crosses midnight the
+ * weekdays and start/end dates move with it, so every future occurrence lands exactly
+ * `deltaMin` later than it would have (matching the already-materialized posts).
+ */
+export function shiftRuleTime(rule: RecurrenceRule, deltaMin: number): RecurrenceRule {
+  if (!deltaMin) return rule;
+  const t = parseTime(rule.timeLocal);
+  const total = t.h * 60 + t.m + deltaMin;
+  const dayShift = Math.floor(total / 1440);
+  const mins = ((total % 1440) + 1440) % 1440;
+  const timeLocal = `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+  if (dayShift === 0) return { ...rule, timeLocal };
+  return {
+    ...rule,
+    timeLocal,
+    weekdays: rule.weekdays.map((w) => (((w + dayShift) % 7) + 7) % 7),
+    startDate: addDaysYmd(rule.startDate, dayShift),
+    endDate: rule.endDate ? addDaysYmd(rule.endDate, dayShift) : rule.endDate ?? null,
+  };
 }
 
 // ── IO (server-only) ───────────────────────────────────────────────────────────
@@ -249,4 +278,121 @@ export async function recurrenceSummary(id: string): Promise<{ id: string; statu
     : rule.freq === "daily" ? `Repeats ${every}day${rule.interval > 1 ? "s" : ""}` : `Repeats ${every}month${rule.interval > 1 ? "s" : ""}`;
   const end = rule.endType === "on_date" && rule.endDate ? ` until ${rule.endDate}` : rule.endType === "after" ? ` · ${rule.endCount} posts` : "";
   return { id: row.id, status: row.status, label: `${base} at ${rule.timeLocal}${end}`, madeCount: row.made_count ?? 0 };
+}
+
+/** Variant states that are already live or in flight, so a series edit leaves them alone. */
+const LOCKED_VARIANT_STATUSES = ["published", "publishing", "interrupted", "archived"];
+
+export type SeriesEditScope = "this" | "following" | "all";
+export type SeriesEditResult = { ok: true; updated: number; skipped: number } | { ok: false; error: string };
+
+/**
+ * Edit series posts by scope (Google-style), mirroring deleteSeriesPosts:
+ *   this       → just the clicked post
+ *   following  → the clicked post + every later occurrence; future occurrences follow the template
+ *   all        → every post in the series; future occurrences follow the template
+ * `body` replaces the copy for the clicked variant's account. `deltaMin` moves the time of
+ * day for every variant of the affected posts. Published / in-flight variants are skipped.
+ */
+export async function editSeriesPosts(
+  recurrenceId: string,
+  scope: SeriesEditScope,
+  opts: { variantId: string; body?: string | null; deltaMin?: number | null; userId?: string | null },
+  now = new Date(),
+): Promise<SeriesEditResult> {
+  const body = opts.body?.trim() || null;
+  const deltaMin = opts.deltaMin ? Math.trunc(opts.deltaMin) : 0;
+  if (!body && !deltaMin) return { ok: true, updated: 0, skipped: 0 };
+  const deltaMs = deltaMin * 60000;
+
+  const { data: clicked } = await db().from("social_variants")
+    .select("id, post_id, account_id, post:social_posts(recurrence_id, scheduled_at)").eq("id", opts.variantId).maybeSingle();
+  const cp = clicked?.post as { recurrence_id: string | null; scheduled_at: string | null } | null;
+  if (!clicked || cp?.recurrence_id !== recurrenceId) return { ok: false, error: "That post isn't part of this series." };
+  const accountId = clicked.account_id as string;
+
+  // Which posts are in scope.
+  let postIds: string[] = [];
+  if (scope === "this") postIds = [clicked.post_id as string];
+  else {
+    let q = db().from("social_posts").select("id").eq("recurrence_id", recurrenceId);
+    if (scope === "following" && cp?.scheduled_at) q = q.gte("scheduled_at", cp.scheduled_at);
+    const { data } = await q;
+    postIds = ((data ?? []) as { id: string }[]).map((r) => r.id);
+    if (!postIds.includes(clicked.post_id as string)) postIds.push(clicked.post_id as string);
+  }
+
+  const { data: vrows } = await db().from("social_variants")
+    .select("id, post_id, account_id, status, body, scheduled_at, gcal_event_id").in("post_id", postIds);
+  type V = { id: string; post_id: string; account_id: string; status: string; body: string; scheduled_at: string | null; gcal_event_id: string | null };
+  const all = (vrows ?? []) as V[];
+  const editable = all.filter((v) => !LOCKED_VARIANT_STATUSES.includes(v.status));
+  const skipped = new Set(all.filter((v) => LOCKED_VARIANT_STATUSES.includes(v.status)).map((v) => v.post_id)).size;
+
+  if (deltaMs) {
+    const intoPast = editable.some((v) => v.scheduled_at && new Date(v.scheduled_at).getTime() + deltaMs <= now.getTime());
+    if (intoPast) return { ok: false, error: "That time would move a scheduled post into the past. Pick a later time or edit only the following posts." };
+  }
+
+  const stamp = new Date().toISOString();
+  const touchedPosts = new Set<string>();
+  const calendarJobs: (() => Promise<unknown>)[] = [];
+  for (const v of editable) {
+    const patch: Record<string, unknown> = { updated_at: stamp };
+    const newBody = body && v.account_id === accountId ? body : null;
+    if (newBody) patch.body = newBody;
+    let startISO = v.scheduled_at;
+    if (deltaMs && v.scheduled_at) {
+      startISO = new Date(new Date(v.scheduled_at).getTime() + deltaMs).toISOString();
+      patch.scheduled_at = startISO;
+      if (v.status === "queued") patch.next_attempt_at = startISO;
+    }
+    if (Object.keys(patch).length === 1) continue;
+    const { error } = await db().from("social_variants").update(patch).eq("id", v.id);
+    if (error) return { ok: false, error: error.message };
+    touchedPosts.add(v.post_id);
+    if (v.gcal_event_id && startISO && opts.userId) {
+      const notes = newBody ?? v.body;
+      const eventId = v.gcal_event_id;
+      calendarJobs.push(() => syncPostEvent({ userId: opts.userId!, existingEventId: eventId, title: (notes || "Social post").split("\n")[0].slice(0, 80), startISO: startISO!, notes }));
+    }
+  }
+
+  // Keep the parent post rows in step (post.body mirrors the first variant's copy).
+  const { data: rec } = await db().from("social_recurrences").select("*").eq("id", recurrenceId).maybeSingle();
+  const tmplVariants = ((rec?.variants as { accountId: string; body: string }[]) ?? []);
+  const isLead = !tmplVariants.length || tmplVariants[0].accountId === accountId;
+  if (touchedPosts.size) {
+    const { data: prow } = await db().from("social_posts").select("id, scheduled_at").in("id", [...touchedPosts]);
+    for (const p of (prow ?? []) as { id: string; scheduled_at: string | null }[]) {
+      const patch: Record<string, unknown> = {};
+      if (body && isLead) patch.body = body;
+      if (deltaMs && p.scheduled_at) patch.scheduled_at = new Date(new Date(p.scheduled_at).getTime() + deltaMs).toISOString();
+      if (Object.keys(patch).length) await db().from("social_posts").update(patch).eq("id", p.id);
+    }
+  }
+
+  // Future occurrences: update the series template so new posts get the change too.
+  if (scope !== "this" && rec) {
+    const patch: Record<string, unknown> = { updated_at: stamp };
+    if (body) {
+      patch.variants = tmplVariants.map((tv) => (tv.accountId === accountId ? { ...tv, body } : tv));
+      if (isLead) patch.body = body;
+    }
+    if (deltaMs) {
+      const shifted = shiftRuleTime(ruleFromRow(rec), deltaMin);
+      patch.time_local = shifted.timeLocal;
+      patch.weekdays = shifted.weekdays;
+      patch.start_date = shifted.startDate;
+      patch.end_date = shifted.endDate ?? null;
+      if (rec.next_run) patch.next_run = new Date(new Date(rec.next_run as string).getTime() + deltaMs).toISOString();
+    }
+    const { error } = await db().from("social_recurrences").update(patch).eq("id", recurrenceId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  // Mirror onto Google Calendar, a few at a time; a calendar hiccup never fails the edit.
+  for (let i = 0; i < calendarJobs.length; i += 5) await Promise.allSettled(calendarJobs.slice(i, i + 5).map((j) => j()));
+
+  return { ok: true, updated: touchedPosts.size, skipped };
 }

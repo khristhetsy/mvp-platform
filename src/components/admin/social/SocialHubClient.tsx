@@ -404,6 +404,10 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   // Google-style "delete recurring post" scope dialog.
   const [recDelete, setRecDelete] = useState<QueueItem | null>(null);
   const [recDeleteScope, setRecDeleteScope] = useState<"this" | "following" | "all">("this");
+  // Google-style "edit recurring post" scope dialog + the series time field in the editor.
+  const [recEdit, setRecEdit] = useState<QueueItem | null>(null);
+  const [recEditScope, setRecEditScope] = useState<"this" | "following" | "all">("all");
+  const [editTime, setEditTime] = useState("");
   // "Make recurring" panel state (for non-series posts).
   const [mrOpen, setMrOpen] = useState(false);
   const [mrFreq, setMrFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
@@ -504,6 +508,36 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
       const r = await fetch(`/api/admin/social/recurrences/${q.recurrence_id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, postId: q.post_id, from: itemISO(q) }) });
       if (!r.ok) { alert((await r.json().catch(() => ({}))).error ?? "Could not delete."); return; }
       setRecDelete(null); setSelected(null); await reload();
+    } finally { setBusy(false); }
+  }
+  const localHHMM = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+  const toMin = (t: string) => { const [h, m] = t.split(":").map((n) => parseInt(n, 10)); return (h || 0) * 60 + (m || 0); };
+  // What the series editor would change: new copy and/or a same-day time shift in minutes.
+  function recEditChanges(q: QueueItem) {
+    const body = draft.trim() && draft.trim() !== q.body.trim() ? draft.trim() : null;
+    const oldT = localHHMM(itemISO(q));
+    const deltaMin = oldT && editTime && editTime !== oldT ? toMin(editTime) - toMin(oldT) : 0;
+    return { body, deltaMin };
+  }
+  function saveEdit(q: QueueItem) {
+    if (!draft.trim()) { alert("Body can't be empty."); return; }
+    if (!q.recurrence_id) { void act(q.id, "edit", { body: draft }); return; }
+    const { body, deltaMin } = recEditChanges(q);
+    if (!body && !deltaMin) { setEditing(false); return; }
+    setRecEditScope("all"); setRecEdit(q);
+  }
+  async function editRecurring(q: QueueItem, scope: "this" | "following" | "all") {
+    if (!q.recurrence_id) return;
+    const { body, deltaMin } = recEditChanges(q);
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/admin/social/recurrences/${q.recurrence_id}/edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope, variantId: q.id, body, deltaMin: deltaMin || null }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error ?? "Could not update the series."); return; }
+      setRecEdit(null); setEditing(false); await reload();
+      const s = await fetch(`/api/admin/social/recurrences/${q.recurrence_id}`).then((x) => x.json()).catch(() => ({}));
+      setRecSummary(s.summary ?? null);
+      if (d.skipped) alert(`${d.skipped} post${d.skipped === 1 ? " was" : "s were"} already published or publishing, so ${d.skipped === 1 ? "it was" : "they were"} left as is.`);
     } finally { setBusy(false); }
   }
   async function recAct(id: string, action: "pause" | "resume" | "end") {
@@ -791,7 +825,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
               ) : null}
               <div className="flex flex-wrap gap-1.5">
                 <DetailBtn icon="ti-eye" label="Preview" onClick={() => setPreview(q)} accent />
-                {!live ? <DetailBtn icon="ti-edit" label="Edit" onClick={() => { setEditing(true); setDraft(q.body); }} /> : null}
+                {!live ? <DetailBtn icon="ti-edit" label="Edit" onClick={() => { setEditing(true); setDraft(q.body); setEditTime(localHHMM(iso)); }} /> : null}
                 {onCal && !live ? <DetailBtn icon="ti-calendar" label="Reschedule" onClick={() => openSchedule(q)} /> : null}
                 {!onCal ? <DetailBtn icon="ti-calendar-plus" label="Schedule" onClick={() => openSchedule(q)} /> : null}
                 {onCal && !live ? <DetailBtn icon="ti-calendar-off" label="Unschedule" onClick={() => act(q.id, "unschedule")} /> : null}
@@ -805,8 +839,15 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
             {editing ? (
               <div className="mt-3">
                 <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={5} className="w-full rounded-lg border border-slate-200 p-2 text-[13px]" />
+                {q.recurrence_id && iso ? (
+                  <label className="mt-1.5 flex items-center gap-2 text-[11.5px] text-slate-500">
+                    <i className="ti ti-clock" aria-hidden="true" /> Time
+                    <input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} className="rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700" />
+                    <span className="text-[10.5px] text-slate-400">You choose which posts in the series to change when you save.</span>
+                  </label>
+                ) : null}
                 <div className="mt-1.5 flex gap-2">
-                  <button type="button" onClick={() => act(q.id, "edit", { body: draft })} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
+                  <button type="button" onClick={() => saveEdit(q)} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
                   <button type="button" onClick={() => setEditing(false)} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Cancel</button>
                 </div>
               </div>
@@ -854,6 +895,27 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
             <div className="mt-3 flex items-center justify-end gap-3">
               <button type="button" onClick={() => setRecDelete(null)} className="text-[12.5px] font-medium text-indigo-600">Cancel</button>
               <button type="button" disabled={busy} onClick={() => void deleteRecurring(recDelete, recDeleteScope)} className="rounded-full bg-indigo-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {recEdit ? (
+        <div onClick={() => setRecEdit(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[320px] rounded-xl bg-white p-4 shadow-xl">
+            <p className="text-[14px] font-semibold text-slate-800">Edit recurring post</p>
+            {(() => { const c = recEditChanges(recEdit); const parts = [c.body ? "new text" : null, c.deltaMin ? `time to ${editTime}` : null].filter(Boolean); return <p className="mt-0.5 text-[11px] text-slate-400">Applying: {parts.join(" and ")}</p>; })()}
+            <div className="mt-3 flex flex-col gap-0.5">
+              {([["this", "This post"], ["following", "This and following posts"], ["all", "All posts"]] as const).map(([v, lbl]) => (
+                <label key={v} className="flex items-center gap-2.5 py-1.5 text-[13px] text-slate-700">
+                  <input type="radio" name="recedit" checked={recEditScope === v} onChange={() => setRecEditScope(v)} /> {lbl}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-[10.5px] text-slate-400">Posts already published stay as they are. Future posts in the series use the new version unless you pick This post.</p>
+            <div className="mt-3 flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setRecEdit(null)} className="text-[12.5px] font-medium text-indigo-600">Cancel</button>
+              <button type="button" disabled={busy} onClick={() => void editRecurring(recEdit, recEditScope)} className="rounded-full bg-indigo-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
             </div>
           </div>
         </div>
