@@ -5,6 +5,7 @@
  * fit and reasons only: never a name or contact detail. Names live in the app.
  */
 import { button, escapeHtml, shell } from "@/lib/activity/email-templates";
+import { NOT_A_BROKER_DEALER } from "@/lib/email/layout";
 
 export type DigestMatch = {
   investorType: string | null;
@@ -137,6 +138,14 @@ export function renderMatchDigestEmail(input: MatchDigestInput): { subject: stri
     `<div style="font-size:18px;font-weight:bold;margin:0 0 12px;">${escapeHtml(cap)}</div>` +
       `<p style="margin:0 0 14px;">${escapeHtml(lead)}</p>` +
       body,
+    {
+      audience: "founder",
+      subject: cap,
+      preheader: allowance ?? lead,
+      context: input.companyName,
+      reason: `You get this weekly because ${input.companyName} is active on iCapOS.`,
+      lines: [NOT_A_BROKER_DEALER],
+    },
   );
 
   return { subject: cap, text, html };

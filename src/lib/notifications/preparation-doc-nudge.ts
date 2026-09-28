@@ -6,6 +6,7 @@
  */
 import { QUALIFY_REQUIRED_DOCUMENTS, isQualifyDocSatisfied } from "@/lib/founder-journey/documents";
 import { absoluteUrl, button, escapeHtml, shell } from "@/lib/activity/email-templates";
+import { NOT_A_BROKER_DEALER } from "@/lib/email/layout";
 
 export type UploadedDoc = { document_type: string | null; created_at: string | null };
 
@@ -97,8 +98,15 @@ export function buildPreparationDocNudge(input: {
     `<p style="margin:0 0 12px;">Hi ${escapeHtml(name)},</p>` +
       `<p style="margin:0 0 16px;">${escapeHtml(intro)}</p>` +
       `<table style="width:100%;border-collapse:collapse;border:1px solid #E3E8F2;border-radius:8px;margin:0 0 18px;">${rows}</table>` +
-      `<div>${button("Finish my documents", prepUrl, true)}</div>` +
-      `<p style="margin:12px 0 0;color:#667;font-size:12px;">Every plan includes all tools. iCapOS is not a broker dealer and does not raise capital or guarantee funding.</p>`,
+      `<div>${button("Finish my documents", prepUrl, true)}</div>`,
+    {
+      audience: "founder",
+      subject,
+      preheader: message,
+      context: company ?? null,
+      reason: "You get this because your company has had no activity on iCapOS for a few days. At most one reminder a week.",
+      lines: [`Every plan includes all tools. ${NOT_A_BROKER_DEALER}`],
+    },
   );
 
   const lines = status.map((s) => (s.done ? `Done: ${s.label}` : `Missing: ${s.label}. ${s.how}: ${absoluteUrl(s.path)}`));

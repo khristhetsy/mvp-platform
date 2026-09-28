@@ -34,6 +34,12 @@ export type EmailBlock =
   | { type: "note"; text: string; tone?: "info" | "warning" }
   | { type: "quote"; label: string; meta?: string | null; text: string }
   | { type: "action"; title: string; subtitle?: string | null; button: EmailLink }
+  /**
+   * Trusted markup, dropped in as is. Only for renderers that already build
+   * and escape their own body; everything new should use the blocks above.
+   * Contributes nothing to the plain-text part.
+   */
+  | { type: "html"; html: string }
   | {
       type: "card";
       name: string;
@@ -291,6 +297,9 @@ function blockHtml(b: EmailBlock, color: string): string {
         `background:#F2F7FF;border:1px solid #BFD4F6;border-radius:10px;border-collapse:separate;`,
       );
 
+    case "html":
+      return b.html;
+
     case "card": {
       const initial = esc(b.name.trim().charAt(0).toUpperCase() || "?");
       const meta = b.meta?.length
@@ -358,6 +367,8 @@ function blockText(b: EmailBlock): string {
       return `${b.label}${b.meta ? ` · ${b.meta}` : ""}:\n"${b.text}"`;
     case "action":
       return `${b.title}${b.subtitle ? ` (${b.subtitle})` : ""}\n${b.button.label}: ${absolute(b.button.url)}`;
+    case "html":
+      return "";
     case "card":
       return [b.name, b.tagline ?? null, b.meta?.length ? b.meta.map((m) => `${m.label}: ${m.value}`).join(" · ") : null]
         .filter((l): l is string => l !== null)

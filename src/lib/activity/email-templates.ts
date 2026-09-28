@@ -9,6 +9,8 @@
  *   - every link is absolute. A relative path cannot be opened from Gmail.
  */
 
+import { NOT_A_BROKER_DEALER, renderEmail, type EmailAudience } from "@/lib/email/layout";
+
 export type ChecklistItem = { label: string; done: boolean };
 
 export type DocumentDetail = {
@@ -47,9 +49,9 @@ export type FounderUploadEmailInput = {
 
 export type RenderedEmail = { subject: string; text: string; html: string };
 
+
 export const FOUNDER_STEPS = ["Rate", "Ready", "Match", "Raise"] as const;
 
-const NAVY = "#0A1A40";
 const BLUE = "#1A6CE4";
 const TEXT = "#16223F";
 const MUTED = "#5A6B8C";
@@ -110,17 +112,29 @@ export function button(label: string, url: string, primary: boolean): string {
   return `<a href="${escapeHtml(url)}" style="${style}display:inline-block;padding:10px 16px;border-radius:8px;font-family:${FONT};font-size:14px;font-weight:bold;text-decoration:none;margin:0 8px 8px 0;">${escapeHtml(label)}</a>`;
 }
 
-export function shell(inner: string): string {
-  return [
-    `<div style="background:#F4F6FB;padding:24px 12px;">`,
-    `<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #E3E8F2;border-radius:12px;overflow:hidden;">`,
-    `<div style="background:${NAVY};padding:14px 24px;font-family:${FONT};font-size:16px;font-weight:bold;color:#ffffff;">iCap<span style="color:#2E78F5;">OS</span></div>`,
-    `<div style="padding:24px;font-family:${FONT};color:${TEXT};font-size:14px;line-height:1.6;">`,
-    inner,
-    `</div></div>`,
-    `<div style="max-width:560px;margin:12px auto 0;font-family:${FONT};font-size:12px;color:${MUTED};text-align:center;">iCFO Capital Global, Inc. · La Jolla, CA 92037</div>`,
-    `</div>`,
-  ].join("");
+export type ShellFrame = {
+  audience: EmailAudience;
+  subject: string;
+  preheader: string;
+  context?: string | null;
+  reason: string;
+  lines?: string[];
+  preferencesUrl?: string | null;
+};
+
+/**
+ * Wraps a renderer's own body in the shared email layout (logo, audience
+ * rule, preheader, footer). The body is trusted: callers escape their values.
+ */
+export function shell(inner: string, frame: ShellFrame): string {
+  return renderEmail({
+    audience: frame.audience,
+    subject: frame.subject,
+    preheader: frame.preheader,
+    context: frame.context ?? null,
+    blocks: [{ type: "html", html: `<div style="font-family:${FONT};color:${TEXT};font-size:14px;line-height:1.6;">${inner}</div>` }],
+    footer: { reason: frame.reason, lines: frame.lines, preferencesUrl: frame.preferencesUrl },
+  }).html;
 }
 
 function row(label: string, value: string): string {
@@ -192,6 +206,13 @@ export function renderAdminActivityEmail(input: AdminActivityEmailInput): Render
       `<div>${button(input.companyName ? "Open company" : "Open activity", input.primaryUrl, true)}${input.noOwner ? button("Assign owner", input.assignUrl, false) : ""}</div>`,
       `<div style="font-size:12px;color:${MUTED};margin-top:12px;word-break:break-all;">Full link: ${escapeHtml(input.primaryUrl)}</div>`,
     ].join(""),
+    {
+      audience: "admin",
+      subject,
+      preheader: input.actor ? `${input.actor.name}, ${input.actor.roleLabel}.${input.noOwner ? " No owner is assigned to this stage yet." : ""}` : input.classDescription,
+      context: input.companyName,
+      reason: "Internal. Sent to the staff assigned to this stage, or to super admins when nobody holds it.",
+    },
   );
 
   return { subject, text, html };
@@ -245,12 +266,21 @@ export function renderFounderUploadEmail(input: FounderUploadEmailInput): Render
   const html = shell(
     [
       `<div style="font-size:18px;font-weight:bold;margin:0 0 12px;">${escapeHtml(subject)}</div>`,
-      `<p style="margin:0 0 16px;">${escapeHtml(greeting)} ${escapeHtml(opening)}</p>`,
+      `<p style="margin:0 0 8px;">${escapeHtml(greeting)}</p>`,
+      `<p style="margin:0 0 16px;">${escapeHtml(opening)}</p>`,
       `<div style="font-size:12px;color:${MUTED};margin:0 0 6px;">Your raise: step ${step + 1} of ${FOUNDER_STEPS.length}</div>`,
       `<table role="presentation" style="width:100%;table-layout:fixed;border-collapse:collapse;margin:0 0 16px;"><tr>${bars}</tr><tr>${labels}</tr></table>`,
       input.checklist.length ? `<div style="margin:0 0 16px;font-size:14px;">${items}</div>` : "",
       `<div>${input.next ? button(input.next.cta, input.next.url, true) : ""}${button("Open your workspace", input.workspaceUrl, !input.next)}</div>`,
     ].join(""),
+    {
+      audience: "founder",
+      subject,
+      preheader: remaining,
+      context: input.companyName,
+      reason: `You get this because ${input.companyName ?? "your company"} is active on iCapOS.`,
+      lines: [NOT_A_BROKER_DEALER],
+    },
   );
 
   return { subject, text, html };

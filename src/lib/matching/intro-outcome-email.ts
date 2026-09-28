@@ -4,6 +4,7 @@
  * with iCFO until the introduction is made.
  */
 import { button, escapeHtml, shell } from "@/lib/activity/email-templates";
+import { NOT_A_BROKER_DEALER } from "@/lib/email/layout";
 
 export type IntroOutcome = "facilitated" | "contacted" | "declined";
 
@@ -51,6 +52,14 @@ export function renderIntroOutcomeEmail(input: IntroOutcomeInput): { subject: st
         ? `<div style="background:#F4F6FB;border-radius:8px;padding:10px 12px;font-size:13px;margin:0 0 16px;">Note from iCFO: ${escapeHtml(note)}</div>`
         : "") +
       `<div>${button("See your matches", input.matchesUrl, true)}</div>`,
+    {
+      audience: "founder",
+      subject: `${title} · ${input.companyName}`,
+      preheader: message,
+      context: input.companyName,
+      reason: `You get this because you requested an introduction for ${input.companyName} on iCapOS.`,
+      lines: [NOT_A_BROKER_DEALER],
+    },
   );
   return { subject: `${title} · ${input.companyName}`, text, html };
 }
