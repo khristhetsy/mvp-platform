@@ -48,7 +48,9 @@ interface Opp {
 
 async function loadRaw(ownerId?: string | null) {
   let oppQ = db().from("sales_opportunities").select("status, value_cents, billing, probability, stage_id, created_at, updated_at, last_activity_at");
-  let actQ = db().from("sales_activity_log").select("created_at");
+  let actQ = db().from("sales_activity_log").select("created_at")
+    // Note housekeeping (edits, deletes, restores, Odoo notes copied in) is not rep activity.
+    .not("kind", "in", "(note_edited,note_deleted,note_restored,odoo_note)");
   if (ownerId) { oppQ = oppQ.eq("owner_id", ownerId); actQ = actQ.eq("actor_id", ownerId); }
   const [{ data: opps }, { data: stages }, { data: acts }, { data: settings }] = await Promise.all([
     oppQ,

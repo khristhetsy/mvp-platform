@@ -111,3 +111,39 @@ export async function fetchPartnerMessages(externalId: string, limit = 30): Prom
     return [];
   }
 }
+
+/**
+ * Fetch the chatter on any Odoo record (e.g. crm.lead for an opportunity). Same
+ * mapping as the partner fetch. Read-only, best-effort: any failure yields [].
+ */
+export async function fetchRecordMessages(model: string, resId: number, limit = 50): Promise<OdooContactMessage[]> {
+  if (!odooConfigured() || !Number.isInteger(resId) || resId <= 0) return [];
+  try {
+    const rows = await executeKw<RawMessage[]>(
+      "mail.message",
+      "search_read",
+      [
+        [
+          ["model", "=", model],
+          ["res_id", "=", resId],
+        ],
+        MSG_FIELDS,
+      ],
+      { limit, order: "date desc" },
+    );
+    return (rows ?? []).map(mapMessage);
+  } catch {
+    return [];
+  }
+}
+
+/** Read one Odoo message by id (used before an Odoo note is edited or hidden in iCapOS). */
+export async function fetchMessageById(id: number): Promise<OdooContactMessage | null> {
+  if (!odooConfigured() || !Number.isInteger(id) || id <= 0) return null;
+  try {
+    const rows = await executeKw<RawMessage[]>("mail.message", "read", [[id], MSG_FIELDS]);
+    return rows?.[0] ? mapMessage(rows[0]) : null;
+  } catch {
+    return null;
+  }
+}
