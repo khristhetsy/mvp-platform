@@ -10,6 +10,7 @@ import { REPORT_SENT_PREFIX } from "@/lib/ir/metrics";
 import { reportData, type ReportData } from "@/lib/ir/report";
 import { sendEmail } from "@/lib/email/send-email";
 import type { IrMilestone, IrProject } from "@/lib/ir/types";
+import { renderEmail } from "@/lib/email/layout";
 
 export type DueSummary = { project: IrProject; kind: "week" | "month"; milestone: IrMilestone };
 
@@ -37,10 +38,8 @@ export function summaryHtml(d: ReportData): { subject: string; html: string; tex
   const total = d.pipeline.reduce((s, p) => s + p.count, 0);
   const cell = "padding:6px 8px;border-bottom:1px solid #E2E7F0;font-size:13px;color:#0F1B33";
   const head = "padding:6px 8px;border-bottom:1px solid #E2E7F0;font-size:11px;color:#5B6B86;text-align:left";
-  const html = `
-<div style="font-family:Inter,Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;color:#0F1B33">
-  <p style="font-size:16px;font-weight:700;color:#0A1A40;margin:0">iCFO Capital Global, Inc.</p>
-  <p style="font-size:12px;color:#5B6B86;margin:2px 0 18px">Investor Relations · ${esc(d.project.title)}</p>
+  const body = `
+<div style="color:#0F1B33">
   <h1 style="font-size:20px;margin:0 0 4px">Your investor outreach summary</h1>
   <p style="font-size:13px;color:#5B6B86;margin:0 0 16px">${esc(d.period.label)} · ${esc(d.project.monthLabel)} of the project</p>
   <p style="font-size:14px;line-height:1.6;margin:0 0 16px">Hi ${esc(first)}, ${esc(d.summary.replace(/^[^,]+, your/, "your"))}</p>
@@ -55,10 +54,23 @@ export function summaryHtml(d: ReportData): { subject: string; html: string; tex
   ${d.notes.length ? d.notes.map((n) => `<p style="font-size:13px;line-height:1.55;margin:0 0 8px"><strong>${esc(n.date)}.</strong> ${esc(n.body)}</p>`).join("") : `<p style="font-size:13px;color:#5B6B86;margin:0 0 18px">No notes this period.</p>`}
   ${d.upcoming.length ? `<h2 style="font-size:15px;margin:18px 0 6px">Upcoming meetings</h2><ul style="font-size:13px;margin:0 0 18px;padding-left:18px">${d.upcoming.map((u) => `<li>${esc(u.firm)} · ${esc(u.when)}</li>`).join("")}</ul>` : ""}
   <p style="font-size:13px;line-height:1.55;margin:18px 0">Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated. Your full written report with the executive summary is prepared and sent by ${esc(d.project.owner_name ?? "your IR contact")}.</p>
-  <p style="font-size:11px;color:#5B6B86;line-height:1.5;margin-top:24px">Confidential. Prepared for ${esc(d.founder.name)} and ${esc(d.project.title)} only. Investor names and contact details are held by iCFO Capital Global, Inc. and are not included. Figures cover the period stated above and are drawn from the iCapOS Investor Relations Hub. This summary is not an offer to sell securities.</p>
 </div>`;
+  const subject = `${d.project.title} investor outreach summary · ${d.period.label.split(" · ")[0]}`;
+  const html = renderEmail({
+    audience: "founder",
+    subject,
+    preheader: d.summary,
+    context: `Investor Relations · ${d.project.title}`,
+    blocks: [{ type: "html", html: body }],
+    footer: {
+      reason: `You get this because iCFO runs investor outreach for ${d.project.title}.`,
+      lines: [
+        `Confidential. Prepared for ${d.founder.name} and ${d.project.title} only. Investor names and contact details are held by iCFO Capital Global, Inc. and are not included. Figures cover the period stated above and are drawn from the iCapOS Investor Relations Hub. This summary is not an offer to sell securities.`,
+      ],
+    },
+  }).html;
   const text = [`Your investor outreach summary · ${d.period.label}`, "", d.summary, "", ...rows.map(([l, k]) => `${l}: ${d.metrics[k]}${d.prevMetrics ? ` (prev ${d.prevMetrics[k]})` : ""}`), "", `Pipeline ${d.asOf}: ${d.pipeline.map((p) => `${p.label} ${p.count}`).join(", ")}`, "", ...d.comms.map((c) => `${c.date} · ${c.channel} · ${c.firm} · ${c.what}${c.next ? ` → ${c.next}` : ""}`), "", ...d.notes.map((n) => `${n.date}. ${n.body}`)].join("\n");
-  return { subject: `${d.project.title} investor outreach summary · ${d.period.label.split(" · ")[0]}`, html, text };
+  return { subject, html, text };
 }
 
 export async function runIrSummaries(today = new Date().toISOString().slice(0, 10)): Promise<{ due: number; sent: number; skipped: Array<{ project: string; kind: string; reason: string }> }> {

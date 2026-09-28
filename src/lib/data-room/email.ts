@@ -7,6 +7,7 @@ import { getUserLocaleByEmail } from "@/lib/i18n/user-locale";
 import { emailTranslator } from "@/lib/i18n/email-i18n";
 import type { AppLocale } from "@/lib/i18n/locale";
 import type { DataRoomState } from "@/lib/data-room/completeness";
+import { renderEmail } from "@/lib/email/layout";
 
 function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
@@ -36,27 +37,38 @@ export function buildDataRoomReminderEmail(input: {
     : t("dataRoom.leadIncomplete");
 
   const greeting = t("dataRoom.greeting", { name });
-  const listItems = missingLabels.map((l) => `<li style="margin:4px 0;">${l}</li>`).join("");
+  const subject = state.coreComplete
+    ? t("dataRoom.subjectComplete", { company: companyName, count: state.missingCount, docs })
+    : t("dataRoom.subjectIncomplete", { company: companyName });
+  const note = t("dataRoom.note", { percent: state.percent, completed: state.completed, total: state.total });
 
-  const html = `
-  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;color:#0f172a;">
-    <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2E78F5;font-weight:600;margin:0 0 6px;">${t("dataRoom.eyebrow")}</p>
-    <h1 style="font-size:20px;margin:0 0 10px;">${headline}</h1>
-    <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 14px;">${greeting} ${lead}</p>
-    ${missingLabels.length ? `<p style="font-size:14px;color:#334155;margin:0 0 6px;font-weight:600;">${t("dataRoom.stillNeeded")}</p><ul style="font-size:14px;color:#334155;margin:0 0 16px;padding-left:18px;">${listItems}</ul>` : ""}
-    <a href="${link}" style="display:inline-block;background:#2E78F5;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:8px;">${t("dataRoom.cta")}</a>
-    <p style="font-size:12px;color:#94a3b8;margin:18px 0 0;line-height:1.5;">${t("dataRoom.note", { percent: state.percent, completed: state.completed, total: state.total })}</p>
-  </div>`;
+  const mail = renderEmail({
+    audience: "founder",
+    subject,
+    preheader: lead,
+    context: companyName,
+    eyebrow: t("dataRoom.eyebrow"),
+    headline,
+    intro: `${greeting} ${lead}`,
+    blocks: [
+      { type: "progress", label: t("dataRoom.eyebrow"), value: `${state.completed}/${state.total} · ${state.percent}%`, percent: state.percent },
+      ...(missingLabels.length
+        ? [{ type: "checklist" as const, title: t("dataRoom.stillNeeded"), items: missingLabels.map((label) => ({ label, done: false })) }]
+        : []),
+      { type: "paragraph", text: note },
+    ],
+    primary: { label: t("dataRoom.cta").replace(/\s*→\s*$/, ""), url: link },
+    footer: {
+      reason: t("shell.footerFounder"),
+      preferencesUrl: `${appUrl()}/founder/settings`,
+      preferencesLabel: t("shell.manage"),
+      lines: [t("diligence.notBrokerDealer")],
+    },
+  });
 
   const text = `${headline}\n\n${greeting} ${lead}\n\n${missingLabels.length ? `${t("dataRoom.stillNeeded")} ${missingLabels.join(", ")}\n\n` : ""}${t("dataRoom.cta")} ${link}`;
 
-  return {
-    subject: state.coreComplete
-      ? t("dataRoom.subjectComplete", { company: companyName, count: state.missingCount, docs })
-      : t("dataRoom.subjectIncomplete", { company: companyName }),
-    html,
-    text,
-  };
+  return { subject, html: mail.html, text };
 }
 
 export async function sendDataRoomReminderEmail(input: {
@@ -69,5 +81,5 @@ export async function sendDataRoomReminderEmail(input: {
   // Resolve the recipient's saved language unless the caller already passed one.
   const locale = input.locale ?? (await getUserLocaleByEmail(input.to));
   const { subject, html, text } = buildDataRoomReminderEmail({ ...input, locale });
-  return sendEmail({ to: input.to, subject, html, text });
+  return sendEmail({ to: input.to, subject, html, text, fromName: "iCapOS" });
 }

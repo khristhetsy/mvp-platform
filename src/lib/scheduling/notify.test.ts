@@ -18,7 +18,7 @@ const base = {
 describe("bookingEmailHtml", () => {
   it("renders the event card, responses, and all three action links", () => {
     const html = bookingEmailHtml({ ...base, greetingName: "Troy Brazell", heroTitle: "You're scheduled", heroSub: "A calendar invitation has been sent." });
-    expect(html).toContain("You're scheduled");
+    expect(html).toContain("You&#39;re scheduled"); // apostrophes are escaped by the shared layout
     expect(html).toContain("Intro call");
     expect(html).toContain("30 minutes");
     expect(html).toContain("Troy Brazell");

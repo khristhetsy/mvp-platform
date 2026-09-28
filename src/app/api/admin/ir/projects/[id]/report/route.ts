@@ -16,6 +16,7 @@ import { draftExecSummary, freeze, isExecSummary, reportData, type FrozenReport,
 import { renderReportPdf } from "@/lib/ir/report-pdf";
 import { sendEmail } from "@/lib/email/send-email";
 import { summaryHtml } from "@/lib/ir/summaries";
+import { renderEmail } from "@/lib/email/layout";
 
 export const dynamic = "force-dynamic";
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -80,7 +81,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
     if (body.action === "preview") {
       const ex = data.saved && isExecSummary(data.saved.exec_summary) ? data.saved.exec_summary : null;
-      const html = `<div style="font-family:Inter,Helvetica,Arial,sans-serif;max-width:640px;color:#0F1B33;font-size:14px;line-height:1.6"><p>${escapeHtml(body.message).replace(/\n/g, "<br>")}</p>${body.attachPdf ? `<p style="border:1px solid #E2E7F0;border-radius:8px;padding:8px 12px;display:inline-block;font-size:12px;color:#5B6B86">Attachment: Investor-Outreach-Report-${escapeHtml(data.project.title.replace(/[^\w]+/g, "-"))}-${data.period.start}.pdf${ex ? "" : " · not yet approved — attaches once the summary is approved"}</p>` : ""}<p style="color:#5B6B86;font-size:12px">Confidential. Investor names and contact details are held by iCFO Capital Global, Inc. Firms are named once a meeting is booked. This report is not an offer to sell securities.</p></div>`;
+      const file = `Investor-Outreach-Report-${data.project.title.replace(/[^\w]+/g, "-")}-${data.period.start}.pdf`;
+      const { html } = reportEmail({
+        message: body.message,
+        subject: `${data.project.title} investor outreach report · ${data.period.label}`,
+        projectTitle: data.project.title,
+        attachment: body.attachPdf ? `${file}${ex ? "" : " · not yet approved, attaches once the summary is approved"}` : null,
+      });
       return NextResponse.json({ html, subject: `${data.project.title} investor outreach report · ${data.period.label}` });
     }
     // send — only an approved snapshot goes out, and only to a real address
@@ -88,13 +95,32 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!saved || !saved.approved_at || !isExecSummary(saved.exec_summary)) return NextResponse.json({ error: "Approve the executive summary before sending." }, { status: 400 });
     const frozen = saved.metrics as unknown as FrozenReport;
     const attachments = body.attachPdf ? [{ filename: `Investor-Outreach-Report-${data.project.title.replace(/[^\w]+/g, "-")}-${data.period.start}.pdf`, content: (await renderReportPdf(frozen, saved.exec_summary)).toString("base64") }] : [];
-    const html = `<p>${escapeHtml(body.message).replace(/\n/g, "<br>")}</p><p style="color:#5B6B86;font-size:12px">Confidential. Investor names and contact details are held by iCFO Capital Global, Inc. Firms are named once a meeting is booked. This report is not an offer to sell securities.</p>`;
+    const { html } = reportEmail({ message: body.message, subject: body.subject, projectTitle: data.project.title, attachment: attachments[0]?.filename ?? null });
     const delivered = await sendEmail({ to: body.to, subject: body.subject, html, text: body.message, fromName: me.full_name ?? undefined, attachments });
     if (!delivered) return NextResponse.json({ error: "Email isn't configured on this environment (RESEND_API_KEY), so the report was not sent." }, { status: 503 });
     await markReportSent(saved.id, body.to);
     await createActivity({ projectId: id, matchId: null, taskId: null, type: "email", subject: `${REPORT_SENT_PREFIX} · ${data.period.label}`, description: `Report ${saved.id} sent to ${body.to}`, doneAt: new Date().toISOString(), founderVisible: false, assigneeId: me.id, createdBy: me.id });
     return NextResponse.json({ ok: true });
   } catch (e) { return failed(e, "Couldn't complete that."); }
+}
+
+/** The IR lead's covering email, on the shared layout. The PDF carries the report itself. */
+function reportEmail(input: { message: string; subject: string; projectTitle: string; attachment: string | null }): { html: string } {
+  const paras = input.message.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return renderEmail({
+    audience: "founder",
+    subject: input.subject,
+    preheader: paras[0]?.replace(/\s+/g, " ") ?? input.subject,
+    context: `Investor Relations · ${input.projectTitle}`,
+    blocks: [
+      { type: "html", html: paras.map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:24px;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`).join("") },
+      ...(input.attachment ? [{ type: "note" as const, text: `Attached: ${input.attachment}` }] : []),
+    ],
+    footer: {
+      reason: `You get this because iCFO runs investor outreach for ${input.projectTitle}.`,
+      lines: ["Confidential. Investor names and contact details are held by iCFO Capital Global, Inc. Firms are named once a meeting is booked. This report is not an offer to sell securities."],
+    },
+  });
 }
 
 function escapeHtml(s: string): string { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)); }
