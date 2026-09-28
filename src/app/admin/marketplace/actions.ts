@@ -90,7 +90,7 @@ export type NotifyInterestResult =
 
 /**
  * Notify a live listing's interest list that the offering is live on its portal.
- * Email delivery is gated (MARKETPLACE_INTEREST_EMAILS_LIVE) and counsel-pending;
+ * Email delivery is gated (MARKETPLACE_INTEREST_EMAILS_LIVE); copy approved by legal 2026-09-28;
  * until enabled this reports the intended count without sending.
  */
 export async function notifyInterestList(listingId: string): Promise<NotifyInterestResult> {

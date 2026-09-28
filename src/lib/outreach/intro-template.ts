@@ -1,11 +1,12 @@
 /**
- * intro_fit_v1 — the LOCKED investor-introduction template.
+ * intro_fit_v1: the LOCKED investor-introduction template.
  *
- * COMPLIANCE: only the four merge fields below are dynamic (company, sector,
- * stage, investor first name). The body framing and the disclaimer footer are
- * fixed and MUST be replaced with counsel-approved copy before live sending is
- * enabled (INVESTOR_OUTREACH_LIVE=true). The placeholder text here is NOT legal
- * copy — it is a scaffold.
+ * COMPLIANCE: copy approved by legal on 2026-09-28. Only the merge fields are
+ * dynamic (company, sector, stage, investor first name, and the admin-edited
+ * subject/intro/closing). The disclaimer footer is fixed. Any change to the
+ * fixed wording needs a new legal review; intro-template.test.ts pins it.
+ * Sending is controlled by the outreach master switch (admin setting, or
+ * INVESTOR_OUTREACH_LIVE=true as an override).
  */
 
 import { AUDIENCE_COLOR, EMAIL_BRAND_LEGAL_LINE, esc, renderEmail, type EmailBlock } from "@/lib/email/layout";
@@ -46,7 +47,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-// Fixed, counsel-approved-pending disclaimer. Do not template this per-recipient.
+// Fixed disclaimer, approved by legal 2026-09-28. Do not template this per-recipient.
 const LOCKED_DISCLAIMER =
   "This message is an introduction generated from platform fit scoring. It is not investment advice, " +
   "an offer, a solicitation, or a recommendation to buy or sell any security. iCapOS is not a broker-dealer " +
