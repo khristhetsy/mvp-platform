@@ -12,9 +12,10 @@ import { introToken, renderIntro, type IntroTemplate } from "@/lib/icfo-events/i
 import type { Recipient } from "@/lib/icfo-events/introductions";
 import { matchReason } from "@/lib/icfo-events/match-reason";
 import type { Role } from "@/lib/icfo-events/pair-types";
+import { renderEmail, type EmailAudience } from "@/lib/email/layout";
 
 const NAVY = "#0A1A40";
-const BLUE = "#2563eb";
+const BLUE = "#1A6CE4";
 
 export type Sender =
   /** Resend, from the platform address. Replies come back to the reply hook. */
@@ -26,6 +27,19 @@ export type Sender =
    */
   | { via: "gmail"; userId: string };
 
+/** Plain-text part from the rendered page: head, styles and the hidden preheader are not body text. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<head[\s\S]*?<\/head>/i, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<div style="display:none[^"]*"[^>]*>[\s\S]*?<\/div>/i, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#8199;|&#65279;|&#847;/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** One door for both senders, so every introduction email can use either. */
 async function deliver(sender: Sender, input: { to: string; subject: string; html: string }): Promise<boolean> {
   if (sender.via === "gmail") {
@@ -34,7 +48,7 @@ async function deliver(sender: Sender, input: { to: string; subject: string; htm
       to: input.to,
       subject: input.subject,
       // Gmail wants a plain-text part too; the HTML is what people read.
-      body: input.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+      body: htmlToText(input.html),
       html: input.html,
     });
     if ("error" in result) {
@@ -88,37 +102,32 @@ export function introductionHtml(input: {
   test?: boolean;
   /** The fixed networking sentence. Omitted only when the event is unknown. */
   purpose?: { eventTitle: string; when: string | null } | null;
+  /** For the document title and inbox preview. */
+  subject?: string;
 }): string {
   const paragraphs = input.body
     .split(/\n{2,}/)
     .map((p) => `<p style="margin:0 0 14px;font-size:14px;line-height:1.65;color:#33415a;">${esc(p.trim()).replace(/\n/g, "<br>")}</p>`)
     .join("");
 
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eef1f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5;padding:22px 0;"><tr><td align="center">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f2;">
-      <tr><td style="padding:24px 30px;font-family:Arial,sans-serif;">
-        ${input.test ? TEST_BANNER : ""}
-        ${paragraphs}
-        ${input.purpose ? purposeBlock(input.purpose) : ""}
-        <div style="margin-top:6px;">
-          ${button(`${input.respondUrl}?a=yes`, "Accept the introduction →", true)}
-          ${button(`${input.respondUrl}?a=no`, "Not right now", false)}
-        </div>
-        <p style="margin:14px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;">
-          Declining is silent — nobody is told who declined.
-        </p>
-      </td></tr>
-      <tr><td style="padding:16px 30px;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
-        <div style="font-size:11px;color:#8a93a6;line-height:1.5;">
-          iCFO events are for education and community only. Nothing in this email is an offer to sell or a
-          solicitation to buy any security. iCFO Capital Global, Inc. is not a broker-dealer, placement agent,
-          or registered investment adviser, and no funding outcome is promised.
-        </div>
-      </td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`;
+  const inner =
+    (input.test ? TEST_BANNER : "") +
+    paragraphs +
+    (input.purpose ? purposeBlock(input.purpose) : "") +
+    `<div style="margin-top:6px;">` +
+    button(`${input.respondUrl}?a=yes`, "Accept the introduction →", true) +
+    button(`${input.respondUrl}?a=no`, "Not right now", false) +
+    `</div>` +
+    `<p style="margin:14px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;">Declining is silent — nobody is told who declined.</p>`;
+
+  const paras = input.body.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
+  return shell(inner, {
+    audience: "shared",
+    subject: input.subject ?? "An introduction from iCFO",
+    // Skip a bare greeting ("Hi Sam,") so the preview says something.
+    preheader: (paras.find((x) => !/^(hi|hello|dear)\b[^.!?]{0,40},$/i.test(x)) ?? paras[0] ?? "").replace(/\s+/g, " "),
+    lines: [INTRO_DISCLAIMER],
+  });
 }
 
 /**
@@ -157,6 +166,7 @@ export async function sendIntroductionEmail(input: {
     to: input.to,
     subject: input.test ? `[Test] ${subject}` : subject,
     html: introductionHtml({
+      subject,
       body,
       // A test carries no introduction to answer, so its buttons must not look
       // like they do — they lead to a page that says so.
@@ -172,18 +182,23 @@ export async function sendIntroductionEmail(input: {
 // founder was never told he had been accepted, and nobody was ever told when
 // the meeting was.
 
-const FOOTER = `<p style="margin:14px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;">
-  iCFO events are for education and community only. Nothing in this email is an offer to sell or a
-  solicitation to buy any security.
-</p>`;
+const EVENT_DISCLAIMER =
+  "iCFO events are for education and community only. Nothing in this email is an offer to sell or a solicitation to buy any security.";
+const INTRO_DISCLAIMER =
+  `${EVENT_DISCLAIMER} iCFO Capital Global, Inc. is not a broker-dealer, placement agent, or registered investment adviser, and no funding outcome is promised.`;
 
-function shell(inner: string): string {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eef1f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5;padding:22px 0;"><tr><td align="center">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f2;">
-      <tr><td style="padding:24px 30px;font-family:Arial,sans-serif;">${inner}${FOOTER}</td></tr>
-    </table>
-  </td></tr></table></body></html>`;
+type Frame = { audience: EmailAudience; subject: string; preheader: string; lines?: string[] };
+
+/** The shared email layout around this module's own (already escaped) body. */
+function shell(inner: string, frame: Frame): string {
+  return renderEmail({
+    audience: frame.audience,
+    subject: frame.subject,
+    preheader: frame.preheader,
+    context: "iCFO events",
+    blocks: [{ type: "html", html: inner }],
+    footer: { reason: "You get this because of an introduction made by the iCFO events team.", lines: frame.lines ?? [EVENT_DISCLAIMER] },
+  }).html;
 }
 
 const para = (html: string) =>
@@ -219,9 +234,10 @@ export async function sendScheduleRequest(input: {
     ? `${esc(input.investorName)} — ${esc(input.investorCompany)}`
     : esc(input.investorName);
 
+  const subject = `${input.investorName} accepted: pick a time`;
   return sendEmail({
     to: input.to,
-    subject: `${input.investorName} accepted — pick a time`,
+    subject,
     html: shell(
       para(`Hi ${esc(input.founderName.split(/\s+/)[0] || input.founderName)},`) +
       para(`${who} accepted your introduction.`) +
@@ -229,7 +245,9 @@ export async function sendScheduleRequest(input: {
       para("Choose a slot inside the event and add your meeting link. We will send both to them and put it in your calendars.") +
       `<div>${button(input.scheduleUrl, "Set the time →", true)}</div>` +
       para(`<span style="font-size:12px;color:#8a93a6;">They are waiting on you — nothing is booked until you pick.</span>`),
+      { audience: "founder", subject, preheader: `Choose a slot at ${input.eventTitle}. Nothing is booked until you pick.` },
     ),
+    fromName: "iCapOS",
   });
 }
 
@@ -256,11 +274,12 @@ export async function sendScheduledNotice(input: {
     ? `${esc(input.founderName)} — ${esc(input.founderCompany)}`
     : esc(input.founderName);
 
+  const subject = input.changed
+    ? `New time with ${input.founderName}: ${input.when}`
+    : `${input.founderName} set a time: ${input.when}`;
   return sendEmail({
     to: input.to,
-    subject: input.changed
-      ? `New time with ${input.founderName} — ${input.when}`
-      : `${input.founderName} set a time — ${input.when}`,
+    subject,
     html: shell(
       para(`Hi ${esc(input.investorName.split(/\s+/)[0] || input.investorName)},`) +
       para(`${who} will meet you at <strong>${esc(input.when)}</strong>, during ${esc(input.eventTitle)}.`) +
@@ -268,7 +287,9 @@ export async function sendScheduledNotice(input: {
       (input.calendarUrl ? button(input.calendarUrl, "Add to calendar", false) : "") +
       button(input.rescheduleUrl, "Ask for another time", false) +
       `</div>`,
+      { audience: "shared", subject, preheader: `${input.when}, during ${input.eventTitle}. Join link inside.` },
     ),
+    fromName: "iCapOS",
   });
 }
 
@@ -290,9 +311,10 @@ export async function sendRescheduleRequest(input: {
 }): Promise<boolean> {
   if (!input.to?.includes("@")) return false;
 
+  const subject = `${input.investorName} asked for a different time`;
   return sendEmail({
     to: input.to,
-    subject: `${input.investorName} asked for a different time`,
+    subject,
     html: shell(
       para(`Hi ${esc(input.founderName.split(/\s+/)[0] || input.founderName)},`) +
       para(
@@ -308,7 +330,9 @@ export async function sendRescheduleRequest(input: {
            </table>`
         : "") +
       `<div>${button(input.scheduleUrl, "Pick another time →", true)}</div>`,
+      { audience: "founder", subject, preheader: "The introduction stands. Only the slot is open again." },
     ),
+    fromName: "iCapOS",
   });
 }
 
@@ -349,6 +373,8 @@ export function introductionDigestHtml(input: {
   test?: boolean;
   /** Stated once, above the list — not on every row. */
   purpose?: { eventTitle: string; when: string | null } | null;
+  /** For the document title. */
+  subject?: string;
 }): string {
   const rows = input.rows.map((r) => `
     <tr><td style="padding:14px 0;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
@@ -371,6 +397,7 @@ export function introductionDigestHtml(input: {
     `<p style="margin:16px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;">
        Accept as many or as few as you like. Declining is silent — nobody is told who declined.
      </p>`,
+    { audience: "investor", subject: input.subject ?? "Introductions from iCFO", preheader: input.intro },
   );
 }
 
@@ -417,6 +444,7 @@ export async function sendIntroductionDigest(input: {
     to: input.to,
     subject: input.test ? `[Test] ${subject}` : subject,
     html: introductionDigestHtml({
+      subject,
       greeting: `Hi ${input.investorName.split(/\s+/)[0] || input.investorName},`,
       intro: noun === "founders"
         ? `${input.items.length} founders at ${input.eventTitle} match what you back. Accept the ones you want to meet — each sends you their time and a link.`

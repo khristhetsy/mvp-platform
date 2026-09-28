@@ -104,3 +104,21 @@ describe("the networking purpose line", () => {
     expect(withPurpose).not.toContain("registered to attend");
   });
 });
+
+describe("shared layout", () => {
+  it("frames the digest in the shared layout with the event disclaimer", async () => {
+    const { introductionDigestHtml, htmlToText } = await import("./introduction-emails");
+    const html = introductionDigestHtml({
+      greeting: "Hi Sam,",
+      intro: "2 founders at iCFO PE Expo match what you back.",
+      rows: [{ name: "Northstar", meta: "Seed", pitch: null, respondUrl: "https://icapos.com/e/intro/t" }],
+      subject: "2 founders worth meeting at iCFO PE Expo",
+    });
+    expect(html).toContain("height:3px;background:#0E7C66");
+    expect(html).toContain("2 founders at iCFO PE Expo match what you back.");
+    const text = htmlToText(html);
+    expect(text).toContain("Hi Sam,");
+    expect(text).not.toContain("@media");
+    expect(text).not.toMatch(/^2 founders at iCFO PE Expo match what you back\. 2 founders/);
+  });
+});
