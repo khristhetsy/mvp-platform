@@ -15,6 +15,8 @@ export type NativeRow = {
   odoo_message_id: number | null;
   /** Original Odoo author for a row that mirrors an Odoo note. */
   odoo_author?: string | null;
+  /** For a sent email: which mailbox sent it ("icapos" or "gmail"). */
+  via?: string | null;
 };
 
 export type OdooMsg = {
@@ -43,6 +45,7 @@ export type TimelineItem = {
   edited_at: string | null;
   deleted_at: string | null;
   odoo_synced: boolean;
+  via: string | null;
 };
 
 export function isNoteKind(kind: string): boolean {
@@ -70,6 +73,7 @@ export function rowToItem(r: NativeRow): TimelineItem {
     edited_at: r.edited_at,
     deleted_at: r.deleted_at,
     odoo_synced: !odoo && r.odoo_message_id != null,
+    via: r.via ?? null,
   };
 }
 
@@ -87,6 +91,7 @@ function odooToItem(m: OdooMsg): TimelineItem {
     edited_at: null,
     deleted_at: null,
     odoo_synced: false,
+    via: null,
   };
 }
 

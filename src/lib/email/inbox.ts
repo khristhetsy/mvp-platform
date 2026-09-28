@@ -170,7 +170,7 @@ async function sendOnThread(
   cc?: string | null,
   bcc?: string | null,
   toOverride?: string | null,
-): Promise<void> {
+): Promise<boolean> {
   let fullBody: string;
   let html: string;
   if (htmlOverride) {
@@ -244,13 +244,14 @@ async function sendOnThread(
     .from("email_threads")
     .update({ last_message_at: now, last_direction: "outbound", unread: false, updated_at: now })
     .eq("id", thread.id);
+  return sent;
 }
 
 export async function composeThread(
   supabase: SupabaseClient<Database>,
   owner: Owner,
   input: { to: string; toName?: string | null; cc?: string | null; bcc?: string | null; subject: string; body: string; html?: string | null; attachments?: EmailAttachment[] },
-): Promise<EmailThread> {
+): Promise<EmailThread & { sent: boolean }> {
   // The To field can carry a trailing comma or several recipients (from the
   // autocomplete). Parse them: the first is the thread's contact, all are sent.
   const toRecipients = parseRecipients(input.to);
@@ -276,8 +277,8 @@ export async function composeThread(
   if (error) throw new Error(error.message ?? "Unable to start thread.");
 
   const thread = data as EmailThread;
-  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null, input.cc ?? null, input.bcc ?? null, sendTo);
-  return thread;
+  const sent = await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null, input.cc ?? null, input.bcc ?? null, sendTo);
+  return { ...thread, sent };
 }
 
 export async function replyToThread(
