@@ -33,7 +33,11 @@ export function describeFilters(f: AdminReportFilters): string[] {
   if (f.investorId) out.push(`Investor ${f.investorId}`);
   if (f.severity) out.push(`Compliance severity ${f.severity}`);
   if (f.reviewStatus) out.push(`Review status ${f.reviewStatus}`);
-  return out.length ? out : ["All companies (no filters)"];
+  if (f.companyId) out.push(`Company ${f.companyId}`);
+  if (f.spvStatus) out.push(`SPV status ${f.spvStatus}`);
+  if (f.operationalReadinessStatus) out.push(`Operational readiness ${f.operationalReadinessStatus}`);
+  if (f.closingReviewStatus) out.push(`Closing review ${f.closingReviewStatus}`);
+  return out;
 }
 
 function readinessCell(score: unknown): Cell {
@@ -188,7 +192,7 @@ export function buildPortfolioModel(payload: AdminReportPayload, generatedBy: st
   sections.push({
     key: "method",
     title: "Scope and privacy",
-    keyValues: [["Filters", describeFilters(payload.meta.filters).join("; ")]],
+    keyValues: [["Filters", describeFilters(payload.meta.filters).join("; ") || "None"]],
     paragraphs: [
       `${payload.meta.privacyNotice} This PDF leaves out investor contact details, message bodies, OAuth tokens and calendar event identifiers.`,
       "Prepared by iCFO Capital Global, Inc. for internal staff. This report is not investment advice and is not an offer to sell or a solicitation to buy any security.",
@@ -199,7 +203,7 @@ export function buildPortfolioModel(payload: AdminReportPayload, generatedBy: st
     generatedAt: new Date(payload.meta.generatedAt),
     generatedBy,
     companyCount: total,
-    filterLines: describeFilters(payload.meta.filters),
+    filterLines: describeFilters(payload.meta.filters).length ? describeFilters(payload.meta.filters) : ["All companies (no filters)"],
     metrics,
     readinessBar,
     takeaways: t.slice(0, 3),
