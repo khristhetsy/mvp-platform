@@ -29,8 +29,31 @@ async function extractDocx(bytes: Uint8Array): Promise<string> {
   return value ?? "";
 }
 
+let pdfWorkerReady: Promise<void> | null = null;
+
+/**
+ * pdfjs in Node runs a "fake worker" on the main thread, and it finds that
+ * worker by importing ./pdf.worker.mjs from disk at runtime. Vercel's file
+ * tracing cannot see that dynamic path, so the file was missing in production
+ * and every PDF failed with "Setting up fake worker failed". The error was
+ * swallowed, the text came back empty, and no PDF ever got an ai_summary.
+ *
+ * Importing the worker here makes it a static dependency, and putting it on
+ * globalThis.pdfjsWorker hands pdfjs the handler directly so it never looks
+ * for the file.
+ */
+async function ensurePdfWorker(): Promise<void> {
+  const g = globalThis as { pdfjsWorker?: unknown };
+  if (g.pdfjsWorker) return;
+  pdfWorkerReady ??= import("pdfjs-dist/legacy/build/pdf.worker.mjs").then((m) => {
+    g.pdfjsWorker = m;
+  });
+  await pdfWorkerReady;
+}
+
 async function extractPdf(bytes: Uint8Array): Promise<string> {
-  // Dynamic import of the legacy (main-thread) build — no worker in Node.
+  // Dynamic import of the legacy (main-thread) build — no worker thread in Node.
+  await ensurePdfWorker();
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false, useSystemFonts: true }).promise;
   const pages = Math.min(doc.numPages, MAX_PDF_PAGES);
@@ -88,7 +111,10 @@ export async function extractDocumentText(
     else if (isCsvOrText(mime, fileName)) text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     else return "";
     return text.replace(/\s+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim().slice(0, MAX_CHARS);
-  } catch {
+  } catch (err) {
+    // Still return "" so callers skip rather than fabricate, but say why. A
+    // silent catch here hid a production-wide PDF failure for months.
+    console.error("[extract-text] extraction failed", { fileName, mime, err: String(err) });
     return "";
   }
 }

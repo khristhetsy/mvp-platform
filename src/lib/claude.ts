@@ -83,3 +83,56 @@ export async function claudeComplete(
   };
   return data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
 }
+
+/**
+ * Send one PDF to Claude as a native document block, with a text prompt.
+ *
+ * For PDFs whose text layer cannot be extracted locally (scanned decks,
+ * image-only statements), Claude reads the pages itself. The Messages API
+ * caps a request at 32 MB, so callers should pass files well under that.
+ */
+export async function claudeCompleteWithPdf(
+  pdf: Uint8Array,
+  prompt: string,
+  options: Omit<ClaudeOptions, "locale"> = {},
+): Promise<string> {
+  const { model = CLAUDE_HAIKU, maxTokens = 1024, temperature, system } = options;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: Record<string, any> = {
+    model,
+    max_tokens: maxTokens,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "document",
+            source: { type: "base64", media_type: "application/pdf", data: Buffer.from(pdf).toString("base64") },
+          },
+          { type: "text", text: prompt },
+        ],
+      },
+    ],
+  };
+  if (system)                    body.system      = system;
+  if (temperature !== undefined) body.temperature = temperature;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:  "POST",
+    headers: {
+      "x-api-key":         getApiKey(),
+      "anthropic-version": "2023-06-01",
+      "content-type":      "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.statusText);
+    throw new Error(`Anthropic API ${res.status}: ${err}`);
+  }
+
+  const data = await res.json() as { content: Array<{ type: string; text: string }> };
+  return data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
+}
