@@ -16,6 +16,7 @@ const p = (over: Partial<RosterPerson> = {}): RosterPerson => ({
   role: "Presenter",
   company: "Acme",
   headshotUrl: null,
+  companyLogoUrl: null,
   initials: "JD",
   bio: "",
   companySummary: "",

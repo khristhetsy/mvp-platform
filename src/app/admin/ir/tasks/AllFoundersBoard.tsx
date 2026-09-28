@@ -13,7 +13,7 @@ import { HScrollBoard } from "@/components/admin/HScrollBoard";
 type Task = { id: string; project_id: string; title: string; status: "new" | "in_progress" | "done"; starred: boolean; deadline: string | null; created_at: string; assignee_name: string | null; week: { label: string; starts_on: string; ends_on: string } | null; investors: number };
 type Project = { id: string; title: string; founder_name: string | null };
 
-const COLORS = ["#4F46E5", "#EA580C", "#0D9488", "#DB2777", "#7C3AED", "#16A34A", "#0284C7", "#CA8A04"];
+const COLORS = ["#4F46E5", "#EA580C", "#0F766E", "#DB2777", "#7C3AED", "#16A34A", "#0284C7", "#CA8A04"];
 const STATUS_DOT: Record<string, string> = { new: "#94A3B8", in_progress: "#F59E0B", done: "#16A34A" };
 const DAY = 86_400_000;
 const initials = (n: string | null) => (n ?? "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
