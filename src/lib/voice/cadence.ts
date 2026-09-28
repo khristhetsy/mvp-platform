@@ -52,16 +52,18 @@ function outcomeFromGate(reason: string | undefined): StepOutcome {
 /** Execute one cadence step for a contact. Returns how to advance. */
 /**
  * The text sent when a cadence step has no body of its own. Names the sender
- * and why, keeps STOP. Asks for no reply: inbound texts other than STOP are
- * not routed to anyone yet.
+ * and why, invites a reply (inbound replies reach every staff member, see
+ * inbound-replies.ts) and keeps STOP. Stays within one 160-character SMS:
+ * a long first name is dropped before anything else.
  */
 export function defaultFollowUpSms(input: { firstName: string | null; audience: "founder" | "investor" | null }): string {
-  const hi = input.firstName ? `Hi ${input.firstName}` : "Hi";
   const about =
     input.audience === "investor"
       ? "following up about deal flow that fits your focus"
       : "following up on getting your company investor ready";
-  return `${hi}, it's the iCFO Capital team ${about}. Reply STOP to opt out.`;
+  const build = (hi: string) => `${hi}, it's the iCFO Capital team ${about}. Reply here to set up a short call. Reply STOP to opt out.`;
+  const named = input.firstName ? build(`Hi ${input.firstName}`) : null;
+  return named && named.length <= 160 ? named : build("Hi");
 }
 
 async function followUpContext(contactId: string, campaignId: string): Promise<{ firstName: string | null; audience: "founder" | "investor" | null }> {

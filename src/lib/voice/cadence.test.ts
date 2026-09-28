@@ -46,8 +46,11 @@ describe("defaultFollowUpSms", () => {
   it("names the sender, the reason and keeps STOP", async () => {
     const { defaultFollowUpSms } = await import("./cadence");
     const founder = defaultFollowUpSms({ firstName: "Maya", audience: "founder" });
-    expect(founder).toBe("Hi Maya, it's the iCFO Capital team following up on getting your company investor ready. Reply STOP to opt out.");
+    expect(founder).toBe("Hi Maya, it's the iCFO Capital team following up on getting your company investor ready. Reply here to set up a short call. Reply STOP to opt out.");
     expect(founder.length).toBeLessThanOrEqual(160);
     expect(defaultFollowUpSms({ firstName: null, audience: "investor" })).toMatch(/^Hi, it's the iCFO Capital team following up about deal flow/);
+    const long = defaultFollowUpSms({ firstName: "Bartholomewandersonsmithington", audience: "founder" });
+    expect(long.startsWith("Hi, it's")).toBe(true);
+    expect(long.length).toBeLessThanOrEqual(160);
   });
 });
