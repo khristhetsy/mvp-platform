@@ -9,34 +9,32 @@ const recentActivity = [
   { label: "Cap table gap flagged", time: "1d ago", status: "Action" },
 ];
 
+/**
+ * A picture of the founder dashboard for the marketing pages. It is decorative:
+ * the company switcher and bell are drawn as plain shapes, not buttons, so
+ * visitors are not offered controls that do nothing.
+ */
 export function MarketingDashboardPreview() {
   const t = useTranslations("sharedCmp");
   const interestSeries = [12, 14, 15, 17, 19, 21, 23];
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-1 shadow-[var(--shadow-panel)]">
+    <div className="rounded-xl border border-slate-200/80 bg-white p-1 shadow-[var(--shadow-panel)]" aria-label="Dashboard preview" role="img">
       <div className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] p-3">
         {/* Header bar */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
           <div>
             <p className="text-xs font-semibold text-[var(--navy)]">{t("overview")}</p>
-            <button
-              type="button"
-              className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-slate-600"
-            >
+            <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-slate-600">
               Acme Robotics Inc.
               <ChevronDown className="h-3 w-3" strokeWidth={1.75} aria-hidden />
-            </button>
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4" strokeWidth={1.75} />
+            <span className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500">
+              <Bell className="h-4 w-4" strokeWidth={1.75} aria-hidden />
               <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--gold)]" />
-            </button>
+            </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy)] text-[10px] font-semibold text-white">
               AR
             </div>

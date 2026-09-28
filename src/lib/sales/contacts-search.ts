@@ -45,6 +45,20 @@ export async function must<T>(p: PromiseLike<{ data: T; error: { message?: strin
   return data;
 }
 
+/**
+ * Run a read-only query, retrying once if Postgres cancels it for the statement
+ * timeout (57014). The database has short CPU stalls where a normally fast query
+ * runs 50x slower; a second attempt a moment later almost always succeeds.
+ */
+async function readWithRetry<T>(run: () => PromiseLike<{ data: T; error: { message?: string; code?: string } | null }>, context: string): Promise<T> {
+  const first = await run();
+  if (first.error?.code === "57014") {
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    return must(run(), context);
+  }
+  return must(Promise.resolve(first), context);
+}
+
 /** Client params → one query. Old-style params are folded into the spec. */
 export function parseContactsQuery(p: URLSearchParams): ContactsQuery {
   const conditions: Condition[] = [];
@@ -118,7 +132,7 @@ export type ContactRow = {
  * matching row (2.6 s for 7k Investors on the production instance).
  */
 export async function searchContacts(q: ContactsQuery, owner: string | null, count = true): Promise<{ rows: ContactRow[]; total: number }> {
-  const rows = await must<ContactRow[] | null>(db().rpc("search_contacts", {
+  const rows = await readWithRetry<ContactRow[] | null>(() => db().rpc("search_contacts", {
     p_spec: q.spec, p_owner: owner, p_group_by: q.groupBy, p_group_value: q.groupValue,
     p_sort: q.sort, p_dir: q.dir, p_offset: q.offset, p_limit: q.limit, p_count: count,
   }), "search_contacts");
@@ -128,8 +142,8 @@ export async function searchContacts(q: ContactsQuery, owner: string | null, cou
 
 /** Bucket counts for one dimension over the same predicate (Unassigned = NONE, last). */
 export async function countContactBuckets(spec: FilterSpec, owner: string | null, groupBy: string): Promise<Array<{ value: string; count: number }>> {
-  const rows = await must<Array<{ value: string; n: number | string }> | null>(
-    db().rpc("count_contact_buckets", { p_spec: spec, p_owner: owner, p_group_by: groupBy }), "count_contact_buckets");
+  const rows = await readWithRetry<Array<{ value: string; n: number | string }> | null>(
+    () => db().rpc("count_contact_buckets", { p_spec: spec, p_owner: owner, p_group_by: groupBy }), "count_contact_buckets");
   return (rows ?? []).map((r) => ({ value: r.value, count: Number(r.n) }));
 }
 

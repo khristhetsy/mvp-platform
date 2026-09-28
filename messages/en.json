@@ -534,7 +534,11 @@
       "typePost": " to confirm:",
       "deleting": "Deleting…",
       "confirmDelete": "Confirm delete",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "handOverTitle": "Hand over before deleting",
+      "handOverDesc": "These records need an owner. Choose the teammate who takes them over.",
+      "handOverPick": "Choose a teammate",
+      "handOverNone": "No other active admin or analyst can take these over. Add one first."
     },
     "manage": {
       "eyebrow": "Admin",
@@ -594,7 +598,11 @@
         "deactivated": "{actor} deactivated {target}",
         "reactivated": "{actor} reactivated {target}",
         "invited": "{actor} invited {email} as {role}"
-      }
+      },
+      "handOverTitle": "Hand over before deleting",
+      "handOverDesc": "These records need an owner. Choose the teammate who takes them over.",
+      "handOverPick": "Choose a teammate",
+      "handOverNone": "No other active admin or analyst can take these over. Add one first."
     },
     "permissions": {
       "eyebrow": "Internal RBAC",

@@ -124,14 +124,24 @@ export function AiFirstMode({ nextEvent = null, autoOpen = true }: { nextEvent?:
     if (!sessionId.current) sessionId.current = crypto.randomUUID();
     const openHandler = () => setOpen(true);
     window.addEventListener("icapos:open-ai-first", openHandler);
-    return () => window.removeEventListener("icapos:open-ai-first", openHandler);
+    // Tells SiteNav this page can open the overlay in place.
+    (window as unknown as { __icaposAiFirst?: boolean }).__icaposAiFirst = true;
+    return () => {
+      window.removeEventListener("icapos:open-ai-first", openHandler);
+      (window as unknown as { __icaposAiFirst?: boolean }).__icaposAiFirst = false;
+    };
   }, []);
 
   // Auto-open only on "/" and "/events" (per-context dismissal + ?pages=1).
   // Admin "Public site default view" = Browse → never auto-open.
   useEffect(() => {
-    if (!autoOpen || !isAutoOpen(pathname)) return;
     const params = new URLSearchParams(window.location.search);
+    // "?ai=1" is the AI Mode link from pages without the overlay: always open.
+    if (params.get("ai") === "1") {
+      const id = requestAnimationFrame(() => setOpen(true));
+      return () => cancelAnimationFrame(id);
+    }
+    if (!autoOpen || !isAutoOpen(pathname)) return;
     if (params.get("pages") === "1") return;
     if (sessionStorage.getItem(`icapos-aifirst-dismissed:${ctx}`) === "1") return;
     const id = requestAnimationFrame(() => setOpen(true));

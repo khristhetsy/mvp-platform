@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
@@ -10,6 +11,17 @@ export const dynamic = "force-dynamic";
 function db(): any { return createServiceRoleClient(); }
 
 const GROUPS = ["founder", "investor", "advisor", "other"] as const;
+
+// Country totals scan every contact with a country (13k rows) and change only when a
+// sync lands, so they are cached for 10 minutes instead of recomputed per request.
+// Under database load that scan was hitting the 8s statement timeout.
+const loadCountryRows = unstable_cache(
+  async () =>
+    must<Array<{ country: string | null; n: number }> | null>(
+      db().from("crm_country_facets").select("country, n").order("n", { ascending: false }), "contacts: country facets"),
+  ["crm-country-facets"],
+  { revalidate: 600 },
+);
 
 // GET /api/sales/contacts/facets — role group counts for the active filters (one query,
 // same predicate as the list) + the country value list.
@@ -24,8 +36,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
     const [buckets, countryRows] = await Promise.all([
       countContactBuckets(q.spec, owner, "profile"),
-      must<Array<{ country: string | null; n: number }> | null>(
-        db().from("crm_country_facets").select("country, n").order("n", { ascending: false }), "contacts: country facets"),
+      loadCountryRows(),
     ]);
     const counts: Record<string, number> = { founder: 0, investor: 0, advisor: 0, other: 0 };
     for (const b of buckets) if (b.value in counts) counts[b.value] = b.count;

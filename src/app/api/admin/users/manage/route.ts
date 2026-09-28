@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireManageUsersApi } from "@/lib/api/permissions";
 import { writeAuditLog } from "@/lib/data/audit";
+import { prepareUserDeletion } from "@/lib/users/ownership-transfer";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, UserRole } from "@/lib/supabase/types";
 
@@ -133,6 +134,14 @@ export async function DELETE(req: NextRequest): Promise<Response> {
     );
   }
 
+  // Records only this user can own (IR projects, notes, reports, valuations)
+  // block the delete; hand them to the chosen teammate first.
+  const reassignTo = typeof body.reassignTo === "string" && body.reassignTo ? body.reassignTo : null;
+  const blocked = await prepareUserDeletion(admin, userId, reassignTo);
+  if (blocked) {
+    return NextResponse.json({ error: blocked.error, mustReassign: blocked.items }, { status: blocked.status });
+  }
+
   // Hard-delete from Supabase Auth (profiles row cascades via FK)
   const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
   if (deleteError) {
@@ -157,7 +166,7 @@ export async function DELETE(req: NextRequest): Promise<Response> {
     action: "admin.user_deleted",
     entityType: "profile",
     entityId: userId,
-    metadata: { targetEmail: target?.email, targetName: target?.full_name },
+    metadata: { targetEmail: target?.email, targetName: target?.full_name, reassignedTo: reassignTo },
   });
 
   return NextResponse.json({ success: true });

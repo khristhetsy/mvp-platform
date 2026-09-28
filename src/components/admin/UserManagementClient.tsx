@@ -5,6 +5,7 @@ import { Users, Trash2, UserMinus, AlertTriangle, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EmailContactButton } from "@/components/email/EmailContactButton";
 import { DeptChips, type DeptOption } from "@/components/admin/DeptChips";
+import { HandOverPicker, type HandOverItem, type HandOverCandidate } from "@/components/admin/HandOverPicker";
 import type { UserRole } from "@/lib/supabase/types";
 
 const INTERNAL_ROLES = new Set<UserRole>(["admin", "analyst"]);
@@ -13,7 +14,7 @@ type T = (key: string, values?: Record<string, string | number>) => string;
 const ROLE_SLUGS = ["founder", "investor", "admin", "analyst"];
 
 type DependentItem = { key: string; label: string; count: number };
-type Dependents = { items: DependentItem[]; total: number };
+type Dependents = { items: DependentItem[]; total: number; mustReassign: HandOverItem[]; candidates: HandOverCandidate[] };
 
 type UserStatus = "active" | "invited" | "inactive";
 
@@ -118,6 +119,7 @@ export function UserManagementClient() {
   const [confirmEmail, setConfirmEmail] = useState("");
   const [deps, setDeps] = useState<Dependents | null>(null);
   const [depsLoading, setDepsLoading] = useState(false);
+  const [reassignTo, setReassignTo] = useState("");
   const [departments, setDepartments] = useState<DeptOption[]>([]);
   const [memberMap, setMemberMap] = useState<Record<string, string[]>>({});
 
@@ -220,12 +222,13 @@ export function UserManagementClient() {
   const openDeleteModal = useCallback(async (user: ManagedUser) => {
     setDeleteTarget(user);
     setConfirmEmail("");
+    setReassignTo("");
     setDeps(null);
     setDepsLoading(true);
     try {
       const res = await fetch(`/api/admin/users/dependents?userId=${encodeURIComponent(user.id)}`);
       const data = await res.json();
-      if (res.ok) setDeps({ items: data.items ?? [], total: data.total ?? 0 });
+      if (res.ok) setDeps({ items: data.items ?? [], total: data.total ?? 0, mustReassign: data.mustReassign ?? [], candidates: data.candidates ?? [] });
     } catch {
       // Non-fatal: modal still works, just without the count breakdown.
     } finally {
@@ -236,17 +239,18 @@ export function UserManagementClient() {
   const closeDeleteModal = useCallback(() => {
     setDeleteTarget(null);
     setConfirmEmail("");
+    setReassignTo("");
     setDeps(null);
   }, []);
 
-  const deleteUser = useCallback(async (userId: string) => {
+  const deleteUser = useCallback(async (userId: string, reassignToId?: string) => {
     setSaving((prev) => new Set(prev).add(userId));
     closeDeleteModal();
     try {
       const res = await fetch("/api/admin/users/manage", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, reassignTo: reassignToId || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Delete failed.");
@@ -573,6 +577,10 @@ export function UserManagementClient() {
                 )}
               </div>
 
+              {deps ? (
+                <HandOverPicker items={deps.mustReassign} candidates={deps.candidates} value={reassignTo} onChange={setReassignTo} />
+              ) : null}
+
               {/* Type-to-confirm */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">
@@ -599,8 +607,12 @@ export function UserManagementClient() {
               </button>
               <button
                 type="button"
-                disabled={confirmEmail.trim().toLowerCase() !== (deleteTarget.email ?? "").toLowerCase()}
-                onClick={() => void deleteUser(deleteTarget.id)}
+                disabled={
+                  depsLoading ||
+                  confirmEmail.trim().toLowerCase() !== (deleteTarget.email ?? "").toLowerCase() ||
+                  (Boolean(deps?.mustReassign.length) && !reassignTo)
+                }
+                onClick={() => void deleteUser(deleteTarget.id, reassignTo)}
                 className="rounded-lg bg-[#A32D2D] px-3 py-2 text-sm font-semibold text-white hover:bg-[#8A2525] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t("deletePermanently")}

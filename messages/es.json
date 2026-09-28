@@ -534,7 +534,11 @@
       "typePost": " para confirmar:",
       "deleting": "Eliminando…",
       "confirmDelete": "Confirmar eliminación",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "handOverTitle": "Transferir antes de eliminar",
+      "handOverDesc": "Estos registros necesitan un responsable. Elige al compañero que se hará cargo.",
+      "handOverPick": "Elige a un compañero",
+      "handOverNone": "Ningún otro administrador o analista activo puede hacerse cargo. Agrega uno primero."
     },
     "manage": {
       "eyebrow": "Admin",
@@ -594,7 +598,11 @@
         "deactivated": "{actor} desactivó a {target}",
         "reactivated": "{actor} reactivó a {target}",
         "invited": "{actor} invitó a {email} como {role}"
-      }
+      },
+      "handOverTitle": "Transferir antes de eliminar",
+      "handOverDesc": "Estos registros necesitan un responsable. Elige al compañero que se hará cargo.",
+      "handOverPick": "Elige a un compañero",
+      "handOverNone": "Ningún otro administrador o analista activo puede hacerse cargo. Agrega uno primero."
     },
     "permissions": {
       "eyebrow": "RBAC interno",

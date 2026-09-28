@@ -18,7 +18,7 @@
  * tomorrow get the same treatment instead of the fields silently decaying again.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { readAllRows, PAGE_SIZE } from "@/lib/supabase/paged";
+import { readAllRows } from "@/lib/supabase/paged";
 import { reportDbError } from "@/lib/supabase/report";
 import { reindexContacts } from "@/lib/fit/match-index";
 import { mergeOverrides } from "@/lib/sales/overrides";
@@ -155,6 +155,8 @@ export function summarise(plan: PlanItem[]): Record<string, Record<string, numbe
   return out;
 }
 
+const PLAN_PAGE_SIZE = 250;
+
 /**
  * Everything the pass would change, walked by CURSOR rather than re-read from the top.
  *
@@ -175,12 +177,21 @@ export async function planDerivation(opts: { afterId?: string | null; wanted?: n
 
   // Keyset pagination: `id > cursor` rather than an offset, so pages can't shift under us.
   for (let page = 0; page < 200; page++) {
-    let q = db().from("crm_contacts")
-      .select("id, company, raw, overrides")
-      .or("contact_type.eq.investor,module.eq.investor")
-      .not("company", "is", null);
-    if (cursor) q = q.gt("id", cursor);
-    const { data, error } = await q.order("id", { ascending: true }).limit(PAGE_SIZE);
+    // Each row carries the full Odoo `raw` record, so pages stay small, and a page the
+    // database cancels for the 8s statement timeout (57014) is retried once.
+    const fetchPage = () => {
+      let q = db().from("crm_contacts")
+        .select("id, company, raw, overrides")
+        .or("contact_type.eq.investor,module.eq.investor")
+        .not("company", "is", null);
+      if (cursor) q = q.gt("id", cursor);
+      return q.order("id", { ascending: true }).limit(PLAN_PAGE_SIZE);
+    };
+    let { data, error } = await fetchPage();
+    if (error?.code === "57014") {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      ({ data, error } = await fetchPage());
+    }
     if (reportDbError("planDerivation: crm_contacts", error)) { done = false; break; }
     const rows = (data ?? []) as Row[];
     if (rows.length === 0) { done = true; break; }
@@ -194,7 +205,7 @@ export async function planDerivation(opts: { afterId?: string | null; wanted?: n
       withWork.add(r.id);
       if (withWork.size >= wanted) return { plan, scanned, nextCursor: cursor, done: false };
     }
-    if (rows.length < PAGE_SIZE) { done = true; break; }
+    if (rows.length < PLAN_PAGE_SIZE) { done = true; break; }
   }
   return { plan, scanned, nextCursor: done ? null : cursor, done };
 }

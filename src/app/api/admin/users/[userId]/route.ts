@@ -4,10 +4,11 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { writeAuditLog } from "@/lib/data/audit";
 import type { Profile } from "@/lib/supabase/types";
+import { prepareUserDeletion } from "@/lib/users/ownership-transfer";
 
 type RouteContext = { params: Promise<{ userId: string }> };
 
-export async function DELETE(_req: Request, { params }: RouteContext) {
+export async function DELETE(req: Request, { params }: RouteContext) {
   const { userId: targetUserId } = await params;
 
   const userSupabase = await createServerSupabaseClient();
@@ -71,6 +72,15 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "You cannot delete a super admin account." }, { status: 403 });
   }
 
+  // Records only this user can own (IR projects, notes, reports, valuations)
+  // block the delete; hand them to the chosen teammate first.
+  const body = (await req.json().catch(() => ({}))) as { reassignTo?: unknown };
+  const reassignTo = typeof body.reassignTo === "string" && body.reassignTo ? body.reassignTo : null;
+  const blocked = await prepareUserDeletion(admin, targetUserId, reassignTo);
+  if (blocked) {
+    return NextResponse.json({ error: blocked.error, mustReassign: blocked.items }, { status: blocked.status });
+  }
+
   // Write audit log before deletion (so the actor record still exists)
   await writeAuditLog(admin, {
     userId: user.id,
@@ -81,6 +91,7 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
       targetEmail: targetProfile.email,
       targetName: targetProfile.full_name,
       targetRole: targetProfile.role,
+      reassignedTo: reassignTo,
     },
   });
 
