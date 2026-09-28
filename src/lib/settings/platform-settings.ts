@@ -403,3 +403,34 @@ export async function setFounderConnectionConfig(cfg: FounderConnectionConfig, u
     return false;
   }
 }
+
+/**
+ * Public site landing experience (admin Feature Controls). "ai" auto-opens the
+ * full-screen AI mode on "/" and "/events"; "browse" lands visitors on the
+ * regular pages, with AI mode still one click away (nav button + launcher).
+ */
+export type SiteDefaultView = "ai" | "browse";
+export const DEFAULT_SITE_VIEW: SiteDefaultView = "ai";
+export const SITE_DEFAULT_VIEW_KEY = "site_default_view";
+export const SITE_DEFAULT_VIEW_TAG = "site-default-view";
+
+export async function getSiteDefaultView(): Promise<SiteDefaultView> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", SITE_DEFAULT_VIEW_KEY).maybeSingle();
+    const view = (data as { value?: { view?: unknown } } | null)?.value?.view;
+    return view === "browse" || view === "ai" ? view : DEFAULT_SITE_VIEW;
+  } catch {
+    return DEFAULT_SITE_VIEW;
+  }
+}
+
+export async function setSiteDefaultView(view: SiteDefaultView, updatedBy: string | null): Promise<boolean> {
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert({ key: SITE_DEFAULT_VIEW_KEY, value: { view }, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return !error;
+  } catch {
+    return false;
+  }
+}

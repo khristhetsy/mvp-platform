@@ -107,7 +107,7 @@ function fmtEventDate(iso: string | null): string {
   return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
-export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
+export function AiFirstMode({ nextEvent = null, autoOpen = true }: { nextEvent?: NextEvent; autoOpen?: boolean }) {
   const pathname = usePathname() ?? "/";
   const ctx = contextFor(pathname);
   const cfg = CONTEXTS[ctx];
@@ -128,14 +128,15 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
   }, []);
 
   // Auto-open only on "/" and "/events" (per-context dismissal + ?pages=1).
+  // Admin "Public site default view" = Browse → never auto-open.
   useEffect(() => {
-    if (!isAutoOpen(pathname)) return;
+    if (!autoOpen || !isAutoOpen(pathname)) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("pages") === "1") return;
     if (sessionStorage.getItem(`icapos-aifirst-dismissed:${ctx}`) === "1") return;
     const id = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(id);
-  }, [pathname, ctx]);
+  }, [pathname, ctx, autoOpen]);
 
   /** Dismiss AI-first: remember for the session per context and, where it
    *  auto-opens, reflect it in the URL (?pages=1). pushState is guarded (§15). */
