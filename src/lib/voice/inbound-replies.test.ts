@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/lib/notifications/notifications", () => ({ notifyStaffIfNotRecent: vi.fn() }));
 
-import { buildSmsReplyEmail, replyInbox, replyPath } from "./inbound-replies";
+import { buildSmsReplyEmail, replyPath } from "./inbound-replies";
 
 describe("inbound SMS replies", () => {
   it("links to the matched contact, else the voice console", () => {
@@ -26,14 +26,8 @@ describe("inbound SMS replies", () => {
     expect(m.text).toContain("Not matched to a CRM contact");
   });
 
-  it("reads the reply inbox from the environment", () => {
-    const prev = { a: process.env.SMS_REPLY_NOTIFY_EMAIL, b: process.env.ADMIN_SUPPORT_EMAIL };
-    process.env.SMS_REPLY_NOTIFY_EMAIL = "ops@icapos.com, khris@icapos.com";
-    expect(replyInbox()).toEqual(["ops@icapos.com", "khris@icapos.com"]);
-    delete process.env.SMS_REPLY_NOTIFY_EMAIL;
-    delete process.env.ADMIN_SUPPORT_EMAIL;
-    expect(replyInbox()).toEqual([]);
-    if (prev.a !== undefined) process.env.SMS_REPLY_NOTIFY_EMAIL = prev.a;
-    if (prev.b !== undefined) process.env.ADMIN_SUPPORT_EMAIL = prev.b;
+  it("says who receives it", () => {
+    const m = buildSmsReplyEmail({ channel: "sms", from: "+1", body: "Hi", contactId: null, contactName: null, campaignName: null });
+    expect(m.text).toContain("each staff member's account email");
   });
 });

@@ -1,14 +1,14 @@
 // Inbound SMS / WhatsApp replies that are not STOP. Until now the webhook only
 // handled opt-outs, so any other reply was dropped and nobody saw it. Here a
 // reply is matched to its contact, logged on the contact's timeline, raised to
-// staff in-app, and emailed to the reply inbox when one is configured.
+// staff in-app, and emailed to each staff member at their own account email.
 // Service-role only. Best-effort: a failure here never breaks the webhook.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
-import { sendEmail, parseRecipients } from "@/lib/email/send-email";
+import { sendEmail } from "@/lib/email/send-email";
 import { renderEmail, type RenderedEmail } from "@/lib/email/layout";
 import type { MessageChannel } from "@/lib/voice/twilio";
 
@@ -34,9 +34,15 @@ export function replyPath(contactId: string | null): string {
   return contactId ? `/admin/crm/record/${encodeURIComponent(contactId)}` : "/admin/voice";
 }
 
-/** Who gets reply emails. Unset means in-app only. */
-export function replyInbox(): string[] {
-  return parseRecipients(process.env.SMS_REPLY_NOTIFY_EMAIL ?? process.env.ADMIN_SUPPORT_EMAIL ?? null);
+/**
+ * Who gets reply emails: every staff member (admin, analyst) at the email on
+ * their own iCapOS account, the same people who get the in-app alert. No
+ * shared inbox to configure.
+ */
+async function staffEmails(db: SupabaseClient): Promise<string[]> {
+  const { data } = await db.from("profiles").select("email").in("role", ["admin", "analyst"]);
+  const emails = ((data ?? []) as Array<{ email: string | null }>).map((r) => r.email?.trim().toLowerCase() ?? "").filter((e) => e.includes("@"));
+  return [...new Set(emails)];
 }
 
 /** The staff email for one reply. Pure. */
@@ -63,7 +69,7 @@ export function buildSmsReplyEmail(r: InboundReply): RenderedEmail {
       },
     ],
     primary: { label: r.contactId ? "Open contact" : "Open the voice console", url: `${appOrigin()}${replyPath(r.contactId)}` },
-    footer: { reason: "Internal. Sent to the outreach reply inbox (SMS_REPLY_NOTIFY_EMAIL) for every inbound text that is not STOP." },
+    footer: { reason: "Internal. Sent to each staff member's account email for every inbound text that is not STOP." },
   });
 }
 
@@ -131,9 +137,12 @@ export async function handleInboundReply(input: { channel: MessageChannel; from:
     withinHours: 0,
   }).catch(() => undefined);
 
-  const to = replyInbox();
+  const to = await staffEmails(db).catch(() => [] as string[]);
   if (to.length) {
     const mail = buildSmsReplyEmail(reply);
-    await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" }).catch(() => false);
+    // One email per person, so no one sees the others' addresses.
+    await Promise.all(
+      to.map((address) => sendEmail({ to: address, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" }).catch(() => false)),
+    );
   }
 }
