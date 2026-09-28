@@ -69,6 +69,37 @@ export function docToBuffer(doc: PdfDoc, draw: () => void): Promise<Buffer> {
 
 export type Canvas = ReturnType<typeof createCanvas>;
 
+export type MastheadInput = {
+  /** Small line above the title, e.g. "iCapOS". */
+  kicker?: string;
+  title: string;
+  /** One line under the title: company, audience, filters. */
+  subtitle?: string;
+  /** Up to four label/value pairs on the right. */
+  meta?: [string, string][];
+};
+
+/**
+ * The navy page-1 band every v2 report opens with. Draws on the current page
+ * and moves the canvas below it. Returns the band height.
+ */
+export function masthead(c: Canvas, m: MastheadInput, bandH = 112): number {
+  const { doc } = c;
+  doc.rect(0, 0, PAGE_W, bandH).fill(NAVY);
+  c.text(m.kicker ?? "iCapOS", M, 28, { font: "Times-Roman", size: 11, color: HEAD_INK, lineGap: 0 });
+  doc.font(SERIF).fontSize(24);
+  const size = doc.widthOfString(safe(m.title)) > 330 ? 20 : 24;
+  c.text(m.title, M, 42, { font: SERIF, size, color: "#FFFFFF", width: 330, lineGap: 0 });
+  if (m.subtitle) c.text(m.subtitle, M, 76, { size: 10, color: HEAD_INK, width: 320, lineGap: 0 });
+  (m.meta ?? []).slice(0, 4).forEach(([k, v], i) => {
+    const my = 36 + i * 13;
+    c.text(k, PAGE_W - M - 200, my, { size: 8, color: HEAD_INK, width: 70, lineGap: 0 });
+    c.text(v, PAGE_W - M - 128, my, { size: 8, color: "#FFFFFF", width: 128, lineGap: 0 });
+  });
+  c.y = bandH + 22;
+  return bandH;
+}
+
 export function createCanvas(doc: PdfDoc) {
   let y = 0;
 

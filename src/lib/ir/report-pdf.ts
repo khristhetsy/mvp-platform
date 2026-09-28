@@ -6,6 +6,7 @@
  */
 import PDFDocument from "pdfkit";
 import type { ExecSummary, FrozenReport } from "@/lib/ir/report";
+import { createCanvas, masthead } from "@/lib/diligence/pdf-primitives";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", GREEN = "#1E8A57", GREY = "#9AA6BA", INK = "#0F1B33", MUTED = "#5B6B86", LINE = "#E2E7F0", PALE = "#EEF1F6";
 const FIRM = "iCFO Capital Global, Inc.";
@@ -66,14 +67,14 @@ export function renderReportPdf(r: FrozenReport, ex: ExecSummary): Promise<Buffe
       doc.y = top + r.pipeline.length * rowH + 6; doc.x = L;
     };
 
-    // Letterhead
-    doc.font("Helvetica-Bold").fontSize(15).fillColor(NAVY).text(FIRM, L, doc.y, { continued: false });
-    doc.font("Helvetica").fontSize(9).fillColor(MUTED).text("Investor Relations · La Jolla, California");
-    const yTop = doc.page.margins.top;
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(NAVY).text("Investor Outreach Report", L, yTop, { width: W, align: "right" });
-    doc.font("Helvetica").fontSize(9).fillColor(MUTED).text(`Prepared ${r.preparedOn}`, L, yTop + 16, { width: W, align: "right" });
-    doc.y = yTop + 44; doc.x = L;
-    doc.moveTo(L, doc.y).lineTo(L + W, doc.y).strokeColor(NAVY).lineWidth(1.2).stroke(); doc.moveDown(0.8);
+    // Masthead: the shared v2 report band (same as the diligence and portfolio reports)
+    const kit = createCanvas(doc);
+    masthead(kit, {
+      title: "Investor Outreach Report",
+      subtitle: `${r.project.title} · ${r.period.label}`,
+      meta: [["Prepared", r.preparedOn]],
+    });
+    doc.y = kit.y; doc.x = L;
 
     // Cover block
     const meta: Array<[string, string]> = [["Prepared for", `${r.founder.name}, ${r.project.title}`], ["Reporting period", r.period.label], ["Project term", `${r.project.termLabel} · ${r.project.monthLabel}`], ["Prepared by", `${r.project.owner_name ?? "Investor Relations"}, Investor Relations`]];
@@ -124,13 +125,12 @@ export function renderReportPdf(r: FrozenReport, ex: ExecSummary): Promise<Buffe
     doc.moveDown(0.8);
     p(`Confidential. Prepared for ${r.founder.name} and ${r.project.title} only. Investor names and contact details are held by ${FIRM} and are not included in this report. Firms are named once a meeting is booked. Figures cover the reporting period stated above and are drawn from the iCapOS Investor Relations Hub. This report is not an offer to sell securities.`, { size: 8, color: MUTED });
 
-    // Page numbers
-    const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) {
-      doc.switchToPage(i);
-      doc.page.margins.bottom = 0;   // writing inside the bottom margin must not spawn a page
-      doc.font("Helvetica").fontSize(8).fillColor(MUTED).text(`${FIRM} · Investor Outreach Report · Page ${i + 1} of ${range.count}`, L, doc.page.height - 40, { width: W, align: "center", lineBreak: false });
-    }
+    // Running header (pages 2+) and footer with page numbers, from the shared kit
+    kit.finish({
+      left: `${FIRM} · Investor Outreach Report`,
+      right: r.period.label,
+      footer: `Confidential · Prepared for ${r.founder.name} and ${r.project.title} only`,
+    });
     doc.end();
   });
 }
