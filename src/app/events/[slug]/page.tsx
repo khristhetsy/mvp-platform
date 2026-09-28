@@ -25,6 +25,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { formatEventDateRange } from "@/lib/icfo-events/zoned-time";
 import { effectiveStatus } from "@/lib/icfo-events/lifecycle";
 import { getLeaderboard, getMemberStats, getPointRules } from "@/lib/icfo-events/gamification";
 import type { LeaderboardEntry, MemberStats } from "@/lib/icfo-events/gamification";
@@ -92,15 +93,6 @@ export async function generateMetadata({
     alternates: { canonical: `/events/${event.slug}` },
     openGraph: { title: mk?.seoTitle?.trim() || event.title, description, url: `/events/${event.slug}`, type: "website" },
   };
-}
-
-function fmtRange(start: string | null, end: string | null): string {
-  if (!start) return "Date to be announced";
-  const s = new Date(start);
-  const opts: Intl.DateTimeFormatOptions = { month: "long", day: "numeric", year: "numeric" };
-  if (!end) return s.toLocaleDateString(undefined, opts);
-  const e = new Date(end);
-  return `${s.toLocaleDateString(undefined, { month: "long", day: "numeric" })} – ${e.toLocaleDateString(undefined, opts)}`;
 }
 
 function initials(name: string): string {
@@ -373,7 +365,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" style={{ color: "#aeb8c7" }}>
                 <span className="inline-flex items-center gap-1.5">
                   <CalendarDays className="h-4 w-4" />
-                  {fmtRange(event.startsAt, event.endsAt)}
+                  {formatEventDateRange(event.startsAt, event.endsAt, event.timezone, "en-US")}
                 </span>
                 <span className="capitalize">· {event.format.replace("_", " ")}</span>
                 {shownStatus === "live" && (

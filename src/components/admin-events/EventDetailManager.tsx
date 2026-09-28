@@ -20,6 +20,7 @@ import type {
   EventSponsor,
   SessionType,
 } from "@/lib/icfo-events/types";
+import { isoToZonedInput, zonedInputToIso, zoneAbbrev } from "@/lib/icfo-events/zoned-time";
 
 const SESSION_TYPE_VALUES: SessionType[] = ["keynote", "panel", "talk_show", "founder_showcase", "workshop"];
 
@@ -127,7 +128,6 @@ function formatApiError(error: unknown, fallback: string): string {
   return fallback;
 }
 
-/** ISO → value for <input type="datetime-local"> in the viewer's local time. */
 /** Human date for the confirmation subtitle — "not set" beats an empty gap. */
 function whenLabel(iso: string | null): string {
   if (!iso) return "not set";
@@ -138,12 +138,9 @@ function whenLabel(iso: string | null): string {
   } catch { return iso; }
 }
 
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** ISO → value for <input type="datetime-local">, shown in the event's timezone. */
+function toLocalInput(iso: string | null, timeZone?: string | null): string {
+  return isoToZonedInput(iso, timeZone);
 }
 
 function SessionLiveControls({
@@ -434,8 +431,8 @@ export function EventDetailManager({
   const [summary, setSummary] = useState(event.summary ?? "");
   const [format, setFormat] = useState<EventFormat>(event.format);
   const [visibility, setVisibility] = useState<EventVisibility>(event.visibility);
-  const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt));
-  const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt));
+  const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt, event.timezone));
+  const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt, event.timezone));
   const [timezone, setTimezone] = useState<string>(event.timezone ?? "");
   const [sectorSlugs, setSectorSlugs] = useState<string[]>(event.sectors.map((s) => s.sectorSlug));
   const [headerTitle, setHeaderTitle] = useState(event.title);
@@ -454,8 +451,25 @@ export function EventDetailManager({
   const [confirmMove, setConfirmMove] = useState(false);
   const impact = useEventImpact(event.id);
   const dateMoved = () =>
-    startsAt !== toLocalInput(event.startsAt) || endsAt !== toLocalInput(event.endsAt);
+    zonedInputToIso(startsAt, timezone) !== (event.startsAt ? new Date(event.startsAt).toISOString() : null) ||
+    zonedInputToIso(endsAt, timezone) !== (event.endsAt ? new Date(event.endsAt).toISOString() : null);
   const published = event.status === "published" || event.status === "live";
+
+  // Live check of what the public page will show for the typed times.
+  const previewStartIso = zonedInputToIso(startsAt, timezone);
+  const previewEndIso = zonedInputToIso(endsAt, timezone);
+  const schedulePreview = previewStartIso
+    ? (() => {
+        const tz = timezone || undefined;
+        const fmt = (iso: string) =>
+          new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: tz });
+        const day = new Date(previewStartIso).toLocaleDateString(undefined, {
+          weekday: "short", month: "short", day: "numeric", timeZone: tz,
+        });
+        const abbr = zoneAbbrev(previewStartIso, timezone);
+        return `${day} · ${fmt(previewStartIso)}${previewEndIso ? ` to ${fmt(previewEndIso)}` : ""}${abbr ? ` ${abbr}` : ""}`;
+      })()
+    : null;
 
   function submitDetails(e: React.FormEvent) {
     e.preventDefault();
@@ -481,8 +495,9 @@ export function EventDetailManager({
           summary: summary || null,
           format,
           visibility,
-          startsAt: startsAt ? new Date(startsAt).toISOString() : null,
-          endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+          // Typed times are wall-clock times in the event's timezone.
+          startsAt: zonedInputToIso(startsAt, timezone),
+          endsAt: zonedInputToIso(endsAt, timezone),
           timezone: timezone || null,
           sectors: sectorSlugs.map((slug) => ({
             sectorSlug: slug,
@@ -576,7 +591,7 @@ export function EventDetailManager({
           abstract: sAbstract || null,
           sectorSlug: sSector || null,
           hostSponsorId: sHost || null,
-          startsAt: sStartsAt ? new Date(sStartsAt).toISOString() : null,
+          startsAt: zonedInputToIso(sStartsAt, timezone),
           position: sessions.length,
         }),
       });
@@ -842,6 +857,23 @@ export function EventDetailManager({
             </label>
           </div>
 
+          <label className="block">
+            <span className="text-xs font-medium text-[var(--text-muted)]">Timezone</span>
+            <select
+              value={timezone}
+              onChange={(e) => { setTimezone(e.target.value); setDetailsMsg(null); }}
+              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            >
+              <option value="">Not set</option>
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+              Start and end are entered in this timezone, and shown with it to attendees.
+            </span>
+          </label>
+
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
               <span className="text-xs font-medium text-[var(--text-muted)]">{t("startsAtOpt")}</span>
@@ -869,22 +901,11 @@ export function EventDetailManager({
             </label>
           </div>
 
-          <label className="block">
-            <span className="text-xs font-medium text-[var(--text-muted)]">Timezone</span>
-            <select
-              value={timezone}
-              onChange={(e) => { setTimezone(e.target.value); setDetailsMsg(null); }}
-              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-            >
-              <option value="">Not set</option>
-              {TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>{tz.label}</option>
-              ))}
-            </select>
-            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
-              Shown next to the schedule so attendees know which zone the times are in.
-            </span>
-          </label>
+          {schedulePreview && (
+            <p className="-mt-2 text-[11px] text-[var(--text-muted)]">
+              Attendees see: <span className="font-medium text-[var(--text-primary)]">{schedulePreview}</span>
+            </p>
+          )}
 
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("sectorTracks")}</span>
@@ -1191,7 +1212,7 @@ export function EventDetailManager({
       <ImpactConfirm
         open={confirmMove}
         title="Move this event?"
-        subtitle={`${whenLabel(event.startsAt)} → ${whenLabel(startsAt ? new Date(startsAt).toISOString() : null)}`}
+        subtitle={`${whenLabel(event.startsAt)} → ${whenLabel(zonedInputToIso(startsAt, timezone))}`}
         loading={impact.loading}
         lines={[
           { count: impact.event?.registrations ?? null, text: "registrations, each holding a calendar invite for the old date" },
