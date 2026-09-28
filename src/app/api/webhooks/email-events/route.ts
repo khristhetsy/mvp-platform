@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { recordEmailOpen, recordEmailClick } from "@/lib/outreach/email-events";
 import { recordEngagement } from "@/lib/ir/sequences";
+import { recordEmailLogEvent } from "@/lib/email/email-log";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,23 @@ export async function POST(request: Request) {
   if (!payload) return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
 
   const type = typeof payload.type === "string" ? payload.type : "";
-  if (type !== "email.opened" && type !== "email.clicked") {
-    // Acknowledge other events (delivered, bounced, etc.) without acting on them.
-    return NextResponse.json({ ok: true, ignored: type || "unknown" });
-  }
-
   const data = (payload.data as Record<string, unknown>) ?? {};
+
+  // Every event (delivered, opened, clicked, bounced, complained, delayed)
+  // updates the platform email log row for that send (Admin, Activity, Sent).
+  const emailId = typeof data.email_id === "string" ? data.email_id : "";
+  const logged = emailId
+    ? await recordEmailLogEvent({
+        providerId: emailId,
+        type,
+        at: typeof payload.created_at === "string" ? payload.created_at : null,
+        to: collectEmails(data.to),
+      })
+    : 0;
+
+  if (type !== "email.opened" && type !== "email.clicked") {
+    return NextResponse.json({ ok: true, logged, ignored: type || "unknown" });
+  }
 
   // IR auto sequence emails carry ir_seq / ir_step tags (object or [{ name, value }]).
   const rawTags = data.tags;

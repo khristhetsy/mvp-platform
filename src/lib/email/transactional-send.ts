@@ -1,5 +1,6 @@
 import { createNotification } from "@/lib/notifications/notifications";
 import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -45,8 +46,12 @@ export async function sendTransactionalEmail(input: {
     });
 
     if (!response.ok) {
-      throw new Error(`Email delivery failed: ${await response.text()}`);
+      const detail = await response.text();
+      await logOutboundEmail({ to: input.to, subject: input.subject, html: input.html ?? null, text: input.body, status: "failed", error: `Email provider error ${response.status}`, source: input.notificationType });
+      throw new Error(`Email delivery failed: ${detail}`);
     }
+    const sent = (await response.json().catch(() => null)) as { id?: string } | null;
+    await logOutboundEmail({ to: input.to, subject: input.subject, html: input.html ?? null, text: input.body, status: "sent", providerId: sent?.id ?? null, source: input.notificationType });
 
     return { channel: "resend", delivered: true } satisfies TransactionalEmailResult;
   }

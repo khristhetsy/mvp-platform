@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -31,7 +32,17 @@ export async function POST(req: NextRequest): Promise<Response> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
 
   if (apiKey) {
-    await fetch(RESEND_API_URL, {
+    const subject = `Live agent requested — ${founderName}`;
+    const text = [
+      `A founder has requested a live agent via the iCapOS AI assistant.`,
+      ``,
+      `Founder: ${founderName} (${founderEmail})`,
+      `Page: ${currentPath}`,
+      `Time: ${new Date().toUTCString()}`,
+      ``,
+      `Please follow up via the platform Messages or email.`,
+    ].join("\n");
+    const res = await fetch(RESEND_API_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -40,19 +51,23 @@ export async function POST(req: NextRequest): Promise<Response> {
       body: JSON.stringify({
         from: resolveFrom({ envKeys: TRANSACTIONAL_FROM_ENV }),
         to: [adminEmail],
-        subject: `Live agent requested — ${founderName}`,
-        text: [
-          `A founder has requested a live agent via the iCapOS AI assistant.`,
-          ``,
-          `Founder: ${founderName} (${founderEmail})`,
-          `Page: ${currentPath}`,
-          `Time: ${new Date().toUTCString()}`,
-          ``,
-          `Please follow up via the platform Messages or email.`,
-        ].join("\n"),
+        subject,
+        text,
       }),
     }).catch((err) => {
       console.error("[live-agent-request] Email send failed:", err);
+      return null;
+    });
+    const sent = res?.ok ? ((await res.json().catch(() => null)) as { id?: string } | null) : null;
+    await logOutboundEmail({
+      to: adminEmail,
+      subject,
+      text,
+      status: res?.ok ? "sent" : "failed",
+      error: res?.ok ? null : `Email provider error ${res?.status ?? "network"}`,
+      providerId: sent?.id ?? null,
+      source: "live-agent-request",
+      triggeredBy: auth.profile.id,
     });
   }
 

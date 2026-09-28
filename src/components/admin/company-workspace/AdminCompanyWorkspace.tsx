@@ -24,6 +24,7 @@ import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
 import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import { CompanyActivityLog } from "@/components/admin/company-workspace/CompanyActivityLog";
+import { SentEmailsClient } from "@/components/admin/activity/SentEmailsClient";
 import { ScheduledReachOuts } from "@/components/admin/company-workspace/ScheduledReachOuts";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
@@ -357,6 +358,12 @@ export function AdminCompanyWorkspace({
           <WorkspaceSection icon="ti-history" tone="gray" title="Activity log" subtitle="Reminder & gate activity — click a row to expand">
             <CompanyActivityLog companyId={data.company.id} />
           </WorkspaceSection>
+
+          {data.founder?.id ? (
+            <WorkspaceSection icon="ti-mail" tone="blue" title="Emails sent" subtitle="Every email the platform sent this founder, and whether it was delivered and opened">
+              <SentEmailsClient userId={data.founder.id} compact />
+            </WorkspaceSection>
+          ) : null}
 
           <WorkspaceSection icon="ti-messages" tone="teal" title={t("team_discussion")} subtitle={t("entity_scoped_comments_not_investor_messagin")}>
             <CollaborationDiscussionPanel entityType="company" entityId={data.company.id} title={t("company_discussion")} />

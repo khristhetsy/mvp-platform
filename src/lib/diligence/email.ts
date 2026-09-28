@@ -5,6 +5,7 @@ import { getResendApiKey, getAppUrl } from "@/lib/env";
 import { getUserLocaleByEmail } from "@/lib/i18n/user-locale";
 import { emailTranslator, type EmailT } from "@/lib/i18n/email-i18n";
 import { fromFor, renderEmail, type EmailAudience, type RenderedEmail } from "@/lib/email/layout";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const SENDER = "iCFO Venture Group";
@@ -28,7 +29,13 @@ async function send(to: string, audience: EmailAudience, mail: RenderedEmail): P
       text: mail.text,
     }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const detail = await res.text();
+    await logOutboundEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, status: "failed", error: `Email provider error ${res.status}`, source: "diligence", audience: audience === "admin" ? "staff" : audience === "shared" ? null : audience });
+    throw new Error(detail);
+  }
+  const sent = (await res.json().catch(() => null)) as { id?: string } | null;
+  await logOutboundEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, status: "sent", providerId: sent?.id ?? null, source: "diligence", audience: audience === "admin" ? "staff" : audience === "shared" ? null : audience });
   return { delivered: true };
 }
 

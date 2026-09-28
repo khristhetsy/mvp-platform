@@ -11,6 +11,7 @@ import { makeUnsubscribeToken } from "@/lib/marketing/send";
 import { EMAIL_BRAND } from "./brand";
 import { renderCopyHtml } from "./render-copy";
 import type { CopyWithMaster } from "./masters-queries";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -75,9 +76,11 @@ export async function sendCopyToRecipient(
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
+      await logOutboundEmail({ to: recipient.email, subject, status: "failed", error: `Email provider error ${res.status}`, source: opts.test ? "marketing-copy-test" : "marketing-copy", storeBody: false });
       return { ok: false, reason: "send_failed", message: `Resend returned ${res.status}: ${text.slice(0, 200)}` };
     }
     const json = (await res.json().catch(() => null)) as { id?: string } | null;
+    await logOutboundEmail({ to: recipient.email, subject, status: "sent", providerId: json?.id ?? null, source: opts.test ? "marketing-copy-test" : "marketing-copy", storeBody: false });
     return { ok: true, resendId: json?.id ?? null };
   } catch (err) {
     return { ok: false, reason: "send_failed", message: err instanceof Error ? err.message : "Send failed." };

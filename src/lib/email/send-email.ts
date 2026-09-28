@@ -10,6 +10,7 @@
  */
 
 import { recordDelivery } from "@/lib/cron/job-deliveries";
+import { logOutboundEmail, type EmailRole } from "@/lib/email/email-log";
 
 const RESEND_API = "https://api.resend.com/emails";
 
@@ -36,6 +37,13 @@ export type EmailPayload = {
   attachments?: Array<{ filename: string; content: string }>;
   /** Resend tags, echoed back on webhook events (letters, digits, _ and - only). */
   tags?: Array<{ name: string; value: string }>;
+  /** For the email log (Admin, Activity, Sent): what triggered the send.
+   *  Defaults to the scheduled job, else the route or page that ran it. */
+  source?: string;
+  /** For the email log: who it is for when the recipient has no account. */
+  audience?: EmailRole;
+  /** For the email log: the signed-in person whose action sent it. */
+  triggeredBy?: string | null;
 };
 
 // Must be an address on a domain verified for sending in Resend. icapos.com is
@@ -101,10 +109,23 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     status: result.ok ? "sent" : result.skipped ? "skipped" : "failed",
     error: result.error ?? null,
   });
+  // Every send, job or not, goes to the platform email log.
+  await logOutboundEmail({
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text ?? null,
+    status: result.ok ? "sent" : result.skipped ? "skipped" : "failed",
+    error: result.error ?? null,
+    providerId: result.providerId ?? null,
+    source: payload.source ?? null,
+    audience: payload.audience ?? null,
+    triggeredBy: payload.triggeredBy ?? null,
+  });
   return result.ok;
 }
 
-async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipped?: boolean; error?: string; providerId?: string | null }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = resolveFrom({ displayName: payload.fromName });
 
@@ -154,7 +175,8 @@ async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipp
       return { ok: false, error: `Email provider error ${res.status}` };
     }
 
-    return { ok: true };
+    const sent = (await res.json().catch(() => null)) as { id?: string } | null;
+    return { ok: true, providerId: sent?.id ?? null };
   } catch (err) {
     console.error("[email] Failed to send email:", err);
     return { ok: false, error: err instanceof Error ? err.message : "Send failed" };

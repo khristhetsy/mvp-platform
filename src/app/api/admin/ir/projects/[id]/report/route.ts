@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (body.action === "email_me") {
       if (!me.email) return NextResponse.json({ error: "Your profile has no email address." }, { status: 400 });
       const mail = summaryHtml(data);
-      const ok = await sendEmail({ to: me.email, subject: `[Copy] ${mail.subject}`, html: mail.html, text: mail.text });
+      const ok = await sendEmail({ to: me.email, subject: `[Copy] ${mail.subject}`, html: mail.html, text: mail.text, source: "ir-report-copy", triggeredBy: me.id });
       if (!ok) return NextResponse.json({ error: "Email isn't configured on this environment (RESEND_API_KEY)." }, { status: 503 });
       return NextResponse.json({ ok: true, to: me.email });
     }
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const frozen = saved.metrics as unknown as FrozenReport;
     const attachments = body.attachPdf ? [{ filename: `Investor-Outreach-Report-${data.project.title.replace(/[^\w]+/g, "-")}-${data.period.start}.pdf`, content: (await renderReportPdf(frozen, saved.exec_summary)).toString("base64") }] : [];
     const { html } = reportEmail({ message: body.message, subject: body.subject, projectTitle: data.project.title, attachment: attachments[0]?.filename ?? null });
-    const delivered = await sendEmail({ to: body.to, subject: body.subject, html, text: body.message, fromName: me.full_name ?? undefined, attachments });
+    const delivered = await sendEmail({ to: body.to, subject: body.subject, html, text: body.message, fromName: me.full_name ?? undefined, attachments, source: "ir-report", audience: "founder", triggeredBy: me.id });
     if (!delivered) return NextResponse.json({ error: "Email isn't configured on this environment (RESEND_API_KEY), so the report was not sent." }, { status: 503 });
     await markReportSent(saved.id, body.to);
     await createActivity({ projectId: id, matchId: null, taskId: null, type: "email", subject: `${REPORT_SENT_PREFIX} · ${data.period.label}`, description: `Report ${saved.id} sent to ${body.to}`, doneAt: new Date().toISOString(), founderVisible: false, assigneeId: me.id, createdBy: me.id });

@@ -58,7 +58,7 @@ export async function sendInvestorEmail(input: {
     if ("error" in r) return { ok: false, status: 502, error: gmailError(r.error) };
     return { ok: true, onePager: !!onePager };
   }
-  const sent = await sendEmail({ to, subject: input.subject, html, text, replyTo: input.sender.email ?? undefined, fromName: input.sender.name ?? undefined, tags: input.tags });
+  const sent = await sendEmail({ to, subject: input.subject, html, text, replyTo: input.sender.email ?? undefined, fromName: input.sender.name ?? undefined, tags: input.tags, source: "ir-investor-email", audience: "investor", triggeredBy: input.sender.id });
   if (!sent) return { ok: false, status: 502, error: "iCapOS couldn't send that email. Check the email settings in System health, or send with Gmail." };
   return { ok: true, onePager: !!onePager };
 }

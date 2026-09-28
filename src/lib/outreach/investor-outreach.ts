@@ -466,7 +466,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           location,
           message: eff?.message ?? outreachMessage ?? undefined,
         });
-        const ok = await sendEmail({ to: email, subject, html, text });
+        const ok = await sendEmail({ to: email, subject, html, text, source: "investor-intro", audience: "investor" });
         if (ok) {
           await db
             .from("investor_outreach_recipients")

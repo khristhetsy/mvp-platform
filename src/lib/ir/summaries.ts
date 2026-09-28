@@ -87,7 +87,7 @@ export async function runIrSummaries(today = new Date().toISOString().slice(0, 1
       if (!data) { skipped.push({ project: project.title, kind: d.kind, reason: error ?? "no data" }); continue; }
       if (!data.founder.email) { skipped.push({ project: project.title, kind: d.kind, reason: "no founder email on file" }); continue; }
       const mail = summaryHtml(data);
-      const ok = await sendEmail({ to: data.founder.email, subject: mail.subject, html: mail.html, text: mail.text, fromName: project.owner_name ?? undefined }).catch(() => false);
+      const ok = await sendEmail({ to: data.founder.email, subject: mail.subject, html: mail.html, text: mail.text, fromName: project.owner_name ?? undefined, source: "ir-weekly-summary", audience: "founder" }).catch(() => false);
       if (!ok) { skipped.push({ project: project.title, kind: d.kind, reason: "email not delivered (RESEND_API_KEY?)" }); continue; }
       const { error: logErr } = await db().from("ir_summary_sends").insert({ project_id: project.id, kind: d.kind, period_start: d.milestone.starts_on, period_end: d.milestone.ends_on, sent_to: data.founder.email });
       if (logErr) skipped.push({ project: project.title, kind: d.kind, reason: `sent but not logged: ${logErr.message}` });

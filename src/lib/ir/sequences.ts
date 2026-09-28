@@ -161,7 +161,7 @@ async function alert(e: Enrollment, title: string, message: string, _who: string
   for (const p of (data ?? []) as Array<{ email: string | null }>) {
     if (!p.email) continue;
     await sendEmail({ to: p.email, subject: `🔔 ${title}`, text: `${message}\n\nOpen the record: ${base}${link}`,
-      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937"><p>${message.replace(/</g, "&lt;")}</p><p><a href="${base}${link}" style="color:#4338CA;font-weight:600">Open the record</a></p></div>` }).catch(() => false);
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937"><p>${message.replace(/</g, "&lt;")}</p><p><a href="${base}${link}" style="color:#4338CA;font-weight:600">Open the record</a></p></div>`, source: "ir-sequence-alert" }).catch(() => false);
   }
 }
 

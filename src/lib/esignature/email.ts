@@ -5,6 +5,7 @@
 import { getResendApiKey, getAppUrl } from "@/lib/env";
 import { BRAND } from "./types";
 import { fromFor, renderEmail, type RenderedEmail } from "@/lib/email/layout";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -29,7 +30,13 @@ async function send(to: string, mail: RenderedEmail): Promise<{ delivered: boole
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: fromFor("shared", BRAND.emailSender), to: [to], subject: mail.subject, html: mail.html, text: mail.text }),
   });
-  if (!res.ok) throw new Error(`Email delivery failed: ${await res.text()}`);
+  if (!res.ok) {
+    const detail = await res.text();
+    await logOutboundEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, status: "failed", error: `Email provider error ${res.status}`, source: "e-signature" });
+    throw new Error(`Email delivery failed: ${detail}`);
+  }
+  const sent = (await res.json().catch(() => null)) as { id?: string } | null;
+  await logOutboundEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, status: "sent", providerId: sent?.id ?? null, source: "e-signature" });
   return { delivered: true };
 }
 

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import type { SendResult } from "./types";
 
 import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -162,8 +163,11 @@ ${htmlBody}
 
     const data = await res.json();
     if (!res.ok) {
+      await logOutboundEmail({ to: input.to, subject, status: "failed", error: data?.message ?? "Resend error", source: "marketing-campaign", storeBody: false });
       return { resend_id: null, ok: false, error: data?.message ?? "Resend error" };
     }
+    // Campaign bodies stay in the campaign; the log keeps who got what and when.
+    await logOutboundEmail({ to: input.to, subject, status: "sent", providerId: data.id ?? null, source: "marketing-campaign", storeBody: false });
     return { resend_id: data.id ?? null, ok: true };
   } catch (err) {
     return { resend_id: null, ok: false, error: String(err) };

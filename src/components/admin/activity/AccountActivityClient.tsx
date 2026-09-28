@@ -256,6 +256,12 @@ export function AccountActivityClient({
             {searched.rows.length} of {totalInWindow}
           </span>
           <Link
+            href="/admin/activity/sent"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+          >
+            Sent emails
+          </Link>
+          <Link
             href="/admin/activity/assignments"
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
           >

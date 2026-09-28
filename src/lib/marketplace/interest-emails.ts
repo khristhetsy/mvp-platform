@@ -73,7 +73,7 @@ export async function notifyInterestListOfferingLive(listingId: string): Promise
   let sent = 0;
   for (const to of emails) {
     // Individual sends — never expose the interest list to recipients.
-    const ok = await sendEmail({ to, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    const ok = await sendEmail({ to, subject: tpl.subject, html: tpl.html, text: tpl.text, source: "marketplace-offering-live", audience: "investor" });
     if (ok) sent += 1;
   }
   return { intended: emails.length, sent, live };
