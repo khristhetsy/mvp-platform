@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 /**
  * Networking is chosen at registration (required). This panel lets an attendee
@@ -18,6 +18,9 @@ export function NetworkingOptIn({
 }) {
   const t = useTranslations("eventsCmp");
   const [interests, setInterests] = useState<string[]>(initialInterests);
+  // Their existing picks stay on the list even if one has since been retired,
+  // so saving again cannot quietly drop an interest they chose.
+  const { options: sectors } = useVocabulary("industry", initialInterests);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export function NetworkingOptIn({
       <div className="mt-4">
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{t("your_interests")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          {EVENT_SECTORS.map((s) => {
+          {sectors.map((s) => {
             const on = interests.includes(s.slug);
             return (
               <button

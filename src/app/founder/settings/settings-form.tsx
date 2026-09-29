@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { industryOptionsFor } from "@/lib/industries";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import {
   REVENUE_STAGE_OPTIONS,
   INVESTOR_TYPE_OPTIONS,
@@ -210,6 +210,7 @@ export function CompanySettingsForm({ company }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [company]);
 
+  const { options: industryOptions } = useVocabulary("industry", company?.industry ?? null);
   const [values, setValues] = useState<Record<string, string>>(seed);
   const [orig, setOrig] = useState<Record<string, string>>(seed);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -346,7 +347,10 @@ export function CompanySettingsForm({ company }: Props) {
       return (
         <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
           {!v ? <option value="">— Select an industry —</option> : null}
-          {industryOptionsFor(v).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+          {industryOptions.map((opt) => <option key={opt.slug} value={opt.label}>{opt.label}</option>)}
+          {/* A value set before this list existed stays selectable rather than
+              being silently replaced by whatever sorts first. */}
+          {v && !industryOptions.some((o) => o.label === v) ? <option value={v}>{v}</option> : null}
         </select>
       );
     }

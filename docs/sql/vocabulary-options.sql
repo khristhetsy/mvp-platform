@@ -211,7 +211,7 @@ insert into public.vocabulary_options (list, slug, label, sort_order) values
   ('use_of_funds','prototype','Prototype',100),
   ('use_of_funds','recapitalization','Recapitalization',110),
   ('use_of_funds','research-development','Research & Development',120),
-  ('use_of_funds','working-capital','WCL — Working Capital',130),
+  ('use_of_funds','working-capital','WCL = Working Capital',130),
   ('use_of_funds','other','Other',140)
 on conflict (list, slug) do nothing;
 

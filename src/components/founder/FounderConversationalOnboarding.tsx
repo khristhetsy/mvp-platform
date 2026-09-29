@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import {
   REVENUE_STAGE_OPTIONS as STAGES,
   USE_OF_FUNDS_OPTIONS as FUND_USES,
@@ -21,11 +22,9 @@ import {
 
 // Option lists shared with the Company Profile settings form + matching inputs
 // live in @/lib/profile/options. Industries + timelines stay local to onboarding.
-const INDUSTRIES = [
-  "FinTech", "HealthTech", "SaaS / B2B Software", "EdTech", "CleanTech",
-  "E-commerce", "AI / ML", "Real Estate", "Consumer", "Deep Tech",
-  "Marketplace", "Logistics", "Hardware", "Other",
-];
+// The industries used to be a second hardcoded copy of the shared list, which
+// meant adding one anywhere else left the first question a founder answers
+// showing the old set. It now reads the same list as every other picker.
 
 const TIMELINES = [
   { id: "3m",        label: "Within 3 months", sub: "Actively closing now" },
@@ -248,6 +247,9 @@ export function FounderConversationalOnboarding({
   const [companyName, setCompanyName] = useState(company.company_name ?? "");
   const [phone, setPhone]             = useState(company.contact_phone ?? "");
   const [industry, setIndustry]       = useState<string | null>(company.industry ?? null);
+  // Offered values, plus whatever this company already holds — so a founder
+  // editing a profile set before a value was retired still sees their answer.
+  const { options: industryOptions } = useVocabulary("industry", company.industry);
   const [stage, setStage]             = useState<string | null>(company.revenue_stage ?? null);
   const [amount, setAmount]           = useState(company.funding_amount?.toString() ?? "");
   const [description, setDescription] = useState(
@@ -566,9 +568,9 @@ export function FounderConversationalOnboarding({
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("select_the_closest_match_we_use_this_to_targ")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                {INDUSTRIES.map((ind) => (
-                  <Chip key={ind} selected={industry === ind} onClick={() => setIndustry(ind)}>
-                    {ind}
+                {industryOptions.map((opt) => (
+                  <Chip key={opt.slug} selected={industry === opt.label} onClick={() => setIndustry(opt.label)}>
+                    {opt.label}
                   </Chip>
                 ))}
               </div>

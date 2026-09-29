@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import type { EventFormat, EventRecord, EventStatus, EventVisibility } from "@/lib/icfo-events/types";
 
 const STATUS_STYLES: Record<EventStatus, string> = {
@@ -54,6 +54,7 @@ function formatApiError(error: unknown, fallback: string): string {
 }
 
 export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] }) {
+  const { options: sectors } = useVocabulary("industry");
   const t = useTranslations("adminCmp");
   const [events, setEvents] = useState<EventRecord[]>(initialEvents);
   const [showForm, setShowForm] = useState(false);
@@ -121,7 +122,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
           visibility,
           sectors: sectorSlugs.map((slug) => ({
             sectorSlug: slug,
-            label: EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug,
+            label: sectors.find((s) => s.slug === slug)?.label ?? slug,
           })),
         }),
       });
@@ -240,7 +241,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
               <span className="text-sm font-medium text-[var(--text-secondary)]">{t("sector_tracks")}</span>
               <p className="text-xs text-[var(--text-muted)]">{t("an_event_must_have_at_least_one_track_before")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {EVENT_SECTORS.map((s) => {
+                {sectors.map((s) => {
                   const on = sectorSlugs.includes(s.slug);
                   return (
                     <button

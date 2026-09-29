@@ -2,6 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Naming
+
+- Parent company: iCFO Capital Global, Inc.
+- Product: iCapOS (never "CapitalOS" in UI or copy)
+- Repo: iCFO CapitalOS
+- Domain: icapos.com
+
+## Hard rules
+
+- **No money movement:** iCapOS processes no transactions or funds. Pledges and intros only.
+- **AI drafts only:** AI features (Chief of Staff, agents) draft. They never write to tables
+  without human confirmation.
+- **Demo/internal accounts:** Fully functional, but distribution sends and intro requests must
+  NOT dispatch to real investors.
+- **Uploads:** Document uploads are PDF only, with a user-facing message on rejection. Logos,
+  pitch video, avatars, and contact import keep their own formats.
+- **Odoo:** Odoo is not part of this codebase. Do not add Odoo integrations unless explicitly asked.
+  Seeding option lists from an Odoo export is fine; that is data, not an integration.
+
 ## Commands
 
 ```bash
@@ -123,6 +142,18 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
 
 > **Note (from AGENTS.md):** This project uses Next.js 16 App Router, which has breaking changes from earlier versions. Before writing any Next.js-specific code, check `node_modules/next/dist/docs/` for the current API.
 
+## Codebase conventions (domain)
+
+- The lead pre-score field is `lead_prescore`, never `crr` (CRR is a separate feature).
+  Rubric lives in `/lib/prescore/rubric.ts`.
+- CRM ownership uses the `contact_assignees` junction table with RLS policies.
+- Matching sources investors from Investor Contact records, not the Investor CRM. Tables
+  `investor_profiles` and `prospect_investors` are separate.
+- The SPV account type displays as "Deal Company" in UI. Keep the `organizations.type` enum
+  value unchanged. Additional company accounts are currently hidden, not removed.
+- Marketing Hub email uses the MJML pipeline with CAN-SPAM/GDPR footer and suppression logic.
+- CEO Hub, Sales Hub, Marketing Hub are internal iCFO tools, not customer facing.
+
 ## UI conventions — the house design
 
 These are the platform's agreed patterns. **Every new dashboard, card, list and
@@ -179,8 +210,23 @@ Every list search uses `src/lib/ui/live-search.ts` + `components/ui/SearchStatus
   at full prominence.
 - Provenance on any derived figure: where it came from and when.
 
+## Brand tokens
+
+- Navy `#0A1A40`, blue `#1A6CE4`, hover/active `#2E78F5`, steel secondary `#185FA5`
+- Legacy teal `#0D9488` is not used in the app
+- Type: Archivo (headlines), Inter (body), IBM Plex Mono (mono)
+- Investor network figure: "+7,000"
+
+## Copy rules
+
+- No response rate or funding probability figures in UI copy.
+- No em dashes or hyphens as sentence punctuation in user-facing copy.
+
 ## Working with khris
 
+- Before coding, restate the task in one or two lines and list the files you plan to touch.
+- If a request conflicts with a rule in this file, stop and ask rather than guessing.
+- When a session drifts, khris runs /compact or /clear — rely on this file, not old session history.
 - Mockup first: show a mockup and wait for "build it" before writing code.
 - Don't offer to build. Never end a reply with "say build it" / "want me to build this?".
   Building happens only when khris says so, or after the plan has been agreed. Until then,

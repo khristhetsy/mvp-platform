@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { industryOptionsFor } from "@/lib/industries";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import type { LinkedCompany } from "./ContactProfileClient";
 
 /**
@@ -109,6 +109,7 @@ export function CompanyLinkedRecordEditor({
 }) {
   const [data, setData] = useState<Form>(() => fromCompany(company));
   const [form, setForm] = useState<Form>(data);
+  const { options: industryOptions } = useVocabulary("industry", data.industry);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -222,7 +223,10 @@ export function CompanyLinkedRecordEditor({
           <EditRow label="Industry">
             <select className={INPUT} style={inputStyle} value={form.industry} onChange={(e) => set("industry", e.target.value)}>
               {!form.industry ? <option value="">— Select —</option> : null}
-              {industryOptionsFor(form.industry).map((o) => (<option key={o} value={o}>{o}</option>))}
+              {industryOptions.map((o) => (<option key={o.slug} value={o.label}>{o.label}</option>))}
+              {form.industry && !industryOptions.some((o) => o.label === form.industry)
+                ? <option value={form.industry}>{form.industry}</option>
+                : null}
             </select>
           </EditRow>
           <EditRow label="Revenue stage">

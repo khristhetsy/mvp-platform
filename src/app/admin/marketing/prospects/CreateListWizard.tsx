@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 type Source = "founder" | "all" | "odoo" | "icapos" | "csv";
 const SOURCES: Array<{ id: Source; label: string }> = [
@@ -29,6 +29,7 @@ const label: React.CSSProperties = { fontSize: 9, color: "var(--muted-foreground
 const sel: React.CSSProperties = { fontSize: 11.5, border: "0.5px solid var(--border)", borderRadius: 6, padding: "6px 8px", width: "100%", background: "var(--background)", color: "var(--foreground)" };
 
 export function CreateListWizard() {
+  const { options: sectors } = useVocabulary("industry");
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [source, setSource] = useState<Source>("founder");
@@ -198,7 +199,7 @@ export function CreateListWizard() {
           {isFounder ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
               <div><label style={label}>Progress stage</label><select value={ff.stage} onChange={(e) => setFounder({ stage: e.target.value })} style={sel}><option value="">Any</option>{STAGES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
-              <div><label style={label}>Sector</label><select value={ff.sector} onChange={(e) => setFounder({ sector: e.target.value })} style={sel}><option value="">Any</option>{EVENT_SECTORS.map((s) => <option key={s.slug} value={s.label}>{s.label}</option>)}</select></div>
+              <div><label style={label}>Sector</label><select value={ff.sector} onChange={(e) => setFounder({ sector: e.target.value })} style={sel}><option value="">Any</option>{sectors.map((s) => <option key={s.slug} value={s.label}>{s.label}</option>)}</select></div>
               <div><label style={label}>Readiness ≥</label><select value={ff.minReadiness} onChange={(e) => setFounder({ minReadiness: e.target.value })} style={sel}><option value="">Any</option><option value="50">50</option><option value="60">60</option><option value="70">70</option><option value="80">80</option></select></div>
               <div><label style={label}>Jurisdiction</label><input value={ff.jurisdiction} onChange={(e) => setFounder({ jurisdiction: e.target.value })} placeholder="e.g. Delaware" style={sel} /></div>
               <div><label style={label}>Raise ≥ ($)</label><input value={ff.minFunding} onChange={(e) => setFounder({ minFunding: e.target.value.replace(/[^0-9]/g, "") })} placeholder="Any" style={sel} /></div>

@@ -9,6 +9,8 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { RegisterButton } from "@/components/events/RegisterButton";
 import { NetworkingOptIn } from "@/components/events/NetworkingOptIn";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 import { NetworkingConnections } from "@/components/events/NetworkingConnections";
 import { SessionVideo } from "@/components/events/SessionVideo";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
@@ -570,10 +572,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         {profile && (
           <div id="networking" className="mt-10 scroll-mt-24">
-            <NetworkingOptIn
-              eventId={event.id}
-              initialInterests={optin?.interests ?? []}
-            />
+            <VocabularyProvider value={await loadVocabularies()}>
+              <NetworkingOptIn
+                eventId={event.id}
+                initialInterests={optin?.interests ?? []}
+              />
+            </VocabularyProvider>
 
             {optin?.optedIn && (
               <NetworkingConnections

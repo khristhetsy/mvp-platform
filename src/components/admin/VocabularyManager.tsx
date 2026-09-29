@@ -205,7 +205,7 @@ export function VocabularyManager({ initial }: Readonly<{ initial: ManagedOption
                       ))}
                     </div>
                     <p className="mt-2 text-[11.5px] text-slate-500">
-                      Not offered to anyone new. Records already holding one keep it and still match — nothing here has been merged into a similar value.
+                      Not offered to anyone new. Records already holding one keep it and still match. Nothing here has been merged into a similar value.
                     </p>
                   </div>
                 ) : null}

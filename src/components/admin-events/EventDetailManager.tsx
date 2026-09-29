@@ -5,7 +5,8 @@ import { useDismiss } from "@/lib/ui/use-dismiss";
 import Link from "next/link";
 import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench, Pin } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
+import { sectorLabel } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import { BannerEditor } from "@/components/admin-events/BannerEditor";
 import { EventInvitesPanel } from "@/components/admin-events/EventInvitesPanel";
@@ -425,6 +426,9 @@ export function EventDetailManager({
   canEdit?: boolean;
 }) {
   const t = useTranslations("eventsAdmin.manage");
+  // Includes any sector this event already runs a track for, so retiring a
+  // value cannot make an existing track disappear from its own editor.
+  const { options: sectors } = useVocabulary("industry", event.sectors.map((s) => s.sectorSlug));
   const [sessions, setSessions] = useState<EventSession[]>(event.sessions);
   const [eventSponsors, setEventSponsors] = useState<EventSponsor[]>(initialEventSponsors);
   const [error, setError] = useState<string | null>(null);
@@ -486,14 +490,14 @@ export function EventDetailManager({
           timezone: timezone || null,
           sectors: sectorSlugs.map((slug) => ({
             sectorSlug: slug,
-            label: EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug,
+            label: sectors.find((s) => s.slug === slug)?.label ?? slug,
           })),
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(formatApiError(json.error, "Could not save event."));
       setHeaderTitle(title);
-      setHeaderSectors(sectorSlugs.map((slug) => EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug));
+      setHeaderSectors(sectorSlugs.map((slug) => sectors.find((s) => s.slug === slug)?.label ?? slug));
       setDetailsMsg(t("saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save event.");
@@ -890,7 +894,7 @@ export function EventDetailManager({
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("sectorTracks")}</span>
             <p className="text-xs text-[var(--text-muted)]">{t("sectorHint")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {EVENT_SECTORS.map((s) => {
+              {sectors.map((s) => {
                 const active = sectorSlugs.includes(s.slug);
                 return (
                   <button

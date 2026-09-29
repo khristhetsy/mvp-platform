@@ -48,7 +48,7 @@ export default async function AdminProfileFieldsPage() {
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
           <h2 className="text-sm font-semibold text-amber-900">The lists are not in the database yet</h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-amber-800">
-            Nothing is broken — every form is still rendering its built-in list. Run
+            Nothing is broken. Every form is still rendering its built-in list. Run
             <span className="mx-1 font-mono text-[12px]">docs/sql/vocabulary-options.sql</span>
             and this page fills in.
           </p>

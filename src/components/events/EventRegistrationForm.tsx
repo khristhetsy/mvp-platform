@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Coins, Rocket, Briefcase, Store } from "lucide-react";
 import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import {
   type RegistrationField as Field,
   REGISTRATION_COMMON as CODE_COMMON,
@@ -37,6 +37,7 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
   });
   const [consent, setConsent] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
+  const { options: sectors } = useVocabulary("industry");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +198,7 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany, defaultEm
             Pick at least one so we can match you with the right founders and investors. Names only — no contact details shared until both sides accept.
           </p>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {EVENT_SECTORS.map((s) => {
+            {sectors.map((s) => {
               const on = interests.includes(s.slug);
               return (
                 <button

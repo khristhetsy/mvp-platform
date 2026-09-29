@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { getTranslations } from "next-intl/server";
 import { FounderConversationalOnboarding } from "@/components/founder/FounderConversationalOnboarding";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
 import { requireRole } from "@/lib/supabase/auth";
@@ -42,10 +44,12 @@ export default async function FounderOnboardingPage() {
 
         <FounderOnboardingProgressCard progress={data.progress} inPage />
 
-        <FounderConversationalOnboarding
-          company={data.company}
-          founderName={profile.full_name ?? profile.email ?? "Founder"}
-        />
+        <VocabularyProvider value={await loadVocabularies()}>
+          <FounderConversationalOnboarding
+            company={data.company}
+            founderName={profile.full_name ?? profile.email ?? "Founder"}
+          />
+        </VocabularyProvider>
       </div>
     </FounderAppShell>
   );

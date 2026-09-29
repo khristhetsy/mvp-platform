@@ -6,6 +6,8 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { CompanySettingsForm } from "./settings-form";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
 import { FounderProfileTabs } from "@/components/founder/FounderProfileTabs";
@@ -58,7 +60,11 @@ export default async function FounderSettingsPage() {
                 <p className="mt-0.5 text-xs text-slate-500">{t("edit_your_public_listing_and_company_details")}</p>
               </div>
               <div className="p-6">
-                {company ? <CompanySettingsForm company={company} /> : null}
+                {company ? (
+                  <VocabularyProvider value={await loadVocabularies()}>
+                    <CompanySettingsForm company={company} />
+                  </VocabularyProvider>
+                ) : null}
                 {company ? (
                   <div className="mt-8">
                     <CollaborationDiscussionPanel
