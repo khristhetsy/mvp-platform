@@ -23,7 +23,22 @@ export const EVENT_SECTORS: EventSector[] = [
 
 const BY_SLUG = new Map(EVENT_SECTORS.map((s) => [s.slug, s]));
 
+/**
+ * Whether a value is shaped like a sector key.
+ *
+ * This used to check membership of the fourteen hardcoded sectors. Now that
+ * the list is editable, that check would reject every industry added after
+ * this file was written: staff could pick the new value and the save would
+ * fail validation with "Unknown sector". The authoritative list is the
+ * vocabulary table, so what is enforced here is the shape — lowercase letters,
+ * digits and single hyphens — and an unknown key simply renders as itself.
+ */
 export function isValidSectorSlug(slug: string): boolean {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) && slug.length <= 60;
+}
+
+/** Whether it is one of the sectors this file shipped with. */
+export function isSeededSectorSlug(slug: string): boolean {
   return BY_SLUG.has(slug);
 }
 

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import type { Sponsor, SponsorCategory, SponsorTier } from "@/lib/icfo-events/types";
 
 const TIERS: { value: SponsorTier; label: string }[] = [
@@ -253,6 +253,7 @@ function VideoManage({ sponsor, onUpdated }: { sponsor: Sponsor; onUpdated: (s: 
 }
 
 export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[] }) {
+  const { options: sectors } = useVocabulary("industry");
   const t = useTranslations("adminCmp");
   const [sponsors, setSponsors] = useState<Sponsor[]>(initialSponsors);
   const [name, setName] = useState("");
@@ -372,7 +373,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
           </select>
           <select value={sectorSlug} onChange={(e) => setSectorSlug(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
             <option value="">Cross-sector</option>
-            {EVENT_SECTORS.map((s) => <option key={s.slug} value={s.slug}>{s.label}</option>)}
+            {sectors.map((s) => <option key={s.slug} value={s.slug}>{s.label}</option>)}
           </select>
         </div>
         <input value={videoRef} onChange={(e) => setVideoRef(e.target.value)} placeholder="Booth video link — YouTube/Vimeo/Loom (optional; or upload one after creating)" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
@@ -467,6 +468,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
 }
 
 function SponsorEditForm({ sponsor, onSaved, onCancel }: { sponsor: Sponsor; onSaved: (s: Sponsor) => void; onCancel: () => void }) {
+  const { options: sectors } = useVocabulary("industry", sponsor.sectorSlug ?? null);
   const [name, setName] = useState(sponsor.name);
   const [website, setWebsite] = useState(sponsor.website ?? "");
   const [blurb, setBlurb] = useState(sponsor.blurb ?? "");
@@ -512,7 +514,7 @@ function SponsorEditForm({ sponsor, onSaved, onCancel }: { sponsor: Sponsor; onS
         </select>
         <select value={sectorSlug} onChange={(e) => setSectorSlug(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
           <option value="">Cross-sector</option>
-          {EVENT_SECTORS.map((x) => <option key={x.slug} value={x.slug}>{x.label}</option>)}
+          {sectors.map((x) => <option key={x.slug} value={x.slug}>{x.label}</option>)}
         </select>
       </div>
       {error && <span className="text-xs text-rose-600">{error}</span>}
