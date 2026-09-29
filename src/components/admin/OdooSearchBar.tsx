@@ -11,7 +11,7 @@
  * The Contacts grids keep their own richer bar (server-side filter spec) in
  * SalesContactsClient — deliberately not shared, that one is working.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type SearchState = {
   /** Free text; the page decides which fields it matches. */
@@ -72,6 +72,18 @@ function Chip({ text, color, bg, border, onRemove, icon }: { text: string; color
 
 export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, noGroupId = "", placeholder = "Search…", applyDefault = true, width = 560, api = "/api/marketing/saved-searches", personalOnly = false, groupChipPrefix = "" }: Props) {
   const [open, setOpen] = useState(false);
+  // The panel is wider than most bars and hangs off the bar's right edge. When
+  // that would push it past the left edge of the page area (under the side menu),
+  // open it from the bar's left edge instead.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [alignLeft, setAlignLeft] = useState(false);
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+    const bar = rootRef.current.getBoundingClientRect();
+    const edge = rootRef.current.closest("main")?.getBoundingClientRect().left ?? 0;
+    const panel = Math.min(620, window.innerWidth - 48);
+    setAlignLeft(bar.right - panel < edge + 8);
+  }, [open]);
   const [typed, setTyped] = useState("");
   /** True while `q` is being driven by the live input rather than a committed chip. */
   const liveQ = useRef(false);
@@ -176,7 +188,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
   );
 
   return (
-    <div style={{ position: "relative", flex: `0 1 ${typeof width === "number" ? `${width}px` : width}`, minWidth: 260 }}>
+    <div ref={rootRef} style={{ position: "relative", flex: `0 1 ${typeof width === "number" ? `${width}px` : width}`, minWidth: 260 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
         <i className="ti ti-search" style={{ color: "var(--muted-foreground)", fontSize: 14 }} aria-hidden="true" />
         {applied && <Chip icon="ti-star" text={applied.name} color="#0A1A40" bg="#EEEDFE" border="#CECBF6" onRemove={clearAll} />}
@@ -205,7 +217,7 @@ export function OdooSearchBar({ scope, state, onChange, quick, fields, groups, n
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 25 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, width: typed.trim() ? "100%" : 620, maxWidth: "calc(100vw - 48px)", zIndex: 30, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: "calc(100% + 5px)", ...(alignLeft ? { left: 0 } : { right: 0 }), width: typed.trim() ? "100%" : 620, maxWidth: "calc(100vw - 48px)", zIndex: 30, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", overflow: "hidden" }}>
             {typed.trim() ? (
               <div style={{ padding: "4px 0" }}>
                 <button type="button" onClick={() => { liveQ.current = false; set({ q: typed.trim() }); setTyped(""); setOpen(false); }} style={{ ...item, paddingLeft: 12 }}>Search for: <span style={{ color: "#185FA5" }}>{typed.trim()}</span></button>
