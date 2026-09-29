@@ -7,7 +7,7 @@ import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar
 import { SelectionBar, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
-import { INDUSTRY_OPTIONS } from "@/lib/industries";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
@@ -84,7 +84,6 @@ const MEETING_LABELS: Record<MeetingStatus, string> = {
 };
 
 const STAGE_OPTIONS: string[] = [...FUNDING_STAGE_OPTIONS];
-const SECTOR_OPTIONS: string[] = [...INDUSTRY_OPTIONS];
 
 // ─── Badge sub-components ────────────────────────────────────────────────────
 
@@ -174,6 +173,8 @@ const EMPTY_FORM = {
 
 export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
   const router = useRouter();
+  // Focus sectors offer the stored industry list, the same one investors pick from.
+  const SECTOR_OPTIONS: string[] = useVocabulary("industry").options.map((o) => o.label);
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [viewMode, setViewMode] = useState<"table" | "board">("board");

@@ -66,8 +66,8 @@ export function RegistrationFieldsEditor({
   const [showHistory, setShowHistory] = useState(false);
 
   const fields = tab === "common" ? set.common : set.byType[tab] ?? [];
-  const errors = useMemo(() => validateFieldSet(set), [set]);
-  const changes = useMemo(() => diffFieldSets(initialSet, set, usage), [initialSet, set, usage]);
+  const errors = useMemo(() => validateFieldSet(set, linked.sectors), [set, linked.sectors]);
+  const changes = useMemo(() => diffFieldSets(initialSet, set, usage, linked.sectors), [initialSet, set, usage, linked.sectors]);
   const dirty = changes.length > 0;
 
   function writeFields(next: StoredField[]) {
@@ -181,7 +181,7 @@ export function RegistrationFieldsEditor({
             const locked = keyIsLocked(f.key, usage);
             const isLinked = Boolean(f.optionsFrom);
             const all = isLinked ? linked[f.optionsFrom as "sectors" | "countries"] ?? [] : [];
-            const opts = resolvedOptionsFor(f);
+            const opts = resolvedOptionsFor(f, linked.sectors);
             const open = editing === f.key;
             return (
               <li key={`${f.key}-${i}`}>

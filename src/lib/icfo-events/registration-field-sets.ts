@@ -50,16 +50,25 @@ export type FieldSet = {
  */
 export type SharedOption = { value: string; label: string };
 
+/**
+ * The industry list as shared options. Callers pass the stored list (from the
+ * vocabulary provider or loader); with nothing passed, the code list is used,
+ * so a caller that has not been wired renders exactly what it did before.
+ */
+export function sectorOptions(list: ReadonlyArray<{ slug: string; label: string }>): SharedOption[] {
+  return list.map((s) => ({ value: s.slug, label: s.label }));
+}
+
 /** Lists a field can borrow rather than copy, with their stable values. */
-export function sharedOptionList(name: StoredField["optionsFrom"]): SharedOption[] {
-  if (name === "sectors") return EVENT_SECTORS.map((s) => ({ value: s.slug, label: s.label }));
+export function sharedOptionList(name: StoredField["optionsFrom"], sectors?: SharedOption[]): SharedOption[] {
+  if (name === "sectors") return sectors ?? sectorOptions(EVENT_SECTORS);
   if (name === "countries") return REGISTRATION_COUNTRIES.map((c) => ({ value: c, label: c }));
   return [];
 }
 
 /** The labels of a shared list, in order. */
-export function sharedOptions(name: StoredField["optionsFrom"]): string[] {
-  return sharedOptionList(name).map((o) => o.label);
+export function sharedOptions(name: StoredField["optionsFrom"], sectors?: SharedOption[]): string[] {
+  return sharedOptionList(name, sectors).map((o) => o.label);
 }
 
 /**
@@ -67,27 +76,27 @@ export function sharedOptions(name: StoredField["optionsFrom"]): string[] {
  * or its own copied list. Keeps the shared list's order rather than the order
  * the values were ticked in.
  */
-export function resolvedOptionsFor(f: StoredField): string[] {
+export function resolvedOptionsFor(f: StoredField, sectors?: SharedOption[]): string[] {
   if (!f.optionsFrom) return f.options ?? [];
-  const all = sharedOptionList(f.optionsFrom);
+  const all = sharedOptionList(f.optionsFrom, sectors);
   if (!f.include) return all.map((o) => o.label);
   const wanted = new Set(f.include);
   return all.filter((o) => wanted.has(o.value)).map((o) => o.label);
 }
 
 /** A stored field resolved for rendering — options filled in from the shared list. */
-export function resolveField(f: StoredField): RegistrationField {
+export function resolveField(f: StoredField, sectors?: SharedOption[]): RegistrationField {
   return {
     key: f.key,
     label: f.label,
     kind: f.kind,
-    options: f.optionsFrom ? resolvedOptionsFor(f) : f.options,
+    options: f.optionsFrom ? resolvedOptionsFor(f, sectors) : f.options,
     required: f.required,
   };
 }
 
-export function resolveAll(fields: StoredField[]): RegistrationField[] {
-  return fields.map(resolveField);
+export function resolveAll(fields: StoredField[], sectors?: SharedOption[]): RegistrationField[] {
+  return fields.map((f) => resolveField(f, sectors));
 }
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -99,7 +108,7 @@ const NEEDS_OPTIONS: FieldKind[] = ["select", "chips"];
  * Everything wrong with a draft, in the order a person would fix it. Empty
  * means safe to save.
  */
-export function validateFieldSet(set: FieldSet): string[] {
+export function validateFieldSet(set: FieldSet, sectors?: SharedOption[]): string[] {
   const errors: string[] = [];
 
   if (!set.roles.length) errors.push("At least one attendee type is required.");
@@ -128,7 +137,7 @@ export function validateFieldSet(set: FieldSet): string[] {
       if (NEEDS_OPTIONS.includes(f.kind)) {
         // Counts what the field would actually render, so switching every
         // linked option off is caught here rather than by an empty form.
-        if (resolvedOptionsFor(f).length === 0) {
+        if (resolvedOptionsFor(f, sectors).length === 0) {
           errors.push(`${where}: a ${f.kind} field needs at least one option.`);
         }
       }
@@ -169,7 +178,7 @@ export type FieldChange =
  * changed" list on the save dialog, and the thing that makes a destructive
  * rename visible before it happens rather than after.
  */
-export function diffFieldSets(before: FieldSet, after: FieldSet, usage: KeyUsage = {}): FieldChange[] {
+export function diffFieldSets(before: FieldSet, after: FieldSet, usage: KeyUsage = {}, sectors?: SharedOption[]): FieldChange[] {
   const out: FieldChange[] = [];
   const groups = ["common", ...new Set([...before.roles, ...after.roles].map((r) => r.key))];
 
@@ -200,8 +209,8 @@ export function diffFieldSets(before: FieldSet, after: FieldSet, usage: KeyUsage
       }
       // Compares what the field renders, so narrowing a linked list shows up
       // as an option change the same way editing a copied list does.
-      const pOpts = resolvedOptionsFor(prev);
-      const nOpts = resolvedOptionsFor(f);
+      const pOpts = resolvedOptionsFor(prev, sectors);
+      const nOpts = resolvedOptionsFor(f, sectors);
       if (pOpts.join("|") !== nOpts.join("|")) {
         const dropped = pOpts.filter((o) => !nOpts.includes(o));
         out.push({

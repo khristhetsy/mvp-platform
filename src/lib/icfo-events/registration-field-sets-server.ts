@@ -16,10 +16,14 @@ import {
   REGISTRATION_COMMON,
   REGISTRATION_ROLES,
 } from "@/lib/icfo-events/registration-fields";
+import { loadVocabulary } from "@/lib/vocabulary/store";
+import { offered } from "@/lib/vocabulary/lists";
 import {
   codeDefaultFieldSet,
   diffFieldSets,
+  sectorOptions,
   validateFieldSet,
+  type SharedOption,
   type FieldSet,
   type KeyUsage,
   type StoredField,
@@ -27,6 +31,15 @@ import {
 
 function raw(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
+}
+
+/**
+ * The industries a linked "sectors" field offers: the stored list, minus retired
+ * values. The loader falls back to the code list itself, so this never comes
+ * back empty.
+ */
+export async function loadSectorOptions(): Promise<SharedOption[]> {
+  return sectorOptions(offered(await loadVocabulary("industry")));
 }
 
 /** The constants, as a set. Used when the table has nothing to say. */
@@ -62,7 +75,7 @@ export const loadRegistrationFieldSet = cache(async (): Promise<FieldSet> => {
     const set = mapSet(data as Row);
     // A stored set that doesn't validate is worse than the constants: it could
     // render a form nobody can submit.
-    return validateFieldSet(set).length ? CODE_DEFAULT_FIELD_SET : set;
+    return validateFieldSet(set, await loadSectorOptions()).length ? CODE_DEFAULT_FIELD_SET : set;
   } catch {
     return CODE_DEFAULT_FIELD_SET;
   }
@@ -142,7 +155,8 @@ export async function saveFieldSet(
   reason: string,
   createdBy: string | null,
 ): Promise<SaveResult> {
-  const errors = validateFieldSet(draft);
+  const sectors = await loadSectorOptions();
+  const errors = validateFieldSet(draft, sectors);
   if (errors.length) return { ok: false, errors };
   if (!reason.trim()) return { ok: false, errors: ["Say why this version exists."] };
 
@@ -150,7 +164,7 @@ export async function saveFieldSet(
   // input, and this is the server-side half of that guard.
   const usage = await answerCounts();
   const active = await loadRegistrationFieldSet();
-  const stranded = diffFieldSets(active, draft, usage).filter(
+  const stranded = diffFieldSets(active, draft, usage, sectors).filter(
     (c) => c.kind === "removed" && c.answered > 0,
   );
 

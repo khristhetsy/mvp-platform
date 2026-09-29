@@ -43,8 +43,10 @@ export function sectorsOf(answers: Record<string, unknown>): string[] {
 
 /** The sectors both of them declared. */
 export function sharedSectors(a: Matchable, b: Matchable): string[] {
-  const mine = new Set(a.sectors);
-  return b.sectors.filter((s) => mine.has(s));
+  // Case-insensitive: older registrations hold "FinTech" while the stored list
+  // now offers "Fintech", and the two must still count as the same sector.
+  const mine = new Set(a.sectors.map((s) => s.toLowerCase()));
+  return b.sectors.filter((s) => mine.has(s.toLowerCase()));
 }
 
 /**

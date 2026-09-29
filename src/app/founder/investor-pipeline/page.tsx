@@ -9,6 +9,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { InvestorPipelineClient } from "./InvestorPipelineClient";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 import { ManualInvestorsPanel } from "@/components/founder/ManualInvestorsPanel";
 import { listManualInvestors } from "@/lib/founder/manual-investors";
 
@@ -69,7 +71,9 @@ export default async function InvestorPipelinePage() {
             title={t("investor_pipeline")}
             description={t("track_and_manage_your_investor_relationships_p")}
           />
-          <InvestorPipelineClient initialData={initialInvestors ?? []} />
+          <VocabularyProvider value={await loadVocabularies()}>
+            <InvestorPipelineClient initialData={initialInvestors ?? []} />
+          </VocabularyProvider>
           <ManualInvestorsPanel investors={manualInvestors} />
         </WorkspacePageContainer>
       </FounderFeatureGate>

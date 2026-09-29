@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { investorStart } from "@/content/investor-start";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 /** Investor sign up intake: records the lead, then opens the account form set to investor (free). */
 export function InvestorStartForm() {
   const f = investorStart.fields;
+  const sectorOptions = useVocabulary("industry").options.map((o) => o.label);
   const [sectors, setSectors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export function InvestorStartForm() {
       <fieldset className="mt-5">
         <legend className="text-[13px] font-medium text-site-navy">{f.sectors.label}</legend>
         <div className="mt-2 flex flex-wrap gap-2">
-          {f.sectors.options.map((s) => (
+          {sectorOptions.map((s) => (
             <button
               key={s}
               type="button"
