@@ -16,14 +16,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type FieldFilter, type GroupOption, type SearchState } from "@/components/admin/OdooSearchBar";
+import { InvestorSearchTab } from "./InvestorSearchTab";
+import { COLS, DEFAULT_COLS, TIER_CLS, STAGE_CLS, srcLabel, fmtDay, cell, OutreachPill, sortRows, nextSort, SortTh, type ColKey, type Row, type SortKey, type SortState } from "./matching-table";
 import { formatRange } from "@/lib/ir/milestones";
 import { SEQUENCE_TEMPLATES } from "@/lib/ir/sequence-templates";
 import { IR_STAGE_LABEL, type IrMilestone, type IrProject, type IrStage, type IrTask } from "@/lib/ir/types";
 
 type Opt = { key: string; label: string };
-type Outreach = { matchId: string; stage: IrStage; stageChangedAt: string; projectTitle: string };
-/** fit < 0 marks a row found by "Search all investors" rather than scored by the engine. */
-type Row = { contactId: string; name: string | null; firm: string; fit: number; tier: "high" | "medium" | "low"; summary: string; sectors: string[]; types: string[]; dataSource: string | null; verifiedAt?: string | null; alsoOn: string[]; founderOutreach: Outreach | null; onProject?: boolean };
 type Filters = { industry: string[]; stage: string[]; raise: string[]; revenue: string[]; investorType: string[]; source: string; tier: string };
 type Payload = {
   project: IrProject; task: IrTask | null; week: IrMilestone | null; onTask: number;
@@ -31,25 +30,13 @@ type Payload = {
   filters: Filters; rows: Row[]; total: number; thin: boolean;
   defaults?: { from?: "company" | "founder_profile" | "both" };
 };
-const TIER_CLS = { high: "bg-emerald-50 text-emerald-700", medium: "bg-amber-50 text-amber-700", low: "bg-slate-100 text-slate-600" };
 const SOURCE_OPTS: Opt[] = [{ key: "verified", label: "Verified" }, { key: "self_reported", label: "Self-reported" }];
-const SEARCH_FIELDS: FieldFilter[] = [{ key: "source", label: "Data source", options: ["Verified", "Self-reported", "Unverified"] }];
 const TIER_OPTS: Opt[] = [{ key: "high", label: "High (≥70)" }, { key: "medium", label: "Medium (50–69)" }, { key: "low", label: "Low" }];
-const SEARCH_GROUPS: GroupOption[] = [{ id: "none", label: "None" }, { id: "firm", label: "Firm" }, { id: "source", label: "Data source" }];
 const GROUPS: GroupOption[] = [{ id: "none", label: "None" }, { id: "firm", label: "Firm" }, { id: "tier", label: "Fit tier" }, { id: "type", label: "Investor type" }, { id: "source", label: "Data source" }];
-const srcLabel = (s: string | null) => (s === "verified" ? "Verified" : s === "self_reported" ? "Self-reported" : "Unverified");
-const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-const STAGE_CLS: Partial<Record<IrStage, string>> = { passed: "bg-rose-50 text-rose-700", committed: "bg-emerald-50 text-emerald-700", meeting_scheduled: "bg-indigo-50 text-indigo-700", meeting_held: "bg-indigo-50 text-indigo-700" };
 
-/** Optional columns. Investor and the checkbox are always shown. */
-type ColKey = "outreach" | "firm" | "fit" | "why" | "sectors" | "types" | "source" | "also";
-const COLS: Array<{ key: ColKey; label: string; on: boolean }> = [
-  { key: "outreach", label: "Outreach", on: true }, { key: "firm", label: "Firm", on: true }, { key: "fit", label: "Fit", on: true },
-  { key: "why", label: "Why", on: true }, { key: "sectors", label: "Sectors", on: false }, { key: "types", label: "Investor type", on: false },
-  { key: "source", label: "Data source", on: true }, { key: "also", label: "Also matched", on: true },
-];
-const COLS_KEY = "ir.matching.columns";
-const DEFAULT_COLS = COLS.filter((c) => c.on).map((c) => c.key);
+ const COLS_KEY = "ir.matching.columns.v2";
+/** v1 predates Phone and Email: carry a saved v1 choice over with the two new columns on. */
+const COLS_KEY_V1 = "ir.matching.columns";
 
 /** Filters ↔ search-bar field state (labels in the bar, keys on the wire). */
 function toState(f: Filters, o: Payload["options"]): SearchState {
@@ -85,26 +72,11 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   const [hideContacted, setHideContacted] = useState(false);
   const [profile, setProfile] = useState<Row | null>(null);
   const [mode, setMode] = useState<"match" | "search">("match");
-  // "Search all investors" uses the same search bar as Proposed matches; its text is the server query.
-  const [sa, setSa] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
-  const sq = sa.q;
+  const [sort, setSort] = useState<SortState>(null);
+  const onSort = useCallback((k: SortKey) => setSort((s) => nextSort(s, k)), []);
+  // Rows the search tab has shown, so selections made there keep their details here.
   const [found, setFound] = useState<Row[]>([]);
-  const [searching, setSearching] = useState(false);
-  useEffect(() => {
-    if (mode !== "search" || sq.trim().length < 2) return;
-    let live = true;
-    const h = setTimeout(() => {
-      setSearching(true);
-      void fetch(`/api/admin/ir/investors?${new URLSearchParams({ q: sq.trim(), project: projectId })}`).then(async (r) => {
-        const j = await r.json().catch(() => ({}));
-        if (!live) return;
-        setSearching(false);
-        type Hit = { id: string; name: string | null; firm: string | null; dataSource: string | null; alsoOn: string[]; onThisProject: boolean; founderOutreach: Outreach | null };
-        setFound(((j.investors ?? []) as Hit[]).map((x) => ({ contactId: x.id, name: x.name, firm: x.firm ?? "", fit: -1, tier: "low", summary: "Found by search", sectors: [], types: [], dataSource: x.dataSource, alsoOn: x.alsoOn, founderOutreach: x.founderOutreach, onProject: x.onThisProject })));
-      });
-    }, 250);
-    return () => { live = false; clearTimeout(h); };
-  }, [mode, sq, projectId]);
+  const onFoundRows = useCallback((rs: Row[]) => setFound((prev) => { const m = new Map(prev.map((r) => [r.contactId, r])); for (const r of rs) m.set(r.contactId, r); return [...m.values()]; }), []);
   const [seq, setSeq] = useState<null | { setupNeeded: boolean; staff: Array<{ id: string; name: string }>; template: string; via: "icapos" | "gmail"; manager: string; notifyEmail: boolean }>(null);
 
   async function openSequence() {
@@ -115,7 +87,12 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
 
   useEffect(() => {
     let saved: ColKey[] | null = null;
-    try { const raw = window.localStorage.getItem(COLS_KEY); const v = raw ? JSON.parse(raw) : null; if (Array.isArray(v)) saved = v.filter((k): k is ColKey => COLS.some((c) => c.key === k)); } catch { /* ignore */ }
+    try {
+      const raw = window.localStorage.getItem(COLS_KEY);
+      const v1 = raw ? null : window.localStorage.getItem(COLS_KEY_V1);
+      const v = raw ? JSON.parse(raw) : v1 ? [...(JSON.parse(v1) as string[]), "phone", "email"] : null;
+      if (Array.isArray(v)) saved = COLS.map((c) => c.key).filter((k) => v.includes(k));
+    } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the column choice after mount (localStorage isn't available during SSR)
     if (saved) setCols(saved);
   }, []);
@@ -162,18 +139,16 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
     { key: "tier", label: "Fit tier", options: TIER_OPTS.map((o) => o.label) },
   ] : [], [data]);
 
-  const rows = useMemo(() => mode === "search"
-    ? (sq.trim().length >= 2 ? found : []).filter((r) => !(hideContacted && r.founderOutreach) && (!sa.fields.source?.length || sa.fields.source.includes(srcLabel(r.dataSource))))
-    : (data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), [data, search, hideContacted, mode, found, sq, sa.fields.source]);
+  const rows = useMemo(() => sortRows((data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.email ?? "", r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), sort), [data, search, hideContacted, sort]);
   const grouped = useMemo(() => {
-    const gb = mode === "search" ? sa.groupBy : search?.groupBy;
+    const gb = search?.groupBy;
     const g = gb && gb !== "none" ? gb : null;
     if (!g) return [{ label: null as string | null, rows }];
     const keyOf = (r: Row) => g === "firm" ? r.firm || "—" : g === "tier" ? `${r.tier[0].toUpperCase()}${r.tier.slice(1)} fit` : g === "type" ? (r.types[0] ?? "—") : srcLabel(r.dataSource);
     const m = new Map<string, Row[]>();
     for (const r of rows) m.set(keyOf(r), [...(m.get(keyOf(r)) ?? []), r]);
     return [...m.entries()].map(([label, rs]) => ({ label, rows: rs }));
-  }, [rows, search, mode, sa.groupBy]);
+  }, [rows, search]);
 
   const contacted = useMemo(() => (data?.rows ?? []).filter((r) => r.founderOutreach).length, [data]);
   const pickedContacted = useMemo(() => [...new Map([...(data?.rows ?? []), ...found].map((r) => [r.contactId, r])).values()].filter((r) => picked.has(r.contactId) && r.founderOutreach).length, [data, found, picked]);
@@ -206,23 +181,12 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   if (!data || !search) return <p className="text-[13px] text-slate-400">Loading…</p>;
   const back = `/admin/ir/projects/${projectId}/tasks/${taskId}`;
   const noSector = !(search.fields.sector?.length);
-
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-semibold text-indigo-900">Matching for {data.project.title}{data.week ? ` · ${data.week.label}` : ""}</p>
-          <p className="text-[12px] text-indigo-800">{data.week ? `${formatRange(data.week.starts_on, data.week.ends_on)} · ` : ""}{data.onTask} investor{data.onTask === 1 ? "" : "s"} already on this task. Confirmed investors land in Matched with a &ldquo;Send intro email&rdquo; to-do.</p>
-        </div>
-        <button type="button" disabled={loading} onClick={() => void load(toFilters(search, data.options))} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60">{loading ? "Scoring…" : "Run matching again"}</button>
-      </div>
-
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+  const tabsEl = (
         <div className="flex overflow-hidden rounded-lg border border-slate-200" role="group" aria-label="How to find investors">
           {([["match", "Proposed matches"], ["search", "Search all investors"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={mode === k} onClick={() => setMode(k)} className={`px-3 py-1.5 text-[12.5px] ${mode === k ? "bg-indigo-50 font-semibold text-indigo-800" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>)}
         </div>
-        {mode === "match" ? <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={620} />
-          : <OdooSearchBar scope="ir-investor-search" state={sa} onChange={setSa} quick={[]} fields={SEARCH_FIELDS} groups={SEARCH_GROUPS} noGroupId="none" applyDefault={false} placeholder="Search any investor by name, firm or email domain…" width={620} />}
+  );
+  const toolsEl = (<>
         <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHideContacted(e.target.checked)} /> Hide already contacted</label>
         <div className="relative" data-cols-menu>
           <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{cols.length}/{COLS.length}</span></button>
@@ -242,7 +206,29 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
             </div>
           ) : null}
         </div>
-        <span className="ml-auto text-[12px] text-slate-600">{mode === "search" ? (sq.trim().length < 2 ? "Type at least 2 letters" : searching ? "Searching…" : `${rows.length} found${found.length >= 50 ? " (first 50)" : ""}`) : loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
+  </>);
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-semibold text-indigo-900">Matching for {data.project.title}{data.week ? ` · ${data.week.label}` : ""}</p>
+          <p className="text-[12px] text-indigo-800">{data.week ? `${formatRange(data.week.starts_on, data.week.ends_on)} · ` : ""}{data.onTask} investor{data.onTask === 1 ? "" : "s"} already on this task. Confirmed investors land in Matched with a &ldquo;Send intro email&rdquo; to-do.</p>
+        </div>
+        <button type="button" disabled={loading} onClick={() => void load(toFilters(search, data.options))} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60">{loading ? "Scoring…" : "Run matching again"}</button>
+      </div>
+
+      {mode === "search" ? (
+        <InvestorSearchTab
+          projectId={projectId} cols={cols} picked={picked} setPicked={setPicked} hideContacted={hideContacted}
+          sort={sort} onSort={onSort} onProfile={setProfile} onRows={onFoundRows} tabs={tabsEl} tools={toolsEl}
+        />
+      ) : (<>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        {tabsEl}
+        <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={620} />
+        {toolsEl}
+        <span className="ml-auto text-[12px] text-slate-600">{loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
       </div>
 
       {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales Hub › Settings, then reload.</p> : null}
@@ -254,8 +240,8 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
         <table className="w-full text-[12.5px]">
           <thead><tr className="bg-slate-50 text-left text-[11px] text-slate-500">
             <th className="w-8 px-3 py-2"><input type="checkbox" checked={allVisible} ref={(el) => { if (el) el.indeterminate = pickedVisible > 0 && !allVisible; }} onChange={(e) => toggleAll(e.target.checked)} disabled={!visibleIds.length} aria-label={allVisible ? "Unselect all" : "Select all"} title={allVisible ? "Unselect all" : "Select all"} /></th>
-            <th className="py-2 pr-2 font-medium">Investor</th>
-            {cols.map((k) => <th key={k} className="py-2 pr-2 font-medium">{COLS.find((c) => c.key === k)?.label}</th>)}
+            <SortTh label="Investor" k="name" sort={sort} onSort={onSort} />
+            {cols.map((k) => <SortTh key={k} label={COLS.find((c) => c.key === k)?.label ?? k} k={k} sort={sort} onSort={onSort} />)}
           </tr></thead>
           <tbody className="divide-y divide-slate-100">
             {grouped.map((g) => [
@@ -271,11 +257,12 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
                 </tr>
               )),
             ])}
-            {mode === "search" && rows.length === 0 ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{sq.trim().length < 2 ? "Search by an investor's name, firm or email domain." : searching ? "Searching…" : "No investors match that search."}</td></tr> : null}
-            {mode === "match" && rows.length === 0 && !noSector ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{loading ? "Scoring…" : hideContacted && contacted ? "Every proposal here was already worked for this founder. Untick “Hide already contacted” to see them." : "No proposals for these filters — widen the sector or drop the tier / source filter."}</td></tr> : null}
+            {rows.length === 0 && !noSector ? <tr><td colSpan={cols.length + 2} className="px-3 py-6 text-center text-slate-400">{loading ? "Scoring…" : hideContacted && contacted ? "Every proposal here was already worked for this founder. Untick “Hide already contacted” to see them." : "No proposals for these filters — widen the sector or drop the tier / source filter."}</td></tr> : null}
           </tbody>
         </table>
       </div>
+
+      </>)}
 
       <div className="sticky bottom-0 mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
         <span className="text-[12.5px] text-slate-600">{picked.size} selected</span>
@@ -308,27 +295,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   );
 }
 
-function OutreachPill({ o }: { o: Outreach | null }) {
-  if (!o) return <span className="text-slate-400">Not contacted</span>;
-  return (
-    <Link href={`/admin/ir/matches/${o.matchId}`} title={`Open the match on ${o.projectTitle}`} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium hover:ring-1 hover:ring-current ${STAGE_CLS[o.stage] ?? "bg-sky-50 text-sky-700"}`}>
-      {IR_STAGE_LABEL[o.stage]} <span className="font-normal opacity-75">{fmtDay(o.stageChangedAt)}</span> <i className="ti ti-arrow-right" aria-hidden="true" />
-    </Link>
-  );
-}
 
-function cell(k: ColKey, r: Row) {
-  switch (k) {
-    case "outreach": return r.onProject ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">On this project</span> : <OutreachPill o={r.founderOutreach} />;
-    case "firm": return r.firm || "—";
-    case "fit": return r.fit < 0 ? <span className="text-slate-400">not scored</span> : <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[r.tier]}`}>{r.fit}% · {r.tier}</span>;
-    case "why": return r.summary;
-    case "sectors": return r.sectors.length ? r.sectors.join(", ") : "—";
-    case "types": return r.types.length ? r.types.join(", ") : "—";
-    case "source": return srcLabel(r.dataSource);
-    case "also": return r.alsoOn.length ? r.alsoOn.join(", ") : "—";
-  }
-}
 
 type History = { investor: { id: string; name: string | null; firm: string | null; dataSource: string | null; verifiedAt: string | null; website: string | null }; matches: Array<{ matchId: string; projectId: string; projectTitle: string; founderName: string | null; stage: IrStage; stageChangedAt: string }> };
 

@@ -17,6 +17,7 @@ export type FounderOutreach = { matchId: string; stage: IrStage; stageChangedAt:
 export type QueueRow = {
   contactId: string; name: string | null; firm: string; fit: number; tier: "high" | "medium" | "low"; summary: string;
   sectors: string[]; types: string[]; dataSource: string | null; verifiedAt: string | null; alsoOn: string[];
+  email: string; phone: string;
   founderOutreach: FounderOutreach | null;
 };
 
@@ -57,6 +58,10 @@ async function companyDefaults(companyId: string): Promise<Partial<FitAnswers>> 
   return out;
 }
 
+/** Odoo writes an empty field as `false`; read through raw->>… that is the string "false". Same rule as the Contacts list. */
+const odooText = (v: string | null | undefined) => { const t = (v ?? "").trim(); return t === "" || t.toLowerCase() === "false" ? "" : t; };
+const phoneOf = (m: { phone: string | null; raw_phone: string | null; raw_mobile: string | null } | undefined) => (m ? m.phone || odooText(m.raw_phone) || odooText(m.raw_mobile) : "");
+
 export async function proposeMatches(projectId: string, f: QueueFilters): Promise<{ rows: QueueRow[]; total: number; thin: boolean }> {
   if (!f.industry.length) return { rows: [], total: 0, thin: false };
   const scorables = await scorablesForIndustries(f.industry).catch(() => null);
@@ -67,11 +72,11 @@ export async function proposeMatches(projectId: string, f: QueueFilters): Promis
   const onProject = new Set((await listMatches(projectId)).map((m) => m.investor_contact_id));
   const ids = ranked.map((r) => r.contactId).filter((id) => !onProject.has(id));
   const [{ data: contacts }, { data: elsewhere }, { data: self }] = await Promise.all([
-    ids.length ? db().from("crm_contacts").select("id, name, inv_source, inv_verified_at").in("id", ids.slice(0, 400)) : { data: [] },
+    ids.length ? db().from("crm_contacts").select("id, name, inv_source, inv_verified_at, email, phone, raw_phone:raw->>phone, raw_mobile:raw->>mobile").in("id", ids.slice(0, 400)) : { data: [] },
     ids.length ? db().from("ir_matches").select("id, investor_contact_id, stage, stage_changed_at, project:ir_projects(title, company_id, founder_contact_id)").in("investor_contact_id", ids.slice(0, 400)) : { data: [] },
     db().from("ir_projects").select("company_id, founder_contact_id").eq("id", projectId).maybeSingle(),
   ]);
-  const meta = new Map(((contacts ?? []) as Array<{ id: string; name: string | null; inv_source: string | null; inv_verified_at: string | null }>).map((c) => [c.id, c]));
+  const meta = new Map(((contacts ?? []) as Array<{ id: string; name: string | null; inv_source: string | null; inv_verified_at: string | null; email: string | null; phone: string | null; raw_phone: string | null; raw_mobile: string | null }>).map((c) => [c.id, c]));
   const me = self as { company_id: string | null; founder_contact_id: string | null } | null;
   const sameFounder = (p: { company_id: string | null; founder_contact_id: string | null } | null) =>
     !!p && !!me && ((!!me.company_id && p.company_id === me.company_id) || (!!me.founder_contact_id && p.founder_contact_id === me.founder_contact_id));
@@ -95,7 +100,7 @@ export async function proposeMatches(projectId: string, f: QueueFilters): Promis
     const src = m?.inv_source ?? null;
     if (f.source !== "any" && src !== f.source) continue;
     if (f.tier !== "any" && tier !== f.tier) continue;
-    rows.push({ contactId: r.contactId, name: m?.name ?? null, firm: r.company, fit: r.fit, tier, summary: r.summary, sectors: r.sectors, types: r.types, dataSource: src, verifiedAt: m?.inv_verified_at ?? null, alsoOn: also.get(r.contactId) ?? [], founderOutreach: prior.get(r.contactId) ?? null });
+    rows.push({ contactId: r.contactId, name: m?.name ?? null, firm: r.company, fit: r.fit, tier, summary: r.summary, sectors: r.sectors, types: r.types, dataSource: src, verifiedAt: m?.inv_verified_at ?? null, alsoOn: also.get(r.contactId) ?? [], email: m?.email ?? "", phone: phoneOf(m), founderOutreach: prior.get(r.contactId) ?? null });
     if (rows.length >= 200) break;
   }
   return { rows, total: ranked.length - [...onProject].filter((id) => ranked.some((r) => r.contactId === id)).length, thin: false };
