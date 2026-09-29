@@ -108,12 +108,12 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, _
     return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
-  // Free founders: grandfathered accounts (predating FREE_RETIRED_AT) keep the
-  // full toolset; new free accounts are paywalled to "settings" until they pick a
-  // paid plan. Fail-open — only an EXPLICIT false gates, so a missing flag on a
-  // legacy row keeps access rather than risking a lock-out.
+  // Free founders: grandfathered accounts keep the full toolset; any other free
+  // row is paywalled to "settings" until they pick a paid plan. Reads
+  // is_grandfathered, the flag admin billing grants and revokes, so a staff
+  // change takes effect here. Fail-open: only an EXPLICIT false gates.
   if (planType === "founder_free") {
-    return subscription.grandfathered_free === false
+    return subscription.is_grandfathered === false
       ? new Set<FeatureKey>(["settings"])
       : new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }

@@ -41,7 +41,7 @@ describe("trial", () => {
 });
 
 describe("free-access retirement (grandfather gate)", () => {
-  const free = (gf?: boolean) => sub({ plan_type: "founder_free", subscription_status: "free", grandfathered_free: gf });
+  const free = (gf?: boolean) => sub({ plan_type: "founder_free", subscription_status: "free", is_grandfathered: gf });
 
   it("grandfathered free founder keeps tool access", () => {
     expect(canAccessFeature(free(true), "documents").allowed).toBe(true);
