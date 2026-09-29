@@ -11,6 +11,7 @@
 
 import { recordDelivery } from "@/lib/cron/job-deliveries";
 import { logOutboundEmail, type EmailRole } from "@/lib/email/email-log";
+import { holdForFounderDigest } from "@/lib/notifications/founder-email-budget/gate";
 import { personalFromHeader, verifiedSenderDomains } from "@/lib/email/sender-domains";
 
 const RESEND_API = "https://api.resend.com/emails";
@@ -39,6 +40,8 @@ export type EmailPayload = {
   fromAddress?: string | null;
   /** File attachments — base64 content (Resend format). */
   attachments?: Array<{ filename: string; content: string }>;
+  /** Extra message headers (List-Unsubscribe and the like). */
+  headers?: Record<string, string>;
   /** Resend tags, echoed back on webhook events (letters, digits, _ and - only). */
   tags?: Array<{ name: string; value: string }>;
   /** For the email log (Admin, Activity, Sent): what triggered the send.
@@ -109,14 +112,21 @@ export async function previewFrom(name: string | null | undefined, email: string
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
-  const result = await sendEmailNow(payload);
+  // Founder email budget: inside a founder facing scheduled job, an email to a
+  // founder in the rollout may be held for their digest or dropped (instant
+  // alerts only). Returns null in every other case, including any error, so the
+  // send below is unchanged for everyone else. A held email counts as handled.
+  const held = await holdForFounderDigest(payload);
+  const result = held
+    ? { ok: true, skipped: true, error: held.reason, providerId: null }
+    : await sendEmailNow(payload);
   // Inside a scheduled job, the send is recorded for its Sent tab. No-op otherwise.
   await recordDelivery({
     channel: "email",
     toEmail: parseRecipients(payload.to).join(", ") || null,
     subject: payload.subject,
     bodyHtml: payload.html,
-    status: result.ok ? "sent" : result.skipped ? "skipped" : "failed",
+    status: held ? "skipped" : result.ok ? "sent" : result.skipped ? "skipped" : "failed",
     error: result.error ?? null,
   });
   // Every send, job or not, goes to the platform email log.
@@ -125,7 +135,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     subject: payload.subject,
     html: payload.html,
     text: payload.text ?? null,
-    status: result.ok ? "sent" : result.skipped ? "skipped" : "failed",
+    status: held ? "skipped" : result.ok ? "sent" : result.skipped ? "skipped" : "failed",
     error: result.error ?? null,
     providerId: result.providerId ?? null,
     source: payload.source ?? null,
@@ -173,6 +183,7 @@ async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipp
           reply_to: payload.replyTo,
           attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
           tags: payload.tags && payload.tags.length > 0 ? payload.tags : undefined,
+          headers: payload.headers && Object.keys(payload.headers).length > 0 ? payload.headers : undefined,
         }),
       });
       if (res.status !== 429 || attempt === MAX_ATTEMPTS) break;
