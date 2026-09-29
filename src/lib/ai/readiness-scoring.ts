@@ -63,7 +63,43 @@ export type ReadinessScoreResult = {
   factorScores: Record<FactorKey, FactorScore>;
   generatedBy: "rule-based" | "unconfigured";
   isDemo: boolean;
+  /** Summarized documents that at least one factor actually read. */
+  documentsUsed?: number;
 };
+
+// ─── Which uploads each factor reads ──────────────────────────────────────────
+//
+// Upload types (founder/documents page) do not all match the names the factors
+// ask for. Each uploaded document is also filed under these extra names, so a
+// factor asking for one type reads every document that belongs there.
+//
+// INCORPORATION_DOCS is never an upload type: incorporation papers are uploaded
+// as CORPORATE_DOCUMENTS, or sometimes as LEGAL_DOCUMENTS. A LEGAL_DOCUMENTS file
+// only counts when its summary describes formation papers, so an NDA or a
+// customer agreement does not earn incorporation credit.
+const INCORPORATION_TEXT =
+  /incorporat|certificate of formation|articles of (incorporation|organization|association)|bylaws|by-laws|operating agreement|certificate of good standing|good standing|formation documents?|registered agent|delaware (c-)?corp|llc agreement/i;
+
+export function readAsTypes(type: string, summary: string | null): string[] {
+  const types = [type];
+  if (type === "CORPORATE_DOCUMENTS") types.push("INCORPORATION_DOCS");
+  if (type === "LEGAL_DOCUMENTS" && summary && INCORPORATION_TEXT.test(summary)) {
+    types.push("INCORPORATION_DOCS");
+  }
+  return types;
+}
+
+/** Every document type some factor reads (after readAsTypes). */
+export const SCORED_DOCUMENT_TYPES = [
+  "PITCH_DECK",
+  "BUSINESS_PLAN",
+  "FINANCIAL_STATEMENTS",
+  "CAP_TABLE",
+  "INCORPORATION_DOCS",
+  "TEAM_BIOS",
+  "CUSTOMER_CONTRACTS",
+  "MARKET_RESEARCH",
+] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -416,7 +452,9 @@ function scoreCustomerTraction(
   const bizSummary = getSummary("BUSINESS_PLAN");
   const financialSummary = getSummary("FINANCIAL_STATEMENTS");
 
-  const combinedSummary = [pitchSummary, bizSummary, financialSummary].filter(Boolean).join(" ");
+  // Signed contracts, LOIs and POs are direct traction evidence.
+  const contractSummary = getSummary("CUSTOMER_CONTRACTS");
+  const combinedSummary = [pitchSummary, bizSummary, financialSummary, contractSummary].filter(Boolean).join(" ");
 
   // Biotech / medtech / pharma companies have entirely different traction signals —
   // no LOIs or MRR is expected; clinical, regulatory, and partnership milestones are the standard.
@@ -742,6 +780,8 @@ function scoreFounderTeam(
   const hasBizPlan = has("BUSINESS_PLAN");
   const pitchSummary = getSummary("PITCH_DECK");
   const bizSummary = getSummary("BUSINESS_PLAN");
+  // Team bios are the most direct evidence of founder depth and experience.
+  const bioSummary = getSummary("TEAM_BIOS");
 
   const TEAM_KEYWORDS = ["founder", "team", "ceo", "cto", "cfo", "co-founder", "experience", "background", "track record", "led", "built", "years"];
   const DEPTH_KEYWORDS = ["co-founder", "cto", "cfo", "vp ", "director", "advisory", "advisor", "board", "employees", "team of", "hire", "leadership"];
@@ -792,7 +832,7 @@ function scoreFounderTeam(
     "carbon project", "emissions reduction", "clean energy", "epc",
   ];
 
-  const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
+  const combinedSummary = [pitchSummary, bizSummary, bioSummary].filter(Boolean).join(" ");
   const hasTeamEvidence = containsKeywords(combinedSummary, TEAM_KEYWORDS);
   const hasTeamDepth = isLifeScience(industry)
     ? containsKeywords(combinedSummary, [...DEPTH_KEYWORDS, ...LS_DEPTH_KEYWORDS])
@@ -857,6 +897,9 @@ function scoreFounderTeam(
     evidence.push({ icon: hasTeamEvidence ? "pass" : "warn", text: hasTeamEvidence ? "Business plan references founder/team background" : "Business plan uploaded — no team context detected", src: "BUSINESS_PLAN" });
   } else {
     evidence.push({ icon: "warn", text: "Business plan missing — secondary team evidence unavailable", src: "Document checklist" });
+  }
+  if (bioSummary) {
+    evidence.push({ icon: "pass", text: "Team bios uploaded and read for founder depth and experience", src: "TEAM_BIOS" });
   }
   if (hasPriorExperience) evidence.push({
     icon: "pass",
@@ -971,7 +1014,8 @@ function scoreMarketEvidence(
   const pitchSummary = getSummary("PITCH_DECK");
   const bizSummary = getSummary("BUSINESS_PLAN");
 
-  const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
+  const researchSummary = getSummary("MARKET_RESEARCH");
+  const combinedSummary = [pitchSummary, bizSummary, researchSummary].filter(Boolean).join(" ");
 
   // Life science market evidence signals — clinical validation replaces commercial traction
   const LS_TRACTION_KEYWORDS = [
@@ -2233,9 +2277,23 @@ export async function scoreCompanyReadiness(input: {
   documentSummaries: Array<{ type: string; summary: string }>;
   uploadedDocumentTypes: string[];
 }): Promise<ReadinessScoreResult> {
-  const has = (type: string) => input.uploadedDocumentTypes.includes(type);
+  const summaryByType = new Map<string, string[]>();
+  for (const d of input.documentSummaries) {
+    for (const t of readAsTypes(d.type, d.summary)) {
+      summaryByType.set(t, [...(summaryByType.get(t) ?? []), d.summary]);
+    }
+  }
+  const uploaded = new Set(input.uploadedDocumentTypes.flatMap((t) => readAsTypes(t, null)));
+  for (const t of summaryByType.keys()) uploaded.add(t);
+
+  const has = (type: string) => uploaded.has(type);
+  // Every document of a type is read, not just the first one uploaded.
   const getSummary = (type: string): string | null =>
-    input.documentSummaries.find((d) => d.type === type)?.summary ?? null;
+    summaryByType.get(type)?.join("\n\n") ?? null;
+  const scored = new Set<string>(SCORED_DOCUMENT_TYPES);
+  const documentsUsed = input.documentSummaries.filter((d) =>
+    readAsTypes(d.type, d.summary).some((t) => scored.has(t)),
+  ).length;
 
   const factors: Record<FactorKey, FactorScore> = {
     revenue_cashflow:   scoreRevenueCashflow(has, getSummary, input.revenueStage, input.fundingAmount, input.industry),
@@ -2263,5 +2321,6 @@ export async function scoreCompanyReadiness(input: {
     factorScores: factors,
     generatedBy: "rule-based",
     isDemo: false,
+    documentsUsed,
   };
 }
