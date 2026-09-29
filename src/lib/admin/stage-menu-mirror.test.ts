@@ -49,6 +49,7 @@ describe("Marketing menu — the CRR gate", () => {
 
   it("does not touch the rows the founder owns outright", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
+    expect(item(m, "My contacts")?.status).toBe("todo");
     expect(item(m, "Present at event")?.status).toBe("todo");
     expect(item(m, "Marketplace")?.status).toBe("todo");
   });
@@ -65,9 +66,10 @@ describe("Marketing menu — the CRR gate", () => {
 
   it("counts browse-only rows as measured — they have a wired signal", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
-    // CRR, matches, Matching Center, outreach, Investor CRM = 5 of 7.
+    // CRR, matches, Matching Center, outreach, Investor CRM = 5 of 8
+    // (My contacts, Present at event and Marketplace have no signal).
     expect(m.measuredCount).toBe(5);
-    expect(m.total).toBe(7);
+    expect(m.total).toBe(8);
   });
 
   it("clears every CRR-gated row once the engine unlocks outreach", () => {
