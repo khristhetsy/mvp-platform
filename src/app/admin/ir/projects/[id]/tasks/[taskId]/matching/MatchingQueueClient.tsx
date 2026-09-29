@@ -27,7 +27,7 @@ type Filters = { industry: string[]; stage: string[]; raise: string[]; revenue: 
 type Payload = {
   project: IrProject; task: IrTask | null; week: IrMilestone | null; onTask: number;
   options: { sectors: string[]; stages: Opt[]; raises: Opt[]; revenues: Opt[]; types: Opt[] };
-  filters: Filters; rows: Row[]; total: number; thin: boolean;
+  filters: Filters; rows: Row[]; total: number; contacted?: number; thin: boolean;
   defaults?: { from?: "company" | "founder_profile" | "both" };
 };
 const SOURCE_OPTS: Opt[] = [{ key: "verified", label: "Verified" }, { key: "self_reported", label: "Self-reported" }];
@@ -216,6 +216,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
           <p className="text-[12px] text-indigo-800">{data.week ? `${formatRange(data.week.starts_on, data.week.ends_on)} · ` : ""}{data.onTask} investor{data.onTask === 1 ? "" : "s"} already on this task. Confirmed investors land in Matched with a &ldquo;Send intro email&rdquo; to-do.</p>
         </div>
         <button type="button" disabled={loading} onClick={() => void load(toFilters(search, data.options))} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60">{loading ? "Scoring…" : "Run matching again"}</button>
+        {!noSector && !data.thin ? <MatchTotals total={data.total} contacted={data.contacted ?? 0} loading={loading} hideContacted={hideContacted} onNeverContacted={() => setHideContacted((h) => !h)} /> : null}
       </div>
 
       {mode === "search" ? (
@@ -233,7 +234,6 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
 
       {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales Hub › Settings, then reload.</p> : null}
       {mode === "match" && noSector ? <p className="mb-3 text-[12.5px] text-slate-500">Add at least one Sector under Filters to see proposals{data.project.company_id ? "" : ". This project has no iCapOS company and the founder's Odoo questionnaire names no industry, so there was nothing to start from"}. Or use Search all investors.</p> : null}
-      {mode === "match" && !noSector && (data.defaults?.from === "founder_profile" || data.defaults?.from === "both") ? <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-900">Filters start from the founder&rsquo;s Odoo questionnaire (industries, capital sought, revenue, stage and investor types). Change them under Filters.</p> : null}
       {contacted ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"><b>{contacted} of these investors were already worked for {data.project.founder_name ?? data.project.title}</b> on another of the founder&rsquo;s projects. They are flagged in the Outreach column; click a status to open that match.</p> : null}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -366,6 +366,38 @@ function InvestorPanel({ row, onClose, picked, onPick }: { row: Row; onClose: ()
           <button type="button" onClick={onClose} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Close</button>
         </div>
       </aside>
+    </div>
+  );
+}
+
+/**
+ * Header counts for the founder: every investor fitting the current filters (not only the
+ * 200 rows shown), how many were never contacted for this founder, and how many were.
+ * "Contacted" is the same test as the Outreach column and "Hide already contacted": a
+ * match on another of the founder's projects. Clicking Never contacted toggles that box.
+ */
+function MatchTotals({ total, contacted, loading, hideContacted, onNeverContacted }: { total: number; contacted: number; loading: boolean; hideContacted: boolean; onNeverContacted: () => void }) {
+  const never = Math.max(0, total - contacted);
+  const pct = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : "0%");
+  const num = (n: number) => (loading ? "…" : n.toLocaleString("en-US"));
+  const tile = "rounded-lg border bg-white px-3 py-2 text-left";
+  return (
+    <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-3">
+      <div className={`${tile} border-indigo-200`}>
+        <p className="text-[12px] text-slate-500"><i className="ti ti-users" aria-hidden="true" /> Total investors matched</p>
+        <p className="text-[22px] font-semibold leading-tight text-slate-900">{num(total)}</p>
+        <p className="text-[11.5px] text-slate-400">Fit the founder&rsquo;s filters</p>
+      </div>
+      <button type="button" onClick={onNeverContacted} aria-pressed={hideContacted} title={hideContacted ? "Show every proposal" : "Show only investors never contacted for this founder"} className={`${tile} ${hideContacted ? "border-2 border-indigo-500 px-[11px] py-[7px]" : "border-indigo-200 hover:border-indigo-400"}`}>
+        <p className="text-[12px] text-slate-500"><i className="ti ti-mail-off" aria-hidden="true" /> Never contacted</p>
+        <p className="text-[22px] font-semibold leading-tight text-slate-900">{num(never)} {!loading ? <span className="text-[12.5px] font-normal text-slate-500">{pct(never)}</span> : null}</p>
+        <p className="text-[11.5px] text-indigo-700">{hideContacted ? "Showing only these · show all" : "Show only these"} <i className="ti ti-arrow-right" aria-hidden="true" /></p>
+      </button>
+      <div className={`${tile} border-indigo-200`}>
+        <p className="text-[12px] text-slate-500"><i className="ti ti-mail-check" aria-hidden="true" /> Already contacted</p>
+        <p className="text-[22px] font-semibold leading-tight text-slate-900">{num(contacted)} {!loading ? <span className="text-[12.5px] font-normal text-slate-500">{pct(contacted)}</span> : null}</p>
+        <p className="text-[11.5px] text-slate-400">Any outreach for this founder</p>
+      </div>
     </div>
   );
 }

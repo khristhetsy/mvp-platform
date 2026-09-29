@@ -62,10 +62,10 @@ async function companyDefaults(companyId: string): Promise<Partial<FitAnswers>> 
 const odooText = (v: string | null | undefined) => { const t = (v ?? "").trim(); return t === "" || t.toLowerCase() === "false" ? "" : t; };
 const phoneOf = (m: { phone: string | null; raw_phone: string | null; raw_mobile: string | null } | undefined) => (m ? m.phone || odooText(m.raw_phone) || odooText(m.raw_mobile) : "");
 
-export async function proposeMatches(projectId: string, f: QueueFilters): Promise<{ rows: QueueRow[]; total: number; thin: boolean }> {
-  if (!f.industry.length) return { rows: [], total: 0, thin: false };
+export async function proposeMatches(projectId: string, f: QueueFilters): Promise<{ rows: QueueRow[]; total: number; contacted: number; thin: boolean }> {
+  if (!f.industry.length) return { rows: [], total: 0, contacted: 0, thin: false };
   const scorables = await scorablesForIndustries(f.industry).catch(() => null);
-  if (scorables === null) return { rows: [], total: 0, thin: true };   // index unusable — say so rather than scan 7k raw rows
+  if (scorables === null) return { rows: [], total: 0, contacted: 0, thin: true };   // index unusable — say so rather than scan 7k raw rows
   const answers: FitAnswers = { stage: f.stage, raise: f.raise, industry: f.industry, revenue: f.revenue, investorType: f.investorType.length ? f.investorType : ["any"] };
   const ranked = rankScorables(scorables, answers);
 
@@ -103,7 +103,24 @@ export async function proposeMatches(projectId: string, f: QueueFilters): Promis
     rows.push({ contactId: r.contactId, name: m?.name ?? null, firm: r.company, fit: r.fit, tier, summary: r.summary, sectors: r.sectors, types: r.types, dataSource: src, verifiedAt: m?.inv_verified_at ?? null, alsoOn: also.get(r.contactId) ?? [], email: m?.email ?? "", phone: phoneOf(m), founderOutreach: prior.get(r.contactId) ?? null });
     if (rows.length >= 200) break;
   }
-  return { rows, total: ranked.length - [...onProject].filter((id) => ranked.some((r) => r.contactId === id)).length, thin: false };
+  const contactedSet = await founderContactedIds(projectId, me);
+  return { rows, total: ids.length, contacted: ids.filter((id) => contactedSet.has(id)).length, thin: false };
+}
+
+/**
+ * Investors already matched on another of this founder's projects (same company or same
+ * founder contact) — the "already contacted" set behind the queue's header counts. Two
+ * small queries over the founder's own matches, so it covers every matched investor, not
+ * only the 200 rows the queue shows.
+ */
+async function founderContactedIds(projectId: string, me: { company_id: string | null; founder_contact_id: string | null } | null): Promise<Set<string>> {
+  const ors = [me?.company_id ? `company_id.eq.${me.company_id}` : null, me?.founder_contact_id ? `founder_contact_id.eq.${me.founder_contact_id}` : null].filter(Boolean) as string[];
+  if (!ors.length) return new Set();
+  const { data: projects } = await db().from("ir_projects").select("id").or(ors.join(",")).neq("id", projectId);
+  const pids = ((projects ?? []) as Array<{ id: string }>).map((p) => p.id);
+  if (!pids.length) return new Set();
+  const { data: ms } = await db().from("ir_matches").select("investor_contact_id").in("project_id", pids);
+  return new Set(((ms ?? []) as Array<{ investor_contact_id: string }>).map((m) => m.investor_contact_id));
 }
 
 export async function queueOptions(): Promise<{ sectors: string[]; stages: Array<{ key: string; label: string }>; raises: Array<{ key: string; label: string }>; revenues: Array<{ key: string; label: string }>; types: Array<{ key: string; label: string }> }> {
