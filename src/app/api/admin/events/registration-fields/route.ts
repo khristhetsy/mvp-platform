@@ -5,6 +5,7 @@ import {
   answerCounts,
   listFieldSetVersions,
   loadRegistrationFieldSet,
+  loadSectorOptions,
   saveFieldSet,
 } from "@/lib/icfo-events/registration-field-sets-server";
 import { sharedOptionList, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
@@ -31,7 +32,7 @@ export async function GET(): Promise<Response> {
   return NextResponse.json({
     set,
     usage,
-    linked: { sectors: sharedOptionList("sectors"), countries: sharedOptionList("countries") },
+    linked: { sectors: sharedOptionList("sectors", await loadSectorOptions()), countries: sharedOptionList("countries") },
     versions: versions.map((v) => ({
       id: v.id, version: v.version, isActive: v.isActive,
       reason: v.reason, createdAt: v.createdAt, createdByName: v.createdByName,

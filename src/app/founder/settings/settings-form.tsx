@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { industryOptionsFor } from "@/lib/industries";
 import {
   INVESTOR_TYPE_OPTIONS,
   CAPITAL_TYPE_OPTIONS,
@@ -21,7 +20,7 @@ import {
   moneyBandFor,
   splitProfileCsv,
 } from "@/lib/profile/options";
-import { useVocabularies } from "@/lib/vocabulary/provider";
+import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
 import { labelOf, offered, type VocabularyList, type VocabularyOption } from "@/lib/vocabulary/lists";
 import type { ResolvedSurface } from "@/lib/profile-fields/display";
 
@@ -223,6 +222,7 @@ export function CompanySettingsForm({ company, display }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [company]);
 
+  const { options: industryOptions } = useVocabulary("industry", company?.industry ?? null);
   const [values, setValues] = useState<Record<string, string>>(seed);
   const [orig, setOrig] = useState<Record<string, string>>(seed);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -378,7 +378,10 @@ export function CompanySettingsForm({ company, display }: Props) {
       return (
         <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
           {!v ? <option value="">— Select an industry —</option> : null}
-          {industryOptionsFor(v).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+          {industryOptions.map((opt) => <option key={opt.slug} value={opt.label}>{opt.label}</option>)}
+          {/* A value set before this list existed stays selectable rather than
+              being silently replaced by whatever sorts first. */}
+          {v && !industryOptions.some((o) => o.label === v) ? <option value={v}>{v}</option> : null}
         </select>
       );
     }

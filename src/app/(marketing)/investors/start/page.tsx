@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { investorStart } from "@/content/investor-start";
 import { InvestorStartForm } from "@/components/marketing-site/InvestorStartForm";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
+
+// The sector options come from the stored industry list; refresh hourly.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Create your investor account — iCapOS",
@@ -12,7 +17,7 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <p className="font-site-mono text-xs font-semibold uppercase tracking-[0.16em] text-site-blue-lt">{children}</p>
 );
 
-export default function InvestorStartPage() {
+export default async function InvestorStartPage() {
   const s = investorStart;
   return (
     <section className="bg-gradient-to-b from-site-navy to-site-navy-2 px-6 pb-16 pt-20 text-white">
@@ -31,7 +36,9 @@ export default function InvestorStartPage() {
           </ol>
         </div>
         <div className="text-site-ink">
-          <InvestorStartForm />
+          <VocabularyProvider value={await loadVocabularies()}>
+            <InvestorStartForm />
+          </VocabularyProvider>
         </div>
       </div>
     </section>

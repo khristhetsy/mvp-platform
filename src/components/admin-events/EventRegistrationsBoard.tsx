@@ -9,7 +9,8 @@ import {
   REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
 import { EventManualRegister } from "./EventManualRegister";
-import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import { resolveAll, sectorOptions, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 const TYPE_LABEL: Record<string, string> = {
   investor: "Investor",
@@ -312,9 +313,10 @@ function RegistrationEditForm({
   fieldSet?: FieldSet;
 }) {
   const type = (row.attendeeType as AttendeeType | null) ?? null;
-  const common: RegistrationField[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;
+  const sectorList = sectorOptions(useVocabulary("industry").options);
+  const common: RegistrationField[] = fieldSet ? resolveAll(fieldSet.common, sectorList) : CODE_COMMON;
   const perType: RegistrationField[] = type
-    ? (fieldSet ? resolveAll(fieldSet.byType[type] ?? []) : CODE_BY_TYPE[type])
+    ? (fieldSet ? resolveAll(fieldSet.byType[type] ?? [], sectorList) : CODE_BY_TYPE[type])
     : [];
   const fields: RegistrationField[] = [...common, ...perType];
   const configKeys = new Set(fields.map((f) => f.key));

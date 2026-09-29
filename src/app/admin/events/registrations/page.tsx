@@ -10,6 +10,7 @@ import {
   answerCounts,
   listFieldSetVersions,
   loadRegistrationFieldSet,
+  loadSectorOptions,
 } from "@/lib/icfo-events/registration-field-sets-server";
 import { sharedOptionList } from "@/lib/icfo-events/registration-field-sets";
 import { RegistrationFieldsEditor } from "@/components/admin-events/RegistrationFieldsEditor";
@@ -105,7 +106,7 @@ export default async function RegistrationPage({
       <RegistrationFieldsEditor
         initialSet={set}
         usage={usage}
-        linked={{ sectors: sharedOptionList("sectors"), countries: sharedOptionList("countries") }}
+        linked={{ sectors: sharedOptionList("sectors", await loadSectorOptions()), countries: sharedOptionList("countries") }}
         versions={versions.map((v) => ({
           id: v.id, version: v.version, isActive: v.isActive,
           reason: v.reason, createdAt: v.createdAt, createdByName: v.createdByName,

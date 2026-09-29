@@ -16,7 +16,7 @@ import {
   moneyBandFor,
   isMoneyBand,
 } from "@/lib/profile/options";
-import { useVocabularies } from "@/lib/vocabulary/provider";
+import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
 import { offered, type VocabularyOption } from "@/lib/vocabulary/lists";
 import { SKIPPABLE_STEPS, type ResolvedSurface } from "@/lib/profile-fields/display";
 import { nextQuestion, previousQuestion, questionPosition, type QuestionNum } from "@/lib/onboarding/question-order";
@@ -27,12 +27,8 @@ import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/M
 /* ─────────────────────────── data ─────────────────────────── */
 
 // Option lists shared with the Company Profile settings form + matching inputs
-// live in @/lib/profile/options. Industries + timelines stay local to onboarding.
-const INDUSTRIES = [
-  "FinTech", "HealthTech", "SaaS / B2B Software", "EdTech", "CleanTech",
-  "E-commerce", "AI / ML", "Real Estate", "Consumer", "Deep Tech",
-  "Marketplace", "Logistics", "Hardware", "Other",
-];
+// live in @/lib/profile/options. Industries come from the stored list (the same
+// one every other picker reads); timelines stay local to onboarding.
 
 const TIMELINES = [
   { id: "3m",        label: "Within 3 months", sub: "Actively closing now" },
@@ -280,6 +276,9 @@ export function FounderConversationalOnboarding({
   const [companyName, setCompanyName] = useState(company.company_name ?? "");
   const [phone, setPhone]             = useState(company.contact_phone ?? "");
   const [industry, setIndustry]       = useState<string | null>(company.industry ?? null);
+  // Offered values, plus whatever this company already holds, so a founder
+  // whose value was since retired still sees their answer.
+  const { options: industryOptions } = useVocabulary("industry", company.industry);
   const [stage, setStage]             = useState<string | null>(company.revenue_stage ?? null);
   // Amount of capital as one of the money bands: the stored band, else the band an
   // existing exact amount falls in.
@@ -662,11 +661,14 @@ export function FounderConversationalOnboarding({
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("select_the_closest_match_we_use_this_to_targ")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                {INDUSTRIES.map((ind) => (
-                  <Chip key={ind} selected={industry === ind} onClick={() => setIndustry(ind)}>
-                    {ind}
+                {industryOptions.map((opt) => (
+                  <Chip key={opt.slug} selected={industry === opt.label} onClick={() => setIndustry(opt.label)}>
+                    {opt.label}
                   </Chip>
                 ))}
+                {industry && !industryOptions.some((o) => o.label === industry) ? (
+                  <Chip selected onClick={() => setIndustry(industry)}>{industry}</Chip>
+                ) : null}
               </div>
               <ContextCard>
                 Industry matching is one of the strongest signals our algorithm uses. Investors who back companies in your sector already understand your market — they move faster and ask better questions.

@@ -9,7 +9,8 @@ import {
   REGISTRATION_COMMON as CODE_COMMON,
   REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
-import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import { resolveAll, sectorOptions, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { eventId: string; onAdded: (r: EventRegistrationRow) => void; onClose: () => void; fieldSet?: FieldSet }) {
   const [role, setRole] = useState<AttendeeType>("investor");
@@ -19,9 +20,10 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
 
   // Same source as the public form, so the two can never ask different things.
   const REGISTRATION_ROLES = fieldSet?.roles ?? CODE_ROLES;
-  const common: RegistrationField[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;
+  const sectorList = sectorOptions(useVocabulary("industry").options);
+  const common: RegistrationField[] = fieldSet ? resolveAll(fieldSet.common, sectorList) : CODE_COMMON;
   const perType: RegistrationField[] = fieldSet
-    ? resolveAll(fieldSet.byType[role] ?? [])
+    ? resolveAll(fieldSet.byType[role] ?? [], sectorList)
     : CODE_BY_TYPE[role];
   const fields: RegistrationField[] = [...common, ...perType];
 

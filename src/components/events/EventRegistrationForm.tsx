@@ -11,7 +11,7 @@ import {
   REGISTRATION_COMMON as CODE_COMMON,
   REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
-import { resolveAll, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import { resolveAll, sectorOptions, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 
 const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins; leads: string }[] = [
   { key: "investor", label: "Investor", Icon: Coins, leads: "See founders raising in your sectors. iCapOS is free for investors." },
@@ -41,10 +41,13 @@ const SECTOR_QUESTION: Record<AttendeeType, string> = {
 
 export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defaultPhone, defaultName, fieldSet, signedIn = true }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string; fieldSet?: FieldSet; /** False for visitors registering without an account. */ signedIn?: boolean }) {
   // The saved set when the page loaded one; otherwise the code constants, so
-  // the form renders even if the table is empty or unreachable.
-  const COMMON: Field[] = fieldSet ? resolveAll(fieldSet.common) : CODE_COMMON;
+  // the form renders even if the table is empty or unreachable. Linked industry
+  // questions offer the stored list, the same one as the interests step.
+  const { options: sectors } = useVocabulary("industry");
+  const sectorList = sectorOptions(sectors);
+  const COMMON: Field[] = fieldSet ? resolveAll(fieldSet.common, sectorList) : CODE_COMMON;
   const BY_TYPE: Record<string, Field[]> = fieldSet
-    ? Object.fromEntries(Object.entries(fieldSet.byType).map(([k, v]) => [k, resolveAll(v)]))
+    ? Object.fromEntries(Object.entries(fieldSet.byType).map(([k, v]) => [k, resolveAll(v, sectorList)]))
     : CODE_BY_TYPE;
   const t = useTranslations("eventsCmp");
   const [role, setRole] = useState<AttendeeType | null>(null);
@@ -56,7 +59,6 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
   });
   const [consent, setConsent] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
-  const { options: sectors } = useVocabulary("industry");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
