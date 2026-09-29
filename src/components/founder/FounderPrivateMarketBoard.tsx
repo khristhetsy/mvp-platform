@@ -228,11 +228,15 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
 export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInvestorRow[] }>) {
   const t = useTranslations("founderCmp");
   const [selected, setSelected] = useState<FounderInvestorRow | null>(null);
-  const [tab, setTab] = useState<"outreach" | "all">("outreach");
-  // "In outreach" = anyone queued or already contacted; sorted most-recent-first
-  // by the loader. "All matches" is the full ranked directory.
+  // "All matches" (the full ranked directory) is the first and default view so a
+  // founder sees everyone they matched before anyone is contacted. "In outreach"
+  // = queued or already contacted; "Not contacted" = the rest.
+  const [tab, setTab] = useState<"all" | "none" | "outreach">("all");
   const inOutreach = rows.filter((r) => r.outreach !== "none");
-  const visible = tab === "outreach" ? inOutreach : rows;
+  const notContacted = rows.filter((r) => r.outreach === "none");
+  const visible = tab === "outreach" ? inOutreach : tab === "none" ? notContacted : rows;
+  const tabClass = (on: boolean) =>
+    `rounded-md px-2 py-0.5 text-[11px] font-semibold ${on ? "bg-[var(--navy)] text-white" : "text-slate-500 hover:bg-slate-100"}`;
 
   if (rows.length === 0) {
     return (
@@ -252,8 +256,9 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
           <div>
             <h2 className="text-[15px] font-semibold text-[var(--navy)]">{t("investors")}</h2>
             <div className="mt-1 flex items-center gap-1">
-              <button type="button" onClick={() => setTab("outreach")} className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${tab === "outreach" ? "bg-[var(--navy)] text-white" : "text-slate-500 hover:bg-slate-100"}`}>In outreach · {inOutreach.length}</button>
-              <button type="button" onClick={() => setTab("all")} className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${tab === "all" ? "bg-[var(--navy)] text-white" : "text-slate-500 hover:bg-slate-100"}`}>All matches · {rows.length}</button>
+              <button type="button" onClick={() => setTab("all")} className={tabClass(tab === "all")}>All matches · {rows.length}</button>
+              <button type="button" onClick={() => setTab("none")} className={tabClass(tab === "none")}>Not contacted · {notContacted.length}</button>
+              <button type="button" onClick={() => setTab("outreach")} className={tabClass(tab === "outreach")}>In outreach · {inOutreach.length}</button>
               {tab === "outreach" ? <span className="font-mono text-[10px] text-slate-400">· most recent first</span> : null}
             </div>
           </div>
@@ -273,8 +278,8 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
       <div>
         {visible.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <p className="text-[13px] font-semibold text-[var(--navy)]">No outreach yet</p>
-            <p className="mx-auto mt-1 max-w-md text-[12px] text-slate-500">Strong matches queue automatically once your CRR clears the threshold and automation is on. Switch to “All matches” to see your full ranked list.</p>
+            <p className="text-[13px] font-semibold text-[var(--navy)]">{tab === "none" ? "Every match has been contacted" : "No outreach yet"}</p>
+            <p className="mx-auto mt-1 max-w-md text-[12px] text-slate-500">{tab === "none" ? "Everyone on your ranked list is queued or already reached." : "Strong matches queue automatically once your CRR clears the threshold and automation is on. Switch to “All matches” to see your full ranked list."}</p>
           </div>
         ) : visible.map((r, i) => (
           <button

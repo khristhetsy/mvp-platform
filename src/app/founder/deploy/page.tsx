@@ -15,6 +15,7 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
+import { PublicProfileEditor } from "@/components/founder/PublicProfileEditor";
 import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
@@ -233,35 +234,36 @@ export default async function FounderDeployPage() {
             href="/founder/settings"
             className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
           >
-            Edit profile ↗
+            Full profile ↗
           </Link>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
-          <span className="text-xs font-medium text-slate-500">Live preview — exactly what investors see</span>
-          {publicHref && isPublished ? (
-            <a
-              href={publicHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-            >
-              Open live link ↗
-            </a>
-          ) : null}
-        </div>
-        <iframe
-          src="/founder/preview?embed=1"
-          title="Investor one-pager preview"
-          className="h-[640px] w-full border-0"
+      {company ? (
+        <PublicProfileEditor
+          companyId={company.id}
+          initial={{
+            company_name: company.company_name,
+            website: company.website ?? null,
+            country: company.country ?? null,
+            state: company.state ?? null,
+            business_description: company.business_description ?? null,
+            key_highlights: (company as unknown as Record<string, string | null>).key_highlights ?? null,
+            team_summary: company.team_summary ?? null,
+            management_team: (company as unknown as Record<string, string | null>).management_team ?? null,
+            use_of_funds: company.use_of_funds ?? null,
+            founder_goals: company.founder_goals ?? null,
+          }}
         />
-      </div>
-      <p className="text-xs text-slate-400">
-        Editing happens in one place — your profile settings — so this preview, your public page, and investor
-        matching always stay in sync.
-      </p>
+      ) : null}
+      {publicHref && isPublished ? (
+        <p className="text-xs text-slate-400">
+          Your live link:{" "}
+          <a href={publicHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-700">
+            open public page ↗
+          </a>
+        </p>
+      ) : null}
     </>
   );
 

@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 /**
- * Marketing-Hub-style manual investor outreach builder for Outreach → Manual.
- * Four tabs (Audience → Compose → Sequence → Review) with a Continue
- * progression; Review is gated until an audience is selected.
+ * Manual investor outreach workspace for Outreach → Manual, laid out in three
+ * panes: recipients (left), compose / sequence / review (middle) and a live
+ * preview of the exact email the previewed investor receives (right). Review is
+ * gated until at least one recipient is selected.
  *
  * Persistence goes through /api/founder/outreach/manual. "Start sequence" marks
  * the campaign queued — live email dispatch reuses the platform send path and is
@@ -20,7 +21,7 @@ export type OutreachAudienceContact = {
   detail?: string | null;
 };
 
-type Tab = 0 | 1 | 2 | 3;
+type Tab = 0 | 1 | 2;
 type SeqStep = { label: string; dayOffset: number };
 type RecipientStatus = {
   name: string | null;
@@ -48,8 +49,7 @@ function shortDate(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-const TABS = ["Create list", "Compose", "Sequence", "Review & send"];
-const CREATE_SUBSTEPS = ["1 Source", "2 Select", "3 Name & save"];
+const TABS = ["Compose", "Sequence", "Review and send"];
 
 const DEFAULT_SUBJECT = "{{first_name}}, a quick intro to {{company}}";
 const DEFAULT_BODY =
@@ -135,9 +135,10 @@ export function ManualOutreachBuilder({
   const [testing, setTesting] = useState(false);
   const [drafting, setDrafting] = useState(false);
 
-  // Create-list sub-flow (Source → Select → Name & save) + reusable saved lists.
-  const [createSub, setCreateSub] = useState<0 | 1 | 2>(0);
-  const [listSource, setListSource] = useState<"contacts" | "file">("contacts");
+  // Recipients pane: search, add / import panels, previewed investor + reusable saved lists.
+  const [search, setSearch] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [listName, setListName] = useState("");
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [savedLists, setSavedLists] = useState<{ id: string; name: string; contactIds: string[] }[]>([]);
@@ -365,7 +366,7 @@ export function ManualOutreachBuilder({
     markDirty();
   }
   function goto(next: Tab) {
-    if (next === 3 && selectedCount === 0) return;
+    if (next === 2 && selectedCount === 0) return;
     setTab(next);
   }
 
@@ -404,14 +405,38 @@ export function ManualOutreachBuilder({
     }
   }
 
+  const q = search.trim().toLowerCase();
+  const filteredContacts = q
+    ? contactList.filter((c) => `${c.name} ${c.detail ?? ""} ${c.email ?? ""}`.toLowerCase().includes(q))
+    : contactList;
+  const previewRecipient =
+    contactList.find((c) => c.id === previewId) ??
+    contactList.find((c) => selected.has(c.id)) ??
+    contactList[0] ??
+    null;
+  const previewFirstName = previewRecipient?.name ? previewRecipient.name.split(/\s+/)[0] : null;
+  const pStep = Math.min(previewStep, Math.max(0, activeSteps.length - 1));
+  const pStepData = activeSteps[pStep];
+  const allFilteredSelected = filteredContacts.length > 0 && filteredContacts.every((c) => selected.has(c.id));
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) filteredContacts.forEach((c) => next.delete(c.id));
+      else filteredContacts.forEach((c) => next.add(c.id));
+      return next;
+    });
+    markDirty();
+  }
+
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-950">Investor outreach</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Build a list, draft the emails, and let iCapOS run the follow-up sequence.
+            Pick investors on the left, write in the middle, and see exactly what each one receives on the right.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -431,524 +456,428 @@ export function ManualOutreachBuilder({
         </div>
       </div>
 
-      {/* AI kit */}
-      <div className="mt-4 rounded-lg border border-indigo-300 bg-indigo-50 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-slate-900"><i className="ti ti-sparkles" aria-hidden="true" /> AI outreach kit</span>
-          <button type="button" onClick={() => void draftEmails()} disabled={drafting} className="ml-auto rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
-            {drafting ? "Drafting…" : "Draft emails"}
-          </button>
-        </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          <span className="mr-0.5 text-xs text-slate-500">Tone:</span>
-          {TONE_PRESETS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTone(t)}
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${tone === t ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300"}`}
-            >
-              {t}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setTone("Custom")}
-            className={`rounded-full border border-dashed px-2.5 py-1 text-xs font-medium transition-colors ${tone === "Custom" ? "border-indigo-600 text-indigo-700" : "border-slate-300 text-slate-500 hover:border-indigo-300"}`}
-          >
-            Custom…
-          </button>
-          {tone === "Custom" && (
-            <input
-              value={customTone}
-              onChange={(e) => setCustomTone(e.target.value)}
-              placeholder="e.g. punchy, founder-to-founder"
-              className="w-52 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
-            />
-          )}
-        </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Claude drafts your subject, body, and the full follow-up sequence from your company profile in the chosen tone.
-          Everything stays editable.
-        </p>
-      </div>
+      {message ? (
+        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600" role="status">{message}</p>
+      ) : null}
 
-      {/* Tabs */}
-      <div className="mt-4 flex gap-1 border-b border-slate-200">
-        {TABS.map((label, i) => {
-          const locked = i === 3 && selectedCount === 0;
-          return (
-            <button
-              key={label}
-              type="button"
-              onClick={() => goto(i as Tab)}
-              disabled={locked}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
-                tab === i
-                  ? "border-indigo-600 text-indigo-600"
-                  : locked
-                    ? "cursor-not-allowed border-transparent text-slate-300"
-                    : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[230px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)_300px]">
+        {/* ---------- LEFT · Recipients ---------- */}
+        <div className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-900">Recipients</p>
+            <span className="text-xs text-slate-500">{selectedCount} of {contactList.length} selected</span>
+          </div>
+          <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+            Your own investors only. Platform matches are handled under Automated.
+          </p>
 
-      <div className="mt-4 min-h-[200px]">
-        {/* Create list — Source → Select → Name & save */}
-        {tab === 0 ? (
-          <div>
-            <div className="mb-3 flex gap-4 text-xs">
-              {CREATE_SUBSTEPS.map((label, si) => (
+          {savedLists.length > 0 ? (
+            <select
+              value={activeListId ?? ""}
+              onChange={(e) => {
+                const l = savedLists.find((x) => x.id === e.target.value);
+                if (l) loadSavedList(l);
+                else setActiveListId(null);
+              }}
+              className="mt-3 w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+              aria-label="Load a saved list"
+            >
+              <option value="">Load a saved list…</option>
+              {savedLists.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name} ({l.contactIds.length})
+                </option>
+              ))}
+            </select>
+          ) : null}
+
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, firm, email"
+            className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+          />
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => { setAddOpen((v) => !v); setImportOpen(false); }}
+              className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+            >
+              {addOpen ? "Close" : "+ Add investor"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setImportOpen((v) => !v); setAddOpen(false); }}
+              className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+            >
+              {importOpen ? "Close" : "Import CSV"}
+            </button>
+            {filteredContacts.length > 0 ? (
+              <button
+                type="button"
+                onClick={toggleAllFiltered}
+                className="ml-auto rounded-md px-2 py-1 text-[11px] font-medium text-indigo-600 hover:bg-indigo-50"
+              >
+                {allFilteredSelected ? "Clear" : "Select all"}
+              </button>
+            ) : null}
+          </div>
+
+          {addOpen ? (
+            <div className="mt-2 space-y-1.5 rounded-lg border border-slate-200 bg-white p-2">
+              <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Investor name" className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs" />
+              <input value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="Email (optional)" className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs" />
+              <button type="button" onClick={() => void addContact()} disabled={adding || !addName.trim()} className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
+                {adding ? "Adding…" : "Add"}
+              </button>
+            </div>
+          ) : null}
+
+          {importOpen ? (
+            <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
+              <textarea
+                value={csvText}
+                onChange={(e) => setCsvText(e.target.value)}
+                rows={4}
+                placeholder="investor_name,firm_name,email&#10;Ada Lovelace,Analytical Ventures,ada@av.com"
+                className="w-full rounded-md border border-slate-200 px-2 py-1.5 font-mono text-[11px]"
+              />
+              <button type="button" onClick={() => void importCsv()} disabled={importing || !csvText.trim()} className="mt-1.5 w-full rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
+                {importing ? "Importing…" : "Import CSV"}
+              </button>
+            </div>
+          ) : null}
+
+          <ul className="mt-2 max-h-[420px] flex-1 space-y-1 overflow-y-auto">
+            {filteredContacts.length === 0 ? (
+              <li className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-5 text-center text-xs text-slate-500">
+                {contactList.length === 0 ? "No investors yet. Add one or import a CSV." : "No one matches that search."}
+              </li>
+            ) : (
+              filteredContacts.map((c) => {
+                const on = selected.has(c.id);
+                const previewing = previewRecipient?.id === c.id;
+                return (
+                  <li
+                    key={c.id}
+                    className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${previewing ? "border-indigo-300 bg-indigo-50" : "border-slate-200 bg-white"}`}
+                  >
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={on}
+                      aria-label={`Select ${c.name}`}
+                      onClick={() => toggleContact(c.id)}
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${on ? "bg-indigo-600 text-[11px] text-white" : "border-[1.5px] border-slate-300"}`}
+                    >
+                      {on ? <i className="ti ti-check" aria-hidden="true" /> : null}
+                    </button>
+                    <button type="button" onClick={() => setPreviewId(c.id)} className="min-w-0 flex-1 text-left" title="Preview this investor's email">
+                      <span className="block truncate text-xs font-medium text-slate-900">{c.name}</span>
+                      <span className="block truncate text-[11px] text-slate-500">{c.detail ?? c.email ?? "No email on file"}</span>
+                    </button>
+                    {!c.email ? <span className="shrink-0 text-[10px] text-amber-600">No email</span> : null}
+                  </li>
+                );
+              })
+            )}
+          </ul>
+
+          <div className="mt-3 border-t border-slate-200 pt-2">
+            <div className="flex gap-1.5">
+              <input
+                value={listName}
+                onChange={(e) => setListName(e.target.value)}
+                placeholder="Name this list"
+                className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => void saveList()}
+                disabled={savingList || !listName.trim() || selectedCount === 0}
+                className="shrink-0 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+              >
+                {savingList ? "Saving…" : activeListId ? "Update" : "Save list"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ---------- MIDDLE · Compose / Sequence / Review ---------- */}
+        <div className="min-w-0 rounded-xl border border-slate-200 p-4">
+          {/* AI kit */}
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-slate-900"><i className="ti ti-sparkles" aria-hidden="true" /> AI outreach kit</span>
+              <button type="button" onClick={() => void draftEmails()} disabled={drafting} className="ml-auto rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50">
+                {drafting ? "Drafting…" : "Draft emails"}
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="mr-0.5 text-xs text-slate-500">Tone:</span>
+              {TONE_PRESETS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTone(t)}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${tone === t ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300"}`}
+                >
+                  {t}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setTone("Custom")}
+                className={`rounded-full border border-dashed px-2.5 py-1 text-xs font-medium transition-colors ${tone === "Custom" ? "border-indigo-600 text-indigo-700" : "border-slate-300 text-slate-500 hover:border-indigo-300"}`}
+              >
+                Custom…
+              </button>
+              {tone === "Custom" && (
+                <input
+                  value={customTone}
+                  onChange={(e) => setCustomTone(e.target.value)}
+                  placeholder="e.g. punchy, founder-to-founder"
+                  className="w-48 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="mt-3 flex gap-1 border-b border-slate-200">
+            {TABS.map((label, i) => {
+              const locked = i === 2 && selectedCount === 0;
+              return (
                 <button
                   key={label}
                   type="button"
-                  onClick={() => setCreateSub(si as 0 | 1 | 2)}
-                  className={createSub === si ? "font-medium text-indigo-600" : "text-slate-400 hover:text-slate-600"}
+                  onClick={() => goto(i as Tab)}
+                  disabled={locked}
+                  title={locked ? "Select at least one recipient first" : undefined}
+                  className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
+                    tab === i
+                      ? "border-indigo-600 text-indigo-600"
+                      : locked
+                        ? "cursor-not-allowed border-transparent text-slate-300"
+                        : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
                 >
-                  {label}
+                  {i + 1}. {label}
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            <div className="mb-4 flex gap-2 rounded-r-lg border border-l-[3px] border-slate-200 border-l-indigo-500 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
-              <span aria-hidden="true">ⓘ</span>
-              <span>
-                Manual outreach is for your own investors only. Platform-matched investors are handled automatically
-                under <b>Automated</b>.
-              </span>
-            </div>
-
-            {/* Sub-step 1 · Source */}
-            {createSub === 0 ? (
-              <div>
-                {savedLists.length > 0 ? (
-                  <div className="mb-4">
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Load a saved list</label>
-                    <select
-                      value={activeListId ?? ""}
-                      onChange={(e) => {
-                        const l = savedLists.find((x) => x.id === e.target.value);
-                        if (l) loadSavedList(l);
-                        else setActiveListId(null);
-                      }}
-                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                    >
-                      <option value="">— New list —</option>
-                      {savedLists.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name} ({l.contactIds.length})
-                        </option>
-                      ))}
-                    </select>
+          <div className="mt-4 min-h-[260px]">
+            {tab === 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Subject</label>
+                  <input
+                    value={subject}
+                    onChange={(e) => { setSubject(e.target.value); markDirty(); }}
+                    onFocus={() => setPreviewStep(0)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Body</label>
+                  <textarea
+                    value={emailBody}
+                    rows={9}
+                    onChange={(e) => { setEmailBody(e.target.value); markDirty(); }}
+                    onFocus={() => setPreviewStep(0)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  />
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {MERGE_FIELDS.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => { setEmailBody((b) => `${b}${f}`); markDirty(); }}
+                        className="rounded bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700 hover:bg-indigo-100"
+                      >
+                        {f}
+                      </button>
+                    ))}
                   </div>
-                ) : null}
-                <p className="mb-2 text-sm text-slate-700">Where should this list come from?</p>
-                <div className="flex flex-wrap gap-2">
-                  {(["contacts", "file"] as const).map((src) => (
-                    <button
-                      key={src}
-                      type="button"
-                      onClick={() => setListSource(src)}
-                      className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-                        listSource === src
-                          ? "border-indigo-600 bg-indigo-600 text-white"
-                          : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      {src === "contacts" ? "My contacts" : "File upload"}
-                    </button>
+                </div>
+              </div>
+            ) : null}
+
+            {tab === 1 ? (
+              <div>
+                <div className="flex items-center justify-between gap-4 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">Automatic follow-ups</p>
+                    <p className="text-xs text-slate-500">Click a step to preview it on the right.</p>
+                  </div>
+                  <Switch on={autoFollowUps} onClick={() => { setAutoFollowUps((v) => !v); markDirty(); }} label="Automatic follow-ups" />
+                </div>
+                <ul className="space-y-1">
+                  {activeSteps.map((s, i) => (
+                    <li key={s.label}>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewStep(i)}
+                        className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${i === pStep ? "border-indigo-300 bg-indigo-50" : "border-transparent hover:bg-slate-50"}`}
+                      >
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ${i === pStep ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>{i + 1}</span>
+                        <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{s.label}</span>
+                        <span className="shrink-0 text-xs text-slate-500">Day {s.dayOffset}</span>
+                      </button>
+                    </li>
                   ))}
+                </ul>
+                <div className="mt-2 flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">Stop when the investor replies</p>
+                    <p className="text-xs text-slate-500">No more auto-sends once they respond.</p>
+                  </div>
+                  <Switch on={stopOnReply} onClick={() => { setStopOnReply((v) => !v); markDirty(); }} label="Stop on reply" />
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  {listSource === "contacts"
-                    ? "Investors already in your CRM — people you've added or who became your investors."
-                    : "Import a CSV; rows are added to your contacts. Columns: investor_name, firm_name, email."}
-                </p>
               </div>
             ) : null}
 
-            {/* Sub-step 2 · Select */}
-            {createSub === 1 ? (
+            {tab === 2 ? (
               <div>
-                {listSource === "file" ? (
-                  <div className="mb-4">
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Paste CSV</label>
-                    <textarea
-                      value={csvText}
-                      onChange={(e) => setCsvText(e.target.value)}
-                      rows={4}
-                      placeholder="investor_name,firm_name,email&#10;Ada Lovelace,Analytical Ventures,ada@av.com"
-                      className="w-full rounded-md border border-slate-200 px-3 py-2 font-mono text-xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void importCsv()}
-                      disabled={importing || !csvText.trim()}
-                      className="mt-2 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-                    >
-                      {importing ? "Importing…" : "Import CSV"}
-                    </button>
+                <dl className="text-sm">
+                  <div className="flex justify-between border-b border-slate-100 py-2">
+                    <dt className="text-slate-500">Recipients</dt>
+                    <dd className="font-medium text-slate-800">{selectedCount} investors</dd>
                   </div>
-                ) : (
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Your investors <span className="text-slate-400">— tap to select</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setAddOpen((v) => !v)}
-                      className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      {addOpen ? "Close" : "+ Add investor"}
-                    </button>
+                  <div className="flex justify-between border-b border-slate-100 py-2">
+                    <dt className="text-slate-500">Sequence</dt>
+                    <dd className="font-medium text-slate-800">
+                      {activeSteps.length} step{activeSteps.length === 1 ? "" : "s"}
+                      {stopOnReply ? " · stops on reply" : ""}
+                    </dd>
                   </div>
-                )}
-
-                {listSource === "contacts" && addOpen ? (
-                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-                    <input
-                      value={addName}
-                      onChange={(e) => setAddName(e.target.value)}
-                      placeholder="Investor name"
-                      className="min-w-[120px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
-                    />
-                    <input
-                      value={addEmail}
-                      onChange={(e) => setAddEmail(e.target.value)}
-                      placeholder="Email (optional)"
-                      className="min-w-[140px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void addContact()}
-                      disabled={adding || !addName.trim()}
-                      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-                    >
-                      {adding ? "Adding…" : "Add"}
-                    </button>
+                  <div className="flex justify-between py-2">
+                    <dt className="text-slate-500">Schedule</dt>
+                    <dd className="font-medium text-slate-800">{activeSteps.map((s) => `Day ${s.dayOffset}`).join(" · ")}</dd>
                   </div>
-                ) : null}
-
-                {contactList.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-                    No investors yet. Add one above or import a CSV, then select who enters the sequence.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-slate-100">
-                    {contactList.map((c) => {
-                      const on = selected.has(c.id);
-                      return (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            onClick={() => toggleContact(c.id)}
-                            className="flex w-full items-center gap-3 py-2 text-left"
-                          >
-                            <span
-                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${on ? "bg-indigo-600 text-[11px] text-white" : "border-[1.5px] border-slate-300"}`}
-                            >
-                              {on ? <i className="ti ti-check" aria-hidden="true" /> : ""}
-                            </span>
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
-                              {c.name.slice(0, 2).toUpperCase()}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-medium text-slate-900">{c.name}</span>
-                              <span className="block truncate text-xs text-slate-500">
-                                {c.detail ?? c.email ?? "No email on file"}
-                              </span>
-                            </span>
-                            {!c.email ? <span className="text-[10px] text-amber-600">No email</span> : null}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <p className="mt-3 text-xs text-slate-500">
-                  <b className="text-slate-800">{selectedCount} selected</b> · they will enter the sequence.
-                </p>
-              </div>
-            ) : null}
-
-            {/* Sub-step 3 · Name & save */}
-            {createSub === 2 ? (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">List name</label>
-                <input
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  placeholder="e.g. Warm angels — Q3"
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                />
-                <div className="mt-3 flex justify-between border-t border-slate-100 py-2 text-sm">
-                  <span className="text-slate-500">Investors</span>
-                  <span className="font-medium text-slate-800">{selectedCount} selected</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 py-2 text-sm">
-                  <span className="text-slate-500">Source</span>
-                  <span className="font-medium text-slate-800">
-                    {listSource === "contacts" ? "My contacts" : "File upload"}
+                </dl>
+                <div className="mt-3 flex gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-500">
+                  <span aria-hidden="true">ⓘ</span>
+                  <span>
+                    Each email includes an unsubscribe link and honors the platform suppression list. This shares your Founder
+                    Preview and is not an offer or solicitation of securities.
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void saveList()}
-                  disabled={savingList || !listName.trim()}
-                  className="mt-3 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  {savingList ? "Saving…" : activeListId ? "Update list" : "Save list"}
-                </button>
-                <p className="mt-2 text-xs text-slate-400">
-                  Saved lists are reusable — load this list for a future campaign from the Source step.
-                </p>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* Compose */}
-        {tab === 1 ? (
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Subject</label>
-              <input
-                value={subject}
-                onChange={(e) => {
-                  setSubject(e.target.value);
-                  markDirty();
-                }}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Body</label>
-              <textarea
-                value={emailBody}
-                rows={6}
-                onChange={(e) => {
-                  setEmailBody(e.target.value);
-                  markDirty();
-                }}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              />
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {MERGE_FIELDS.map((f) => (
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
-                    key={f}
                     type="button"
-                    onClick={() => {
-                      setEmailBody((b) => `${b}${f}`);
-                      markDirty();
-                    }}
-                    className="rounded bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700 hover:bg-indigo-100"
+                    onClick={() => void persist("start")}
+                    disabled={saving || selectedCount === 0}
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
                   >
-                    {f}
+                    {saving ? "Starting…" : status === "queued" ? "Update sequence" : "Start sequence"}
                   </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void sendTest()}
+                    disabled={testing || !emailBody.trim()}
+                    className="rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {testing ? "Sending…" : "Send test to me"}
+                  </button>
+                </div>
 
-        {/* Sequence */}
-        {tab === 2 ? (
-          (() => {
-            const firstRecipient = contactList.find((c) => selected.has(c.id)) ?? contactList[0] ?? null;
-            const firstName = firstRecipient?.name ? firstRecipient.name.split(/\s+/)[0] : null;
-            const step = Math.min(previewStep, Math.max(0, activeSteps.length - 1));
-            const stepData = activeSteps[step];
-            const others = Math.max(0, selectedCount - 1);
-            return (
-              <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
-                {/* Left: steps + toggles */}
-                <div>
-                  <div className="flex items-center justify-between gap-4 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Automatic follow-ups</p>
-                      <p className="text-xs text-slate-500">Click a step to preview what it sends.</p>
+                {recipients.length > 0 ? (
+                  <div className="mt-6">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-slate-900">Recipient activity</h3>
+                      <span className="text-xs text-slate-400">{recipients.length} enrolled</span>
                     </div>
-                    <Switch on={autoFollowUps} onClick={() => { setAutoFollowUps((v) => !v); markDirty(); }} label="Automatic follow-ups" />
+                    <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                      {recipients.map((r) => {
+                        const stage = recipientStage(r);
+                        return (
+                          <li key={r.email} className="flex items-center gap-3 px-3 py-2.5">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
+                              {(r.name ?? r.email).slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm text-slate-800">{r.name ?? r.email}</span>
+                              {r.name ? <span className="block truncate text-xs text-slate-400">{r.email}</span> : null}
+                            </span>
+                            {stage.at ? <span className="shrink-0 text-xs text-slate-400">{shortDate(stage.at)}</span> : null}
+                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${stage.cls}`}>{stage.label}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
-                  <ul className="space-y-1">
-                    {activeSteps.map((s, i) => (
-                      <li key={s.label}>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewStep(i)}
-                          className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${i === step ? "border-indigo-300 bg-indigo-50" : "border-transparent hover:bg-slate-50"}`}
-                        >
-                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ${i === step ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>{i + 1}</span>
-                          <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{s.label}</span>
-                          <span className="shrink-0 text-xs text-slate-500">Day {s.dayOffset}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-2 flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Stop when the investor replies</p>
-                      <p className="text-xs text-slate-500">No more auto-sends once they respond.</p>
-                    </div>
-                    <Switch on={stopOnReply} onClick={() => { setStopOnReply((v) => !v); markDirty(); }} label="Stop on reply" />
-                  </div>
-                </div>
-
-                {/* Right: live preview of what this step sends */}
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
-                    <span className="text-xs font-medium text-slate-500">Preview · Step {step + 1}{stepData ? ` · sends Day ${stepData.dayOffset}` : ""}</span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">{tone === "Custom" ? (customTone.trim() || "Custom") : tone} tone</span>
-                  </div>
-                  <div className="px-4 py-3">
-                    <p className="text-[10px] uppercase tracking-wide text-slate-400">To</p>
-                    <p className="mb-2.5 text-[13px] text-slate-700">
-                      {firstRecipient ? (firstRecipient.name || firstRecipient.email || "Recipient") : "No recipient selected"}
-                      {firstRecipient?.detail ? <span className="text-slate-400"> · {firstRecipient.detail}</span> : null}
-                      {others > 0 ? <span className="text-slate-400"> (and {others} more)</span> : null}
-                    </p>
-                    {step === 0 ? (
-                      <>
-                        <p className="text-[10px] uppercase tracking-wide text-slate-400">Subject</p>
-                        <p className="mb-2.5 text-[13px] font-medium text-slate-900">{resolvePreview(subject, firstName)}</p>
-                        <div className="border-t border-slate-200 pt-2.5 text-[13px] leading-6 text-slate-700 whitespace-pre-wrap">{resolvePreview(emailBody, firstName)}</div>
-                      </>
-                    ) : (
-                      <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-[13px] text-slate-600">
-                        <p className="font-medium text-slate-800">{stepData?.label}</p>
-                        <p className="mt-1 text-slate-500">A short follow-up on the initial email above, sent on day {stepData?.dayOffset} if they haven&apos;t replied.</p>
-                      </div>
-                    )}
-                    <p className="mt-3 text-[10.5px] text-slate-400">Merge fields fill per recipient at send time — this is exactly what {firstName ?? "each investor"} receives.</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })()
-        ) : null}
-
-        {/* Review */}
-        {tab === 3 ? (
-          <div>
-            <dl className="text-sm">
-              <div className="flex justify-between border-b border-slate-100 py-2">
-                <dt className="text-slate-500">Recipients</dt>
-                <dd className="font-medium text-slate-800">{selectedCount} investors</dd>
-              </div>
-              <div className="flex justify-between border-b border-slate-100 py-2">
-                <dt className="text-slate-500">Sequence</dt>
-                <dd className="font-medium text-slate-800">
-                  {activeSteps.length} step{activeSteps.length === 1 ? "" : "s"}
-                  {stopOnReply ? " · stops on reply" : ""}
-                </dd>
-              </div>
-              <div className="flex justify-between py-2">
-                <dt className="text-slate-500">Schedule</dt>
-                <dd className="font-medium text-slate-800">
-                  {activeSteps.map((s) => `Day ${s.dayOffset}`).join(" · ")}
-                </dd>
-              </div>
-            </dl>
-            <div className="mt-3 flex gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-500">
-              <span aria-hidden="true">ⓘ</span>
-              <span>
-                Each email includes an unsubscribe link and honors the platform suppression list. This shares your Founder
-                Preview and is not an offer or solicitation of securities.
-              </span>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void persist("start")}
-                disabled={saving || selectedCount === 0}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-              >
-                {saving ? "Starting…" : status === "queued" ? "Update sequence" : "Start sequence"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void sendTest()}
-                disabled={testing || !emailBody.trim()}
-                className="rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                {testing ? "Sending…" : "Send test to me"}
-              </button>
-            </div>
-
-            {recipients.length > 0 ? (
-              <div className="mt-6">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-slate-900">Recipient activity</h3>
-                  <span className="text-xs text-slate-400">{recipients.length} enrolled</span>
-                </div>
-                <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
-                  {recipients.map((r) => {
-                    const stage = recipientStage(r);
-                    return (
-                      <li key={r.email} className="flex items-center gap-3 px-3 py-2.5">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
-                          {(r.name ?? r.email).slice(0, 2).toUpperCase()}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm text-slate-800">{r.name ?? r.email}</span>
-                          {r.name ? <span className="block truncate text-xs text-slate-400">{r.email}</span> : null}
-                        </span>
-                        {stage.at ? <span className="shrink-0 text-xs text-slate-400">{shortDate(stage.at)}</span> : null}
-                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${stage.cls}`}>
-                          {stage.label}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                ) : null}
               </div>
             ) : null}
           </div>
-        ) : null}
-      </div>
 
-      {/* Footer: Continue / Back progression + messages */}
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-        <button
-          type="button"
-          onClick={() => {
-            if (tab === 0 && createSub > 0) setCreateSub((s) => (s - 1) as 0 | 1 | 2);
-            else if (tab > 0) setTab((t) => (t - 1) as Tab);
-          }}
-          className={`rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 ${tab === 0 && createSub === 0 ? "invisible" : ""}`}
-        >
-          ← Back
-        </button>
-        <div className="ml-auto flex items-center gap-3">
-          {message ? <span className="text-xs text-slate-500">{message}</span> : null}
-          {tab === 0 && createSub >= 1 && selectedCount === 0 ? (
-            <span className="text-xs text-slate-400">Select at least one investor to continue</span>
-          ) : null}
-          {tab < 3 ? (
+          {/* Footer progression */}
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
             <button
               type="button"
-              onClick={() => {
-                if (tab === 0 && createSub < 2) setCreateSub((s) => (s + 1) as 0 | 1 | 2);
-                else goto((tab + 1) as Tab);
-              }}
-              disabled={tab === 0 && createSub >= 1 && selectedCount === 0}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              onClick={() => { if (tab > 0) setTab((t) => (t - 1) as Tab); }}
+              className={`rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 ${tab === 0 ? "invisible" : ""}`}
             >
-              {tab === 0
-                ? createSub === 0
-                  ? "Continue → Select"
-                  : createSub === 1
-                    ? "Continue → Name & save"
-                    : "Continue → Compose"
-                : tab === 1
-                  ? "Continue → Sequence"
-                  : "Continue → Review"}
+              ← Back
             </button>
-          ) : null}
+            {tab < 2 ? (
+              <div className="ml-auto flex items-center gap-3">
+                {tab === 1 && selectedCount === 0 ? (
+                  <span className="text-xs text-slate-400">Select at least one recipient to review</span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => goto((tab + 1) as Tab)}
+                  disabled={tab === 1 && selectedCount === 0}
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {tab === 0 ? "Continue → Sequence" : "Continue → Review"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* ---------- RIGHT · Live preview ---------- */}
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 lg:col-span-2 xl:sticky xl:top-16 xl:col-span-1 xl:self-start">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
+            <span className="text-xs font-medium text-slate-500">
+              Live preview · Step {pStep + 1}{pStepData ? ` · Day ${pStepData.dayOffset}` : ""}
+            </span>
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+              {tone === "Custom" ? (customTone.trim() || "Custom") : tone} tone
+            </span>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">To</p>
+            <p className="mb-2.5 text-[13px] text-slate-700">
+              {previewRecipient ? (previewRecipient.name || previewRecipient.email || "Recipient") : "No recipient yet"}
+              {previewRecipient?.detail ? <span className="text-slate-400"> · {previewRecipient.detail}</span> : null}
+            </p>
+            {pStep === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Subject</p>
+                <p className="mb-2.5 text-[13px] font-medium text-slate-900">{resolvePreview(subject, previewFirstName)}</p>
+                <div className="whitespace-pre-wrap border-t border-slate-100 pt-2.5 text-[13px] leading-6 text-slate-700">
+                  {resolvePreview(emailBody, previewFirstName)}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-[13px] text-slate-600">
+                <p className="font-medium text-slate-800">{pStepData?.label}</p>
+                <p className="mt-1 text-slate-500">
+                  A short follow-up on the first email, sent on day {pStepData?.dayOffset} if they haven&apos;t replied.
+                </p>
+              </div>
+            )}
+            <p className="mt-3 text-[10.5px] leading-snug text-slate-400">
+              Click any name on the left to preview their copy. Merge fields fill per recipient at send time.
+            </p>
+          </div>
         </div>
       </div>
     </section>

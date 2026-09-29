@@ -14,6 +14,7 @@ import {
 } from "@/lib/subscriptions/get-subscription";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { presentTierForPlan } from "@/lib/icfo-events/present-tiers";
 import { getMaterials, listInvitesForProfile, stageLink } from "@/lib/icfo-events/invites";
 import { INVITE_ROLES } from "@/lib/icfo-events/invite-rules";
@@ -43,6 +44,13 @@ export default async function PresentAtEventPage() {
     id: e.id,
     title: e.title,
     startsAt: e.startsAt,
+    slug: e.slug,
+    format: e.format,
+    summary: e.summary,
+    // The same banner image the public event page shows.
+    coverUrl: bannerPublicUrl(supabase, e.coverPath),
+    coverFocal: e.coverFocal,
+    coverOverlay: e.coverOverlay,
   }));
 
   // The founder's own applications (RLS returns only their rows).

@@ -5,7 +5,51 @@ import Link from "next/link";
 import { CheckCircle2, Lock, Sparkles, Video } from "lucide-react";
 import type { PresentTier } from "@/lib/icfo-events/present-tiers";
 
-export type PresentEventOption = { id: string; title: string; startsAt: string | null };
+export type PresentEventOption = {
+  id: string;
+  title: string;
+  startsAt: string | null;
+  slug?: string;
+  format?: string;
+  summary?: string | null;
+  /** Public URL of the event's banner image, when one is set. */
+  coverUrl?: string | null;
+  coverFocal?: string;
+  coverOverlay?: number;
+};
+
+const FORMAT_LABELS: Record<string, string> = {
+  showcase: "Showcase",
+  demo_day: "Demo day",
+  webinar: "Webinar",
+  hybrid: "Hybrid",
+};
+
+/** Event banner: the uploaded cover image with its overlay, or a navy block
+ *  when the event has no image yet. */
+function EventBanner({ e, tall }: { e: PresentEventOption; tall?: boolean }) {
+  return (
+    <div className={`relative overflow-hidden ${tall ? "h-40 sm:h-48" : "h-20"}`} style={{ background: "#0c2340" }}>
+      {e.coverUrl ? (
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ backgroundImage: `url(${e.coverUrl})`, backgroundSize: "cover", backgroundPosition: e.coverFocal ?? "center" }}
+        />
+      ) : null}
+      <div aria-hidden className="absolute inset-0" style={{ background: "#0c2340", opacity: e.coverUrl ? (e.coverOverlay ?? 40) / 100 : 1 }} />
+      {tall ? (
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <p className="text-xl font-semibold leading-tight text-white sm:text-2xl">{e.title}</p>
+          <p className="mt-1 text-xs text-white/80">
+            {fmtDate(e.startsAt)}
+            {e.format ? ` · ${FORMAT_LABELS[e.format] ?? e.format}` : ""}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 export type ExistingApplication = { eventId: string; status: string; kind: string; topic: string };
 
 function fmtDate(iso: string | null): string {
@@ -97,6 +141,7 @@ export function PresentAtEventClient({
   }
 
   const appliedEventIds = new Set(existing.map((e) => e.eventId));
+  const selectedEvent = events.find((e) => e.id === eventId) ?? null;
 
   async function submit() {
     setError(null);
@@ -142,23 +187,64 @@ export function PresentAtEventClient({
           </span>
         </div>
 
-        <label className="block text-sm font-medium text-[var(--text-primary)]">Event</label>
-        <select
-          value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
-          className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm text-[var(--text-primary)]"
-        >
-          <option value="">Select an event…</option>
-          {events.map((e) => (
-            <option key={e.id} value={e.id} disabled={appliedEventIds.has(e.id)}>
-              {e.title} · {fmtDate(e.startsAt)}
-              {appliedEventIds.has(e.id) ? " (applied)" : ""}
-            </option>
-          ))}
-        </select>
-        {events.length === 0 && (
+        <p className="block text-sm font-medium text-[var(--text-primary)]">Choose an event</p>
+        {events.length === 0 ? (
           <p className="mt-1.5 text-xs text-[var(--text-muted)]">No events are open for applications right now.</p>
+        ) : (
+          <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="Event">
+            {events.map((e) => {
+              const applied = appliedEventIds.has(e.id);
+              const on = eventId === e.id;
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  disabled={applied}
+                  onClick={() => setEventId(e.id)}
+                  className={`overflow-hidden rounded-xl border text-left transition ${
+                    on
+                      ? "border-[var(--brand-indigo,#2E78F5)] ring-2 ring-[var(--brand-indigo,#2E78F5)]/30"
+                      : "border-[var(--border-subtle)] hover:border-slate-300"
+                  } ${applied ? "cursor-not-allowed opacity-60" : ""}`}
+                >
+                  <EventBanner e={e} />
+                  <div className="px-3 py-2">
+                    <p className="line-clamp-2 text-[13px] font-semibold text-[var(--text-primary)]">{e.title}</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                      {fmtDate(e.startsAt)}
+                      {e.format ? ` · ${FORMAT_LABELS[e.format] ?? e.format}` : ""}
+                      {applied ? " · Applied" : ""}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
+
+        {selectedEvent ? (
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--border-subtle)]">
+            <EventBanner e={selectedEvent} tall />
+            {selectedEvent.summary || selectedEvent.slug ? (
+              <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+                {selectedEvent.summary ? (
+                  <p className="min-w-0 flex-1 text-xs leading-relaxed text-[var(--text-muted)] line-clamp-3">{selectedEvent.summary}</p>
+                ) : <span />}
+                {selectedEvent.slug ? (
+                  <Link
+                    href={`/events/${selectedEvent.slug}`}
+                    target="_blank"
+                    className="shrink-0 text-xs font-semibold text-[var(--brand-indigo,#2E78F5)] hover:underline"
+                  >
+                    View event page ↗
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">Talk title</label>
         <input

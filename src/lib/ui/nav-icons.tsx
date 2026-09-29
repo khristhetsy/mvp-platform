@@ -120,6 +120,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/investors/outreach": MessageSquare,
   "/founder/investors/matches": Sparkles,
   "/founder/matches": Sparkles,
+  "/founder/contacts": Users,
   "/founder/matching": GitCompare,
   "/founder/capital-raise": Rocket,
   "/founder/learning": GraduationCap,

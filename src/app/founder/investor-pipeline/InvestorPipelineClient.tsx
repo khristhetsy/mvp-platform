@@ -24,6 +24,26 @@ const PIPELINE_STAGES: { id: PipelineStage; label: string; color: string }[] = [
   { id: "passed",     label: "Passed",     color: "#A32D2D" },
 ];
 
+/** Small donut used by the pipeline stat cards: the number sits in the middle,
+ *  the arc is `fraction` (0–1) of the circle. */
+function StatRing({ value, fraction, color, label }: { value: number; fraction: number; color: string; label: string }) {
+  const r = 17;
+  const c = 2 * Math.PI * r;
+  const f = Math.max(0, Math.min(1, fraction));
+  return (
+    <svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label={`${label}: ${value}`} className="shrink-0">
+      <circle cx="22" cy="22" r={r} fill="none" stroke="#E2E8F0" strokeWidth="5" />
+      {f > 0 ? (
+        <circle
+          cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={`${(f * c).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 22 22)"
+        />
+      ) : null}
+      <text x="22" y="26.5" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text-primary)">{value}</text>
+    </svg>
+  );
+}
+
 interface PipelineInvestor {
   id: string;
   founder_id: string;
@@ -227,7 +247,9 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
     interested: investors.filter((i) => i.interested).length,
     meetings: investors.filter((i) => i.meeting_requested !== "none").length,
     closed: investors.filter((i) => i.outreach_status === "closed").length,
+    pastNew: investors.filter((i) => i.pipeline_stage !== "new").length,
   };
+  const pctOfTotal = (n: number) => `${stats.total ? Math.round((n / stats.total) * 100) : 0}% of total`;
 
   // ── Bulk actions ──────────────────────────────────────────────────────────────
   const pickedIds = () => [...picked];
@@ -432,19 +454,27 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   return (
     <div className="space-y-5">
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Stats — compact cards with a ring. Interested / Meetings / Closed show
+          their share of all investors; Total shows how many have moved past New. */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {(
           [
-            { label: "Total Investors", value: stats.total, warn: false },
-            { label: "Interested", value: stats.interested, warn: false },
-            { label: "Meetings", value: stats.meetings, warn: false },
-            { label: "Closed", value: stats.closed, warn: false },
-          ] as { label: string; value: number; warn: boolean }[]
-        ).map(({ label, value, warn }) => (
-          <div key={label} className="rounded-xl border bg-white p-4" style={{ borderColor: warn ? "#fca5a5" : "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{label}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums" style={{ color: warn ? "#dc2626" : "var(--text-primary)" }}>{value}</p>
+            { label: "Total investors", value: stats.total, part: stats.pastNew, note: `${stats.pastNew} past New`, color: "#378ADD" },
+            { label: "Interested", value: stats.interested, part: stats.interested, note: pctOfTotal(stats.interested), color: "#1D9E75" },
+            { label: "Meetings", value: stats.meetings, part: stats.meetings, note: pctOfTotal(stats.meetings), color: "#7F77DD" },
+            { label: "Closed", value: stats.closed, part: stats.closed, note: pctOfTotal(stats.closed), color: "#BA7517" },
+          ] as { label: string; value: number; part: number; note: string; color: string }[]
+        ).map(({ label, value, part, note, color }) => (
+          <div
+            key={label}
+            className="flex items-center gap-3 rounded-xl border bg-white px-3 py-2.5"
+            style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}
+          >
+            <StatRing value={value} fraction={stats.total ? part / stats.total : 0} color={color} label={label} />
+            <div className="min-w-0">
+              <p className="truncate text-[12.5px] font-semibold" style={{ color: "var(--text-primary)" }}>{label}</p>
+              <p className="truncate text-[11px]" style={{ color: "var(--text-muted)" }}>{note}</p>
+            </div>
           </div>
         ))}
       </div>

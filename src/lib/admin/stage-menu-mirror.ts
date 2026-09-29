@@ -78,6 +78,8 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "Investor matches", href: "/founder/matches", partialCondition: "crrQualified" },
     { label: "Matching Center", href: "/founder/matching", partialCondition: "crrQualified" },
     // Sends into the iCapOS investor data from iCapOS infrastructure — hard gate.
+    // The founder's own contacts (imported, added, introduced) — theirs outright.
+    { label: "My contacts", href: "/founder/contacts" },
     { label: "Automated outreach", href: "/founder/deploy", condition: "crrQualified" },
     { label: "Investor CRM", href: "/founder/investor-pipeline", condition: "hasInvestorInterest" },
     { label: "Present at event", href: "/founder/events/present" },
