@@ -4,6 +4,7 @@ import { isUnsubscribed } from "./contacts";
 import { emitNotification } from "./notifications/emit";
 import { listAdminIds } from "./notifications/store";
 import type { MarketingCampaign } from "./types";
+import { needsEmailReview } from "./recipient";
 
 export async function getCampaigns(): Promise<MarketingCampaign[]> {
   const db = await marketingDb();
@@ -203,6 +204,7 @@ export async function sendCampaign(campaignId: string): Promise<{
   let sent = 0, skipped = 0, failed = 0;
 
   for (const contact of contacts) {
+    if (needsEmailReview(contact.tags)) { skipped++; continue; }
     const unsub = await isUnsubscribed(contact.email);
     if (unsub) { skipped++; continue; }
 
