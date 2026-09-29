@@ -4,17 +4,17 @@ import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
 import { rankMatches } from "@/lib/icfo-events/registration-matches";
 import { loadMatchPool } from "@/lib/icfo-events/registration-matches-server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-const LABELS = EVENT_SECTORS.map((s) => s.label) as [string, ...string[]];
+// Sector names come from the stored industry list, which staff can extend, so
+// any short name is accepted; the query below only matches names registrants hold.
 const bodySchema = z.object({
   role: z.enum(["founder", "investor"]),
-  sectors: z.array(z.enum(LABELS)).max(14),
+  sectors: z.array(z.string().trim().min(1).max(80)).max(64),
   email: z.string().max(200).optional(),
 });
 
