@@ -13,6 +13,7 @@ import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL,
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../../../_shared/RecordPanels";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
+import { MatchBulkActions } from "./MatchBulkActions";
 
 type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
 type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
@@ -37,6 +38,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
   const [mcols, setMcols] = useState<MatchColKey[]>(MATCH_DEFAULT);
   const [colsOpen, setColsOpen] = useState(false);
   const [contact, setContact] = useState<{ contactId: string; matchId: string } | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   useEffect(() => {
     let saved: MatchColKey[] | null = null;
     try { const v = JSON.parse(window.localStorage.getItem(MATCH_COLS_KEY) ?? "null"); if (Array.isArray(v)) saved = v.filter((k): k is MatchColKey => MATCH_COLS.some((c) => c.key === k)); } catch { /* ignore */ }
@@ -191,8 +193,15 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                   ) : null}
                 </div>
               </div>
+              <div className="relative z-10 mb-2">
+                <MatchBulkActions matches={data.matches} contacts={data.contacts} project={p} entrepreneur={data.entrepreneur} staff={data.staff} selected={picked} setSelected={setPicked} onChange={load} />
+              </div>
               <div className="overflow-x-auto">
-              <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="py-1.5 pr-2 font-medium">Name</th>{mcols.map((k) => <th key={k} className="py-1.5 pr-2 font-medium">{MATCH_COLS.find((c) => c.key === k)?.label}</th>)}<th className="py-1.5 font-medium"></th></tr></thead>
+              <table className="w-full text-[12.5px]"><thead><tr className="text-left text-[11px] text-slate-500"><th className="w-8 py-1.5 pl-1 pr-2">{(() => {
+                const n = data.matches.filter((m) => picked.has(m.id)).length;
+                const all = data.matches.length > 0 && n === data.matches.length;
+                return <input type="checkbox" checked={all} disabled={!data.matches.length} ref={(el) => { if (el) el.indeterminate = n > 0 && !all; }} onChange={(e) => setPicked(e.target.checked ? new Set(data.matches.map((m) => m.id)) : new Set())} aria-label={all ? "Unselect all" : "Select all"} title={all ? "Unselect all" : "Select all"} />;
+              })()}</th><th className="py-1.5 pr-2 font-medium">Name</th>{mcols.map((k) => <th key={k} className="py-1.5 pr-2 font-medium">{MATCH_COLS.find((c) => c.key === k)?.label}</th>)}<th className="py-1.5 font-medium"></th></tr></thead>
                 <tbody className="divide-y divide-slate-100">{data.matches.map((m) => {
                   const c = data.contacts[m.investor_contact_id];
                   const nx = open.find((a) => a.match_id === m.id);
@@ -215,13 +224,14 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                     }
                   };
                   return (
-                    <tr key={m.id} className="hover:bg-slate-50">
+                    <tr key={m.id} className={picked.has(m.id) ? "bg-indigo-50/40" : "hover:bg-slate-50"}>
+                      <td className="py-2 pl-1 pr-2"><input type="checkbox" checked={picked.has(m.id)} onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Select ${m.investor_name ?? m.investor_firm ?? "investor"}`} /></td>
                       <td className="whitespace-nowrap py-2 pr-2"><button type="button" onClick={() => setContact({ contactId: m.investor_contact_id, matchId: m.id })} className="text-left font-medium text-slate-900 hover:text-indigo-700 hover:underline">{m.investor_name ?? m.investor_firm ?? "—"}</button></td>
                       {mcols.map((k) => <td key={k} className="whitespace-nowrap py-2 pr-2 text-slate-600">{cellOf(k)}</td>)}
                       <td className="py-2 text-right"><button type="button" disabled={busy} onClick={() => removeMatch(m)} aria-label={`Remove ${m.investor_name ?? "investor"}`} className="text-slate-400 hover:text-rose-600">✕</button></td>
                     </tr>
                   ); })}
-                  <tr><td colSpan={mcols.length + 2} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
+                  <tr><td colSpan={mcols.length + 3} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
                 </tbody></table>
               </div>
               {contact ? <InvestorContactDialog contactId={contact.contactId} matchId={contact.matchId} onClose={() => setContact(null)} /> : null}
