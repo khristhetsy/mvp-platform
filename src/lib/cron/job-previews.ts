@@ -6,6 +6,7 @@ import "server-only";
  * sent. Jobs not listed here have no preview.
  */
 import { planJourneyNudges } from "@/lib/notifications/founder-nudges";
+import { runFounderMatchDigest } from "@/lib/matching/match-digest";
 
 export type PreviewItem = {
   recipientName: string | null;
@@ -32,6 +33,22 @@ export const JOB_PREVIEWS: Record<string, { label: string; note: string; load: (
         channels: p.mail ? (["email", "in_app"] as const).slice() : (["in_app"] as const).slice(),
         message: p.notification.message,
         html: p.mail?.html ?? null,
+      })),
+  },
+  "/api/cron/founder-match-digest": {
+    label: "Weekly match email",
+    note: "Paying founders with new matches since their last email. Founders with nothing new, or with email turned off, are skipped and not listed.",
+    load: async () =>
+      ((await runFounderMatchDigest({ dryRun: true })).preview ?? []).map((p) => ({
+        recipientName: p.recipientName,
+        toEmail: p.to,
+        companyName: p.companyName,
+        subject: p.subject,
+        // Email only: sendTransactionalEmail falls back to the bell only when no
+        // email provider is configured.
+        channels: (["email"] as const).slice(),
+        message: p.text,
+        html: p.html,
       })),
   },
 };

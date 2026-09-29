@@ -30,7 +30,16 @@ export type MatchDigestResult = {
   skippedPrefs: number;
   failed: number;
   dryRun: boolean;
-  preview?: Array<{ companyId: string; to: string; subject: string }>;
+  preview?: Array<{
+    companyId: string;
+    to: string;
+    subject: string;
+    /** For the Next run tab on Scheduled jobs. */
+    recipientName: string | null;
+    companyName: string | null;
+    text: string;
+    html: string;
+  }>;
 };
 
 export async function runFounderMatchDigest(opts: { dryRun?: boolean } = {}): Promise<MatchDigestResult> {
@@ -127,7 +136,15 @@ export async function runFounderMatchDigest(opts: { dryRun?: boolean } = {}): Pr
         });
 
         if (dryRun) {
-          result.preview!.push({ companyId: company.id, to: email, subject: rendered.subject });
+          result.preview!.push({
+            companyId: company.id,
+            to: email,
+            subject: rendered.subject,
+            recipientName: fullName || null,
+            companyName: company.company_name ?? null,
+            text: rendered.text,
+            html: rendered.html,
+          });
           result.sent += 1;
           continue;
         }
