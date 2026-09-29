@@ -3,6 +3,8 @@
  *   GET ?q=<text>&project=<id> → { investors: [{ id, name, firm, dataSource, sectors, types, alsoOn: [project titles], onThisProject, founderOutreach }] }
  * `sectors` / `types` come from investor_match_index (the same values Proposed matches shows);
  * contacts not in the index are projected from their own row, at most one page of 50.
+ *   GET ?ids=<id,id,…>&project=<id> → same shape for those contacts (at most 100): the matching
+ * queue's "Search all investors" lists through the Contacts search and tops its rows up here.
  * `founderOutreach` is the furthest stage this investor reached with the same founder on another
  * of the founder's projects (the matching queue's Outreach column), or null.
  */
@@ -18,11 +20,17 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!(await irStaff())) return forbidden();
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
   const projectId = req.nextUrl.searchParams.get("project");
-  if (q.length < 2) return NextResponse.json({ investors: [] });
+  const idList = (req.nextUrl.searchParams.get("ids") ?? "").split(",").map((x) => x.trim()).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 100);
+  if (!idList.length && q.length < 2) return NextResponse.json({ investors: [] });
   try {
-    const like = `%${q.replace(/[%_,]/g, " ")}%`;
-    const { data, error } = await db().from("crm_contacts").select("id, name, company, inv_source")
-      .eq("contact_type", "investor").or(`name.ilike.${like},company.ilike.${like},email.ilike.${like}`).order("name").limit(50);
+    let data: unknown[] | null; let error: { message: string } | null;
+    if (idList.length) {
+      ({ data, error } = await db().from("crm_contacts").select("id, name, company, inv_source").in("id", idList));
+    } else {
+      const like = `%${q.replace(/[%_,]/g, " ")}%`;
+      ({ data, error } = await db().from("crm_contacts").select("id, name, company, inv_source")
+        .eq("contact_type", "investor").or(`name.ilike.${like},company.ilike.${like},email.ilike.${like}`).order("name").limit(50));
+    }
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as Array<{ id: string; name: string | null; company: string | null; inv_source: string | null }>;
     const ids = rows.map((r) => r.id);
