@@ -61,7 +61,7 @@ export async function rescoreCompanyReadiness(
     total_score: cols.total_score,
     factor_scores: result.factorScores,
     scored_by: result.generatedBy,
-    document_count: documentSummaries.length,
+    document_count: result.documentsUsed ?? documentSummaries.length,
     outreach_unlocked: cols.outreach_unlocked,
     score_angel: cols.score_angel,
     score_seed_institutional: cols.score_seed_institutional,

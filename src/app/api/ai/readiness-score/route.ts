@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       total_score: cols.total_score,
       factor_scores: result.factorScores,
       scored_by: result.generatedBy,
-      document_count: documentSummaries.length,
+      document_count: result.documentsUsed ?? documentSummaries.length,
       outreach_unlocked: outreachUnlocked,
       ...profileScores,
     } as never)
