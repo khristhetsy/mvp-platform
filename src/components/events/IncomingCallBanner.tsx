@@ -27,7 +27,7 @@ export function IncomingCallBanner() {
         <p className="mt-3.5 text-lg font-medium" style={{ color: "#0c2340" }}>{incomingCall.fromName} is calling</p>
         <p className="mt-1 text-sm" style={{ color: "#5b6470" }}>They&rsquo;d like to connect over Google Meet.</p>
         <div className="mt-4 flex flex-col gap-2">
-          <button
+          <button type="button"
             onClick={() => {
               window.open(incomingCall.meetUrl, "_blank", "noopener");
               dismissCall();
@@ -37,7 +37,7 @@ export function IncomingCallBanner() {
           >
             Join call ↗
           </button>
-          <button
+          <button type="button"
             onClick={dismissCall}
             className="w-full rounded-lg border px-4 py-2 text-sm"
             style={{ borderColor: "#d8dce1", color: "#5b6470" }}

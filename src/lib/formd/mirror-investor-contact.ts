@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { FORM_D_TYPES } from "@/lib/sales/backfill-investor-type";
 
 // When an investor firm is promoted into the distribution list (prospect_investors),
 // also mirror it into crm_contacts as an Investor so it appears on the Sales Hub
@@ -29,6 +30,9 @@ export async function mirrorInvestorToContacts(firmId: string, actorId: string):
       website: firm.domain ?? null,
       lead_status: "new",
       tags: ["SEC Form D", "Investor"],
+      // Durable Investor Type: SEC Form D investors are Venture Capital + Fund Manager.
+      // Stored where the Contacts grid groups/filters (raw.__profile.investorTypes).
+      raw: { __profile: { investorTypes: [...FORM_D_TYPES] } },
       overrides: {
         lead_source: "SEC Form D",
         membership: "Investor",

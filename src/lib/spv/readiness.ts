@@ -143,7 +143,7 @@ export type AdminSpvDashboardMetrics = {
 export function buildAdminSpvDashboardMetrics(
   opportunities: SpvOpportunityRecord[],
   participationsBySpv: Record<string, SpvParticipationRecord[]>,
-  requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>,
+  _requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>,
 ): AdminSpvDashboardMetrics {
   let totalIndicativeInterest = 0;
   let investorsDocumentReady = 0;

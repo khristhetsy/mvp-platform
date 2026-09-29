@@ -59,7 +59,7 @@ export function ActivityLog({ externalId }: { externalId: string }) {
     <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Activity</h2>
-        <button onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        <button type="button" onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">
           <Plus className="h-3.5 w-3.5" /> Log activity
         </button>
       </div>
@@ -78,8 +78,8 @@ export function ActivityLog({ externalId }: { externalId: string }) {
           </div>
           <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={2} placeholder="What happened? e.g. Left voicemail; sent deck; agreed to meet Thursday." className="mt-2 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none" />
           <div className="mt-2 flex justify-end gap-2">
-            <button onClick={() => setOpen(false)} className="rounded-lg px-2.5 py-1.5 text-sm text-slate-500 hover:bg-slate-100">Cancel</button>
-            <button onClick={save} disabled={busy || !summary.trim()} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-2.5 py-1.5 text-sm text-slate-500 hover:bg-slate-100">Cancel</button>
+            <button type="button" onClick={save} disabled={busy || !summary.trim()} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save
             </button>
           </div>

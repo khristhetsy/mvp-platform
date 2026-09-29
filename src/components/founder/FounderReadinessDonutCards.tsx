@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ScoreRing } from "@/components/ui/ScoreRing";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { DocumentChecklistItem, ProfileCompletionItem } from "@/lib/data/founder-readiness";
@@ -21,52 +22,10 @@ interface Props {
   reviewFeedback: string | null;
 }
 
-function DonutChart({
-  pct,
-  color,
-  size = 48,
-}: {
-  pct: number;
-  color: string;
-  size?: number;
-}) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size * 0.375;
-  const sw = size * 0.125;
-  const safeP = Math.max(0.01, Math.min(0.999, pct));
-  const a1 = -Math.PI / 2;
-  const a2 = safeP * 2 * Math.PI - Math.PI / 2;
-  const x1 = (cx + r * Math.cos(a1)).toFixed(2);
-  const y1 = (cy + r * Math.sin(a1)).toFixed(2);
-  const x2 = (cx + r * Math.cos(a2)).toFixed(2);
-  const y2 = (cy + r * Math.sin(a2)).toFixed(2);
-  const large = safeP > 0.5 ? 1 : 0;
-  const d = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      aria-hidden
-    >
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="none"
-        stroke="#EEEDFE"
-        strokeWidth={sw}
-      />
-      <path
-        d={d}
-        fill="none"
-        stroke={color}
-        strokeWidth={sw}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+/** The readiness donut is the shared ScoreRing with the number suppressed —
+ *  these cards print their own figure beside it. */
+function DonutChart({ pct, color, size = 48 }: { pct: number; color: string; size?: number }) {
+  return <ScoreRing score={pct * 100} size={size} color={color} label="" title={`${Math.round(pct * 100)}%`} />;
 }
 
 function StatusBadge({
@@ -182,7 +141,7 @@ export function FounderReadinessDonutCards({
     switch (key) {
       case "score":
         return {
-          title: "Completion",
+          title: "Preparation complete",
           sub: readinessDetail,
           stats: [
             { v: `${readinessScore}%`, l: "Complete" },
@@ -217,7 +176,7 @@ export function FounderReadinessDonutCards({
                 : "#A32D2D",
           })),
           meaning:
-            `Completion of ${readinessScore}% means ${readinessScore >= 80 ? "your profile is above the institutional benchmark — continue strengthening your data room" : `your core materials are present but key verification documents are missing. Institutional investors typically require 80%+ before taking a first meeting`}.`,
+            `Preparation complete of ${readinessScore}% means ${readinessScore >= 80 ? "your profile is above the institutional benchmark — continue strengthening your data room" : `your core materials are present but key verification documents are missing. Institutional investors typically require 80%+ before taking a first meeting`}.`,
           advice: scoreAdvice(),
           href: "/founder/readiness",
         };
@@ -357,7 +316,7 @@ export function FounderReadinessDonutCards({
   }[] = [
     {
       key: "score",
-      label: "Completion",
+      label: "Preparation complete",
       value: `${readinessScore}%`,
       detail: readinessDetail,
       pct: readinessScore / 100,
@@ -373,29 +332,15 @@ export function FounderReadinessDonutCards({
       color: "#7F77DD",
       href: "/founder/settings",
     },
-    {
-      key: "docs",
-      label: "Documents uploaded",
-      value: `${uploadedCount}/${checklistTotal}`,
-      detail: `${missingCount} key ${missingCount === 1 ? "document" : "documents"} missing`,
-      pct: checklistTotal > 0 ? uploadedCount / checklistTotal : 0,
-      color: "#2E78F5",
-      href: "/founder/readiness/documents",
-    },
-    {
-      key: "diligence",
-      label: "Diligence review",
-      value: reviewStatusFormatted,
-      detail: isPublished ? "Published to marketplace" : "Pending review",
-      pct: isPublished ? 0.6 : 0.3,
-      color: "#854F0B",
-      href: "/founder/readiness/diligence",
-    },
+    // Documents uploaded and Diligence review are deliberately absent: both
+    // feed the Capital Readiness Rating above, and scoring them again here is
+    // the same double-count the dashboard just lost. Their drawers still exist
+    // and open from the rating panel's own figures.
   ];
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {cards.map((card) => (
           <button
             key={card.key}

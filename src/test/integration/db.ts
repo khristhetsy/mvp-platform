@@ -41,9 +41,11 @@ export async function isRlsEnabled(table: string): Promise<boolean> {
 }
 
 /** True if a unique constraint or unique index covers exactly the given columns. */
+// attname is type `name`; node-pg returns name[] as a raw "{a,b}" string, so
+// cast to text to get a parsed array back.
 export async function hasUniqueOn(table: string, columns: string[]): Promise<boolean> {
   const { rows } = await getPool().query<{ cols: string[] }>(
-    `select array_agg(a.attname order by a.attname) as cols
+    `select array_agg(a.attname::text order by a.attname) as cols
        from pg_constraint con
        join pg_class c on c.oid = con.conrelid
        join pg_namespace n on n.oid = c.relnamespace

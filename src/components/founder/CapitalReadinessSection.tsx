@@ -85,20 +85,6 @@ function DonutChart({
 // ---------------------------------------------------------------------------
 // Priority badge
 // ---------------------------------------------------------------------------
-function PriBadge({ level }: { level: "critical" | "high" | "medium" | "low" }) {
-  const cfg = {
-    critical: "bg-[#FCEBEB] text-[#A32D2D]",
-    high: "bg-[#FAEEDA] text-[#854F0B]",
-    medium: "bg-[#EEEDFE] text-[#1A6CE4]",
-    low: "bg-slate-100 text-slate-600",
-  };
-  return (
-    <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold capitalize ${cfg[level]}`}>
-      {level}
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Stat box
 // ---------------------------------------------------------------------------
@@ -396,7 +382,7 @@ export function CapitalReadinessSection({
           ? `${savedCount} investor${savedCount === 1 ? " has" : "s have"} saved your deal but haven't expressed interest. These are warm prospects — send a direct update with your latest metrics to nudge them toward active interest.`
           : `Make sure your listing includes a strong company summary and clear funding ask. Investors save deals when the profile is compelling enough to return to later.`,
         totalActivity > 0
-          ? `Your total of ${totalActivity} interactions is a signal of market interest. Convert this momentum by closing your document gaps — investors who are already watching you will upgrade to interest when your completion crosses 80%.`
+          ? `Your total of ${totalActivity} interactions is a signal of market interest. Convert this momentum by closing your document gaps — investors who are already watching you will upgrade to interest when your Preparation completeness crosses 80%.`
           : `Upload your pitch deck and financial model first. Investors rarely interact with listings that have an empty data room, even if the summary is strong.`,
       ],
     },

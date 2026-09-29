@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import {
   cronMisconfiguredResponse,
   cronUnauthorizedResponse,
@@ -7,14 +8,13 @@ import {
 } from "@/lib/notifications/cron/auth";
 import { runCronOrchestrationPass } from "@/lib/notifications/orchestration/run-cron-pass";
 import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
-import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { refreshPartnerScoreSnapshots } from "@/lib/investor-rating/snapshot";
-import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges";
-import { runStageGateReminderPass } from "@/lib/notifications/stage-gate-reminders";
 import { digestStalledFoundersForStaff } from "@/lib/notifications/staff-journey-digest";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
-export const maxDuration = 60;
+// Was 60, and every cron run since 2026-06-27 hit it and was killed (averaged
+// 28s when runs last completed). 300 matches the other cron routes.
+export const maxDuration = 300;
 
 /** Best-effort daily metric snapshot. Never allowed to fail the cron pass. */
 async function captureMetricSnapshotsSafely(): Promise<{ captured: number } | { error: string }> {
@@ -22,15 +22,6 @@ async function captureMetricSnapshotsSafely(): Promise<{ captured: number } | { 
     return await captureCompanyMetricSnapshots(createServiceRoleClient());
   } catch (error) {
     return { error: error instanceof Error ? error.message.slice(0, 200) : "snapshot failed" };
-  }
-}
-
-/** Best-effort data-room reminder cadence. Never allowed to fail the cron pass. */
-async function runDataRoomRemindersSafely() {
-  try {
-    return await runDataRoomReminderPass();
-  } catch (error) {
-    return { error: error instanceof Error ? error.message.slice(0, 200) : "data-room reminders failed" };
   }
 }
 
@@ -65,13 +56,13 @@ async function handleCron(request: Request) {
   try {
     const result = await runCronOrchestrationPass({ triggerSource: "cron", forceDigest });
     const snapshots = await captureMetricSnapshotsSafely();
-    const dataRoomReminders = await runDataRoomRemindersSafely();
-    // Leave ~15s of headroom under the 60s function limit for the partner-score refresh.
-    const partnerScores = await refreshPartnerScoresSafely(startedAt + 45_000);
-    const journeyNudges = await nudgeStalledJourneyFounders().catch(() => ({ nudged: 0 }));
+    // Data room reminders, journey nudges and stage gate reminders run in
+    // /api/cron/founder-nudges with their own budget; this pass hit its 60s limit
+    // before reaching them.
+    // Leave ~30s of headroom under the function limit for the steps after the refresh.
+    const partnerScores = await refreshPartnerScoresSafely(startedAt + (maxDuration - 30) * 1000);
     const journeyDigest = await digestStalledFoundersForStaff().catch(() => ({ staffNotified: 0, stalled: 0 }));
-    const gateReminders = await runStageGateReminderPass().catch(() => ({ sent: 0, resolved: 0 }));
-    return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores, journeyNudges, journeyDigest, gateReminders }, { status: result.success ? 200 : 207 });
+    return NextResponse.json({ ...result, snapshots, partnerScores, journeyDigest }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(
@@ -95,10 +86,13 @@ async function handleCron(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+async function scheduledGET(request: Request) {
   return handleCron(request);
 }
 
 export async function POST(request: Request) {
   return handleCron(request);
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/run-orchestration", scheduledGET);

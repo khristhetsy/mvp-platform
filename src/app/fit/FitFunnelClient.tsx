@@ -1,0 +1,334 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, Q5_INVESTOR_TYPE, type FitAnswers } from "@/lib/fit/options";
+
+type MatchResult = {
+  contactId: string; company: string; summary: string; fit: number;
+  sectors: string[]; types: string[]; stage: string | null; checkSize: string | null; revenue: string | null;
+  score: number | null; tier: string | null;
+};
+type MatchResponse = { matched_count: number; top: MatchResult[]; locked_count: number; thin: boolean; network_total: number };
+
+// Tier → ring/badge colors (matches the investor-rating scale).
+function tierColor(tier: string | null): { ring: string; bg: string; fg: string } {
+  const t = (tier ?? "").toLowerCase();
+  if (t.startsWith("a") || t === "excellent") return { ring: "#1D9E75", bg: "#E1F5EE", fg: "#0F6E56" };
+  if (t.startsWith("b") || t === "strong" || t === "good") return { ring: "#BA7517", bg: "#FAEEDA", fg: "#854F0B" };
+  if (!tier || t === "new") return { ring: "#B4B2A9", bg: "#F1EFE8", fg: "#5F5E5A" };
+  return { ring: "#378ADD", bg: "#E6F1FB", fg: "#185FA5" };
+}
+
+/** Circular progress gauge for the fit %. */
+function FitGauge({ value }: { value: number }) {
+  const v = Math.max(0, Math.min(100, Math.round(value)));
+  const C = 2 * Math.PI * 18;
+  const strong = v >= 60;
+  const track = strong ? "#E1F5EE" : "#FAEEDA";
+  const arc = strong ? "#1D9E75" : "#BA7517";
+  const text = strong ? "#0F6E56" : "#854F0B";
+  return (
+    <svg width="44" height="44" viewBox="0 0 46 46" role="img" aria-label={`${v}% fit`}>
+      <circle cx="23" cy="23" r="18" fill="none" stroke={track} strokeWidth="5" />
+      <circle cx="23" cy="23" r="18" fill="none" stroke={arc} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(v / 100) * C} ${C}`} transform="rotate(-90 23 23)" />
+      <text x="23" y="27" textAnchor="middle" fontSize="13" fontWeight="500" fill={text}>{v}%</text>
+    </svg>
+  );
+}
+
+function MatchCard({ m }: { m: MatchResult }) {
+  const [open, setOpen] = useState(false);
+  const c = tierColor(m.tier);
+  const summaryLine = [m.sectors[0], m.stage, m.checkSize].filter(Boolean).join(" · ");
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 p-3 text-left">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-slate-900">{m.company}</p>
+          {summaryLine ? <p className="mt-0.5 truncate text-[11px] text-slate-500">{summaryLine}</p> : null}
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-800">Investor score {m.score ?? "—"}</span>
+            <span className="rounded px-1.5 py-px text-[9px] font-medium" style={{ background: c.bg, color: c.fg }}>{m.tier ?? "New"}</span>
+          </div>
+        </div>
+        <div className="flex w-[66px] flex-shrink-0 flex-col items-center gap-1">
+          <span className="text-[8.5px] font-medium uppercase tracking-wide text-slate-400">Fit</span>
+          <FitGauge value={m.fit} />
+        </div>
+        <i className={`ti ti-chevron-${open ? "down" : "right"} flex-shrink-0 text-slate-400`} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="border-t border-slate-100 bg-slate-50 px-3 py-3 text-[12px]">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div><p className="text-slate-400">Sectors</p><p className="text-slate-700">{m.sectors.slice(0, 4).join(", ") || "—"}</p></div>
+            <div><p className="text-slate-400">Stage</p><p className="text-slate-700">{m.stage ?? "—"}</p></div>
+            <div><p className="text-slate-400">Check size</p><p className="text-slate-700">{m.checkSize ?? "—"}</p></div>
+            <div><p className="text-slate-400">Revenue focus</p><p className="text-slate-700">{m.revenue ?? "—"}</p></div>
+            <div className="col-span-2"><p className="text-slate-400">Investor type</p><p className="text-slate-700">{m.types.slice(0, 4).join(", ") || "—"}</p></div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const RAISE_LABEL: Record<string, string> = Object.fromEntries(Q2_RAISE.map((o) => [o.key, o.label]));
+const STAGE_LABEL: Record<string, string> = Object.fromEntries(Q1_STAGE.map((o) => [o.key, o.label]));
+const REV_LABEL: Record<string, string> = Object.fromEntries(Q4_REVENUE.map((o) => [o.key, o.label]));
+
+const DEFAULT_SUBTITLE = "Answer five quick questions and instantly see the investors in our network that match your raise.";
+
+function FunnelHeader({ subtitle = DEFAULT_SUBTITLE }: { subtitle?: string | null }) {
+  return (
+    <div className="mb-5 flex flex-col items-center text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icapos-logo.svg" alt="iCapOS" className="h-8 w-auto" />
+      {subtitle ? <p className="mt-3 text-[13.5px] leading-relaxed text-slate-500">{subtitle}</p> : null}
+    </div>
+  );
+}
+
+const TOTAL_STEPS = 5;
+
+/** A multi-select funnel question: toggle options, then Continue (≥1 required). */
+function MultiQ({ n, title, options, selected, onToggle, onContinue, loading }: {
+  n: number; title: string;
+  options: { key: string; label: string }[];
+  selected: string[]; onToggle: (key: string) => void; onContinue: () => void; loading?: boolean;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <FunnelHeader />
+      <p className="font-mono text-xs uppercase tracking-wider text-indigo-500">Question {n} of {TOTAL_STEPS}</p>
+      <h1 className="mt-2 text-[22px] font-semibold leading-snug text-slate-900">{title}</h1>
+      <p className="mt-1 text-[13px] text-slate-500">Select all that apply.</p>
+      <div className="mt-4 flex flex-col gap-2.5">
+        {loading ? <p className="text-sm text-slate-400">Loading…</p> : options.map((o) => {
+          const on = selected.includes(o.key);
+          return (
+            <button key={o.key} type="button" onClick={() => onToggle(o.key)}
+              className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-[15px] transition-colors ${on ? "border-indigo-500 bg-indigo-50 font-medium text-indigo-700" : "border-slate-200 bg-white text-slate-800 hover:border-indigo-300"}`}>
+              <span className={`flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded ${on ? "bg-indigo-600 text-white" : "border-[1.5px] border-slate-300"}`}>{on ? <i className="ti ti-check text-[11px]" aria-hidden="true" /> : null}</span>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" disabled={selected.length === 0} onClick={onContinue}
+        className="mt-5 w-full rounded-lg bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white transition-opacity hover:bg-indigo-700 disabled:opacity-40">
+        Continue{selected.length ? ` · ${selected.length} selected` : ""}
+      </button>
+    </div>
+  );
+}
+
+type MethodStep = { t: string; d: string; done?: boolean };
+
+function MethodSteps({ items, color, line }: { items: MethodStep[]; color: string; line: string }) {
+  return (
+    <div className="relative mb-6 mt-5 pl-7">
+      <span className={`absolute bottom-1.5 left-[11px] top-1.5 w-0.5 ${line}`} aria-hidden="true" />
+      {items.map((s, i) => (
+        <div key={s.t} className={`relative ${i < items.length - 1 ? "mb-5" : ""}`}>
+          <span className={`absolute -left-7 top-0 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold text-white ${s.done ? "bg-emerald-600" : color}`}>
+            {s.done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
+          </span>
+          <p className="text-[14px] font-medium text-slate-900">{s.t}</p>
+          <p className="mt-0.5 text-[12px] text-slate-500">{s.d}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Options screen telemetry. keepalive lets the request finish while the page navigates away.
+function logFitChoice(eventName: "fit_options_view" | "fit_spv_click" | "fit_crr_click") {
+  fetch("/api/fit/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventName }), keepalive: true }).catch(() => {});
+}
+
+const EMPTY: FitAnswers = { stage: [], raise: [], industry: [], revenue: [], investorType: [] };
+
+export function FitFunnelClient() {
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | "match" | "method">(1);
+  const [answers, setAnswers] = useState<FitAnswers>(EMPTY);
+  const [sectors, setSectors] = useState<string[]>([]);
+  const [result, setResult] = useState<MatchResponse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+  const [captured, setCaptured] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/fit/sectors").then((r) => (r.ok ? r.json() : null)).then((d) => setSectors(d?.sectors ?? [])).catch(() => {});
+    const tag = new URLSearchParams(window.location.search).get("s");
+    fetch("/api/fit/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourceTag: tag }) }).catch(() => {});
+  }, []);
+
+  const empty: MatchResponse = { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: 0 };
+
+  async function runMatch(final: FitAnswers) {
+    setBusy(true);
+    setStep("match");
+    try {
+      const res = await fetch("/api/fit/match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(final) });
+      setResult(res.ok ? await res.json() : empty);
+    } catch {
+      setResult(empty);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (step === "method") logFitChoice("fit_options_view");
+  }, [step]);
+
+  const toggle = (field: keyof FitAnswers, value: string) =>
+    setAnswers((a) => ({ ...a, [field]: a[field].includes(value) ? a[field].filter((v) => v !== value) : [...a[field], value] }));
+
+  function advance(field: keyof FitAnswers, stepNum: number, next: 2 | 3 | 4 | 5 | "done") {
+    // Record last_step (drop-off diagnostic) + the answer as a joined string. The session
+    // has no investor_type column, so that step logs step only.
+    const body: Record<string, unknown> = { step: stepNum };
+    if (field !== "investorType") body[field] = answers[field].join(", ");
+    fetch("/api/fit/session", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+    if (next === "done") void runMatch(answers);
+    else setStep(next);
+  }
+
+  if (step === 1) return <MultiQ n={1} title="Where are you today?" options={Q1_STAGE} selected={answers.stage} onToggle={(k) => toggle("stage", k)} onContinue={() => advance("stage", 1, 2)} />;
+  if (step === 2) return <MultiQ n={2} title="How much are you raising?" options={Q2_RAISE} selected={answers.raise} onToggle={(k) => toggle("raise", k)} onContinue={() => advance("raise", 2, 3)} />;
+  if (step === 3) return <MultiQ n={3} title="What sectors are you in?" options={sectors.map((s) => ({ key: s, label: s }))} loading={sectors.length === 0} selected={answers.industry} onToggle={(k) => toggle("industry", k)} onContinue={() => advance("industry", 3, 4)} />;
+  if (step === 4) return <MultiQ n={4} title="What is your revenue?" options={Q4_REVENUE} selected={answers.revenue} onToggle={(k) => toggle("revenue", k)} onContinue={() => advance("revenue", 4, 5)} />;
+  if (step === 5) return <MultiQ n={5} title="What type of investor are you looking for?" options={Q5_INVESTOR_TYPE} selected={answers.investorType} onToggle={(k) => toggle("investorType", k)} onContinue={() => advance("investorType", 5, "done")} />;
+
+  // Match screen
+  const a = answers;
+  const j = (arr: string[], map?: Record<string, string>) => arr.map((k) => (map ? map[k] ?? k : k)).join(", ");
+  // Revenue labels like "Pre-revenue" already say "revenue", and the stage answer can
+  // repeat the revenue answer word for word; skip both duplicates.
+  const revText = j(a.revenue, REV_LABEL);
+  const revPart = /revenue/i.test(revText) ? revText : `${revText} revenue`;
+  const stageText = j(a.stage, STAGE_LABEL);
+  const subline = [j(a.industry), `raising ${j(a.raise, RAISE_LABEL)}`, revPart, stageText.toLowerCase() === revPart.toLowerCase() ? "" : stageText].filter(Boolean).join(" · ");
+  const count = result?.matched_count ?? 0;
+  const thin = result?.thin ?? true;
+
+  // /fit/method — iCFO Capital advisory SPV screen (build-spec §6). Gold badge, a
+  // dot diagram sized to the actual match count, four steps, a scoped panel (no
+  // figures), the verbatim disclaimer, and one CTA to the structuring-call scheduler
+  // (which links back to this funnel session via the fs_session cookie).
+  if (step === "method") {
+    const spvSteps = [
+      { t: "Form the vehicle", d: "We structure the SPV. Due diligence runs in parallel." },
+      { t: "Reach matched investors", d: "The opportunity goes to investors whose stage, sector, and check size fit." },
+      { t: "Investors subscribe", d: "Participation flows directly into the SPV as limited partners." },
+      { t: "Funded", d: "Capital deploys on a rolling basis, first in, first out.", done: true },
+    ];
+    const selfSteps = [
+      { t: "Get your CRR score", d: "See your Capital Readiness Rating and what to fix before you pitch." },
+      { t: "Outreach to investors", d: "Reach investors matched to your stage, sector, and raise size." },
+      { t: "Manage in your deal room", d: "Share documents, track interest, and answer diligence in one place." },
+      { t: "Close the Deal", d: "You negotiate terms and close directly with your investors.", done: true },
+    ];
+    return (
+      <div className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <FunnelHeader subtitle="Two ways to raise. Pick the one that fits." />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col rounded-xl border border-slate-200 p-5">
+            <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+              <i className="ti ti-building-bank" aria-hidden="true" /> Option 1 · iCFO Capital advisory
+            </span>
+            <h1 className="mt-3 text-[20px] font-semibold leading-snug text-slate-900">Run your raise through an SPV</h1>
+            <p className="mt-1.5 text-[13px] text-slate-500">One vehicle. One cap table line. One close, scoped to your raise.</p>
+            <MethodSteps items={spvSteps} color="bg-indigo-600" line="bg-gradient-to-b from-indigo-600 to-indigo-200" />
+            <Link href="/schedule/dc2f3667-ca80-4f35-a1cd-ba0c3adac510" onClick={() => logFitChoice("fit_spv_click")} className="mt-auto block rounded-lg bg-indigo-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-indigo-700">Book a structuring call</Link>
+          </div>
+
+          <div className="flex flex-col rounded-xl border border-slate-200 p-5">
+            <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+              <i className="ti ti-rocket" aria-hidden="true" /> Option 2 · Self-serve on iCapOS
+            </span>
+            <h2 className="mt-3 text-[20px] font-semibold leading-snug text-slate-900">Raise your own capital</h2>
+            <p className="mt-1.5 text-[13px] text-slate-500">Use the iCapOS tools to run your raise yourself, start to close.</p>
+            <MethodSteps items={selfSteps} color="bg-emerald-700" line="bg-gradient-to-b from-emerald-700 to-emerald-200" />
+            <a href="https://icapos.com/start?src=fit" onClick={() => logFitChoice("fit_crr_click")} className="mt-auto block rounded-lg border border-emerald-700 px-5 py-3 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Get my CRR score <i className="ti ti-arrow-right" aria-hidden="true" /></a>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[13px] font-medium text-slate-700">Scoped to your raise</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{subline}</p>
+        </div>
+
+        <p className="mt-6 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-400">
+          iCFO Capital Global, Inc. is not a registered broker-dealer, funding portal, investment adviser, or placement agent. It does not offer or sell securities, effect securities transactions, hold or transmit customer funds, or receive transaction-based compensation.
+        </p>
+      </div>
+    );
+  }
+
+  const networkTotal = result?.network_total ?? 0;
+  const hasMatches = count > 0 && !thin;
+
+  return (
+    <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <FunnelHeader subtitle={busy ? null : "The investors in our network that match your raise, ranked by fit and investor score."} />
+      {busy ? (
+        <p className="text-center text-sm text-slate-400">Matching against our network…</p>
+      ) : hasMatches ? (
+        <>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h1 className="text-[19px] font-semibold leading-snug text-slate-900">{count} investors match your raise</h1>
+              <p className="mt-1 text-[12px] text-slate-500">{subline}</p>
+            </div>
+            <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/25" /> Live data
+            </span>
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1 rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10.5px] text-slate-400">In our network</p><p className="text-[18px] font-semibold text-slate-900">{networkTotal.toLocaleString()}</p></div>
+            <div className="flex-1 rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10.5px] text-slate-400">Match you</p><p className="text-[18px] font-semibold text-emerald-600">{count}</p></div>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2.5">
+            {result!.top.map((m) => <MatchCard key={m.contactId} m={m} />)}
+            {result!.locked_count > 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-[12.5px] font-medium text-indigo-600">
+                <i className="ti ti-lock" aria-hidden="true" /> Unlock more matched
+              </div>
+            ) : null}
+          </div>
+
+          <button type="button" onClick={() => setStep("method")} className="mt-4 w-full rounded-lg bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white hover:bg-indigo-700">See how we structure your raise</button>
+        </>
+      ) : (
+        <>
+          <h1 className="text-[22px] font-semibold leading-snug text-slate-900">No investors in our network match this profile yet</h1>
+          <p className="mt-1.5 text-[13px] text-slate-500">{subline}. Leave your email and we&apos;ll tell you when one does.</p>
+          <div className="mt-6 border-t border-slate-100 pt-5">
+            {captured ? (
+              <p className="text-[13px] text-emerald-700">Got it — we&apos;ll be in touch.</p>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!email.trim()) return;
+                  fetch("/api/fit/capture", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }) }).catch(() => {});
+                  setCaptured(true);
+                }}
+                className="flex gap-2"
+              >
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none" />
+                <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Notify me</button>
+              </form>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

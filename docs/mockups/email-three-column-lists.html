@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event email — three columns, companies first</title>
+<style>
+  :root{ --navy:#0c2340; --blue:#2E78F5; --violet:#7c3aed; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:840px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  /* email shell */
+  .mail{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden;max-width:600px;margin:0 auto}
+  .hero{background:var(--navy);color:#fff;padding:20px 22px}
+  .hero .eb{font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin:0 0 5px}
+  .hero h4{margin:0;font-size:19px;line-height:1.25}
+  .hero p{margin:6px 0 13px;font-size:12px;opacity:.82}
+  .cta{display:inline-block;background:var(--blue);color:#fff;border-radius:6px;padding:8px 15px;
+       font-size:12.6px;font-weight:700}
+  .body{padding:18px 20px}
+  .h2{margin:0 0 3px;font-size:15px;color:var(--navy);font-weight:700}
+  .lead{margin:0 0 10px;font-size:11.4px;color:var(--muted);line-height:1.5}
+
+  .cal{border-left:3px solid var(--blue);background:#f7faff;border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:8px}
+  .cal.ts{border-left-color:var(--violet);background:#fbfaff}
+  .cal .k{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+          background:var(--blue);color:#fff;border-radius:3px;padding:1px 6px;margin-bottom:4px}
+  .cal.ts .k{background:var(--violet)}
+  .cal b{display:block;font-size:13.2px;color:var(--navy)}
+  .cal p{margin:4px 0 0;font-size:11.4px;color:#4a5568;line-height:1.5}
+  .guests{margin-top:9px;border-top:1px solid #ece9fb;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .g{display:flex;gap:7px;align-items:flex-start;min-width:0}
+  .g .av{width:26px;height:26px;border-radius:50%;background:#ede9fe;color:#6d28d9;flex:none;
+         display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800}
+  .g .av.inv{background:#dbeafe;color:#1d4ed8}
+  .g .r{display:block;font-size:8.4px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--violet)}
+  .g .r.inv{color:#1d4ed8}
+  .g b{display:block;font-size:12px;color:var(--navy);line-height:1.25}
+  .g span.c{display:block;font-size:10.4px;color:var(--muted)}
+
+  /* three-column grids */
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .g3 > div{background:#fff;padding:9px 10px;min-width:0}
+  .g3 b{display:block;font-size:11.8px;color:var(--navy);line-height:1.3;
+        overflow-wrap:break-word}
+  .g3 span{display:block;font-size:10.1px;color:var(--muted);margin-top:2px;line-height:1.35}
+  .g3 .empty{background:#fbfcfe}
+
+  .sc3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .sc3 > div{border:1px solid var(--border);border-top:3px solid var(--violet);border-radius:0 0 7px 7px;
+             padding:9px 10px;background:#fdfcff;min-width:0}
+  .sc3 b{display:block;font-size:11.9px;color:var(--navy);line-height:1.25;overflow-wrap:break-word}
+  .sc3 .who{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+  .sc3 p{margin:6px 0 0;font-size:10.4px;color:#4a5568;line-height:1.45}
+
+  .inline{font-size:11.6px;color:#33415a;line-height:1.7;margin:0}
+  .foot{border-top:1px solid var(--border);padding:14px 20px;font-size:10.4px;color:#8a93a6;line-height:1.5}
+
+  .ordtag{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;border-radius:999px;
+          padding:2px 8px;background:#eef4ff;color:#1d4ed8;margin-left:7px;vertical-align:middle}
+  .ordtag.v{background:#f5f3ff;color:#6d28d9}
+
+  /* mobile compare */
+  .cmp{display:grid;grid-template-columns:1fr 200px;gap:20px;align-items:start}
+  @media(max-width:860px){.cmp{grid-template-columns:1fr}}
+  .phone{border:1px solid var(--border);border-radius:14px;background:#fff;overflow:hidden;padding:12px 11px}
+  .g1{display:grid;grid-template-columns:1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .g1 > div{background:#fff;padding:8px 10px}
+  .g1 b{display:block;font-size:12.2px;color:var(--navy)}
+  .g1 span{display:block;font-size:10.4px;color:var(--muted);margin-top:1px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Three columns, companies first</h1>
+  <p class="sub">Presenting companies moves above Founder Showcase, and both run three across. The talk-show guest strip stays as it was.</p>
+
+  <!-- EMAIL -->
+  <h2>The email</h2>
+  <div class="mail">
+    <div class="hero">
+      <p class="eb">iCFO PE Expo</p>
+      <h4>iCFO PE Expo — Las Vegas | Sept 22</h4>
+      <p>Tuesday, September 22, 2026 · 12:00 PM – 4:00 PM PDT · Webinar · Free registration</p>
+      <span class="cta">Register to attend →</span>
+    </div>
+    <div class="body">
+      <p class="h2">Agenda</p>
+      <div class="cal">
+        <span class="k">Keynote</span><b>Auditorium</b>
+        <p>Prequalified deal flow, dynamic presentations, and live Q&amp;A with our experts.</p>
+      </div>
+      <div class="cal ts">
+        <span class="k">Talk show</span><b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+        <p>A candid conversation with a CEO, followed by a live investor panel.</p>
+        <div class="guests">
+          <div class="g"><span class="av">SP</span><span><span class="r">Guest CEO</span><b>Shan Padda</b><span class="c">Harvard MedTech</span></span></div>
+          <div class="g"><span class="av inv">MR</span><span><span class="r inv">Investor</span><b>Marcus Reyes</b><span class="c">Tessellate Ventures</span></span></div>
+        </div>
+      </div>
+
+      <p class="h2" style="margin-top:24px">Presenting companies <span class="ordtag">1st</span></p>
+      <p class="lead">On the programme at Las Vegas.</p>
+      <div class="g3">
+        <div><b>ClearPool Digital</b><span>Dr. Jamie Allsop · CEO</span></div>
+        <div><b>Scriptive</b><span>Bob Wood · President &amp; CEO</span></div>
+        <div><b>Brainlest AI</b><span>Alan Steinberg · CEO</span></div>
+        <div><b>Revolution5 Global</b><span>Tyler Mackay · CEO</span></div>
+        <div><b>Doyle Organics</b><span>John Kelser · CEO</span></div>
+        <div class="empty"></div>
+      </div>
+
+      <p class="h2" style="margin-top:22px">Founder Showcase <span class="ordtag v">2nd</span></p>
+      <p class="lead">Five companies pitching live from the main stage.</p>
+      <div class="sc3">
+        <div><b>SOHM</b><span class="who">Shailesh Shah · Founder</span><p>Generic pharmaceuticals moving into the US retail channel.</p></div>
+        <div><b>Harvard MedTech</b><span class="who">Shan Padda · CEO</span><p>VR therapeutics for chronic pain, reimbursed via workers&rsquo; comp.</p></div>
+        <div><b>Amynas</b><span class="who">Lode Debrabandere · Founder</span><p>Antibody discovery targeting autoimmune indications.</p></div>
+        <div><b>NovaRhythm Biosciences</b><span class="who">Paul E. Miller, PhD</span><p>Cardiac rhythm diagnostics, FDA submission filed.</p></div>
+        <div><b>LivIQ</b><span class="who">Steve Gatt · CEO</span><p>Longevity analytics from wearables, sold via employer plans.</p></div>
+        <div style="border-top-color:transparent;border-color:transparent;background:transparent"></div>
+      </div>
+
+      <p class="h2" style="margin-top:22px;font-size:13.4px">Exhibitors</p>
+      <p class="inline">NAI Technology · Impervitex Corp</p>
+
+      <p style="margin:20px 0 0;font-size:11.4px;color:var(--muted)">Presented by iCFO Capital Global</p>
+    </div>
+    <div class="foot">iCFO events are for education and community only. Nothing in this email is an offer to sell…</div>
+  </div>
+
+  <p class="note" style="margin-top:12px">Order is now <b>Agenda → Presenting companies → Founder Showcase → Exhibitors</b>.
+  The blocks are still independent, so this is the default order rather than a fixed one — drag either above the other
+  in the block editor.</p>
+
+  <!-- THREE ACROSS -->
+  <h2>What three across costs</h2>
+  <div class="cmp">
+    <div>
+      <div class="panel">
+        <table>
+          <thead><tr><th style="width:24%">At 600px wide</th><th style="width:20%">Column</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>Two columns</td><td>~270px</td><td>Company and person each fit on one line</td></tr>
+            <tr><td><b>Three columns</b></td><td><b>~178px</b></td><td>Long names wrap to two lines — &ldquo;NovaRhythm Biosciences&rdquo;, &ldquo;Revolution5 Global&rdquo;. Rows stay aligned because cells are equal height</td></tr>
+            <tr><td>Showcase pitch line</td><td>~178px</td><td>About 9 words per line. The summaries above were shortened to fit; longer ones clamp at three lines</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note" style="margin-top:10px">
+        Three across suits <b>Presenting companies</b> well — it is a scan, and shorter rows make a long roster look
+        shorter. It is tighter on the <b>Showcase</b>, where the pitch line is the point. If a summary matters more
+        than the density, two columns reads better there; both are built, so it stays a per-block choice.
+      </p>
+    </div>
+
+    <div>
+      <p class="note" style="margin:0 0 8px;font-size:11.4px"><b>On a phone</b></p>
+      <div class="phone">
+        <p class="h2" style="font-size:13px">Presenting companies</p>
+        <div class="g1">
+          <div><b>ClearPool Digital</b><span>Dr. Jamie Allsop · CEO</span></div>
+          <div><b>Scriptive</b><span>Bob Wood · CEO</span></div>
+          <div><b>Brainlest AI</b><span>Alan Steinberg · CEO</span></div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:8px;font-size:11.2px">Stacks to one column.</p>
+    </div>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>Outlook on Windows won&rsquo;t stack.</b> It ignores the media query that collapses
+    three columns to one, so it renders three narrow cells at any width. That is why each cell holds a company and a
+    person and nothing more — anything longer is what breaks there first. The Showcase pitch line is the part to
+    watch.</p>
+    <p style="margin:0 0 8px"><b>A short last row leaves a gap.</b> Five companies across three columns leaves one
+    empty cell, as above. It is rendered as a blank cell rather than a stretched one, so the grid stays square.</p>
+    <p style="margin:0"><b>Order within each block is still arbitrary</b> — <code>position</code> is never written, so
+    it is database order. Three columns makes that more visible than two did, because the eye reads across rows.
+    Alphabetical by company would settle it.</p>
+  </div>
+
+</div>
+</body>
+</html>

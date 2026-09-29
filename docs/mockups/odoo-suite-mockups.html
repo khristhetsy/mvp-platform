@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iCapOS · Odoo-style suite · Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E9EDF4;--bar:#fff;--ink:#0A1A40;--muted:#5B6B86;--line:#D6DDE8;--accent:#1A6CE4}
+[hidden]{display:none!important} html,body{margin:0} body{background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink)}
+.bar{position:sticky;top:0;z-index:5;background:var(--bar);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.brand{font-family:Archivo;font-weight:700;font-size:18px;margin-right:12px}.brand span{color:var(--accent)}
+.tabs{display:flex;gap:6px;overflow-x:auto;flex:1}.tab{font:inherit;font-size:13px;white-space:nowrap;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.tab[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+main{padding:16px;overflow-x:auto}.frame{width:1440px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#F4F6FA;display:flex;min-height:860px}
+.frame *{box-sizing:border-box}.note{font-size:12px;color:var(--muted);padding:0 16px 16px;max-width:1440px}
+.side{width:232px;flex-shrink:0;background:#0A1A40;display:flex;flex-direction:column;padding:20px 14px;gap:2px}
+.logo{font-family:Archivo;font-weight:700;font-size:22px;color:#fff;padding:4px 12px 20px}.logo span{color:#4F94FF}
+.nav{display:block;padding:10px 12px;border-radius:8px;color:#C9D6EE;font-size:14px}.nav.on{background:#1A6CE4;color:#fff}
+.sub{display:block;padding:8px 12px 8px 28px;font-size:13px;color:#A9BBDB;border-radius:8px}.sub.on{color:#fff;background:#1B2D57}
+.new{font-size:10px;font-weight:600;background:#22C55E;color:#062A12;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.body{flex:1;min-width:0;display:flex;flex-direction:column}
+.top{height:56px;flex-shrink:0;background:#fff;border-bottom:1px solid #E2E7F0;display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.hubtabs{display:flex;gap:2px}.hubtabs a{font-size:13px;padding:8px 12px;border-radius:8px;color:#5B6B86}.hubtabs a.on{background:#EAF1FD;color:#1A6CE4;font-weight:500}
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:Archivo;margin:0;color:#0A1A40}h2{font-size:18px}h3{font-size:15px}
+.card{background:#fff;border:1px solid #E2E7F0;border-radius:12px;padding:18px}
+.btn{font:inherit;font-size:13px;font-weight:500;height:36px;padding:0 12px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;color:#0A1A40;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#1A6CE4;border-color:#1A6CE4;color:#fff}
+.pill{display:inline-block;font-size:11.5px;font-weight:500;padding:3px 8px;border-radius:6px}
+.ok{background:#E7F7EE;color:#137A3B}.warn{background:#FFF4DE;color:#9A5B00}.bad{background:#FDE8E8;color:#B42323}.info{background:#EAF1FD;color:#1A5FC8}.gray{background:#EEF1F6;color:#5B6B86}
+table{border-collapse:collapse;width:100%;font-size:13.5px}th{text-align:left;font-size:12px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}td{padding:10px;border-bottom:1px solid #EEF1F6;vertical-align:middle}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr}
+.app{background:#fff;border:1px solid #E2E7F0;border-radius:12px;padding:16px;display:flex;gap:12px;align-items:flex-start}
+.ico{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;font-family:Archivo;font-weight:700;color:#fff;font-size:15px}
+.app b{display:block;font-size:14px}.app small{display:block;color:#5B6B86;font-size:12px;margin-top:3px;line-height:1.4}
+.kpi{background:#fff;border:1px solid #E2E7F0;border-radius:12px;padding:16px}.kpi .big{font-family:Archivo;font-weight:600;font-size:26px}.kpi .lbl{font-size:12px;color:#5B6B86}
+.tool{display:flex;gap:10px;align-items:center}.search{flex:1;height:36px;border:1px solid #C9D3E3;border-radius:8px;background:#fff;padding:0 12px;display:flex;align-items:center;color:#8A98B3;font-size:13px}
+.seg{display:inline-flex;border:1px solid #C9D3E3;border-radius:8px;overflow:hidden}.seg span{font-size:13px;padding:8px 12px;background:#fff}.seg span+span{border-left:1px solid #C9D3E3}.seg span.on{background:#0A1A40;color:#fff}
+.kan{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.col{background:#EEF1F6;border-radius:10px;padding:10px}.col h4{margin:0 0 8px;font:500 12px Inter;color:#5B6B86;display:flex;justify-content:space-between}
+.tk{background:#fff;border:1px solid #E2E7F0;border-radius:8px;padding:10px;margin-bottom:8px;font-size:13px}.tk small{display:block;color:#5B6B86;margin-top:4px;font-size:11.5px}
+.rec{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:13px}.rec .k{color:#5B6B86}.rec .v{color:#0A1A40}
+.row{display:flex;gap:8px;align-items:center}
+.stage{display:flex;gap:0;font-size:12px}.stage span{padding:6px 14px;background:#fff;border:1px solid #C9D3E3;margin-left:-1px}.stage span.on{background:#0A1A40;color:#fff;border-color:#0A1A40}
+.chat{border-top:1px solid #E2E7F0;padding-top:12px;font-size:13px}.chat .m{padding:8px 0;border-bottom:1px solid #EEF1F6}.chat .m b{font-weight:500}.chat .m small{color:#5B6B86;margin-left:6px}
+.wiki{display:grid;grid-template-columns:240px 1fr;gap:16px}.tree a{display:block;padding:6px 8px;font-size:13px;border-radius:6px;color:#0A1A40}.tree a.on{background:#EAF1FD;color:#1A6CE4}.tree .h{font-size:11px;color:#5B6B86;text-transform:uppercase;padding:10px 8px 4px;letter-spacing:.04em}
+.bars{display:flex;gap:6px;align-items:flex-end;height:90px}.bars i{flex:1;background:#1A6CE4;border-radius:4px 4px 0 0;opacity:.85}
+</style></head><body>
+<div class="bar"><div class="brand">iCap<span>OS</span> · Odoo-style suite</div><div class="tabs" id="tabs"></div></div>
+<main>
+
+<!-- ───────────────── 0. APPS + GAP MAP ───────────────── -->
+<section id="s-Apps" class="frame">
+  <aside class="side"><div class="logo">iCap<span>OS</span></div>
+    <a class="nav on">Apps</a><a class="nav">Sales Hub</a><a class="nav">Marketing Hub</a><a class="nav">Investor Relations Hub</a><a class="nav">Contacts <span class="new">NEW</span></a><a class="nav">Finance Hub <span class="new">NEW</span></a><a class="nav">People Hub <span class="new">NEW</span></a><a class="nav">Knowledge <span class="new">NEW</span></a><a class="nav">Communication</a><a class="nav">Operational Tools</a><a class="nav">Customer Support</a><a class="nav">Administration</a>
+  </aside>
+  <div class="body"><div class="top"><h2>Apps</h2><span style="font-size:13px;color:#5B6B86">What Odoo does → where it lives in iCapOS</span></div>
+  <div class="content">
+    <div class="card"><h3>Already covered — Odoo can be switched off for these today</h3>
+      <div class="grid g4" style="margin-top:12px">
+        <div class="app"><div class="ico" style="background:#1A6CE4">CRM</div><div><b>CRM → Sales Hub</b><small>Leads, opportunities, pipeline, activities, sequences.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#7C3AED">PJ</div><div><b>Project → IR Hub + Tasks</b><small>Projects, milestones, weekly tasks, kanban, chatter.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#DB2777">MK</div><div><b>Email + Social Marketing</b><small>Lists, campaigns, templates, social queue, ROI.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#0891B2">CA</div><div><b>Calendar / Appointments</b><small>Scheduling links, bookings, Google Calendar, Meet.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#059669">SG</div><div><b>Sign</b><small>E-signatures.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#D97706">HD</div><div><b>Helpdesk → Support queue</b><small>Tickets, CSAT, stuck founders.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#4F46E5">EL</div><div><b>eLearning + Events</b><small>Courses, badges, events, sponsors, applications.</small><span class="pill ok">Live</span></div></div>
+        <div class="app"><div class="ico" style="background:#475569">DS</div><div><b>Discuss → Inbox + Messages</b><small>Threads, notifications, record chatter.</small><span class="pill ok">Live</span></div></div>
+      </div></div>
+    <div class="card"><h3>Gaps — what this build adds (Odoo app → new iCapOS hub)</h3>
+      <div class="grid g4" style="margin-top:12px">
+        <div class="app"><div class="ico" style="background:#0A1A40">CT</div><div><b>Contacts → Contacts hub</b><small>One directory: people + companies, every role (founder, investor, vendor, partner, staff). Today split across Sales Contacts / Marketing Contacts / Companies / Investors.</small><span class="pill warn">Partial → unify</span></div></div>
+        <div class="app"><div class="ico" style="background:#0A1A40">SO</div><div><b>Sales orders → Quotes</b><small>Quote → engagement agreement → signed → invoiced. Membership plans as products.</small><span class="pill bad">Missing</span></div></div>
+        <div class="app"><div class="ico" style="background:#0A1A40">IN</div><div><b>Invoicing + Accounting → Finance hub</b><small>Customer invoices, vendor bills, payments, subscriptions, expenses, P&amp;L / balance sheet, bank statements.</small><span class="pill bad">Missing (Billing has plans only)</span></div></div>
+        <div class="app"><div class="ico" style="background:#0A1A40">HR</div><div><b>Employees / Time off / Timesheets / Expenses → People hub</b><small>Staff directory, departments (reuses RBAC departments), leave, timesheets on IR projects, expense claims.</small><span class="pill bad">Missing</span></div></div>
+        <div class="app"><div class="ico" style="background:#0A1A40">KN</div><div><b>Knowledge → Knowledge hub</b><small>Wiki with nested articles, per-department, linked from any record. Operations Manual moves in.</small><span class="pill warn">Partial (Manual is one page)</span></div></div>
+        <div class="app"><div class="ico" style="background:#0A1A40">DC</div><div><b>Documents → Documents</b><small>Company-wide file workspace with folders/tags; data room stays founder-scoped.</small><span class="pill warn">Partial</span></div></div>
+        <div class="app"><div class="ico" style="background:#0A1A40">SV</div><div><b>Surveys → Feedback</b><small>Founder NPS, event feedback, investor surveys; results feed Analytics.</small><span class="pill bad">Missing</span></div></div>
+        <div class="app"><div class="ico" style="background:#94A3B8">–</div><div><b>Not needed</b><small>Inventory, Manufacturing, POS, eCommerce, Fleet, Payroll, Purchase (vendor bills covered by Finance).</small><span class="pill gray">Skip</span></div></div>
+      </div></div>
+    <div class="card"><h3>Build order (each phase ships on its own)</h3>
+      <table style="margin-top:8px"><tr><th>Phase</th><th>Hub</th><th>What it needs</th><th>Why this order</th></tr>
+      <tr><td>1</td><td>Contacts hub</td><td>One <code>contacts</code> view over crm_contacts + companies + profiles; roles, tags, merge, chatter, activities</td><td>Every other hub links to a contact. Fixes today's four-way split.</td></tr>
+      <tr><td>2</td><td>Quotes + Finance hub</td><td>products (plans, services), quotes, orders, invoices, payments (Stripe already in Billing), vendor bills, expenses, subscriptions, reports</td><td>Revenue-critical; replaces Odoo Invoicing, which is the last thing keeping Odoo on.</td></tr>
+      <tr><td>3</td><td>People hub</td><td>employees ⇄ profiles, departments (RBAC), time off + approvals, timesheets on IR tasks, expenses → Finance</td><td>Timesheets need IR tasks (done) and expenses need Finance (phase 2).</td></tr>
+      <tr><td>4</td><td>Knowledge + Documents + Feedback</td><td>articles tree, record links; documents workspace; survey builder + results</td><td>Independent of the others; lowest risk, can slot anywhere.</td></tr></table></div>
+  </div></div>
+</section>
+
+<!-- ───────────────── 1. CONTACTS HUB ───────────────── -->
+<section id="s-Contacts" class="frame" hidden>
+  <aside class="side"><div class="logo">iCap<span>OS</span></div><a class="nav">Apps</a><a class="nav on">Contacts</a><a class="sub on">All contacts</a><a class="sub">Companies</a><a class="sub">People</a><a class="sub">Tags &amp; roles</a><a class="sub">Duplicates</a><a class="nav">Sales Hub</a><a class="nav">Finance Hub</a><a class="nav">People Hub</a><a class="nav">Knowledge</a></aside>
+  <div class="body"><div class="top"><h2>Contacts</h2><div class="hubtabs"><a class="on">All</a><a>Companies</a><a>People</a><a>Tags &amp; roles</a><a>Duplicates</a></div></div>
+  <div class="content">
+    <div class="tool"><span class="btn pri">+ New</span><span class="btn">⚙</span><div class="search">Search name, company, email, tag… &nbsp;<span class="pill info">Role: Investor ×</span></div><div class="seg"><span class="on">List</span><span>Kanban</span><span>Map</span></div></div>
+    <div class="grid g4"><div class="kpi"><div class="big">4,812</div><div class="lbl">Contacts</div></div><div class="kpi"><div class="big">1,190</div><div class="lbl">Companies</div></div><div class="kpi"><div class="big">3,102</div><div class="lbl">Investors</div></div><div class="kpi"><div class="big">37</div><div class="lbl">Possible duplicates</div></div></div>
+    <div class="card"><table><tr><th></th><th>Name</th><th>Company</th><th>Roles</th><th>Email / phone</th><th>Owner</th><th>Next activity</th><th>Source</th></tr>
+      <tr><td>☐</td><td><b>Elena Marsh</b></td><td>Marsh Ventures</td><td><span class="pill info">Investor</span> <span class="pill gray">LP</span></td><td>elena@… · +1 415…</td><td>Johnny R.</td><td>Call · Sep 22</td><td>Odoo import</td></tr>
+      <tr><td>☐</td><td><b>Doyle Organics</b> <span class="pill gray">Company</span></td><td>—</td><td><span class="pill ok">Founder company</span> <span class="pill gray">Professional plan</span></td><td>hello@doyle…</td><td>Johnny R.</td><td>Founder report · Mon</td><td>Sign-up</td></tr>
+      <tr><td>☐</td><td><b>Priya Natarajan</b></td><td>Doyle Organics</td><td><span class="pill ok">Founder</span></td><td>priya@doyle…</td><td>Johnny R.</td><td>—</td><td>Sign-up</td></tr>
+      <tr><td>☐</td><td><b>Carter &amp; Lee LLP</b> <span class="pill gray">Company</span></td><td>—</td><td><span class="pill warn">Vendor</span></td><td>billing@carter…</td><td>Khris T.</td><td>Bill due · Sep 30</td><td>Finance</td></tr>
+      <tr><td>☐</td><td><b>Johnny Rivera</b></td><td>iCFO Capital</td><td><span class="pill gray">Staff</span> <span class="pill gray">IR</span></td><td>johnny@myicfos.com</td><td>—</td><td>—</td><td>People hub</td></tr></table></div>
+    <div class="grid g2"><div class="card"><h3>Contact record (Odoo layout)</h3>
+      <div class="rec" style="margin-top:10px"><span class="k">Type</span><span class="v">Individual · works at Marsh Ventures</span><span class="k">Roles</span><span class="v">Investor, LP</span><span class="k">Investor profile</span><span class="v">Seed–A · SaaS, Healthtech · $250k–$1M <a>edit</a></span><span class="k">Address</span><span class="v">San Francisco, CA</span><span class="k">Tags</span><span class="v">Warm, Conference 2026</span><span class="k">Owner</span><span class="v">Johnny Rivera</span></div>
+      <div class="stage" style="margin-top:12px"><span>Sales &amp; Opportunities (2)</span><span>IR matches (3)</span><span>Invoices (0)</span><span>Meetings (4)</span><span>Notes</span></div>
+      <div class="chat"><div class="m"><b>Johnny Rivera</b> logged a call<small>Sep 17</small><br>Interested in Doyle; wants deck before the 24th.</div><div class="m"><b>System</b> merged duplicate “E. Marsh (Marsh Vent.)”<small>Sep 12</small></div></div></div>
+      <div class="card"><h3>Duplicates queue</h3><p style="font-size:13px;color:#5B6B86;margin:6px 0 10px">Same email, or name + company within 2 edits. Merge keeps every activity, match, invoice and note.</p>
+      <table><tr><th>Keep</th><th>Merge in</th><th>Reason</th><th></th></tr><tr><td>Elena Marsh · Marsh Ventures</td><td>E. Marsh · Marsh Vent.</td><td>Name drift</td><td><span class="btn">Merge</span></td></tr><tr><td>Carter &amp; Lee LLP</td><td>Carter and Lee</td><td>Corporate suffix</td><td><span class="btn">Merge</span></td></tr></table></div></div>
+  </div></div>
+</section>
+
+<!-- ───────────────── 2. QUOTES ───────────────── -->
+<section id="s-Quotes" class="frame" hidden>
+  <aside class="side"><div class="logo">iCap<span>OS</span></div><a class="nav">Apps</a><a class="nav">Contacts</a><a class="nav on">Finance Hub</a><a class="sub">Dashboard</a><a class="sub on">Quotes &amp; orders</a><a class="sub">Invoices</a><a class="sub">Vendor bills</a><a class="sub">Subscriptions</a><a class="sub">Expenses</a><a class="sub">Products</a><a class="sub">Reports</a><a class="nav">People Hub</a></aside>
+  <div class="body"><div class="top"><h2>Finance Hub</h2><div class="hubtabs"><a>Dashboard</a><a class="on">Quotes &amp; orders</a><a>Invoices</a><a>Vendor bills</a><a>Subscriptions</a><a>Expenses</a><a>Products</a><a>Reports</a></div></div>
+  <div class="content">
+    <div class="tool"><span class="btn pri">+ New quote</span><div class="search">Search customer, number…</div><div class="seg"><span class="on">Kanban</span><span>List</span></div></div>
+    <div class="kan">
+      <div class="col"><h4>Quotation <span>4</span></h4><div class="tk"><b>Q-0142 · Doyle Organics</b><small>Professional plan · 6 months · $6,000</small><small>Priya N. · expires Sep 30</small></div><div class="tk"><b>Q-0141 · Healthfleet</b><small>IR retainer · $4,500/mo · 4 months</small></div></div>
+      <div class="col"><h4>Sent <span>2</span></h4><div class="tk"><b>Q-0139 · Nimbus Labs</b><small>Basic plan · $499/mo</small><small>Opened 3× · no signature</small></div></div>
+      <div class="col"><h4>Signed (order) <span>3</span></h4><div class="tk"><b>SO-0088 · GreenGrid</b><small>Professional · $1,000/mo · signed Sep 14 via E-Signatures</small><small><span class="pill info">Invoice due</span></small></div></div>
+      <div class="col"><h4>Invoiced <span>11</span></h4><div class="tk"><b>SO-0081 · Doyle Organics</b><small>INV-2026-041 · paid</small></div></div></div>
+    <div class="grid g2"><div class="card"><h3>Quote Q-0142 · Doyle Organics</h3>
+      <div class="stage" style="margin:10px 0"><span class="on">Quotation</span><span>Sent</span><span>Signed</span><span>Invoiced</span></div>
+      <div class="rec"><span class="k">Customer</span><span class="v">Doyle Organics · Priya Natarajan</span><span class="k">Salesperson</span><span class="v">Khris Thetsy</span><span class="k">Payment terms</span><span class="v">Monthly in advance</span><span class="k">Linked</span><span class="v">Opportunity “Doyle raise” · IR project “Doyle Organics”</span></div>
+      <table style="margin-top:12px"><tr><th>Product</th><th>Qty</th><th>Unit</th><th>Total</th></tr><tr><td>Founder Professional plan (monthly)</td><td>6</td><td>$1,000</td><td>$6,000</td></tr><tr><td>Investor deck review</td><td>1</td><td>$750</td><td>$750</td></tr><tr><td colspan="3" style="text-align:right"><b>Total</b></td><td><b>$6,750</b></td></tr></table>
+      <div class="row" style="margin-top:12px"><span class="btn pri">Send for signature</span><span class="btn">Preview PDF</span><span class="btn">Create invoice</span></div></div>
+      <div class="card"><h3>Products (plans + services)</h3><table style="margin-top:8px"><tr><th>Name</th><th>Type</th><th>Price</th><th>Recurring</th></tr><tr><td>Founder Basic</td><td>Subscription</td><td>$499</td><td>Monthly</td></tr><tr><td>Founder Professional</td><td>Subscription</td><td>$1,000</td><td>Monthly</td></tr><tr><td>IR retainer</td><td>Service</td><td>$4,500</td><td>Monthly</td></tr><tr><td>Investor deck review</td><td>Service</td><td>$750</td><td>One-off</td></tr><tr><td>Event sponsorship · Gold</td><td>Service</td><td>$5,000</td><td>One-off</td></tr></table><p style="font-size:12px;color:#5B6B86;margin:8px 0 0">Plans read from <code>subscriptions/plans.ts</code> so Billing and Finance never disagree.</p></div></div>
+  </div></div>
+</section>
+
+<!-- ───────────────── 3. INVOICING / ACCOUNTING ───────────────── -->
+<section id="s-Finance" class="frame" hidden>
+  <aside class="side"><div class="logo">iCap<span>OS</span></div><a class="nav">Apps</a><a class="nav">Contacts</a><a class="nav on">Finance Hub</a><a class="sub on">Dashboard</a><a class="sub">Quotes &amp; orders</a><a class="sub">Invoices</a><a class="sub">Vendor bills</a><a class="sub">Subscriptions</a><a class="sub">Expenses</a><a class="sub">Products</a><a class="sub">Reports</a><a class="nav">People Hub</a></aside>
+  <div class="body"><div class="top"><h2>Finance Hub</h2><div class="hubtabs"><a class="on">Dashboard</a><a>Quotes &amp; orders</a><a>Invoices</a><a>Vendor bills</a><a>Subscriptions</a><a>Expenses</a><a>Products</a><a>Reports</a></div></div>
+  <div class="content">
+    <div class="grid g4"><div class="kpi"><div class="big">$48,250</div><div class="lbl">Invoiced this month</div></div><div class="kpi"><div class="big">$12,400</div><div class="lbl">Outstanding · 7 invoices</div></div><div class="kpi"><div class="big">$3,900</div><div class="lbl">Overdue · 2 invoices</div></div><div class="kpi"><div class="big">$31,000</div><div class="lbl">MRR · 29 subscriptions</div></div></div>
+    <div class="grid g2">
+      <div class="card"><h3>Customer invoices</h3><div class="tool" style="margin:10px 0"><span class="btn pri">+ New invoice</span><div class="search">Search…</div><span class="pill warn">Unpaid ×</span></div>
+        <table><tr><th>Number</th><th>Customer</th><th>Date</th><th>Due</th><th>Amount</th><th>Status</th></tr>
+        <tr><td>INV-2026-044</td><td>GreenGrid</td><td>Sep 15</td><td>Sep 30</td><td>$1,000</td><td><span class="pill info">Sent</span></td></tr>
+        <tr><td>INV-2026-043</td><td>Healthfleet</td><td>Sep 1</td><td>Sep 15</td><td>$4,500</td><td><span class="pill bad">Overdue 3d</span></td></tr>
+        <tr><td>INV-2026-042</td><td>Nimbus Labs</td><td>Sep 1</td><td>Sep 1</td><td>$499</td><td><span class="pill ok">Paid · Stripe</span></td></tr>
+        <tr><td>INV-2026-041</td><td>Doyle Organics</td><td>Aug 28</td><td>Sep 11</td><td>$1,000</td><td><span class="pill ok">Paid · bank</span></td></tr></table>
+        <div class="row" style="margin-top:10px"><span class="btn">Send reminder</span><span class="btn">Register payment</span><span class="btn">Download PDF</span></div></div>
+      <div class="card"><h3>Vendor bills &amp; expenses</h3><table style="margin-top:10px"><tr><th>Vendor</th><th>Ref</th><th>Due</th><th>Amount</th><th>Status</th></tr>
+        <tr><td>Carter &amp; Lee LLP</td><td>Legal · Sept</td><td>Sep 30</td><td>$2,200</td><td><span class="pill warn">To approve</span></td></tr>
+        <tr><td>Vercel</td><td>Hosting</td><td>Sep 20</td><td>$150</td><td><span class="pill info">Scheduled</span></td></tr>
+        <tr><td>Johnny Rivera (expense)</td><td>Conference travel</td><td>—</td><td>$612</td><td><span class="pill warn">Manager approval</span></td></tr></table>
+        <h3 style="margin-top:16px">Subscriptions</h3><table style="margin-top:8px"><tr><th>Customer</th><th>Plan</th><th>Next invoice</th><th>Status</th></tr><tr><td>Doyle Organics</td><td>Professional · $1,000/mo</td><td>Sep 28</td><td><span class="pill ok">Active</span></td></tr><tr><td>Nimbus Labs</td><td>Basic · $499/mo</td><td>Oct 1</td><td><span class="pill warn">Card expiring</span></td></tr><tr><td>Bluefin Robotics</td><td>Trial</td><td>—</td><td><span class="pill gray">Ends Sep 21</span></td></tr></table></div></div>
+    <div class="grid g3">
+      <div class="card"><h3>Profit &amp; loss · Sep</h3><div class="rec" style="margin-top:8px"><span class="k">Revenue</span><span class="v">$48,250</span><span class="k">Cost of services</span><span class="v">–$9,100</span><span class="k">Operating expenses</span><span class="v">–$21,640</span><span class="k"><b>Net</b></span><span class="v"><b>$17,510</b></span></div></div>
+      <div class="card"><h3>Cash in · last 6 months</h3><div class="bars" style="margin-top:10px"><i style="height:40%"></i><i style="height:55%"></i><i style="height:48%"></i><i style="height:70%"></i><i style="height:64%"></i><i style="height:85%"></i></div></div>
+      <div class="card"><h3>Bank statement</h3><p style="font-size:13px;color:#5B6B86;margin:6px 0 8px">CSV/OFX upload → match lines to invoices, bills and expenses.</p><table><tr><th>Line</th><th>Amount</th><th>Match</th></tr><tr><td>ACH DOYLE ORG</td><td>$1,000</td><td><span class="pill ok">INV-041</span></td></tr><tr><td>STRIPE PAYOUT</td><td>$1,497</td><td><span class="pill ok">3 invoices</span></td></tr><tr><td>AMZN MKTP</td><td>–$84</td><td><span class="btn" style="height:28px">Match…</span></td></tr></table></div></div>
+  </div></div>
+</section>
+
+<!-- ───────────────── 4. PEOPLE HUB ───────────────── -->
+<section id="s-People" class="frame" hidden>
+  <aside class="side"><div class="logo">iCap<span>OS</span></div><a class="nav">Apps</a><a class="nav">Contacts</a><a class="nav">Finance Hub</a><a class="nav on">People Hub</a><a class="sub on">Employees</a><a class="sub">Departments</a><a class="sub">Time off</a><a class="sub">Timesheets</a><a class="sub">Expenses</a><a class="nav">Knowledge</a></aside>
+  <div class="body"><div class="top"><h2>People Hub</h2><div class="hubtabs"><a class="on">Employees</a><a>Departments</a><a>Time off</a><a>Timesheets</a><a>Expenses</a></div></div>
+  <div class="content">
+    <div class="grid g4"><div class="kpi"><div class="big">9</div><div class="lbl">Employees · 4 departments</div></div><div class="kpi"><div class="big">2</div><div class="lbl">Out today</div></div><div class="kpi"><div class="big">3</div><div class="lbl">Leave requests to approve</div></div><div class="kpi"><div class="big">142 h</div><div class="lbl">Timesheets this week · 88% on IR projects</div></div></div>
+    <div class="grid g2">
+      <div class="card"><h3>Employees</h3><div class="grid g2" style="margin-top:10px">
+        <div class="app"><div class="ico" style="background:#1A6CE4">JR</div><div><b>Johnny Rivera</b><small>IR Lead · Investor Relations · reports to Khris</small><span class="pill ok">In</span></div></div>
+        <div class="app"><div class="ico" style="background:#7C3AED">KT</div><div><b>Khris Thetsy</b><small>CEO · Leadership</small><span class="pill ok">In</span></div></div>
+        <div class="app"><div class="ico" style="background:#DB2777">MA</div><div><b>Maya Alvarez</b><small>Marketing Manager · Marketing</small><span class="pill warn">PTO until Sep 22</span></div></div>
+        <div class="app"><div class="ico" style="background:#059669">DK</div><div><b>Dev Kapoor</b><small>Analyst · Investor Relations</small><span class="pill ok">In</span></div></div></div>
+        <p style="font-size:12px;color:#5B6B86;margin:10px 0 0">Employees are staff <code>profiles</code> + an HR record (job, department, manager, start date, work email, emergency contact). Departments reuse RBAC departments, so permissions and org chart are one thing.</p></div>
+      <div class="card"><h3>Time off</h3><table style="margin-top:8px"><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Days</th><th></th></tr><tr><td>Dev Kapoor</td><td>Vacation</td><td>Oct 6–10</td><td>5</td><td><span class="btn" style="height:28px">Approve</span> <span class="btn" style="height:28px">Refuse</span></td></tr><tr><td>Maya Alvarez</td><td>Sick</td><td>Sep 18</td><td>1</td><td><span class="btn" style="height:28px">Approve</span></td></tr></table>
+        <div class="rec" style="margin-top:12px"><span class="k">Allocation · Dev Kapoor</span><span class="v">15 days · 9 taken · 6 left</span><span class="k">Policy</span><span class="v">Manager approval, 2-week notice for &gt;3 days</span></div>
+        <h3 style="margin-top:16px">Timesheet · Johnny Rivera · this week</h3><table style="margin-top:8px"><tr><th>Project / task</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Total</th></tr><tr><td>Doyle Organics · Week 3 outreach</td><td>4</td><td>5</td><td>3</td><td>4</td><td>—</td><td>16</td></tr><tr><td>Healthfleet · Investor meetings</td><td>2</td><td>1</td><td>3</td><td>2</td><td>—</td><td>8</td></tr><tr><td>Internal · Pipeline review</td><td>1</td><td>1</td><td>1</td><td>1</td><td>—</td><td>4</td></tr></table><p style="font-size:12px;color:#5B6B86;margin:8px 0 0">Rows are IR tasks; hours show on the task and roll up to the project and the Finance retainer.</p></div></div>
+  </div></div>
+</section>
+
+<!-- ───────────────── 5. KNOWLEDGE ───────────────── -->
+<section id="s-Knowledge" class="frame" hidden>
+  <aside class="side"><div class="logo">iCap<span>OS</span></div><a class="nav">Apps</a><a class="nav">Contacts</a><a class="nav">Finance Hub</a><a class="nav">People Hub</a><a class="nav on">Knowledge</a><a class="nav">Documents</a><a class="nav">Feedback</a></aside>
+  <div class="body"><div class="top"><h2>Knowledge</h2><div class="row"><div class="search" style="width:320px">Search articles…</div><span class="btn pri">+ New article</span></div></div>
+  <div class="content"><div class="wiki">
+    <div class="card tree"><div class="h">Workspace</div><a>Company handbook</a><a class="on">Investor Relations playbook</a><a style="padding-left:20px">Weekly outreach cadence</a><a style="padding-left:20px">Founder report approval</a><a style="padding-left:20px">Meeting booking rules</a><a>Sales playbook</a><a>Marketing SOPs</a><a>Operations manual <span class="pill gray">moved</span></a><div class="h">Private</div><a>My drafts</a><div class="h">Shared with me</div><a>Legal footer wording (counsel)</a></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2>Investor Relations playbook</h2><span style="font-size:12px;color:#5B6B86">Johnny Rivera · updated Sep 16 · 14 versions</span></div>
+      <p style="font-size:14px;line-height:1.6;margin:12px 0">The playbook covers the four-to-six month engagement: onboarding, weekly outreach, meeting prep, and founder reporting. Each section links to the live screen it describes.</p>
+      <h3>Weekly outreach cadence</h3><p style="font-size:14px;line-height:1.6">Monday: run matching on the week's task (→ <a>IR Hub · Tasks</a>). Tuesday–Thursday: intros and calls, logged on the Share Project record. Friday: clear blockers, prep next week. Targets come from <a>Goals</a>.</p>
+      <div class="card" style="background:#F8FAFD;margin:10px 0"><b style="font-size:13px">Linked records</b><div class="row" style="margin-top:6px;flex-wrap:wrap"><span class="pill info">IR project · Doyle Organics</span><span class="pill info">Task · Week 3 outreach</span><span class="pill gray">Template · Intro email</span></div></div>
+      <h3>Founder report approval</h3><p style="font-size:14px;line-height:1.6">Draft the AI summary, edit, approve, then send. Nothing goes out unapproved. Firm names appear only once a meeting is booked.</p>
+      <div class="chat"><div class="m"><b>Khris Thetsy</b> commented<small>Sep 16</small><br>Add the 24-hour deck rule here.</div></div></div></div>
+  </div></div>
+</section>
+
+</main>
+<script>
+const names=["Apps","Contacts","Quotes","Finance","People","Knowledge"];const tabs=document.getElementById("tabs");
+names.forEach((n,i)=>{const b=document.createElement("button");b.className="tab";b.textContent=(i?i+". ":"")+n;b.onclick=()=>show(n);tabs.appendChild(b)});
+function show(n){names.forEach(m=>{document.getElementById("s-"+m).hidden=m!==n});[...tabs.children].forEach((b,i)=>b.setAttribute("aria-current",names[i]===n))}
+show("Apps");
+</script>
+</body></html>

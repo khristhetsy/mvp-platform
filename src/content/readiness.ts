@@ -12,7 +12,7 @@ export const readiness = {
   hero: {
     eyebrow: "Capital Readiness Rating",
     title: "Find the gaps before an investor does.",
-    sub: "A structured score across five dimensions investors commonly screen on, with an ordered list of what to fix. Free, and you can re-run it as often as you like.",
+    sub: "A structured score across five dimensions investors commonly screen on, with an ordered list of what to fix. Included in every plan, and you can re-run it as often as you like.",
     cta: { label: "Start the rating", href: "/start" },
     compliance: "The rating is an assessment tool. It is not investment advice, a valuation, a credit opinion, or any indication that capital will be raised.",
   },
@@ -52,7 +52,7 @@ export const readiness = {
     estimated: 58,
     band: "Developing",
     workOn: "Work on these first",
-    cta: { label: "Get your real rating — free", href: "/start" },
+    cta: { label: "Find the right fit investors", href: "/fit" },
     disclaimer: "Estimator only. Not a valuation, credit opinion, or prediction of any funding outcome.",
   },
   measures: {
@@ -84,6 +84,6 @@ export const readiness = {
   closing: {
     title: "Rough deck? Start anyway.",
     sub: "The rating is built to be run early. That's the point of it.",
-    cta: { label: "Run your free rating", href: "/start" },
+    cta: { label: "Find the right fit investors", href: "/fit" },
   },
 } as const;

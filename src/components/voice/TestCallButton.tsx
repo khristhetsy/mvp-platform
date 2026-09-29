@@ -35,7 +35,7 @@ export function TestCallButton() {
           <p className="text-sm font-semibold text-slate-800">Place a test call</p>
           <p className="text-xs text-slate-500">Dials your verified test number (VAPI_TEST_NUMBER) through Vapi. No consent needed — this is your own line.</p>
         </div>
-        <button
+        <button type="button"
           onClick={call}
           disabled={state === "calling"}
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"

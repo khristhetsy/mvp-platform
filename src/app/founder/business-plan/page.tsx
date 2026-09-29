@@ -9,19 +9,22 @@ import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business plan" };
 
 export default async function FounderBusinessPlanPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "business_plan")) notFound();
 
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   if (!company) {
     return (
       <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle="No active raise">

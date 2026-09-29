@@ -24,7 +24,7 @@ export default async function SubmitCompanyPage() {
               funding or investor participation.
             </p>
             <p className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              Preview — create a free account to fill this out and save your readiness draft.
+              Preview — create your account to fill this out and save your readiness draft.
             </p>
           </div>
           <form className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">

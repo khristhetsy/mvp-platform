@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { HandOverPicker, type HandOverItem, type HandOverCandidate } from "@/components/admin/HandOverPicker";
 
 type Props = {
   userId: string;
@@ -19,6 +20,8 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [handOver, setHandOver] = useState<{ items: HandOverItem[]; candidates: HandOverCandidate[] } | null>(null);
+  const [reassignTo, setReassignTo] = useState("");
 
   useEffect(() => {
     void fetch("/api/admin/users/permissions/me")
@@ -29,17 +32,35 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
       .catch(() => null);
   }, []);
 
+  // Load what must be handed over once the confirm step opens.
+  useEffect(() => {
+    if (!showConfirm) return;
+    let active = true;
+    void fetch(`/api/admin/users/dependents?userId=${encodeURIComponent(userId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { mustReassign?: HandOverItem[]; candidates?: HandOverCandidate[] } | null) => {
+        if (active) setHandOver({ items: d?.mustReassign ?? [], candidates: d?.candidates ?? [] });
+      })
+      .catch(() => { if (active) setHandOver({ items: [], candidates: [] }); });
+    return () => { active = false; };
+  }, [showConfirm, userId]);
+
   if (!isSuperAdmin) return null;
 
   const displayName = userName?.trim() || userEmail || userId;
-  const canConfirm = confirmText.trim().toUpperCase() === "DELETE";
+  const needsHandOver = Boolean(handOver?.items.length);
+  const canConfirm = confirmText.trim().toUpperCase() === "DELETE" && handOver !== null && (!needsHandOver || Boolean(reassignTo));
 
   async function handleDelete() {
     if (!canConfirm) return;
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reassignTo: reassignTo || undefined }),
+      });
       const data = await res.json() as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Delete failed.");
       router.push("/admin/companies");
@@ -70,6 +91,9 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
             </button>
           ) : (
             <div className="mt-3 space-y-2">
+              {handOver ? (
+                <HandOverPicker items={handOver.items} candidates={handOver.candidates} value={reassignTo} onChange={setReassignTo} />
+              ) : null}
               <p className="text-xs text-red-700">
                 {t("typePre")}<span className="font-mono font-bold">DELETE</span>{t("typePost")}
               </p>
@@ -91,7 +115,7 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowConfirm(false); setConfirmText(""); }}
+                  onClick={() => { setShowConfirm(false); setConfirmText(""); setReassignTo(""); setHandOver(null); }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
                 >
                   {t("cancel")}

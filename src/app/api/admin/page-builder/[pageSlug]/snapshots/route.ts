@@ -3,7 +3,6 @@ import { requirePageBuilderApi } from "@/lib/api/permissions";
 import {
   createSnapshot,
   getOrCreateDraft,
-  getSnapshotById,
   isPageBuilderSlug,
   listSnapshotsWithMeta,
 } from "@/lib/page-builder/drafts";

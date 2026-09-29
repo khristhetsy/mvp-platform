@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -9,6 +12,7 @@ type Task = {
   status: "open" | "done" | "snoozed"; assignee_id: string | null; assignee_name: string | null; opportunity_id: string | null;
   contact_crm_id: string | null; contact_name: string | null;
   opportunity_status: string | null; opportunity_name: string | null;
+  source?: "icapos" | "odoo"; odoo_url?: string | null;
 };
 
 /** Add N business days (skip weekends) → YYYY-MM-DD. */
@@ -25,6 +29,14 @@ function addBusinessDays(n: number): string {
 type Scope = "my" | "all" | "overdue";
 type Staff = { id: string; name: string };
 const TASK_TYPES = ["Call", "Email", "Demo", "Follow-up", "Proposal"];
+const TASK_QUICK = [
+  { key: "overdue", label: "Overdue" }, { key: "today", label: "Due today" }, { key: "week", label: "This week" }, { key: "no_date", label: "No due date" },
+  { key: "open", label: "Open", sep: true }, { key: "done", label: "Done" },
+  { key: "icapos", label: "iCapOS", sep: true }, { key: "odoo", label: "Odoo" },
+];
+const TASK_GROUPS = [
+  { id: "none", label: "None" }, { id: "assignee", label: "Assignee" }, { id: "due", label: "Due date" }, { id: "type", label: "Type" }, { id: "contact", label: "Contact" },
+];
 
 const TYPE_COLOR: Record<string, { color: string; bg: string }> = {
   Call: { color: "#185FA5", bg: "#E6F1FB" }, Email: { color: "#4338CA", bg: "#EEF2FF" },
@@ -40,8 +52,9 @@ function dueLabel(d: string | null): { text: string; color: string } {
   return { text: d, color: "var(--muted-foreground)" };
 }
 
-export function TasksClient({ staff }: { staff: Staff[] }) {
+export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canExport?: boolean }) {
   const [scope, setScope] = useState<Scope>("my");
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -88,6 +101,7 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
   }
   async function markDone(t: Task) {
     await patch(t.id, { status: "done" });
+    if (t.source === "odoo") return; // Odoo activity completed back in Odoo — no iCapOS next-step prompt.
     // Prompt for the next step on every completed task — unless the linked
     // opportunity is already closed (Won / Lost / archived). Tasks with no
     // linked opportunity still prompt (there's no closed deal to suppress it).
@@ -121,20 +135,62 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
   }
 
   const overdueCount = tasks.filter((t) => t.status === "open" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10)).length;
+  const odooCount = tasks.filter((t) => t.source === "odoo").length;
+  const assigneeOptions = useMemo(() => [...new Set(tasks.map((t) => t.assignee_name ?? "Unassigned"))].sort(), [tasks]);
+  const typeOptions = useMemo(() => [...new Set([...TASK_TYPES, ...tasks.map((t) => t.task_type)])], [tasks]);
+  const searchFields = useMemo(() => [
+    { key: "type", label: "Type", options: typeOptions },
+    { key: "assignee", label: "Assignee", options: assigneeOptions },
+  ], [typeOptions, assigneeOptions]);
+  const visibleTasks = useMemo(() => {
+    const { q, quick, fields } = search;
+    const today = new Date().toISOString().slice(0, 10);
+    const weekEnd = new Date(new Date().getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    return tasks.filter((t) => {
+      if (!textMatch(q, t.title, t.summary, t.contact_name, t.opportunity_name)) return false;
+      if (quick.includes("overdue") && !(t.status === "open" && t.due_date && t.due_date < today)) return false;
+      if (quick.includes("today") && t.due_date !== today) return false;
+      if (quick.includes("week") && !(t.due_date && t.due_date >= today && t.due_date <= weekEnd)) return false;
+      if (quick.includes("no_date") && t.due_date) return false;
+      if (quick.includes("open") && t.status === "done") return false;
+      if (quick.includes("done") && t.status !== "done") return false;
+      if (quick.includes("icapos") && t.source === "odoo") return false;
+      if (quick.includes("odoo") && t.source !== "odoo") return false;
+      if (fields.type?.length && !fields.type.includes(t.task_type)) return false;
+      if (fields.assignee?.length && !fields.assignee.includes(t.assignee_name ?? "Unassigned")) return false;
+      return true;
+    });
+  }, [tasks, search]);
+  const taskGroups = useMemo(() => {
+    const g = search.groupBy || "none";
+    if (g === "none") return null;
+    const keyOf = (t: Task) => g === "assignee" ? (t.assignee_name ?? "Unassigned")
+      : g === "due" ? dueLabel(t.due_date).text.replace(/^\d+d overdue$/, "Overdue")
+      : g === "type" ? t.task_type
+      : (t.contact_name ?? "No contact");
+    const map = new Map<string, Task[]>();
+    for (const t of visibleTasks) { const k = keyOf(t); (map.get(k) ?? map.set(k, []).get(k)!).push(t); }
+    return [...map.entries()];
+  }, [visibleTasks, search.groupBy]);
   const scopeTab = (s: Scope, label: string, danger = false): React.CSSProperties => ({ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 5, padding: "5px 10px", background: scope === s ? "#2E78F5" : "transparent", color: scope === s ? "#fff" : danger ? "#A32D2D" : "var(--muted-foreground)" });
 
   return (
     <div>
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>Tasks &amp; activities</span>
+          <NewButton onClick={() => setAdding((v) => !v)} />
+          <ToolbarGear heading="Tasks" items={[
+            ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${visibleTasks.length.toLocaleString()} matching`, onClick: () => downloadCsv(`tasks-${new Date().toISOString().slice(0, 10)}.csv`, ["Task", "Type", "Due", "Status", "Assignee", "Contact", "Opportunity", "Source"], visibleTasks.map((t) => [t.title, t.task_type, t.due_date ?? "", t.status, t.assignee_name ?? "", t.contact_name ?? "", t.opportunity_name ?? "", t.source ?? "icapos"])) } as GearItem] : []),
+            { key: "settings", icon: "ti-adjustments", label: "Task settings", href: "/admin/sales/settings" },
+          ]} />
           <div style={{ display: "flex", background: "var(--muted)", borderRadius: 7, padding: 2 }}>
-            <button onClick={() => setScope("my")} style={scopeTab("my", "My")}>My</button>
-            <button onClick={() => setScope("all")} style={scopeTab("all", "All")}>All</button>
-            <button onClick={() => setScope("overdue")} style={scopeTab("overdue", "Overdue", true)}>Overdue{scope !== "overdue" && overdueCount ? ` ${overdueCount}` : ""}</button>
+            <button type="button" onClick={() => setScope("my")} style={scopeTab("my", "My")}>My</button>
+            <button type="button" onClick={() => setScope("all")} style={scopeTab("all", "All")}>All</button>
+            <button type="button" onClick={() => setScope("overdue")} style={scopeTab("overdue", "Overdue", true)}>Overdue{scope !== "overdue" && overdueCount ? ` ${overdueCount}` : ""}</button>
           </div>
-          <div style={{ flex: 1 }} />
-          <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ New task</button>
+          {odooCount > 0 && <span style={{ fontSize: 11, color: "#6B3FA0" }}>{odooCount} from Odoo</span>}
+          <OdooSearchBar scope="tasks" state={search} onChange={setSearch} quick={TASK_QUICK} fields={searchFields} groups={TASK_GROUPS} noGroupId="none" placeholder="Search task, contact, deal…" width={440} />
+          <SalesViewControl />
         </div>
 
         {adding && (
@@ -144,8 +200,8 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
             <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} style={inp} />
             <select value={draft.assigneeId} onChange={(e) => setDraft({ ...draft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+              <button type="button" onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
+              <button type="button" onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
           </div>
         )}
@@ -188,8 +244,8 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#E6F1FB", color: "#185FA5", fontSize: 11, padding: "3px 9px", borderRadius: 999 }}>Due +3 business days</span>
 
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <button onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>Create task</button>
-                <button onClick={() => setNextStep(null)} style={{ fontSize: 12.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Skip</button>
+                <button type="button" onClick={createNextStep} disabled={busy || !nextStep.title.trim()} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 14px", cursor: "pointer", opacity: busy || !nextStep.title.trim() ? 0.5 : 1 }}>Create task</button>
+                <button type="button" onClick={() => setNextStep(null)} style={{ fontSize: 12.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Skip</button>
               </div>
 
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5", display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -212,15 +268,17 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
           }
         `}</style>
 
-        {!loading && tasks.length > 0 && (
+        {!loading && visibleTasks.length > 0 && (
           <div className="tHead" style={{ padding: "8px 14px", borderTop: "0.5px solid #eef1f5", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--muted-foreground)" }}>
             <span>Task</span><span>Type</span><span>Due date</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
         )}
 
         {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
-          : tasks.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No tasks. Create one, or add tasks from a contact or opportunity.</p>
-          : tasks.map((t) => {
+          : visibleTasks.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No tasks. Create one, or add tasks from a contact or opportunity.</p>
+          : (taskGroups ?? [["", visibleTasks] as [string, Task[]]]).map(([gk, list]) => (<Fragment key={gk || "_all"}>
+            {gk && <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", background: "var(--muted)", borderTop: "0.5px solid #eef1f5", fontSize: 11.5, fontWeight: 600 }}>{gk} <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>{list.length}</span></div>}
+            {list.map((t) => {
               const due = dueLabel(t.due_date);
               const tc = TYPE_COLOR[t.task_type] ?? { color: "#5F5E5A", bg: "#F1EFE8" };
               const done = t.status === "done";
@@ -229,8 +287,8 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                   <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
                     <span style={{ fontSize: 12.5, color: "#A32D2D" }}><i className="ti ti-alert-triangle" aria-hidden="true" /> Delete &ldquo;{t.title}&rdquo;{t.contact_name ? ` for ${t.contact_name}` : ""}? This can&rsquo;t be undone.</span>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button onClick={async () => { await del(t.id); setConfirmId(null); }} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Delete</button>
-                      <button onClick={() => setConfirmId(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+                      <button type="button" onClick={async () => { await del(t.id); setConfirmId(null); }} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Delete</button>
+                      <button type="button" onClick={() => setConfirmId(null)} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
                     </div>
                   </div>
                 );
@@ -243,8 +301,8 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                     <input type="date" value={edit.dueDate} onChange={(e) => setEdit({ ...edit, dueDate: e.target.value })} style={inp} />
                     <select value={edit.assigneeId} onChange={(e) => setEdit({ ...edit, assigneeId: e.target.value })} style={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => saveEdit(t.id)} disabled={busy || !edit.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+                      <button type="button" onClick={() => saveEdit(t.id)} disabled={busy || !edit.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Save</button>
+                      <button type="button" onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
                     </div>
                   </div>
                 );
@@ -254,7 +312,10 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                   <div className="cTask" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                     <span style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "var(--muted-foreground)" : due.color, flexShrink: 0 }} />
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 500, textDecoration: done ? "line-through" : "none", color: done ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                        <span style={{ fontWeight: 500, textDecoration: done ? "line-through" : "none", color: done ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</span>
+                        {t.source === "odoo" && <span style={{ flexShrink: 0, fontSize: 9.5, color: "#6B3FA0", border: "0.5px solid #C9B8E6", borderRadius: 5, padding: "0 6px" }}>◆ Odoo</span>}
+                      </div>
                       <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                         {t.contact_name ? (t.contact_crm_id ? <Link href={`/admin/sales/contacts/${t.contact_crm_id}`} style={{ color: "#185FA5", textDecoration: "none" }}>{t.contact_name}</Link> : t.contact_name) : t.opportunity_id ? <Link href={`/admin/sales/opportunities/${t.opportunity_id}`} style={{ color: "#185FA5", textDecoration: "none" }}>opportunity</Link> : "—"}
                       </div>
@@ -265,14 +326,24 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
                   <span className="cLbl" data-label="Assignee" style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.assignee_name ?? "—"}</span>
                   <span className="cLbl" data-label="Status" style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: done ? "#0F6E56" : "#854F0B", background: done ? "#E1F5EE" : "#FAEEDA" }}>{done ? "Done" : "Open"}</span>
                   <div className="tActions">
-                    <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-                    {!done && <button onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
-                    {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
-                    <button onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                    {t.source === "odoo" ? (
+                      <>
+                        {!done && <button type="button" onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
+                        {t.odoo_url && <a href={t.odoo_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10.5, color: "#6B3FA0", textDecoration: "none" }}>Open in Odoo ↗</a>}
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
+                        {!done && <button type="button" onClick={() => markDone(t)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
+                        {!done && <button type="button" onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
+                        <button type="button" onClick={() => setConfirmId(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
             })}
+          </Fragment>))}
       </div>
     </div>
   );

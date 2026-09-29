@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { industryOptionsFor, isCanonicalIndustry } from "@/lib/industries";
+import { isMoneyBand, moneyBandFor } from "@/lib/profile/options";
+import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
+import { useFieldShown } from "@/lib/profile-fields/display-provider";
+import { offered } from "@/lib/vocabulary/lists";
 
 const STAGES: { id: string; label: string }[] = [
   { id: "pre_revenue", label: "Pre-revenue" },
@@ -16,7 +19,13 @@ type Basics = {
   industry: string;
   business_description: string;
   revenue_stage: string | null;
+  /** Amount of capital as one of the money bands ("" when not set). */
+  funding_amount_band: string;
+};
+
+type BasicsResponse = Omit<Basics, "funding_amount_band"> & {
   funding_amount: number | null;
+  funding_amount_band: string | null;
 };
 
 const INPUT =
@@ -25,7 +34,12 @@ const LABEL = "block text-xs font-semibold text-slate-600";
 
 export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string }>) {
   const router = useRouter();
+  // Money bands from Profile and fields: offered order and labels.
+  const moneyBands = useVocabularies().money_band;
+  // Fields hidden for staff on Admin, Profile and fields.
+  const shown = useFieldShown();
   const [b, setB] = useState<Basics | null>(null);
+  const { options: industryOptions } = useVocabulary("industry", b?.industry ?? null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -35,13 +49,14 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
     let active = true;
     void fetch(`/api/admin/companies/${companyId}/basics`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Could not load company basics."))))
-      .then((d: Basics) => {
+      .then((d: BasicsResponse) => {
         if (active) setB({
           company_name: d.company_name ?? "",
           industry: d.industry ?? "",
           business_description: d.business_description ?? "",
           revenue_stage: d.revenue_stage,
-          funding_amount: d.funding_amount,
+          // The stored band, or the band an existing exact amount falls in.
+          funding_amount_band: isMoneyBand(d.funding_amount_band) ? d.funding_amount_band : (moneyBandFor(d.funding_amount) ?? ""),
         });
       })
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Load failed."); })
@@ -69,7 +84,8 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
           industry: b.industry.trim(),
           business_description: b.business_description.trim() || null,
           revenue_stage: b.revenue_stage,
-          funding_amount: b.funding_amount,
+          // The band; a database trigger keeps the exact funding_amount consistent.
+          funding_amount_band: b.funding_amount_band || null,
         }),
       });
       const j = (await res.json()) as { error?: string };
@@ -92,25 +108,30 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
         <label className={LABEL} htmlFor="cb-name">Company name</label>
         <input id="cb-name" value={b.company_name} onChange={(e) => patch({ company_name: e.target.value })} className={INPUT} placeholder="e.g. Doyle Organics, LLC" />
       </div>
+      {shown("industry") ? (
       <div>
         <label className={LABEL} htmlFor="cb-industry">Industry</label>
         <select id="cb-industry" value={b.industry} onChange={(e) => patch({ industry: e.target.value })} className={INPUT}>
           {!b.industry ? <option value="">— Select an industry —</option> : null}
-          {industryOptionsFor(b.industry).map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-              {!isCanonicalIndustry(opt) ? " (current — not in list)" : ""}
+          {industryOptions.map((opt) => (
+            <option key={opt.slug} value={opt.label}>
+              {opt.label}{opt.archived ? " (retired)" : ""}
             </option>
           ))}
+          {b.industry && !industryOptions.some((o) => o.label === b.industry) ? (
+            <option value={b.industry}>{b.industry} (current, not in list)</option>
+          ) : null}
         </select>
         <p className="mt-1 text-[11px] text-slate-400">
           Shared list — the founder picks from the same options, so matching and the marketplace stay in sync.
         </p>
       </div>
+      ) : null}
       <div>
         <label className={LABEL} htmlFor="cb-desc">Business description</label>
         <textarea id="cb-desc" rows={3} value={b.business_description} onChange={(e) => patch({ business_description: e.target.value })} className={INPUT} placeholder="One or two sentences about what the company does." />
       </div>
+      {shown("revenue_stage") ? (
       <div>
         <label className={LABEL} htmlFor="cb-stage">Revenue stage</label>
         <select id="cb-stage" value={b.revenue_stage ?? ""} onChange={(e) => patch({ revenue_stage: e.target.value || null })} className={INPUT}>
@@ -118,20 +139,28 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
           {STAGES.map((s) => (<option key={s.id} value={s.id}>{s.label}</option>))}
         </select>
       </div>
+      ) : null}
+      {shown("funding_amount_band") ? (
       <div>
-        <label className={LABEL} htmlFor="cb-funding">Funding target ($)</label>
-        <input
-          id="cb-funding"
-          inputMode="numeric"
-          value={b.funding_amount ?? ""}
-          onChange={(e) => {
-            const raw = e.target.value.replace(/[^0-9.]/g, "");
-            patch({ funding_amount: raw ? Number(raw) : null });
-          }}
-          className={INPUT}
-          placeholder="e.g. 500000"
-        />
+        <p className={LABEL} id="cb-funding">Funding target ($)</p>
+        <div className="mt-1.5 flex max-w-xl flex-wrap gap-1.5" role="group" aria-labelledby="cb-funding">
+          {[...offered(moneyBands), ...moneyBands.filter((x) => x.archived && x.slug === b.funding_amount_band)].map(({ slug: o, label }) => {
+            const on = b.funding_amount_band === o;
+            return (
+              <button
+                key={o}
+                type="button"
+                aria-pressed={on}
+                onClick={() => patch({ funding_amount_band: on ? "" : o })}
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      ) : null}
 
       {error ? <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 

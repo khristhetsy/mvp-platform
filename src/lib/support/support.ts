@@ -8,6 +8,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
 export const SUPPORT_STATUSES = ["open", "pending_founder", "resolved"] as const;
+
+/** Where a support notification should land when clicked — the queue / the founder's
+ *  page, with the request preselected. Both pages read `?request=`. */
+export const staffSupportLink = (requestId: string) => `/admin/support?request=${requestId}`;
+export const founderSupportLink = (requestId: string) => `/founder/support?request=${requestId}`;
 export type SupportStatus = (typeof SUPPORT_STATUSES)[number];
 
 export const SUPPORT_SOURCES = ["request_help", "question", "manual"] as const;
@@ -79,12 +84,18 @@ export async function createSupportRequest(
   const id = (data as { id: string }).id;
 
   if (input.body.trim()) {
-    await db(supabase).from("support_messages").insert({
+    // The body is the ticket. If it can't be saved, don't leave staff a subject with no
+    // message and tell the founder it went through — remove the request and report it.
+    const { error: msgErr } = await db(supabase).from("support_messages").insert({
       request_id: id,
       author_user_id: input.founderId,
       author_role: "founder",
       body: input.body.trim().slice(0, 4000),
     });
+    if (msgErr) {
+      await db(supabase).from("support_requests").delete().eq("id", id);
+      return { error: `Couldn't save your message: ${msgErr.message}` };
+    }
   }
   return { id };
 }

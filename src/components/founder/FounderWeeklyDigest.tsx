@@ -131,7 +131,7 @@ function computePriorities(opts: {
     p.push(
       gap <= 10
         ? `You're ${gap} points from the 80 threshold — one or two uploads will cross it.`
-        : `Bring your completion from ${opts.readinessScore}% to 80% — that unlocks institutional investor conversations.`,
+        : `Bring your Preparation completeness from ${opts.readinessScore}% to 80% — that unlocks institutional investor conversations.`,
     );
   }
 
@@ -145,7 +145,7 @@ function computePriorities(opts: {
   // Positive fallback
   if (p.length === 0) {
     p.push("Keep your deal rooms active and maintain your response time below 24h.");
-    p.push("Upload any outstanding diligence documents to strengthen your completion.");
+    p.push("Upload any outstanding diligence documents to strengthen your Preparation completeness.");
     p.push("Review your investor matches and start outreach to the strongest fits.");
   }
 

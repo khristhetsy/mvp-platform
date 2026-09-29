@@ -17,6 +17,9 @@ import {
 } from "@/lib/data/founder-readiness";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { FounderReadinessDonutCards } from "@/components/founder/FounderReadinessDonutCards";
+import { CrrImprovement } from "@/components/founder/CrrImprovement";
+import { crrFor } from "@/lib/crr/crr-for";
+import { improvementSteps, reachesGate } from "@/lib/crr/improvement";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -25,16 +28,22 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { computeReadinessBenchmark } from "@/lib/data/readiness-benchmark";
 import { ReadinessBenchmarkBanner } from "@/components/founder/ReadinessBenchmarkBanner";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 
 export default async function FounderReadinessPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
 
-  const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
+  const documents = company ? (await listCompanyDocuments(db, company.id)).data ?? [] : [];
   const notApplicable = company
     ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
     : [];
@@ -48,8 +57,8 @@ export default async function FounderReadinessPage() {
 
   const [{ data: diligenceReport }, { data: adminReview }] = company
     ? await Promise.all([
-        getLatestDiligenceReport(supabase, company.id),
-        getLatestAdminReview(supabase, company.id),
+        getLatestDiligenceReport(db, company.id),
+        getLatestAdminReview(db, company.id),
       ])
     : [{ data: null }, { data: null }];
 
@@ -71,6 +80,11 @@ export default async function FounderReadinessPage() {
 
   const companyName = company?.company_name ?? "Your company";
   const remediation = await loadFounderRemediationPlan(profile);
+  // The rating leads this page now: it is what opens outreach, and the
+  // checklist below is one of its inputs rather than a rival score.
+  const crr = company ? await crrFor(company.id) : null;
+  const crrSteps = crr ? improvementSteps(crr.factorGaps) : [];
+  const crrReach = crr ? reachesGate(crrSteps, crr.pointsToGate) : { enough: false, available: 0, shortfall: 0 };
   const benchmark = company ? await computeReadinessBenchmark(company.id, company.revenue_stage ?? null) : null;
 
   return (
@@ -98,6 +112,29 @@ export default async function FounderReadinessPage() {
             </WorkspacePanel>
           ) : (
             <>
+              {crr ? (
+                <section className="mb-6">
+                  <CrrImprovement
+                    companyName={companyName}
+                    score={crr.score}
+                    band={crr.band}
+                    gate={crr.gate}
+                    pointsToGate={crr.pointsToGate}
+                    outreachUnlocked={crr.outreachUnlocked}
+                    dimensions={crr.dimensions.map((d) => ({
+                      label: d.label, contributes: d.contributes, weight: d.weight,
+                    }))}
+                    steps={crrSteps}
+                    reach={crrReach}
+                    scoredAt={crr.scoredAt}
+                    inputs={{
+                      documents: `${uploadedCount} of ${checklist.length} documents`,
+                      diligence: `diligence ${formatReviewStatus(reviewStatus ? String(reviewStatus) : null).toLowerCase()}`,
+                    }}
+                  />
+                </section>
+              ) : null}
+
               <section>
                 <FounderReadinessDonutCards
                   readinessScore={readinessScore}

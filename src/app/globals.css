@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Tabler icon webfont — powers every `ti ti-*` icon across the app (189 files).
+   Bundled via the package so there's no CDN runtime dependency. */
+@import "@tabler/icons-webfont/dist/tabler-icons.min.css";
 
 :root {
   --background: #f5f6f8;
@@ -287,3 +290,24 @@ select {
     animation-play-state: paused;
   }
 }
+
+/* Kanban boards (HScrollBoard): the board hides its own horizontal bar; the pinned bar
+   under it is always visible — macOS overlay scrollbars would otherwise hide it. */
+.hscroll-board { scrollbar-width: none; }
+.hscroll-board::-webkit-scrollbar { display: none; }
+.hscroll-bar { scrollbar-width: auto; scrollbar-color: #94a3b8 transparent; }
+.hscroll-bar::-webkit-scrollbar { height: 14px; -webkit-appearance: none; }
+.hscroll-bar::-webkit-scrollbar-track { background: transparent; }
+.hscroll-bar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 7px; border: 4px solid #fff; }
+.hscroll-bar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* Contact detail: Odoo-style hover actions on phone / email / website rows. */
+.field-row { padding-left: 6px !important; padding-right: 6px !important; margin: 0 -6px; }
+.field-row .field-act, .field-row .field-pen { visibility: hidden; }
+.field-row:hover { background: var(--muted); }
+.field-row:hover .field-val.field-link { color: #185FA5; text-decoration: underline; text-decoration-color: #B5D4F4; }
+.field-row:hover .field-act, .field-row:focus-within .field-act,
+.field-row:hover .field-pen { visibility: visible; }
+.field-row .field-act:hover { background: #B5D4F4; }
+.field-row.field-editing { background: var(--muted); }
+.field-row.field-editing:hover .field-pen { visibility: hidden; }

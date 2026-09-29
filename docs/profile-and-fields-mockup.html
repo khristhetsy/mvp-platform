@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile and fields — mockup</title>
+<style>
+  :root{--navy:#10233f;--blue:#2E78F5;--blue-soft:#EEF3FE;--gold:#BA7517;--muted:#7a8296;--sub:#5a6376;--line:#e4e7ee;--line2:#f1f3f7;--warn:#854F0B;--warnbg:#FAEEDA;--warnbd:#EFD2A2;--bad:#A32D2D;--badbg:#FCEBEB;--ok:#0F6E56;--okbg:#E1F5EE;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:0;font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1d2432;background:#f7f8fa;}
+  .shell{display:flex;min-height:100vh;}
+  nav{width:210px;flex:none;background:#fff;border-right:1px solid var(--line);padding:18px 0;}
+  nav .grp{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:14px 18px 6px;}
+  nav a{display:block;padding:6px 18px;font-size:13px;color:var(--sub);text-decoration:none;}
+  nav a.on{background:var(--blue-soft);color:var(--blue);font-weight:600;border-right:2px solid var(--blue);}
+  main{flex:1;padding:28px 32px 80px;max-width:1040px;}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:6px 0 0;color:var(--navy);}
+  .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0;}
+  .lede{font-size:13.5px;color:var(--sub);margin:9px 0 0;max-width:62ch;}
+  .hdr{border-bottom:1px solid var(--line);padding-bottom:20px;}
+  .tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-top:20px;}
+  .tabs button{background:none;border:none;padding:0 0 10px;font:inherit;font-size:13.5px;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;}
+  .tabs button.on{color:var(--blue);font-weight:600;border-bottom-color:var(--blue);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-top:11px;}
+  .card h3{font-size:14.5px;font-weight:600;margin:0;color:var(--navy);}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .w{font-size:11.5px;color:var(--muted);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
+  .chip{font-size:12px;border:1px solid #d6dae4;border-radius:20px;padding:4px 11px;color:#394051;}
+  .chip.dupe{border-color:var(--warnbd);background:var(--warnbg);color:var(--warn);}
+  .add{font-size:12px;border:1px dashed #c3c9d6;border-radius:20px;padding:4px 11px;color:var(--muted);cursor:pointer;background:none;}
+  .foot{font-size:11.5px;color:var(--sub);margin:10px 0 0;}
+  .foot.warnt{color:var(--warn);}
+  .divider{border-top:1px solid var(--line2);margin-top:11px;padding-top:10px;}
+  button.btn{font:inherit;font-size:12.5px;padding:5px 11px;border:1px solid #cfd5e0;background:#fff;border-radius:7px;cursor:pointer;color:#2b3346;}
+  button.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px;}
+  th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 8px;border-bottom:1px solid var(--line);}
+  td{padding:10px 8px;border-bottom:1px solid var(--line2);vertical-align:middle;}
+  td.num,th.num{text-align:right;}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);}
+  .ph{display:inline-block;min-width:26px;text-align:right;color:#aab0be;letter-spacing:2px;}
+  .tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;}
+  .tag.legacy{background:var(--warnbg);color:var(--warn);}
+  .tag.arch{background:#eef0f4;color:var(--muted);}
+  .tag.no{background:var(--badbg);color:var(--bad);}
+  .tag.yes{background:var(--okbg);color:var(--ok);}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-top:14px;}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .tile p{margin:0;}
+  .tile .lab{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+  .tile .val{font-size:22px;font-weight:600;color:var(--navy);margin-top:3px;}
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0 12px;}
+  input[type=text]{font:inherit;font-size:13px;padding:6px 10px;border:1px solid #cfd5e0;border-radius:7px;width:230px;}
+  .note{border-left:3px solid var(--blue);background:#f4f8ff;padding:10px 13px;border-radius:0 6px 6px 0;margin-top:13px;font-size:12.5px;color:#2b3346;}
+  .warnbox{border-left:3px solid var(--warn);background:var(--warnbg);padding:10px 13px;border-radius:0 6px 6px 0;margin-top:13px;font-size:12.5px;color:#5c3a08;}
+  .legend{font-size:11.5px;color:var(--muted);margin-top:14px;}
+  .hide{display:none;}
+  .back{background:none;border:none;font:inherit;font-size:12.5px;color:var(--blue);cursor:pointer;padding:0;margin-bottom:10px;}
+  .src{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;background:#eef0f4;color:var(--muted);}
+  .src.odoo{background:#EAF3DE;color:#3B6D11;}
+  .m{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px;}
+  .m.plat{background:#E6F1FB;color:#185FA5;}
+  .m.net{background:#EEEDFE;color:#534AB7;}
+  .m.none{background:#f2f3f6;color:#9aa1b0;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <nav>
+    <div class="grp">Administration</div>
+    <a href="#">User Management</a>
+    <a href="#">User Permissions</a>
+    <a href="#">Contact Sync</a>
+    <a href="#">Billing</a>
+    <a href="#">Pricing</a>
+    <a href="#">Accounts</a>
+    <a href="#">My Profile</a>
+    <a href="#" class="on">Profile and fields</a>
+    <a href="#">Feature Controls</a>
+  </nav>
+
+  <main>
+    <div class="hdr">
+      <p class="eyebrow">Administration</p>
+      <h1>Profile and fields</h1>
+      <p class="lede">The words every form offers, and the questions that use them.</p>
+    </div>
+
+    <div class="tabs">
+      <button id="tv" class="on" onclick="show('vocab')">Vocabularies</button>
+      <button id="tf" onclick="show('fields')">Fields</button>
+    </div>
+
+    <!-- ── VOCABULARIES ───────────────────────────────────────────── -->
+    <section id="vocab">
+
+      <div class="card" style="border-color:#c9dcfa;">
+        <div class="row"><h3>Industry <span class="src odoo">from Odoo</span></h3><span class="w">56 values · weight 25</span></div>
+        <div class="chips">
+          <span class="chip">Aerospace</span><span class="chip">Agriculture</span><span class="chip">AgTech</span>
+          <span class="chip">Apparel</span><span class="chip dupe">Artificial Intelligence</span><span class="chip dupe">Biotechnology/Life Science</span>
+          <span class="chip dupe">Bitcoin</span><span class="chip dupe">Blockchain</span><span class="chip">Business Services</span>
+          <span class="chip">Cannabis</span><span class="chip">Cleantech</span><span class="chip">Communications</span>
+          <span class="chip">Computer</span><span class="chip">Construction</span><span class="chip">Consumer Products</span>
+          <span class="chip dupe">Cryptocurrency</span><span class="chip">Cyber Security</span><span class="chip">Data/IoT</span>
+          <span class="chip">Deep Tech</span><span class="chip">Defense</span><span class="chip dupe">Digital Health</span>
+          <span class="chip">EdTech</span><span class="chip">Energy</span><span class="chip dupe">Enterprise Software</span>
+          <span class="chip">Entertainment</span><span class="chip dupe">Financial Services</span><span class="chip dupe">Fintech</span>
+          <span class="chip">Food Tech</span><span class="chip">Food/Hospitality</span><span class="chip">Gaming</span>
+          <span class="chip">Hardware</span><span class="chip dupe">Health &amp; Wellness</span><span class="chip dupe">Healthcare</span>
+          <span class="chip">Industrial</span><span class="chip">Insurance</span><span class="chip">Manufacturing</span>
+          <span class="chip">Materials</span><span class="chip">Media</span><span class="chip dupe">Medical Devices</span>
+          <span class="chip">Mining</span><span class="chip">Nano Technology</span><span class="chip">Nuclear Waste Recycling</span>
+          <span class="chip">Oil &amp; Gas</span><span class="chip">Payment App</span><span class="chip">Plastics</span>
+          <span class="chip">Professional Services</span><span class="chip">Real Estate</span><span class="chip">Robotics</span>
+          <span class="chip dupe">SaaS</span><span class="chip">Semiconductor</span><span class="chip dupe">Software</span>
+          <span class="chip">Telecom</span><span class="chip">Transportation</span><span class="chip">Travel</span>
+          <span class="chip">Warehousing</span><span class="chip">Other</span>
+        </div>
+        <p class="foot warnt">Amber values collapse into one another under the matcher’s synonym families — Fintech and Financial Services score identically, as do SaaS, Software, Enterprise Software and Artificial Intelligence. Fine as a picker; it means the 25-point factor is coarser than 56 values suggests.</p>
+        <div class="divider row">
+          <span class="foot" style="margin:0;">Add, rename, archive, and see where each one is used</span>
+          <button class="btn" onclick="show('detail')">Open &rarr;</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Operating stage <span class="src odoo">from Odoo</span></h3><span class="w">7 values · weight 20</span></div>
+        <div class="chips">
+          <span class="chip">Startup</span><span class="chip">Prototype</span><span class="chip">Small Business</span>
+          <span class="chip">Expand Growth</span><span class="chip">Midsize Company</span><span class="chip">Large Corporation</span>
+          <span class="chip">Other</span><button class="add">+</button>
+        </div>
+        <p class="foot warnt">This describes the company, not the round. Pre-seed / Seed / Series A is a different question and still needs its own list — see Funding stage below.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Funding stage</h3><span class="w">6 values · weight 20</span></div>
+        <div class="chips">
+          <span class="chip">Pre-seed</span><span class="chip">Seed</span><span class="chip">Series A</span>
+          <span class="chip">Series B</span><span class="chip">Growth</span><span class="chip">Other</span>
+          <button class="add">+</button>
+        </div>
+        <p class="foot">The round being raised. Kept separate from operating stage above.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Investor type <span class="src odoo">from Odoo</span></h3><span class="w">12 values · weight 10</span></div>
+        <div class="chips">
+          <span class="chip">Angel Investor</span><span class="chip">Banker/Lender</span><span class="chip">Both debt and equity investors</span>
+          <span class="chip">Family Office</span><span class="chip">Hedge Fund</span><span class="chip">Investment Bank</span>
+          <span class="chip">Lender</span><span class="chip dupe">Pre-Series A</span><span class="chip">Private Equity</span>
+          <span class="chip">Represent Investors</span><span class="chip">Venture Capital</span><span class="chip">Other</span>
+          <button class="add">+</button>
+        </div>
+        <p class="foot warnt">“Pre-Series A” is a stage, not an investor type — it will never match a founder’s answer to this question. Worth archiving and re-tagging those records.</p>
+      </div>
+
+      <div class="card" style="border-color:var(--warnbd);">
+        <div class="row"><h3>Capital type <span class="src odoo">from Odoo</span></h3><span class="w" style="color:var(--warn);">7 values · weight 10 · never scores</span></div>
+        <div class="chips">
+          <span class="chip">Equity Capital</span><span class="chip">Debt Capital</span><span class="chip">Business Loan</span>
+          <span class="chip">Alternative Financing</span><span class="chip">Human Capital</span><span class="chip">Social Capital</span>
+          <span class="chip">Other</span><button class="add">+</button>
+        </div>
+        <p class="foot warnt">Founders answer this. No investor is ever asked, so the factor drops out of every platform match. Replaces Equity / SAFE / Convertible note / Venture debt / Revenue-based — nothing stored on the old values maps automatically.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Geography</h3><span class="w">weight 10</span></div>
+        <div class="chips">
+          <span class="chip">North America</span><span class="chip">Europe</span><span class="chip">LATAM</span>
+          <span class="chip">APAC</span><span class="chip">MENA</span><span class="chip">Africa</span>
+          <span class="chip">Global</span><button class="add">+</button>
+        </div>
+        <p class="foot warnt">Proposed, not in the codebase and not from Odoo. Investors type geographies free-hand today. Needs your list before seeding.</p>
+      </div>
+
+      <p class="legend" style="margin-top:22px;font-weight:600;color:var(--sub);">Founder profile — existing selects</p>
+
+      <div class="card">
+        <div class="row"><h3>Type of investor(s) sought</h3><span class="w">6 values</span></div>
+        <div class="chips">
+          <span class="chip">Individual angel</span><span class="chip">Angel group / syndicate</span><span class="chip">Family office</span>
+          <span class="chip">Venture fund</span><span class="chip">Corporate / strategic</span><span class="chip">Other</span>
+        </div>
+        <p class="foot warnt">Does not line up with the 12 Odoo investor types above. Both feed the same 10-point factor, so the two lists have to be reconciled.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Active investor preference</h3><span class="w">5 values</span></div>
+        <div class="chips">
+          <span class="chip">Lead investor</span><span class="chip">Follow-on / co-invest</span><span class="chip">Hands-on / operator</span>
+          <span class="chip">Passive</span><span class="chip">No preference</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Use of funds <span class="src odoo">from Odoo</span></h3><span class="w">14 values</span></div>
+        <div class="chips">
+          <span class="chip">Administration</span><span class="chip">Balance Sheet Strength</span><span class="chip">Growth Stage</span>
+          <span class="chip">Lab</span><span class="chip">M&amp;A Financing</span><span class="chip">Marketing</span>
+          <span class="chip">Model</span><span class="chip">Operation</span><span class="chip">Pre-seed capital</span>
+          <span class="chip">Prototype</span><span class="chip">Recapitalization</span><span class="chip">Research &amp; Development</span>
+          <span class="chip">WCL — Working Capital</span><span class="chip">Other</span><button class="add">+</button>
+        </div>
+        <p class="foot warnt">Replaces Hire team / Build product / Marketing &amp; sales / R&amp;D / Operations / International expansion / Working capital. Growth Stage, Pre-seed capital and Prototype are stages rather than uses — they will read oddly next to Marketing and Lab.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Annual revenue size</h3><span class="w">6 values</span></div>
+        <div class="chips">
+          <span class="chip">Pre-revenue</span><span class="chip">Under $100k</span><span class="chip">$100k – $500k</span>
+          <span class="chip">$500k – $1M</span><span class="chip">$1M – $5M</span><span class="chip">$5M+</span>
+          <button class="add">+</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Revenue stage</h3><span class="w">6 values · same options</span></div>
+        <div class="chips">
+          <span class="chip">Pre-revenue</span><span class="chip">Under $100k</span><span class="chip">$100k – $500k</span>
+          <span class="chip">$500k – $1M</span><span class="chip">$1M – $5M</span><span class="chip">$5M+</span>
+        </div>
+        <p class="foot">Replaces Early revenue / Growing / Scaling.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>ARR</h3><span class="w">6 values · same options · weight 6</span></div>
+        <div class="chips">
+          <span class="chip">Pre-revenue</span><span class="chip">Under $100k</span><span class="chip">$100k – $500k</span>
+          <span class="chip">$500k – $1M</span><span class="chip">$1M – $5M</span><span class="chip">$5M+</span>
+        </div>
+        <p class="foot">Founder ARR and the investor’s preferred ARR both draw from this.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>MRR</h3><span class="w">6 values · same options · weight 6</span></div>
+        <div class="chips">
+          <span class="chip">Pre-revenue</span><span class="chip">Under $100k</span><span class="chip">$100k – $500k</span>
+          <span class="chip">$500k – $1M</span><span class="chip">$1M – $5M</span><span class="chip">$5M+</span>
+        </div>
+        <p class="foot warnt">Replaces Under $10k / $10k – $50k / $50k – $100k / $100k+. Nothing stored on those maps across.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Annual EBITDA</h3><span class="w">6 values · same options</span></div>
+        <div class="chips">
+          <span class="chip">Pre-revenue</span><span class="chip">Under $100k</span><span class="chip">$100k – $500k</span>
+          <span class="chip">$500k – $1M</span><span class="chip">$1M – $5M</span><span class="chip">$5M+</span>
+        </div>
+        <p class="foot warnt">Replaces Negative / pre-profit · Break-even · Under $250K · $250K – $1M · $1M – $5M · $5M+. The field currently renders as free text and has never offered a list at all.</p>
+      </div>
+
+      <div class="card">
+        <div class="row"><h3>Business entity</h3><span class="w">5 values</span></div>
+        <div class="chips">
+          <span class="chip">Delaware C-Corp</span><span class="chip">LLC</span><span class="chip">S-Corp</span>
+          <span class="chip">Public benefit corp</span><span class="chip">Not yet incorporated</span>
+          <button class="add">+</button>
+        </div>
+        <p class="foot">Select, not free text.</p>
+      </div>
+
+      <p class="legend" style="margin-top:22px;font-weight:600;color:var(--sub);">Investor profile — typed today, becomes a selection</p>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <tr><th style="width:26%">Field</th><th style="width:34%">Today</th><th style="width:22%">Becomes</th><th style="width:18%">Draws from</th></tr>
+          <tr><td>Preferred sectors</td><td class="mono" style="color:var(--bad);">“FinTech, SaaS, HealthTech”</td><td>Multi-select</td><td style="color:var(--sub);">Industry</td></tr>
+          <tr><td>Stage focus</td><td class="mono" style="color:var(--bad);">“Pre-seed, Seed, Series A”</td><td>Multi-select</td><td style="color:var(--sub);">Funding stage</td></tr>
+          <tr><td>Preferred geographies</td><td class="mono" style="color:var(--bad);">“US, Europe, LATAM”</td><td>Multi-select</td><td style="color:var(--sub);">Geography</td></tr>
+          <tr><td>Preferred ARR</td><td class="mono" style="color:var(--bad);">“$1M – $5M”</td><td>Multi-select</td><td style="color:var(--sub);">ARR</td></tr>
+          <tr><td>Preferred MRR</td><td class="mono" style="color:var(--bad);">“$80k – $400k”</td><td>Multi-select</td><td style="color:var(--sub);">MRR</td></tr>
+          <tr><td>Investor type</td><td style="color:var(--sub);">Select — already</td><td>Unchanged</td><td style="color:var(--sub);">Investor type</td></tr>
+        </table>
+        <div style="padding:0 15px 13px;"><p class="foot warnt" style="margin:0;">67 of the 112 matching points are currently entered as prose and compared as strings. This is the single change that improves every matcher at once.</p></div>
+      </div>
+
+      <p class="legend" style="margin-top:22px;font-weight:600;color:var(--sub);">Imports</p>
+
+      <div class="card">
+        <div class="row"><h3>Values that don’t fit are held, not swallowed</h3></div>
+        <p class="foot">Every import and every Odoo sync is checked against the lists above. A value that matches nothing is not written into the field and not silently invented — it lands here for a decision.</p>
+        <div class="divider" style="padding-top:12px;">
+          <table style="margin-top:0;">
+            <tr><th style="width:28%">Incoming value</th><th style="width:18%">Field</th><th style="width:16%">Records</th><th style="width:38%">Action</th></tr>
+            <tr><td class="mono">Web3</td><td style="color:var(--sub);">Industry</td><td><span class="ph">••</span></td><td><button class="btn">Map to…</button> <button class="btn">Add as new</button> <button class="btn">Ignore</button></td></tr>
+            <tr><td class="mono">pre seed</td><td style="color:var(--sub);">Funding stage</td><td><span class="ph">••</span></td><td><button class="btn">Map to…</button> <button class="btn">Add as new</button> <button class="btn">Ignore</button></td></tr>
+            <tr><td class="mono">EMEA</td><td style="color:var(--sub);">Geography</td><td><span class="ph">••</span></td><td><button class="btn">Map to…</button> <button class="btn">Add as new</button> <button class="btn">Ignore</button></td></tr>
+          </table>
+        </div>
+        <div class="warnbox" style="margin-top:12px;">
+          <strong>Nothing is mapped for you.</strong> No suggested match, no closest guess. The value is named, the records holding it are counted, and a person decides. The contact still imports — rejecting the whole record over one unrecognised field would lose the person along with the bad value — but the field stays empty until someone says what it should be.
+        </div>
+        <div class="warnbox" style="margin-top:10px;">
+          <strong>This retires the silent merges.</strong> Today <span class="mono">canonical.ts</span> rewrites values on the way out of the database: <span class="mono">internet</span> and <span class="mono">technology/web</span> both become Data/IoT, <span class="mono">education</span> becomes EdTech, <span class="mono">space tech</span> becomes Aerospace, <span class="mono">agnostic</span> is dropped entirely. Those are decisions nobody made deliberately and nobody can see. Under this policy each one surfaces here instead.
+        </div>
+      </div>
+
+      <div class="note">Amount of capital and check size are not here. They stay numeric and keep their current scoring.</div>
+      <p class="legend">Values are stored as keys and displayed as labels, so renaming a word never orphans an answer. Removing one archives it — records already on it keep it and still match.</p>
+    </section>
+
+    <!-- ── INDUSTRY DETAIL ────────────────────────────────────────── -->
+    <section id="detail" class="hide">
+      <button class="back" onclick="show('vocab')">&larr; Vocabularies</button>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="bar" style="padding:12px 15px;border-bottom:1px solid var(--line);">
+          <input type="text" placeholder="Search industries">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="w">56 of 56</span>
+            <button class="btn primary">Add industry</button>
+          </div>
+        </div>
+
+        <div style="padding:12px 15px;background:var(--blue-soft);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="text" value="Quantum Computing" style="flex:1;min-width:170px;">
+            <span class="mono" style="color:var(--blue);">&#128274; quantum-computing</span>
+            <button class="btn primary">Add</button>
+          </div>
+          <p class="foot" style="color:#2b4c86;">The key is derived from the name and fixed forever — stored answers point at it. The name can be changed later.</p>
+        </div>
+
+        <table>
+          <tr><th>Name</th><th>Key</th><th class="num">Founders</th><th class="num">Investors</th><th class="num">Registrations</th><th></th></tr>
+          <tr><td>Aerospace</td><td class="mono">aerospace</td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><button class="btn">Edit</button></td></tr>
+          <tr><td>AgTech</td><td class="mono">agtech</td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><button class="btn">Edit</button></td></tr>
+          <tr style="background:#fafbfd;">
+            <td><input type="text" value="Biotechnology/Life Science" style="width:100%;"></td>
+            <td class="mono">&#128274; biotechnology-life-science</td>
+            <td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td>
+            <td class="num"><button class="btn primary">Save</button></td>
+          </tr>
+          <tr style="background:#fafbfd;"><td colspan="6" style="padding-top:0;font-size:12px;color:var(--sub);">Renaming changes what every record on this key displays. The key is unchanged, so all of them keep matching.</td></tr>
+          <tr><td>Fintech</td><td class="mono">fintech</td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><button class="btn">Edit</button></td></tr>
+          <tr><td>Financial Services <span class="tag legacy">same family as Fintech</span></td><td class="mono">financial-services</td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><button class="btn">Edit</button></td></tr>
+          <tr style="color:var(--muted);"><td>Plastics</td><td class="mono">plastics</td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="ph">••</span></td><td class="num"><span class="tag arch">Archived</span></td></tr>
+        </table>
+      </div>
+
+      <div class="note">Counts come from live queries against companies, investor profiles and registrations. A count that cannot be loaded renders as unmeasured with the query named — never as zero.</div>
+      <p class="legend">Archiving removes an industry from new pickers. Records already on it keep it and still match. Nothing deletes.</p>
+    </section>
+
+    <!-- ── FIELDS ─────────────────────────────────────────────────── -->
+    <section id="fields" class="hide">
+      <div class="card" style="padding:0;overflow:hidden;margin-top:13px;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Founder</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Asked on</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Industry</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Industry <span class="m plat">platform</span><span class="m net">networking</span></td><td class="num">25</td></tr>
+          <tr><td>Funding stage</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Stage focus <span class="m plat">platform</span></td><td class="num">20</td></tr>
+          <tr><td>Amount of capital</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Check size <span class="m plat">platform</span></td><td class="num">15</td></tr>
+          <tr><td>Type of investor(s)</td><td style="color:var(--sub);">Profile · registration</td><td>—</td><td style="color:var(--sub);">Investor · Investor type <span class="m plat">platform</span></td><td class="num">10</td></tr>
+          <tr><td>Country / State</td><td style="color:var(--sub);">Profile · registration</td><td>—</td><td style="color:var(--sub);">Investor · Geography <span class="m plat">platform</span></td><td class="num">10</td></tr>
+          <tr><td>ARR</td><td style="color:var(--sub);"><strong>Onboarding</strong> · profile</td><td>—</td><td style="color:var(--sub);">Investor · ARR <span class="m plat">platform</span></td><td class="num">6</td></tr>
+          <tr><td>MRR</td><td style="color:var(--sub);"><strong>Onboarding</strong> · profile</td><td>—</td><td style="color:var(--sub);">Investor · MRR <span class="m plat">platform</span></td><td class="num">6</td></tr>
+          <tr><td>Type(s) of capital</td><td style="color:var(--sub);">Profile</td><td>—</td><td style="color:var(--warn);">Investor · Capital type</td><td class="num"><span class="tag no">Dead</span></td></tr>
+          <tr><td>Annual EBITDA</td><td style="color:var(--sub);">Profile</td><td>—</td><td style="color:var(--sub);">Investor · EBITDA <span class="tag legacy">new</span></td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Use of funds</td><td style="color:var(--sub);">Profile</td><td>—</td><td style="color:var(--sub);">Investor · Use of funds <span class="tag legacy">new</span></td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Operating stage</td><td style="color:var(--sub);">Profile</td><td>—</td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Description</td><td style="color:var(--sub);">Onboarding · profile</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+          <tr><td>Five key highlights</td><td style="color:var(--sub);">Profile</td><td>—</td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+          <tr><td>One-line pitch</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Investor</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Asked on</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Industry</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Industry <span class="m plat">platform</span><span class="m net">networking</span></td><td class="num">25</td></tr>
+          <tr><td>Stage focus</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Funding stage <span class="m plat">platform</span></td><td class="num">20</td></tr>
+          <tr><td>Check size</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Amount of capital <span class="m plat">platform</span></td><td class="num">15</td></tr>
+          <tr><td>Investor type</td><td style="color:var(--sub);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Type of investor(s) <span class="m plat">platform</span></td><td class="num">10</td></tr>
+          <tr><td>Geography</td><td style="color:var(--sub);">Onboarding · profile</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Country / State <span class="m plat">platform</span></td><td class="num">10</td></tr>
+          <tr><td>ARR</td><td style="color:var(--sub);"><strong>Onboarding</strong> · profile</td><td>—</td><td style="color:var(--sub);">Founder · ARR <span class="m plat">platform</span></td><td class="num">6</td></tr>
+          <tr><td>MRR</td><td style="color:var(--sub);"><strong>Onboarding</strong> · profile</td><td>—</td><td style="color:var(--sub);">Founder · MRR <span class="m plat">platform</span></td><td class="num">6</td></tr>
+          <tr><td>Capital type <span class="tag legacy">new</span></td><td style="color:var(--sub);">Onboarding · profile</td><td>—</td><td style="color:var(--sub);">Founder · Type(s) of capital</td><td class="num" style="color:var(--warn);font-size:11.5px;">Revives 10</td></tr>
+          <tr><td>Annual EBITDA <span class="tag legacy">new</span></td><td style="color:var(--sub);">Onboarding · profile</td><td>—</td><td style="color:var(--sub);">Founder · Annual EBITDA</td><td class="num" style="color:var(--warn);font-size:11.5px;">Unweighted</td></tr>
+          <tr><td>Use of funds <span class="tag legacy">new</span></td><td style="color:var(--sub);">Onboarding · profile</td><td>—</td><td style="color:var(--sub);">Founder · Use of funds</td><td class="num" style="color:var(--warn);font-size:11.5px;">Unweighted</td></tr>
+          <tr style="background:#fffaf1;"><td style="color:var(--warn);">Investment thesis</td><td style="color:var(--warn);">Onboarding · profile · registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+          <tr><td>Accredited</td><td style="color:var(--sub);">Onboarding · registration</td><td>—</td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Event registration — Founder</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Type</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Industry</td><td style="color:var(--sub);">Multi · industry list</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Industry <span class="m net">networking</span></td><td class="num">25</td></tr>
+          <tr><td>Funding stage</td><td style="color:var(--sub);">Select · funding stage</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Stage focus <span class="m net">networking</span></td><td class="num">20</td></tr>
+          <tr><td>Amount of capital</td><td style="color:var(--sub);">Select · raise amount</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Check size <span class="m net">networking</span></td><td class="num">15</td></tr>
+          <tr><td>Type of investor(s)</td><td style="color:var(--sub);">Multi · investor type <span class="tag legacy">new</span></td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Investor type <span class="m net">networking</span></td><td class="num">10</td></tr>
+          <tr><td>Country</td><td style="color:var(--sub);">Select · country list</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Investor · Geography <span class="m net">networking</span></td><td class="num">10</td></tr>
+          <tr><td>Currently raising?</td><td style="color:var(--sub);">Select</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>One-line pitch</td><td style="color:var(--sub);">Text</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+          <tr><td>Apply to present</td><td style="color:var(--sub);">Checkbox</td><td>—</td><td style="color:var(--muted);">nothing</td><td class="num">—</td></tr>
+        </table>
+        <div style="padding:0 15px 13px;"><p class="foot warnt" style="margin:0;">Today the networking board scores shared sectors and role only — the stage, amount, investor type and country rows above are collected and ignored. They become live when the board reads the same factors the platform matcher does.</p></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Event registration — Investor</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Type</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Industry</td><td style="color:var(--sub);">Multi · industry list</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Industry <span class="m net">networking</span></td><td class="num">25</td></tr>
+          <tr><td>Stage focus</td><td style="color:var(--sub);">Multi · funding stage</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Funding stage <span class="m net">networking</span></td><td class="num">20</td></tr>
+          <tr><td>Check size</td><td style="color:var(--sub);">Select · check size</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Amount of capital <span class="m net">networking</span></td><td class="num">15</td></tr>
+          <tr><td>Investor type</td><td style="color:var(--sub);">Select · investor type</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Type of investor(s) <span class="m net">networking</span></td><td class="num">10</td></tr>
+          <tr><td>Country</td><td style="color:var(--sub);">Select · country list</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Country <span class="m net">networking</span></td><td class="num">10</td></tr>
+          <tr><td>Investment thesis</td><td style="color:var(--sub);">Text</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+          <tr><td>Accredited</td><td style="color:var(--sub);">Checkbox</td><td>—</td><td style="color:var(--muted);">nothing</td><td class="num">—</td></tr>
+        </table>
+        <div style="padding:0 15px 13px;"><p class="foot warnt" style="margin:0;">Investor ↔ investor pairings compare industry, stage focus and country only. Check size and investor type have no meaning between two investors, so those factors drop out rather than scoring zero.</p></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Advisor</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Asked on</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Industry</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Industry <span class="m net">networking</span></td><td class="num">25</td></tr>
+          <tr><td>Country</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Country <span class="m net">networking</span></td><td class="num">10</td></tr>
+          <tr><td>Advisory category</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Who you serve</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Specialty / offer</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Read by a person</td></tr>
+        </table>
+        <div style="padding:0 15px 13px;"><p class="foot warnt" style="margin:0;">Advisor does not exist as a role today — the platform has one <span class="mono">service</span> role covering both advisors and service providers. Splitting them is a data change, not just a form.</p></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Service provider</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Asked on</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Industry</td><td style="color:var(--sub);">Registration <span class="tag legacy">new</span></td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Industry <span class="m net">networking</span></td><td class="num">25</td></tr>
+          <tr><td>Country</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Founder · Country <span class="m net">networking</span></td><td class="num">10</td></tr>
+          <tr><td>Service category</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Who you serve</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+          <tr><td>Interested in</td><td style="color:var(--sub);">Registration</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num" style="color:var(--warn);font-size:11.5px;">Not scored</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:11px 15px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Event registration — asked of everyone</div>
+        <table>
+          <tr><th style="width:20%">Field</th><th style="width:26%">Type</th><th style="width:10%">Required</th><th style="width:26%">Wired to</th><th class="num" style="width:18%">Weight</th></tr>
+          <tr><td>Full name</td><td style="color:var(--sub);">Text</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num">—</td></tr>
+          <tr><td>Company / firm</td><td style="color:var(--sub);">Text</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num">—</td></tr>
+          <tr><td>Title</td><td style="color:var(--sub);">Text</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num">—</td></tr>
+          <tr><td>Country</td><td style="color:var(--sub);">Select · country list</td><td><span class="tag yes">Yes</span></td><td style="color:var(--sub);">Geography factor</td><td class="num">10</td></tr>
+          <tr><td>Email · Phone</td><td style="color:var(--sub);">Text</td><td><span class="tag yes">Yes</span></td><td style="color:var(--muted);">nothing</td><td class="num">—</td></tr>
+          <tr style="background:#fffaf1;"><td style="color:var(--warn);">Networking interests</td><td style="color:var(--warn);">Multi · industry list</td><td><span class="tag yes">Yes</span></td><td style="color:var(--warn);">duplicate of Industry</td><td class="num" style="color:var(--warn);font-size:11.5px;">Remove</td></tr>
+          <tr style="background:#fffaf1;"><td colspan="5" style="padding-top:0;font-size:12px;color:var(--warn);">Asked in addition to the role’s own sector question, stored separately and in a different vocabulary. This is the pair that has to become one question.</td></tr>
+        </table>
+      </div>
+
+      <div class="warnbox">Weights are read from the live matching config, never from a copy, so this tab cannot drift from what the matcher does. “Wired to” names the counterpart field the answer is actually compared against — a field wired to nothing is collected and never matched.</div>
+    </section>
+
+    <p class="legend" style="margin-top:26px;border-top:1px solid var(--line);padding-top:14px;">
+      Mockup only — no code behind it. Every <span class="ph">••</span> is a live count in the built page; none are shown here because none have been measured.
+    </p>
+  </main>
+</div>
+
+<script>
+  function show(id){
+    ['vocab','detail','fields'].forEach(function(s){
+      document.getElementById(s).classList.toggle('hide', s !== id);
+    });
+    document.getElementById('tv').classList.toggle('on', id !== 'fields');
+    document.getElementById('tf').classList.toggle('on', id === 'fields');
+  }
+</script>
+</body>
+</html>

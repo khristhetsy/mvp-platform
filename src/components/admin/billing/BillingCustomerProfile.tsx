@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/ui/format-display";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
+import { CODE_DEFAULT_PRICING, priceShort, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 const navy = "#0A1A40", blue = "#1A6CE4";
 
@@ -12,7 +13,7 @@ const PLAN_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "founder_free", label: "Free" },
   { value: "founder_basic", label: "Basic" },
   { value: "founder_professional", label: "Professional" },
-  { value: "founder_managed_ir", label: "Managed IR" },
+  { value: "founder_managed_ir", label: "SPV Program" },
   { value: "investor_free", label: "Investor Free" },
   { value: "investor_pro", label: "Investor Pro" },
   { value: "investor_premium", label: "Investor Premium" },
@@ -59,7 +60,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function BillingCustomerProfile({ detail }: { detail: Detail }) {
+export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING }: { detail: Detail; pricing?: PricingCatalog }) {
   const router = useRouter();
   const c = detail.customer;
   const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
@@ -142,8 +143,8 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
           </div>
           {!editing && (
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setEditMsg(null); setEditing(true); }} disabled={busy} style={btn("#EEF3FC", blue)}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>
-              <button onClick={() => void removeCustomer()} disabled={busy} style={btn("#FCEBEB", "#A32D2D")}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
+              <button type="button" onClick={() => { setEditMsg(null); setEditing(true); }} disabled={busy} style={btn("#EEF3FC", blue)}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>
+              <button type="button" onClick={() => void removeCustomer()} disabled={busy} style={btn("#FCEBEB", "#A32D2D")}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
             </div>
           )}
         </div>
@@ -166,8 +167,8 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
               </label>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
-              <button onClick={() => void saveEdit()} disabled={busy} style={btn(navy, "#fff")}>{busy ? "Saving…" : "Save changes"}</button>
-              <button onClick={() => { setEditing(false); setEditMsg(null); }} disabled={busy} style={btn("#F1EFE8", navy)}>Cancel</button>
+              <button type="button" onClick={() => void saveEdit()} disabled={busy} style={btn(navy, "#fff")}>{busy ? "Saving…" : "Save changes"}</button>
+              <button type="button" onClick={() => { setEditing(false); setEditMsg(null); }} disabled={busy} style={btn("#F1EFE8", navy)}>Cancel</button>
               <span style={{ fontSize: 10.5, color: "#98A2B3" }}>Edits the local record only — never charges or refunds in Lemon Squeezy.</span>
             </div>
           </div>
@@ -219,16 +220,16 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
         <div style={{ fontSize: 13, fontWeight: 600, color: navy, marginBottom: 10 }}>Create checkout link</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
-            <option value="founder_basic">Basic — $499/mo</option>
-            <option value="founder_professional">Professional — $1,000/mo</option>
+            <option value="founder_basic">Basic — {priceShort(pricing, "founder_basic")}</option>
+            <option value="founder_professional">Professional — {priceShort(pricing, "founder_professional")}</option>
           </select>
-          <button onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
-          <button onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
+          <button type="button" onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
+          <button type="button" onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
         </div>
         {coUrl && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
             <input readOnly value={coUrl} style={{ flex: 1, fontSize: 11.5, padding: "6px 9px", borderRadius: 7, border: "1px solid #E4E8F0", color: "#475569" }} />
-            <button onClick={() => { void navigator.clipboard?.writeText(coUrl); setCoMsg("Link copied."); }} style={btn("#F1EFE8", navy)}>Copy</button>
+            <button type="button" onClick={() => { void navigator.clipboard?.writeText(coUrl); setCoMsg("Link copied."); }} style={btn("#F1EFE8", navy)}>Copy</button>
           </div>
         )}
         {coMsg && <div style={{ fontSize: 11.5, color: /Failed|didn't/.test(coMsg) ? "#A32D2D" : "#0F6E56", marginTop: 6 }}>{coMsg}</div>}

@@ -127,6 +127,11 @@ export async function updateBillingCustomer(profileId: string, patch: BillingCus
   if (patch.plan_type !== undefined) {
     row.plan_type = patch.plan_type;
     row.monthly_price_cents = PLAN_PRICES[patch.plan_type] ?? 0;
+    // Staff moving an account ONTO the discontinued free tier is a deliberate
+    // grant, so record it as one — otherwise the account reads "Free —
+    // discontinued tier" and looks like the signup hole reopened. Moving OFF
+    // free clears the flag, which is what "convert this customer" means.
+    row.is_grandfathered = patch.plan_type === "founder_free";
   }
   if (patch.subscription_status !== undefined) row.subscription_status = patch.subscription_status;
   if (patch.current_period_end !== undefined) row.current_period_end = patch.current_period_end;

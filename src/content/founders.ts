@@ -8,7 +8,8 @@ export const founders = {
     eyebrow: "For founders",
     title: "The investor legwork, run for you.",
     sub: "You keep running the company. iCapOS rates your readiness, builds your matched investor list, sends your materials, and gets you onto the conference agenda. Both plans are fully self-serve — nothing requires a sales call. A demo is available if you want one.",
-    primaryCta: { label: "Start with the free rating", href: "/readiness" },
+    primaryCta: { label: "Get started today", href: "/start" },
+    fitCta: { label: "Find the right fit investors", href: "/fit" },
     secondaryCta: { label: "Compare plans", href: "/pricing" },
   },
 
@@ -89,11 +90,11 @@ export const founders = {
         "Switch between DIY and done-for-you at any time",
       ],
     },
-    capTitle: "What “up to 25” actually means",
+    capTitle: "What “up to 5” actually means",
     capParas: [
       "Every investor sets their own monthly limit on how many companies they'll accept. When the right-fit investors for your company have already hit their cap that month, your list is shorter — and that's deliberate.",
       "Capping volume is what keeps the network responsive. A short list of investors who opted in beats a long list of investors who've stopped reading.",
-      "So we say “up to.” 25 matched investors on Basic, 100 on Professional — as availability allows.",
+      "So we say “up to.” 5 matched investors on Basic, 50 on Professional — as availability allows.",
     ],
   },
 
@@ -107,8 +108,8 @@ export const founders = {
 
   closing: {
     title: "More meetings, faster, with fewer diligence deaths.",
-    sub: "That's the claim. Not “you'll raise” — nobody can promise that. Start with the free rating and see what's in your way.",
-    primaryCta: { label: "Run your free rating", href: "/readiness" },
+    sub: "That's the claim. Not “you'll raise” — nobody can promise that. Start today and see what's in your way.",
+    primaryCta: { label: "Find the right fit investors", href: "/fit" },
     secondaryCta: { label: "See pricing", href: "/pricing" },
     // Required cross-link (§3): Founders → Events, in the closing CTA.
     eventsCta: { label: "See the iCFO events", href: "/events" },

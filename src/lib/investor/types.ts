@@ -14,6 +14,10 @@ export type InvestorProfileRecord = {
   firm_name: string | null;
   check_size_min: number | null;
   check_size_max: number | null;
+  preferred_arr_range: string | null;
+  preferred_mrr_range: string | null;
+  /** Capital types offered, labels from the capital_type list (migration 20260924004). */
+  capital_types?: string[];
   preferred_sectors: string[];
   preferred_geographies: string[];
   preferred_stages: string[];

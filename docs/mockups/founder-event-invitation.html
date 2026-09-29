@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What the founder sees — event invitation</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --navy:#0C2340;--ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 9px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.2px;white-space:nowrap}
+
+  .app{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+       box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:12px}
+  .crumb{padding:9px 15px;border-bottom:1px solid var(--l100);background:var(--l50);font-size:11px;color:var(--s500)}
+  .crumb b{color:var(--s700);font-weight:600}
+  .body{padding:15px}
+  h2{font-size:16px;font-weight:650;margin:0 0 3px}
+  .lede{font-size:12.5px;color:var(--s500);margin:0 0 14px}
+
+  .btn{border-radius:7px;padding:6px 13px;font-size:12.3px;font-weight:550;border:1px solid var(--line);
+       background:#fff;color:var(--s600);text-decoration:none;display:inline-block;white-space:nowrap}
+  .btn.pri{background:var(--ind);border-color:var(--ind);color:#fff}
+  .btn.dark{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn.sm{padding:3px 9px;font-size:11px}
+
+  .chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:650;border:1px solid}
+  .c-grey{background:var(--l100);color:var(--s600);border-color:var(--line)}
+  .c-ok{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
+  .c-amber{background:#FFFBEB;color:#92400E;border-color:#FDE68A}
+  .c-ind{background:#EEF2FF;color:#3730A3;border-color:#C7D2FE}
+
+  /* the invitation banner */
+  .invite{border:1px solid #C7D2FE;background:linear-gradient(#F8F9FF,#fff);border-radius:11px;padding:13px 14px;margin-bottom:14px}
+  .invite .top{display:flex;align-items:flex-start;gap:10px}
+  .invite .ic{width:30px;height:30px;border-radius:8px;background:var(--ind);color:#fff;display:flex;
+              align-items:center;justify-content:center;font-size:14px;flex:none}
+  .invite h3{margin:0 0 2px;font-size:13.5px;font-weight:650}
+  .invite p{margin:0;font-size:12.2px;color:var(--s600);line-height:1.55}
+  .invite .acts{display:flex;gap:7px;margin-top:11px}
+  .quote{margin-top:9px;border-left:2px solid #C7D2FE;padding-left:10px;font-size:12px;color:var(--s600);font-style:italic}
+
+  /* tier cards (existing) */
+  .tiers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+  .tier{border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+  .tier.locked{background:var(--l50);opacity:.72}
+  .tier h4{margin:0 0 2px;font-size:12.8px;font-weight:650}
+  .tier .b{font-size:11.3px;color:var(--s500);line-height:1.5;margin:0 0 7px}
+  .tier ul{margin:0;padding-left:16px}
+  .tier li{font-size:11.3px;color:var(--s600);margin-bottom:2px}
+
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:11px;font-weight:600;color:var(--s600);margin-bottom:3px}
+  .inp{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.4px;color:var(--s700);background:#fff}
+  .inp.ph{color:var(--s400)}
+  .hint{font-size:10.8px;color:var(--s500);margin-top:3px;line-height:1.45}
+  .req{color:#B91C1C;font-weight:700}
+
+  .drop{border:1.5px dashed #CBD5E1;border-radius:9px;padding:13px;text-align:center;background:var(--l50)}
+  .drop p{margin:0;font-size:11.8px;color:var(--s600)}
+  .drop .sm{font-size:10.6px;color:var(--s400);margin-top:3px}
+  .file{display:flex;align-items:center;gap:8px;margin-top:7px;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+
+  .linkbox{display:flex;align-items:center;gap:8px;border:1px solid #C7D2FE;background:#F8F9FF;border-radius:8px;padding:8px 10px}
+  .linkbox .u{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.2px;color:#3730A3;
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .check{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.3px;border-bottom:1px solid var(--l100)}
+  .check:last-child{border-bottom:none}
+  .check .m{width:16px;height:16px;border-radius:99px;flex:none;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700}
+  .m-ok{background:#D1FAE5;color:#047857}
+  .m-no{background:#FEF3C7;color:#B45309}
+  .check .sp{flex:1}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ind);border-radius:9px;
+        padding:12px 15px;font-size:12.5px;color:var(--s600);line-height:1.62;margin-bottom:12px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  ul.t{margin:6px 0 0;padding-left:18px}
+  ul.t li{font-size:12.3px;margin-bottom:5px;line-height:1.55}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>What the founder sees</h1>
+<p class="sub">Founder portal → Marketing → Present at event · mockup</p>
+
+<div class="note">
+  <b>This page already exists.</b> <code>/founder/events/present</code> is plan-gated by
+  <code>present-tiers.ts</code> — Basic gets <b>Spotlight</b>, Professional gets <b>Full
+  presentation</b>, Free gets nothing — and applying creates a <code>speaker_application</code>.
+  What it has no concept of is <i>being invited</i>, so an invitation has to land here rather than
+  in a page of its own.
+</div>
+
+<!-- ═════ TODAY ═════ -->
+<div class="lbl">Today — apply only</div>
+<div class="app">
+  <div class="crumb">Founder · <b>Marketing</b> · Present at event</div>
+  <div class="body">
+    <h2>Present at an iCFO event</h2>
+    <p class="lede">Put your company in front of the investor room.</p>
+    <div class="tiers">
+      <div class="tier">
+        <h4>Spotlight <span class="chip c-ok">Your plan</span></h4>
+        <p class="b">A curated showcase slot — your company card, a short pitch video, and a place in the event lineup.</p>
+        <ul><li>Company card in the lineup</li><li>60-second pitch video</li><li>Logo on the showcase wall</li></ul>
+      </div>
+      <div class="tier locked">
+        <h4>Full presentation <span class="chip c-grey">Professional</span></h4>
+        <p class="b">A monthly live stage slot with your full presentation video.</p>
+        <ul><li>Live stage slot</li><li>Full presentation video</li><li>Q&amp;A with the room</li></ul>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>Video presentation link <span class="req">*</span></label>
+      <input class="inp ph" value="https://…" readonly>
+      <p class="hint">Paste a link to your 60-second pitch video.</p>
+    </div>
+    <a class="btn pri" href="#">Apply to present</a>
+  </div>
+</div>
+
+<!-- ═════ INVITED ═════ -->
+<div class="lbl">Invited — the same page, with the invitation on top</div>
+<div class="app">
+  <div class="crumb">Founder · <b>Marketing</b> · Present at event</div>
+  <div class="body">
+
+    <div class="invite">
+      <div class="top">
+        <span class="ic" aria-hidden>★</span>
+        <div style="flex:1;min-width:0">
+          <h3>You've been invited to showcase</h3>
+          <p><b>iCFO PE Expo — Las Vegas</b> · Tuesday 22 September, 9:00 PM PT<br>
+            Main stage · 6 minutes · Founder Showcase</p>
+          <p class="quote">"We'd love to have NutriFlex AI showcase at the Expo — 6 minutes on the
+            main stage." — Khris Thetsy, iCFO Capital</p>
+          <div class="acts">
+            <a class="btn pri" href="#">Accept</a>
+            <a class="btn" href="#">Decline</a>
+            <span style="flex:1"></span>
+            <span class="hint" style="margin:0;align-self:center">Materials due 18 Sept</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:var(--s500);text-transform:uppercase;letter-spacing:.06em">
+      Or apply to a different event</p>
+    <div class="tiers">
+      <div class="tier"><h4>Spotlight <span class="chip c-ok">Your plan</span></h4>
+        <p class="b">A curated showcase slot in the event lineup.</p></div>
+      <div class="tier locked"><h4>Full presentation <span class="chip c-grey">Professional</span></h4>
+        <p class="b">A monthly live stage slot with your full presentation video.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ ACCEPTED ═════ -->
+<div class="lbl">Accepted — what they do next</div>
+<div class="app">
+  <div class="crumb">Founder · <b>Marketing</b> · Present at event</div>
+  <div class="body">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <h2 style="margin:0">iCFO PE Expo — Las Vegas</h2>
+      <span class="chip c-ok">Confirmed</span>
+      <span style="flex:1"></span>
+      <span class="chip c-amber">1 item outstanding · due 18 Sept</span>
+    </div>
+
+    <p style="margin:0 0 5px;font-size:11px;font-weight:600;color:var(--s600)">Your stage link</p>
+    <div class="linkbox">
+      <span aria-hidden style="color:#3730A3">▷</span>
+      <span class="u">https://meet.google.com/kqw-drbz-hvx</span>
+      <a class="btn sm" href="#">Copy</a>
+      <a class="btn sm" href="#">Add to calendar</a>
+    </div>
+    <p class="hint" style="margin-bottom:14px">Yours for this session only. Opens 15 minutes early
+      for a sound check. Attendees join through the event page, so there's no need to share it.</p>
+
+    <div class="field">
+      <label>Pitch video — link only <span class="req">*</span></label>
+      <input class="inp" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ" readonly>
+      <p class="hint">YouTube, Vimeo or Loom. We don't host video files — paste the share link.</p>
+    </div>
+
+    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:var(--s600)">Pitch deck — PDF <span class="req">*</span></p>
+    <div class="drop">
+      <p><b>Drop your deck here</b> or browse</p>
+      <p class="sm">PDF only · up to 25 MB</p>
+    </div>
+    <div class="file">
+      <span aria-hidden style="color:#B91C1C">▤</span>
+      <span style="flex:1;min-width:0;font-size:12px">NutriFlex-AI-Expo-Deck.pdf
+        <span style="color:var(--s400)">· 4.2 MB · uploaded 19 Sept</span></span>
+      <a class="btn sm" href="#">Replace</a>
+    </div>
+    <p class="hint" style="margin-top:5px">Already in your Documents? <a href="#" style="color:#4338CA">Use
+      your existing pitch deck</a> instead of uploading again.</p>
+
+    <div style="height:14px"></div>
+    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:var(--s600)">Before the event</p>
+    <div class="check"><span class="m m-ok">✓</span><span class="sp">Invitation accepted</span><span class="chip c-grey">17 Sept</span></div>
+    <div class="check"><span class="m m-ok">✓</span><span class="sp">Pitch deck uploaded</span><span class="chip c-grey">19 Sept</span></div>
+    <div class="check"><span class="m m-ok">✓</span><span class="sp">Pitch video linked</span><span class="chip c-grey">19 Sept</span></div>
+    <div class="check"><span class="m m-no">◷</span><span class="sp">Company one-pager published</span>
+      <a class="btn sm" href="#">Publish</a></div>
+
+    <div style="display:flex;gap:8px;margin-top:15px">
+      <a class="btn pri" href="#">Save</a>
+      <a class="btn" href="#">I can no longer attend</a>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Why it belongs on this page rather than a new one.</b> The founder already comes here to think
+  about events, the plan tiers are already explained here, and an accepted invitation becomes a
+  <code>speaker_application</code> with <code>status: approved</code> — the same row an application
+  produces, just created from the other direction. A separate "My invitations" page would split one
+  subject across two places.
+  <br><br>
+  <b>A founder with an account never needs the emailed token link.</b> They can click it, but it
+  should recognise their session and land them here. The tokenless page is for exhibitors and
+  outside speakers with no iCapOS account.
+</div>
+
+<div class="note warn">
+  <b>The decision this forces: does an invitation override the plan gate?</b>
+  <code>present-tiers.ts</code> gives Free founders <i>no</i> presenting at all, and Basic only
+  Spotlight. So:
+  <ul class="t">
+    <li><b>A Free founder you invite</b> — today the page would show them an upgrade wall. Do they
+      present because you asked them to, or do they have to pay first?</li>
+    <li><b>A Basic founder invited to a full stage slot</b> — that is the Professional tier. Does
+      the invitation grant it for this one event?</li>
+  </ul>
+  My read: <b>an invitation should override the gate for that event only</b>, and the page should
+  say so plainly — <i>"Invited by iCFO — no plan upgrade needed for this event"</i>. You invited
+  them; making them pay to accept is a strange conversation, and staff inviting someone is already
+  a deliberate act. But it is your call, and it changes what
+  <code>PresentAtEventClient</code> renders for a Free founder.
+</div>
+
+</div>
+</body>
+</html>

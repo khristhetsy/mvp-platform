@@ -43,7 +43,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
     <div>
       <div className="mb-4 flex gap-2">
         {(["new", "contacted", "dismissed", "all"] as const).map((f) => (
-          <button
+          <button type="button"
             key={f}
             onClick={() => setFilter(f)}
             className={`rounded-full px-3 py-1.5 text-sm ${
@@ -86,7 +86,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   {r.status}
                 </span>
                 {r.status !== "contacted" && (
-                  <button
+                  <button type="button"
                     onClick={() => update(r.id, "contacted")}
                     disabled={busy === r.id}
                     className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
@@ -95,7 +95,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   </button>
                 )}
                 {r.status !== "dismissed" ? (
-                  <button
+                  <button type="button"
                     onClick={() => update(r.id, "dismissed")}
                     disabled={busy === r.id}
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
@@ -103,7 +103,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                     Dismiss
                   </button>
                 ) : (
-                  <button
+                  <button type="button"
                     onClick={() => update(r.id, "new")}
                     disabled={busy === r.id}
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"

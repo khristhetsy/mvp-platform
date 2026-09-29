@@ -10,17 +10,39 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
+import { crrFor } from "@/lib/crr/crr-for";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
 import { getRatingConfig } from "@/lib/investor-rating/weights";
 import { tierFromScore } from "@/lib/investor-rating/scoring";
+import { IntroGateLockedCard, IntroQuotaStrip } from "@/components/founder/IntroGate";
+import { openRatingItems } from "@/lib/crr/open-items";
+import { FACTOR_LABEL } from "@/lib/crr/weight-sets";
+import { loadIntroQuota } from "@/lib/matching/intro-quota";
+import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 
 export const dynamic = "force-dynamic";
 
 function titleCase(s: string): string {
   return s.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Open items for the locked gate card, in rating points. openRatingItems ranks
+ * by each factor's raw gap, but a factor is scored against its own maximum,
+ * not this stage's weight; factorGaps carries the same points the gate counts,
+ * so the card shows and ranks by those.
+ */
+function gateItems(crr: { factorScores: Parameters<typeof openRatingItems>[0]; factorGaps: Array<{ label: string; pts: number; max: number }> }) {
+  const ratingGap = new Map(crr.factorGaps.map((g) => [g.label, Math.round(Math.max(0, g.max - g.pts))]));
+  return openRatingItems(crr.factorScores, FACTOR_LABEL, Number.MAX_SAFE_INTEGER)
+    .map((item) => ({ ...item, gap: ratingGap.get(item.factor) ?? 0 }))
+    .sort((a, b) => b.gap - a.gap)
+    .slice(0, 3);
 }
 
 export default async function FounderMatchesPage() {
@@ -51,6 +73,43 @@ export default async function FounderMatchesPage() {
   const viewers = company ? await countViewersForFounder(companyIds) : 0;
   const data = company ? await loadFounderMatchingCenter(company) : { cards: [], total: 0, strong: 0 };
   const plan = await getUserPlan(profile.id);
+  // The rating gate, read from the engine rather than a threshold typed on this
+  // page. The admin model already says this surface is CRR-qualified; now the
+  // button agrees with it.
+  const crr = company ? await crrFor(company.id) : null;
+  // Intro quota, shown once the founder is through the gate on a plan that can
+  // request introductions. Same counter the intro route enforces.
+  const connectionCfg = await getFounderConnectionConfig();
+  const introQuota =
+    crr?.outreachUnlocked && founderEntitlements(plan).canBrokerIntros
+      ? await loadIntroQuota(createServiceRoleClient(), { companyId: company.id, founderId: profile.id, plan })
+      : null;
+  // Basic founders below the gate see what Professional adds once they unlock.
+  // Every figure comes from config: caps, entitlements and the pricing catalog.
+  const upgrade =
+    crr && !crr.outreachUnlocked && plan === "founder_basic"
+      ? await (async () => {
+          const pricing = await loadPricing();
+          const b = founderEntitlements("founder_basic");
+          const p = founderEntitlements("founder_professional");
+          return {
+            basic: {
+              monthlyIntros: connectionCfg.monthlyByPlan.basic,
+              weeklyIntros: connectionCfg.weeklyByPlan?.basic ?? null,
+              investorCap: b.investorCap,
+              presentsMonthly: b.canPresentMonthly,
+              price: priceShort(pricing, "founder_basic"),
+            },
+            professional: {
+              monthlyIntros: connectionCfg.monthlyByPlan.professional,
+              weeklyIntros: connectionCfg.weeklyByPlan?.professional ?? null,
+              investorCap: p.investorCap,
+              presentsMonthly: p.canPresentMonthly,
+              price: priceShort(pricing, "founder_professional"),
+            },
+          };
+        })()
+      : null;
   // Free sees matches (count · sector · fit tier) but not identities or actions.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;
 
@@ -114,6 +173,8 @@ export default async function FounderMatchesPage() {
       reasons: c.reasons,
       introRef: reveal ? c.ref : undefined,
       connected: reveal ? c.connected : false,
+      introStatus: reveal ? c.introStatus : null,
+      introNote: reveal ? c.introNote : null,
       followUp: reveal ? { name: c.name, firm: c.firm, investorType: c.investorType } : undefined,
       detail: {
         name: displayName,
@@ -151,7 +212,22 @@ export default async function FounderMatchesPage() {
         />
 
         {/* Investor search — the full named directory with per-investor actions. */}
+        {crr && !crr.outreachUnlocked ? (
+          <IntroGateLockedCard
+            score={crr.score}
+            gate={crr.gate}
+            pointsToGate={crr.pointsToGate}
+            matchCount={cards.length}
+            items={gateItems(crr)}
+            upgrade={upgrade}
+          />
+        ) : introQuota ? (
+          <IntroQuotaStrip quota={introQuota} plan={plan} professionalMonthlyCap={connectionCfg.monthlyByPlan.professional} />
+        ) : null}
+
         <MatchingCenterList
+          scope="matches"
+          gate={crr ? { score: crr.score, gate: crr.gate, unlocked: crr.outreachUnlocked } : undefined}
           cards={cards}
           introEndpoint="/api/founder/matching/intro"
           followUpEndpoint="/api/founder/matching/follow-up"

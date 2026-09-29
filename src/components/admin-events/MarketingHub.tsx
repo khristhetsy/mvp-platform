@@ -126,7 +126,7 @@ export function MarketingHub({
         <div className="flex items-center gap-2">
           {dirty && <span className="text-xs text-amber-600">{t("unsaved")}</span>}
           {!dirty && savedAt && <span className="text-xs text-[var(--text-muted)]">{t("saved", { when: new Date(savedAt).toLocaleString() })}</span>}
-          <button
+          <button type="button"
             onClick={save}
             disabled={saving || !dirty}
             className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
@@ -147,7 +147,7 @@ export function MarketingHub({
             placeholder={t("tonePlaceholder")}
             className="ml-auto w-48 rounded-md border border-[var(--border-subtle)] bg-white px-2.5 py-1.5 text-xs"
           />
-          <button
+          <button type="button"
             onClick={generate}
             disabled={generating}
             className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
@@ -163,7 +163,7 @@ export function MarketingHub({
       {/* tabs */}
       <div className="mt-4 flex gap-1 border-b border-[var(--border-subtle)]">
         {TAB_KEYS.map((tab_) => (
-          <button
+          <button type="button"
             key={tab_.key}
             onClick={() => setTab(tab_.key)}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${

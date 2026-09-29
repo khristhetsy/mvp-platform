@@ -8,6 +8,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { listEventRegistrations } from "@/lib/icfo-events/registrations";
 import { EventRegistrationsBoard } from "@/components/admin-events/EventRegistrationsBoard";
+import { loadRegistrationFieldSet } from "@/lib/icfo-events/registration-field-sets-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event registrations" };
@@ -36,7 +37,7 @@ export default async function AdminEventRegistrationsPage({ params }: { params: 
         </Link>
         <h1 className="mt-4 text-lg font-semibold text-[var(--navy)]">{event.title}</h1>
         <div className="mt-3">
-          <EventRegistrationsBoard eventId={id} initial={registrations} />
+          <EventRegistrationsBoard eventId={id} initial={registrations} fieldSet={await loadRegistrationFieldSet()} />
         </div>
       </div>
     </AppShell>

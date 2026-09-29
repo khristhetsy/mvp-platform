@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Company workspace · "Override settings" section · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 8px;max-width:1000px}
+.frame{width:1000px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:8px 22px 18px}
+.frame *{box-sizing:border-box}
+.sec{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #EEF1F6;cursor:pointer}
+.sec .chev{color:#94A3B8;font-size:12px;width:12px}.sec .ico{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;color:#4F46E5;background:#EEF2FF}
+.sec b{display:block;font-size:14px}.sec small{display:block;color:#5B6B86;font-size:12px;margin-top:2px}
+.sec .right{margin-left:auto;font-size:12px;color:#4F46E5}
+.sec.open .chev{transform:rotate(90deg)}
+.body{padding:14px 0 6px 32px;display:flex;flex-direction:column;gap:14px}
+.card{border:1px solid #E2E7F0;border-radius:12px;padding:16px}
+.card h4{margin:0;font-size:13.5px;display:flex;align-items:center;gap:8px}.card p{margin:4px 0 0;font-size:12px;color:#5B6B86}
+.row{display:flex;gap:10px;align-items:flex-end;margin-top:12px}
+.lbl{font-size:11px;color:#5B6B86;margin-bottom:4px;display:block}
+.sel,.inp{height:36px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;font-size:12.5px;display:flex;align-items:center;background:#fff;color:#0A1A40}.inp{flex:1;color:#8A98B3}
+.btn{height:36px;padding:0 14px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn.gray{background:#94A3B8;border-color:#94A3B8;color:#fff}
+.chip{font-size:11px;background:#EEF2FF;color:#4F46E5;border-radius:6px;padding:3px 8px;margin-left:auto}
+.danger{border-color:#FECACA;background:#FEF2F2}.danger h4{color:#B42323}.danger p{color:#7F1D1D}.danger .btn{border-color:#F87171;color:#B42323;margin-top:10px;height:32px}
+.dim{opacity:.55}
+</style></head><body>
+
+<p class="note">BEFORE — the two cards sit under "Review &amp; marketplace actions" with no heading of their own, so they read as part of the marketplace controls.</p>
+<div class="frame dim">
+  <div class="sec"><span class="chev">›</span><span class="ico">✓</span><span><b>Review &amp; marketplace actions</b><small>Same controls as the companies list — changes apply immediately</small></span><span class="right">Back to all companies</span></div>
+  <div class="body">
+    <div class="card"><h4>⇄ Progress stage override <span class="chip">Current: Stage 3 — Deploy</span></h4><p>Force-advance or roll back this founder's stage. Bypasses readiness; audit-logged.</p></div>
+    <div class="card danger"><h4>⚠ Danger zone</h4><p>Permanently delete the account for <b>Cynthia Mcbreen</b> and all associated data.</p></div>
+  </div>
+</div>
+
+<p class="note" style="margin-top:20px">AFTER — a new collapsible section, same style as the six above it, holding both cards. Collapsed by default so the destructive controls aren't on screen unless you open it.</p>
+<div class="frame">
+  <div class="sec"><span class="chev">›</span><span class="ico">✓</span><span><b>Review &amp; marketplace actions</b><small>Same controls as the companies list — changes apply immediately</small></span><span class="right">Back to all companies</span></div>
+
+  <div class="sec open"><span class="chev">›</span><span class="ico" style="background:#FFF4DE;color:#9A5B00">⚙</span><span><b>Override settings</b><small>Staff-only overrides and irreversible actions — every change is recorded with a reason</small></span></div>
+  <div class="body">
+    <div class="card">
+      <h4>⇄ Progress stage override <span class="chip">Current: Stage 3 — Deploy</span></h4>
+      <p>Force-advance or roll back this founder's stage. Bypasses readiness; audit-logged.</p>
+      <div class="row">
+        <div><span class="lbl">Set stage</span><div class="sel">Stage 3 — Deploy ▾</div></div>
+        <div style="flex:1"><span class="lbl">Reason (recorded)</span><div class="inp">Why are you overriding?</div></div>
+        <span class="btn gray">✓ Set stage</span><span class="btn">↻ Recompute</span>
+      </div>
+      <p style="margin-top:8px">Recompute applies the normal rules to the founder's current data — it promotes them only if they actually qualify (no override).</p>
+    </div>
+    <div class="card danger">
+      <h4>⚠ Danger zone</h4>
+      <p>Permanently delete the account for <b>Cynthia Mcbreen</b> and all associated data. This action cannot be undone.</p>
+      <span class="btn">Delete account</span>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export type FounderRequestRow = {
   id: string;
@@ -27,13 +27,17 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRow[] }>) {
   const router = useRouter();
-  const [selected, setSelected] = useState<FounderRequestRow | null>(null);
+  const params = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
+  // Read the selected row off `rows` (server data) so a refresh — e.g. after staff resolve —
+  // updates status / CSAT here instead of leaving a stale copy in state.
+  const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? null : null;
 
   async function open(row: FounderRequestRow) {
-    setSelected(row);
+    setSelectedId(row.id);
     setMessages([]);
     setReply("");
     const res = await fetch(`/api/founder/support/${row.id}`);
@@ -42,6 +46,16 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
       setMessages(json.messages ?? []);
     }
   }
+
+  // A notification deep-link (?request=<id>) lands with that request open.
+  const wanted = params.get("request");
+  useEffect(() => {
+    if (!wanted || selectedId) return;
+    const row = rows.find((r) => r.id === wanted);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- open() sets state to reflect the URL, once
+    if (row) void open(row);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open is stable for our purposes; run once per ?request
+  }, [wanted, rows]);
 
   async function sendReply() {
     if (!selected || !reply.trim()) return;
@@ -71,7 +85,6 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csat }),
       });
-      setSelected({ ...selected, csat });
       router.refresh();
     } finally {
       setBusy(false);

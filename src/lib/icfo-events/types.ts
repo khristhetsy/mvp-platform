@@ -83,6 +83,7 @@ export type EventActivityType =
   | "published"
   | "unpublished"
   | "archived"
+  | "ended"
   | "session_added"
   | "presenter_approved"
   | "presenter_declined"
@@ -127,6 +128,8 @@ export interface EventPresenter {
   displayName: string;
   roleLabel: string | null;
   headshotPath: string | null;
+  /** Company logo: the brochure avatar fallback when there is no headshot. */
+  companyLogoPath?: string | null;
   headline: string | null;
   bio: string | null;
   links: string[];
@@ -136,6 +139,8 @@ export interface EventPresenter {
   startsAt: string | null;
   timezone: string | null;
   email: string | null;
+  /** When the roster row was created — orders "most recent appearance". */
+  createdAt?: string | null;
   /** Joined from events, for the cross-event presenter manager. */
   eventTitle?: string | null;
   eventSlug?: string | null;

@@ -8,7 +8,9 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listEventsBySector } from "@/lib/icfo-events/queries";
-import { isValidSectorSlug, sectorLabel } from "@/lib/icfo-events/sectors";
+import { isValidSectorSlug } from "@/lib/icfo-events/sectors";
+import { loadVocabulary } from "@/lib/vocabulary/store";
+import { labelOf } from "@/lib/vocabulary/lists";
 import type { EventRecord } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,9 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   if (!isValidSectorSlug(slug)) return { title: "Sector not found" };
-  const label = sectorLabel(slug);
+  // Resolved from the stored list, so a sector added after this file was
+  // written shows its name rather than its key.
+  const label = labelOf(await loadVocabulary("industry"), slug);
   return {
     title: `${label} events — iCFO Events`,
     description: `Founder showcases, panels, and talk shows in ${label}.`,
@@ -47,7 +51,9 @@ export default async function SectorPage({ params }: { params: Promise<{ slug: s
     events = [];
   }
 
-  const label = sectorLabel(slug);
+  // Resolved from the stored list, so a sector added after this file was
+  // written shows its name rather than its key.
+  const label = labelOf(await loadVocabulary("industry"), slug);
 
   return (
     <MarketingShell>

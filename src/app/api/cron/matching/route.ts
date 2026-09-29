@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { withCronGate, CRON_SUMMARY_HEADER } from "@/lib/cron/gate";
 import { validateCronSecret, cronUnauthorizedResponse, cronMisconfiguredResponse, getCronSecret } from "@/lib/notifications/cron/auth";
 import { runMatchingPass, promoteSuggestedMatches } from "@/lib/matching/engine";
+import { matchingSummary } from "@/lib/matching/matching-summary";
+import { loadMatchingThresholds } from "@/lib/matching/matching-thresholds";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -12,14 +15,19 @@ export const maxDuration = 300;
  *
  * Schedule via vercel.json, e.g. GET /api/cron/matching daily.
  */
-export async function GET(request: Request) {
+async function scheduledGET(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
 
   try {
-    const pass = await runMatchingPass();
+    // Thresholds are set on Scheduled jobs, Matching pass, Settings (default 60 and 60).
+    const thresholds = await loadMatchingThresholds();
+    const pass = await runMatchingPass({ readinessThreshold: thresholds.readiness, matchThreshold: thresholds.match });
     const promotion = await promoteSuggestedMatches();
-    return NextResponse.json({ ok: true, ...pass, promoted: promotion.promoted });
+    return NextResponse.json(
+      { ok: true, ...pass, promoted: promotion.promoted },
+      { headers: { [CRON_SUMMARY_HEADER]: matchingSummary(pass, thresholds.readiness) } },
+    );
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Matching pass failed." },
@@ -27,3 +35,6 @@ export async function GET(request: Request) {
     );
   }
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/matching", scheduledGET);

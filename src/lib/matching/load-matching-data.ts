@@ -1,5 +1,5 @@
 import { listMarketplaceListings } from "@/lib/data/marketplace";
-import { computeReadinessScore } from "@/lib/data/founder-readiness";
+import { crrScoresFor } from "@/lib/crr/crr-for";
 import {
   countHighMatches,
   matchInvestorToCompany,
@@ -19,12 +19,14 @@ function formatGeography(company: Pick<Company, "state" | "country">) {
 
 /** Combine funding stage + operating stage + revenue stage into one haystack so
  *  all three feed the engine's stage factor (token overlap vs investor stages). */
+/**
+ * The company's stage for matching: its funding stage (Pre-seed, Seed, Series A,
+ * Series B, Growth), the one stage vocabulary investors pick from. Operating and
+ * revenue stage no longer feed this factor; revenue is scored by ARR and MRR.
+ */
 function combinedStage(company: Company): string | null {
-  const cx = company as unknown as Record<string, unknown>;
-  const parts = [cx.funding_stage, cx.operating_stage, company.revenue_stage]
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean);
-  return parts.length ? parts.join(", ") : company.revenue_stage;
+  const raw = (company as unknown as Record<string, unknown>).funding_stage;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
 export function companyToMatchProfile(
@@ -42,6 +44,7 @@ export function companyToMatchProfile(
     stage: combinedStage(company),
     geography: formatGeography(company),
     fundingAmount: company.funding_amount,
+    fundingBand: typeof cx.funding_amount_band === "string" && cx.funding_amount_band ? cx.funding_amount_band : null,
     readinessScore: input?.readinessScore ?? null,
     onboardingPercent: company.onboarding_progress_percent ?? 0,
     reviewStatus: company.review_status ? String(company.review_status) : company.status,
@@ -114,7 +117,7 @@ export async function loadApprovedInvestorMatchProfiles() {
     const { data, error } = await admin
       .from("investor_profiles")
       .select(
-        "profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, approval_status",
+        "profile_id, investor_type, check_size_min, check_size_max, preferred_sectors, preferred_geographies, preferred_stages, preferred_arr_range, preferred_mrr_range, approval_status",
       )
       .eq("approval_status", "approved")
       .order("profile_id", { ascending: true })
@@ -144,30 +147,10 @@ export async function loadAdminCompanyMatchProfiles() {
   const readinessByCompany = new Map<string, number>();
 
   if (companyIds.length > 0) {
-    const { data: reports } = await admin
-      .from("diligence_reports")
-      .select("company_id, readiness_score, created_at")
-      .in("company_id", companyIds)
-      .order("created_at", { ascending: false });
-
-    for (const report of reports ?? []) {
-      if (!readinessByCompany.has(report.company_id) && report.readiness_score != null) {
-        readinessByCompany.set(report.company_id, report.readiness_score);
-      }
-    }
-
-    const { data: documents } = await admin
-      .from("documents")
-      .select("company_id, document_type")
-      .in("company_id", companyIds);
-
-    for (const company of companies ?? []) {
-      if (!readinessByCompany.has(company.id)) {
-        const docs = (documents ?? []).filter((doc) => doc.company_id === company.id);
-        const types = docs.flatMap((doc) => (doc.document_type ? [doc.document_type] : []));
-        readinessByCompany.set(company.id, computeReadinessScore(types));
-      }
-    }
+    // The CRR engine score — the same number the founder, the admin and the
+    // investor see. This used to read diligence_reports with a document-type
+    // count as fallback, so matching ran on a figure nothing else agreed with.
+    for (const [id, score] of await crrScoresFor(companyIds)) readinessByCompany.set(id, score);
   }
 
   return (companies ?? []).map((company) =>
@@ -178,24 +161,8 @@ export async function loadAdminCompanyMatchProfiles() {
 }
 
 export async function loadFounderCompanyMatchContext(company: Company) {
-  const admin = createServiceRoleClient();
-  const { data: report } = await admin
-    .from("diligence_reports")
-    .select("readiness_score")
-    .eq("company_id", company.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let readinessScore = report?.readiness_score ?? null;
-  if (readinessScore == null) {
-    const { data: documents } = await admin
-      .from("documents")
-      .select("document_type")
-      .eq("company_id", company.id);
-    const types = (documents ?? []).flatMap((doc) => (doc.document_type ? [doc.document_type] : []));
-    readinessScore = computeReadinessScore(types);
-  }
+  // Same engine score the rest of the platform reads.
+  const readinessScore = (await crrScoresFor([company.id])).get(company.id) ?? null;
 
   const profile = companyToMatchProfile(company, { readinessScore });
   const [investors, cfg] = await Promise.all([

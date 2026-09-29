@@ -1,4 +1,6 @@
 import { createNotification } from "@/lib/notifications/notifications";
+import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -17,12 +19,14 @@ export async function sendTransactionalEmail(input: {
   entityType?: string | null;
   entityId?: string | null;
   dedupeKey?: string | null;
+  /** Optional HTML alternative. Plain `body` is always sent as the text part. */
+  html?: string | null;
+  /** Where replies should land. Staff outreach sets this to the sender, so a
+   *  founder replying to a platform-addressed email reaches a person. */
+  replyTo?: string | null;
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from =
-    process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ??
-    process.env.EMAIL_FROM?.trim() ??
-    "iCapOS <no-reply@mail.icapos.com>";
+  const from = resolveFrom({ envKeys: TRANSACTIONAL_FROM_ENV });
 
   if (apiKey && input.to.includes("@")) {
     const response = await fetch(RESEND_API_URL, {
@@ -36,12 +40,18 @@ export async function sendTransactionalEmail(input: {
         to: [input.to],
         subject: input.subject,
         text: input.body,
+        ...(input.html ? { html: input.html } : {}),
+        ...(input.replyTo ? { reply_to: [input.replyTo] } : {}),
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Email delivery failed: ${await response.text()}`);
+      const detail = await response.text();
+      await logOutboundEmail({ to: input.to, subject: input.subject, html: input.html ?? null, text: input.body, status: "failed", error: `Email provider error ${response.status}`, source: input.notificationType });
+      throw new Error(`Email delivery failed: ${detail}`);
     }
+    const sent = (await response.json().catch(() => null)) as { id?: string } | null;
+    await logOutboundEmail({ to: input.to, subject: input.subject, html: input.html ?? null, text: input.body, status: "sent", providerId: sent?.id ?? null, source: input.notificationType });
 
     return { channel: "resend", delivered: true } satisfies TransactionalEmailResult;
   }

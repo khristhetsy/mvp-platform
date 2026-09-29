@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { requireRole } from "@/lib/supabase/auth";
 import { getCronSecret, validateCronSecret, cronUnauthorizedResponse, cronMisconfiguredResponse } from "@/lib/notifications/cron/auth";
 import { runBriefing } from "@/lib/ceo/briefing";
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // GET — Vercel cron. Weekly (full) on Mondays, light run other days.
-export async function GET(req: NextRequest): Promise<Response> {
+async function scheduledGET(req: NextRequest): Promise<Response> {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(req)) return cronUnauthorizedResponse();
   const mode = new Date().getUTCDay() === 1 ? "weekly" : "daily";
@@ -31,3 +32,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Briefing failed." }, { status: 500 });
   }
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/ceo/briefing", scheduledGET);

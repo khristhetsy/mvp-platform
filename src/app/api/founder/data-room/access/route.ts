@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { grantDataRoomAccess, revokeDataRoomAccess, listDataRoomAccess } from "@/lib/data-room/access";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitActivity } from "@/lib/activity/emit";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,20 @@ export async function POST(request: Request) {
     console.error("data-room grant audit log failed", auditError);
   }
 
+  // Who can see what is compliance's business, not only the stage owner's.
+  emitActivity({
+    classKey: "data_room_access_changed",
+    actorUserId: auth.profile.id,
+    actorRole: "founder",
+    companyId: company.id,
+    investorId: investor.id,
+    entityType: "data_room_access",
+    entityId: company.id,
+    sourceModule: "data-room-access",
+    title: `Granted data-room access to ${parsed.data.email.trim()}`,
+    metadata: { scope: parsed.data.scope, expires_at: expiresAt, action: "granted" },
+  });
+
   return NextResponse.json({ grants: await listDataRoomAccess(company.id) });
 }
 
@@ -92,6 +107,19 @@ export async function DELETE(request: Request) {
   } catch (auditError) {
     console.error("data-room revoke audit log failed", auditError);
   }
+
+  emitActivity({
+    classKey: "data_room_access_changed",
+    actorUserId: auth.profile.id,
+    actorRole: "founder",
+    companyId: company.id,
+    investorId: parsed.data.investorId,
+    entityType: "data_room_access",
+    entityId: company.id,
+    sourceModule: "data-room-access",
+    title: "Revoked an investor's data-room access",
+    metadata: { action: "revoked" },
+  });
 
   return NextResponse.json({ grants: await listDataRoomAccess(company.id) });
 }

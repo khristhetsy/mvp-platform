@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Companies — type a letter, see the data</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #DC2626;border-radius:8px;
+       padding:13px 15px;margin-bottom:22px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why ol{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .why li{margin-bottom:5px}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:24px 0 8px}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;position:relative}
+
+  /* search row */
+  .srow{display:flex;gap:8px;align-items:center;margin-bottom:0}
+  .sbox{flex:1;position:relative}
+  .sinput{width:100%;border:2px solid #6366F1;border-radius:9px;padding:9px 32px 9px 32px;font-size:13.5px;
+          color:var(--ink);background:#fff;outline:none}
+  .mag{position:absolute;left:10px;top:9px;color:var(--s400);font-size:13px}
+  .clr{position:absolute;right:10px;top:8px;color:var(--s400);cursor:pointer}
+  .sel{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--s600);background:#fff}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg span{padding:7px 11px;font-size:12px;color:var(--s600);border-right:1px solid var(--line)}
+  .seg span:last-child{border-right:none}
+  .seg .on{background:#EEF2FF;color:#3730A3;font-weight:600}
+
+  /* dropdown */
+  .dd{position:absolute;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);
+      border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,.12);z-index:5;overflow:hidden}
+  .ddh{padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+       color:var(--s400);background:#FAFBFC;border-bottom:1px solid var(--l100)}
+  .ddi{display:flex;align-items:center;gap:9px;padding:7px 12px;font-size:12.5px;color:var(--s600);cursor:pointer;
+       border-bottom:1px solid var(--l100)}
+  .ddi:last-child{border-bottom:none}
+  .ddi:hover,.ddi.hot{background:#EEF2FF}
+  .ddi .k{color:var(--s400);font-size:11px}
+  .ddi .n{margin-left:auto;font-size:11px;color:var(--s400);font-variant-numeric:tabular-nums}
+  .ddi b{color:var(--ink);font-weight:600}
+  mark{background:#FEF08A;color:inherit;border-radius:2px;padding:0 1px}
+
+  /* count line */
+  .cnt{margin:14px 0 8px;font-size:12px;color:var(--s500)}
+  .cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .chip{display:inline-flex;align-items:center;gap:5px;background:#EEF2FF;border:1px solid #C7D2FE;color:#3730A3;
+        border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:600;margin-right:5px}
+  .chip i{cursor:pointer;color:#6366F1;font-style:normal}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--s400);
+     font-weight:700;padding:7px 10px;border-bottom:1px solid var(--line)}
+  td{padding:8px 10px;border-bottom:1px solid var(--l100);color:var(--s600)}
+  td.co{font-weight:600;color:var(--ink)}
+  tr:last-child td{border-bottom:none}
+  .num{font-variant-numeric:tabular-nums;font-weight:600}
+  .g{color:#059669}.a{color:#B45309}.r{color:#DC2626}.m{color:var(--s400)}
+  .pill{border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:600}
+  .pill.prep{background:#EEF2FF;color:#3730A3}
+  .pill.mkt{background:#ECFDF5;color:#047857}
+  .pill.onb{background:#FFF7ED;color:#9A3412}
+
+  .empty{padding:26px;text-align:center;color:var(--s500);font-size:12.5px}
+  .empty b{display:block;color:var(--ink);font-size:13px;margin-bottom:3px}
+  .empty a{color:#4F46E5;text-decoration:none;font-weight:600}
+
+  .note{margin-top:9px;font-size:11.5px;color:var(--s400)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Companies — type a letter, see the data</h1>
+<p class="sub">Admin workspace → Companies. What the search does today, and what it should do.</p>
+
+<div class="why">
+  <h2>Why typing "a" looked like nothing happened</h2>
+  <ol>
+    <li><b>It <i>is</i> filtering — you just can't tell.</b> "a" matches almost every row through the founder's name
+        (Martin, Tina, Charles, Alan…), so 23 rows stay on screen and nothing appears to move.</li>
+    <li><b>The count never changes.</b> <code>countSub</code> is passed
+        <code>count: companies.length</code> — the unfiltered total. Filtered or not, it always reads
+        "23 companies". This is the bug that makes search feel dead.</li>
+    <li><b>No match is ever shown.</b> Nothing is highlighted, there is no dropdown, no "6 of 23" — the only
+        feedback is rows silently disappearing.</li>
+    <li><b>It searches four fields only</b> — company, industry, founder, review status. Typing
+        <code>Marketing</code>, <code>78</code> or a founder's email finds nothing, even though those columns
+        are on screen.</li>
+    <li><b>Every other admin list uses <code>OdooSearchBar</code></b> with a typeahead dropdown. Companies is
+        the one page still on a bare <code>&lt;input type="search"&gt;</code>.</li>
+  </ol>
+</div>
+
+<!-- ============ A ============ -->
+<div class="lbl">A · Typing "a" — dropdown appears on the first keystroke</div>
+<div class="panel" style="padding-bottom:210px">
+  <div class="srow">
+    <div class="sbox">
+      <span class="mag">⌕</span>
+      <input class="sinput" value="a" readonly>
+      <span class="clr">✕</span>
+      <div class="dd">
+        <div class="ddh">Search "a" in</div>
+        <div class="ddi hot"><span class="k">Company</span> <b>a</b> <span class="n">4 matches</span></div>
+        <div class="ddi"><span class="k">Founder</span> <b>a</b> <span class="n">14 matches</span></div>
+        <div class="ddi"><span class="k">Industry</span> <b>a</b> <span class="n">9 matches</span></div>
+        <div class="ddi"><span class="k">Stage</span> <b>a</b> <span class="n">23 matches</span></div>
+        <div class="ddh">Jump to</div>
+        <div class="ddi">🏢 N<mark>A</mark>I Technology — NutriFlex AI LLC <span class="n">Marketing · 25</span></div>
+        <div class="ddi">🏢 Al<mark>a</mark>n Steinberg's Company <span class="n">Onboarding · 1</span></div>
+        <div class="ddi">🏢 Br<mark>a</mark>iniest AI Technology <span class="n">Onboarding · 28</span></div>
+        <div class="ddi">🏢 Chineduplus Tr<mark>a</mark>ding <span class="n">Preparation · 12</span></div>
+      </div>
+    </div>
+    <select class="sel"><option>All users</option></select>
+    <select class="sel"><option>All stages</option></select>
+    <div class="seg"><span>Kanban</span><span>Grid</span><span class="on">List</span><span>Journey</span></div>
+  </div>
+  <p class="note">↑ / ↓ to move, Enter to apply as a filter, Esc to clear. The list behind already narrows live —
+    the dropdown just tells you <i>where</i> the letter matched, which is what was missing.</p>
+</div>
+
+<!-- ============ B ============ -->
+<div class="lbl">B · Typing "imp" — the count moves and the match is highlighted</div>
+<div class="panel">
+  <div class="srow">
+    <div class="sbox">
+      <span class="mag">⌕</span>
+      <input class="sinput" value="imp" readonly>
+      <span class="clr">✕</span>
+    </div>
+    <select class="sel"><option>All users</option></select>
+    <select class="sel"><option>All stages</option></select>
+    <div class="seg"><span>Kanban</span><span>Grid</span><span class="on">List</span><span>Journey</span></div>
+  </div>
+
+  <p class="cnt"><b>1</b> of <b>23</b> companies · 0 pending review · matched on <b>company name</b></p>
+
+  <table>
+    <thead><tr><th>Company</th><th>Founder</th><th>Industry</th><th>Readiness</th><th>Investable</th><th>Stage</th><th>Review</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="co"><mark>Imp</mark>ervitex Corp</td><td>Cynthia Mcbreen</td><td>Deep Tech</td>
+        <td class="num g">78</td><td class="num r">27</td><td><span class="pill mkt">Marketing</span></td><td>Approved</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ C ============ -->
+<div class="lbl">C · Enter turns it into a facet — and the extra fields become searchable</div>
+<div class="panel">
+  <div class="srow">
+    <div class="sbox">
+      <span class="mag">⌕</span>
+      <input class="sinput" value="" readonly style="padding-left:150px">
+      <span style="position:absolute;left:30px;top:9px">
+        <span class="chip">Stage: Preparation <i>✕</i></span>
+      </span>
+    </div>
+    <select class="sel"><option>All users</option></select>
+    <select class="sel"><option>All stages</option></select>
+    <div class="seg"><span>Kanban</span><span>Grid</span><span class="on">List</span><span>Journey</span></div>
+  </div>
+
+  <p class="cnt"><b>4</b> of <b>23</b> companies · 0 pending review</p>
+
+  <table>
+    <thead><tr><th>Company</th><th>Founder</th><th>Industry</th><th>Readiness</th><th>Investable</th><th>Stage</th><th>Review</th></tr></thead>
+    <tbody>
+      <tr><td class="co">Tinski Tech</td><td>Martin Goldberg</td><td>Deep Tech</td><td class="num m">—</td><td class="num m">—</td><td><span class="pill prep">Preparation</span></td><td>Approved</td></tr>
+      <tr><td class="co">Credtent, Inc.</td><td>Eric R Burgess</td><td>AI / ML</td><td class="num g">72</td><td class="num a">36</td><td><span class="pill prep">Preparation</span></td><td>Approved</td></tr>
+      <tr><td class="co">Liposomal Technologies Inc</td><td>Ergin Yildiz</td><td>HealthTech</td><td class="num m">—</td><td class="num r">7</td><td><span class="pill prep">Preparation</span></td><td>Approved</td></tr>
+      <tr><td class="co">Roberto Chiteta's Company</td><td>Roberto Chiteta</td><td>Other</td><td class="num a">55</td><td class="num a">37</td><td><span class="pill prep">Preparation</span></td><td>Approved</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Searchable fields widen to match what the table shows: company, founder, founder email, industry,
+    <b>stage</b>, <b>review status</b>, <b>published</b>, and the two <b>scores</b> (so "78" or "&gt;70" works).</p>
+</div>
+
+<!-- ============ D ============ -->
+<div class="lbl">D · No match — say so, and offer the way out</div>
+<div class="panel">
+  <div class="srow">
+    <div class="sbox">
+      <span class="mag">⌕</span>
+      <input class="sinput" value="zzz" readonly>
+      <span class="clr">✕</span>
+    </div>
+    <select class="sel"><option>All users</option></select>
+    <select class="sel"><option>All stages</option></select>
+    <div class="seg"><span>Kanban</span><span>Grid</span><span class="on">List</span><span>Journey</span></div>
+  </div>
+  <p class="cnt"><b>0</b> of <b>23</b> companies</p>
+  <div class="empty">
+    <b>Nothing matches "zzz"</b>
+    Searched company, founder, email, industry, stage, review and scores. <a href="#">Clear search</a>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

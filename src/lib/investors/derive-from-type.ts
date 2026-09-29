@@ -1,0 +1,329 @@
+/**
+ * Derive missing investor criteria from the investor's TYPE.
+ *
+ * These are assumptions, not facts, and are recorded as such: every value written carries
+ * a provenance tag naming the rule that produced it, so staff can tell a derived value
+ * from a stated one and any single rule/field can be reversed on its own.
+ *
+ * Why it earns its place: stage was a 25-point weight sitting empty for ~99.9% of the
+ * network, contributing nothing to ranking. And because /fit's investor-type question
+ * defaults to "Open to any", the type weight usually awards every investor the same 15
+ * points — so a value derived from type does add real discrimination rather than
+ * double-counting something already scored.
+ *
+ * A field is only filled when the contact has NO value for it under any known label or
+ * keyword. Stated and AI-extracted values always win; this never overwrites.
+ *
+ * Originally run as one-off SQL. In code it is repeatable, so investors synced from Odoo
+ * tomorrow get the same treatment instead of the fields silently decaying again.
+ */
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { readAllRows } from "@/lib/supabase/paged";
+import { reportDbError } from "@/lib/supabase/report";
+import { reindexContacts } from "@/lib/fit/match-index";
+import { mergeOverrides } from "@/lib/sales/overrides";
+import { OP_STAGE_LABEL, OP_STAGE_LABELS, INV_SIZE_LABEL, REVENUE_LABEL, FIT_WEIGHTS, FIELD_KEYWORDS } from "@/lib/fit/options";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(): any { return createServiceRoleClient(); }
+
+export const EBITDA_LABEL = "Investor preferences for company with annual EBITDA range of?";
+
+/** One field a rule fills, with everything needed to detect "already has a value". */
+export type FieldFill = {
+  field: string;              // short id, used in the UI and for undo
+  /** Label written to. First entry is the write target. */
+  labels: readonly string[];
+  /** Extra keywords for the "does it already have one?" check — labels drift in Odoo. */
+  keywords: readonly string[];
+  values: string[];
+  /** overrides key holding the provenance tag for this field. */
+  sourceKey: string;
+  /** Whether /fit scores this field, purely so the UI can say so honestly. */
+  weight: number;
+};
+
+export type TypeRule = { id: string; label: string; matches: readonly string[]; fills: FieldFill[] };
+
+const stageFill = (values: string[]): FieldFill => ({
+  field: "stage", labels: OP_STAGE_LABELS, keywords: FIELD_KEYWORDS.stage,
+  values, sourceKey: "_stage_source", weight: FIT_WEIGHTS.stage,
+});
+
+/**
+ * The agreed rules. A contact is filled by the FIRST rule whose type it carries, so more
+ * specific types come first.
+ *
+ * VC deliberately spans every stage band: seed VCs are common, and excluding them all
+ * from pre-revenue founders on an assumption would be worse than the gap it closes.
+ * Private Equity is the only type with size/revenue/EBITDA rules — those cheque and
+ * revenue floors are genuinely characteristic of the asset class in a way they are not
+ * for, say, a family office.
+ */
+export const TYPE_RULES: TypeRule[] = [
+  {
+    id: "derived:angel", label: "Angel", matches: ["Angel", "Angel Investor"],
+    fills: [stageFill(["Startup", "Prototype"])],
+  },
+  {
+    id: "derived:family_office", label: "Family Office", matches: ["Family Office"],
+    fills: [stageFill(["Expand Growth", "Small Business", "Midsize Company"])],
+  },
+  {
+    id: "derived:private_equity", label: "Private Equity", matches: ["Private Equity", "PE"],
+    fills: [
+      stageFill(["Small Business", "Expand Growth", "Midsize Company", "Large Corporation"]),
+      { field: "size", labels: [INV_SIZE_LABEL], keywords: FIELD_KEYWORDS.size,
+        values: ["$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"],
+        sourceKey: "_size_source", weight: FIT_WEIGHTS.size },
+      // NB "Over $100m" here, "$100m+" above — the two vocabularies genuinely differ, and
+      // using the wrong one stores a value that can never match.
+      { field: "revenue", labels: [REVENUE_LABEL], keywords: FIELD_KEYWORDS.revenue,
+        values: ["$1m - $10m", "$10m - $50m", "$50m - $100m", "Over $100m"],
+        sourceKey: "_revenue_source", weight: FIT_WEIGHTS.revenue },
+      // EBITDA is displayed on the profile but the matcher never reads it — 0 points.
+      { field: "ebitda", labels: [EBITDA_LABEL], keywords: FIELD_KEYWORDS.ebitda,
+        values: ["$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"],
+        sourceKey: "_ebitda_source", weight: 0 },
+    ],
+  },
+  {
+    id: "derived:vc", label: "Venture Capital", matches: ["VC", "Venture Capital", "Venture"],
+    fills: [stageFill(["Startup", "Prototype", "Expand Growth", "Small Business", "Midsize Company"])],
+  },
+];
+
+type Row = {
+  id: string; company: string | null;
+  raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null;
+};
+
+function asList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean);
+  if (v == null || v === "") return [];
+  return [String(v).trim()].filter(Boolean);
+}
+
+/** Types on a contact, from overrides or the Odoo profile. Raw spellings, not canonical. */
+export function typesOf(r: Row): string[] {
+  const ov = r.overrides?.["Investor type"];
+  if (Array.isArray(ov) && ov.length) return asList(ov);
+  return asList((r.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes);
+}
+
+/**
+ * True when the contact already has a value for this field — by exact label OR by keyword,
+ * in overrides or the Odoo payload. The keyword arm matters: a value stored under a
+ * renamed label is still a real value, and overwriting it would destroy information.
+ */
+export function hasFieldValue(r: Row, fill: FieldFill): boolean {
+  const extra = (r.raw?.__profile as { extra?: Record<string, unknown> } | undefined)?.extra ?? {};
+  for (const label of fill.labels) {
+    if (asList(r.overrides?.[label]).length > 0 || asList(extra[label]).length > 0) return true;
+  }
+  const hit = (key: string) => fill.keywords.some((k) => key.trim().toLowerCase().includes(k.toLowerCase()));
+  for (const [k, v] of Object.entries(r.overrides ?? {})) if (hit(k) && asList(v).length > 0) return true;
+  for (const [k, v] of Object.entries(extra)) if (hit(k) && asList(v).length > 0) return true;
+  return false;
+}
+
+/** The rule that applies to a contact, by type alone. Pure. */
+export function ruleFor(r: Row, rules: TypeRule[] = TYPE_RULES): TypeRule | null {
+  const types = typesOf(r).map((t) => t.trim().toLowerCase());
+  if (types.length === 0) return null;
+  return rules.find((rule) => rule.matches.some((m) => types.includes(m.toLowerCase()))) ?? null;
+}
+
+export type PlanItem = { contactId: string; company: string | null; ruleId: string; field: string; label: string; values: string[]; sourceKey: string };
+
+/** Which fields this contact is missing that its rule can fill. Pure. */
+export function fillsFor(r: Row, rules: TypeRule[] = TYPE_RULES): PlanItem[] {
+  const rule = ruleFor(r, rules);
+  if (!rule) return [];
+  return rule.fills
+    .filter((f) => !hasFieldValue(r, f))
+    .map((f) => ({ contactId: r.id, company: r.company, ruleId: rule.id, field: f.field, label: f.labels[0], values: f.values, sourceKey: f.sourceKey }));
+}
+
+/** Counts per rule and field, for the preview readout. Pure. */
+export function summarise(plan: PlanItem[]): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  for (const p of plan) {
+    out[p.ruleId] ??= {};
+    out[p.ruleId][p.field] = (out[p.ruleId][p.field] ?? 0) + 1;
+  }
+  return out;
+}
+
+const PLAN_PAGE_SIZE = 250;
+
+/**
+ * Everything the pass would change, walked by CURSOR rather than re-read from the top.
+ *
+ * Each row carries the whole Odoo `raw` jsonb, so a full plan is a multi-megabyte scan.
+ * Re-running it per apply — inside a loop that can fire 50 times — reproduces exactly the
+ * pattern that pinned the database CPU at 97% earlier. Passing `afterId` means the loop
+ * walks the table ONCE across all its calls instead of once per call.
+ *
+ * Stops as soon as `wanted` contacts have work, and reports the id it stopped at.
+ */
+export async function planDerivation(opts: { afterId?: string | null; wanted?: number } = {}): Promise<{ plan: PlanItem[]; scanned: number; nextCursor: string | null; done: boolean }> {
+  const wanted = opts.wanted ?? Number.POSITIVE_INFINITY;
+  const plan: PlanItem[] = [];
+  const withWork = new Set<string>();
+  let scanned = 0;
+  let cursor: string | null = opts.afterId ?? null;
+  let done = true;
+
+  // Keyset pagination: `id > cursor` rather than an offset, so pages can't shift under us.
+  for (let page = 0; page < 200; page++) {
+    // Each row carries the full Odoo `raw` record, so pages stay small, and a page the
+    // database cancels for the 8s statement timeout (57014) is retried once.
+    const fetchPage = () => {
+      let q = db().from("crm_contacts")
+        .select("id, company, raw, overrides")
+        .or("contact_type.eq.investor,module.eq.investor")
+        .not("company", "is", null);
+      if (cursor) q = q.gt("id", cursor);
+      return q.order("id", { ascending: true }).limit(PLAN_PAGE_SIZE);
+    };
+    let { data, error } = await fetchPage();
+    if (error?.code === "57014") {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      ({ data, error } = await fetchPage());
+    }
+    if (reportDbError("planDerivation: crm_contacts", error)) { done = false; break; }
+    const rows = (data ?? []) as Row[];
+    if (rows.length === 0) { done = true; break; }
+
+    for (const r of rows) {
+      scanned++;
+      cursor = r.id;
+      const fills = fillsFor(r);
+      if (fills.length === 0) continue;
+      plan.push(...fills);
+      withWork.add(r.id);
+      if (withWork.size >= wanted) return { plan, scanned, nextCursor: cursor, done: false };
+    }
+    if (rows.length < PLAN_PAGE_SIZE) { done = true; break; }
+  }
+  return { plan, scanned, nextCursor: done ? null : cursor, done };
+}
+
+/**
+ * Apply the plan. All fields for one contact are merged into a single update, then the
+ * contact is reindexed so /fit sees it without a manual rebuild. Best-effort per contact.
+ */
+/**
+ * Each contact costs a read and a write. Done serially, ~380 contacts is ~760 round trips
+ * and blows the 60s function limit part-way through — which is exactly what happened on
+ * the first real run (285 of 377 written, the rest lost to the timeout). Bounded
+ * concurrency turns that into seconds; the cap keeps any single request finite and
+ * returns `remaining` so the caller can loop.
+ */
+const WRITE_CONCURRENCY = 6;
+const MAX_PER_RUN = 400;
+
+export async function applyDerivation(opts: { afterId?: string | null } = {}): Promise<{ scanned: number; contacts: number; fields: number; byRule: Record<string, Record<string, number>>; errors: number; firstError: string | null; reindexed: number; nextCursor: string | null; done: boolean }> {
+  // Only plan as much as this pass will actually write, resuming where the last one
+  // stopped — see planDerivation for why re-planning the whole network per call is the
+  // expensive mistake here.
+  const { plan, scanned, nextCursor, done } = await planDerivation({ afterId: opts.afterId, wanted: MAX_PER_RUN });
+
+  const byContact = new Map<string, PlanItem[]>();
+  for (const p of plan) byContact.set(p.contactId, [...(byContact.get(p.contactId) ?? []), p]);
+
+  const todo = [...byContact.entries()];
+
+  let contacts = 0, fields = 0, errors = 0;
+  let firstError: string | null = null;
+  const byRule: Record<string, Record<string, number>> = {};
+  const touched: string[] = [];
+
+  let cursor = 0;
+  async function worker() {
+    while (cursor < todo.length) {
+      const [contactId, items] = todo[cursor++];
+      // Re-read immediately before writing: the plan is a snapshot, and an approved
+      // enrichment may have given this contact a real value since it was built.
+      const { data: c, error: readErr } = await db().from("crm_contacts").select("raw, overrides").eq("id", contactId).maybeSingle();
+      // Must check: a swallowed read error would leave c null, and the spread below would
+      // then replace the whole overrides column with just our keys.
+      if (readErr || !c) {
+        errors++;
+        if (!firstError) firstError = `read overrides failed: ${readErr?.message ?? "no row"}`;
+        continue;
+      }
+      const fresh: Row = { id: contactId, company: null, raw: c.raw ?? null, overrides: c.overrides ?? null };
+
+      // Build a PATCH of only the keys we're adding; the merge is atomic in Postgres, so
+      // a concurrent Approve on the same contact keeps its keys and we keep ours.
+      const set: Record<string, unknown> = {};
+      let wrote = 0;
+      for (const item of items) {
+        const rule = TYPE_RULES.find((r) => r.id === item.ruleId);
+        const fill = rule?.fills.find((f) => f.field === item.field);
+        if (!fill || hasFieldValue(fresh, fill)) continue;   // someone got there first
+        set[item.label] = item.values;
+        set[item.sourceKey] = item.ruleId;
+        wrote++;
+        byRule[item.ruleId] ??= {};
+        byRule[item.ruleId][item.field] = (byRule[item.ruleId][item.field] ?? 0) + 1;
+      }
+      if (wrote === 0) continue;
+
+      const merged = await mergeOverrides(contactId, { set }, "applyDerivation");
+      if (merged === null) {
+        errors++;
+        if (!firstError) firstError = "merge_contact_overrides failed (see log)";
+        continue;
+      }
+      contacts++; fields += wrote; touched.push(contactId);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, todo.length) }, () => worker()));
+
+  const reindexed = await reindexContacts(touched).catch(() => 0);
+  return { scanned, contacts, fields, byRule, errors, firstError, reindexed, nextCursor, done };
+}
+
+/**
+ * Remove every value one rule wrote for one field, leaving stated and extracted values —
+ * and the rule's other fields — untouched.
+ */
+export async function undoDerivation(ruleId: string, field: string): Promise<number> {
+  const rule = TYPE_RULES.find((r) => r.id === ruleId);
+  const fill = rule?.fills.find((f) => f.field === field);
+  if (!fill) return 0;
+  // Paged: .limit() does not lift db-max-rows, so this previously removed at most 1,000
+  // values and reported success as if it had finished.
+  type Tagged = { id: string };
+  const rows = await readAllRows<Tagged>((from, to) => db().from("crm_contacts")
+    .select("id").eq(`overrides->>${fill.sourceKey}`, ruleId)
+    .order("id", { ascending: true }).range(from, to), { context: "undoDerivation: read" });
+
+  // Captured before the closure: narrowing on `fill` doesn't survive into the worker.
+  const targetLabel = fill.labels[0];
+  const tagKey = fill.sourceKey;
+  let n = 0;
+  const touched: string[] = [];
+  // Concurrent, like applyDerivation: one update per row done serially is ~40s per 1,000
+  // rows of pure round trips, which times out mid-way and reports "Undo failed" having
+  // already undone several hundred.
+  let cursor = 0;
+  async function worker() {
+    while (cursor < rows.length) {
+      const r = rows[cursor++];
+      // Atomic key removal — never rewrites the rest of the column.
+      const merged = await mergeOverrides(r.id, { remove: [targetLabel, tagKey] }, "undoDerivation");
+      if (merged !== null) { n++; touched.push(r.id); }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(WRITE_CONCURRENCY, rows.length) }, () => worker()));
+  await reindexContacts(touched).catch(() => 0);
+  return n;
+}
+
+/** Kept so the stage-only entry point still reads clearly at the call sites. */
+export const applyStageDerivation = applyDerivation;
+export { OP_STAGE_LABEL };

@@ -96,7 +96,7 @@ export function EventLeadsBoard({ eventId, initialLeads }: { eventId: string; in
 
       <div className="mt-4 flex flex-wrap gap-2">
         {(["all", "open", "contacted", "won", "lost"] as const).map((k) => (
-          <button
+          <button type="button"
             key={k}
             onClick={() => setFilter(k)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${

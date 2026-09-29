@@ -14,6 +14,10 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { READINESS_FACTORS } from "@/lib/ai/readiness-scoring";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
+import type { Dimension, ProfileKey } from "@/lib/crr/profiles";
+import type { StoredFactor, WeightSet } from "@/lib/crr/weight-sets";
+import { dimensionCards } from "@/lib/crr/dimension-detail";
+import { DimensionPanel } from "@/components/admin/crr/DimensionPanel";
 
 // Evidence status → Tabler outline icon + color
 const EV_ICON = { pass: "ti-circle-check", warn: "ti-alert-triangle", fail: "ti-circle-x" } as const;
@@ -41,6 +45,8 @@ type Row = {
   companyName: string;
   industry: string | null;
   status: string | null;
+  /** The audience profile this company is scored against — from its funding stage. */
+  profile: ProfileKey;
   score: CompanyScore | null;
 };
 
@@ -55,15 +61,11 @@ type Metrics = {
 type Props = {
   rows: Row[];
   metrics: Metrics;
+  /** The weighting in force — the dimension cards are computed against it. */
+  weightSet: WeightSet;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function scoreColor(n: number): string {
-  if (n >= 75) return "#1D9E75";
-  if (n >= 50) return "#E8922A";
-  return "#D9534F";
-}
 
 function scoreBadgeClass(n: number): string {
   if (n >= 75) return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
@@ -119,7 +121,7 @@ function FactorPopup({
     >
       <div className="relative w-full max-w-lg max-h-[82vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="sticky top-0 z-10 border-b border-slate-100 bg-white px-6 py-4">
-          <button
+          <button type="button"
             onClick={onClose}
             className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
           >
@@ -254,7 +256,7 @@ function FactorPopup({
         </div>
 
         <div className="sticky bottom-0 border-t border-slate-100 bg-white px-6 py-4">
-          <button
+          <button type="button"
             onClick={onClose}
             className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
@@ -332,7 +334,7 @@ function OverridePanel({
           <p className="text-sm font-semibold text-slate-900">{row.companyName}</p>
           <p className="mt-0.5 text-xs text-slate-400">{t("override_panel")}</p>
         </div>
-        <button
+        <button type="button"
           onClick={onCancel}
           className="text-xs text-slate-400 hover:text-slate-600"
         >
@@ -391,7 +393,7 @@ function OverridePanel({
       )}
 
       <div className="mt-4 flex gap-2">
-        <button
+        <button type="button"
           onClick={() => submit(false)}
           disabled={isPending}
           className="flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
@@ -399,7 +401,7 @@ function OverridePanel({
           {isPending ? "Saving…" : "Save override"}
         </button>
         {row.score.overrideScore !== null && (
-          <button
+          <button type="button"
             onClick={() => submit(true)}
             disabled={clearing}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-60"
@@ -447,7 +449,7 @@ function DistributionChart({ rows }: { rows: Row[] }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function AdminReadinessDashboard({ rows, metrics }: Props) {
+export function AdminReadinessDashboard({ rows, metrics, weightSet }: Props) {
   const t = useTranslations("adminCmp");
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked" | "overridden">("all");
   const [search, setSearch] = useState("");
@@ -456,6 +458,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
     key: FactorKey;
     score: FactorScore;
   } | null>(null);
+  const [openDimension, setOpenDimension] = useState<{ row: Row; dimension: Dimension } | null>(null);
   const [rescoring, setRescoring] = useState<string | null>(null);
   const [rescoreError, setRescoreError] = useState<string | null>(null);
   const [rescoreAllProgress, setRescoreAllProgress] = useState<{ done: number; total: number } | null>(null);
@@ -580,12 +583,6 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
     }
   }
 
-  function openFactor(companyScore: CompanyScore, factorKey: string) {
-    const fs = companyScore.factorScores?.[factorKey] as FactorScore | undefined;
-    if (!fs) return;
-    setActiveFactor({ key: factorKey as FactorKey, score: fs });
-  }
-
   return (
     <>
       {/* Metric cards */}
@@ -628,7 +625,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
               <option value="locked">Outreach locked</option>
               <option value="overridden">Admin overridden</option>
             </select>
-            <button
+            <button type="button"
               onClick={backfillSummaries}
               disabled={summaryProgress !== null || rescoreAllProgress !== null}
               title="Generate AI summaries for documents that lack one, then re-score affected companies. Fixes low scores caused by missing document summaries."
@@ -636,7 +633,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
             >
               {summaryProgress ? `Summarizing… ${summaryProgress.done} done` : "Generate summaries"}
             </button>
-            <button
+            <button type="button"
               onClick={rescoreAll}
               disabled={rescoreAllProgress !== null || summaryProgress !== null}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
@@ -739,36 +736,38 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
                         )}
                       </td>
 
-                      {/* Factor mini-bars */}
+                      {/* Dimension cards — the same five the Weights tab edits */}
                       <td className="hidden px-4 py-3 lg:table-cell">
                         {s?.factorScores ? (
-                          <div className="flex gap-1.5">
-                            {READINESS_FACTORS.map((f) => {
-                              const fs = s.factorScores[f.key] as FactorScore | undefined;
-                              if (!fs) return null;
-                              const pct = fs.pts / fs.max;
+                          <div className="flex flex-wrap gap-1.5">
+                            {dimensionCards(
+                              s.factorScores as Partial<Record<FactorKey, StoredFactor>>,
+                              weightSet,
+                              row.profile,
+                            ).map((d) => {
                               const col =
-                                pct >= 0.75 ? "#1D9E75" : pct >= 0.45 ? "#E8922A" : "#D9534F";
+                                d.score >= 75 ? "#1D9E75" : d.score >= 45 ? "#E8922A" : "#D9534F";
                               return (
                                 <button
-                                  key={f.key}
-                                  title={`${f.label}: ${fs.pts}/${fs.max}`}
+                                  key={d.key}
+                                  type="button"
+                                  title={`${d.label} — weighted ${d.weight} for this company's stage. Click for the detail.`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    openFactor(s, f.key);
+                                    setOpenDimension({ row, dimension: d.key });
                                   }}
-                                  className="group relative flex flex-col items-center gap-0.5"
+                                  className="min-w-[104px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-left transition-colors hover:border-indigo-500 hover:bg-indigo-50/40"
                                 >
-                                  <div className="h-6 w-3 overflow-hidden rounded-sm bg-slate-100">
-                                    <div
-                                      className="w-full rounded-sm transition-all group-hover:opacity-80"
-                                      style={{
-                                        height: `${pct * 100}%`,
-                                        background: col,
-                                        marginTop: `${(1 - pct) * 100}%`,
-                                      }}
-                                    />
-                                  </div>
+                                  <span className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">
+                                    {d.label}
+                                    <em className="not-italic font-semibold text-slate-300">{d.weight}</em>
+                                  </span>
+                                  <span className="block text-sm font-semibold tabular-nums" style={{ color: col }}>
+                                    {d.score}
+                                  </span>
+                                  <span className="mt-0.5 block h-[3px] overflow-hidden rounded-full bg-slate-100">
+                                    <span className="block h-full rounded-full" style={{ width: `${d.score}%`, background: col }} />
+                                  </span>
                                 </button>
                               );
                             })}
@@ -798,7 +797,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
+                          <button type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               rescore(row.companyId);
@@ -809,7 +808,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
                             {rescoring === row.companyId ? "Scoring…" : "Re-score"}
                           </button>
                           {s && (
-                            <button
+                            <button type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedRow(isSelected ? null : row);
@@ -873,7 +872,17 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
         </div>
       </div>
 
-      {/* Factor popup */}
+      {/* Dimension panel — one level above the factor popup, which it can open. */}
+      {openDimension && (
+        <DimensionPanel
+          companyId={openDimension.row.companyId}
+          dimension={openDimension.dimension}
+          onClose={() => setOpenDimension(null)}
+          onOpenFactor={(key, score) => setActiveFactor({ key, score })}
+        />
+      )}
+
+      {/* Factor popup — still reachable, now from inside the dimension panel */}
       {activeFactor && (
         <FactorPopup
           factorKey={activeFactor.key}

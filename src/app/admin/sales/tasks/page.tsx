@@ -12,7 +12,7 @@ export default async function SalesTasksPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <TasksClient staff={staff} />
+      <TasksClient staff={staff} canExport={profile.role === "admin"} />
     </AppShell>
   );
 }

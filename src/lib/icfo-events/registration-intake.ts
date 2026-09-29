@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { upsertOptin } from "@/lib/icfo-events/networking";
+import { sectorsOf } from "@/lib/icfo-events/matching-rule";
 import { notifyStaff } from "@/lib/notifications/notifications";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
@@ -12,11 +13,6 @@ export type AttendeeType = (typeof ATTENDEE_TYPES)[number];
 
 export type RegistrationAnswers = Record<string, unknown>;
 
-function asStringArray(v: unknown): string[] {
-  if (Array.isArray(v)) return v.map((x) => String(x)).filter(Boolean);
-  if (typeof v === "string" && v.trim()) return [v.trim()];
-  return [];
-}
 
 /**
  * Apply the typed registration: persist the answers on the registration, then
@@ -46,8 +42,9 @@ export async function applyRegistrationIntake(input: {
     if (attendeeType === "investor" || attendeeType === "founder") {
       // Sector interests power the event's networking matchmaking — scoped to
       // the event, not the core profile.
-      const interests =
-        attendeeType === "investor" ? asStringArray(answers.sectors) : asStringArray(answers.sector);
+      // One sector question for every role now: read both keys, as the
+      // networking rule does, so a founder's several sectors all count.
+      const interests = sectorsOf(answers);
       if (interests.length > 0) {
         await upsertOptin(supabase, eventId, profileId, true, interests);
       }

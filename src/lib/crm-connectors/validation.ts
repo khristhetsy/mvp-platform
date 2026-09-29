@@ -1,4 +1,4 @@
-import { CRM_EXPORT_ENTITY_TYPES, CRM_EXPORT_FORMATS } from "@/lib/crm-connectors/types";
+import { CRM_EXPORT_ENTITY_TYPES } from "@/lib/crm-connectors/types";
 import type { CrmExportEntityType, CrmExportFormat } from "@/lib/crm-connectors/types";
 
 const MAX_EXPORT_ROWS = 2000;

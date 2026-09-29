@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { crrScoresFor } from "@/lib/crr/crr-for";
 import { buildActionId, createNextBestAction } from "@/lib/next-best-actions/action-catalog";
 import type { NextBestAction } from "@/lib/next-best-actions/types";
 import { listCompanyDocuments } from "@/lib/data/documents";
@@ -101,7 +102,11 @@ export async function loadFounderNbaContext(
   });
 
   const uploadedTypeCodes = docs.flatMap((doc) => (doc.document_type ? [doc.document_type] : []));
-  const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
+  // The CRR engine score — one number across the platform. The old expression
+  // (diligence score, falling back to a document-type count) survives only as a
+  // last resort for a company the engine has never scored.
+  const readinessScore = (await crrScoresFor([company.id])).get(company.id)
+    ?? diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
 
   const learningPercent =
     FOUNDER_COURSES.length > 0
@@ -306,8 +311,8 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
       createNextBestAction({
         id: buildActionId(["founder", "readiness_score", company.id]),
         role: "founder",
-        title: "Improve completion",
-        description: `Your completion is ${ctx.readinessScore}%. Target ${READINESS_SCORE_THRESHOLD}%+ for stronger investor confidence.`,
+        title: "Improve your Capital Readiness Rating",
+        description: `Your CRR is ${ctx.readinessScore}. Target ${READINESS_SCORE_THRESHOLD}+ for stronger investor confidence.`,
         priority: "high",
         category: "readiness",
         entityType: "company",
@@ -315,7 +320,7 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
         companyId: company.id,
         href: "/founder/readiness",
         sourceModule: "diligence",
-        reason: "Completion is below the institutional threshold.",
+        reason: "CRR is below the institutional threshold.",
         createdFrom: "founder_nba",
       }),
     );

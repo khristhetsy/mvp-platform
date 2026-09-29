@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import {
-  REVENUE_STAGE_OPTIONS as STAGES,
   USE_OF_FUNDS_OPTIONS as FUND_USES,
   INVESTOR_TYPE_OPTIONS as INVESTOR_TYPE_OPTS,
   CAPITAL_TYPE_OPTIONS as CAPITAL_TYPE_OPTS,
@@ -14,17 +13,22 @@ import {
   BUSINESS_ENTITY_OPTIONS as BUSINESS_ENTITY_OPTS,
   FUNDING_STAGE_OPTIONS as FUNDING_STAGE_OPTS,
   OPERATING_STAGE_OPTIONS as OPERATING_STAGE_OPTS,
+  moneyBandFor,
+  isMoneyBand,
 } from "@/lib/profile/options";
+import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
+import { offered, type VocabularyOption } from "@/lib/vocabulary/lists";
+import { SKIPPABLE_STEPS, type ResolvedSurface } from "@/lib/profile-fields/display";
+import { nextQuestion, previousQuestion, questionPosition, type QuestionNum } from "@/lib/onboarding/question-order";
+import { founderMeter, type Meter } from "@/lib/matching/matchable-points";
+import type { EngineWeights } from "@/lib/matching/investor-company-matching";
+import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
 // Option lists shared with the Company Profile settings form + matching inputs
-// live in @/lib/profile/options. Industries + timelines stay local to onboarding.
-const INDUSTRIES = [
-  "FinTech", "HealthTech", "SaaS / B2B Software", "EdTech", "CleanTech",
-  "E-commerce", "AI / ML", "Real Estate", "Consumer", "Deep Tech",
-  "Marketplace", "Logistics", "Hardware", "Other",
-];
+// live in @/lib/profile/options. Industries come from the stored list (the same
+// one every other picker reads); timelines stay local to onboarding.
 
 const TIMELINES = [
   { id: "3m",        label: "Within 3 months", sub: "Actively closing now" },
@@ -49,12 +53,6 @@ function raiseHint(stage: string | null): string {
 function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15;
-}
-
-function formatAmount(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n}`;
 }
 
 function generateOnboardingDraft(opts: {
@@ -126,7 +124,7 @@ function computeScore(opts: {
   if (opts.name.trim().length >= 2) s += 10;
   if (opts.industry) s += 15;
   if (opts.stage) s += 15;
-  if (Number(opts.amount) > 0) s += 10;
+  if (opts.amount) s += 10;
   if (opts.description.trim().length >= 20) s += 15;
   if (opts.useOfFunds.length > 0) s += 10;
   return Math.min(s, 100);
@@ -218,16 +216,57 @@ function ScoreRing({ score }: { score: number }) {
 
 /* ─────────────────────────── main ─────────────────────────── */
 
-type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-const TOTAL = 7;
+type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+// 8 is Traction (the last question); 9 is the done screen, which is why TOTAL
+// stops at 8 — the progress bar should never count the confirmation as a step.
+const TOTAL = 8;
+
+// Asked in QUESTION_ORDER: scored questions first, prose last. Question
+// numbers are unchanged, so canAdvance, SKIPPABLE_STEPS and the save are too.
+/** Meter rows keyed by the Profile and fields key that hides them. */
+const METER_FIELD_KEYS: Record<string, string | null> = {
+  Industry: null,
+  Stage: "funding_stage",
+  "Amount of capital": "funding_amount_band",
+  "Headquarters location": null,
+  "Seeking investor type": "seeking_investor_types",
+  "Seeking capital type": "seeking_capital_types",
+  ARR: "arr",
+  MRR: "mrr",
+};
+
+const HIGHLIGHT_PLACEHOLDERS = [
+  "Pilot line running at 400 units/month",
+  "Two LOIs signed with tier-1 manufacturers",
+  "US patent granted",
+  "",
+  "",
+];
 
 export function FounderConversationalOnboarding({
   company,
   founderName,
+  display,
+  engineWeights,
 }: Readonly<{
   company: Company;
   founderName: string;
+  /** Shown and Required per field, from Admin, Profile and fields. Absent means today's behaviour. */
+  display?: ResolvedSurface;
+  /** The matching engine's weights, for the matchable points meter. Absent hides the meter. */
+  engineWeights?: EngineWeights;
 }>) {
+  /** Whether a managed field is asked. */
+  const shows = (key: string) => display?.[key]?.shown !== false;
+  /** Whether a managed field must be answered; `base` is its built in rule. */
+  const needs = (key: string, base: boolean) => shows(key) && (display?.[key]?.required ?? base);
+  /** A step is skipped when its only question is hidden. */
+  const skipped = (n: number) => Boolean(SKIPPABLE_STEPS[n]) && !shows(SKIPPABLE_STEPS[n]);
+  const star = (key: string, base: boolean) => (needs(key, base) ? <span className="text-rose-600">*</span> : <span className="font-normal text-slate-400">· optional</span>);
+  // Option lists edited on Admin, Profile and fields (built in lists if not provided).
+  const vocab = useVocabularies();
+  const menu = (all: VocabularyOption[], held: string | null): VocabularyOption[] =>
+    [...offered(all), ...all.filter((o) => o.archived && o.slug === held)];
   const t = useTranslations("founderCmp");
   const router = useRouter();
   const [step, setStep]             = useState<StepNum>(1);
@@ -237,8 +276,16 @@ export function FounderConversationalOnboarding({
   const [companyName, setCompanyName] = useState(company.company_name ?? "");
   const [phone, setPhone]             = useState(company.contact_phone ?? "");
   const [industry, setIndustry]       = useState<string | null>(company.industry ?? null);
+  // Offered values, plus whatever this company already holds, so a founder
+  // whose value was since retired still sees their answer.
+  const { options: industryOptions } = useVocabulary("industry", company.industry);
   const [stage, setStage]             = useState<string | null>(company.revenue_stage ?? null);
-  const [amount, setAmount]           = useState(company.funding_amount?.toString() ?? "");
+  // Amount of capital as one of the money bands: the stored band, else the band an
+  // existing exact amount falls in.
+  const [amount, setAmount]           = useState<string>(() => {
+    const stored = (company as unknown as Record<string, unknown>).funding_amount_band;
+    return isMoneyBand(stored) ? stored : (moneyBandFor(company.funding_amount ?? null) ?? "");
+  });
   const [description, setDescription] = useState(
     !company.business_description || company.business_description.startsWith("Company profile created")
       ? ""
@@ -265,8 +312,20 @@ export function FounderConversationalOnboarding({
   const [fundingStage, setFundingStage] = useState<string[]>(splitCsv(cx.funding_stage));
   const [opStage, setOpStage]         = useState<string[]>(splitCsv(cx.operating_stage));
   const [bizEntity, setBizEntity]     = useState<string | null>(typeof cx.business_entity === "string" ? cx.business_entity : null);
-  const [ebitda, setEbitda]           = useState(typeof cx.annual_ebitda === "string" ? cx.annual_ebitda : "");
+  // Only a stored value that is one of the bands pre-selects a chip.
+  const [ebitda, setEbitda]           = useState(isMoneyBand(cx.annual_ebitda) ? cx.annual_ebitda : "");
   const [mgmtTeam, setMgmtTeam]       = useState(typeof cx.management_team === "string" ? cx.management_team : "");
+  // Traction (step 8). All optional: forcing a number here would make
+  // pre-revenue founders invent one, and the CRR engine would then score fiction.
+  const [revSize, setRevSize]         = useState<string | null>(typeof cx.annual_revenue_size === "string" && cx.annual_revenue_size ? cx.annual_revenue_size : null);
+  // Pre-select only a stored value that is on the list; a typed legacy value is kept on the record untouched.
+  const [arr, setArr]                 = useState(typeof cx.arr === "string" && vocab.arr_band.some((o) => o.slug === cx.arr) ? cx.arr : "");
+  const [mrr, setMrr]                 = useState(typeof cx.mrr === "string" && vocab.mrr_band.some((o) => o.slug === cx.mrr) ? cx.mrr : "");
+  const [highlights, setHighlights]   = useState<string[]>(() => {
+    const raw = typeof cx.key_highlights === "string" ? cx.key_highlights : "";
+    const rows = raw.split("\n").map((r) => r.trim());
+    return [0, 1, 2, 3, 4].map((i) => rows[i] ?? "");
+  });
 
   function toggleFund(label: string) {
     setUseOfFunds((prev) =>
@@ -280,22 +339,40 @@ export function FounderConversationalOnboarding({
     switch (step) {
       case 1: return companyName.trim().length >= 2 && isValidPhone(phone) && country.trim().length >= 2;
       case 2: return Boolean(industry);
-      case 3: return Boolean(stage);
-      case 4: return Number(amount) > 0;
+      case 3: return !needs("revenue_stage", true) || Boolean(stage);
+      case 4: return !needs("funding_amount_band", true) || isMoneyBand(amount);
       case 5: return description.trim().length >= 20;
-      case 6: return true;
+      case 6: return !needs("use_of_funds", false) || useOfFunds.length > 0;
       case 7:
+        // Active investor preference and management team are not managed on
+        // Profile and fields, so they keep their built in requirement.
         return (
-          invTypes.length > 0 && capTypes.length > 0 && invPref.length > 0 &&
-          Boolean(bizEntity) && fundingStage.length > 0 && opStage.length > 0 &&
-          ebitda.trim().length > 0 && mgmtTeam.trim().length > 0
+          (!needs("seeking_investor_types", true) || invTypes.length > 0) &&
+          (!needs("seeking_capital_types", true) || capTypes.length > 0) &&
+          invPref.length > 0 &&
+          (!needs("business_entity", true) || Boolean(bizEntity)) &&
+          (!needs("funding_stage", true) || fundingStage.length > 0) &&
+          (!needs("operating_stage", true) || opStage.length > 0) &&
+          (!needs("annual_ebitda", true) || isMoneyBand(ebitda)) &&
+          mgmtTeam.trim().length > 0
+        );
+      // Step 8 is optional by default; Profile and fields can require a field.
+      case 8:
+        return (
+          (!needs("annual_revenue_size", false) || Boolean(revSize)) &&
+          (!needs("arr", false) || Boolean(arr)) &&
+          (!needs("mrr", false) || Boolean(mrr))
         );
       default: return true;
     }
   }
 
   async function handleNext() {
-    if (step < TOTAL) { setStep((s) => (s + 1) as StepNum); return; }
+    const next = nextQuestion(step as QuestionNum, skipped);
+    if (next !== null) {
+      setStep(next);
+      return;
+    }
     // step 6 → save & show done
     setSaving(true);
     setErr(null);
@@ -325,7 +402,7 @@ export function FounderConversationalOnboarding({
         body: JSON.stringify({
           step: "funding_information",
           advanceToStep: "documents_uploaded",
-          funding_amount: Number(amount) || 0,
+          funding_amount_band: amount,
           revenue_stage: stage ?? "",
           use_of_funds: useOfFunds.join(", "),
           // Seeking + Company & stage (step 7)
@@ -335,13 +412,18 @@ export function FounderConversationalOnboarding({
           funding_stage: fundingStage.join(", "),
           operating_stage: opStage.join(", "),
           business_entity: bizEntity ?? "",
-          annual_ebitda: ebitda.trim(),
+          annual_ebitda: ebitda,
           management_team: mgmtTeam.trim(),
+          // Traction (step 8)
+          annual_revenue_size: revSize ?? "",
+          arr: arr.trim(),
+          mrr: mrr.trim(),
+          key_highlights: highlights.map((h) => h.trim()).filter(Boolean).join("\n"),
         }),
       });
       if (!r2.ok) throw new Error("Could not save funding information.");
 
-      setStep(8);
+      setStep(9);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -349,12 +431,43 @@ export function FounderConversationalOnboarding({
     }
   }
 
+  // The meter: a point shown is a point the matcher scores. Rows for fields
+  // hidden on Profile and fields are left out, since they cannot be answered.
+  const meter: Meter | null = useMemo(() => {
+    if (!engineWeights) return null;
+    const full = founderMeter(
+      {
+        industry,
+        stages: fundingStage,
+        amountBand: amount || null,
+        country,
+        state: companyState,
+        seekingInvestorTypes: invTypes,
+        seekingCapitalTypes: capTypes,
+        arr: arr || null,
+        mrr: mrr || null,
+      },
+      engineWeights,
+    );
+    const rows = full.rows.filter((r) => {
+      const key = METER_FIELD_KEYS[r.label];
+      return !key || shows(key);
+    });
+    return {
+      rows,
+      answeredPoints: rows.reduce((n, r) => n + (r.answered ? r.weight : 0), 0),
+      totalPoints: rows.reduce((n, r) => n + r.weight, 0),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engineWeights, industry, fundingStage, amount, country, companyState, invTypes, capTypes, arr, mrr, display]);
+  const position = step === 9 ? TOTAL : questionPosition(step);
+
   const firstName = founderName.split(" ")[0] || founderName;
   const actionPlan = computeActionPlan({ stage, amount, timeline });
   const score      = computeScore({ name: companyName, industry, stage, amount, description, useOfFunds });
 
   /* ─── Done screen ─── */
-  if (step === 8) {
+  if (step === 9) {
     return (
       <>
         <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -435,23 +548,33 @@ export function FounderConversationalOnboarding({
     <>
       <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
+      <div className={meter ? "grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start" : ""}>
+      {meter ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] lg:hidden" aria-label="Matchable points">
+          <span className="text-slate-500">Matchable points</span>
+          <span className="font-semibold text-[#0A1A40]">{meter.answeredPoints} of {meter.totalPoints}</span>
+          <div className="h-1.5 flex-1 rounded-full bg-slate-200" aria-hidden="true">
+            <div className="h-1.5 rounded-full bg-[#1A6CE4]" style={{ width: `${meter.totalPoints ? Math.round((meter.answeredPoints / meter.totalPoints) * 100) : 0}%` }} />
+          </div>
+        </div>
+      ) : null}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         {/* Progress */}
         <div className="mb-8 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Step {step} of {TOTAL}
+            Step {position} of {TOTAL}
           </p>
           <div className="flex gap-1.5">
             {Array.from({ length: TOTAL }, (_, i) => (
               <div
                 key={i}
                 style={{
-                  width: i + 1 <= step ? 20 : 8,
+                  width: i + 1 <= position ? 20 : 8,
                   height: 8,
                   borderRadius: 4,
-                  background: i + 1 < step ? "#2E78F5" : i + 1 === step ? "#2E78F5" : "#e2e8f0",
+                  background: i + 1 <= position ? "#2E78F5" : "#e2e8f0",
                   transition: "all 0.3s ease",
-                  opacity: i + 1 <= step ? 1 : 0.5,
+                  opacity: i + 1 <= position ? 1 : 0.5,
                 }}
               />
             ))}
@@ -538,11 +661,14 @@ export function FounderConversationalOnboarding({
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("select_the_closest_match_we_use_this_to_targ")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                {INDUSTRIES.map((ind) => (
-                  <Chip key={ind} selected={industry === ind} onClick={() => setIndustry(ind)}>
-                    {ind}
+                {industryOptions.map((opt) => (
+                  <Chip key={opt.slug} selected={industry === opt.label} onClick={() => setIndustry(opt.label)}>
+                    {opt.label}
                   </Chip>
                 ))}
+                {industry && !industryOptions.some((o) => o.label === industry) ? (
+                  <Chip selected onClick={() => setIndustry(industry)}>{industry}</Chip>
+                ) : null}
               </div>
               <ContextCard>
                 Industry matching is one of the strongest signals our algorithm uses. Investors who back companies in your sector already understand your market — they move faster and ask better questions.
@@ -555,13 +681,13 @@ export function FounderConversationalOnboarding({
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("this_calibrates_the_benchmarks_and_investor")}</p>
               <div className="mt-5 space-y-2">
-                {STAGES.map((s) => (
+                {menu(vocab.revenue_stage, stage).map((s) => (
                   <OptionCard
-                    key={s.id}
-                    selected={stage === s.id}
-                    onClick={() => setStage(s.id)}
+                    key={s.slug}
+                    selected={stage === s.slug}
+                    onClick={() => setStage(s.slug)}
                     label={s.label}
-                    sub={s.sub}
+                    sub={s.description ?? ""}
                   />
                 ))}
               </div>
@@ -574,25 +700,12 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 How much are you looking to raise?
               </p>
-              <p className="mt-1 text-sm text-slate-500">{t("enter_the_total_target_for_this_round_in_usd")}</p>
-              <div className="mt-5 relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-slate-400">$</span>
-                <input
-                  autoFocus
-                  type="number"
-                  min={1}
-                  className="w-full rounded-xl border border-slate-200 py-3.5 pl-8 pr-4 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                  placeholder="1000000"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance()) void handleNext(); }}
-                />
+              <p className="mt-1 text-sm text-slate-500">Pick the range for the total target of this round, in USD.</p>
+              <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Amount to raise">
+                {menu(vocab.money_band, amount).map((o) => (
+                  <Chip key={o.slug} selected={amount === o.slug} onClick={() => setAmount(o.slug)}>{o.label}</Chip>
+                ))}
               </div>
-              {Number(amount) > 0 ? (
-                <p className="mt-2 text-sm font-semibold" style={{ color: "#2E78F5" }}>
-                  {formatAmount(Number(amount))}
-                </p>
-              ) : null}
               <ContextCard>
                 {raiseHint(stage)}
                 {" "}Raising too little or too much for your stage can slow down conversations — we&apos;ll flag if your target is outside the typical range.
@@ -603,6 +716,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What does your company do?
               </p>
+              <div className="mt-2"><ReadByPersonBadge /></div>
               <p className="mt-1 text-sm text-slate-500">2–3 sentences is all you need. Lead with the problem you solve.</p>
               <textarea
                 autoFocus
@@ -623,14 +737,17 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What will you use this funding for?
               </p>
+              <div className="mt-2"><ReadByPersonBadge /></div>
               <p className="mt-1 text-sm text-slate-500">{t("select_all_that_apply_then_tell_us_your_time")}</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {FUND_USES.map((u) => (
-                  <Chip key={u} selected={useOfFunds.includes(u)} onClick={() => toggleFund(u)}>
-                    {u}
-                  </Chip>
-                ))}
-              </div>
+              {shows("use_of_funds") ? (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {FUND_USES.map((u) => (
+                    <Chip key={u} selected={useOfFunds.includes(u)} onClick={() => toggleFund(u)}>
+                      {u}
+                    </Chip>
+                  ))}
+                </div>
+              ) : null}
               <p className="mt-6 mb-3 text-sm font-semibold text-slate-700">{t("when_are_you_looking_to_close")}</p>
               <div className="space-y-2">
                 {TIMELINES.map((t) => (
@@ -652,58 +769,155 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 Who you&apos;re raising from, and where you are
               </p>
-              <p className="mt-1 text-sm text-slate-500">Select all that apply. This sharpens your investor matches and your completion.</p>
+              <p className="mt-1 text-sm text-slate-500">Select all that apply. This sharpens your investor matches and your Preparation completeness.</p>
 
               <p className="mt-6 mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Seeking</p>
-              <label className="block text-sm font-medium text-slate-700">Type of investor(s) <span className="text-rose-600">*</span></label>
+              {shows("seeking_investor_types") ? (
+                <>
+              <label className="block text-sm font-medium text-slate-700">Type of investor(s) {star("seeking_investor_types", true)}</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {INVESTOR_TYPE_OPTS.map((o) => (<Chip key={o} selected={invTypes.includes(o)} onClick={() => toggleIn(setInvTypes, o)}>{o}</Chip>))}
               </div>
-              <label className="mt-4 block text-sm font-medium text-slate-700">Type(s) of capital <span className="text-rose-600">*</span></label>
+                </>
+              ) : null}
+              {shows("seeking_capital_types") ? (
+                <>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Type(s) of capital {star("seeking_capital_types", true)}</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {CAPITAL_TYPE_OPTS.map((o) => (<Chip key={o} selected={capTypes.includes(o)} onClick={() => toggleIn(setCapTypes, o)}>{o}</Chip>))}
               </div>
+                </>
+              ) : null}
               <label className="mt-4 block text-sm font-medium text-slate-700">Active investor preference <span className="text-rose-600">*</span></label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {INVESTOR_PREF_OPTS.map((o) => (<Chip key={o} selected={invPref.includes(o)} onClick={() => toggleIn(setInvPref, o)}>{o}</Chip>))}
               </div>
-              <label className="mt-4 block text-sm font-medium text-slate-700">Business entity <span className="text-rose-600">*</span> <span className="font-normal text-slate-400">(pick one)</span></label>
+              {shows("business_entity") ? (
+                <>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Business entity {star("business_entity", true)} <span className="font-normal text-slate-400">(pick one)</span></label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {BUSINESS_ENTITY_OPTS.map((o) => (<Chip key={o} selected={bizEntity === o} onClick={() => setBizEntity(o)}>{o}</Chip>))}
               </div>
+                </>
+              ) : null}
 
               <p className="mt-7 mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Company &amp; stage</p>
-              <label className="block text-sm font-medium text-slate-700">Funding stage <span className="text-rose-600">*</span></label>
+              {shows("funding_stage") ? (
+                <>
+              <label className="block text-sm font-medium text-slate-700">Funding stage {star("funding_stage", true)}</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {FUNDING_STAGE_OPTS.map((o) => (<Chip key={o} selected={fundingStage.includes(o)} onClick={() => toggleIn(setFundingStage, o)}>{o}</Chip>))}
               </div>
-              <label className="mt-4 block text-sm font-medium text-slate-700">Operating stage <span className="text-rose-600">*</span></label>
+                </>
+              ) : null}
+              {shows("operating_stage") ? (
+                <>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Operating stage {star("operating_stage", true)}</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {OPERATING_STAGE_OPTS.map((o) => (<Chip key={o} selected={opStage.includes(o)} onClick={() => toggleIn(setOpStage, o)}>{o}</Chip>))}
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Annual EBITDA <span className="text-rose-600">*</span></label>
-                  <input
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    placeholder="e.g. -$120,000 (0 if pre-revenue)"
-                    value={ebitda}
-                    onChange={(e) => setEbitda(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span></label>
-                  <input
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    placeholder="e.g. 2 co-founders, 3 full-time"
-                    value={mgmtTeam}
-                    onChange={(e) => setMgmtTeam(e.target.value)}
-                  />
-                </div>
+                </>
+              ) : null}
+              {shows("annual_ebitda") ? (
+                <>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Annual EBITDA {star("annual_ebitda", true)} <span className="font-normal text-slate-400">(pick one)</span></label>
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Annual EBITDA">
+                {menu(vocab.money_band, ebitda).map((o) => (<Chip key={o.slug} selected={ebitda === o.slug} onClick={() => setEbitda(o.slug)}>{o.label}</Chip>))}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">Current EBITDA only, not projected.</p>
+                </>
+              ) : null}
+              <div className="mt-4">
+                <label className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span> <ReadByPersonBadge /></label>
+                <input
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="e.g. 2 co-founders, 3 full-time"
+                  value={mgmtTeam}
+                  onChange={(e) => setMgmtTeam(e.target.value)}
+                />
               </div>
 
               <ContextCard>
                 Investors filter hard on these. Getting your capital type, stage, and entity right means we only surface investors whose mandate actually fits — fewer, better conversations.
+              </ContextCard>
+            </>
+          ) : step === 8 ? (
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-slate-900">Your numbers</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Investors look at these first. Leave anything blank if it doesn&apos;t apply — a blank is better than a guess.
+              </p>
+
+              {/* Say what's public before they type it, not after. */}
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-[12.5px] leading-relaxed text-emerald-900">
+                <i className="ti ti-eye mt-0.5" aria-hidden="true" />
+                <span>
+                  Revenue and highlights appear on your <b>investor one-pager</b>.{" "}
+                  <b>EBITDA and your team summary stay internal</b> — staff and your own dashboard only.
+                </span>
+              </div>
+
+              {shows("annual_revenue_size") ? (
+                <>
+                  <label className="mt-6 block text-sm font-medium text-slate-700">
+                    Annual revenue size <span className="font-normal text-slate-400">· last 12 months</span> {needs("annual_revenue_size", false) ? <span className="text-rose-600">*</span> : null}
+                  </label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {menu(vocab.revenue_size, revSize).map((o) => (
+                      <Chip key={o.slug} selected={revSize === o.slug} onClick={() => setRevSize(revSize === o.slug ? null : o.slug)}>{o.label}</Chip>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+
+              {/* ARR and MRR: pick one from their lists, the same chips as founder settings. */}
+              {shows("arr") ? (
+                <>
+                  <label className="mt-5 block text-sm font-medium text-slate-700">ARR {star("arr", false)}</label>
+                  <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="ARR">
+                    {menu(vocab.arr_band, arr).map((o) => (
+                      <Chip key={o.slug} selected={arr === o.slug} onClick={() => setArr(arr === o.slug ? "" : o.slug)}>{o.label}</Chip>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">Subscription or contracted revenue only.</p>
+                </>
+              ) : null}
+              {shows("mrr") ? (
+                <>
+                  <label className="mt-5 block text-sm font-medium text-slate-700">MRR {star("mrr", false)}</label>
+                  <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="MRR">
+                    {menu(vocab.mrr_band, mrr).map((o) => (
+                      <Chip key={o.slug} selected={mrr === o.slug} onClick={() => setMrr(mrr === o.slug ? "" : o.slug)}>{o.label}</Chip>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">Leave blank if you have no recurring revenue.</p>
+                </>
+              ) : null}
+
+              <label className="mt-5 block text-sm font-medium text-slate-700">
+                Five key highlights <span className="font-normal text-slate-400">· what makes this fundable</span>
+              </label>
+              <div className="mt-2 space-y-2">
+                {highlights.map((h, i) => (
+                  <div key={`hl-${i}`} className="flex items-center gap-2.5">
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-indigo-50 text-[11px] font-bold text-indigo-600">
+                      {i + 1}
+                    </span>
+                    <input
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                      placeholder={HIGHLIGHT_PLACEHOLDERS[i]}
+                      value={h}
+                      onChange={(e) => setHighlights((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">These become the bullet list on your one-pager. Three is enough to start.</p>
+
+              <ContextCard>
+                These are the numbers the readiness engine scores your Traction and Revenue on. Leaving them blank
+                doesn&apos;t hurt your score any more than a low number would — but an invented one will, once an
+                investor asks about it.
               </ContextCard>
             </>
           ) : null}
@@ -715,10 +929,13 @@ export function FounderConversationalOnboarding({
         ) : null}
 
         <div className="mt-8 flex items-center justify-between">
-          {step > 1 ? (
+          {position > 1 ? (
             <button
               type="button"
-              onClick={() => setStep((s) => (s - 1) as StepNum)}
+              onClick={() => {
+                const prev = previousQuestion(step as QuestionNum, skipped);
+                if (prev !== null) setStep(prev);
+              }}
               className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
             >
               ← Back
@@ -735,11 +952,13 @@ export function FounderConversationalOnboarding({
           >
             {saving
               ? "Saving…"
-              : step === TOTAL
+              : position === TOTAL
               ? "Finish →"
               : "Continue →"}
           </button>
         </div>
+      </div>
+      {meter ? <MatchablePointsMeter meter={meter} className="hidden lg:sticky lg:top-6 lg:block" /> : null}
       </div>
     </>
   );

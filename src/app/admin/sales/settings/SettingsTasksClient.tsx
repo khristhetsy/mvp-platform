@@ -48,13 +48,13 @@ export function SettingsTasksClient({ staff }: { staff: Staff[] }) {
         {taskTypes.map((t) => (
           <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 14, padding: "3px 9px" }}>
             {t}
-            <button onClick={() => removeType(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#185FA5", fontSize: 12, lineHeight: 1 }}>×</button>
+            <button type="button" onClick={() => removeType(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#185FA5", fontSize: 12, lineHeight: 1 }}>×</button>
           </span>
         ))}
       </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
         <input value={newType} onChange={(e) => setNewType(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addType()} placeholder="Add task type…" style={{ flex: 1, fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
-        <button onClick={addType} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Add</button>
+        <button type="button" onClick={addType} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Add</button>
       </div>
 
       <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>Default assignee</div>

@@ -1,34 +1,68 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
+import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { HScrollBoard } from "@/components/admin/HScrollBoard";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean; sequence_id: string | null };
 type SeqOption = { id: string; name: string; status: string };
 type Pipeline = { id: string; name: string; is_default: boolean; stages: Stage[] };
-type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null };
+type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null; owner_id: string | null; owner_name: string | null; source: string | null; expected_close: string | null; created_at: string };
 
 const money = (c: number | null) => (c == null ? "" : `$${(c / 100).toLocaleString()}`);
 const moneyShort = (c: number) => (c >= 1000 ? `$${Math.round(c / 100000)}k` : `$${Math.round(c / 100)}`);
 const STAGE_ACCENTS = ["#2E78F5", "#EF9F27", "#639922", "#888780", "#4338CA", "#0F6E56"];
 const isStalled = (o: BoardOpp) => o.updated_at != null && Date.now() - new Date(o.updated_at).getTime() > 14 * 86400000;
+const ownerLabel = (o: BoardOpp) => o.owner_name ?? "Unassigned";
+const sourceLabel = (o: BoardOpp) => (o.source && o.source.toLowerCase() === "odoo" ? "Odoo" : o.source ? o.source : "Manual");
 
-export function PipelineClient() {
+const PIPE_QUICK = [
+  { key: "mine", label: "My deals" }, { key: "unassigned", label: "Unassigned" }, { key: "has_value", label: "Has value" },
+  { key: "prob50", label: "Probability ≥ 50%" }, { key: "closing_month", label: "Closing this month" }, { key: "stalled", label: "Stalled (14d)" },
+];
+const PIPE_GROUPS = [
+  { id: "none", label: "None" }, { id: "stage", label: "Stage" }, { id: "owner", label: "Owner" }, { id: "source", label: "Source" },
+  { id: "close_month", label: "Expected close (month)" }, { id: "created_month", label: "Created (month)" },
+];
+
+function loadLS<T>(key: string, def: T): T {
+  try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : def; } catch { return def; }
+}
+
+export function PipelineClient({ canExport = false, meId = "" }: { canExport?: boolean; meId?: string } = {}) {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [board, setBoard] = useState<BoardOpp[]>([]);
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
   const [selId, setSelId] = useState<string>("");
-  const [view, setView] = useState<"board" | "stages">("board");
-  const [search, setSearch] = useState("");
+  // "list" is the line view: same deals as the board, one row each, with selection.
+  const [view, setView] = useState<"board" | "list" | "stages">(() => loadLS<"board" | "list" | "stages">("pipeline.view", "board"));
+  // Search + filters (shared by Board and List) + group-by (List only) in one Odoo bar.
+  const [search, setSearch] = useState<SearchState>(() => loadLS<SearchState>("pipeline.search.v1", { ...EMPTY_SEARCH, groupBy: "none" }));
+  useEffect(() => { try { window.localStorage.setItem("pipeline.search.v1", JSON.stringify(search)); } catch { /* ignore */ } }, [search]);
+  // List view selection + bulk actions.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [actionResult, setActionResult] = useState<string | null>(null);
+  useEffect(() => { try { window.localStorage.setItem("pipeline.view", JSON.stringify(view)); } catch { /* ignore */ } }, [view]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ name: "", company: "", value: "" });
   const [sequences, setSequences] = useState<SeqOption[]>([]);
   // Delete-stage modal: choose where the stage's deals go, surface guard errors.
   const [delTarget, setDelTarget] = useState<Stage | null>(null);
   const [reassignTo, setReassignTo] = useState<string>("");
   const [delErr, setDelErr] = useState<string | null>(null);
   const [delBusy, setDelBusy] = useState(false);
-  const viewAs = useSearchParams().get("viewAs");
+  const searchParams = useSearchParams();
+  const viewAs = searchParams.get("viewAs");
+  const viewParam = searchParams.get("view");
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- deep link (?view=stages) from the Opportunities gear
+  useEffect(() => { if (viewParam === "stages" || viewParam === "list" || viewParam === "board") setView(viewParam); }, [viewParam]);
   const viewQ = viewAs ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
 
   const load = useCallback(async () => {
@@ -37,6 +71,7 @@ export function PipelineClient() {
     const data = await res.json();
     setPipelines(data.pipelines ?? []);
     setBoard(data.board ?? []);
+    setStaff(data.staff ?? []);
     setSelId((cur) => cur || (data.pipelines?.[0]?.id ?? ""));
   }, [viewQ]);
 
@@ -110,7 +145,88 @@ export function PipelineClient() {
     } finally { setDelBusy(false); }
   }
 
-  const stages = (pipeline?.stages ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+  const stages = useMemo(() => (pipeline?.stages ?? []).slice().sort((a, b) => a.sort_order - b.sort_order), [pipeline]);
+  const stageName = useMemo(() => new Map(stages.map((s) => [s.id, s.name])), [stages]);
+  async function addDeal() {
+    if (!draft.name.trim()) return;
+    const cents = draft.value.trim() ? Math.round(Number(draft.value.replace(/[^0-9.]/g, "")) * 100) : null;
+    await call("/api/sales/opportunities", "POST", { name: draft.name.trim(), company: draft.company.trim() || null, valueCents: Number.isFinite(cents) ? cents : null, pipelineId: pipeline?.id ?? null, stageId: stages[0]?.id ?? null });
+    setAdding(false); setDraft({ name: "", company: "", value: "" });
+  }
+
+  // Deals in this pipeline that pass search + filters. Board and List both read this.
+  const ownerOptions = useMemo(() => [...new Set(board.map(ownerLabel))].sort(), [board]);
+  const sourceOptions = useMemo(() => [...new Set(board.map(sourceLabel))].sort(), [board]);
+  const searchFields = useMemo(() => [
+    { key: "stage", label: "Stage", options: stages.map((s) => s.name) },
+    { key: "owner", label: "Owner", options: ownerOptions },
+    { key: "source", label: "Source", options: sourceOptions },
+  ], [stages, ownerOptions, sourceOptions]);
+  const filtered = useMemo(() => {
+    const { q, quick, fields } = search;
+    const inPipeline = new Set(stages.map((s) => s.id));
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    return board.filter((o) => {
+      if (!o.stage_id || !inPipeline.has(o.stage_id)) return false;
+      if (!textMatch(q, o.title, o.contact_name)) return false;
+      if (quick.includes("mine") && o.owner_id !== meId) return false;
+      if (quick.includes("unassigned") && o.owner_id) return false;
+      if (quick.includes("has_value") && o.value_cents == null) return false;
+      if (quick.includes("prob50") && (o.probability == null || o.probability < 50)) return false;
+      if (quick.includes("closing_month") && (o.expected_close ?? "").slice(0, 7) !== thisMonth) return false;
+      if (quick.includes("stalled") && !isStalled(o)) return false;
+      if (fields.stage?.length && !fields.stage.includes(stageName.get(o.stage_id) ?? "")) return false;
+      if (fields.owner?.length && !fields.owner.includes(ownerLabel(o))) return false;
+      if (fields.source?.length && !fields.source.includes(sourceLabel(o))) return false;
+      return true;
+    });
+  }, [board, stages, stageName, search, meId]);
+  // List-view grouping (the Board is grouped by stage by nature).
+  const listGroups = useMemo(() => {
+    const g = search.groupBy || "none";
+    if (g === "none") return null;
+    const keyOf = (o: BoardOpp) => g === "stage" ? (stageName.get(o.stage_id ?? "") ?? "No stage")
+      : g === "owner" ? ownerLabel(o)
+      : g === "source" ? sourceLabel(o)
+      : g === "close_month" ? ((o.expected_close ?? "").slice(0, 7) || "No close date")
+      : o.created_at.slice(0, 7);
+    const map = new Map<string, BoardOpp[]>();
+    for (const o of filtered) { const k = keyOf(o); (map.get(k) ?? map.set(k, []).get(k)!).push(o); }
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [filtered, search.groupBy, stageName]);
+
+  // Selection lives on the filtered set; a filter change drops anything no longer visible.
+  const filteredIds = useMemo(() => filtered.map((o) => o.id), [filtered]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- prune selection when the visible set changes
+  useEffect(() => { setSelected((s) => { const keep = new Set(filteredIds); const n = new Set([...s].filter((id) => keep.has(id))); return n.size === s.size ? s : n; }); }, [filteredIds]);
+  const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  function toggleRow(id: string) { setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  async function bulk(body: Record<string, unknown>, verb: string) {
+    const ids = [...selected]; if (!ids.length) return;
+    setBusy(true); setActionResult(null);
+    try {
+      const r = await runBulk("/api/sales/opportunities/bulk", { ...body, ids });
+      if (!r.ok) { setActionResult(r.error); return; }
+      setActionResult(r.file ? `Exported ${ids.length.toLocaleString()} deal${ids.length === 1 ? "" : "s"} to ${r.file}.` : `${verb} ${r.count.toLocaleString()} deal${r.count === 1 ? "" : "s"}${r.failed ? ` — ${r.failed} failed` : ""}.`);
+      if (!r.file) { setSelected(new Set()); await load(); }
+    } finally { setBusy(false); }
+  }
+  const selectionActions: SelectionAction[] = [
+    { key: "stage", icon: "ti-arrow-right", label: "Move to stage", options: stages.map((s) => ({ value: s.id, label: s.name })), runWith: (stageId) => void bulk({ op: "stage", stageId }, "Moved") },
+    { key: "owner", icon: "ti-user", label: "Assign owner", options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.id, label: s.name }))], runWith: (ownerId) => void bulk({ op: "owner", ownerId: ownerId || null }, "Reassigned") },
+    { key: "won", icon: "ti-check", label: "Mark sold", run: () => void bulk({ op: "status", status: "won" }, "Marked sold") },
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export CSV", run: () => void bulk({ op: "export" }, "Exported") } as SelectionAction] : []),
+    { key: "archive", icon: "ti-archive", label: "Archive", run: () => void bulk({ op: "status", status: "archived" }, "Archived") },
+  ];
+
+  const gearItems: GearItem[] = [
+    ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${filtered.length.toLocaleString()} matching`, onClick: () => downloadCsv(`pipeline-${new Date().toISOString().slice(0, 10)}.csv`, ["Deal", "Contact", "Stage", "Owner", "Value", "Probability", "Expected close", "Source", "Created"], filtered.map((o) => [o.title, o.contact_name, stageName.get(o.stage_id ?? "") ?? "", ownerLabel(o), o.value_cents == null ? "" : (o.value_cents / 100).toFixed(2), o.probability ?? "", o.expected_close ?? "", sourceLabel(o), o.created_at.slice(0, 10)])) } as GearItem] : []),
+    { key: "stages", icon: "ti-adjustments", label: "Edit stages", sep: canExport, onClick: () => setView("stages") },
+    { key: "newp", icon: "ti-plus", label: "New pipeline", onClick: () => void newPipeline() },
+    ...(pipeline ? [{ key: "rename", icon: "ti-pencil", label: "Rename pipeline", onClick: () => void renamePipeline() } as GearItem] : []),
+  ];
+  const segBtn = (on: boolean, first = false): React.CSSProperties => ({ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: first ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: on ? 600 : 400, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 });
+  const LIST_COLS = "30px 1.8fr 1.1fr 130px 1fr 90px 100px 80px";
 
   return (
     <div>
@@ -122,32 +238,85 @@ export function PipelineClient() {
         </div>
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <NewButton onClick={() => setAdding((v) => !v)} />
+        <ToolbarGear items={gearItems} heading="Pipeline" />
         <select value={selId} onChange={(e) => setSelId(e.target.value)} style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4" }}>
           {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>)}
         </select>
-        <button onClick={newPipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "6px 11px", cursor: "pointer" }}>+ New pipeline</button>
-        {pipeline && <button onClick={renamePipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Rename</button>}
-        {view === "board" && (
-          <div style={{ position: "relative", marginLeft: 4 }}>
-            <i className="ti ti-search" aria-hidden="true" style={{ position: "absolute", left: 8, top: 8, fontSize: 13, color: "var(--muted-foreground)" }} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search cards…" style={{ fontSize: 12, padding: "6px 9px 6px 26px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", width: 170 }} />
-          </div>
+        {view !== "stages" && (
+          <OdooSearchBar scope="opportunities" state={search} onChange={setSearch} quick={PIPE_QUICK} fields={searchFields} groups={PIPE_GROUPS} noGroupId="none" placeholder={view === "board" ? "Search cards…" : "Search deals…"} width={480} />
         )}
         <div style={{ marginLeft: "auto", display: "inline-flex", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, overflow: "hidden" }}>
-          <button onClick={() => setView("board")} style={{ fontSize: 12, padding: "6px 12px", border: "none", background: view === "board" ? "#EFF6FF" : "#fff", color: view === "board" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: view === "board" ? 600 : 400, cursor: "pointer" }}>Board</button>
-          <button onClick={() => setView("stages")} style={{ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: "0.5px solid var(--border-strong, #cbd5e1)", background: view === "stages" ? "#EFF6FF" : "#fff", color: view === "stages" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: view === "stages" ? 600 : 400, cursor: "pointer" }}>Edit stages</button>
+          <button type="button" onClick={() => setView("board")} style={segBtn(view === "board", true)}><i className="ti ti-layout-kanban" aria-hidden="true" /> Board</button>
+          <button type="button" onClick={() => setView("list")} style={segBtn(view === "list")}><i className="ti ti-list" aria-hidden="true" /> List</button>
+          <button type="button" onClick={() => setView("stages")} style={segBtn(view === "stages")}>Edit stages</button>
         </div>
+        <SalesViewControl />
       </div>
 
-      {view === "board" ? (
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
+      {adding && (
+        <div style={{ background: "#F5F9FF", border: "0.5px solid #BFDBFE", borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "1.4fr 1fr 0.7fr auto", gap: 8, alignItems: "center" }}>
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contact name *" autoFocus style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff" }} />
+          <input value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="Company" style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff" }} />
+          <input value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder="Value $" style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "#fff" }} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <button type="button" onClick={() => void addDeal()} disabled={busy || !draft.name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.name.trim() ? 0.5 : 1 }}>Create in {stages[0]?.name ?? "first stage"}</button>
+            <button type="button" onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+          </div>
+        </div>
+      )}
+
+      {view === "list" ? (
+        <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
+          <ActionResult text={actionResult} onClose={() => setActionResult(null)} />
+          <SelectionBar count={selected.size} total={filteredIds.length} onSelectAll={() => setSelected(new Set(filteredIds))} onClear={() => setSelected(new Set())} actions={selectionActions} busy={busy} heading="Selected deals" />
+          <div style={{ display: "grid", gridTemplateColumns: LIST_COLS, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(filteredIds))} aria-label="Select all" style={{ width: 14, height: 14, cursor: "pointer" }} /></div>
+            <div>Deal</div><div>Contact</div><div>Stage</div><div>Owner</div><div>Value</div><div>Expected close</div><div>Prob.</div>
+          </div>
+          {filtered.length === 0 && <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>{stages.length === 0 ? "No stages. Add some in “Edit stages”." : "No deals match."}</p>}
+          {(listGroups ?? [["", filtered] as [string, BoardOpp[]]]).map(([gk, list]) => (<Fragment key={gk || "_all"}>
+          {gk && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", background: "var(--muted)", borderTop: "0.5px solid #eef1f5", fontSize: 11.5, fontWeight: 600 }}>
+              {gk} <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>{list.length}{list.some((o) => o.value_cents) ? ` · ${money(list.reduce((a, o) => a + (o.value_cents ?? 0), 0))}` : ""}</span>
+            </div>
+          )}
+          {list.map((o) => (
+            <div key={o.id} style={{ display: "grid", gridTemplateColumns: LIST_COLS, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(o.id) ? "#F5F9FF" : undefined }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <input type="checkbox" checked={selected.has(o.id)} onChange={() => toggleRow(o.id)} aria-label={`Select ${o.title}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{o.title}</Link>
+                {isStalled(o) && <span style={{ fontSize: 10, color: "#A32D2D" }}><i className="ti ti-clock" aria-hidden="true" /> stalled</span>}
+              </div>
+              <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_name ?? "—"}</div>
+              <div>
+                <select value={o.stage_id ?? ""} onChange={(e) => moveOpp(o.id, e.target.value)} disabled={busy} style={{ fontSize: 11.5, padding: "4px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", maxWidth: 120 }}>
+                  {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                </select>
+              </div>
+              <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ownerLabel(o)}</div>
+              <div style={{ color: "#185FA5" }}>{o.value_cents != null ? money(o.value_cents) : "—"}</div>
+              <div style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>{o.expected_close ? o.expected_close.slice(0, 10) : "—"}</div>
+              <div style={{ color: "#3B6D11" }}>{o.probability != null ? `${o.probability}%` : "—"}</div>
+            </div>
+          ))}
+          </Fragment>))}
+          {filtered.length > 0 && (
+            <div style={{ padding: "8px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 11, color: "var(--muted-foreground)" }}>
+              {filtered.length.toLocaleString()} deal{filtered.length === 1 ? "" : "s"} · {money(filtered.reduce((a, o) => a + (o.value_cents ?? 0), 0)) || "$0"} · {stageName.size} stages
+            </div>
+          )}
+        </div>
+      ) : view === "board" ? (
+        <HScrollBoard>
           {stages.map((s, si) => {
-            const q = search.trim().toLowerCase();
-            const cards = board.filter((o) => o.stage_id === s.id && (!q || o.title.toLowerCase().includes(q) || (o.contact_name ?? "").toLowerCase().includes(q)));
+            const cards = filtered.filter((o) => o.stage_id === s.id);
             const total = cards.reduce((a, o) => a + (o.value_cents ?? 0), 0);
             const accent = s.is_won ? "#0F6E56" : STAGE_ACCENTS[si % STAGE_ACCENTS.length];
             return (
-              <div key={s.id} style={{ minWidth: 220, flex: "0 0 220px", background: "var(--muted)", borderRadius: 12, padding: 10 }}>
+              <div key={s.id} style={{ minWidth: 280, flex: "0 0 280px", background: "var(--muted)", borderRadius: 12, padding: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                   <span style={{ fontSize: 12, fontWeight: 600 }}>{s.name}</span>
                   {s.is_won && <span style={{ fontSize: 9, color: "#0F6E56", background: "#E1F5EE", borderRadius: 4, padding: "0 5px" }}>won</span>}
@@ -179,12 +348,12 @@ export function PipelineClient() {
             );
           })}
           {stages.length === 0 && <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No stages. Add some in “Edit stages”.</p>}
-        </div>
+        </HScrollBoard>
       ) : (
         <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", maxWidth: 620 }}>
           <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center" }}>
             <span style={{ fontSize: 12.5, fontWeight: 600 }}>Stages · {pipeline?.name}</span>
-            <button onClick={addStage} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>+ Add stage</button>
+            <button type="button" onClick={addStage} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>+ Add stage</button>
           </div>
           {stages.map((s, i) => {
             const wonCount = stages.filter((x) => x.is_won).length;
@@ -231,8 +400,8 @@ export function PipelineClient() {
             </select>
             {delErr && <p style={{ fontSize: 12, color: "#A32D2D", margin: "10px 0 0" }}>{delErr}</p>}
             <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
-              <button onClick={() => setDelTarget(null)} disabled={delBusy} style={{ fontSize: 12, padding: "7px 14px", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, background: "#fff", color: "var(--foreground)", cursor: "pointer" }}>Cancel</button>
-              <button onClick={confirmDeleteStage} disabled={delBusy} style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", border: "none", borderRadius: 8, background: "#A32D2D", color: "#fff", cursor: "pointer", opacity: delBusy ? 0.6 : 1 }}>{delBusy ? "Deleting…" : "Delete stage"}</button>
+              <button type="button" onClick={() => setDelTarget(null)} disabled={delBusy} style={{ fontSize: 12, padding: "7px 14px", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, background: "#fff", color: "var(--foreground)", cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={confirmDeleteStage} disabled={delBusy} style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", border: "none", borderRadius: 8, background: "#A32D2D", color: "#fff", cursor: "pointer", opacity: delBusy ? 0.6 : 1 }}>{delBusy ? "Deleting…" : "Delete stage"}</button>
             </div>
           </div>
         </div>

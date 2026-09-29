@@ -73,19 +73,19 @@ export function MeetingRow({ session }: { session: Session }) {
       <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{dateLabel}{timeLabel ? ` · ${timeLabel}${tz ? ` ${tz}` : ""}` : ""}</div>
       <div><span style={{ fontSize: 10.5, fontWeight: 600, background: st.bg, color: st.color, border: st.border, borderRadius: 6, padding: "2px 8px" }}>{st.label}</span></div>
       <div ref={ref} style={{ position: "relative", justifySelf: "end" }}>
-        <button aria-label="Meeting options" onClick={() => setMenu((m) => !m)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 18, padding: "2px 6px", borderRadius: 6 }}>
+        <button type="button" aria-label="Meeting options" onClick={() => setMenu((m) => !m)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 18, padding: "2px 6px", borderRadius: 6 }}>
           <i className="ti ti-dots" aria-hidden="true" />
         </button>
         {menu && (
           <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, width: 190, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: 5, boxShadow: "0 8px 24px rgb(12 35 64 / 0.12)", zIndex: 20 }}>
             <Link href={`/admin/meetings/${session.id}`} style={item as React.CSSProperties}><i className="ti ti-layout-board" aria-hidden="true" /> Open board</Link>
             {session.status === "closed" ? (
-              <button onClick={() => void setStatus("live")} style={item}><i className="ti ti-calendar-clock" aria-hidden="true" /> Reopen</button>
+              <button type="button" onClick={() => void setStatus("live")} style={item}><i className="ti ti-calendar-clock" aria-hidden="true" /> Reopen</button>
             ) : (
-              <button onClick={() => void setStatus("closed")} style={item}><i className="ti ti-circle-check" aria-hidden="true" /> Mark as closed</button>
+              <button type="button" onClick={() => void setStatus("closed")} style={item}><i className="ti ti-circle-check" aria-hidden="true" /> Mark as closed</button>
             )}
             <div style={{ height: "0.5px", background: "var(--border)", margin: "4px 6px" }} />
-            <button onClick={() => void remove()} style={{ ...item, color: "#A32D2D" }}><i className="ti ti-trash" aria-hidden="true" /> Delete meeting</button>
+            <button type="button" onClick={() => void remove()} style={{ ...item, color: "#A32D2D" }}><i className="ti ti-trash" aria-hidden="true" /> Delete meeting</button>
           </div>
         )}
       </div>

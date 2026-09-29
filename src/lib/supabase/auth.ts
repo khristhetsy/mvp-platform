@@ -2,17 +2,9 @@ import { redirect } from "next/navigation";
 import { normalizeUserRole } from "@/lib/api/admin";
 import { createServerSupabaseClient } from "./server";
 import type { Profile, UserRole } from "./types";
+import { dashboardForRole } from "./dashboard-path";
 
-const dashboardByRole: Record<UserRole, string> = {
-  founder: "/founder",
-  investor: "/investor/dashboard",
-  admin: "/admin",
-  analyst: "/admin",
-};
-
-export function dashboardForRole(role: UserRole) {
-  return dashboardByRole[role];
-}
+export { dashboardForRole };
 
 export async function getCurrentUserProfile() {
   const supabase = await createServerSupabaseClient();

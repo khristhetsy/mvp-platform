@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review &amp; marketplace actions — Option B</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  .co{display:flex;align-items:flex-start;gap:12px;margin-bottom:15px;padding-bottom:13px;border-bottom:1px solid var(--l100)}
+  .co h3{margin:0;font-size:17px;font-weight:650}
+  .co .meta{font-size:12px;color:var(--s500);margin-top:2px}
+  .tag{border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:700}
+  .tag.pub{background:#ECFDF5;color:#047857}
+  .tag.dt{background:#F1F5F9;color:#475569}
+
+  .grp{padding:13px 0;border-bottom:1px solid var(--l100)}
+  .grp:last-child{border-bottom:none;padding-bottom:0}
+  .grp:first-of-type{padding-top:0}
+  .glab{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s400);margin-bottom:8px}
+  .line{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .meta2{font-size:11.5px;color:var(--s400)}
+
+  .segc{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .segc button{border:none;background:#fff;padding:7px 14px;font-size:12.5px;color:var(--s600);cursor:pointer;border-right:1px solid var(--line)}
+  .segc button:last-child{border-right:none}
+  .segc .act{background:#047857;color:#fff;font-weight:600}
+  .segc .dz{color:#B91C1C}
+
+  .sw{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--s600)}
+  .track{width:38px;height:21px;border-radius:99px;background:#047857;position:relative;cursor:pointer;flex:none}
+  .track i{position:absolute;top:2px;right:2px;width:17px;height:17px;border-radius:50%;background:#fff;display:block}
+  .track.off{background:#CBD5E1}
+  .track.off i{right:auto;left:2px}
+  .chk{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--s600)}
+
+  .b{border-radius:99px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:#334155}
+  .b.ind{background:#4338CA;border-color:#4338CA;color:#fff}
+  .b.ghost{border-color:transparent;color:#4F46E5;background:transparent;padding-left:3px;padding-right:3px}
+
+  /* score block */
+  .score{display:flex;align-items:center;gap:13px}
+  .big{font-size:27px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .big small{font-size:12px;font-weight:600;color:var(--s400)}
+  .r{color:#DC2626}.a{color:#B45309}.g{color:#059669}
+  .bars{flex:1;min-width:210px;max-width:300px}
+  .bar{margin-bottom:5px}
+  .bar:last-child{margin-bottom:0}
+  .bt{display:flex;justify-content:space-between;font-size:10.5px;color:var(--s500);margin-bottom:2px}
+  .bt b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .tr{height:5px;border-radius:99px;background:#F1F5F9;overflow:hidden}
+  .fl{height:100%;border-radius:99px}
+  .fl.bad{background:#DC2626}.fl.warn{background:#D97706}.fl.ok{background:#059669}
+
+  .gate{font-size:11.5px;color:#B45309;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;padding:6px 10px}
+  .gate b{color:#92400E}
+
+  .dd{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .ddstat{font-size:12.5px;color:var(--s600)}
+  .ddstat b{color:var(--ink)}
+  .stale{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:600}
+  .flag{font-size:11.5px;color:#B91C1C}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #4F46E5;border-radius:8px;
+        padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:18px}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Review &amp; marketplace actions — Option B</h1>
+<p class="sub">Grouped by what each control changes, with the due diligence report and CRR added as their own groups.</p>
+
+<div class="card">
+  <div class="co">
+    <div><h3>Impervitex Corp</h3><div class="meta">Cynthia Mcbreen · impervitex@gmail.com</div></div>
+    <span style="flex:1"></span>
+    <span class="tag dt">Deep Tech</span><span class="tag pub">Published</span>
+  </div>
+
+  <!-- 1 · REVIEW -->
+  <div class="grp">
+    <div class="glab">Review decision</div>
+    <div class="line">
+      <div class="segc">
+        <button class="dz">Reject</button>
+        <button>Request changes</button>
+        <button class="act">Approved ✓</button>
+      </div>
+      <span class="meta2">set 3 Sep by you</span>
+    </div>
+  </div>
+
+  <!-- 2 · CRR -->
+  <div class="grp">
+    <div class="glab">Capital Readiness Rating</div>
+    <div class="line" style="align-items:flex-start">
+      <div class="score">
+        <div class="big r">27<small>/100</small></div>
+      </div>
+      <div class="bars">
+        <div class="bar"><div class="bt"><span>Traction</span><span><b>0</b>/13</span></div><div class="tr"><div class="fl bad" style="width:2%"></div></div></div>
+        <div class="bar"><div class="bt"><span>Financials</span><span><b>6</b>/15</span></div><div class="tr"><div class="fl warn" style="width:40%"></div></div></div>
+        <div class="bar"><div class="bt"><span>Team</span><span><b>5</b>/15</span></div><div class="tr"><div class="fl warn" style="width:33%"></div></div></div>
+      </div>
+      <span style="flex:1"></span>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="b">Open CRR</button>
+        <button class="b">Re-score</button>
+        <button class="b">Override…</button>
+        <button class="b ghost">PDF</button>
+      </div>
+    </div>
+    <div class="line" style="margin-top:9px">
+      <span class="gate">⚠ Below the outreach gate — <b>27</b> of <b>65</b>, <b>38</b> points short. Investor outreach stays locked.</span>
+      <span class="meta2">Seed profile · scored 19 Sep · rule-based</span>
+    </div>
+  </div>
+
+  <!-- 3 · DUE DILIGENCE -->
+  <div class="grp">
+    <div class="glab">Due diligence report</div>
+    <div class="line dd">
+      <span class="ddstat">Last run <b>12 Sep</b> · readiness <b>78</b> · <b>3</b> risk flags · <b>5</b> documents missing</span>
+      <span class="stale">Stale · 4 documents added since</span>
+      <span style="flex:1"></span>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="b ind">Re-run diligence</button>
+        <button class="b">View report</button>
+        <button class="b ghost">PDF</button>
+        <button class="b ghost">Send to founder</button>
+      </div>
+    </div>
+    <p class="flag" style="margin:8px 0 0">Top risk: no signed customer contracts evidencing the stated pipeline.</p>
+  </div>
+
+  <!-- 4 · MARKETPLACE -->
+  <div class="grp">
+    <div class="glab">Marketplace</div>
+    <div class="line">
+      <span class="sw"><span class="track"><i></i></span> <b style="color:#047857">Live</b> <span class="meta2">— visible to investors since 5 Sep</span></span>
+      <label class="chk" style="margin-left:14px"><input type="checkbox"> Mark as sample <span class="meta2">· hides from public</span></label>
+    </div>
+  </div>
+
+  <!-- 5 · OPEN -->
+  <div class="grp">
+    <div class="glab">Open</div>
+    <div class="line">
+      <button class="b">Company</button>
+      <button class="b">Documents <span class="meta2">· 9</span></button>
+      <button class="b">Pitch deck</button>
+      <button class="b">Data room</button>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Why CRR and diligence are groups, not buttons.</b> Both are numbers a reviewer needs <i>before</i> deciding, so
+  they sit above Marketplace and carry their value inline — a score with no context is what made the old panel
+  useless. Two states matter and neither was visible anywhere: the CRR is <b>below the 65 outreach gate</b>, and the
+  diligence report is <b>stale</b> (four documents uploaded since it ran), which is exactly when a reviewer would
+  otherwise approve on out-of-date evidence.
+  <br><br>
+  <b>Still fixed from the original nine buttons:</b> nothing is shown that can't run. <code>Approve</code> and
+  <code>Publish</code> were dead clicks on this company — both are now state controls showing their current value
+  instead of actions that fail with "already approved".
+</div>
+
+</div>
+</body>
+</html>

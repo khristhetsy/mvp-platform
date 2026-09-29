@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Founder's Marketing menu — CRR requirement, flagged</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+  .cb{padding:15px}
+
+  .keep{display:flex;gap:11px;align-items:flex-start;background:#F0FDF9;border:1px solid #A7F3D0;
+        border-radius:9px;padding:12px 14px;font-size:12.6px;color:#065F46;line-height:1.62;margin-bottom:12px}
+  .keep b{color:#022C22}
+  .keeptag{flex:none;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+           background:#059669;color:#fff;border-radius:99px;padding:3px 9px;margin-top:1px}
+
+  /* the menu card — matches the house pattern */
+  .mh{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .mh .t{font-size:13px;font-weight:650}
+  .mh .cnt{font-size:11px;color:var(--s500)}
+  .mh .sp{flex:1}
+  .blocking{border-radius:99px;border:1px solid #FDE68A;background:#FFFBEB;padding:2px 8px;
+            font-size:10.5px;font-weight:700;color:#92400E}
+  .btn{font-size:11.5px;border-radius:7px;padding:5px 11px;border:1px solid var(--line);background:#fff;color:var(--s600);text-decoration:none;display:inline-block;white-space:nowrap}
+  .btn.amber{border-color:#FCD34D;background:#FFFBEB;color:#92400E;font-weight:600}
+
+  .row{display:flex;align-items:center;gap:10px;padding:10px 15px;border-bottom:1px solid var(--l100)}
+  .row:last-child{border-bottom:none}
+  .row .ic{font-size:15px;flex:none;width:17px;text-align:center}
+  .row .nm{font-size:13px;font-weight:500;flex:none}
+  .row .hl{font-size:11.5px;color:var(--s500);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip{font-size:10.5px;border-radius:99px;padding:2px 9px;font-weight:600;white-space:nowrap}
+  .c-done{background:#ECFDF5;color:#047857}
+  .c-miss{background:#FEF2F2;color:#B91C1C}
+  .c-att{background:#FFFBEB;color:#B45309}
+  .c-todo{background:#F1F5F9;color:#64748B}
+  .row.req{background:#FFFBEB}
+  .row.blocked-by{opacity:.72}
+  .caret{color:#CBD5E1;font-size:12px}
+
+  /* drawer */
+  .drawer{background:#FAFAFA;border-bottom:1px solid var(--l100);padding:14px 15px 16px 42px}
+  .dgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .dcol{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+  .dcol h5{margin:0 0 8px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s400)}
+  .dcol p{margin:0 0 6px;font-size:11.8px;color:var(--s600);line-height:1.55}
+  .dcol p:last-child{margin-bottom:0}
+  .ringrow{display:flex;align-items:center;gap:11px;margin-bottom:9px}
+  .bar{margin-bottom:6px}
+  .bar .bl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--s600);margin-bottom:3px}
+  .bar .bl .v{font-variant-numeric:tabular-nums;font-weight:600}
+  .bar .tr{height:5px;border-radius:99px;background:#E2E8F0;overflow:hidden}
+  .bar .tr i{display:block;height:100%;border-radius:99px}
+  .fx{display:flex;gap:8px;font-size:11.5px;padding:4px 0;align-items:baseline}
+  .fx .n{color:var(--s400);flex:none}
+  .fx .sp{flex:1;color:var(--s600);line-height:1.45}
+  .fx .pt{color:#059669;font-weight:700;flex:none;font-variant-numeric:tabular-nums}
+  .src{font-size:10px;color:var(--s400);margin-top:9px;padding-top:8px;border-top:1px solid var(--l100)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .t-flag{background:#FEF3C7;color:#92400E}
+  .t-open{background:#ECFDF5;color:#065F46}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Founder&apos;s Marketing menu — CRR requirement</h1>
+<p class="sub">Company Workspace → Marketing · one new row in the menu that already exists · mockup</p>
+
+<div class="keep">
+  <span class="keeptag">No new concept</span>
+  <span>This adds <b>one row</b> to the Marketing menu, using the <b>Capital Readiness Rating</b> and
+    the <b>Recommendations</b> that already exist. No new score, no new status, no new vocabulary — the
+    same CRR row Preparation already carries, repeated in Marketing because the requirement continues to
+    apply here.</span>
+</div>
+
+<div class="lbl">Flagged — CRR below the requirement</div>
+<div class="card">
+  <div class="mh">
+    <span class="t">Founder&apos;s Marketing menu</span>
+    <span class="cnt">1 of 6 done · 1 requirement not met</span>
+    <span class="sp"></span>
+    <span class="blocking">1 blocking</span>
+    <a class="btn amber" href="#">✉ Reach out to founder</a>
+  </div>
+
+  <!-- the new row -->
+  <div class="row req">
+    <span class="ic" style="color:#DC2626">✕</span>
+    <span class="nm">Capital Readiness Rating</span>
+    <span class="hl">Requirement for this stage — CRR 32, needs 65 · 33 short</span>
+    <span class="chip c-miss">Below requirement</span>
+    <span class="caret">▾</span>
+    <a class="btn" href="#">Open</a>
+    <a class="btn amber" href="#">Open as founder</a>
+  </div>
+
+  <div class="drawer">
+    <div class="dgrid">
+      <div class="dcol">
+        <h5>The problem</h5>
+        <div class="ringrow">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="21" fill="none" stroke="#E2E8F0" stroke-width="6"/>
+            <circle cx="26" cy="26" r="21" fill="none" stroke="#DC2626" stroke-width="6" stroke-linecap="round"
+                    stroke-dasharray="42 132" transform="rotate(-90 26 26)"/>
+            <line x1="26" y1="2" x2="26" y2="9" stroke="#DC2626" stroke-width="2"
+                  transform="rotate(234 26 26)"/>
+            <text x="26" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">32</text>
+          </svg>
+          <div style="font-size:11.5px;color:var(--s600);line-height:1.5">
+            <b style="color:#1E293B">Seed profile · band Early</b><br>
+            requirement <b>65</b> · <b style="color:#B91C1C">33 short</b>
+          </div>
+        </div>
+        <p>Automated Outreach and brokered introductions both send into the iCapOS investor network under
+          the iCapOS name. The CRR is the requirement that gates them, and it is not met.</p>
+        <p>The founder&apos;s own investor list is unaffected — that is their network and their name.</p>
+      </div>
+
+      <div class="dcol">
+        <h5>What&apos;s missing</h5>
+        <div class="bar"><div class="bl"><span>Traction</span><span class="v">5 / 25 <span style="color:#DC2626">−20.5</span></span></div>
+          <div class="tr"><i style="width:20%;background:#DC2626"></i></div></div>
+        <div class="bar"><div class="bl"><span>Cap table</span><span class="v">3 / 20 <span style="color:#DC2626">−17.4</span></span></div>
+          <div class="tr"><i style="width:15%;background:#DC2626"></i></div></div>
+        <div class="bar"><div class="bl"><span>Team</span><span class="v">14 / 30 <span style="color:#B45309">−16.5</span></span></div>
+          <div class="tr"><i style="width:47%;background:#B45309"></i></div></div>
+        <div class="bar"><div class="bl"><span>Financial</span><span class="v">4 / 15 <span style="color:#B45309">−10.8</span></span></div>
+          <div class="tr"><i style="width:27%;background:#B45309"></i></div></div>
+        <div class="bar"><div class="bl"><span>Narrative</span><span class="v">8 / 10 <span style="color:#059669">−2.5</span></span></div>
+          <div class="tr"><i style="width:80%;background:#059669"></i></div></div>
+      </div>
+
+      <div class="dcol">
+        <h5>How to solve</h5>
+        <div class="fx"><span class="n">1</span><span class="sp">Improve Founder Integrity &amp; Team Depth — scoring 13.6 of 30</span><span class="pt">+16</span></div>
+        <div class="fx"><span class="n">2</span><span class="sp">Improve Customer Traction &amp; LOIs — scoring 0 of 14</span><span class="pt">+14</span></div>
+        <div class="fx"><span class="n">3</span><span class="sp">Improve Market &amp; Competitive Evidence — scoring 4.4 of 11</span><span class="pt">+7</span></div>
+        <div class="fx"><span class="n">4</span><span class="sp">Improve IP Protection &amp; Competitive Moat — scoring 0 of 6</span><span class="pt">+6</span></div>
+        <p style="margin-top:8px;font-size:11.5px;color:#065F46"><b>+43 available</b> — 33 needed to meet
+          the requirement.</p>
+      </div>
+    </div>
+    <p class="src">Source: CRR engine · crr-profiles-v1 · scored 18 Sept 2026 · Seed profile from the
+      company&apos;s funding stage. Recommendations from the existing engine output — nothing new is computed here.</p>
+  </div>
+
+  <!-- the rest of the menu, unchanged except the two that depend on it -->
+  <div class="row blocked-by">
+    <span class="ic" style="color:#94A3B8">○</span>
+    <span class="nm">Investor matches</span>
+    <span class="hl">Founder can browse matches · no requirement</span>
+    <span class="chip c-todo">Open</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row blocked-by">
+    <span class="ic" style="color:#94A3B8">○</span>
+    <span class="nm">Matching Center</span>
+    <span class="hl">Founder can browse · no requirement</span>
+    <span class="chip c-todo">Open</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row blocked-by">
+    <span class="ic" style="color:#B45309">⚠</span>
+    <span class="nm">Automated outreach</span>
+    <span class="hl">Held — CRR 32 below the 65 requirement</span>
+    <span class="chip c-att">Requires CRR 65</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row blocked-by">
+    <span class="ic" style="color:#B45309">⚠</span>
+    <span class="nm">Investor CRM</span>
+    <span class="hl">Brokered intros held — CRR 32 below the 65 requirement</span>
+    <span class="chip c-att">Requires CRR 65</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row">
+    <span class="ic" style="color:#94A3B8">○</span>
+    <span class="nm">Present at event</span>
+    <span class="hl">No requirement</span>
+    <span class="chip c-todo">Open</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row">
+    <span class="ic" style="color:#94A3B8">○</span>
+    <span class="nm">Marketplace</span>
+    <span class="hl">No requirement</span>
+    <span class="chip c-todo">Open</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+</div>
+
+<div class="lbl">Met — the same menu at CRR 68</div>
+<div class="card">
+  <div class="mh">
+    <span class="t">Founder&apos;s Marketing menu</span>
+    <span class="cnt">3 of 6 done · requirement met</span>
+    <span class="sp"></span>
+    <a class="btn amber" href="#">✉ Reach out to founder</a>
+  </div>
+  <div class="row">
+    <span class="ic" style="color:#059669">✓</span>
+    <span class="nm">Capital Readiness Rating</span>
+    <span class="hl">Requirement for this stage — CRR 68, needs 65 · met 21 Sept</span>
+    <span class="chip c-done">Met</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row">
+    <span class="ic" style="color:#059669">✓</span>
+    <span class="nm">Automated outreach</span>
+    <span class="hl">2 campaigns · 38 investors contacted</span>
+    <span class="chip c-done">Done</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <div class="row">
+    <span class="ic" style="color:#059669">✓</span>
+    <span class="nm">Investor CRM</span>
+    <span class="hl">1 brokered intro · 4 in pipeline</span>
+    <span class="chip c-done">Done</span><span class="caret">▾</span>
+    <a class="btn" href="#">Open</a><a class="btn amber" href="#">Open as founder</a>
+  </div>
+  <p style="font-size:11.5px;color:#64748B;padding:10px 15px 13px;margin:0">
+    The row does not disappear when the requirement is met — it stays as the record that it <i>is</i> met,
+    and the date it happened. An item that vanishes when it passes leaves nobody able to confirm it ever did.
+  </p>
+</div>
+
+<div class="lbl">What the flag affects, and what it does not</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:26%">Marketing item</th><th style="width:19%">When CRR &lt; 65</th><th>Why</th></tr>
+    <tr><td><b>Automated outreach</b></td><td><span class="tag t-flag">Held</span></td>
+        <td>Sends into the iCapOS investor network from iCapOS infrastructure. Already gated at 65 today — the row makes the reason visible instead of leaving it a surprise at the point of sending.</td></tr>
+    <tr><td><b>Investor CRM</b> · brokered intro</td><td><span class="tag t-flag">Held</span></td>
+        <td>iCapOS vouching for the company by name. Has no gate at all today.</td></tr>
+    <tr><td><b>Investor matches</b></td><td><span class="tag t-open">Open</span></td>
+        <td>Looking is how the founder learns what the score is missing. Blocking it withholds the diagnosis.</td></tr>
+    <tr><td><b>Matching Center</b></td><td><span class="tag t-open">Open</span></td>
+        <td>Same — this is where the gap becomes visible.</td></tr>
+    <tr><td><b>Present at event</b></td><td><span class="tag t-open">Open</span></td>
+        <td>The founder presents as themselves.</td></tr>
+    <tr><td><b>Marketplace</b></td><td><span class="tag t-open">Open</span></td>
+        <td>Already has its own staff review before a listing goes live.</td></tr>
+  </table>
+</div></div>
+
+<div class="note">
+  <b>Everything here already exists.</b> The row uses the same <code>MirrorItem</code> shape as every
+  other item in the menu, the same status chips, the same drawer with problem / what&apos;s missing / how
+  to solve, and the same <code>ItemDiagnosis.ring</code> that Preparation&apos;s CRR row already draws.
+  The only genuinely new thing is one entry in the <code>deploy</code> menu definition and a condition
+  that reads <code>crr.outreachUnlocked</code>.
+  <br><br>
+  <b>Why repeat it in Marketing when Preparation already has it.</b> Because the requirement does not
+  stop applying when the founder advances. Today a company can be in Marketing with a CRR of 32 and
+  nothing on the Marketing tab says so — the number lives one tab back, and the two items that depend on
+  it fail silently. The row puts the requirement where the work is.
+  <br><br>
+  <b>One thing worth deciding.</b> Whether <i>Held</i> means the founder cannot start (a hard stop), or
+  can start and staff see it flagged for review. Hard stop is cleaner to explain; review keeps a
+  borderline company moving while someone looks. Either way the row reads the same — only the button
+  behind &ldquo;Automated outreach&rdquo; changes.
+</div>
+
+</div>
+</body>
+</html>

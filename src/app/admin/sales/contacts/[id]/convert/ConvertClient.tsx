@@ -120,7 +120,7 @@ export function ConvertClient({ contact, pipelines }: { contact: Contact; pipeli
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
           <Link href={`/admin/sales/contacts/${contact.id}`} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 14px", textDecoration: "none" }}>Cancel</Link>
-          <button onClick={create} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>{busy ? "Creating…" : "Create opportunity"}</button>
+          <button type="button" onClick={create} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>{busy ? "Creating…" : "Create opportunity"}</button>
         </div>
       </div>
     </div>

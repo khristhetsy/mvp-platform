@@ -95,16 +95,16 @@ export function SegmentRunOfShow({ sessionId, eventId }: { sessionId: string; ev
                 </span>
                 <div className="flex shrink-0 gap-2">
                   {!live && (
-                    <button onClick={() => setStatus(s.id, "live")} className="text-xs font-medium text-[var(--blue)] hover:underline">
+                    <button type="button" onClick={() => setStatus(s.id, "live")} className="text-xs font-medium text-[var(--blue)] hover:underline">
                       {t("goLive")}
                     </button>
                   )}
                   {live && (
-                    <button onClick={() => setStatus(s.id, "done")} className="text-xs font-medium text-emerald-700 hover:underline">
+                    <button type="button" onClick={() => setStatus(s.id, "done")} className="text-xs font-medium text-emerald-700 hover:underline">
                       {t("endSegment")}
                     </button>
                   )}
-                  <button onClick={() => remove(s.id)} className="text-xs text-rose-600 hover:underline">
+                  <button type="button" onClick={() => remove(s.id)} className="text-xs text-rose-600 hover:underline">
                     {t("remove")}
                   </button>
                 </div>
@@ -122,7 +122,7 @@ export function SegmentRunOfShow({ sessionId, eventId }: { sessionId: string; ev
           maxLength={120}
           className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
         />
-        <button onClick={add} disabled={busy || !title.trim()} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
+        <button type="button" onClick={add} disabled={busy || !title.trim()} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
           {t("add")}
         </button>
       </div>

@@ -114,16 +114,16 @@ export function CallInBar({
                 </span>
                 <div className="flex gap-2">
                   {e.status === "requested" && (
-                    <button onClick={() => setStatus(e.id, "invited")} className="text-xs font-medium text-[var(--blue)] hover:underline">
+                    <button type="button" onClick={() => setStatus(e.id, "invited")} className="text-xs font-medium text-[var(--blue)] hover:underline">
                       Invite
                     </button>
                   )}
                   {e.status === "invited" && (
-                    <button onClick={() => setStatus(e.id, "onstage")} className="text-xs font-medium text-emerald-700 hover:underline">
+                    <button type="button" onClick={() => setStatus(e.id, "onstage")} className="text-xs font-medium text-emerald-700 hover:underline">
                       On stage
                     </button>
                   )}
-                  <button onClick={() => setStatus(e.id, "done")} className="text-xs text-rose-600 hover:underline">
+                  <button type="button" onClick={() => setStatus(e.id, "done")} className="text-xs text-rose-600 hover:underline">
                     Remove
                   </button>
                 </div>
@@ -139,7 +139,7 @@ export function CallInBar({
   return (
     <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-white p-3">
       {!myEntry && (
-        <button
+        <button type="button"
           onClick={raiseHand}
           disabled={busy}
           className="cap-btn-primary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
@@ -150,7 +150,7 @@ export function CallInBar({
       {myEntry?.status === "requested" && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-[var(--text-secondary)]"><i className="ti ti-hand-stop" aria-hidden="true" /> Hand raised — waiting for the host.</span>
-          <button onClick={withdraw} disabled={busy} className="text-xs text-rose-600 hover:underline disabled:opacity-50">
+          <button type="button" onClick={withdraw} disabled={busy} className="text-xs text-rose-600 hover:underline disabled:opacity-50">
             Lower hand
           </button>
         </div>

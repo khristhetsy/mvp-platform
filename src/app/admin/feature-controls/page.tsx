@@ -5,6 +5,7 @@ import { OutreachAutomationToggle } from "@/components/admin/OutreachAutomationT
 import { StageMenuEditor } from "@/components/admin/StageMenuEditor";
 import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls";
 import { UploadLimitsControls } from "@/components/admin/UploadLimitsControls";
+import { SiteDefaultViewControls } from "@/components/admin/SiteDefaultViewControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function AdminFeatureControlsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={t("featureControls")}
     >
+      <SiteDefaultViewControls />
       <OutreachAutomationToggle />
       <DepartmentsControls />
       <AiUsageLimitsControls />

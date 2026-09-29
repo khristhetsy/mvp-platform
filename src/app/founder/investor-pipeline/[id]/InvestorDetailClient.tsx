@@ -12,7 +12,7 @@ type PipelineStage = "new" | "contacted" | "interested" | "meeting" | "committed
 const STAGES: { id: PipelineStage; label: string; color: string }[] = [
   { id: "new", label: "New", color: "#185FA5" },
   { id: "contacted", label: "Contacted", color: "#BA7517" },
-  { id: "interested", label: "Interested", color: "#534AB7" },
+  { id: "interested", label: "Interested", color: "#1A6CE4" },
   { id: "meeting", label: "Meeting", color: "#1D9E75" },
   { id: "committed", label: "Committed", color: "#0F6E56" },
   { id: "passed", label: "Passed", color: "#A32D2D" },
@@ -271,7 +271,7 @@ export function InvestorDetailClient({
           </div>
         ) : (
           <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Investor preferences</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">Investor thesis</p>
             {preferences.length === 0 ? (
               <p className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-400">
                 No stated preferences on file for this investor.

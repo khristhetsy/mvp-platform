@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { MONEY_BAND_OPTIONS } from "@/lib/profile/options";
+
+/** One of the money bands, or "" to clear (stored as null). */
+const moneyBandField = z.union([z.enum(MONEY_BAND_OPTIONS), z.literal("").transform(() => null)]).optional();
 
 export const companyOnboardingSchema = z.object({
   company_name: z.string().min(2),
@@ -50,8 +54,18 @@ export const companyUpdateSchema = z.object({
   funding_stage: z.string().max(300).optional(),
   operating_stage: z.string().max(300).optional(),
   business_entity: z.string().max(120).optional(),
-  annual_ebitda: z.string().max(200).optional(),
+  // Current EBITDA as one of the money bands (never projected); "" clears it.
+  annual_ebitda: moneyBandField,
+  // Amount of capital as one of the money bands; "" clears it.
+  funding_amount_band: moneyBandField,
   management_team: z.string().max(1000).optional(),
+  // Traction (onboarding step 8). Text, not numeric: founders write "$240k" or
+  // "~20,000/mo", and coercing that loses the nuance and rejects honest answers.
+  annual_revenue_size: z.string().max(120).optional(),
+  arr: z.string().max(120).optional(),
+  mrr: z.string().max(120).optional(),
+  /** Up to five one-line highlights, newline-separated. */
+  key_highlights: z.string().max(1000).optional(),
 });
 
 export const founderOnboardingStepSchema = z.object({
@@ -82,6 +96,8 @@ export const founderOnboardingStepSchema = z.object({
   business_description: z.string().optional(),
   founder_goals: z.string().optional(),
   funding_amount: z.coerce.number().positive().optional(),
+  // Amount of capital as one of the money bands; "" means skip.
+  funding_amount_band: moneyBandField,
   revenue_stage: z.string().optional(),
   use_of_funds: z.string().optional(),
   // Seeking + Company & stage (onboarding "Raise & stage" step). Multi-selects
@@ -92,8 +108,13 @@ export const founderOnboardingStepSchema = z.object({
   funding_stage: z.string().optional(),
   operating_stage: z.string().optional(),
   business_entity: z.string().optional(),
-  annual_ebitda: z.string().optional(),
+  // Current EBITDA as one of the money bands (never projected); "" means skip.
+  annual_ebitda: moneyBandField,
   management_team: z.string().optional(),
+  annual_revenue_size: z.string().optional(),
+  arr: z.string().optional(),
+  mrr: z.string().optional(),
+  key_highlights: z.string().optional(),
 });
 
 export const documentUploadSchema = z.object({
@@ -169,6 +190,9 @@ export const investorOnboardingSchema = z
     firm_name: z.string().max(200).optional(),
     check_size_min: z.coerce.number().nonnegative().optional(),
     check_size_max: z.coerce.number().positive().optional(),
+    preferred_arr_range: z.string().max(120).optional(),
+    preferred_mrr_range: z.string().max(120).optional(),
+    capital_types: z.string().max(600).optional(),
     preferred_sectors: z.string().min(2),
     preferred_geographies: z.string().min(2),
     preferred_stages: z.string().min(2),

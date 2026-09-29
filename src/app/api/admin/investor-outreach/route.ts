@@ -180,6 +180,8 @@ export async function PATCH(req: Request): Promise<Response> {
         investorType: clampScore(ew.investorType, dew.investorType),
         capitalType: clampScore(ew.capitalType, dew.capitalType),
         activeRating: clampScore(ew.activeRating, dew.activeRating),
+        arr: clampScore(ew.arr, dew.arr),
+        mrr: clampScore(ew.mrr, dew.mrr),
       },
     };
     const ok = await setInvestorMatchConfig(config, gate.userId);
@@ -209,11 +211,15 @@ export async function PATCH(req: Request): Promise<Response> {
     const c = body.config as Partial<FounderConnectionConfig>;
     const clampCap = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100000 ? Math.round(n) : d);
     const mbp = (c.monthlyByPlan ?? {}) as Partial<FounderConnectionConfig["monthlyByPlan"]>;
+    // Weekly caps: a number, or null for none. Absent means "keep what is stored".
+    const clampWeek = (n: unknown): number | null => (typeof n === "number" && n >= 0 && n <= 100000 ? Math.round(n) : null);
+    const wbp = c.weeklyByPlan && typeof c.weeklyByPlan === "object" ? c.weeklyByPlan : null;
     const config: FounderConnectionConfig = {
       monthlyByPlan: {
         basic: clampCap(mbp.basic, DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.basic),
         professional: clampCap(mbp.professional, DEFAULT_FOUNDER_CONNECTION_CONFIG.monthlyByPlan.professional),
       },
+      ...(wbp ? { weeklyByPlan: { basic: clampWeek(wbp.basic), professional: clampWeek(wbp.professional) } } : {}),
     };
     const ok = await setFounderConnectionConfig(config, gate.userId);
     return NextResponse.json({ ok, connection: config });

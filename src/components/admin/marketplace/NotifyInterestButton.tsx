@@ -24,7 +24,7 @@ export function NotifyInterestButton({
       setMsg(
         res.live
           ? `Sent to ${res.sent} of ${res.intended} interested ${res.intended === 1 ? "person" : "people"}.`
-          : `Email delivery is off (counsel-pending). ${res.intended} ${res.intended === 1 ? "person is" : "people are"} on the interest list and would be notified when enabled.`,
+          : `Email delivery is switched off. ${res.intended} ${res.intended === 1 ? "person is" : "people are"} on the interest list and would be notified when enabled.`,
       );
     });
   }

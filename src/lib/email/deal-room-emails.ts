@@ -8,56 +8,67 @@ import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getUserLocale, getUserLocaleByEmail } from "@/lib/i18n/user-locale";
 import { emailTranslator, type EmailT } from "@/lib/i18n/email-i18n";
+import { esc, renderEmail } from "@/lib/email/layout";
 
-const ACCENT = "#2E78F5";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
-// ── Shared HTML wrapper ───────────────────────────────────────────────────────
-
-function emailShell(content: string, t: EmailT): string {
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>iCapOS</title>
-</head>
-<body style="margin:0;padding:0;background:#F8F9FC;font-family:system-ui,-apple-system,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F9FC;padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" style="max-width:580px;background:white;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;">
-          <!-- Header -->
-          <tr>
-            <td style="background:${ACCENT};padding:24px 32px;">
-              <span style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.02em;">iCapOS</span>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px;">
-              ${content}
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 32px;border-top:1px solid #f3f4f6;background:#fafafa;">
-              <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
-                ${t("shell.footerFounder")}
-                <a href="${APP_URL}/founder/settings" style="color:${ACCENT};">${t("shell.manage")}</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+/** Values go into translated strings that carry their own <strong> markup. */
+function escVars(vars: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, esc(v)]));
 }
 
-function ctaButton(label: string, href: string): string {
-  return `<a href="${href}" style="display:inline-block;margin-top:20px;background:${ACCENT};color:white;font-size:14px;font-weight:600;padding:11px 24px;border-radius:10px;text-decoration:none;">${label} →</a>`;
+function plainText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&ldquo;|&rdquo;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** One deal room email on the shared layout. Pure. */
+export function buildDealRoomEmail(
+  t: EmailT,
+  input: {
+    subject: string;
+    eyebrow: string;
+    heading: string;
+    /** Translation key of the body; its values are escaped before insertion. */
+    bodyKey: string;
+    vars: Record<string, string>;
+    tip?: string | null;
+    cta: string;
+    url: string;
+    context?: string | null;
+    footerReason?: string;
+    note?: string | null;
+  },
+): { subject: string; html: string } {
+  const bodyHtml = t(input.bodyKey, escVars(input.vars));
+  return renderEmail({
+    audience: "founder",
+    subject: input.subject,
+    preheader: plainText(t(input.bodyKey, input.vars)),
+    context: input.context ?? null,
+    eyebrow: input.eyebrow,
+    headline: input.heading,
+    blocks: [
+      { type: "html", html: `<p style="margin:0;font-size:15px;line-height:24px;color:#16223F;">${bodyHtml}</p>` },
+      ...(input.tip ? [{ type: "paragraph" as const, text: input.tip }] : []),
+      ...(input.note ? [{ type: "note" as const, text: input.note }] : []),
+    ],
+    primary: { label: input.cta, url: input.url },
+    footer: {
+      reason: input.footerReason ?? t("shell.footerFounder"),
+      preferencesUrl: input.footerReason ? null : `${APP_URL}/founder/settings`,
+      preferencesLabel: t("shell.manage"),
+      lines: [t("diligence.notBrokerDealer")],
+    },
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -100,17 +111,17 @@ export async function emailFounderDealRoomQuestion(input: {
   const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/deal-room/${input.roomId}`;
-  const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowActivity")}</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.question.heading")}</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      ${t("dealRoom.question.body", { investor: investorName, category: input.questionCategory, room: input.roomTitle })}
-    </p>
-    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      ${t("dealRoom.question.tip")}
-    </p>
-    ${ctaButton(t("dealRoom.question.cta"), deepLink)}
-  `, t);
+  const { html } = buildDealRoomEmail(t, {
+    subject: t("dealRoom.question.subject", { room: input.roomTitle }),
+    eyebrow: t("dealRoom.eyebrowActivity"),
+    heading: t("dealRoom.question.heading"),
+    bodyKey: "dealRoom.question.body",
+    vars: { investor: investorName, category: input.questionCategory, room: input.roomTitle },
+    tip: null,
+    cta: t("dealRoom.question.cta"),
+    url: deepLink,
+    context: input.roomTitle,
+  });
 
   await sendEmail({
     to: founderEmail,
@@ -136,17 +147,17 @@ export async function emailFounderDocumentRequested(input: {
   const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/deal-room/${input.roomId}`;
-  const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowActivity")}</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.document.heading")}</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      ${t("dealRoom.document.body", { investor: investorName, document: input.documentLabel, room: input.roomTitle })}
-    </p>
-    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      ${t("dealRoom.document.tip")}
-    </p>
-    ${ctaButton(t("dealRoom.document.cta"), deepLink)}
-  `, t);
+  const { html } = buildDealRoomEmail(t, {
+    subject: t("dealRoom.document.subject", { room: input.roomTitle }),
+    eyebrow: t("dealRoom.eyebrowActivity"),
+    heading: t("dealRoom.document.heading"),
+    bodyKey: "dealRoom.document.body",
+    vars: { investor: investorName, document: input.documentLabel, room: input.roomTitle },
+    tip: t("dealRoom.document.tip"),
+    cta: t("dealRoom.document.cta"),
+    url: deepLink,
+    context: input.roomTitle,
+  });
 
   await sendEmail({
     to: founderEmail,
@@ -171,17 +182,17 @@ export async function emailFounderRoomViewed(input: {
   const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/deal-room/${input.roomId}`;
-  const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowActivity")}</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.viewed.heading")}</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      ${t("dealRoom.viewed.body", { investor: investorName, room: input.roomTitle })}
-    </p>
-    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      ${t("dealRoom.viewed.tip")}
-    </p>
-    ${ctaButton(t("dealRoom.viewed.cta"), deepLink)}
-  `, t);
+  const { html } = buildDealRoomEmail(t, {
+    subject: t("dealRoom.viewed.subject", { room: input.roomTitle }),
+    eyebrow: t("dealRoom.eyebrowActivity"),
+    heading: t("dealRoom.viewed.heading"),
+    bodyKey: "dealRoom.viewed.body",
+    vars: { investor: investorName, room: input.roomTitle },
+    tip: t("dealRoom.viewed.tip"),
+    cta: t("dealRoom.viewed.cta"),
+    url: deepLink,
+    context: input.roomTitle,
+  });
 
   await sendEmail({
     to: founderEmail,
@@ -205,17 +216,17 @@ export async function emailFounderInvestorInterest(input: {
   const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/capital-raise`;
-  const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowInvestorActivity")}</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.interest.heading")}</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      ${t("dealRoom.interest.body", { investor: investorName, company: input.companyName })}
-    </p>
-    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      ${t("dealRoom.interest.tip")}
-    </p>
-    ${ctaButton(t("dealRoom.interest.cta"), deepLink)}
-  `, t);
+  const { html } = buildDealRoomEmail(t, {
+    subject: t("dealRoom.interest.subject", { company: input.companyName }),
+    eyebrow: t("dealRoom.eyebrowInvestorActivity"),
+    heading: t("dealRoom.interest.heading"),
+    bodyKey: "dealRoom.interest.body",
+    vars: { investor: investorName, company: input.companyName },
+    tip: t("dealRoom.interest.tip"),
+    cta: t("dealRoom.interest.cta"),
+    url: deepLink,
+    context: input.companyName,
+  });
 
   await sendEmail({
     to: founderEmail,
@@ -236,18 +247,18 @@ export async function emailTeamInvite(input: {
   const locale = await getUserLocaleByEmail(input.inviteeEmail);
   const t = emailTranslator(locale);
   const acceptUrl = `${APP_URL}/invite/accept?token=${input.inviteToken}`;
-  const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.teamInvite.eyebrow")}</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.teamInvite.heading", { company: input.companyName })}</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      ${t("dealRoom.teamInvite.body", { inviter: input.inviterName, company: input.companyName })}
-    </p>
-    <p style="margin:0 0 16px;font-size:14px;color:#6b7280;line-height:1.6;">
-      ${t("dealRoom.teamInvite.body2")}
-    </p>
-    ${ctaButton(t("dealRoom.teamInvite.cta"), acceptUrl)}
-    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">${t("dealRoom.teamInvite.expiry")}</p>
-  `, t);
+  const { html } = buildDealRoomEmail(t, {
+    subject: t("dealRoom.teamInvite.subject", { company: input.companyName }),
+    eyebrow: t("dealRoom.teamInvite.eyebrow"),
+    heading: t("dealRoom.teamInvite.heading", { company: input.companyName }),
+    bodyKey: "dealRoom.teamInvite.body",
+    vars: { inviter: input.inviterName, company: input.companyName },
+    tip: t("dealRoom.teamInvite.body2"),
+    cta: t("dealRoom.teamInvite.cta"),
+    url: acceptUrl,
+    context: input.companyName,
+    footerReason: t("dealRoom.teamInvite.expiry"),
+  });
 
   await sendEmail({
     to: input.inviteeEmail,

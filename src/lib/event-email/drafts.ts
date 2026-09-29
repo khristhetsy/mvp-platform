@@ -17,6 +17,7 @@ export type EventEmailDraft = {
   theme: TemplateTheme | null;
   includeBanner: boolean | null;
   includeLobby: boolean | null;
+  includeRoster: boolean | null;
 };
 
 export async function getDraft(
@@ -26,7 +27,7 @@ export async function getDraft(
 ): Promise<EventEmailDraft | null> {
   const { data } = await raw(supabase)
     .from("event_email_drafts")
-    .select("subject, blocks, theme, include_banner, include_lobby")
+    .select("subject, blocks, theme, include_banner, include_lobby, include_roster")
     .eq("event_id", eventId)
     .eq("email_type", emailType)
     .maybeSingle();
@@ -38,6 +39,7 @@ export async function getDraft(
     theme: (r.theme as TemplateTheme | null) ?? null,
     includeBanner: (r.include_banner as boolean | null) ?? null,
     includeLobby: (r.include_lobby as boolean | null) ?? null,
+    includeRoster: (r.include_roster as boolean | null) ?? null,
   };
 }
 
@@ -51,6 +53,7 @@ export async function upsertDraft(
     theme?: TemplateTheme | null;
     includeBanner?: boolean | null;
     includeLobby?: boolean | null;
+    includeRoster?: boolean | null;
     updatedBy?: string | null;
   },
 ): Promise<void> {
@@ -65,6 +68,7 @@ export async function upsertDraft(
         theme: input.theme ?? null,
         include_banner: input.includeBanner ?? null,
         include_lobby: input.includeLobby ?? null,
+        include_roster: input.includeRoster ?? true,
         updated_by: input.updatedBy ?? null,
         updated_at: new Date().toISOString(),
       },

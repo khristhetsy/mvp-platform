@@ -202,7 +202,7 @@ export function LessonPageClient({
         {/* Direct MP4 video */}
         {videoUrl && !embedUrl && (
           <div className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-black">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            { }
             <video
               src={videoUrl}
               controls
@@ -215,7 +215,7 @@ export function LessonPageClient({
         {/* Tab toggle */}
         <div className="mb-6 flex gap-1 rounded-xl border border-slate-200 bg-white p-1 w-fit">
           {tabs.map((tab) => (
-            <button
+            <button type="button"
               key={tab.key}
               onClick={() => setActiveSection(tab.key)}
               className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
@@ -365,7 +365,7 @@ export function LessonPageClient({
                 <i className="ti ti-check" aria-hidden="true" /> Completed
               </span>
             ) : (
-              <button
+              <button type="button"
                 onClick={handleMarkComplete}
                 disabled={marking}
                 className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition disabled:opacity-60"

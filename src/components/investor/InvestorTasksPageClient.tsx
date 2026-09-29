@@ -32,6 +32,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority, TaskType, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
+import { matchRows, type SearchField } from "@/lib/ui/live-search";
 
 /* ─── constants ─────────────────────────────────────────────────── */
 
@@ -158,6 +159,13 @@ const TASK_TYPES: { value: TaskType; label: string; icon: string; pill: string; 
   { value: "operations",        label: "Operations",        icon: "ti-settings", pill: "bg-[#1E3A5F]", text: "text-[#93C5FD]", svgIcon: <IcoSettings /> },
   { value: "investor_outreach", label: "Investor outreach", icon: "ti-users", pill: "bg-[#2D1B5E]", text: "text-[#C4B5FD]", svgIcon: <IcoHandshake /> },
   { value: "deal_diligence",    label: "Deal & diligence",  icon: "ti-search", pill: "bg-[#1A2E1A]", text: "text-[#86EFAC]", svgIcon: <IcoSearch /> },
+];
+
+const INVESTOR_TASK_FIELDS: SearchField<{ title: string; description?: string | null; task_type?: string | null; status?: string | null }>[] = [
+  { label: "title", get: (t) => t.title },
+  { label: "description", get: (t) => t.description },
+  { label: "type", get: (t) => t.task_type },
+  { label: "status", get: (t) => t.status },
 ];
 
 export function InvestorTasksPageClient({
@@ -302,7 +310,8 @@ export function InvestorTasksPageClient({
     tab === "done"   ? doneTasks   : tasks;
 
   const visible = tabFiltered
-    .filter((t) => !query.trim() || t.title.toLowerCase().includes(query.toLowerCase()))
+    // Title alone missed everything else the card shows.
+    .filter((t) => !query.trim() || matchRows([t], INVESTOR_TASK_FIELDS, query).rows.length > 0)
     .filter((t) => !taskTypeFilter || t.task_type === taskTypeFilter);
 
   /* ── shared toolbar + filters ── */

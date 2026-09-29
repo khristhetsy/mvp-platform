@@ -19,7 +19,7 @@ export function IrLifecycleCard({
   if ((investorStages?.length ?? 0) === 0 && (founderStages?.length ?? 0) === 0) return null;
 
   const seg = (m: "investor" | "founder", label: string) => (
-    <button onClick={() => setMode(m)} style={{ fontSize: 12, padding: "4px 11px", background: mode === m ? ACCENT : "transparent", color: mode === m ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>{label}</button>
+    <button type="button" onClick={() => setMode(m)} style={{ fontSize: 12, padding: "4px 11px", background: mode === m ? ACCENT : "transparent", color: mode === m ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>{label}</button>
   );
 
   const toggle = (

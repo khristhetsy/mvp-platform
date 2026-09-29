@@ -112,7 +112,7 @@ function InternalFields({ externalId, initial }: { externalId: string; initial: 
       </label>
       <div className="mt-3 flex items-center justify-end gap-2">
         {saved && <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><Check className="h-3.5 w-3.5" /> Saved</span>}
-        <button onClick={save} disabled={saving || !dirty} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+        <button type="button" onClick={save} disabled={saving || !dirty} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save
         </button>
       </div>
@@ -191,7 +191,7 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
 
   return (
     <div>
-      <button onClick={() => router.back()} className="mb-4 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
+      <button type="button" onClick={() => router.back()} className="mb-4 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
 
@@ -205,22 +205,22 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {d.email && (
-            <button onClick={() => { setEmailError(null); setEmailOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white" style={{ background: BLUE }}>
+            <button type="button" onClick={() => { setEmailError(null); setEmailOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white" style={{ background: BLUE }}>
               <Send className="h-4 w-4" /> Email
             </button>
           )}
-          <button onClick={() => setScheduleOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <button type="button" onClick={() => setScheduleOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             <CalendarPlus className="h-4 w-4" /> Schedule
           </button>
-          <button onClick={() => exportRecord(r)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <button type="button" onClick={() => exportRecord(r)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             <Download className="h-4 w-4" /> Export CSV
           </button>
           {canWrite && (
             <>
-              <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <button type="button" onClick={() => setEditOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <Pencil className="h-4 w-4" /> Edit
               </button>
-              <button onClick={archive} disabled={archiving} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50">
+              <button type="button" onClick={archive} disabled={archiving} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50">
                 {archiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />} Archive
               </button>
             </>

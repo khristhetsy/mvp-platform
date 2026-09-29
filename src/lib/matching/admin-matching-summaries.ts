@@ -2,7 +2,6 @@ import {
   countHighMatches,
   rankInvestorsForCompany,
   matchInvestorToCompany,
-  type CompanyMatchProfile,
 } from "@/lib/matching/investor-company-matching";
 import { loadAdminCompanyMatchProfiles, loadApprovedInvestorMatchProfiles } from "@/lib/matching/load-matching-data";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";

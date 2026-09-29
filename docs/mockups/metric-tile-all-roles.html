@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Metric tile — one design, every dashboard</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:26px 0 9px}
+  .lbl span{font-weight:500;text-transform:none;letter-spacing:0;color:var(--s500);margin-left:7px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #4F46E5;border-radius:8px;padding:13px 15px;margin-bottom:10px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#4338CA}
+  .why ul{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .why li{margin-bottom:4px}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:12px}
+
+  /* ---------- THE TILE ---------- */
+  .t{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;
+     min-height:146px;position:relative}
+  .t:hover{border-color:#CBD5E1}
+  .t .cap{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s400)}
+  .t .mid{display:flex;align-items:center;gap:12px;margin-top:10px}
+  .t .num{min-width:0}
+  .t .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+  .t .u{font-size:11.5px;color:var(--s500);margin-top:2px}
+  .t .foot{margin-top:auto;padding-top:10px;font-size:11.5px;color:var(--s600);line-height:1.45}
+  .t .foot b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .t .flag{display:block;margin-top:4px;font-size:11px}
+  .t .flag.a{color:#B45309}.t .flag.g{color:#047857}.t .flag.r{color:#B91C1C}
+  .t .go{position:absolute;top:13px;right:13px;font-size:12px;color:#CBD5E1}
+  .t:hover .go{color:#4F46E5}
+  .g{color:#059669}.a{color:#B45309}.r{color:#DC2626}.m0{color:#94A3B8}
+
+  .old{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .oc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;min-height:112px}
+  .oc .cap{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s400)}
+  .oc .v{font-size:20px;font-weight:700;margin-top:8px}
+  .oc .d{font-size:11.5px;color:var(--s500);margin-top:4px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #059669;border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:18px}
+  .note b{color:var(--ink)}
+  .note code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Metric tile — one design, every dashboard</h1>
+<p class="sub">The row layout&apos;s content, kept as a tile. Same component across founder, investor and admin.</p>
+
+<div class="why">
+  <h2>The anatomy</h2>
+  <ul>
+    <li><b>Ring left, number right</b> — the ring gives scale, the number gives the value. A count with no ceiling gets a dashed ring instead of a fake arc.</li>
+    <li><b>A footer line that says something.</b> This is the part the old tiles didn&apos;t have room for: the denominator, and the one fact that changes what you&apos;d do.</li>
+    <li><b>Drill arrow top-right</b>, so the whole tile stays clickable without a button competing for space.</li>
+    <li><b>One component.</b> <code>MetricCard</code> already takes <code>ring</code>; this adds <code>flag</code> for the coloured footer line. Every dashboard using <code>MetricGrid</code> picks it up.</li>
+  </ul>
+</div>
+
+<div class="lbl">Now <span>— admin company workspace</span></div>
+<div class="old">
+  <div class="oc"><div class="cap">Completion</div><div class="v m0">—</div><div class="d">Foundation Ready</div></div>
+  <div class="oc"><div class="cap">Capital Readiness</div><div class="v m0">—</div><div class="d">Not yet scored</div></div>
+  <div class="oc"><div class="cap">Open remediation</div><div class="v">14</div><div class="d">4 closed of 18</div></div>
+  <div class="oc"><div class="cap">Investor interests</div><div class="v m0">0</div><div class="d">0 intro requests</div></div>
+</div>
+
+<!-- ============ ADMIN ============ -->
+<div class="lbl">Admin <span>— company workspace · At a glance</span></div>
+<div class="grid">
+
+  <div class="t"><span class="go">→</span><div class="cap">Completion</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#EEEDFE" stroke-width="5.75"/><text x="23" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#94A3B8">—</text></svg>
+      <div class="num"><div class="v m0">Not scored</div><div class="u">onboarding 100%</div></div>
+    </div>
+    <div class="foot">Foundation Ready.<span class="flag a">⚠ No diligence report has been run.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Capital Readiness Rating</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#EEEDFE" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#CBD5E1" stroke-width="5.75" stroke-dasharray="2 5" stroke-linecap="round"/><line x1="11.6" y1="31.4" x2="6.2" y2="35.2" stroke="#DC2626" stroke-width="1.8"/><text x="23" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#94A3B8">—</text></svg>
+      <div class="num"><div class="v m0">Not scored</div><div class="u">gate 65</div></div>
+    </div>
+    <div class="foot">The engine has never run.<span class="flag a">⚠ Outreach locked until it scores 65.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Open remediation</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#FEE2E2" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 36.6 32.6" fill="none" stroke="#D97706" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">14</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">of 18</text></svg>
+      <div class="num"><div class="v a">14 open</div><div class="u">4 closed of 18</div></div>
+    </div>
+    <div class="foot"><b>4</b> high priority.<span class="flag a">⚠ Oldest open 46 days.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Investor interests</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#CBD5E1" stroke-width="5.75" stroke-dasharray="2 5" stroke-linecap="round"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#94A3B8">0</text></svg>
+      <div class="num"><div class="v m0">None yet</div><div class="u">0 intro requests</div></div>
+    </div>
+    <div class="foot">No investor has seen this company — outreach is locked.</div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Open compliance</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#059669" stroke-width="5.75"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">0</text></svg>
+      <div class="num"><div class="v g">All clear</div><div class="u">0 of 0 raised</div></div>
+    </div>
+    <div class="foot">Nothing has ever been flagged.<span class="flag g">✓ 0 critical</span></div>
+  </div>
+</div>
+
+<!-- ============ FOUNDER ============ -->
+<div class="lbl">Founder <span>— dashboard</span></div>
+<div class="grid">
+
+  <div class="t"><span class="go">→</span><div class="cap">Capital Readiness Rating</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#EEEDFE" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 37.5 30.4" fill="none" stroke="#D97706" stroke-width="5.75" stroke-linecap="round"/><line x1="11.6" y1="31.4" x2="6.2" y2="35.2" stroke="#DC2626" stroke-width="1.8"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#D97706">45</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">/100</text></svg>
+      <div class="num"><div class="v a">45<span style="font-size:12px;color:#94A3B8">/100</span></div><div class="u">band Developing</div></div>
+    </div>
+    <div class="foot">Pre-seed profile.<span class="flag a">⚠ 20 points to unlock outreach.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Documents</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 38.8 17.4" fill="none" stroke="#DC2626" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">4</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">of 9</text></svg>
+      <div class="num"><div class="v r">0 of 3 core</div><div class="u">4 of 9 full package</div></div>
+    </div>
+    <div class="foot">Missing Pitch deck, Financial model, Cap table.<span class="flag r">These three gate the stage.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Investor matches</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#CBD5E1" stroke-width="5.75" stroke-dasharray="2 5" stroke-linecap="round"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#94A3B8">—</text></svg>
+      <div class="num"><div class="v m0">Locked</div><div class="u">opens at CRR 65</div></div>
+    </div>
+    <div class="foot">Matches appear on their own once you cross the gate — no approval needed.</div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Learning</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 39.6 26.7" fill="none" stroke="#059669" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">6</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">of 9</text></svg>
+      <div class="num"><div class="v g">67%</div><div class="u">6 of 9 modules</div></div>
+    </div>
+    <div class="foot">Milestone: Foundation Ready.<span class="flag g">✓ Next: Valuation basics</span></div>
+  </div>
+</div>
+
+<!-- ============ INVESTOR ============ -->
+<div class="lbl">Investor <span>— analytics</span></div>
+<div class="grid">
+
+  <div class="t"><span class="go">→</span><div class="cap">Saved deals</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 36.6 32.6" fill="none" stroke="#4F46E5" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#4F46E5">12</text></svg>
+      <div class="num"><div class="v">12</div><div class="u">on your watchlist</div></div>
+    </div>
+    <div class="foot"><b>3</b> added this month.<span class="flag a">⚠ 4 haven&apos;t been opened in 30 days.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Expressed interests</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 33.6 10.2" fill="none" stroke="#059669" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">2</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">of 12</text></svg>
+      <div class="num"><div class="v">2</div><div class="u">of 12 saved</div></div>
+    </div>
+    <div class="foot">17% of your watchlist.<span class="flag g">✓ 1 founder replied</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Intro requests</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><path d="M 23 6 A 17 17 0 0 1 39.9 24.6" fill="none" stroke="#059669" stroke-width="5.75" stroke-linecap="round"/><text x="23" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">5</text><text x="23" y="33" text-anchor="middle" font-size="6.5" fill="#94A3B8">of 8</text></svg>
+      <div class="num"><div class="v">5 answered</div><div class="u">of 8 sent</div></div>
+    </div>
+    <div class="foot"><b>3</b> awaiting a reply.<span class="flag a">⚠ Oldest sent 11 days ago.</span></div>
+  </div>
+
+  <div class="t"><span class="go">→</span><div class="cap">Recommended deals</div>
+    <div class="mid">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="#F1F5F9" stroke-width="5.75"/><circle cx="23" cy="23" r="17" fill="none" stroke="#CBD5E1" stroke-width="5.75" stroke-dasharray="2 5" stroke-linecap="round"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#94A3B8">0</text></svg>
+      <div class="num"><div class="v m0">None yet</div><div class="u">matching your thesis</div></div>
+    </div>
+    <div class="foot">Add a sector and cheque size to your profile to get matches.</div>
+  </div>
+</div>
+
+<div class="note">
+  <b>One tile, one component.</b> <code>MetricCard</code> already carries <code>ring</code> after today&apos;s change;
+  this adds a <code>flag</code> prop for the coloured footer line and moves the drill affordance to a corner arrow.
+  Every dashboard on <code>MetricGrid</code> — admin company workspace, admin analytics, insights, learning, SPV KPIs,
+  founder dashboard and optimise, investor analytics and portfolio — inherits it.
+  <br><br>
+  <b>The footer is the actual upgrade.</b> "14" tells you nothing; "14 open of 18 · 4 high priority · oldest open
+  46 days" tells you whether to act today. Same for the empty states: instead of a bare 0, the investor tile says
+  what to do to stop it being 0.
+  <br><br>
+  <b>Tile height goes 112px → 146px</b> to fit the footer. Four across still fits a 1280px screen; the grid stays
+  <code>auto-fit minmax(232px, 1fr)</code> so it reflows to 2-up on a laptop and 1-up on mobile.
+</div>
+
+</div>
+</body>
+</html>

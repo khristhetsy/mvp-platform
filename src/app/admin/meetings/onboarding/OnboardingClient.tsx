@@ -48,7 +48,7 @@ export function OnboardingClient({ initial, items }: { initial: Record_[]; items
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="Company name" style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", width: 200 }} />
-          <button onClick={() => void add()} disabled={busy || !name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>+ Add company</button>
+          <button type="button" onClick={() => void add()} disabled={busy || !name.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>+ Add company</button>
         </div>
       </div>
 
@@ -59,7 +59,7 @@ export function OnboardingClient({ initial, items }: { initial: Record_[]; items
             const open = expanded === r.id;
             return (
               <div key={r.id} style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 11, overflow: "hidden" }}>
-                <button onClick={() => setExpanded(open ? null : r.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+                <button type="button" onClick={() => setExpanded(open ? null : r.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: NAVY, flex: 1 }}>{r.company_name}</span>
                   {r.conference_ready && <span style={{ fontSize: 10, fontWeight: 700, background: "#E1F5EE", color: "#0F6E56", borderRadius: 6, padding: "2px 8px" }}>CONFERENCE-READY</span>}
                   <span style={{ fontSize: 11.5, color: MUTED, fontVariantNumeric: "tabular-nums" }}>{r.done}/{r.total}</span>

@@ -1,0 +1,126 @@
+/**
+ * Founder report for one project.
+ *   GET  ?kind=week|month|custom&milestone=<id>&start&end&compare=1 → ReportData (+ saved snapshot when one exists)
+ *   POST { action: "draft", ...period }                 → { summary, source }          AI drafts; nothing is written
+ *   POST { action: "save", ...period, summary, approve } → { report }                   staff text + frozen metrics
+ *   POST { action: "send", ...period, to, subject, message, attachPdf } → { ok, channel } approved report only
+ *   POST { action: "email_me", ...period }                → emails the interactive summary to the signed-in staff member
+ *   POST { action: "preview", ...period, message }        → { html } the email the founder would receive
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { irStaff, forbidden, failed } from "@/lib/ir/auth";
+import { createActivity, markReportSent, upsertReport } from "@/lib/ir/db";
+import { REPORT_SENT_PREFIX } from "@/lib/ir/metrics";
+import { draftExecSummary, freeze, isExecSummary, reportData, type FrozenReport, type ReportKind } from "@/lib/ir/report";
+import { renderReportPdf } from "@/lib/ir/report-pdf";
+import { sendEmail } from "@/lib/email/send-email";
+import { summaryHtml } from "@/lib/ir/summaries";
+import { renderEmail } from "@/lib/email/layout";
+
+export const dynamic = "force-dynamic";
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+const periodSchema = z.object({
+  kind: z.enum(["week", "month", "custom"]).default("week"),
+  milestone: z.string().uuid().nullish(),
+  start: z.string().regex(DAY).nullish(),
+  end: z.string().regex(DAY).nullish(),
+  compare: z.boolean().default(true),
+});
+type PeriodQ = z.infer<typeof periodSchema>;
+const load = (id: string, q: PeriodQ) => reportData(id, { kind: q.kind as ReportKind, milestoneId: q.milestone ?? null, start: q.start ?? null, end: q.end ?? null, compare: q.compare });
+
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  if (!(await irStaff())) return forbidden();
+  const { id } = await ctx.params;
+  const sp = req.nextUrl.searchParams;
+  const parsed = periodSchema.safeParse({ kind: sp.get("kind") ?? "week", milestone: sp.get("milestone") || null, start: sp.get("start") || null, end: sp.get("end") || null, compare: sp.get("compare") !== "0" });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid period." }, { status: 400 });
+  try {
+    const { data, error } = await load(id, parsed.data);
+    if (!data) return NextResponse.json({ error: error ?? "Couldn't build the report." }, { status: error === "Project not found." ? 404 : 400 });
+    return NextResponse.json(data);
+  } catch (e) { return failed(e, "Couldn't build the report."); }
+}
+
+const summarySchema = z.object({ bottom: z.string().max(600), lead: z.string().max(2000), highlights: z.array(z.string().max(400)).max(8), themes: z.array(z.string().max(400)).max(8), watch: z.array(z.string().max(400)).max(8), asks: z.array(z.string().max(400)).max(8) });
+const postSchema = z.discriminatedUnion("action", [
+  periodSchema.extend({ action: z.literal("draft") }),
+  periodSchema.extend({ action: z.literal("save"), summary: summarySchema, approve: z.boolean().default(false) }),
+  periodSchema.extend({ action: z.literal("send"), to: z.string().email(), subject: z.string().min(1).max(200), message: z.string().max(4000), attachPdf: z.boolean().default(true) }),
+  periodSchema.extend({ action: z.literal("email_me") }),
+  periodSchema.extend({ action: z.literal("preview"), message: z.string().max(4000), attachPdf: z.boolean().default(true) }),
+]);
+
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  const me = await irStaff();
+  if (!me) return forbidden();
+  const { id } = await ctx.params;
+  const parsed = postSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request." }, { status: 400 });
+  const body = parsed.data;
+  try {
+    const { data, error } = await load(id, body);
+    if (!data) return NextResponse.json({ error: error ?? "Couldn't build the report." }, { status: 400 });
+
+    if (body.action === "draft") {
+      const { summary, source } = await draftExecSummary(data);
+      return NextResponse.json({ summary, source });
+    }
+    if (body.action === "save") {
+      const report = await upsertReport({ projectId: id, period: data.period, execSummary: body.summary, metrics: freeze(data), approve: body.approve, by: me.id });
+      return NextResponse.json({ report });
+    }
+    if (body.action === "email_me") {
+      if (!me.email) return NextResponse.json({ error: "Your profile has no email address." }, { status: 400 });
+      const mail = summaryHtml(data);
+      const ok = await sendEmail({ to: me.email, subject: `[Copy] ${mail.subject}`, html: mail.html, text: mail.text, source: "ir-report-copy", triggeredBy: me.id });
+      if (!ok) return NextResponse.json({ error: "Email isn't configured on this environment (RESEND_API_KEY)." }, { status: 503 });
+      return NextResponse.json({ ok: true, to: me.email });
+    }
+    if (body.action === "preview") {
+      const ex = data.saved && isExecSummary(data.saved.exec_summary) ? data.saved.exec_summary : null;
+      const file = `Investor-Outreach-Report-${data.project.title.replace(/[^\w]+/g, "-")}-${data.period.start}.pdf`;
+      const { html } = reportEmail({
+        message: body.message,
+        subject: `${data.project.title} investor outreach report · ${data.period.label}`,
+        projectTitle: data.project.title,
+        attachment: body.attachPdf ? `${file}${ex ? "" : " · not yet approved, attaches once the summary is approved"}` : null,
+      });
+      return NextResponse.json({ html, subject: `${data.project.title} investor outreach report · ${data.period.label}` });
+    }
+    // send — only an approved snapshot goes out, and only to a real address
+    const saved = data.saved;
+    if (!saved || !saved.approved_at || !isExecSummary(saved.exec_summary)) return NextResponse.json({ error: "Approve the executive summary before sending." }, { status: 400 });
+    const frozen = saved.metrics as unknown as FrozenReport;
+    const attachments = body.attachPdf ? [{ filename: `Investor-Outreach-Report-${data.project.title.replace(/[^\w]+/g, "-")}-${data.period.start}.pdf`, content: (await renderReportPdf(frozen, saved.exec_summary)).toString("base64") }] : [];
+    const { html } = reportEmail({ message: body.message, subject: body.subject, projectTitle: data.project.title, attachment: attachments[0]?.filename ?? null });
+    const delivered = await sendEmail({ to: body.to, subject: body.subject, html, text: body.message, fromName: me.full_name ?? undefined, attachments, source: "ir-report", audience: "founder", triggeredBy: me.id });
+    if (!delivered) return NextResponse.json({ error: "Email isn't configured on this environment (RESEND_API_KEY), so the report was not sent." }, { status: 503 });
+    await markReportSent(saved.id, body.to);
+    await createActivity({ projectId: id, matchId: null, taskId: null, type: "email", subject: `${REPORT_SENT_PREFIX} · ${data.period.label}`, description: `Report ${saved.id} sent to ${body.to}`, doneAt: new Date().toISOString(), founderVisible: false, assigneeId: me.id, createdBy: me.id });
+    return NextResponse.json({ ok: true });
+  } catch (e) { return failed(e, "Couldn't complete that."); }
+}
+
+/** The IR lead's covering email, on the shared layout. The PDF carries the report itself. */
+function reportEmail(input: { message: string; subject: string; projectTitle: string; attachment: string | null }): { html: string } {
+  const paras = input.message.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return renderEmail({
+    audience: "founder",
+    subject: input.subject,
+    preheader: paras[0]?.replace(/\s+/g, " ") ?? input.subject,
+    context: `Investor Relations · ${input.projectTitle}`,
+    blocks: [
+      { type: "html", html: paras.map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:24px;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`).join("") },
+      ...(input.attachment ? [{ type: "note" as const, text: `Attached: ${input.attachment}` }] : []),
+    ],
+    footer: {
+      reason: `You get this because iCFO runs investor outreach for ${input.projectTitle}.`,
+      lines: ["Confidential. Investor names and contact details are held by iCFO Capital Global, Inc. Firms are named once a meeting is booked. This report is not an offer to sell securities."],
+    },
+  });
+}
+
+function escapeHtml(s: string): string { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)); }

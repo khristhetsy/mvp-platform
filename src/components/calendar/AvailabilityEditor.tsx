@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Clock, Check, Plus, Trash2 } from "lucide-react";
-import type { AvailabilitySettings, WeeklyRule, ScheduleQuestion } from "@/lib/scheduling/types";
+import type { AvailabilitySettings, WeeklyRule, ScheduleQuestion, ContactFieldConfig } from "@/lib/scheduling/types";
+import { DEFAULT_CONTACT_FIELDS } from "@/lib/scheduling/types";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -38,6 +39,9 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
     setSlotDurations((prev) => (prev.includes(n) ? prev.filter((d) => d !== n) : [...prev, n].sort((a, b) => a - b)));
   const [meetingTitle, setMeetingTitle] = useState("");
   const [questions, setQuestions] = useState<ScheduleQuestion[]>([]);
+  const [contactFields, setContactFields] = useState<ContactFieldConfig>(DEFAULT_CONTACT_FIELDS);
+  const setField = <K extends keyof ContactFieldConfig>(key: K, patch: Partial<ContactFieldConfig[K]>) =>
+    setContactFields((p) => ({ ...p, [key]: { ...p[key], ...patch } }));
 
   const addQuestion = () =>
     setQuestions((p) => [...p, { id: (crypto.randomUUID?.() ?? String(Date.now())), label: "", type: "multi", options: ["Option 1"], required: false }]);
@@ -82,6 +86,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
         setBufferMinutes(s.bufferMinutes ?? 0);
         setMeetingTitle(s.meetingTitle ?? "");
         setQuestions(Array.isArray(s.questions) ? s.questions : []);
+        if (s.contactFields) setContactFields(s.contactFields);
       }
     } finally {
       setLoading(false);
@@ -109,6 +114,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
         body: JSON.stringify({
           timezone, slotDurations, bufferMinutes, weeklyRules, meetingTitle,
           questions: questions.filter((q) => q.label.trim()).map((q) => ({ ...q, options: q.type === "short_text" ? [] : q.options.filter((o) => o.trim()) })),
+          contactFields,
         }),
       });
       if (!res.ok) {
@@ -122,7 +128,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
     } finally {
       setSaving(false);
     }
-  }, [days, timezone, slotDurations, bufferMinutes, meetingTitle, questions]);
+  }, [days, timezone, slotDurations, bufferMinutes, meetingTitle, questions, contactFields]);
 
   const setDay = (i: number, patch: Partial<DayState>) =>
     setDays((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -219,6 +225,34 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Contact details — configure the standard invitee fields */}
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <p className="text-sm font-semibold text-slate-900">Contact details</p>
+          <p className="mb-2.5 text-xs text-slate-500">The invitee fills these in when booking. Rename a field, choose what to collect, and mark what&apos;s required.</p>
+          <div className="space-y-2">
+            {/* Name + Email are always collected (email is needed for the invite). */}
+            {(["name", "email"] as const).map((key) => (
+              <div key={key} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2">
+                <input value={contactFields[key].label} onChange={(e) => setField(key, { label: e.target.value })} className="min-w-0 flex-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm" />
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">Always on</span>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={contactFields[key].required} onChange={(e) => setField(key, { required: e.target.checked })} className="h-3.5 w-3.5 rounded" /> Required</label>
+              </div>
+            ))}
+            {/* Phone + Company are opt-in. */}
+            {([
+              { key: "phone" as const, isNew: false },
+              { key: "company" as const, isNew: true },
+            ]).map(({ key, isNew }) => (
+              <div key={key} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[#B5D4F4] bg-[#F7FAFE] px-3 py-2">
+                <input value={contactFields[key].label} onChange={(e) => setField(key, { label: e.target.value })} className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-sm" />
+                {isNew ? <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-[10px] text-[#3B6D11]">New</span> : null}
+                <label className="flex items-center gap-1.5 text-xs text-[#0C447C]"><input type="checkbox" checked={contactFields[key].collect} onChange={(e) => setField(key, { collect: e.target.checked })} className="h-3.5 w-3.5 rounded" /> Collect</label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={contactFields[key].required} disabled={!contactFields[key].collect} onChange={(e) => setField(key, { required: e.target.checked })} className="h-3.5 w-3.5 rounded disabled:opacity-40" /> Required</label>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Booking questions */}

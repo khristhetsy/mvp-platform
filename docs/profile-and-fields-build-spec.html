@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile and fields — build spec</title>
+<style>
+  :root { --navy:#10233f; --blue:#2E78F5; --gold:#BA7517; --muted:#6b7486; --line:#e4e7ee; --warn:#854F0B; --warnbg:#FAEEDA; --bad:#A32D2D; --badbg:#FCEBEB; --ok:#0F6E56; --okbg:#E1F5EE; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:48px 28px 96px; font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#1d2432; background:#fff; }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size:30px; font-weight:600; letter-spacing:-.02em; margin:0 0 6px; color:var(--navy); }
+  h2 { font-size:19px; font-weight:600; margin:44px 0 10px; padding-top:18px; border-top:1px solid var(--line); color:var(--navy); }
+  h3 { font-size:15px; font-weight:600; margin:26px 0 8px; color:var(--navy); }
+  p, li { color:#2b3346; }
+  .eyebrow { font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); margin:0 0 10px; }
+  .lede { font-size:16px; color:#41495c; margin:0 0 4px; }
+  .meta { font-size:12px; color:var(--muted); margin:14px 0 0; }
+  table { width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px; }
+  th { text-align:left; font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:8px 10px 8px 0; border-bottom:1px solid var(--line); }
+  td { padding:9px 10px 9px 0; border-bottom:1px solid #f1f3f7; vertical-align:top; }
+  code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; background:#f5f6f9; padding:1px 5px; border-radius:4px; }
+  pre { background:#f7f8fb; border:1px solid var(--line); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; line-height:1.55; }
+  pre code { background:none; padding:0; }
+  ul, ol { padding-left:20px; }
+  li { margin:5px 0; }
+  .note { border-left:3px solid var(--blue); background:#f4f8ff; padding:11px 14px; border-radius:0 6px 6px 0; margin:14px 0; font-size:13.5px; }
+  .warn { border-left:3px solid var(--warn); background:var(--warnbg); padding:11px 14px; border-radius:0 6px 6px 0; margin:14px 0; font-size:13.5px; color:#5c3a08; }
+  .bad { border-left:3px solid var(--bad); background:var(--badbg); padding:11px 14px; border-radius:0 6px 6px 0; margin:14px 0; font-size:13.5px; color:#6d2020; }
+  .pill { display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; }
+  .p-new { background:var(--okbg); color:var(--ok); }
+  .p-edit { background:#eef1ff; color:#3C3489; }
+  .p-unk { background:var(--warnbg); color:var(--warn); }
+  footer { margin-top:56px; padding-top:18px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+<p class="eyebrow">iCapOS · Build specification</p>
+<h1>Profile and fields</h1>
+<p class="lede">An admin screen that owns the option lists every profile, form and matcher draws from — and shows which questions use them.</p>
+<p class="meta">Status: specification only, nothing built · Route <code>/admin/profile-fields</code> · Permission <code>manage_settings</code></p>
+
+<h2>1. Why</h2>
+<p>Industry values live in <code>src/lib/icfo-events/sectors.ts</code> as a hardcoded array of fourteen. There is no way to add, rename or retire one without a code change and a deploy. The same is true of stage, investor type and capital type.</p>
+<p>The deeper problem is that the platform does not have one list — it has several, and they disagree:</p>
+<ul>
+  <li><code>EVENT_SECTORS</code> — fourteen labels, used by the company profile, event registration and event tracks.</li>
+  <li>A second hardcoded copy of the same fourteen inside <code>FounderConversationalOnboarding.tsx</code>.</li>
+  <li>Odoo CRM industries, canonicalised at read time in <code>src/lib/industries/canonical.ts</code> — Fintech, Data/IoT, AgTech, Business Services, Hospitality. Outreach and <code>/fit</code> match against these.</li>
+  <li>Whatever an investor typed into the free-text “Preferred sectors” box.</li>
+  <li>Whatever <code>enrich-investors.ts</code> inferred from a firm’s website.</li>
+</ul>
+<p>Matching bridges these with a synonym table (<code>src/lib/matching/sector-synonyms.ts</code>). That table works, but it is a workaround for not having one vocabulary.</p>
+
+<h2>2. Scope</h2>
+<h3>In</h3>
+<ul>
+  <li>An <code>industry_options</code> table, seeded with exactly the current fourteen, and an admin UI to add, rename, reorder and archive.</li>
+  <li>A read path — server loader plus client provider — that every picker uses, falling back to the code constants when the table is unreachable.</li>
+  <li>A <strong>Vocabularies</strong> tab listing five option sets: Industry, Stage, Investor type, Capital type, Geography.</li>
+  <li>A <strong>Fields</strong> tab listing every profile field, where it is asked, whether it is required, and its match weight.</li>
+</ul>
+<h3>Out</h3>
+<ul>
+  <li>Amount of capital and check size. They stay numeric and keep their existing range-overlap scoring. Not converted to bands.</li>
+  <li>Any change to the eleven prose fields beyond labelling them as read by a person.</li>
+  <li>The matching core rewrite. Separate piece of work; this spec only surfaces its weights.</li>
+</ul>
+
+<div class="warn">
+  <strong>Naming.</strong> Fields keep the names they have today — “Amount of capital” on the founder side, “Typical check size” on the investor side. This work introduces no new field names.
+</div>
+
+<h2>3. Data model</h2>
+<p>One new table. Stage, investor type, capital type and geography stay in code for now and are rendered read-only on the Vocabularies tab until someone needs to edit them; the table below is the pattern each would follow.</p>
+
+<pre><code>create table if not exists public.industry_options (
+  id          uuid primary key default gen_random_uuid(),
+  slug        text not null unique,
+  label       text not null,
+  sort_order  integer not null default 0,
+  archived    boolean not null default false,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists industry_options_order_idx
+  on public.industry_options (archived, sort_order);
+
+alter table public.industry_options enable row level security;
+
+-- Staff manage it.
+drop policy if exists industry_options_staff_all on public.industry_options;
+create policy industry_options_staff_all on public.industry_options
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- The public event registration form must read it while signed out.
+-- Read-only, and the rows are question options rather than anyone's data.
+drop policy if exists industry_options_public_read on public.industry_options;
+create policy industry_options_public_read on public.industry_options
+  for select using (not archived);
+
+-- Seed: exactly today's fourteen, in today's order, so nothing moves on deploy.
+insert into public.industry_options (slug, label, sort_order)
+values
+  ('fintech','FinTech',10), ('healthtech','HealthTech',20),
+  ('saas','SaaS / B2B Software',30), ('edtech','EdTech',40),
+  ('cleantech','CleanTech',50), ('ecommerce','E-commerce',60),
+  ('ai-ml','AI / ML',70), ('real-estate','Real Estate',80),
+  ('consumer','Consumer',90), ('deep-tech','Deep Tech',100),
+  ('marketplace','Marketplace',110), ('logistics','Logistics',120),
+  ('hardware','Hardware',130), ('other','Other',140)
+on conflict (slug) do nothing;</code></pre>
+
+<div class="note">
+  <strong>The slug is permanent.</strong> Stored answers reference it. The label is display only and may be reworded at any time without touching a single record. This is the property that makes renaming safe, and it is the reason values must be stored as keys — see §7.
+</div>
+
+<h2>4. Read path</h2>
+<p>Every picker must resolve the same list, including client components and the signed-out registration form.</p>
+
+<table>
+  <tr><th style="width:38%">File</th><th>Responsibility</th></tr>
+  <tr><td><code>src/lib/industries/store.ts</code> <span class="pill p-new">new</span></td><td><code>listIndustries()</code> — server-only, wrapped in React <code>cache()</code>. Returns <code>{ slug, label, archived }[]</code>. Never throws; on any error or empty table returns the code seed.</td></tr>
+  <tr><td><code>src/lib/industries/provider.tsx</code> <span class="pill p-new">new</span></td><td><code>&lt;IndustryProvider value={…}&gt;</code> and <code>useIndustries()</code>. With no provider mounted the hook returns the code seed, so a missing provider renders exactly today’s behaviour rather than an empty picker.</td></tr>
+  <tr><td><code>src/lib/icfo-events/sectors.ts</code> <span class="pill p-edit">edit</span></td><td><code>EVENT_SECTORS</code> stays, demoted from source of truth to seed and fallback. <code>sectorLabel</code> and <code>isValidSectorSlug</code> keep working against the loaded list.</td></tr>
+  <tr><td><code>src/lib/industries.ts</code> <span class="pill p-edit">edit</span></td><td><code>INDUSTRY_OPTIONS</code> derives from the loaded list. <code>industryOptionsFor(current)</code> keeps its behaviour of prepending a non-canonical legacy value so it is never silently rewritten.</td></tr>
+</table>
+
+<p>The provider is mounted where the pickers live rather than in the root layout, so marketing pages are not given a database read they do not need:</p>
+<ul>
+  <li><code>src/app/admin/layout.tsx</code></li>
+  <li><code>src/app/founder/settings/page.tsx</code> and the founder onboarding page</li>
+  <li><code>src/app/investor/settings/page.tsx</code></li>
+  <li><code>src/app/events/[slug]/register/page.tsx</code> and the public event pages</li>
+</ul>
+
+<h2>5. Pickers to rewire</h2>
+<p>Every one of these imports the hardcoded list today. Each changes from a module import to <code>useIndustries()</code> — or, for server components, a prop.</p>
+
+<table>
+  <tr><th style="width:56%">File</th><th>Surface</th></tr>
+  <tr><td><code>src/components/founder/FounderConversationalOnboarding.tsx</code></td><td>Founder onboarding, step 2 — holds its own duplicate array</td></tr>
+  <tr><td><code>src/app/founder/settings/settings-form.tsx</code></td><td>Founder company profile</td></tr>
+  <tr><td><code>src/app/admin/sales/contacts/[id]/CompanyLinkedRecordEditor.tsx</code></td><td>CRM linked company record</td></tr>
+  <tr><td><code>src/components/admin/company-workspace/CompanyBasicsEditor.tsx</code></td><td>Admin company basics</td></tr>
+  <tr><td><code>src/components/events/EventRegistrationForm.tsx</code></td><td>Public event registration</td></tr>
+  <tr><td><code>src/components/events/NetworkingOptIn.tsx</code></td><td>Networking interests</td></tr>
+  <tr><td><code>src/components/admin-events/EventsManager.tsx</code></td><td>Event sector tracks</td></tr>
+  <tr><td><code>src/components/admin-events/EventDetailManager.tsx</code></td><td>Event detail, tracks and presenters</td></tr>
+  <tr><td><code>src/components/admin-events/SponsorCatalog.tsx</code></td><td>Sponsor sector targeting</td></tr>
+  <tr><td><code>src/app/admin/marketing/prospects/CreateListWizard.tsx</code></td><td>Prospect list builder</td></tr>
+  <tr><td><code>src/lib/icfo-events/registration-fields.ts</code>, <code>registration-field-sets.ts</code></td><td>Registration question definitions</td></tr>
+  <tr><td><code>src/lib/icfo-events/schemas.ts</code></td><td>Sector track validation</td></tr>
+</table>
+
+<h2>6. The page</h2>
+<p>Route <code>/admin/profile-fields</code>, guarded by <code>manage_settings</code>, added to the <strong>Administration</strong> group in <code>src/lib/workspace-nav.ts</code> between “My Profile” and “Feature Controls”, labelled <strong>Profile and fields</strong>.</p>
+<p>House conventions apply without exception: <code>PageHeader</code> with eyebrow, actions right-aligned in each card’s own header, live search via <code>src/lib/ui/live-search.ts</code> with <code>SearchStatus</code>, counts reflecting the filter (“6 of 14”, never the unfiltered total), and matches highlighted.</p>
+
+<h3>Tab one — Vocabularies</h3>
+<p>Five cards, ordered by match weight. Each shows its values as chips and a line naming what it feeds.</p>
+<table>
+  <tr><th style="width:24%">List</th><th style="width:10%">Weight</th><th>Values</th></tr>
+  <tr><td>Industry</td><td>25</td><td>The fourteen. Editable, opens into a detail view.</td></tr>
+  <tr><td>Stage</td><td>20</td><td>Pre-seed · Seed · Series A · Series B · Growth · Other</td></tr>
+  <tr><td>Investor type</td><td>10</td><td>Individual angel · Angel group / syndicate · Family office · Venture fund · Corporate / strategic · Other</td></tr>
+  <tr><td>Capital type</td><td>10</td><td>Equity · SAFE · Convertible note · Venture debt · Revenue-based</td></tr>
+  <tr><td>Geography</td><td>10</td><td>North America · Europe · LATAM · APAC · MENA · Africa · Global</td></tr>
+</table>
+<div class="warn">
+  <strong>Geography does not exist yet.</strong> Investors type geographies free-hand and founders type a country and a state. The seven regions above are a proposal, not a list in the codebase, and need sign-off before they are seeded.
+</div>
+<div class="bad">
+  <strong>Capital type is marked “never scores”.</strong> Founders answer it; no investor is ever asked. <code>InvestorMatchProfile.capitalTypes</code> is optional and the matching pass does not select it, so the factor drops out of every platform match. The card states this rather than presenting a healthy-looking list.
+</div>
+
+<h3>Industry detail view</h3>
+<p>The only list that needs more than inline chips, because it is the only one with meaningful per-value usage.</p>
+<ul>
+  <li><strong>Table</strong> — Name · Key · founders · investors · registrations · actions.</li>
+  <li><strong>Add</strong> — name typed, slug derived and shown locked before saving.</li>
+  <li><strong>Rename</strong> — inline; the row states how many records display the new wording and that the key is unchanged.</li>
+  <li><strong>Archive</strong> — removes it from new pickers. Records already carrying it keep it and still match. <strong>Nothing deletes.</strong></li>
+  <li><strong>Legacy values</strong> — free-text industries held by existing records appear with a <em>legacy</em> tag and an <em>Adopt</em> action that promotes one into a real option with its own key.</li>
+</ul>
+<div class="note">
+  Counts come from live queries against <code>companies</code>, <code>investor_profiles</code> and <code>registrations</code>. A count that cannot be loaded renders as unmeasured with the query named — never as zero, and never as a placeholder figure.
+</div>
+
+<h3>Tab two — Fields</h3>
+<p>One row per field: name · audience · asked on · required · match weight. Three summary tiles: fields asked, fields scored, fields required but unscored.</p>
+<p>Weights are read from the live matching config (<code>DEFAULT_ENGINE_WEIGHTS</code> and the admin override), never from a copy, so this tab cannot drift from what the matcher does.</p>
+<p>Required can be toggled here. A field the matcher reads cannot be switched off without the UI stating what that costs.</p>
+<p>The eleven fields scored by nothing — investment thesis, description, one-line pitch, use of funds, investor-fit notes, five key highlights, team summary, management team, annual EBITDA, annual revenue size, business entity — are listed as <em>read by a person</em>. Nine of them are required today, which is the fact this tab exists to expose.</p>
+
+<h2>7. Storage rule</h2>
+<p>Values are stored as keys and displayed as labels. This is not cosmetic. Two registration paths currently disagree — <code>resolvedOptionsFor</code> in <code>registration-field-sets.ts</code> returns <code>o.label</code> and discards the slug, so the field-set questions store <span class="mono">"FinTech"</span> while the networking interest chips on the same page store <span class="mono">"fintech"</span>. <code>sectorsOf</code> compares those as raw strings, so a guest registered by staff shares no sector with one who registered themselves.</p>
+<p>The fix belongs in this work: <code>resolvedOptionsFor</code> returns values, labels travel beside them in <code>optionLabels</code>, and every renderer resolves display through one helper.</p>
+
+<h2>8. API</h2>
+<table>
+  <tr><th style="width:42%">Route</th><th>Behaviour</th></tr>
+  <tr><td><code>GET /api/admin/profile-fields/industries</code></td><td>List with usage counts. <code>manage_settings</code>.</td></tr>
+  <tr><td><code>POST /api/admin/profile-fields/industries</code></td><td>Create. Slug derived server-side, uniqueness enforced, rejects a slug that already exists including archived.</td></tr>
+  <tr><td><code>PATCH /api/admin/profile-fields/industries/[id]</code></td><td>Rename, reorder, archive or restore. Slug is immutable and a request attempting to change it is rejected.</td></tr>
+</table>
+<p>No delete endpoint. Archiving is the only removal.</p>
+
+<h2>9. Tests</h2>
+<ul>
+  <li><strong>Store</strong> — returns the seed when the table is empty, unreachable, or the query errors; never throws; archived values excluded from pickers but still resolvable by <code>sectorLabel</code>.</li>
+  <li><strong>Provider</strong> — <code>useIndustries()</code> with no provider mounted returns the code seed.</li>
+  <li><strong>Slug</strong> — derived deterministically, immutable across renames, collision with an archived slug rejected.</li>
+  <li><strong>Options</strong> — <code>resolvedOptionsFor</code> returns values not labels; <code>resolveField</code> attaches <code>optionLabels</code> only where value and label differ.</li>
+  <li><strong>pg test</strong> — the migration applied against PGlite: table shape, RLS present, seed idempotent, re-running changes nothing.</li>
+  <li><strong>Guards</strong> — <code>select-columns.pg.test.ts</code> and <code>nav-routes.test.ts</code> both pass with the new route and table.</li>
+</ul>
+
+<h2>10. Acceptance</h2>
+<ol>
+  <li>Adding an industry on the page makes it appear in founder onboarding, the founder company profile, the admin company editor, the CRM linked record, event registration, networking interests, event sector tracks, the sponsor catalog and the prospect list builder — with no deploy.</li>
+  <li>Renaming one changes every display and breaks no stored answer.</li>
+  <li>Archiving one removes it from pickers while existing records keep it and continue to match.</li>
+  <li>With the table dropped or unreachable, every picker still renders the original fourteen.</li>
+  <li>A guest registered by staff and one who registered themselves, both choosing the same industry, produce a match.</li>
+  <li>Every count on the page is a live query or is labelled unmeasured. No placeholder figures.</li>
+</ol>
+
+<h2>11. Risks</h2>
+<table>
+  <tr><th style="width:34%">Risk</th><th>Handling</th></tr>
+  <tr><td>Client pickers cannot read a server table directly</td><td>Provider mounted per surface, code seed as fallback, so the failure mode is today’s behaviour rather than an empty list</td></tr>
+  <tr><td>Touches the event registration flow, reverted once already</td><td>Ship the loader and provider first with no visible change, then the pickers, then the page. Preview branch before <code>main</code></td></tr>
+  <tr><td>Renaming a label that stored answers hold as text</td><td>Storage rule in §7 lands in the same change; until it does, a rename is display-only and legacy text values are preserved</td></tr>
+  <tr><td>Industry becoming a filter rather than a signal</td><td>Explicitly out of scope. A hard industry gate once emptied the outreach board despite thousands of contacts; industry contributes points and never excludes</td></tr>
+</table>
+
+<h2>12. Open decisions</h2>
+<ol>
+  <li>The seven geography regions — mine, not yours. Sign off or replace.</li>
+  <li>Whether stage, investor type and capital type become editable tables now or stay read-only in code until someone needs to change them.</li>
+  <li>Capital type: wire an investor-side question, or delete the factor and redistribute its ten points.</li>
+</ol>
+
+<footer>
+  Specification only. No code has been written for this document.<br>
+  Figures in this spec are drawn from the codebase; no record counts are asserted, because none have been measured.
+</footer>
+
+</main>
+</body>
+</html>

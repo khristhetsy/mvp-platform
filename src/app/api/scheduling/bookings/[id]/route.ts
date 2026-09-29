@@ -1,0 +1,88 @@
+/**
+ * Update a booking's status (staff-only). Confirmed → Completed / No-show / Cancelled.
+ * Cancelling also removes the host's calendar event (and its Google copy) and emails
+ * both parties. Calendar + email + activity are best-effort — a hiccup there never
+ * blocks the status change.
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireRole } from "@/lib/supabase/auth";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getBooking, updateBookingStatus, updateBookingNote, setBookingSource, BOOKING_STATUSES } from "@/lib/scheduling/bookings";
+import { normalizeSourceTag } from "@/lib/attribution/source";
+import { cancelEvent } from "@/lib/calendar/events";
+import { sendBookingCancellation } from "@/lib/scheduling/notify";
+import { logActivity } from "@/lib/sales/activity";
+
+export const dynamic = "force-dynamic";
+
+const patchSchema = z.object({
+  status: z.enum(BOOKING_STATUSES).optional(),
+  note: z.string().max(4000).nullable().optional(),
+  // Staff attribution override. Null clears it back to unattributed. Wins over
+  // every machine-captured signal, because the person setting it sat in the
+  // meeting — and the row records who and when.
+  sourceTag: z.string().max(120).nullable().optional(),
+}).refine((d) => d.status !== undefined || d.note !== undefined || d.sourceTag !== undefined, { message: "Nothing to update." });
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const profile = await requireRole(["admin", "analyst"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
+  const { id } = await params;
+  const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  const { status, note, sourceTag } = parsed.data;
+
+  const before = await getBooking(id);
+  if (!before) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+
+  // Source-only update — no calendar or email side effects.
+  if (sourceTag !== undefined && status === undefined && note === undefined) {
+    const tag = sourceTag === null ? null : normalizeSourceTag(sourceTag);
+    if (sourceTag !== null && !tag) {
+      return NextResponse.json(
+        { error: "That is not a campaign tag. Pick a campaign, or clear the source." },
+        { status: 400 },
+      );
+    }
+    const res = await setBookingSource({ bookingId: id, tag, userId: profile.id });
+    if (res.error) return NextResponse.json({ error: res.error }, { status: 500 });
+    const fresh = await getBooking(id);
+    return NextResponse.json({ ok: true, booking: fresh });
+  }
+
+  // Note-only update (private meeting notes) — no calendar/email side effects.
+  if (status === undefined) {
+    const noted = await updateBookingNote(id, note ?? null);
+    if (!noted) return NextResponse.json({ error: "Couldn’t save the note." }, { status: 500 });
+    return NextResponse.json({ ok: true, booking: noted });
+  }
+
+  const updated = await updateBookingStatus(id, status);
+  if (!updated) return NextResponse.json({ error: "Couldn’t update the booking." }, { status: 500 });
+
+  if (status === "cancelled") {
+    // Remove the host's calendar event (+ Google copy), notify both parties.
+    if (before.host_id && before.event_id) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await cancelEvent(createServiceRoleClient() as any, before.host_id, before.event_id);
+      } catch { /* best-effort */ }
+    }
+    try {
+      await sendBookingCancellation({
+        hostEmail: before.host_email ?? null, hostName: before.host_name ?? null,
+        bookerEmail: before.booker_email, bookerName: before.booker_name,
+        title: before.event_type ?? "Meeting", startTime: before.start_time, timezone: before.timezone ?? "UTC",
+      });
+    } catch { /* best-effort */ }
+  }
+
+  // Log the status change on the linked contact's timeline (best-effort).
+  if (before.contact_crm_id) {
+    const verb = status === "cancelled" ? "Booking cancelled" : status === "completed" ? "Booking completed" : status === "no_show" ? "Booking marked no-show" : "Booking reconfirmed";
+    await logActivity({ kind: "note", summary: `${verb}${before.event_type ? `: ${before.event_type}` : ""}`, actorId: profile.id, contactCrmId: before.contact_crm_id });
+  }
+
+  return NextResponse.json({ ok: true, booking: updated });
+}

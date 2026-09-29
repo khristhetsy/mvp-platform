@@ -31,7 +31,21 @@ export type AdminNbaContext = {
   queueItems: Partial<Record<AdminQueueType, AdminQueueItem[]>>;
 };
 
-export async function loadAdminNbaContext(supabase: SupabaseClient<Database>): Promise<AdminNbaContext> {
+/**
+ * Data the admin dashboard page has already loaded. When supplied, the NBA
+ * context reuses it instead of querying the same four sources a second time.
+ */
+export type AdminNbaPreload = {
+  metrics: { pendingReviews: number };
+  queueSummary: Array<{ queue_type: string; count: number }>;
+  compliance: { openEvents?: number | null };
+  activityItems: Array<{ severity: string }>;
+};
+
+export async function loadAdminNbaContext(
+  supabase: SupabaseClient<Database>,
+  preload?: AdminNbaPreload,
+): Promise<AdminNbaContext> {
   const [
     metrics,
     queueSummary,
@@ -47,10 +61,12 @@ export async function loadAdminNbaContext(supabase: SupabaseClient<Database>): P
     investorDocItems,
     importItems,
   ] = await Promise.all([
-    getAdminDashboardMetrics(supabase),
-    getAdminQueueSummary(supabase).catch(() => []),
-    getComplianceMetrics(supabase).catch(() => ({ openEvents: 0 })),
-    getOperationalActivityFeed(supabase, { limit: 20 }).catch(() => ({ items: [], total: 0, hasMore: false })),
+    preload ? Promise.resolve(preload.metrics) : getAdminDashboardMetrics(supabase),
+    preload ? Promise.resolve(preload.queueSummary) : getAdminQueueSummary(supabase).catch(() => []),
+    preload ? Promise.resolve(preload.compliance) : getComplianceMetrics(supabase).catch(() => ({ openEvents: 0 })),
+    preload
+      ? Promise.resolve({ items: preload.activityItems.slice(0, 20) })
+      : getOperationalActivityFeed(supabase, { limit: 20 }).catch(() => ({ items: [], total: 0, hasMore: false })),
     supabase.from("import_batches").select("id", { count: "exact", head: true }).eq("status", "failed"),
     supabase.from("import_batches").select("id", { count: "exact", head: true }).eq("status", "validated"),
     supabase

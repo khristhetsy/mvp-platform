@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { optOutByNumber } from "@/lib/voice/messaging";
+import { handleInboundReply } from "@/lib/voice/inbound-replies";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 // but we also record it: any STOP-class keyword adds the number to the DNC list
 // and revokes consent across every channel. Auth is a shared secret in the URL
 // query (`?s=VOICE_AGENT_SECRET`) since Twilio can't send custom headers.
+// Any other reply is logged and raised to staff (see inbound-replies.ts).
 
 const STOP_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit", "stop all", "remove"]);
 const TWIML_EMPTY = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -20,10 +22,13 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   try {
     const form = await req.formData();
-    const from = String(form.get("From") ?? "").replace(/^whatsapp:/, "").trim();
-    const body = String(form.get("Body") ?? "").trim().toLowerCase();
-    if (from && STOP_WORDS.has(body)) {
+    const rawFrom = String(form.get("From") ?? "");
+    const from = rawFrom.replace(/^whatsapp:/, "").trim();
+    const text = String(form.get("Body") ?? "").trim();
+    if (from && STOP_WORDS.has(text.toLowerCase())) {
       await optOutByNumber(from);
+    } else if (from && text) {
+      await handleInboundReply({ channel: rawFrom.startsWith("whatsapp:") ? "whatsapp" : "sms", from, body: text });
     }
   } catch (err) {
     Sentry.captureException(err);

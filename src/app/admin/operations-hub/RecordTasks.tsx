@@ -25,8 +25,8 @@ function TaskEditRow({ draft, setDraft, assignees, onSave, onCancel, busy }: { d
       <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} style={INP} />
       <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as Task["status"] })} style={INP}><option value="open">Open</option><option value="in_progress">In progress</option><option value="done">Done</option></select>
       <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-        <button onClick={onSave} disabled={busy || !draft.title.trim()} style={{ fontSize: 10.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 5, padding: "4px 9px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Save</button>
-        <button onClick={onCancel} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+        <button type="button" onClick={onSave} disabled={busy || !draft.title.trim()} style={{ fontSize: 10.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 5, padding: "4px 9px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Save</button>
+        <button type="button" onClick={onCancel} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
       </div>
     </div>
   );
@@ -84,7 +84,7 @@ export function RecordTasks({ entityType, entityId }: { entityType: string; enti
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "0.5px solid var(--border)" }}>
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)" }}>Tasks</span>
         <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{tasks.filter((t) => t.status !== "done").length} open</span>
-        <button onClick={startNew} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer" }}>+ Assign task</button>
+        <button type="button" onClick={startNew} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer" }}>+ Assign task</button>
       </div>
 
       {editing === "new" && <TaskEditRow draft={draft} setDraft={setDraft} assignees={assignees} onSave={save} onCancel={() => setEditing(null)} busy={busy} />}
@@ -101,8 +101,8 @@ export function RecordTasks({ entityType, entityId }: { entityType: string; enti
           <span style={{ fontSize: 11, color: t.due_date && new Date(t.due_date) < new Date() && t.status !== "done" ? "#A32D2D" : "var(--muted-foreground)" }}>{t.due_date ?? "—"}</span>
           <span><span style={{ fontSize: 10, fontWeight: 600, color: STATUS_BADGE[t.status].color, background: STATUS_BADGE[t.status].bg, borderRadius: 10, padding: "2px 8px" }}>{STATUS_BADGE[t.status].text}</span></span>
           <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button onClick={() => startEdit(t)} title="Edit" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-pencil" aria-hidden="true" /></button>
-            <button onClick={() => patch(t.id, { archived: true })} title="Archive" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-trash" aria-hidden="true" /></button>
+            <button type="button" onClick={() => startEdit(t)} title="Edit" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-pencil" aria-hidden="true" /></button>
+            <button type="button" onClick={() => patch(t.id, { archived: true })} title="Archive" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12 }}><i className="ti ti-trash" aria-hidden="true" /></button>
           </span>
         </div>
       ))}

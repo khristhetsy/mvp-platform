@@ -62,7 +62,7 @@ export function ExportStep() {
               {COLUMNS.map((c) => {
                 const on = cols.has(c.key);
                 return (
-                  <button key={c.key} onClick={() => toggle(c.key)} style={{ fontSize: 11, fontWeight: 600, borderRadius: 999, padding: "4px 11px", cursor: "pointer", border: on ? "0.5px solid #93C5FD" : "0.5px solid var(--border)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)" }}>
+                  <button type="button" key={c.key} onClick={() => toggle(c.key)} style={{ fontSize: 11, fontWeight: 600, borderRadius: 999, padding: "4px 11px", cursor: "pointer", border: on ? "0.5px solid #93C5FD" : "0.5px solid var(--border)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)" }}>
                     {on ? <><i className="ti ti-check" aria-hidden="true" /> </> : "＋ "}{c.label}
                   </button>
                 );
@@ -72,7 +72,7 @@ export function ExportStep() {
             <label style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted-foreground)", display: "block", marginBottom: 6 }}>Format</label>
             <div style={{ display: "flex", gap: 7, marginBottom: 16 }}>
               {(["csv", "xlsx"] as const).map((f) => (
-                <button key={f} onClick={() => setFormat(f)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "7px 16px", cursor: "pointer", border: format === f ? "1px solid #2E78F5" : "0.5px solid var(--border)", background: format === f ? "#EFF6FF" : "#fff", color: format === f ? "#1A6CE4" : "var(--muted-foreground)" }}>
+                <button type="button" key={f} onClick={() => setFormat(f)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "7px 16px", cursor: "pointer", border: format === f ? "1px solid #2E78F5" : "0.5px solid var(--border)", background: format === f ? "#EFF6FF" : "#fff", color: format === f ? "#1A6CE4" : "var(--muted-foreground)" }}>
                   {f === "csv" ? ".CSV" : ".XLSX (Excel)"}
                 </button>
               ))}

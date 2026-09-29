@@ -47,10 +47,6 @@ function groupByDay(events: EnrichedActivityEvent[]): { label: string; events: E
 
 type EventConfig = { label: string; bg: string; color: string; icon: React.ReactElement };
 
-function eventIcon(stroke: string) {
-  return { stroke };
-}
-
 const CONFIGS: Record<string, EventConfig> = {
   room_created: {
     label: "Room created",

@@ -128,7 +128,7 @@ export function ProfileEditModal({ externalId, contactName, onClose }: { externa
       <div className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-sm font-semibold text-slate-950">Edit all fields — {contactName}</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -152,8 +152,8 @@ export function ProfileEditModal({ externalId, contactName, onClose }: { externa
         <div className="flex shrink-0 items-center justify-between border-t border-slate-100 px-5 py-3">
           <p className="text-[11px] text-slate-400">Writes directly to Odoo (system of record) and refreshes the CRM.</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button onClick={save} disabled={saving || loading || !schema} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={save} disabled={saving || loading || !schema} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save to Odoo
             </button>
           </div>

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadCommandCenter } from "@/lib/voice/command-center";
 import { LiveCallsPanel } from "@/components/voice/LiveCallsPanel";
+import { MetricCard } from "@/components/MetricCard";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,61 @@ export default async function VoiceCommandCenterPage() {
     { label: "Dialing", ok: dialingOn, note: dialingOn ? "live" : "off · kill-switch" },
   ];
 
+  // Shared metric tile: ring for scale, unit for the denominator, flag for the
+  // one fact worth acting on. Rates are already 0-100 so the ring is literal;
+  // counts have no ceiling, so they get a presence ring instead of a fake arc.
+  const calls = k?.callsPlaced ?? 0;
+  const connect = k?.connectRate ?? 0;
+  const demos = k?.demosBooked ?? 0;
+  const optOut = k?.optOutRate ?? 0;
+
   const tiles = [
-    { n: (k?.callsPlaced ?? 0).toLocaleString(), label: "Calls placed", tone: "blue" },
-    { n: `${k?.connectRate ?? 0}%`, label: "Connect rate", tone: "" },
-    { n: (k?.demosBooked ?? 0).toLocaleString(), label: "Demos booked", tone: "good" },
-    { n: `${k?.optOutRate ?? 0}%`, label: "Opt-out rate", tone: "warn", canary: true },
-    { n: money(k?.costPerCall ?? 0), label: "Cost / call", tone: "" },
+    {
+      label: "Calls placed",
+      value: calls.toLocaleString(),
+      detail: "Dialled today",
+      accent: "blue" as const,
+      ring: { percent: null, center: calls.toLocaleString(), pending: calls === 0, color: calls > 0 ? "#0C60D8" : undefined },
+      flag: calls === 0 ? { text: "Nothing dialled today.", tone: "warn" as const } : null,
+    },
+    {
+      label: "Connect rate",
+      value: `${connect}%`,
+      detail: `of ${calls.toLocaleString()} calls placed`,
+      accent: "slate" as const,
+      ring: { percent: connect, center: `${connect}%`, pending: calls === 0 },
+      flag: calls > 0 && connect < 20 ? { text: "Below the 20% healthy floor.", tone: "warn" as const } : null,
+    },
+    {
+      label: "Demos booked",
+      value: demos.toLocaleString(),
+      detail: calls > 0 ? `from ${calls.toLocaleString()} calls` : "no calls placed today",
+      accent: "violet" as const,
+      ring: {
+        percent: calls > 0 ? Math.round((demos / calls) * 100) : null,
+        center: demos.toLocaleString(),
+        pending: demos === 0,
+        color: "#059669",
+      },
+      flag: demos > 0 ? { text: `${Math.round((demos / Math.max(calls, 1)) * 100)}% of calls converted.`, tone: "good" as const } : null,
+    },
+    {
+      label: "Opt-out rate",
+      value: `${optOut}%`,
+      detail: "Canary metric — watched for compliance",
+      accent: "slate" as const,
+      ring: { percent: optOut, center: `${optOut}%`, pending: calls === 0, color: optOut > 3 ? "#DC2626" : "#D97706" },
+      // 3% is the escalation threshold this canary exists to catch.
+      flag: optOut > 3 ? { text: "Above the 3% canary threshold — pause and review.", tone: "bad" as const } : null,
+    },
+    {
+      label: "Cost / call",
+      value: money(k?.costPerCall ?? 0),
+      detail: calls > 0 ? `across ${calls.toLocaleString()} calls` : "no calls placed today",
+      accent: "slate" as const,
+      ring: { percent: null, center: money(k?.costPerCall ?? 0), pending: calls === 0 },
+      flag: null,
+    },
   ];
 
   const funnelRows = f
@@ -78,13 +128,17 @@ export default async function VoiceCommandCenterPage() {
 
         {/* KPIs */}
         <p className="mt-6 mb-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-400">Today</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5 [&>*]:h-full">
           {tiles.map((t) => (
-            <div key={t.label} className="relative rounded-xl border border-slate-200 p-4">
-              {t.canary && <span className="absolute right-2.5 top-2.5 rounded bg-amber-50 px-1.5 py-0.5 text-[8.5px] font-bold tracking-wide text-amber-700">CANARY</span>}
-              <div className={`text-2xl font-semibold ${t.tone === "blue" ? "text-[#0C60D8]" : t.tone === "good" ? "text-emerald-600" : t.tone === "warn" ? "text-amber-600" : "text-slate-900"}`}>{t.n}</div>
-              <div className="mt-1 text-[11px] font-medium text-slate-500">{t.label}</div>
-            </div>
+            <MetricCard
+              key={t.label}
+              label={t.label}
+              value={t.value}
+              detail={t.detail}
+              accent={t.accent}
+              ring={t.ring}
+              flag={t.flag}
+            />
           ))}
         </div>
 

@@ -122,7 +122,8 @@ export default async function FounderMatchingPage() {
         )}
         <div className="mt-6">
           <MatchingCenterList
-            cards={cards}
+            scope="matching"
+          cards={cards}
             introEndpoint="/api/founder/matching/intro"
             followUpEndpoint="/api/founder/matching/follow-up"
             draftEndpoint="/api/founder/matching/draft-note"

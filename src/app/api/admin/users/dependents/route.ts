@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireManageUsersApi } from "@/lib/api/permissions";
+import { countRequiredOwnership, listSuccessorCandidates } from "@/lib/users/ownership-transfer";
 
 /**
  * GET /api/admin/users/dependents?userId=<uuid>
@@ -89,5 +90,9 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const total = items.reduce((sum, i) => sum + i.count, 0);
 
-  return NextResponse.json({ userId, items, total });
+  // Records that must be handed to a teammate before the delete can run.
+  const owned = await countRequiredOwnership(admin, userId);
+  const candidates = owned.total > 0 ? await listSuccessorCandidates(admin, userId) : [];
+
+  return NextResponse.json({ userId, items, total, mustReassign: owned.items, candidates });
 }

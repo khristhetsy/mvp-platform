@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { isComplianceNoticeStyle, isProcessStepIcon } from "@/lib/page-builder/content-rules";
-import { getLayoutRegionDescriptors, getRegionBlocks, isLayoutBlockType } from "@/lib/page-builder/layout-blocks";
+import { getLayoutRegionDescriptors, getRegionBlocks } from "@/lib/page-builder/layout-blocks";
 import type { PageBlock, PreviewMode } from "@/lib/page-builder/types";
 
 function asString(value: unknown) {

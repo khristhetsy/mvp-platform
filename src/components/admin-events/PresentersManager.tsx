@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventPresenter } from "@/lib/icfo-events/types";
+import { ReusePresentersDrawer } from "@/components/admin-events/ReusePresentersDrawer";
 
 type EventOpt = { id: string; title: string; timezone: string | null };
+type SessionOpt = { id: string; eventId: string; title: string };
 
-const ROLE_OPTIONS = ["Presenter", "Panelist", "Founder showcase"];
+// Guest CEO and Investor bill a person under a session rather than in the flat
+// roster list — the talk-show line-up. `role_label` is free text, so these are
+// options rather than an enum; the email groups them case-insensitively.
+const ROLE_OPTIONS = ["Presenter", "Panelist", "Founder showcase", "Guest CEO", "Investor", "Exhibitor"];
 const TZ_OPTIONS = [
   "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York",
   "UTC", "Europe/London", "Europe/Berlin", "Asia/Singapore", "Asia/Kolkata", "Australia/Sydney",
@@ -52,11 +57,84 @@ type FormState = {
   date: string;
   time: string;
   meetingUrl: string;
+  sessionId: string;
 };
 
-function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
+// Headshot or company logo for the booklet. The booklet avatar shows the
+// headshot, then the company logo, then initials.
+function PresenterImageField({ presenter, kind, url, onChange }: {
+  presenter: EventPresenter;
+  kind: "headshot" | "logo";
+  url: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const endpoint = `/api/admin/events/${presenter.eventId}/presenters/${presenter.id}/image?kind=${kind}`;
+  const label = kind === "headshot" ? "Headshot" : "Company logo";
+  const hint = kind === "headshot" ? "Square photo, PNG or JPG, up to 5 MB." : "Used when there is no headshot. PNG or JPG, up to 5 MB.";
+
+  async function upload(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(endpoint, { method: "POST", body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Upload failed.");
+      onChange((json.url as string | null) ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(typeof j.error === "string" ? j.error : "Remove failed."); }
+      onChange(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Remove failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] ${url ? "bg-white" : "bg-slate-50"}`}>
+        {url
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={url} alt={label} className={kind === "headshot" ? "h-full w-full object-cover" : "h-[70%] w-[70%] object-contain"} />
+          : <i className={`ti ${kind === "headshot" ? "ti-user" : "ti-building"} text-xl text-[var(--text-muted)]`} aria-hidden="true" />}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-[var(--text-secondary)]">{label}</p>
+        <p className="text-[10.5px] text-[var(--text-muted)]">{hint}</p>
+        <div className="mt-1 flex gap-2">
+          <input ref={input} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+          <button type="button" onClick={() => input.current?.click()} disabled={busy} className="rounded-md border border-[var(--border-subtle)] bg-white px-2 py-1 text-[11px] font-medium text-[var(--blue)] disabled:opacity-50">
+            {busy ? "Working…" : url ? "Replace" : "Upload"}
+          </button>
+          {url && <button type="button" onClick={remove} disabled={busy} className="text-[11px] text-rose-600 disabled:opacity-50">Remove</button>}
+        </div>
+        {error && <p className="mt-1 text-[10.5px] text-rose-700">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+function PresenterForm({ mode, events, sessions, presenter, onSaved, onCancel }: {
   mode: "add" | "edit";
   events?: EventOpt[];
+  sessions?: SessionOpt[];
   presenter?: EventPresenter;
   onSaved: (p: EventPresenter) => void;
   onCancel: () => void;
@@ -76,9 +154,22 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
     date: split.date,
     time: split.time,
     meetingUrl: presenter?.meetingUrl ?? "",
+    sessionId: presenter?.sessionId ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [creatingMeet, setCreatingMeet] = useState(false);
+  const [images, setImages] = useState<{ headshotUrl: string | null; logoUrl: string | null }>({ headshotUrl: null, logoUrl: null });
+
+  // Signed preview URLs for the stored headshot and logo (edit mode only).
+  useEffect(() => {
+    if (mode !== "edit" || !presenter) return;
+    let live = true;
+    fetch(`/api/admin/events/${presenter.eventId}/presenters/${presenter.id}/image`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (live && j) setImages({ headshotUrl: j.headshotUrl ?? null, logoUrl: j.logoUrl ?? null }); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [mode, presenter]);
   const [error, setError] = useState<string | null>(null);
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) { setF((s) => ({ ...s, [k]: v })); }
@@ -97,6 +188,7 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
       timezone: f.date && f.time ? f.tz : null,
       startsAt,
       meetingUrl: f.meetingUrl.trim() || "",
+      sessionId: f.sessionId || null,
     };
   }
 
@@ -162,9 +254,32 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
             {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </label>
+        <label className="block">
+          <span className={L}>Session</span>
+          <select value={f.sessionId} onChange={(e) => set("sessionId", e.target.value)} className={I}>
+            <option value="">— not tied to a session —</option>
+            {(sessions ?? []).filter((s) => s.eventId === f.eventId).map((s) => (
+              <option key={s.id} value={s.id}>{s.title}</option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[10.5px] text-[var(--text-muted)]">
+            Billed under that session in the email and the booklet. Left blank, they appear in the roster list instead.
+          </span>
+        </label>
         <label className="block"><span className={L}>Talk topic / headline</span><input value={f.headline} onChange={(e) => set("headline", e.target.value)} className={I} /></label>
         <label className="block sm:col-span-2"><span className={L}>Short bio</span><textarea rows={2} value={f.bio} onChange={(e) => set("bio", e.target.value)} className={I} /></label>
         <label className="block sm:col-span-2"><span className={L}>Company summary</span><textarea rows={2} value={f.companySummary} onChange={(e) => set("companySummary", e.target.value)} placeholder="What the company does, stage, traction…" className={I} /></label>
+        <div className="sm:col-span-2 mt-1 rounded-md border border-[var(--border-subtle)] bg-white p-2.5">
+          <p className="mb-1.5 text-[11px] font-medium text-[var(--text-secondary)]"><i className="ti ti-photo" aria-hidden="true" /> Booklet images</p>
+          {mode === "edit" && presenter ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PresenterImageField presenter={presenter} kind="headshot" url={images.headshotUrl} onChange={(u) => setImages((s) => ({ ...s, headshotUrl: u }))} />
+              <PresenterImageField presenter={presenter} kind="logo" url={images.logoUrl} onChange={(u) => setImages((s) => ({ ...s, logoUrl: u }))} />
+            </div>
+          ) : (
+            <p className="text-[10.5px] text-[var(--text-muted)]">Save the presenter first, then add a headshot and company logo.</p>
+          )}
+        </div>
         <label className="block sm:col-span-2"><span className={L}>Links (comma-separated)</span><input value={f.links} onChange={(e) => set("links", e.target.value)} placeholder="https://…, https://…" className={I} /></label>
 
         <div className="sm:col-span-2 mt-1 rounded-md border border-[var(--border-subtle)] bg-white p-2.5">
@@ -199,9 +314,10 @@ function PresenterForm({ mode, events, presenter, onSaved, onCancel }: {
   );
 }
 
-export function PresentersManager({ initialPresenters, events }: { initialPresenters: EventPresenter[]; events: EventOpt[] }) {
+export function PresentersManager({ initialPresenters, events, sessions = [] }: { initialPresenters: EventPresenter[]; events: EventOpt[]; sessions?: SessionOpt[] }) {
   const [rows, setRows] = useState<EventPresenter[]>(initialPresenters);
   const [adding, setAdding] = useState(false);
+  const [reusing, setReusing] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -237,9 +353,16 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
           <h2 className="font-semibold text-[var(--navy)]">Presenters</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">Add speakers directly to the roster, schedule their slot, and manage the details attendees see.</p>
         </div>
-        <button type="button" onClick={() => { setAdding((v) => !v); setEditId(null); }} className="shrink-0 rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
-          <i className="ti ti-user-plus" aria-hidden="true" /> Add presenter
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {events.length > 0 && (
+            <button type="button" onClick={() => { setReusing((v) => !v); setAdding(false); setEditId(null); }} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-50">
+              <i className="ti ti-history" aria-hidden="true" /> Reuse previous
+            </button>
+          )}
+          <button type="button" onClick={() => { setAdding((v) => !v); setReusing(false); setEditId(null); }} className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
+            <i className="ti ti-user-plus" aria-hidden="true" /> Add presenter
+          </button>
+        </div>
       </div>
 
       {events.length > 1 && (
@@ -251,9 +374,20 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
         </div>
       )}
 
+      {reusing && (
+        <div className="mt-4">
+          <ReusePresentersDrawer
+            all={rows}
+            events={events}
+            onAdded={(added) => setRows((rs) => [...added, ...rs])}
+            onClose={() => setReusing(false)}
+          />
+        </div>
+      )}
+
       {adding && (
         <div className="mt-4">
-          <PresenterForm mode="add" events={events} onSaved={upsert} onCancel={() => setAdding(false)} />
+          <PresenterForm mode="add" events={events} sessions={sessions} onSaved={upsert} onCancel={() => setAdding(false)} />
         </div>
       )}
 
@@ -283,7 +417,7 @@ export function PresentersManager({ initialPresenters, events }: { initialPresen
               </div>
               {editId === p.id && (
                 <div className="border-b border-[var(--border-subtle)] p-3">
-                  <PresenterForm mode="edit" presenter={p} onSaved={upsert} onCancel={() => setEditId(null)} />
+                  <PresenterForm mode="edit" presenter={p} events={events} sessions={sessions} onSaved={upsert} onCancel={() => setEditId(null)} />
                 </div>
               )}
             </div>

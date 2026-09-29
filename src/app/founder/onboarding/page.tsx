@@ -5,8 +5,12 @@ import { FounderConversationalOnboarding } from "@/components/founder/FounderCon
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
 import { requireRole } from "@/lib/supabase/auth";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
+import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +46,14 @@ export default async function FounderOnboardingPage() {
 
         <FounderOnboardingProgressCard progress={data.progress} inPage />
 
-        <FounderConversationalOnboarding
-          company={data.company}
-          founderName={profile.full_name ?? profile.email ?? "Founder"}
-        />
+        <VocabularyProvider value={await loadVocabularies()}>
+          <FounderConversationalOnboarding
+            company={data.company}
+            founderName={profile.full_name ?? profile.email ?? "Founder"}
+            display={await loadSurfaceDisplay("founder_onboarding")}
+            engineWeights={(await getInvestorMatchConfig()).engineWeights}
+          />
+        </VocabularyProvider>
       </div>
     </FounderAppShell>
   );

@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
-import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
+import { isPastDraft } from "@/lib/icfo-events/lifecycle";
 import type { EventFormat, EventRecord, EventStatus, EventVisibility } from "@/lib/icfo-events/types";
 
 const STATUS_STYLES: Record<EventStatus, string> = {
@@ -26,6 +27,18 @@ function fmtDate(v: string | null): string {
   return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Badge status shown in the list. A published/live event whose end date has
+ *  passed reads as "Ended" — the stored status is untouched (so it stays live
+ *  and Unpublish/Archive still work); this only changes how the pill reads.
+ *  End = endsAt, falling back to startsAt when no end is set. */
+function displayStatus(ev: EventRecord): EventStatus {
+  if (ev.status === "published" || ev.status === "live") {
+    const end = ev.endsAt ?? ev.startsAt;
+    if (end && new Date(end).getTime() < Date.now()) return "ended";
+  }
+  return ev.status;
+}
+
 /** Turn an API error payload into a readable message. The API may return a string
  *  or a Zod fieldErrors object ({ field: ["msg", ...] }) — flatten the latter so
  *  validation failures aren't hidden behind a generic fallback. */
@@ -42,6 +55,7 @@ function formatApiError(error: unknown, fallback: string): string {
 }
 
 export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] }) {
+  const { options: sectors } = useVocabulary("industry");
   const t = useTranslations("adminCmp");
   const [events, setEvents] = useState<EventRecord[]>(initialEvents);
   const [showForm, setShowForm] = useState(false);
@@ -60,12 +74,16 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
   const [dupFor, setDupFor] = useState<EventRecord | null>(null);
   const [dupTitle, setDupTitle] = useState("");
   const [dupOpts, setDupOpts] = useState({ branding: true, sessions: true, sponsors: true });
+  const [dupPeople, setDupPeople] = useState({ presenters: true, exhibitors: true, talkShowGuests: true, panelists: true });
   const [duplicating, setDuplicating] = useState(false);
+  // End event confirm dialog
+  const [endFor, setEndFor] = useState<EventRecord | null>(null);
 
   function openDuplicate(ev: EventRecord) {
     setDupFor(ev);
     setDupTitle(`Copy of ${ev.title}`);
     setDupOpts({ branding: true, sessions: true, sponsors: true });
+    setDupPeople({ presenters: true, exhibitors: true, talkShowGuests: true, panelists: true });
     setError(null);
   }
 
@@ -77,7 +95,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
       const res = await fetch(`/api/admin/events/${dupFor.id}/duplicate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: dupTitle.trim() || undefined, ...dupOpts }),
+        body: JSON.stringify({ title: dupTitle.trim() || undefined, ...dupOpts, ...dupPeople }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(formatApiError(json.error, "Could not duplicate event."));
@@ -109,7 +127,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
           visibility,
           sectors: sectorSlugs.map((slug) => ({
             sectorSlug: slug,
-            label: EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug,
+            label: sectors.find((s) => s.slug === slug)?.label ?? slug,
           })),
         }),
       });
@@ -129,7 +147,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
     }
   }
 
-  async function changeStatus(id: string, action: "publish" | "unpublish" | "archive") {
+  async function changeStatus(id: string, action: "publish" | "unpublish" | "archive" | "end") {
     setBusyId(id);
     setError(null);
     try {
@@ -157,7 +175,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
             Create and publish iCFO Events. Education &amp; community only — no securities offerings here.
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowForm((v) => !v)}
           className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium"
         >
@@ -228,7 +246,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
               <span className="text-sm font-medium text-[var(--text-secondary)]">{t("sector_tracks")}</span>
               <p className="text-xs text-[var(--text-muted)]">{t("an_event_must_have_at_least_one_track_before")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {EVENT_SECTORS.map((s) => {
+                {sectors.map((s) => {
                   const on = sectorSlugs.includes(s.slug);
                   return (
                     <button
@@ -287,13 +305,45 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{ev.format.replace("_", " ")}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{fmtDate(ev.startsAt)}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[ev.status]}`}>
-                      {ev.status}
-                    </span>
+                    {(() => {
+                      const shown = displayStatus(ev);
+                      return (
+                        <>
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[shown]}`}>
+                            {shown}
+                          </span>
+                          {isPastDraft(ev) && (
+                            <span className="mt-1 block text-[11px] text-amber-700">Date passed. Never published.</span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <button
+                      {/* The page as the public sees it. A draft has none, so it
+                          offers the staff-only preview rather than a 404. */}
+                      {ev.status === "published" || ev.status === "live" || ev.status === "ended" ? (
+                        <a
+                          href={`/events/${ev.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md border border-blue-300 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        >
+                          View public page ↗
+                        </a>
+                      ) : (
+                        <a
+                          href={`/events/${ev.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Not published yet — this is the page as it would look"
+                          className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] hover:bg-slate-50"
+                        >
+                          Preview ↗
+                        </a>
+                      )}
+                      <button type="button"
                         onClick={() => openDuplicate(ev)}
                         className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
                       >
@@ -306,7 +356,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                         Manage
                       </Link>
                       {ev.status === "draft" && (
-                        <button
+                        <button type="button"
                           disabled={busyId === ev.id}
                           onClick={() => changeStatus(ev.id, "publish")}
                           className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 disabled:opacity-50"
@@ -314,8 +364,17 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                           Publish
                         </button>
                       )}
+                      {(ev.status === "published" || ev.status === "live") && displayStatus(ev) !== "ended" && (
+                        <button type="button"
+                          disabled={busyId === ev.id}
+                          onClick={() => setEndFor(ev)}
+                          className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          End event
+                        </button>
+                      )}
                       {(ev.status === "published" || ev.status === "live") && (
-                        <button
+                        <button type="button"
                           disabled={busyId === ev.id}
                           onClick={() => changeStatus(ev.id, "unpublish")}
                           className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
@@ -324,7 +383,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                         </button>
                       )}
                       {ev.status !== "archived" && (
-                        <button
+                        <button type="button"
                           disabled={busyId === ev.id}
                           onClick={() => changeStatus(ev.id, "archive")}
                           className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] disabled:opacity-50"
@@ -341,6 +400,45 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
         )}
       </div>
 
+      {endFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+          onClick={() => busyId !== endFor.id && setEndFor(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">End this event?</h2>
+              <p className="mt-1.5 text-sm text-[var(--text-muted)]">
+                “{endFor.title}” closes now. Live sessions end, registration closes, and the public page switches to
+                its ended view. You can still Archive it later.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
+              <button type="button"
+                onClick={() => setEndFor(null)}
+                disabled={busyId === endFor.id}
+                className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button type="button"
+                onClick={async () => {
+                  await changeStatus(endFor.id, "end");
+                  setEndFor(null);
+                }}
+                disabled={busyId === endFor.id}
+                className="rounded-md bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800 disabled:opacity-50"
+              >
+                {busyId === endFor.id ? "Ending…" : "End event"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {dupFor && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
@@ -356,7 +454,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                 Start a new draft from “{dupFor.title}”. Choose what to carry over.
               </p>
             </div>
-            <div className="grid gap-4 px-5 py-4">
+            <div className="grid max-h-[70vh] gap-4 overflow-y-auto px-5 py-4">
               <label className="block">
                 <span className="text-sm font-medium text-[var(--text-secondary)]">New event name</span>
                 <input
@@ -367,6 +465,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                 />
               </label>
               <div className="grid gap-2">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">Event content</span>
                 {(
                   [
                     ["branding", "Branding & banner", "Cover, banner, and organiser details"],
@@ -391,20 +490,63 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   </label>
                 ))}
               </div>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">People</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !Object.values(dupPeople).every(Boolean);
+                      setDupPeople({ presenters: next, exhibitors: next, talkShowGuests: next, panelists: next });
+                    }}
+                    className="text-xs font-medium text-blue-600 hover:underline"
+                  >
+                    {Object.values(dupPeople).every(Boolean) ? "Clear all" : "Select all"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      ["presenters", "Presenters", "Profiles, bios, headshots"],
+                      ["exhibitors", "Exhibitors", "Company and profile details"],
+                      ["talkShowGuests", "Talk show guests", "Guest roster, all start backstage"],
+                      ["panelists", "Panelists", "Profiles, bios, headshots"],
+                    ] as const
+                  ).map(([key, label, desc]) => (
+                    <label
+                      key={key}
+                      className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2 hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={dupPeople[key]}
+                        onChange={(e) => setDupPeople((o) => ({ ...o, [key]: e.target.checked }))}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-[var(--text-primary)]">{label}</span>
+                        <span className="block text-xs text-[var(--text-muted)]">{desc}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Sector tracks are always copied. Attendees, registrations, poll results, and analytics are never copied —
-                the new event starts fresh as a <b>Draft</b>.
+                Sector tracks are always copied. People keep their session slots only when Sessions &amp; agenda is
+                also copied. Invitations, decks, and videos are not copied, so send new invites from the new event.
+                Attendees, registrations, poll results, and analytics are never copied. The new event starts fresh as
+                a <b>Draft</b>.
               </p>
             </div>
             <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
-              <button
+              <button type="button"
                 onClick={() => setDupFor(null)}
                 disabled={duplicating}
                 className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={submitDuplicate}
                 disabled={duplicating}
                 className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"

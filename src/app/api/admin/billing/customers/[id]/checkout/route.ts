@@ -5,6 +5,7 @@ import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { createCheckoutUrl } from "@/lib/lemonsqueezy";
 import { sendEmail } from "@/lib/email/send-email";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
+import { renderEmail } from "@/lib/email/layout";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -45,12 +46,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let emailed = false;
     if (parsed.data.send) {
       const planName = PLAN_LABELS[parsed.data.plan] ?? parsed.data.plan;
-      const ok = await sendEmail({
-        to: email,
+      const first = profile?.full_name ? String(profile.full_name).split(" ")[0] : null;
+      const mail = renderEmail({
+        audience: "founder",
         subject: `Complete your iCapOS ${planName} subscription`,
-        html: `<p>Hi ${profile?.full_name ? String(profile.full_name).split(" ")[0] : "there"},</p><p>Here's your secure checkout link to activate <strong>${planName}</strong>:</p><p><a href="${url}">Complete checkout →</a></p><p>iCapOS — Powered by iCFO Capital Global, Inc.</p>`,
-        text: `Complete your iCapOS ${planName} subscription: ${url}`,
+        preheader: `Your secure checkout link for ${planName} is ready.`,
+        context: "Billing",
+        eyebrow: "Billing",
+        headline: `Activate your ${planName} plan`,
+        intro: `${first ? `Hi ${first}, h` : "H"}ere is your secure checkout link to activate ${planName}.`,
+        blocks: [{ type: "facts", rows: [{ label: "Plan", value: planName }, { label: "Includes", value: "Every tool on iCapOS" }] }],
+        primary: { label: "Complete checkout", url },
+        footer: { reason: "You get this because an iCFO admin started checkout for your account." },
       });
+      const ok = await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS" });
       emailed = ok;
     }
 

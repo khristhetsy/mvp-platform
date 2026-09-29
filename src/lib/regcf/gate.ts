@@ -22,7 +22,7 @@ export async function gateRegCfFounderApi() {
   // Available from the Deploy stage (defense-in-depth beyond the page gate).
   const stageGate = await checkFounderStageAccess("deploy");
   if (!stageGate.allowed) {
-    return { error: NextResponse.json({ error: "Available at the Deploy stage." }, { status: 403 }) } as const;
+    return { error: NextResponse.json({ error: "Available at the Marketing stage." }, { status: 403 }) } as const;
   }
   let company: Company | null = null;
   try {

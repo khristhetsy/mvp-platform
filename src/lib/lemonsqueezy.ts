@@ -200,3 +200,27 @@ export interface LsWebhookPayload {
     };
   };
 }
+
+// ─── Variant price (read-only) ───────────────────────────────────────────────
+
+export type LsVariantPrice = { variantId: string; name: string | null; priceCents: number | null };
+
+/**
+ * What LemonSqueezy actually charges for a variant. Read-only on purpose: their
+ * prices are immutable and can't be changed through the API, so the pricing admin
+ * compares against this and warns rather than pretending it can write it.
+ * Returns null when billing isn't configured or the variant can't be read.
+ */
+export async function getVariantPrice(variantId: string): Promise<LsVariantPrice | null> {
+  if (!process.env.LEMONSQUEEZY_API_KEY || !variantId) return null;
+  try {
+    const res = await fetch(`${LS_API}/variants/${encodeURIComponent(variantId)}`, { headers: headers(), cache: "no-store" });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: { attributes?: { name?: string; price?: number } } };
+    const attrs = json.data?.attributes;
+    if (!attrs) return null;
+    return { variantId, name: attrs.name ?? null, priceCents: typeof attrs.price === "number" ? attrs.price : null };
+  } catch {
+    return null;
+  }
+}

@@ -2,6 +2,8 @@ import crypto from "crypto";
 import type { SendResult } from "./types";
 
 import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
+import { logOutboundEmail } from "@/lib/email/email-log";
+import { firstValidEmail } from "./recipient";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -94,10 +96,16 @@ export async function sendMarketingEmail(
     return { resend_id: null, ok: false, error: "RESEND_API_KEY not configured" };
   }
 
+  // Resolve a single deliverable address; skip locally (no Resend call) if none.
+  const to = firstValidEmail(input.to);
+  if (!to) {
+    return { resend_id: null, ok: false, error: `Invalid recipient address: ${input.to}` };
+  }
+
   const vars: Record<string, string> = {
     first_name: input.first_name ?? "there",
     company: input.company ?? "",
-    email: input.to,
+    email: to,
     sender_name: input.from_name ?? "",
   };
 
@@ -148,7 +156,7 @@ ${htmlBody}
       },
       body: JSON.stringify({
         from: `${input.from_name} <${input.from_email}>`,
-        to: [input.to],
+        to: [to],
         reply_to: input.reply_to ?? undefined,
         subject,
         html: htmlWithFooter,
@@ -162,8 +170,11 @@ ${htmlBody}
 
     const data = await res.json();
     if (!res.ok) {
+      await logOutboundEmail({ to, subject, status: "failed", error: data?.message ?? "Resend error", source: "marketing-campaign", storeBody: false });
       return { resend_id: null, ok: false, error: data?.message ?? "Resend error" };
     }
+    // Campaign bodies stay in the campaign; the log keeps who got what and when.
+    await logOutboundEmail({ to, subject, status: "sent", providerId: data.id ?? null, source: "marketing-campaign", storeBody: false });
     return { resend_id: data.id ?? null, ok: true };
   } catch (err) {
     return { resend_id: null, ok: false, error: String(err) };

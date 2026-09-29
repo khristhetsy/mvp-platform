@@ -59,7 +59,7 @@ export function SectorTracksRoom({ tracks }: { tracks: TrackData[] }) {
     <div className="bg-white p-4">
       <div className="flex flex-wrap gap-2">
         {tracks.map((t, i) => (
-          <button
+          <button type="button"
             key={t.sectorSlug}
             onClick={() => setActive(i)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -136,7 +136,7 @@ export function SectorTracksRoom({ tracks }: { tracks: TrackData[] }) {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {tracks.map((t, i) => (
-          <button
+          <button type="button"
             key={t.sectorSlug}
             onClick={() => setActive(i)}
             className={`rounded-xl border p-4 text-left transition ${

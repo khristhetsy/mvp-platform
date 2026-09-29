@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
+import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
+import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,10 @@ const PUBLIC_FIELDS = [
   "funding_amount",
   "use_of_funds",
   "revenue_stage",
+  // Traction (20260921002). annual_ebitda and management_team stay OUT of this
+  // list on purpose — the onboarding step tells founders those are internal.
+  "annual_revenue_size",
+  "key_highlights",
   "founder_goals",
   "is_published",
   "slug",
@@ -42,6 +48,8 @@ type PublicCompany = {
   funding_amount: number | null;
   use_of_funds: string | null;
   revenue_stage: string | null;
+  annual_revenue_size: string | null;
+  key_highlights: string | null;
   founder_goals: string | null;
   is_published: boolean;
   slug: string | null;
@@ -106,6 +114,13 @@ export default async function InvestorOnePagerPage({
   if (!company) notFound();
 
   const geography = [company.state, company.country].filter(Boolean).join(", ") || null;
+  // Up to five, newline-separated as written at onboarding step 8.
+  const highlightLines = (company.key_highlights ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
   const stageLabel = company.revenue_stage
     ? (STAGE_LABELS[company.revenue_stage] ?? company.revenue_stage)
     : null;
@@ -233,6 +248,24 @@ export default async function InvestorOnePagerPage({
               {company.business_description}
             </p>
           )}
+
+          {/* Founder's own highlights — the bullets they wrote at onboarding. */}
+          {highlightLines.length > 0 && (
+            <ul style={{
+              margin: "18px 0 0", padding: 0, listStyle: "none",
+              borderTop: "1px solid #f3f4f6", paddingTop: 18,
+            }}>
+              {highlightLines.map((line) => (
+                <li key={line} style={{
+                  display: "flex", gap: 9, alignItems: "flex-start",
+                  fontSize: 14, color: "#374151", lineHeight: 1.6, marginBottom: 7,
+                }}>
+                  <span style={{ color: ACCENT, fontWeight: 700, lineHeight: 1.5 }}>•</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Key metrics */}
@@ -242,13 +275,13 @@ export default async function InvestorOnePagerPage({
           gap: 12, marginBottom: 20,
         }}>
           <MetricCard
-            label="Round context (illustrative)"
-            value={company.funding_amount ? `~${formatFunding(company.funding_amount)}` : "TBD"}
+            label="Raising"
+            value={company.funding_amount ? formatFunding(company.funding_amount) : "TBD"}
             accent
           />
           <MetricCard
-            label={t("revenue_stage")}
-            value={stageLabel ?? "—"}
+            label={company.annual_revenue_size ? "Revenue" : t("revenue_stage")}
+            value={company.annual_revenue_size ?? stageLabel ?? "—"}
           />
           {geography && (
             <MetricCard label={t("location")} value={geography} />
@@ -264,14 +297,19 @@ export default async function InvestorOnePagerPage({
 
         {/* Use of funds */}
         {company.use_of_funds && (
-          <Section title="Planned use of capital (illustrative)" icon={
+          <Section title="Use of capital" icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           }>
-            <FormattedText text={company.use_of_funds} />
+            {parseUseOfFunds(company.use_of_funds)
+              ? <UseOfCapitalBar slices={parseUseOfFunds(company.use_of_funds) ?? []} />
+              : <FormattedText text={company.use_of_funds} />}
+            <p style={{ fontSize: 11, color: "#94a3b8", margin: "12px 0 0" }}>
+              Illustrative allocation, not a commitment.
+            </p>
           </Section>
         )}
 

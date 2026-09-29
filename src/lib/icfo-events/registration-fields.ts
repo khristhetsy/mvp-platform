@@ -14,6 +14,14 @@ export type RegistrationField = {
 
 const SECTORS = EVENT_SECTORS.map((s) => s.label);
 
+/**
+ * There is no public-listing opt-in. Registration is the qualifier: a
+ * registered investor or founder is listed on the event page and is matchable.
+ * The tick that briefly existed (field-set v2) decided nothing and comes off
+ * the form in migration 20260922007; answers already stored are left in place
+ * and simply not read.
+ */
+
 export const REGISTRATION_COUNTRIES = ["United States", "Canada", "United Kingdom", "Germany", "India", "Singapore", "Other"];
 
 export const REGISTRATION_ROLES: { key: AttendeeType; label: string }[] = [

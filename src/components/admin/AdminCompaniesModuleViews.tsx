@@ -9,6 +9,8 @@ import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
+import { matchRows, searchSummary, type SearchField } from "@/lib/ui/live-search";
+import { Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
 
 type ViewMode = "kanban" | "grid" | "list" | "journey";
 type UserType = "" | "founders" | "investors";
@@ -49,17 +51,21 @@ function reviewStatusLabel(t: T, status: string | null) {
   return t("companies.reviewStatus.unknown");
 }
 
-function filterCompaniesBySearch(companies: AdminCompanyCardData[], query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return companies;
-  return companies.filter(
-    (c) =>
-      c.company_name.toLowerCase().includes(q) ||
-      (c.industry?.toLowerCase().includes(q) ?? false) ||
-      (c.founder_name.toLowerCase().includes(q) ?? false) ||
-      (c.review_status?.toLowerCase().includes(q) ?? false),
-  );
-}
+// Every column the table shows is searchable — the old version covered four
+// fields, so typing a stage, a score or a founder's email found nothing even
+// though those values were on screen.
+const COMPANY_SEARCH_FIELDS: SearchField<AdminCompanyCardData>[] = [
+  { label: "company name", get: (c) => c.company_name },
+  { label: "founder", get: (c) => c.founder_name },
+  { label: "founder email", get: (c) => c.founder_email },
+  { label: "industry", get: (c) => c.industry },
+  { label: "stage", get: (c) => c.journey_stage },
+  { label: "review status", get: (c) => c.review_status },
+  { label: "readiness", get: (c) => c.readiness_score },
+  { label: "CRR", get: (c) => c.investable_score },
+];
+
+const COMPANY_SEARCH_LABELS = COMPANY_SEARCH_FIELDS.map((f) => f.label);
 
 function AdminCompaniesModuleViewsInner({
   companies,
@@ -82,7 +88,11 @@ function AdminCompaniesModuleViewsInner({
     [companies, companyFilters],
   );
 
-  const filtered = useMemo(() => filterCompaniesBySearch(drilldownFiltered, query), [drilldownFiltered, query]);
+  const search = useMemo(
+    () => matchRows(drilldownFiltered, COMPANY_SEARCH_FIELDS, query),
+    [drilldownFiltered, query],
+  );
+  const filtered = search.rows;
 
   // Journey-stage filter + sortable score/stage columns (list view).
   const [stageFilter, setStageFilter] = useState<string>("");
@@ -179,7 +189,7 @@ function AdminCompaniesModuleViewsInner({
 
       <PageSection
         title={t("companies.submissions")}
-        subtitle={t("companies.countSub", { count: companies.length, pending: pendingCount })}
+        subtitle={`${searchSummary(search, "companies")} · ${pendingCount} pending review`}
       >
         {loadError ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
@@ -195,7 +205,11 @@ function AdminCompaniesModuleViewsInner({
             description="This list is company-centric. Open Directory → Investors to browse and filter investor accounts."
           />
         ) : filtered.length === 0 ? (
-          <ModuleEmptyState title={t("companies.noMatching")} description={t("companies.noMatchingDesc")} />
+          search.active ? (
+            <NoSearchMatches query={query} fields={COMPANY_SEARCH_LABELS} onClear={() => setQuery("")} />
+          ) : (
+            <ModuleEmptyState title={t("companies.noMatching")} description={t("companies.noMatchingDesc")} />
+          )
         ) : view === "journey" ? (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <ul className="divide-y divide-slate-100">
@@ -209,8 +223,8 @@ function AdminCompaniesModuleViewsInner({
                     onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">{company.company_name}</p>
-                      <p className="truncate text-xs text-slate-500">{company.founder_name}</p>
+                      <p className="truncate text-sm font-medium text-slate-900"><Highlight text={company.company_name} query={query} /></p>
+                      <p className="truncate text-xs text-slate-500"><Highlight text={company.founder_name} query={query} /></p>
                     </div>
                     <div>
                       <div className="mb-1 flex items-center gap-1">
@@ -274,9 +288,9 @@ function AdminCompaniesModuleViewsInner({
                     className="hover:bg-slate-50 cursor-pointer"
                     onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
                   >
-                    <td className="px-4 py-3 font-medium text-slate-900">{company.company_name}</td>
-                    <td className="px-4 py-3 text-slate-600">{company.founder_name}</td>
-                    <td className="px-4 py-3 text-slate-500">{company.industry ?? "—"}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900"><Highlight text={company.company_name} query={query} /></td>
+                    <td className="px-4 py-3 text-slate-600"><Highlight text={company.founder_name} query={query} /></td>
+                    <td className="px-4 py-3 text-slate-500">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>
                     <td className={`px-4 py-3 ${scoreClass(company.readiness_score)}`}>
                       {company.readiness_score != null ? company.readiness_score : "—"}
                     </td>

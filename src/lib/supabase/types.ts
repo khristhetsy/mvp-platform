@@ -46,6 +46,14 @@ export type Company = {
   onboarding_step_state?: Record<string, unknown> | null;
   capital_ready_at?: string | null;
   learning_readiness_bonus?: number;
+  /**
+   * Traction fields (migration 20260921002). Text, and now a band the founder
+   * picks rather than free prose — the matcher compares them to the investor's
+   * stated range, and "e.g. $240,000" could never be compared to anything.
+   */
+  arr?: string | null;
+  mrr?: string | null;
+  annual_revenue_size?: string | null;
   /** Dual-lane: founder-attested securities exemption (added 20260719006). */
   offering_type?: string | null;
   offering_type_attested_at?: string | null;
@@ -65,6 +73,7 @@ export type DocumentRecord = {
   mime_type: string | null;
   size_bytes: number | null;
   ai_summary: string | null;
+  label: string | null;
   status: string | null;
   is_approved: boolean;
   created_at: string;
@@ -1311,6 +1320,9 @@ export type Database = {
           firm_name: string | null;
           check_size_min: number | null;
           check_size_max: number | null;
+          preferred_arr_range: string | null;
+          preferred_mrr_range: string | null;
+          capital_types: string[];
           preferred_sectors: string[];
           preferred_geographies: string[];
           preferred_stages: string[];
@@ -1347,6 +1359,9 @@ export type Database = {
           firm_name?: string | null;
           check_size_min?: number | null;
           check_size_max?: number | null;
+          preferred_arr_range?: string | null;
+          preferred_mrr_range?: string | null;
+          capital_types?: string[];
           preferred_sectors?: string[];
           preferred_geographies?: string[];
           preferred_stages?: string[];
@@ -1381,6 +1396,9 @@ export type Database = {
           firm_name?: string | null;
           check_size_min?: number | null;
           check_size_max?: number | null;
+          preferred_arr_range?: string | null;
+          preferred_mrr_range?: string | null;
+          capital_types?: string[];
           preferred_sectors?: string[];
           preferred_geographies?: string[];
           preferred_stages?: string[];
@@ -1542,9 +1560,10 @@ export type Database = {
           overridden_at: string | null;
           effective_score: number;
           scored_by: string;
-          score_version: number;
+          score_version: string;
           document_count: number;
           outreach_unlocked: boolean;
+          dimension_advice: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };

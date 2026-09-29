@@ -1,6 +1,30 @@
 {
   "crons": [
     {
+      "path": "/api/cron/social-queue",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/job-dispatcher",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/scheduled-reach-outs",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/ir-odoo-history",
+      "schedule": "40 * * * *"
+    },
+    {
+      "path": "/api/cron/ir-sequences",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/social-maintenance",
+      "schedule": "7 * * * *"
+    },
+    {
       "path": "/api/cron/run-orchestration",
       "schedule": "0 7 * * *"
     },
@@ -10,7 +34,7 @@
     },
     {
       "path": "/api/marketing/process-sequences",
-      "schedule": "*/15 * * * *"
+      "schedule": "12 * * * *"
     },
     {
       "path": "/api/marketing/process-scheduled",
@@ -30,7 +54,7 @@
     },
     {
       "path": "/api/cron/marketing-notifications",
-      "schedule": "*/30 * * * *"
+      "schedule": "22 * * * *"
     },
     {
       "path": "/api/cron/sync-contacts",
@@ -46,7 +70,7 @@
     },
     {
       "path": "/api/cron/meeting-readiness-reminders",
-      "schedule": "0 * * * *"
+      "schedule": "0 6,15 * * *"
     },
     {
       "path": "/api/cron/meeting-kpi-goals",
@@ -57,12 +81,40 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/cron/founder-match-digest",
+      "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/cron/founder-nudges",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/points-expiry",
       "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/voice-cadence",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/cron/ir-summaries",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/activity-escalations",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/event-invite-reminders",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/intro-follow-ups",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/founder-digest",
+      "schedule": "5 * * * *"
     }
   ]
 }

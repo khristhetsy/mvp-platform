@@ -87,7 +87,7 @@ export function FounderMatchClient({
           {filtered.map((r) => (
             <div key={r.id} style={{ border: "0.5px solid #eef1f5", borderRadius: 12, background: "#fff", padding: "13px 15px", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ width: 34, height: 34, borderRadius: 8, background: "#EEEDFE", color: "#3C3489", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, flexShrink: 0 }}>
+                <span style={{ width: 34, height: 34, borderRadius: 8, background: "#EEEDFE", color: "#0A1A40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, flexShrink: 0 }}>
                   {r.name.slice(0, 2).toUpperCase()}
                 </span>
                 <div style={{ minWidth: 0, flex: 1 }}>

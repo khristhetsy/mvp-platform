@@ -31,7 +31,7 @@ export const PLAN_LABELS: Record<LimitPlan, string> = {
   founder_free: "Free",
   founder_basic: "Basic",
   founder_professional: "Professional",
-  founder_managed_ir: "Managed IR",
+  founder_managed_ir: "SPV Program",
 };
 
 /** Map any subscription plan to the bucket used for limit lookups. */

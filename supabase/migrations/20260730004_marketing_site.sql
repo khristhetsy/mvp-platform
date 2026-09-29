@@ -78,5 +78,18 @@ drop policy if exists "staff_read_marketing_leads" on public.marketing_leads;
 create policy "staff_read_marketing_leads" on public.marketing_leads
   for select using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')));
 
-create index if not exists marketing_events_sort_idx on public.marketing_events (sort_order, starts_at);
-create index if not exists client_logos_sort_idx on public.client_logos (sort_order) where active = true;
+-- Guarded: on a fresh database 0072_marketing_hub already created a different
+-- marketing_events (no sort_order), so the create above is skipped. 20260730006
+-- moves the site onto marketing_site_* tables; these indexes only apply when
+-- the columns exist.
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+             and table_name = 'marketing_events' and column_name = 'sort_order') then
+    create index if not exists marketing_events_sort_idx on public.marketing_events (sort_order, starts_at);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+             and table_name = 'client_logos' and column_name = 'sort_order') then
+    create index if not exists client_logos_sort_idx on public.client_logos (sort_order) where active = true;
+  end if;
+end $$;

@@ -4,18 +4,15 @@ import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { listLeadAssignableStaff } from "@/lib/sales/settings";
-import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { resolveContactIds, MAX_BULK_TARGET as MAX_TARGET } from "@/lib/sales/bulk-targets";
 
 export const dynamic = "force-dynamic";
-
-const GROUPS = ["founder", "investor", "advisor", "other"];
-const MAX_TARGET = 25000; // safety cap on how many contacts one action can touch
 
 const schema = z.object({
   memberIds: z.array(z.string().uuid()).min(1).max(50),
   mode: z.enum(["ids", "filter"]),
   ids: z.array(z.string().uuid()).max(MAX_TARGET).optional(),
-  params: z.string().max(4000).optional(),
+  params: z.string().max(20_000).optional(),
   group: z.string().max(40).optional(),
 });
 
@@ -38,23 +35,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = serviceRoleClientUntyped();
 
-  // Resolve the target contact ids.
-  let ids: string[] = [];
-  if (mode === "ids") {
-    ids = [...new Set(parsed.data.ids ?? [])];
-  } else {
-    const p = new URLSearchParams(parsed.data.params ?? "");
-    const PAGE = 1000;
-    for (let from = 0; from < MAX_TARGET; from += PAGE) {
-      let q = db.from("crm_contacts").select("id").range(from, from + PAGE - 1);
-      if (parsed.data.group && GROUPS.includes(parsed.data.group)) q = q.or(`contact_type.eq.${parsed.data.group},module.eq.${parsed.data.group}`);
-      q = applyContactFilters(q, p);
-      const { data, error } = await q;
-      if (error || !data || data.length === 0) break;
-      ids.push(...(data as Array<{ id: string }>).map((r) => r.id));
-      if (data.length < PAGE) break;
-    }
-    ids = [...new Set(ids)];
+  // Resolve the target contact ids (same predicate as the list, see bulk-targets.ts).
+  let ids: string[];
+  try {
+    ids = await resolveContactIds(profile, mode === "ids"
+      ? { mode, ids: parsed.data.ids }
+      : { mode, params: parsed.data.params, group: parsed.data.group });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't resolve the selection." }, { status: 500 });
   }
   if (ids.length === 0) return NextResponse.json({ error: "No contacts matched." }, { status: 400 });
 

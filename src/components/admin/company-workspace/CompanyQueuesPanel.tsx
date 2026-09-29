@@ -20,8 +20,7 @@ const QUEUE_TAB_HASH: Partial<Record<AdminQueueType, string>> = {
 
 export function CompanyQueuesPanel({
   items,
-  companyId,
-}: Readonly<{ items: AdminQueueItem[]; companyId: string }>) {
+}: Readonly<{ items: AdminQueueItem[] }>) {
   const t = useTranslations("adminCmp");
   return (
     <WorkspacePanel title={t("queue_items")} subtitle={t("active_operational_queue_entries_for_this_co")}>
@@ -45,7 +44,7 @@ export function CompanyQueuesPanel({
                     {item.title}
                   </a>
                 ) : (
-                  <Link href={`/admin/queues?company=${companyId}`} className="font-medium text-indigo-700 hover:text-indigo-900">
+                  <Link href="/admin/queues" className="font-medium text-indigo-700 hover:text-indigo-900">
                     {item.title}
                   </Link>
                 )}
@@ -66,7 +65,7 @@ export function CompanyQueuesPanel({
       )}
       <p className="mt-4 text-xs text-slate-500">
         Source: admin queues ·{" "}
-        <Link href={`/admin/queues?company=${companyId}`} className="font-medium text-indigo-600 hover:text-indigo-800">
+        <Link href="/admin/queues" className="font-medium text-indigo-600 hover:text-indigo-800">
           Open queues console
         </Link>
       </p>

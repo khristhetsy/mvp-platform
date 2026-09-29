@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Archive, Trash2 } from "lucide-react";
+import Link from "next/link";
 import type { NotificationRecord } from "@/lib/notifications/types";
+import { notificationCategory } from "@/lib/notifications/categories";
+
+type Filter = "all" | "action" | "unread";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("en-US", {
@@ -22,6 +26,7 @@ export function NotificationsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<Filter>("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,7 +70,12 @@ export function NotificationsPanel() {
     setUnreadCount(0);
   }
 
-  const allIds = notifications.map((n) => n.id);
+  const needsAction = (n: NotificationRecord) => notificationCategory(n.type, n.severity).needsAction;
+  const actionCount = notifications.filter((n) => !n.is_read && needsAction(n)).length;
+  const visible =
+    filter === "action" ? notifications.filter(needsAction) : filter === "unread" ? notifications.filter((n) => !n.is_read) : notifications;
+
+  const allIds = visible.map((n) => n.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
 
   function toggle(id: string) {
@@ -128,13 +138,44 @@ export function NotificationsPanel() {
         </div>
       </div>
 
+      {notifications.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter notifications">
+          {([
+            ["all", `All · ${notifications.length}`],
+            ["action", `Needs action · ${actionCount}`],
+            ["unread", `Unread · ${unreadCount}`],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={filter === key}
+              onClick={() => {
+                setFilter(key);
+                setSelected(new Set());
+              }}
+              className={`min-h-9 rounded-full px-3.5 text-xs font-semibold transition ${
+                filter === key ? "bg-[#0A1A40] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {notifications.length === 0 ? (
         <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
           No notifications yet. Activity alerts will appear here as your workspace updates.
         </p>
+      ) : visible.length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
+          {filter === "action" ? "Nothing needs your action right now." : "No unread notifications."}
+        </p>
       ) : (
         <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
-          {notifications.map((notification) => (
+          {visible.map((notification) => {
+            const category = notificationCategory(notification.type, notification.severity);
+            return (
             <article
               key={notification.id}
               className={`flex items-start gap-3 px-5 py-4 ${selected.has(notification.id) ? "bg-indigo-50/40" : notification.is_read ? "opacity-75" : "bg-indigo-50/20"}`}
@@ -147,7 +188,25 @@ export function NotificationsPanel() {
                 className="mt-1 h-4 w-4 shrink-0"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-950">{notification.title}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.06em]" style={{ color: category.color }}>
+                  {category.label}
+                  {category.needsAction && !notification.is_read ? (
+                    <span className="ml-1.5 font-semibold normal-case tracking-normal text-slate-500">· Needs action</span>
+                  ) : null}
+                </p>
+                {notification.deep_link ? (
+                  <Link
+                    href={notification.deep_link}
+                    onClick={() => {
+                      if (!notification.is_read) void markRead(notification.id);
+                    }}
+                    className="text-sm font-semibold text-slate-950 hover:text-[#1A6CE4] hover:underline"
+                  >
+                    {notification.title}
+                  </Link>
+                ) : (
+                  <p className="text-sm font-semibold text-slate-950">{notification.title}</p>
+                )}
                 <p className="mt-1 text-sm leading-6 text-slate-600">{notification.message}</p>
                 <p className="mt-2 text-xs text-slate-400">{formatDate(notification.created_at)}</p>
               </div>
@@ -169,7 +228,8 @@ export function NotificationsPanel() {
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event email — a readable agenda</title>
+<style>
+  :root{ --navy:#0c2340; --blue:#2E78F5; --violet:#7c3aed; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:840px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+       text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.now{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .tag.after{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+
+  .mail{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .body{padding:16px 18px}
+  .agh{margin:0 0 9px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+  /* old */
+  .old{border-left:4px solid #0d9488;background:#f6f8fc;border-radius:6px;padding:12px 14px;margin-bottom:10px}
+  .old .k{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0d9488}
+  .old b{display:block;font-size:14.5px;color:var(--navy);margin-top:2px}
+  .old p{margin:4px 0 0;font-size:12.4px;color:#4a5568;line-height:1.5}
+  .old.ts{border-left-color:var(--violet)} .old.ts .k{color:var(--violet)}
+  .old.fs{border-left-color:#c026d3} .old.fs .k{color:#c026d3}
+
+  /* new */
+  .row{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f1f4f9}
+  .row:last-child{border-bottom:0}
+  .kb{flex:none;width:74px;font-size:8.8px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+      color:#fff;background:#0d9488;border-radius:3px;padding:3px 0;text-align:center;margin-top:2px}
+  .kb.ts{background:var(--violet)} .kb.fs{background:#c026d3} .kb.ex{background:#64748b}
+  .rt{min-width:0;flex:1}
+  .rt b{display:block;font-size:13.6px;color:var(--navy);line-height:1.3}
+  .rt p{margin:2px 0 0;font-size:11.8px;color:#5b6b80;line-height:1.5}
+  .rt .guests{margin-top:5px;font-size:11.4px;color:#40546f}
+  .rt .guests span{color:var(--muted)}
+  .feat{background:#fbfaff;border:1px solid #ece9fb;border-radius:8px;padding:11px 12px;margin:0 0 4px}
+
+  .cta{display:inline-block;background:var(--blue);color:#fff;border-radius:6px;padding:9px 16px;
+       font-size:12.8px;font-weight:700;margin-top:6px}
+  .more{display:inline-block;font-size:11.6px;font-weight:600;color:var(--blue);margin-top:9px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+  .bad{border:1px solid #fecaca;background:#fef2f2;border-radius:11px;padding:13px 15px;
+       font-size:12.5px;color:#991b1b;max-width:880px}
+  .bad b{color:#b91c1c}
+  .metric{display:flex;gap:18px;flex-wrap:wrap;margin-top:9px}
+  .m{border:1px solid var(--border);border-radius:9px;background:#fff;padding:9px 13px;min-width:120px}
+  .m b{display:block;font-size:17px;color:var(--navy)}
+  .m span{display:block;font-size:10.6px;color:var(--muted);margin-top:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>The agenda, made readable</h1>
+  <p class="sub">The roster sections are a separate fix and aren&rsquo;t in the email you received. This is what makes the part you <em>did</em> see worth reading.</p>
+
+  <div class="cols">
+    <!-- NOW -->
+    <div>
+      <span class="tag now">Now</span>
+      <div class="mail"><div class="body">
+        <p class="agh">Agenda</p>
+        <div class="old">
+          <span class="k">Keynote</span>
+          <b>Auditorium</b>
+          <p>Auditorium: Experience our prequalified deal flows, learn from dynamic presentations, and engage with experts through interactive Q&amp;A sessions.</p>
+        </div>
+        <div class="old ts">
+          <span class="k">Talk show</span>
+          <b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+          <p>Inside the Investor&rsquo;s Mind – Investor Challenge Series is a monthly, investor-grade talk show designed to reveal how CEOs think, decide, and lead under real-world pressure. Each episode features a candid conversation with a CEO, followed by a live investor panel that asks the kinds of questions typically reserved for private diligence discussions. The panel addresses real-world challenges head-on, bringing the unfiltered reality of the investor perspective into the open.</p>
+        </div>
+        <div class="old fs">
+          <span class="k">Founder showcase</span>
+          <b>Exhibitors - NAI Technology</b>
+          <p>NutriFlex AI solves fragmented health data and generic wellness programs that fail to turn biometric signals into timely, personalized action. Our AI-powered platform transforms wearable data—including sleep, stress, activity, and recovery signals—into adaptive, real-time recommendations that help individuals and organizations improve health, performance, and well-being.</p>
+        </div>
+      </div></div>
+      <div class="metric">
+        <span class="m"><b>~1,050</b><span>words before the CTA</span></span>
+        <span class="m"><b>4</b><span>screens on a phone</span></span>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div>
+      <span class="tag after">After</span>
+      <div class="mail"><div class="body">
+        <p class="agh">Agenda · 4 sessions</p>
+
+        <div class="feat">
+          <div class="row" style="border-bottom:0;padding:0">
+            <span class="kb ts">Talk show</span>
+            <span class="rt">
+              <b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+              <p>A candid conversation with a CEO, followed by a live investor panel.</p>
+              <span class="guests"><span>Guest CEO</span> Shan Padda, Harvard MedTech &nbsp;·&nbsp; <span>Investor</span> Marcus Reyes, Tessellate</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="row">
+          <span class="kb">Keynote</span>
+          <span class="rt">
+            <b>Auditorium</b>
+            <p>Prequalified deal flow, live presentations and Q&amp;A.</p>
+          </span>
+        </div>
+        <div class="row">
+          <span class="kb fs">Showcase</span>
+          <span class="rt"><b>Founder pitches</b><p>Five companies, eight minutes each.</p></span>
+        </div>
+        <div class="row">
+          <span class="kb ex">Exhibits</span>
+          <span class="rt"><b>NAI Technology · Impervitex Corp</b></span>
+        </div>
+
+        <a class="more">Full agenda and abstracts on the event page →</a>
+      </div></div>
+      <div class="metric">
+        <span class="m"><b>~90</b><span>words before the CTA</span></span>
+        <span class="m"><b>1</b><span>screen on a phone</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT CHANGED -->
+  <h2>Four changes</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:24%">Change</th><th style="width:30%">Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Abstracts are trimmed</b></td>
+          <td>First sentence, or 120 characters, whichever is shorter</td>
+          <td>An agenda tells you what&rsquo;s on. The full abstract already lives on the event page, one click away, and it reads better there</td>
+        </tr>
+        <tr>
+          <td><b>One session leads</b></td>
+          <td>The talk show, or the keynote when there isn&rsquo;t one</td>
+          <td>Everything at the same weight means nothing stands out. The lead session gets the tint and the guest billing; the rest become rows</td>
+        </tr>
+        <tr>
+          <td><b>Rows, not cards</b></td>
+          <td>Badge in a fixed column, title, one line</td>
+          <td>A vertical line of badges scans in a second. Four boxed cards do not</td>
+        </tr>
+        <tr>
+          <td><b>Exhibits collapse to one row</b></td>
+          <td>Sessions whose title starts &ldquo;Exhibitors -&rdquo; merge, naming the companies</td>
+          <td>They&rsquo;re booths, not sessions — see below</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DATA PROBLEM -->
+  <h2>The part the email can&rsquo;t fix</h2>
+  <div class="bad">
+    <p style="margin:0 0 8px"><b>&ldquo;Exhibitors - NAI Technology&rdquo; is a session typed <code>founder_showcase</code>.</b>
+    That is why it carries a FOUNDER SHOWCASE badge and a company&rsquo;s marketing paragraph in the agenda. The merge
+    above is a patch over the mislabel, not a repair of it.</p>
+    <p style="margin:0">The repair is to delete those two sessions and add NAI Technology and Impervitex to the roster
+    with role <b>Exhibitor</b>. They then appear on the Exhibitors line, out of the agenda entirely, and the patch
+    becomes unnecessary. Your call which one you want — I&rsquo;d do both, since other events will have the same
+    sessions already.</p>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>Trimming is display-only.</b> Nothing is written back to the session — the abstract
+    stays whole on the event page and in the booklet, which has room for it.</p>
+    <p style="margin:0 0 8px"><b>A first sentence can still be long.</b> The NAI paragraph&rsquo;s first sentence is
+    27 words, so the 120-character cap is what actually bites there. Cut with an ellipsis, never mid-word.</p>
+    <p style="margin:0"><b>The Auditorium abstract starts with &ldquo;Auditorium:&rdquo;</b> — the title repeated
+    inside its own description. Trimming hides it; editing the session removes it.</p>
+  </div>
+
+</div>
+</body>
+</html>

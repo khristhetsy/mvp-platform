@@ -8,12 +8,14 @@ import { buildFounderInvestorCrmView } from "@/lib/data/investor-crm";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
+import { loadOutreachRecords } from "@/lib/founder/outreach-records";
+import { OutreachAnalytics } from "@/components/founder/OutreachAnalytics";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
-import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
+import { PublicProfileEditor } from "@/components/founder/PublicProfileEditor";
 import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
@@ -27,7 +29,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-const OUTREACH_THRESHOLD = 70;
+// The gate is the engine's, not a number typed on this page — a founder was
+// being told outreach was unlocked while the engine flag said it was not.
+import { OUTREACH_GATE as OUTREACH_THRESHOLD, crrFor } from "@/lib/crr/crr-for";
 
 /** Turn the real pipeline numbers into expandable AI insight cards for the Analytics step. */
 function buildDeployInsights(input: {
@@ -134,34 +138,26 @@ export default async function FounderDeployPage() {
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
     // Board is loaded AFTER outreach enrollment below, so newly-queued recipients
     // show on first render (not just on refresh).
-    const [activity, pledgeSummary, journeyState, loadedHub] = await Promise.all([
+    const [activity, pledgeSummary, , loadedHub, engineCrr] = await Promise.all([
       listFounderInvestorActivity(supabase, company.id),
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
       evaluateFounderJourney(supabase, profile.id),
       loadFounderInvestorHub(company, profile.id),
+      crrFor(company.id),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
     hub = loadedHub;
 
-    // Investable Score — same composite the Qualify stage shows, so the gate here
-    // matches what the founder saw there. Readiness-weighted, plus profile and gates.
-    const readiness = journeyState.conditions.readinessScore ?? 0;
-    const profilePercent = buildProfileCompletion(company).percent;
-    investableScore = Math.round(
-      Math.min(
-        100,
-        0.6 * readiness +
-          0.3 * profilePercent +
-          (journeyState.conditions.onboardingComplete ? 5 : 0) +
-          (journeyState.conditions.requiredDocsUploaded ? 5 : 0),
-      ),
-    );
+    // The CRR — the engine score for this company's own stage. This page used to
+    // recompute a third copy of a document-count composite here, which is what
+    // decided whether automated outreach was enrolled.
+    investableScore = engineCrr.score ?? 0;
 
-    // Founder-automatic outreach: once the Investable Score clears the threshold,
-    // ensure the company's outreach campaign exists and is approved. Runs BEFORE
-    // the board load so queued recipients render immediately. Non-fatal; real
-    // email dispatch is still gated by the automation toggle + published one-pager.
-    if (entitlements.canDistribute && investableScore >= OUTREACH_THRESHOLD) {
+    // Founder-automatic outreach: once the CRR clears the engine gate, ensure the
+    // company's outreach campaign exists and is approved. Runs BEFORE the board
+    // load so queued recipients render immediately. Non-fatal; real email dispatch
+    // is still gated by the automation toggle + published one-pager.
+    if (entitlements.canDistribute && engineCrr.outreachUnlocked) {
       try {
         await ensureFounderAutomatedOutreach(company.id, profile.id);
       } catch {
@@ -175,6 +171,9 @@ export default async function FounderDeployPage() {
       board = { ...board, rows: board.rows.map((r) => ({ ...r, name: "Matched investor", company: null })) };
     }
   }
+
+  // Every send this company has made, from the three tables that record them.
+  const outreachRecords = company ? await loadOutreachRecords(company.id) : [];
 
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
   const interestedCount = crmView?.summary.totalInterestedInvestors ?? 0;
@@ -235,35 +234,36 @@ export default async function FounderDeployPage() {
             href="/founder/settings"
             className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
           >
-            Edit profile ↗
+            Full profile ↗
           </Link>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
-          <span className="text-xs font-medium text-slate-500">Live preview — exactly what investors see</span>
-          {publicHref && isPublished ? (
-            <a
-              href={publicHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-            >
-              Open live link ↗
-            </a>
-          ) : null}
-        </div>
-        <iframe
-          src="/founder/preview?embed=1"
-          title="Investor one-pager preview"
-          className="h-[640px] w-full border-0"
+      {company ? (
+        <PublicProfileEditor
+          companyId={company.id}
+          initial={{
+            company_name: company.company_name,
+            website: company.website ?? null,
+            country: company.country ?? null,
+            state: company.state ?? null,
+            business_description: company.business_description ?? null,
+            key_highlights: (company as unknown as Record<string, string | null>).key_highlights ?? null,
+            team_summary: company.team_summary ?? null,
+            management_team: (company as unknown as Record<string, string | null>).management_team ?? null,
+            use_of_funds: company.use_of_funds ?? null,
+            founder_goals: company.founder_goals ?? null,
+          }}
         />
-      </div>
-      <p className="text-xs text-slate-400">
-        Editing happens in one place — your profile settings — so this preview, your public page, and investor
-        matching always stay in sync.
-      </p>
+      ) : null}
+      {publicHref && isPublished ? (
+        <p className="text-xs text-slate-400">
+          Your live link:{" "}
+          <a href={publicHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-700">
+            open public page ↗
+          </a>
+        </p>
+      ) : null}
     </>
   );
 
@@ -335,6 +335,16 @@ export default async function FounderDeployPage() {
               automated={automatedNode}
               manual={manualNode}
               analytics={analytics}
+              outreachAnalytics={
+                <OutreachAnalytics
+                  records={outreachRecords}
+                  crrNote={
+                    investableScore < OUTREACH_THRESHOLD
+                      ? `CRR ${investableScore} — automated outreach is paused until ${OUTREACH_THRESHOLD}. Everything below is your manual outreach.`
+                      : null
+                  }
+                />
+              }
             />
           </div>
         </FounderFeatureGate>

@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database, UserRole } from "@/lib/supabase/types";
+import {
+  SOURCE_COOKIE,
+  SOURCE_COOKIE_MAX_AGE_DAYS,
+  sourceTagFromQuery,
+} from "@/lib/attribution/source";
 
 /** Edge-safe env reads — mirrors @/lib/env helpers used here without importing that module. */
 function trimEnv(name: string): string | undefined {
@@ -194,9 +199,47 @@ export function resolveDepartmentAction(
   return "block";
 }
 
+/**
+ * First-touch campaign capture, on every page the matcher covers.
+ *
+ * Until now the only place a campaign tag was ever remembered was `/fit`, which
+ * sets its own `fs_session` cookie. Anyone who landed anywhere else — the
+ * homepage from a LinkedIn post, a one-pager, the scheduler link direct —
+ * arrived at the booking form with no record of where they came from, and the
+ * Social Hub could not attribute the meeting.
+ *
+ * This writes a separate, longer-lived cookie. It deliberately does NOT touch
+ * `fs_session`: the /fit funnel stays the highest-confidence signal and keeps
+ * working exactly as it does today.
+ *
+ * First-touch — an existing cookie is never overwritten, matching the rule
+ * `/fit` already applies with `if (!overrides.lead_source)`.
+ */
+function captureSourceTag(request: NextRequest, response: NextResponse): void {
+  if (request.cookies.get(SOURCE_COOKIE)) return;
+
+  const tag = sourceTagFromQuery(request.nextUrl.searchParams);
+  if (!tag) return;
+
+  response.cookies.set(SOURCE_COOKIE, tag, {
+    maxAge: SOURCE_COOKIE_MAX_AGE_DAYS * 24 * 60 * 60,
+    path: "/",
+    sameSite: "lax",
+    // Readable by the server only. Nothing in the browser needs it, and the
+    // booking form sends it via the request, not via script.
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
+
+  // Runs before the protection check so a tagged link to a PUBLIC page (the
+  // scheduler, a one-pager, the homepage) is captured too. Sets a cookie and
+  // nothing else — it cannot redirect, block, or change any existing behaviour.
+  captureSourceTag(request, response);
 
   if (!shouldProtectPath(pathname)) {
     return response;
@@ -342,5 +385,18 @@ export const config = {
     "/api/founder/:path*",
     "/api/investor/:path*",
     "/api/admin/:path*",
+    // Public landing pages, added for first-touch campaign capture only. The
+    // protection logic exits early on these (`shouldProtectPath` is false), so
+    // the middleware does nothing here beyond setting the source cookie.
+    // Deliberately NOT a blanket "/:path*" — that would put the middleware in
+    // front of every static asset for the sake of one cookie.
+    "/",
+    "/schedule/:path*",
+    "/f/:path*",
+    "/fit",
+    "/marketplace/:path*",
+    "/deals/:path*",
+    "/events/:path*",
+    "/learn/:path*",
   ],
 };

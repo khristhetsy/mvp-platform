@@ -8,7 +8,6 @@ import { getAdminCompanyWorkspaceHref } from "@/lib/admin/company-workspace-type
 import {
   formatOperationalEventType,
   formatOperationalTimestamp,
-  getOperationalCategoryIcon,
   getOperationalCategoryLabel,
   getOperationalEventIcon,
 } from "@/lib/operational-activity/event-display";

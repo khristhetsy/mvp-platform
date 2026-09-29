@@ -50,7 +50,7 @@ export function AddToCallList() {
           <p className="text-sm font-semibold text-slate-800">Add contacts to the call list</p>
           <p className="text-xs text-slate-500">Record voice consent for opted-in contacts already in iCapOS. They then become dialable.</p>
         </div>
-        <button onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+        <button type="button" onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
           <ListPlus className="h-4 w-4" /> {open ? "Close" : "Add contacts"}
         </button>
       </div>
@@ -101,7 +101,7 @@ export function AddToCallList() {
           </label>
 
           <div className="flex justify-end">
-            <button onClick={submit} disabled={busy || identifiers.length === 0 || !source.trim() || !attest} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+            <button type="button" onClick={submit} disabled={busy || identifiers.length === 0 || !source.trim() || !attest} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Add to call list
             </button>
           </div>

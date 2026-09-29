@@ -14,7 +14,7 @@ export function FounderRaiseAtAGlance({ tiles }: { tiles: GlanceTile[] }) {
   return (
     <div>
       <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-[var(--text-muted)]">Your raise at a glance</p>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
         {tiles.map((t) => {
           const inner = (
             <>

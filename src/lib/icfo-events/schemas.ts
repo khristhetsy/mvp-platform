@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { EVENT_SECTORS, isValidSectorSlug } from "./sectors";
+import { isValidSectorSlug } from "./sectors";
 
-const sectorSlug = z.string().refine(isValidSectorSlug, { message: "Unknown sector" });
+const sectorSlug = z.string().refine(isValidSectorSlug, { message: "Not a sector key" });
 
-/** An event may span every available sector track. */
-const MAX_SECTOR_TRACKS = EVENT_SECTORS.length;
+/**
+ * A ceiling, not a count of the list.
+ *
+ * It used to be `EVENT_SECTORS.length`, which quietly capped an event at
+ * fourteen tracks — so adding industries would have made the cap wrong rather
+ * than raising it.
+ */
+const MAX_SECTOR_TRACKS = 64;
 
 export const sectorTrackInput = z.object({
   sectorSlug,
@@ -42,7 +48,7 @@ export const updateEventSchema = z.object({
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 export const publishEventSchema = z.object({
-  action: z.enum(["publish", "unpublish", "archive"]),
+  action: z.enum(["publish", "unpublish", "archive", "end"]),
 });
 export type PublishEventInput = z.infer<typeof publishEventSchema>;
 

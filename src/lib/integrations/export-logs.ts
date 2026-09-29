@@ -1,4 +1,3 @@
-import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listRecentDeliveryLogs } from "@/lib/integrations/health";
 
 export type IntegrationDeliveryExportRow = {

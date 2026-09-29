@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Move — Presenters &amp; exhibitors to the bottom</title>
+<style>
+  :root{ --navy:#0f2544; --border:#e2e8f0; --muted:#64748b; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1200px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 26px;max-width:720px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:36px 0 12px;font-weight:700}
+  .card{background:#fff;border:1px solid var(--border);border-radius:12px;
+        box-shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.04)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:980px){.two{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+       text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.now{background:#f1f5f9;color:#475569;border:1px solid var(--border)}
+  .tag.after{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+
+  /* page chrome */
+  .pg{padding:16px 18px 20px}
+  .crumb{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .hrow{display:flex;align-items:flex-start;gap:10px;padding-bottom:4px}
+  .htitle{min-width:0;flex:1}
+  .htitle b{display:block;font-size:15.5px;color:var(--navy);line-height:1.25}
+  .htitle span{display:block;font-size:11px;color:var(--muted);margin-top:3px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbtns{flex:none;display:flex;gap:6px;white-space:nowrap}
+  .btn{font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px;
+       border:1px solid var(--border);background:#fff;color:#334155}
+  .btn.p{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  /* stacked sections */
+  .stack{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .sec{border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden}
+  .sec .t{display:flex;align-items:center;gap:8px;padding:11px 13px;font-size:13px;
+          font-weight:600;color:var(--navy)}
+  .sec .t .n{font-size:10px;font-weight:700;color:#94a3b8;background:#f1f5f9;
+             border-radius:5px;padding:1px 6px;font-variant-numeric:tabular-nums}
+  .sec .hint{padding:0 13px 12px;font-size:11.5px;color:var(--muted);margin:0}
+  .sec.ghost{background:#fafcfe}
+
+  /* the moved panel */
+  .moved{border:2px solid #7dd3fc;box-shadow:0 0 0 4px rgba(125,211,252,.18)}
+  .moved .t{background:#f0f9ff}
+  .moved .t .badge{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.07em;
+      text-transform:uppercase;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;
+      border-radius:999px;padding:2px 8px}
+  .invbody{padding:13px;border-top:1px solid #f1f5f9}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .field{margin-bottom:9px}
+  .field label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  .inp{border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:11.5px;
+       color:#475569;background:#fff}
+  .empty{padding:14px 13px;font-size:12px;color:#94a3b8;border-top:1px solid #f1f5f9}
+
+  .arrowcol{display:flex;align-items:center;justify-content:center;font-size:22px;color:#0284c7}
+
+  /* diff */
+  pre{margin:0;padding:14px 16px;font:11.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;
+      overflow-x:auto;color:#334155}
+  .rm{background:#fef2f2;color:#b91c1c;display:block}
+  .ad{background:#ecfdf5;color:#047857;display:block}
+  .ctx{display:block;color:#94a3b8}
+  code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;
+       padding:1px 5px;border-radius:4px;color:#334155}
+  .note{font-size:12.5px;color:#475569;max-width:760px}
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:10px;padding:12px 14px;
+        font-size:12.5px;color:#78350f;max-width:860px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Presenters &amp; exhibitors — moved to the bottom</h1>
+  <p class="sub">Same panel, same behaviour. It stops being the first thing on the page and becomes the last, after Sponsors. Nothing about how it works changes.</p>
+
+  <div class="two">
+    <!-- NOW -->
+    <div>
+      <span class="tag now">Now</span>
+      <div class="card pg">
+        <div class="crumb">← All events</div>
+        <div class="hrow">
+          <div class="htitle">
+            <b>iCFO PE Expo — Las Vegas | Sept 22</b>
+            <span>/icfo-pe-expo-las-vegas-sept-22-2 · Published · Deep Tech, FinTech…</span>
+          </div>
+          <div class="hbtns"><span class="btn p">Live control center</span><span class="btn">More ▾</span></div>
+        </div>
+
+        <div class="stack">
+          <div class="sec moved" style="border-color:#fca5a5;box-shadow:0 0 0 4px rgba(252,165,165,.18)">
+            <div class="t" style="background:#fef2f2">
+              <span class="n">1</span> Presenters &amp; exhibitors · 0 invited
+              <span class="badge" style="color:#b91c1c;background:#fee2e2;border-color:#fecaca">in the way</span>
+            </div>
+            <div class="invbody">
+              <div class="grid3">
+                <div class="field"><label>Role</label><div class="inp">Founder Showcase ▾</div></div>
+                <div class="field"><label>Session</label><div class="inp">— none — ▾</div></div>
+                <div class="field"><label>Materials due</label><div class="inp">mm/dd/yyyy</div></div>
+              </div>
+              <div class="field"><label>Invite by email</label><div class="inp" style="height:32px"></div></div>
+              <span class="btn p">Send invitations</span>
+            </div>
+          </div>
+          <div class="sec ghost"><div class="t"><span class="n">2</span> Event details</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">3</span> Event banner</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">4</span> Page banner &amp; countdown</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">5</span> Sessions</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">6</span> Sponsors</div></div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:10px">An invite form sits between the title and the fields you actually came to edit.</p>
+    </div>
+
+    <!-- AFTER -->
+    <div>
+      <span class="tag after">After</span>
+      <div class="card pg">
+        <div class="crumb">← All events</div>
+        <div class="hrow">
+          <div class="htitle">
+            <b>iCFO PE Expo — Las Vegas | Sept 22</b>
+            <span>/icfo-pe-expo-las-vegas-sept-22-2 · Published · Deep Tech, FinTech…</span>
+          </div>
+          <div class="hbtns"><span class="btn p">Live control center</span><span class="btn">More ▾</span></div>
+        </div>
+
+        <div class="stack">
+          <div class="sec ghost"><div class="t"><span class="n">1</span> Event details</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">2</span> Event banner</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">3</span> Page banner &amp; countdown</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">4</span> Sessions</div></div>
+          <div class="sec ghost"><div class="t"><span class="n">5</span> Sponsors</div></div>
+          <div class="sec moved">
+            <div class="t">
+              <span class="n">6</span> Presenters &amp; exhibitors · 0 invited
+              <span class="badge">moved here</span>
+            </div>
+            <div class="invbody">
+              <div class="grid3">
+                <div class="field"><label>Role</label><div class="inp">Founder Showcase ▾</div></div>
+                <div class="field"><label>Session</label><div class="inp">— none — ▾</div></div>
+                <div class="field"><label>Materials due</label><div class="inp">mm/dd/yyyy</div></div>
+              </div>
+              <div class="field"><label>Invite by email</label><div class="inp" style="height:32px"></div></div>
+              <div class="field"><label>Personal note (optional)</label><div class="inp" style="height:28px"></div></div>
+              <span class="btn p">Send invitations</span>
+            </div>
+            <p class="empty">Nobody invited yet. Founders and showcase presenters answer in their iCapOS portal; exhibitors get a link.</p>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:10px">Event details is the first thing under the header, where it belongs. Invitations sit with Sessions and Sponsors — the other things you attach <em>to</em> an event.</p>
+    </div>
+  </div>
+
+  <!-- DIFF -->
+  <h2>The change</h2>
+  <div class="card">
+    <pre><span class="ctx">src/components/admin-events/EventDetailManager.tsx</span>
+<span class="ctx"> </span>
+<span class="ctx">  {error && ( … )}</span>
+<span class="ctx"> </span>
+<span class="rm">- {/* Invitations — outbound, as against speaker_applications which are inbound. */}</span>
+<span class="rm">- &lt;div className="mt-4"&gt;</span>
+<span class="rm">-   &lt;EventInvitesPanel eventId={event.id} canEdit={canEdit} sessions={…} /&gt;</span>
+<span class="rm">- &lt;/div&gt;</span>
+<span class="ctx"> </span>
+<span class="ctx">  {/* Event details */}   ← now first</span>
+<span class="ctx">  …</span>
+<span class="ctx">  {/* Sessions */}</span>
+<span class="ctx">  {/* Sponsors */}</span>
+<span class="ctx"> </span>
+<span class="ad">+ {/* Invitations — outbound, as against speaker_applications which are inbound.</span>
+<span class="ad">+     Last because it attaches people to the event, like Sessions and Sponsors above. */}</span>
+<span class="ad">+ &lt;div className="mt-6"&gt;</span>
+<span class="ad">+   &lt;EventInvitesPanel eventId={event.id} canEdit={canEdit} sessions={…} /&gt;</span>
+<span class="ad">+ &lt;/div&gt;</span>
+<span class="ctx"> </span>
+<span class="ctx">  {removedSession && ( … undo toast … )}</span></pre>
+  </div>
+  <p class="note" style="margin-top:10px">
+    One file, one block moved. <code>mt-4</code> becomes <code>mt-6</code> so the gap matches the sections it now follows.
+    No props change, no imports change, nothing else on the page moves.
+  </p>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    The panel still fetches its invitations on mount, so moving it down the page doesn&rsquo;t save the request —
+    it just means you scroll past Sponsors to reach it. If you&rsquo;d rather it not load until you open it,
+    that is a different change and I&rsquo;d mock it separately.
+  </div>
+
+</div>
+</body>
+</html>

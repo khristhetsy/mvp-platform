@@ -12,6 +12,18 @@ describe("normalizeFundingStage", () => {
     expect(normalizeFundingStage(null)).toBe("seed");
     expect(normalizeFundingStage("")).toBe("seed");
   });
+
+  it("handles the cases a hand-rolled matcher got wrong", () => {
+    // A local copy in weight-sets-db.ts matched on stage.includes("a"), which put
+    // "Angel" into Series A. Every caller now goes through this function.
+    expect(normalizeFundingStage("Angel")).toBe("pre-seed");
+    expect(normalizeFundingStage("Angel / Pre-seed")).toBe("pre-seed");
+    expect(normalizeFundingStage("Expansion")).toBe("later");
+    expect(normalizeFundingStage("Bridge")).toBe("later");
+    expect(normalizeFundingStage("Pre-IPO")).toBe("later");
+    // funding_stage is stored as a comma-joined multi-select; earliest wins.
+    expect(normalizeFundingStage("Pre-seed, Seed")).toBe("pre-seed");
+  });
 });
 
 describe("founderFacingScore", () => {

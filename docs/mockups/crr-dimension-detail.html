@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR · Dimension cards + detail with AI suggestions · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1080px;line-height:1.55}
+.frame{width:1080px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 8px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 9px;border-bottom:1px solid #E2E7F0}
+td{padding:8px 9px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.co{display:flex;align-items:center;gap:8px}
+.av{width:26px;height:26px;border-radius:7px;background:#EEF0FE;color:#4F46E5;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.nm{font-weight:600;font-size:12.5px}
+.sub{font-size:11px;color:#94A3B8;margin:2px 0 0}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:600}
+.red{background:#FDE8E8;color:#B42323}.amb{background:#FFF4DE;color:#9A5B00}.grn{background:#E7F7EE;color:#137A3B}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.c-g{color:#137A3B}.c-a{color:#9A5B00}.c-r{color:#B42323}.c-z{color:#94A3B8}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+/* dimension cards */
+.dimrow{display:flex;gap:6px;flex-wrap:wrap}
+.dimbox{border:1px solid #E2E7F0;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer;min-width:112px;background:#fff}
+.dimbox:hover{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE}
+.dimbox.on{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE;background:#FBFBFF}
+.dimbox .t{color:#64748B;font-size:10px;letter-spacing:.03em;text-transform:uppercase;display:flex;justify-content:space-between;gap:6px}
+.dimbox .t em{font-style:normal;color:#B6C0D0;font-weight:600}
+.dimbox .v{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;line-height:1.3}
+.meter{height:3px;border-radius:99px;background:#F1F5F9;margin-top:3px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px}
+/* detail panel */
+.panel{border:1px solid #D6DDE8;border-radius:12px;background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.13);width:640px}
+.ph{padding:14px 18px;border-bottom:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:flex-start}
+.pb{padding:14px 18px}
+.big{font-size:30px;font-weight:600;line-height:1}
+.contrib{display:flex;gap:16px;margin-top:10px;padding:9px 12px;background:#F8FAFC;border-radius:9px;font-size:11.5px}
+.contrib div span{display:block;color:#94A3B8;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.contrib div b{font-size:13px;font-variant-numeric:tabular-nums}
+.frow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #F5F7FA;font-size:12.5px;cursor:pointer}
+.frow:hover{background:#FBFBFF}
+.frow .fn{flex:1}
+.frow .fb{width:120px;height:5px;border-radius:99px;background:#F1F5F9;overflow:hidden}
+.frow .fb i{display:block;height:100%;border-radius:99px}
+.frow .fv{width:52px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.sect{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;margin:16px 0 6px}
+.ai{border:1px solid #DCDCFB;background:linear-gradient(180deg,#FBFBFF,#F6F6FE);border-radius:11px;padding:12px 14px}
+.aihead{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:#4F46E5;text-transform:uppercase;letter-spacing:.05em}
+.sugg{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #EDEDFB;font-size:12.5px;line-height:1.5}
+.sugg:last-child{border:0;padding-bottom:0}
+.num{width:19px;height:19px;border-radius:99px;background:#4F46E5;color:#fff;font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.gain{font-size:10.5px;font-weight:600;color:#137A3B;background:#E7F7EE;border-radius:5px;padding:1px 6px;white-space:nowrap}
+.btn{border:1px solid #D6DDE8;border-radius:8px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:600}
+.evid{font-size:12px;display:flex;gap:8px;padding:5px 0;color:#475569}
+.ic{width:15px;flex:none;text-align:center;font-weight:700}
+.ic.pass{color:#1D9E75}.ic.warn{color:#E8922A}.ic.fail{color:#D9534F}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+</style></head><body>
+
+<p class="note"><b>Option E, with the click behaviour.</b> The Factors column becomes five labelled dimension cards. Clicking one opens a panel that shows how that dimension was built and what to do about it. Nothing is built yet.</p>
+
+<!-- ── the row ── -->
+<h2>1. The column, at rest</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:190px">Company</th><th style="width:70px">Score</th><th>Dimensions <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#B6C0D0">— the same five the Weights tab edits · small number = weight for this company&rsquo;s stage</span></th></tr>
+    <tr>
+      <td><div class="co"><div class="av">BA</div><div><div class="nm">Brainiest AI</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill red">28</span></td>
+      <td><div class="dimrow">
+        <div class="dimbox"><div class="t">Narrative <em>10</em></div><div class="v c-g">100</div><div class="meter"><i style="width:100%;background:#1D9E75"></i></div></div>
+        <div class="dimbox"><div class="t">Team <em>30</em></div><div class="v c-r">27</div><div class="meter"><i style="width:27%;background:#D9534F"></i></div></div>
+        <div class="dimbox"><div class="t">Financial <em>15</em></div><div class="v c-a">36</div><div class="meter"><i style="width:36%;background:#E8922A"></i></div></div>
+        <div class="dimbox on"><div class="t">Traction <em>25</em></div><div class="v c-r">17</div><div class="meter"><i style="width:17%;background:#D9534F"></i></div></div>
+        <div class="dimbox"><div class="t">Cap table <em>20</em></div><div class="v c-a">42</div><div class="meter"><i style="width:42%;background:#E8922A"></i></div></div>
+      </div></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CI</div><div><div class="nm">Credtent, Inc.</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill amb">36</span></td>
+      <td><div class="dimrow">
+        <div class="dimbox"><div class="t">Narrative <em>10</em></div><div class="v c-g">100</div><div class="meter"><i style="width:100%;background:#1D9E75"></i></div></div>
+        <div class="dimbox"><div class="t">Team <em>30</em></div><div class="v c-a">45</div><div class="meter"><i style="width:45%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Financial <em>15</em></div><div class="v c-a">58</div><div class="meter"><i style="width:58%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Traction <em>25</em></div><div class="v c-a">48</div><div class="meter"><i style="width:48%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Cap table <em>20</em></div><div class="v c-a">54</div><div class="meter"><i style="width:54%;background:#E8922A"></i></div></div>
+      </div></td>
+    </tr>
+  </table>
+  <p class="sub" style="margin-top:8px">The small grey number in each card header is that dimension&rsquo;s <b>weight for that company&rsquo;s own stage profile</b> — so a pre-seed company shows Narrative 30 / Team 30, a Series A company shows Traction 30 / Financial 25. It answers “does this weak score actually matter here?” without opening anything.</p>
+</div>
+
+<!-- ── the panel ── -->
+<h2>2. Click a card → the detail</h2>
+<p class="note">Opens over the page, same as the factor popup does today. Four parts: what this dimension is worth for this company, the factors inside it, what the AI suggests doing, and the evidence it read.</p>
+
+<div class="panel">
+  <div class="ph">
+    <div>
+      <p class="lbl" style="margin:0 0 3px">Traction · Brainiest AI Technology</p>
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <span class="big c-r">17</span><span style="color:#94A3B8;font-size:14px">/ 100</span>
+        <span class="pill red">Needs work</span>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <button class="btn">Open company ↗</button>
+      <button class="btn" style="margin-left:4px">✕</button>
+    </div>
+  </div>
+
+  <div class="pb">
+    <div class="contrib">
+      <div><span>Weight · Seed profile</span><b>25</b></div>
+      <div><span>Contributes now</span><b>4.3 pts</b></div>
+      <div><span>If it hit 60</span><b class="c-g">+10.8 pts</b></div>
+      <div><span>Company score</span><b>28 → <span class="c-g">39</span></b></div>
+    </div>
+
+    <p class="sect">The two factors inside Traction</p>
+    <div class="frow">
+      <span class="fn">Customer Traction &amp; LOIs</span>
+      <span class="fb"><i style="width:23%;background:#D9534F"></i></span>
+      <span class="fv c-r">3/13</span>
+      <span style="color:#C3CCDA">›</span>
+    </div>
+    <div class="frow">
+      <span class="fn">Market &amp; Competitive Evidence</span>
+      <span class="fb"><i style="width:10%;background:#D9534F"></i></span>
+      <span class="fv c-r">1/10</span>
+      <span style="color:#C3CCDA">›</span>
+    </div>
+    <p class="sub" style="margin-top:6px">4 of 23 points → 17. Clicking a factor opens the existing factor popup — sub-scores, evidence, flags — one level deeper.</p>
+
+    <p class="sect">Suggested improvements</p>
+    <div class="ai">
+      <div class="aihead"><span>✦</span> AI suggestion <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#94A3B8;margin-left:auto">from the last scoring run · 18 Sep</span></div>
+      <div style="margin-top:8px">
+        <div class="sugg">
+          <span class="num">1</span>
+          <div><b>Upload signed customer agreements or pilot LOIs.</b> The data room has a pitch deck and a business plan but no customer-side document. Even two signed pilots would move Customer Traction from 3 to about 8.
+            <div style="margin-top:4px"><span class="gain">+3.8 to the score</span> <span style="color:#94A3B8;font-size:11px;margin-left:6px">largest single gain available</span></div>
+          </div>
+        </div>
+        <div class="sugg">
+          <span class="num">2</span>
+          <div><b>Add retention or usage metrics to the deck.</b> Revenue is claimed but no cohort, churn or MAU figure appears anywhere, so the sub-score for usage evidence is zero.
+            <div style="margin-top:4px"><span class="gain">+1.5 to the score</span></div>
+          </div>
+        </div>
+        <div class="sugg">
+          <span class="num">3</span>
+          <div><b>Name the competitors and size the market with a source.</b> Market &amp; Competitive Evidence scores 1/10 — the plan asserts a market size with no citation and does not name a single competitor.
+            <div style="margin-top:4px"><span class="gain">+2.2 to the score</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:11px;display:flex;gap:6px;align-items:center">
+        <button class="btn pri">Send to founder</button>
+        <button class="btn">Copy</button>
+        <button class="btn">Regenerate</button>
+        <span style="margin-left:auto;font-size:10.5px;color:#94A3B8">Generated, not verified — read it before sending.</span>
+      </div>
+    </div>
+
+    <p class="sect">What the AI read</p>
+    <div class="evid"><span class="ic pass">✓</span><span>Pitch deck v3.pdf — “200+ users on the waitlist”</span></div>
+    <div class="evid"><span class="ic warn">!</span><span>Business plan.docx — market size stated, no source given</span></div>
+    <div class="evid"><span class="ic fail">✕</span><span>No customer contracts, LOIs or pilot agreements in any category</span></div>
+    <div class="evid"><span class="ic fail">✕</span><span>No retention, churn or usage metric found in any document</span></div>
+
+    <div class="warnbox" style="margin-top:14px">
+      <b>Founders cannot see this.</b> CRR scores are admin- and investor-visible only — the page says so at the top. “Send to founder” would be the first thing that crosses that line, so it sends <i>the suggestions</i> as a message, never the score or the weighting.
+    </div>
+  </div>
+</div>
+
+<!-- ── where the suggestion comes from ── -->
+<h2>3. Where the suggestion text comes from <span>— the one real decision here</span></h2>
+<p class="note">“AI suggestion for improvement” does not exist yet. What exists is per-factor <code>aiSummary</code> text and <code>flags</code> with a <code>detail</code> field that already reads like advice (“Upload financial statements even for pre-revenue stage”). Three ways to fill the panel, cheapest first.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:130px">Source</th><th style="width:150px">Cost</th><th>What you get</th></tr>
+    <tr>
+      <td><b>1 · Assemble from flags</b><div class="sub">no AI call</div></td>
+      <td>free, instant, works offline</td>
+      <td>Rank the existing red/amber flags inside the dimension by points lost, print them as the list. Honest and specific, but the wording is the generic flag text — it does not mention what <i>this</i> company&rsquo;s documents actually said.</td>
+    </tr>
+    <tr>
+      <td><b>2 · One Claude call per dimension</b><div class="sub">on open, cached</div></td>
+      <td>~1 call per card opened · cached on the score row so re-opening is free</td>
+      <td>What&rsquo;s drawn above. Reads the factor evidence and sub-scores and writes three ranked actions in the company&rsquo;s own terms. Regenerates only when the score is re-run.</td>
+    </tr>
+    <tr>
+      <td><b>3 · Generate all five at scoring time</b><div class="sub">baked into the run</div></td>
+      <td>5 extra calls per company per re-score · 22 companies = 110</td>
+      <td>Instant to open, and the text is part of the stored score so it can go into founder reports and the outreach email. Most expensive, and it pays for suggestions nobody opens.</td>
+    </tr>
+  </table>
+  <div class="okbox">
+    <b>Recommended: 2, with 1 as the fallback.</b> Generate on open and cache it on the score row, so the second look is instant and a re-score clears it. If <code>ANTHROPIC_API_KEY</code> is missing or the call fails, fall back to the assembled flags rather than showing an empty panel — the same graceful-degradation rule the rest of the AI features follow.
+  </div>
+  <div class="warnbox">
+    <b>The point gains are arithmetic, not AI.</b> “+3.8 to the score” is computed: sub-score headroom × factor weight × dimension weight for that company&rsquo;s profile. Claude writes the sentence; the number never comes from Claude, because a made-up number here would be worse than no number.
+  </div>
+</div>
+
+<!-- ── scope ── -->
+<h2>What this costs</h2>
+<div class="frame">
+  <div class="two">
+    <div>
+      <p class="lbl">Already there</p>
+      <ul class="tight">
+        <li><code>rollupToDimensions</code> — the five scores are computed today, just never displayed.</li>
+        <li>The factor popup, with sub-scores, evidence and flags.</li>
+        <li>The per-stage weights, so the small grey number and the “contributes now” maths are a lookup.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="lbl">New</p>
+      <ul class="tight">
+        <li>The five cards in the column, and the panel.</li>
+        <li>The headroom arithmetic (“if it hit 60”) — pure, testable, no AI.</li>
+        <li>The suggestion call + a cache column on <code>company_readiness_scores</code>, which means a migration.</li>
+        <li>“Send to founder” — decide whether that goes now or later; everything else works without it.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</body></html>

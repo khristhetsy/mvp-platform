@@ -82,7 +82,7 @@ export function CreditsWallet({
                 {item.description && <p className="mt-1 flex-1 text-sm text-[var(--text-secondary)]">{item.description}</p>}
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-semibold text-[var(--navy)]">{item.cost.toLocaleString()} Points</span>
-                  <button
+                  <button type="button"
                     onClick={() => redeem(item)}
                     disabled={!afford || busyId === item.id}
                     className="cap-btn-primary rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50"

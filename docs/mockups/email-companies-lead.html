@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event email — presenting companies lead</title>
+<style>
+  :root{ --navy:#0c2340; --blue:#2E78F5; --violet:#7c3aed; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:840px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  .mail{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden;max-width:600px;margin:0 auto}
+  .hero{background:var(--navy);color:#fff;padding:20px 22px}
+  .hero .eb{font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin:0 0 5px}
+  .hero h4{margin:0;font-size:19px;line-height:1.25}
+  .hero p{margin:6px 0 13px;font-size:12px;opacity:.82}
+  .cta{display:inline-block;background:var(--blue);color:#fff;border-radius:6px;padding:8px 15px;
+       font-size:12.6px;font-weight:700}
+  .body{padding:18px 20px}
+
+  .cal{border-left:3px solid var(--blue);background:#f7faff;border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:8px}
+  .cal.ts{border-left-color:var(--violet);background:#fbfaff}
+  .cal .k{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+          background:var(--blue);color:#fff;border-radius:3px;padding:1px 6px;margin-bottom:4px}
+  .cal.ts .k{background:var(--violet)}
+  .cal b{display:block;font-size:13.2px;color:var(--navy)}
+  .cal p{margin:4px 0 0;font-size:11.4px;color:#4a5568;line-height:1.5}
+  .agh{margin:0 0 9px;font-size:14px;color:var(--navy);font-weight:700}
+  .guests{margin-top:9px;border-top:1px solid #ece9fb;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .g{display:flex;gap:7px;align-items:flex-start;min-width:0}
+  .g .av{width:26px;height:26px;border-radius:50%;background:#ede9fe;color:#6d28d9;flex:none;
+         display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800}
+  .g .av.inv{background:#dbeafe;color:#1d4ed8}
+  .g .r{display:block;font-size:8.4px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--violet)}
+  .g .r.inv{color:#1d4ed8}
+  .g b{display:block;font-size:12px;color:var(--navy);line-height:1.25}
+  .g span.c{display:block;font-size:10.4px;color:var(--muted)}
+
+  /* ── HERO BLOCK: presenting companies ── */
+  .feature{margin:24px -20px 0;padding:18px 20px 20px;background:#f2f6fd;border-top:1px solid #dbe6f8;
+           border-bottom:1px solid #dbe6f8}
+  .feature .eyebrow{margin:0 0 3px;font-size:9.6px;font-weight:800;letter-spacing:.11em;
+                    text-transform:uppercase;color:var(--blue)}
+  .feature h3{margin:0;font-size:20px;line-height:1.2;color:var(--navy);font-weight:800}
+  .feature .lead{margin:6px 0 13px;font-size:12.2px;color:#40546f;line-height:1.5}
+  .f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .f3 > div{background:#fff;border:1px solid #dbe6f8;border-top:3px solid var(--navy);
+            border-radius:0 0 8px 8px;padding:11px 11px 12px;min-width:0;
+            box-shadow:0 1px 2px rgba(12,35,64,.06)}
+  .f3 b{display:block;font-size:13.4px;color:var(--navy);line-height:1.22;font-weight:700;overflow-wrap:break-word}
+  .f3 span{display:block;font-size:10.6px;color:var(--muted);margin-top:4px;line-height:1.35}
+  .f3 .empty{background:transparent;border-color:transparent;box-shadow:none}
+
+  /* ── QUIET BLOCK: founder showcase ── */
+  .quiet{margin-top:24px}
+  .quiet .qh{margin:0 0 2px;font-size:13px;color:#40546f;font-weight:700}
+  .quiet .lead{margin:0 0 9px;font-size:11px;color:var(--muted);line-height:1.5}
+  .q3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .q3 > div{background:#fff;padding:8px 10px;min-width:0}
+  .q3 b{display:block;font-size:11.6px;color:#25405f;line-height:1.25;font-weight:600;overflow-wrap:break-word}
+  .q3 span{display:block;font-size:9.8px;color:var(--muted);margin-top:2px}
+  .q3 p{margin:4px 0 0;font-size:9.9px;color:#5b6b80;line-height:1.4}
+  .q3 .empty{background:#fbfcfe}
+
+  .inline{font-size:11.4px;color:#5b6b80;line-height:1.7;margin:0}
+  .exh{margin:20px 0 2px;font-size:11.4px;color:var(--muted);font-weight:700}
+  .foot{border-top:1px solid var(--border);padding:14px 20px;font-size:10.4px;color:#8a93a6;line-height:1.5}
+
+  /* levers */
+  .lev{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media(max-width:880px){.lev{grid-template-columns:1fr}}
+  .lv{border:1px solid var(--border);border-radius:10px;background:#fff;padding:13px 14px}
+  .lv h4{margin:0 0 6px;font-size:12.6px;color:var(--navy)}
+  .lv p{margin:0;font-size:11.8px;color:#475569;line-height:1.5}
+  .lv .pair{display:flex;gap:10px;align-items:flex-end;margin:9px 0 8px}
+  .swatchA{flex:1;height:30px;border-radius:5px;background:#f2f6fd;border:1px solid #dbe6f8;
+           display:flex;align-items:center;justify-content:center;font-size:9.6px;font-weight:700;color:var(--navy)}
+  .swatchB{flex:1;height:22px;border-radius:5px;background:#fff;border:1px solid var(--border);
+           display:flex;align-items:center;justify-content:center;font-size:9.2px;font-weight:600;color:#7b8798}
+  .bigT{font-size:20px;font-weight:800;color:var(--navy);line-height:1}
+  .smT{font-size:13px;font-weight:700;color:#40546f;line-height:1}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Presenting companies, leading</h1>
+  <p class="sub">Same order and the same three columns — the weight changes. Presenting companies becomes a full-width feature band; Founder Showcase drops back to a quiet grid beneath it.</p>
+
+  <!-- EMAIL -->
+  <h2>The email</h2>
+  <div class="mail">
+    <div class="hero">
+      <p class="eb">iCFO PE Expo</p>
+      <h4>iCFO PE Expo — Las Vegas | Sept 22</h4>
+      <p>Tuesday, September 22, 2026 · 12:00 PM – 4:00 PM PDT · Webinar · Free registration</p>
+      <span class="cta">Register to attend →</span>
+    </div>
+    <div class="body">
+      <p class="agh">Agenda</p>
+      <div class="cal">
+        <span class="k">Keynote</span><b>Auditorium</b>
+        <p>Prequalified deal flow, dynamic presentations, and live Q&amp;A with our experts.</p>
+      </div>
+      <div class="cal ts">
+        <span class="k">Talk show</span><b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+        <p>A candid conversation with a CEO, followed by a live investor panel.</p>
+        <div class="guests">
+          <div class="g"><span class="av">SP</span><span><span class="r">Guest CEO</span><b>Shan Padda</b><span class="c">Harvard MedTech</span></span></div>
+          <div class="g"><span class="av inv">MR</span><span><span class="r inv">Investor</span><b>Marcus Reyes</b><span class="c">Tessellate Ventures</span></span></div>
+        </div>
+      </div>
+
+      <!-- FEATURE -->
+      <div class="feature">
+        <p class="eyebrow">On stage at Las Vegas</p>
+        <h3>Presenting companies</h3>
+        <p class="lead">Five prequalified companies presenting to the room on September 22.</p>
+        <div class="f3">
+          <div><b>ClearPool Digital</b><span>Dr. Jamie Allsop<br />CEO</span></div>
+          <div><b>Scriptive</b><span>Bob Wood<br />President &amp; CEO</span></div>
+          <div><b>Brainlest AI</b><span>Alan Steinberg<br />CEO</span></div>
+          <div><b>Revolution5 Global</b><span>Tyler Mackay<br />CEO</span></div>
+          <div><b>Doyle Organics</b><span>John Kelser<br />CEO</span></div>
+          <div class="empty"></div>
+        </div>
+      </div>
+
+      <!-- QUIET -->
+      <div class="quiet">
+        <p class="qh">Founder Showcase</p>
+        <p class="lead">Also pitching from the main stage.</p>
+        <div class="q3">
+          <div><b>SOHM</b><span>Shailesh Shah</span><p>Generic pharmaceuticals moving into US retail.</p></div>
+          <div><b>Harvard MedTech</b><span>Shan Padda</span><p>VR therapeutics for chronic pain.</p></div>
+          <div><b>Amynas</b><span>Lode Debrabandere</span><p>Antibody discovery for autoimmune.</p></div>
+          <div><b>NovaRhythm Biosciences</b><span>Paul E. Miller, PhD</span><p>Cardiac diagnostics, FDA filed.</p></div>
+          <div><b>LivIQ</b><span>Steve Gatt</span><p>Longevity analytics from wearables.</p></div>
+          <div class="empty"></div>
+        </div>
+      </div>
+
+      <p class="exh">Exhibitors</p>
+      <p class="inline">NAI Technology · Impervitex Corp</p>
+
+      <p style="margin:18px 0 0;font-size:11.2px;color:var(--muted)">Presented by iCFO Capital Global</p>
+    </div>
+    <div class="foot">iCFO events are for education and community only. Nothing in this email is an offer to sell…</div>
+  </div>
+
+  <!-- LEVERS -->
+  <h2>The three levers, and only three</h2>
+  <div class="lev">
+    <div class="lv">
+      <h4>Background</h4>
+      <div class="pair">
+        <span class="swatchA">tinted band</span>
+        <span class="swatchB">plain</span>
+      </div>
+      <p>The feature breaks the margins and sits on a pale navy band. The Showcase stays on white, so the eye lands on the band first.</p>
+    </div>
+    <div class="lv">
+      <h4>Scale</h4>
+      <div class="pair">
+        <span class="bigT">20 / 13.4</span>
+        <span class="smT">13 / 11.6</span>
+      </div>
+      <p>Heading and company name both step down for the Showcase. A third smaller is enough to read as secondary without looking like an afterthought.</p>
+    </div>
+    <div class="lv">
+      <h4>Card weight</h4>
+      <div class="pair">
+        <span class="swatchA" style="border-top:3px solid var(--navy);border-radius:0 0 5px 5px">card + rule</span>
+        <span class="swatchB">hairline cells</span>
+      </div>
+      <p>Separated cards with a navy top rule and a soft shadow, against flat cells divided by hairlines.</p>
+    </div>
+  </div>
+  <p class="note" style="margin-top:11px">No colour was added and nothing was made bigger than the hero — the
+  register button is still the loudest thing in the email, which is the point of sending it.</p>
+
+  <!-- TRADE -->
+  <h2>What it costs the Showcase</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:26%">Showcase</th><th style="width:22%">Before</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td>Pitch line</td><td>10.4px, 3 lines</td><td>9.9px, clamped to 2 — the summaries above were cut to fit</td></tr>
+        <tr><td>Role</td><td>&ldquo;Shailesh Shah · Founder&rdquo;</td><td>Name only; the role is dropped to save a line</td></tr>
+        <tr><td>Card</td><td>Violet top rule, tinted</td><td>Flat cell, hairline divider</td></tr>
+        <tr><td>Heading</td><td>15px navy</td><td>13px slate</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>This demotes the block with the most persuasive content.</b> The Showcase carries the
+    pitch lines — the part that tells an investor why to come — and it is now the quietest thing on the page. If the
+    Showcase is the draw and Presenting companies is the credit, this is backwards; say so and I&rsquo;ll swap the
+    weighting rather than the order.</p>
+    <p style="margin:0 0 8px"><b>The tinted band breaks the body margins.</b> That needs a full-width table row in the
+    email, not padding, or Outlook on Windows will leave a white gutter down both sides. Worth knowing because it is
+    the one part of this that isn&rsquo;t just a style value.</p>
+    <p style="margin:0"><b>Emphasis is per block, not per email.</b> A reminder that leads with the Showcase only
+    needs the two levers reversed — so this is a setting on the block, not a rewrite.</p>
+  </div>
+
+</div>
+</body>
+</html>

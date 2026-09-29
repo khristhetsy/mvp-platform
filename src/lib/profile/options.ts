@@ -88,15 +88,57 @@ export const BUSINESS_ENTITY_OPTIONS = [
   "Not yet incorporated",
 ] as const;
 
-/** 8 — Annual EBITDA bands (also accepts free text on the profile). */
-export const EBITDA_BAND_OPTIONS = [
-  "Negative / pre-profit",
-  "Break-even",
-  "Under $250K",
-  "$250K – $1M",
-  "$1M – $5M",
-  "$5M+",
+/**
+ * Money bands, taken verbatim from the Odoo contact records.
+ *
+ * These nine labels are what investors already answered for "Investor investment
+ * size?" and "Investor preferences for company with annual EBITDA range of?", and
+ * what entrepreneurs answered for "Entrepreneur annual EBITDA?". Founders now pick
+ * from the same list, so both sides compare like for like. Do not add or rename
+ * options here: the list must stay identical to the existing data.
+ */
+export const MONEY_BAND_OPTIONS = [
+  "Less than $50k",
+  "$50k - $100k",
+  "$100k - $250k",
+  "$250k - $500k",
+  "$500k - $1m",
+  "$1m - $10m",
+  "$10m - $50m",
+  "$50m - $100m",
+  "Over $100m",
 ] as const;
+
+export type MoneyBand = (typeof MONEY_BAND_OPTIONS)[number];
+
+/** Amount of capital the founder is raising, as one of the money bands. */
+export const FUNDING_AMOUNT_BAND_OPTIONS = MONEY_BAND_OPTIONS;
+
+/** 8 — Annual EBITDA (current, never projected), as one of the money bands. */
+export const EBITDA_BAND_OPTIONS = MONEY_BAND_OPTIONS;
+
+/** Lower bound (inclusive) of each band, in the same order as MONEY_BAND_OPTIONS. */
+const MONEY_BAND_FLOORS = [0, 50_000, 100_000, 250_000, 500_000, 1_000_000, 10_000_000, 50_000_000, 100_000_000] as const;
+
+/**
+ * The band an exact dollar amount falls in. A value on a boundary goes to the
+ * higher band ($1,000,000 is "$1m - $10m"). Anything below $50k, including zero
+ * and negative EBITDA, is "Less than $50k", since the existing list has no lower
+ * band. Must stay in step with public.money_band_for() in the database.
+ */
+export function moneyBandFor(amount: number | null | undefined): MoneyBand | null {
+  if (amount == null || !Number.isFinite(amount)) return null;
+  let band: MoneyBand = MONEY_BAND_OPTIONS[0];
+  for (let i = 0; i < MONEY_BAND_FLOORS.length; i += 1) {
+    if (amount >= MONEY_BAND_FLOORS[i]) band = MONEY_BAND_OPTIONS[i];
+  }
+  return band;
+}
+
+/** True when the value is exactly one of the money band labels. */
+export function isMoneyBand(value: unknown): value is MoneyBand {
+  return typeof value === "string" && (MONEY_BAND_OPTIONS as readonly string[]).includes(value);
+}
 
 /**
  * The 11 investor-fit categories in the exact order they should appear on the
@@ -124,3 +166,45 @@ export function splitProfileCsv(value: unknown): string[] {
     ? value.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 }
+
+/**
+ * Last-12-months revenue, as a band.
+ *
+ * Bands, not exact figures: this is how investors filter, and a band gets an
+ * honest answer where a precise number gets a rounded guess. Distinct from
+ * OPERATING_STAGE_OPTIONS, which describes the company's phase rather than its
+ * revenue.
+ */
+export const REVENUE_SIZE_OPTIONS = [
+  "Pre-revenue",
+  "Under $100k",
+  "$100k – $500k",
+  "$500k – $1M",
+  "$1M – $5M",
+  "$5M+",
+] as const;
+
+/**
+ * ARR and MRR as bands.
+ *
+ * Free text ("e.g. $240,000") never reached the matcher: the company side is
+ * typed as a number, nothing parsed the text, and the two six-point factors
+ * silently dropped out of every match. Bands are also how investors state their
+ * own preference, so both sides now speak the same vocabulary.
+ */
+export const ARR_BAND_OPTIONS = [
+  "None",
+  "Under $100k",
+  "$100k – $500k",
+  "$500k – $1M",
+  "$1M – $5M",
+  "$5M+",
+] as const;
+
+export const MRR_BAND_OPTIONS = [
+  "None",
+  "Under $10k",
+  "$10k – $50k",
+  "$50k – $100k",
+  "$100k+",
+] as const;

@@ -11,6 +11,9 @@ import { type InvestorPreferences, activeRatingScore } from "./preferences";
 export type CompanyMatchInput = {
   /** The company's raise / ask, USD. */
   fundingAmount: number | null;
+  /** The amount-of-capital band the founder picked, e.g. "$1m - $10m". When
+   *  present it wins over fundingAmount for the check size factor. */
+  fundingBand?: string | null;
   /** The company's annual revenue, USD, if known. */
   revenue: number | null;
   /** e.g. "early_revenue", "growing". */
@@ -18,6 +21,12 @@ export type CompanyMatchInput = {
   /** Free-text use of funds / focus. */
   useOfFunds: string | null;
   industry: string | null;
+  /** Investor types the founder is seeking (for investor-type fit). Optional —
+   *  the factor stays neutral when absent. */
+  soughtInvestorTypes?: string[];
+  /** Founder's actual ARR / MRR, USD (for ARR/MRR fit). Optional — neutral when null. */
+  arr?: number | null;
+  mrr?: number | null;
 };
 
 export type PreferenceMatch = { score: number; reasons: string[] };
@@ -43,6 +52,23 @@ export function parseMoneyBand(raw: string): { min: number; max: number } | null
   return { min: nums[0] * 0.75, max: nums[0] * 1.25 };
 }
 
+/**
+ * Do two stated bands overlap at all?
+ *
+ * Both sides of an ARR comparison are bands now — the founder picks one in
+ * settings, the investor states one in their preferences — so "in range" is an
+ * overlap question, not a point-in-interval one. A band that parses to nothing
+ * ("Pre-revenue", "None") overlaps nothing, which is the honest answer rather
+ * than a zero that counts against the match.
+ */
+export function bandsOverlap(a: string | null | undefined, b: string | null | undefined): boolean | null {
+  if (!a?.trim() || !b?.trim()) return null;
+  const left = parseMoneyBand(a);
+  const right = parseMoneyBand(b);
+  if (!left || !right) return null;
+  return left.min <= right.max && right.min <= left.max;
+}
+
 function inAnyBand(amount: number, bands: string[]): boolean {
   return bands.some((b) => {
     const r = parseMoneyBand(b);
@@ -62,8 +88,13 @@ function tokens(s: string | null): string[] {
 }
 
 /** Weights for each match factor (admin-adjustable). Sum is the denominator. */
-export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
-export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15 };
+export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number; investorType?: number; arr?: number; mrr?: number };
+// investorType/arr/mrr are additive: they count toward the score's denominator only
+// when both sides have data to compare, so scores are unchanged when that data is
+// absent (which is most contacts today) and grow in only where it exists. ARR and
+// MRR are kept light — they're revenue-flavored, so heavy weights would let revenue
+// dominate the overall score.
+export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15, investorType: 12, arr: 6, mrr: 6 };
 
 /** Rough annual-revenue band (USD) implied by the founder's revenue stage, used
  *  to score against the investor's preferred revenue range when no exact figure
@@ -88,7 +119,20 @@ export function scoreInvestorPreferenceMatch(
   weights: MatchWeights = DEFAULT_WEIGHTS,
 ): PreferenceMatch {
   const W = weights;
-  const total = W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity;
+  const wInvestorType = W.investorType ?? 0;
+  const wArr = W.arr ?? 0;
+  const wMrr = W.mrr ?? 0;
+  // Applicable only when BOTH sides have data — otherwise the factor is neutral
+  // (excluded from the denominator) rather than a drag on the score. ARR and MRR
+  // are independent: an investor who targets on ARR is scored on ARR alone.
+  const investorTypeApplicable = pref.investorType.length > 0 && (company.soughtInvestorTypes?.length ?? 0) > 0;
+  const arrApplicable = pref.arrRange.length > 0 && company.arr != null;
+  const mrrApplicable = pref.mrrRange.length > 0 && company.mrr != null;
+  const total =
+    W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity +
+    (investorTypeApplicable ? wInvestorType : 0) +
+    (arrApplicable ? wArr : 0) +
+    (mrrApplicable ? wMrr : 0);
   if (total <= 0) return { score: 50, reasons: [] };
 
   // No scoreable preferences at all → neutral. Avoids a misleading 0% for an
@@ -99,6 +143,9 @@ export function scoreInvestorPreferenceMatch(
     pref.useOfFunds.length > 0 ||
     pref.investmentSize.length > 0 ||
     pref.revenueRange.length > 0 ||
+    pref.arrRange.length > 0 ||
+    pref.mrrRange.length > 0 ||
+    pref.investorType.length > 0 ||
     activeRatingScore(pref) != null;
   if (!hasSignal) return { score: 50, reasons: [] };
 
@@ -142,7 +189,18 @@ export function scoreInvestorPreferenceMatch(
   // Check size vs. the raise (graded). Full credit when the whole raise sits
   // inside the investor's check band; partial when their typical check is a
   // plausible slice of a larger round (they can still participate).
-  if (pref.investmentSize.length > 0 && company.fundingAmount != null) {
+  const raiseBand = company.fundingBand ? parseMoneyBand(company.fundingBand) : null;
+  if (pref.investmentSize.length > 0 && raiseBand) {
+    // Founder picked a band: full credit when it overlaps one of the investor's
+    // bands, partial when their check could be a slice of a larger round.
+    if (pref.investmentSize.some((b) => bandsOverlap(company.fundingBand, b) === true)) {
+      points += W.checkSize;
+      reasons.push("Check size fits the raise");
+    } else if (pref.investmentSize.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= raiseBand.max; })) {
+      points += W.checkSize * 0.6;
+      reasons.push("Check fits as part of the round");
+    }
+  } else if (pref.investmentSize.length > 0 && company.fundingAmount != null) {
     const raise = company.fundingAmount;
     if (inAnyBand(raise, pref.investmentSize)) {
       points += W.checkSize;
@@ -179,6 +237,28 @@ export function scoreInvestorPreferenceMatch(
   if (rating != null) {
     points += W.activity * (rating / 5);
     if (rating >= 4) reasons.push("Highly active investor");
+  }
+
+  // Investor type fit — the investor's type(s) overlap what the founder is seeking.
+  if (investorTypeApplicable) {
+    const want = new Set((company.soughtInvestorTypes ?? []).map((t) => t.trim().toLowerCase()));
+    if (pref.investorType.some((t) => want.has(t.trim().toLowerCase()))) {
+      points += wInvestorType;
+      reasons.push("Investor type fits founder's ask");
+    }
+  }
+
+  // ARR fit and MRR fit — independent: the founder's actual figure inside the
+  // investor's target range for that specific metric.
+  const inRange = (ranges: string[], actual: number | null | undefined): boolean =>
+    actual != null && ranges.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= actual && actual <= r.max; });
+  if (arrApplicable && inRange(pref.arrRange, company.arr)) {
+    points += wArr;
+    reasons.push("ARR in target range");
+  }
+  if (mrrApplicable && inRange(pref.mrrRange, company.mrr)) {
+    points += wMrr;
+    reasons.push("MRR in target range");
   }
 
   return { score: Math.round((points / total) * 100), reasons };

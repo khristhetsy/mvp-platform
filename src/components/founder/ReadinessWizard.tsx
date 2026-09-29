@@ -123,7 +123,10 @@ function StepCard({
           <div>
             <p className="text-sm font-semibold text-slate-900">{step.title}</p>
             <p className="text-[10px]" style={{ color: step.status === "current" ? "#2E78F5" : "#94a3b8" }}>
-              {step.status === "done" ? "Complete" : `+${step.pointValue} pts toward 80`}
+              {/* No point value: these close a document gap, and what that is
+                  worth to the rating depends on what the document says. The CRR
+                  panel above prices each move honestly. */}
+              {step.status === "done" ? "Complete" : "Still missing"}
             </p>
           </div>
         </div>
@@ -239,7 +242,7 @@ export function ReadinessWizard({
           <ScoreRing score={currentScore} />
         </div>
         <p className="text-base font-semibold text-emerald-900">You&apos;re already at {currentScore} — above the {targetScore} threshold!</p>
-        <p className="mt-1 text-sm text-emerald-700">Your profile is investor-ready. Keep your documents current and maintain your completion as you grow.</p>
+        <p className="mt-1 text-sm text-emerald-700">Your profile is investor-ready. Keep your documents current and maintain your Preparation completeness as you grow.</p>
         <Link href="/founder/matching" className="mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-white" style={{ background: "#16a34a" }}>
           Browse investor matches →
         </Link>

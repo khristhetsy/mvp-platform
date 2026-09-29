@@ -4,7 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
-import { OUTREACH_THRESHOLD, computeInvestableCrr } from "@/lib/crr/investable-score";
+import { OUTREACH_THRESHOLD, investableCrrFrom } from "@/lib/crr/investable-score";
+import { crrFor } from "@/lib/crr/crr-for";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FounderStageBanner } from "@/components/founder/FounderStageBanner";
@@ -107,7 +108,7 @@ function getQualifyRequirements(state: FounderJourneyState): Requirement[] {
   return [
     { label: "Onboarding complete", met: state.conditions.onboardingComplete },
     { label: "Required documents uploaded (financials, cap table, pitch deck)", met: state.conditions.requiredDocsUploaded },
-    { label: "Completion ≥ 75%", met: state.conditions.readinessQualified },
+    { label: "Preparation complete ≥ 75%", met: state.conditions.readinessQualified },
   ];
 }
 
@@ -245,10 +246,11 @@ export default async function FounderJourneyPage() {
   const currentIndex = state.stageIndex;
   const qualifyRequirements = getQualifyRequirements(state);
 
-  // Capital Readiness Rating (CRR): the single canonical score, shared with the
-  // dashboard via computeInvestableCrr. Gates automated outreach.
-  const { crr: investableScore, readiness, profilePercent, outreachReady } = computeInvestableCrr(state, company);
-  const outreachGap = OUTREACH_THRESHOLD - investableScore;
+  // Capital Readiness Rating: the engine score for this company's own stage —
+  // the same number admin and investors see, and the same gate.
+  const engineCrr = await crrFor(company?.id ?? null);
+  const { crr: investableScore, readiness, profilePercent, outreachReady } = investableCrrFrom(engineCrr, state, company);
+  const outreachGap = engineCrr.pointsToGate;
 
   return (
     <FounderAppShell
@@ -321,7 +323,7 @@ export default async function FounderJourneyPage() {
                           <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
                             <ScoreGauge score={readiness} stroke="#10b981" />
                             <div className="min-w-0">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Completion</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Preparation complete</p>
                               <p className={state.conditions.readinessQualified ? "text-sm font-semibold text-emerald-600" : "text-sm font-semibold text-amber-600"}>
                                 {state.conditions.readinessQualified ? <>Qualified <i className="ti ti-check" aria-hidden="true" /></> : "Building"}
                               </p>
@@ -338,7 +340,7 @@ export default async function FounderJourneyPage() {
                                   {outreachReady ? "Outreach ready" : `Building · ${outreachGap} to go`}
                                 </p>
                                 <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-slate-500">
-                                  <span>Readiness <b className="text-slate-800">{readiness}</b></span>
+                                  <span>Preparation <b className="text-slate-800">{readiness}</b></span>
                                   <span>Profile <b className="text-slate-800">{profilePercent}</b></span>
                                   <span>Documents <b className="text-slate-800">{state.conditions.requiredDocsUploaded ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</b></span>
                                   <span>Onboarding <b className="text-slate-800">{state.conditions.onboardingComplete ? <i className="ti ti-check" aria-hidden="true" /> : "—"}</b></span>

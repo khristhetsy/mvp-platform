@@ -1,9 +1,27 @@
 // Sales contact profile — reads the CRM mirror + annotations + linked opportunities.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OVERRIDE_KEY, isInvestorProfileLabel, normalizeInvestorProfiles } from "@/lib/sales/investor-profile";
 import { logActivity } from "@/lib/sales/activity";
+import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
+import { reindexContacts } from "@/lib/fit/match-index";
+import { mergeOverrides } from "@/lib/sales/overrides";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
+
+/**
+ * Odoo label → the provenance tag that would mark it as DERIVED by us rather than stated.
+ * Mirrors the sourceKeys in @/lib/investors/derive-from-type. Editing one of these fields
+ * by hand clears the tag: the value is now a human statement, and undoDerivation() must
+ * not be able to delete it.
+ */
+const SOURCE_KEY_FOR_LABEL: Record<string, string> = {
+  "Entrepreneur operating stage?": "_stage_source",
+  "Investor preferences for type(s) of company operational stage?": "_stage_source",
+  "Investor investment size?": "_size_source",
+  "Investor preferences for the company with an annual revenue range of?": "_revenue_source",
+  "Investor preferences for company with annual EBITDA range of?": "_ebitda_source",
+};
 
 export type ContactProfile = {
   id: string; source: string; external_id: string; name: string; email: string | null; company: string | null;
@@ -13,6 +31,10 @@ export type ContactProfile = {
   language: string | null; created_on: string | null; note: string | null;
   // Full source (Odoo) questionnaire/company fields, label → values, for display.
   extra: Array<{ label: string; values: string[] }>;
+  /** Provenance for values this platform DERIVED rather than received or was told:
+   *  sourceKey → rule id (e.g. "_stage_source" → "derived:angel"). Kept separate from
+   *  `extra` because these are metadata about a field, not a field. */
+  derivedSources: Record<string, string>;
 };
 export type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 
@@ -53,12 +75,60 @@ function flattenExtra(
     if (values.length) out.push({ label, values });
   }
 
+  // Consolidate ALL industry data into one "Industries" field: the semantic
+  // __profile.industries list plus any values that landed under stray Odoo labels
+  // (some contacts carry industries under the entrepreneur/investor questionnaire
+  // labels instead of the mapped key). Deduped, and the stray labels are removed
+  // from `out` so they don't show separately in "Other details". Placed before the
+  // override loop so a manual edit to "Industries" still wins.
+  const STRAY_INDUSTRY_LABELS = new Set([
+    "entrepreneur type of industries?",
+    "investor interested in type(s) of business industries?",
+    "industry sector",
+  ]);
+  const industries = (raw?.__profile as { industries?: unknown } | undefined)?.industries;
+  const industrySet = new Set<string>(
+    Array.isArray(industries)
+      ? industries.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean)
+      : [],
+  );
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (STRAY_INDUSTRY_LABELS.has(out[i].label.trim().toLowerCase())) {
+      for (const v of out[i].values) industrySet.add(v);
+      out.splice(i, 1);
+    }
+  }
+  if (industrySet.size) out.push({ label: "Industries", values: sortSectors(canonicalizeIndustries([...industrySet])) });
+
+  // Investor profile: the data lives in __profile.investorTypes (semantic key), same
+  // as industries. Surface it as one "Investor profile" field, folding in any stray
+  // Odoo "Investor profile?" answer, so the contact detail matches the Group-by
+  // "Investor profile" dimension. Placed before overrides so a manual edit still wins.
+  // Values are canonicalised to Odoo's option list (same rules as the SQL merge).
+  const invTypes = (raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes;
+  const invTypeSet = new Set<string>(
+    Array.isArray(invTypes)
+      ? invTypes.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean)
+      : [],
+  );
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (isInvestorProfileLabel(out[i].label)) {
+      for (const v of out[i].values) invTypeSet.add(v);
+      out.splice(i, 1);
+    }
+  }
+  const invProfiles = normalizeInvestorProfiles([...invTypeSet]);
+  if (invProfiles.length) out.push({ label: INVESTOR_PROFILE_LABEL, values: invProfiles });
+
   // Apply array-valued overrides (structured "Additional details" edits): replace
   // a matching label, or add it if new. Empty override = remove the field.
   if (overrides) {
-    for (const [label, ov] of Object.entries(overrides)) {
+    for (const [rawLabel, ov] of Object.entries(overrides)) {
       if (!Array.isArray(ov)) continue; // string overrides are first-class fields
-      const values = ov.map((s) => String(s).trim()).filter(Boolean);
+      // A manual pick is stored under the historical key "Investor type"; it displays as Investor profile.
+      const isInv = isInvestorProfileLabel(rawLabel);
+      const label = isInv ? INVESTOR_PROFILE_LABEL : rawLabel;
+      const values = isInv ? normalizeInvestorProfiles(ov.map((s) => String(s))) : ov.map((s) => String(s).trim()).filter(Boolean);
       const idx = out.findIndex((e) => e.label.trim().toLowerCase() === label.trim().toLowerCase());
       if (idx >= 0) {
         if (values.length) out[idx] = { label: out[idx].label, values };
@@ -125,6 +195,11 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
     extra: flattenExtra(raw, ov),
+    // String overrides ending in _source are derivation tags, not user-visible fields —
+    // flattenExtra skips them (it only merges arrays), so surface them here instead.
+    derivedSources: Object.fromEntries(
+      Object.entries(ov).filter(([k, v]) => /^_[a-z]+_source$/.test(k) && typeof v === "string"),
+    ) as Record<string, string>,
   };
   return { contact, opportunities };
 }
@@ -166,19 +241,45 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   // Structured "Additional details" edits — array-valued overrides keyed by label.
   if (patch.preferences) {
     for (const [label, values] of Object.entries(patch.preferences)) {
+      if (isInvestorProfileLabel(label)) {
+        // Investor profile: one storage key (historical) + Odoo's canonical spellings, so
+        // the profile trigger regroups the contact under the right header on save.
+        ovPatch[INVESTOR_PROFILE_OVERRIDE_KEY] = normalizeInvestorProfiles(values);
+        continue;
+      }
       ovPatch[label] = values.map((s) => s.trim()).filter(Boolean);
+      // A human has now stated this value, so it is no longer our assumption. Clearing
+      // the provenance tag matters for more than display: undoDerivation() deletes by
+      // tag, so leaving it would let "reverse this rule" destroy hand-entered data.
+      const sourceKey = SOURCE_KEY_FOR_LABEL[label];
+      if (sourceKey) ovPatch[sourceKey] = null;
     }
   }
   if (Object.keys(update).length === 0 && Object.keys(ovPatch).length === 0) return;
 
+  // Overrides go through the atomic merge - never read-modify-write. A null value in the
+  // patch means "remove this key" (a cleared provenance tag), not "store null".
   if (Object.keys(ovPatch).length > 0) {
-    const { data: existing } = await db().from("crm_contacts").select("overrides").eq("id", id).maybeSingle();
-    const current = (existing?.overrides ?? {}) as Record<string, unknown>;
-    update.overrides = { ...current, ...ovPatch };
+    const set: Record<string, unknown> = {};
+    const remove: string[] = [];
+    for (const [k, v] of Object.entries(ovPatch)) {
+      if (v === null) remove.push(k);
+      else set[k] = v;
+    }
+    const merged = await mergeOverrides(id, { set, remove }, "updateContact");
+    if (merged === null) throw new Error(`Could not update overrides for ${id}`);
   }
 
-  const { error } = await db().from("crm_contacts").update(update).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (Object.keys(update).length > 0) {
+    const { error } = await db().from("crm_contacts").update(update).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+  // Keep /fit in step with what staff just changed. This edit can touch `company` (firm
+  // de-dup) and every scoring field, and it does NOT move synced_at — so without this the
+  // scheduled rebuild would never notice, and matching would run on the old values
+  // indefinitely with nothing to indicate it was stale. Three background jobs already do
+  // this; the path a human uses every day was the one missing it.
+  await reindexContacts([id]).catch(() => 0);
   const fields = Object.keys(patch).join(", ");
   await logActivity({ kind: "contact_edit", summary: `Edited contact fields: ${fields}`, actorId, contactCrmId: id });
 }

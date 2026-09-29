@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { NotificationRecord } from "@/lib/notifications/types";
+import { notificationCategory } from "@/lib/notifications/categories";
 
 function formatRelativeTime(value: string) {
   const diffMs = Date.now() - new Date(value).getTime();
@@ -127,6 +128,7 @@ export function NotificationBellDropdown() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<"all" | "action">("all");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadNotifications = useCallback(async () => {
@@ -217,6 +219,10 @@ export function NotificationBellDropdown() {
     setUnreadCount(0);
   }
 
+  const actionCount = notifications.filter((n) => !n.is_read && notificationCategory(n.type, n.severity).needsAction).length;
+  const visible =
+    filter === "action" ? notifications.filter((n) => notificationCategory(n.type, n.severity).needsAction) : notifications;
+
   function handleNotificationClick(notification: NotificationRecord) {
     if (!notification.is_read) void markRead(notification.id);
     setOpen(false);
@@ -283,12 +289,34 @@ export function NotificationBellDropdown() {
             ) : null}
           </div>
 
+          {/* Filter */}
+          <div className="flex gap-1.5 px-4 pb-2 pt-3" role="group" aria-label="Filter notifications">
+            {([
+              ["all", "All"],
+              ["action", actionCount > 0 ? `Needs action · ${actionCount}` : "Needs action"],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+                className={`min-h-8 rounded-full px-3 text-xs font-semibold transition ${
+                  filter === key ? "bg-[#0A1A40] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* List */}
           <div className="max-h-80 overflow-y-auto">
             {loading && notifications.length === 0 ? (
               <p className="px-4 py-6 text-sm text-slate-500" role="status" aria-live="polite">
                 Loading…
               </p>
+            ) : visible.length === 0 && filter === "action" ? (
+              <p className="px-4 py-8 text-center text-sm text-slate-500">Nothing needs your action right now.</p>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
@@ -300,8 +328,9 @@ export function NotificationBellDropdown() {
                 <p className="mt-1 text-xs text-slate-400">{t("activity_alerts_will_appear_here")}</p>
               </div>
             ) : (
-              notifications.map((notification) => {
+              visible.map((notification) => {
                 const icon = iconForType(notification.type);
+                const category = notificationCategory(notification.type, notification.severity);
                 return (
                   <button
                     key={notification.id}
@@ -321,10 +350,14 @@ export function NotificationBellDropdown() {
                     </div>
 
                     <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.06em]" style={{ color: category.color }}>
+                        {category.label}
+                        {category.needsAction && !notification.is_read ? <span className="ml-1.5 font-semibold normal-case tracking-normal text-slate-500">· Needs action</span> : null}
+                      </p>
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold leading-snug text-slate-950">{notification.title}</p>
                         {!notification.is_read ? (
-                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-violet-500" aria-hidden />
+                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: category.color }} aria-hidden />
                         ) : null}
                       </div>
                       <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-500">{notification.message}</p>

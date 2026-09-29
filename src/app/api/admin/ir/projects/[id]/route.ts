@@ -1,0 +1,61 @@
+/**
+ * One IR project — the pipeline payload.
+ *   GET   → { project, milestones, matches, tasks, openActivities, staff, stageEvents }
+ *   PATCH { status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary?, description?, color? } → { ok }
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { irStaff, forbidden, failed } from "@/lib/ir/auth";
+import { getProject, listActivities, listMatches, listMilestones, listStaff, listTasks, rescheduleProject, updateProject } from "@/lib/ir/db";
+import { loadEvents } from "@/lib/ir/dashboard";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  if (!(await irStaff())) return forbidden();
+  const { id } = await ctx.params;
+  try {
+    const project = await getProject(id);
+    if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    const [milestones, matches, tasks, openActivities, staff, stageEvents] = await Promise.all([
+      listMilestones(id), listMatches(id), listTasks(id), listActivities({ projectId: id, openOnly: true }), listStaff(), loadEvents([id]),
+    ]);
+    return NextResponse.json({ project, milestones, matches, tasks, openActivities, staff, stageEvents });
+  } catch (e) { return failed(e, "Couldn't load the project."); }
+}
+
+const schema = z.object({
+  status: z.enum(["active", "paused", "completed", "cancelled"]).optional(),
+  ownerId: z.string().uuid().optional(),
+  founderReportVisible: z.boolean().optional(),
+  starred: z.boolean().optional(),
+  isSpv: z.boolean().optional(),
+  title: z.string().min(1).max(160).optional(),
+  founderName: z.string().trim().max(160).nullable().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  termMonths: z.number().int().min(4).max(6).optional(),
+  weeklySummary: z.boolean().optional(),
+  monthlySummary: z.boolean().optional(),
+  description: z.string().max(20000).nullable().optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+});
+
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  if (!(await irStaff())) return forbidden();
+  const { id } = await ctx.params;
+  const parsed = schema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  const d = parsed.data;
+  try {
+    if (d.startDate || d.termMonths) {
+      const cur = await getProject(id);
+      if (!cur) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      const start = d.startDate ?? cur.start_date, term = d.termMonths ?? cur.term_months;
+      if (start !== cur.start_date || term !== cur.term_months) {
+        try { await rescheduleProject(id, start, term); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't move the dates." }, { status: 409 }); }
+      }
+    }
+    await updateProject(id, { status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, founder_name: d.founderName === undefined ? undefined : d.founderName || null, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description, color: d.color });
+    return NextResponse.json({ ok: true });
+  } catch (e) { return failed(e, "Couldn't update the project."); }
+}

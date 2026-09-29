@@ -3,7 +3,6 @@ import type { AutomationPlannedAction, AutomationTriggerContext } from "@/lib/au
 import { planCriticalComplianceEscalation, planRepeatedOverdueEscalation } from "@/lib/automation/escalation-rules";
 import {
   resolveCompanyDependencies,
-  resolveEntityDependencies,
   resolveSpvDependencies,
 } from "@/lib/automation/dependencies";
 import { listStaffProfileIds } from "@/lib/notifications/notifications";

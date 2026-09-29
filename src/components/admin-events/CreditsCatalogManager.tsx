@@ -113,7 +113,7 @@ export function CreditsCatalogManager({
                   />
                   Points
                 </label>
-                <button
+                <button type="button"
                   onClick={() => patch(it.id, { active: !it.active })}
                   className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${it.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
                 >
@@ -160,12 +160,12 @@ export function CreditsCatalogManager({
                     <span className="font-semibold text-rose-600">−{r.cost.toLocaleString()} Points</span>
                     <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${badge}`}>{r.status}</span>
                     {r.status === "pending" && (
-                      <button onClick={() => redemptionAction(r.id, "fulfill")} disabled={redBusy === r.id} className="font-semibold text-[var(--blue)] hover:underline disabled:opacity-50">
+                      <button type="button" onClick={() => redemptionAction(r.id, "fulfill")} disabled={redBusy === r.id} className="font-semibold text-[var(--blue)] hover:underline disabled:opacity-50">
                         {redBusy === r.id ? "…" : "Fulfil"}
                       </button>
                     )}
                     {r.status !== "reversed" && (
-                      <button onClick={() => redemptionAction(r.id, "reverse")} disabled={redBusy === r.id} className="font-semibold text-rose-600 hover:underline disabled:opacity-50">
+                      <button type="button" onClick={() => redemptionAction(r.id, "reverse")} disabled={redBusy === r.id} className="font-semibold text-rose-600 hover:underline disabled:opacity-50">
                         Reverse
                       </button>
                     )}

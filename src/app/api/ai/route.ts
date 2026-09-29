@@ -3,6 +3,7 @@ import { requestSchema, MAX_TOKENS, JSON_OUTPUT, type AiTask } from "@/lib/ai-si
 import { systemPromptFor } from "@/lib/ai-site/prompts";
 import { violatesGuardrails, GUARDRAIL_FALLBACK } from "@/lib/ai-site/guardrails";
 import { checkRateLimitAsync } from "@/lib/ai-site/ratelimit";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 export const runtime = "edge";
 
@@ -12,13 +13,21 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 /** One Anthropic call → assistant text (edge-compatible fetch, no SDK). */
 async function callAnthropic(system: string, messages: { role: string; content: string }[], maxTokens: number): Promise<string | null> {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return null;
+  if (!key) {
+    console.error("[ai-site] ANTHROPIC_API_KEY is not set");
+    return null;
+  }
   const res = await fetch(ANTHROPIC_URL, {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    // Surface the upstream reason (billing, auth, model) in runtime logs instead of failing silently.
+    const detail = await res.text().catch(() => "");
+    console.error(`[ai-site] Anthropic API ${res.status}: ${detail.slice(0, 500)}`);
+    return null;
+  }
   const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
   return (data.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim() || null;
 }
@@ -56,7 +65,7 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
-  const system = systemPromptFor(task);
+  const system = systemPromptFor(task, await loadPricing());
   const maxTokens = MAX_TOKENS[task];
   const contract = JSON_OUTPUT[task as AiTask];
 

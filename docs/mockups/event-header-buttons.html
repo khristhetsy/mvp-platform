@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Event header buttons — three options</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --navy:#0C2340;--indigo:#4F46E5;--blue:#2E78F5}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 8px}
+  .lbl b{color:var(--indigo)}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.3px;white-space:nowrap}
+
+  /* the page frame, at the real max-w-4xl (896px) */
+  .frame{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 16px;
+         box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:10px}
+  .back{font-size:13px;color:var(--s500);margin:0 0 12px}
+  .htitle{font-size:19px;font-weight:650;margin:0}
+  .hmeta{font-size:13px;color:var(--s500);margin:4px 0 0}
+
+  .btn{border-radius:6px;padding:6px 12px;font-size:13px;font-weight:500;text-decoration:none;display:inline-block;border:1px solid transparent}
+  .b-navy{background:var(--navy);color:#fff}
+  .b-ind{background:var(--indigo);color:#fff}
+  .b-out{border-color:var(--line);color:var(--s600);background:#fff}
+  .nw{white-space:nowrap}
+
+  /* BEFORE — deliberately reproduces the wrap */
+  .rowflex{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .acts{display:flex;align-items:center;gap:8px}
+  .broken .btn{max-width:74px}
+
+  /* option B: segmented */
+  .seg{display:flex;gap:2px;background:var(--l100);border-radius:9px;padding:3px;margin-top:12px;width:fit-content;max-width:100%;overflow-x:auto}
+  .seg a{border-radius:7px;padding:5px 12px;font-size:12.5px;font-weight:550;color:var(--s600);text-decoration:none;white-space:nowrap}
+  .seg a.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+
+  /* option C: menu */
+  .menu{position:relative;display:inline-block}
+  .sheet{margin-top:5px;border:1px solid var(--line);border-radius:9px;background:#fff;
+         box-shadow:0 8px 22px rgba(15,23,42,.13);padding:4px;width:190px}
+  .sheet a{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;font-size:12.8px;
+           color:var(--s700);text-decoration:none}
+  .sheet a:hover{background:var(--l50)}
+  .sheet .sep{height:1px;background:var(--l100);margin:4px 2px}
+  .ico{width:14px;text-align:center;color:var(--s400);font-size:12px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--indigo);border-radius:9px;
+        padding:12px 14px;font-size:12.5px;color:var(--s600);line-height:1.6;margin-bottom:14px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  .verdict{display:flex;gap:9px;font-size:12.3px;color:var(--s600);margin-top:8px;line-height:1.55}
+  .verdict .k{flex:none;width:74px;font-weight:650;color:var(--s700)}
+  .win{background:#ECFDF5;color:#047857;border-radius:99px;padding:1px 8px;font-size:10px;font-weight:700;
+       text-transform:uppercase;letter-spacing:.04em;margin-left:6px;vertical-align:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Event header buttons</h1>
+<p class="sub">Admin → Events → Manage event · three options, all at the real container width (896px)</p>
+
+<!-- BEFORE -->
+<div class="lbl">Today</div>
+<div class="frame">
+  <p class="back">← All events</p>
+  <div class="rowflex">
+    <div>
+      <p class="htitle">iCFO PE Expo — Las Vegas | Sept 22</p>
+      <p class="hmeta">/icfo-pe-expo-las-vegas-sept-22 · Published · FinTech, HealthTech, SaaS / B2B Software, EdTech, CleanTech, E-commerce, AI / ML, Consumer, Deep Tech, Marketplace, Logistics, Hardware, Other</p>
+    </div>
+    <div class="acts broken">
+      <a class="btn b-navy" href="#">Live control center</a>
+      <a class="btn b-ind" href="#">Marketing Hub</a>
+      <a class="btn b-out" href="#">Registrations</a>
+      <a class="btn b-out" href="#">Leads</a>
+      <a class="btn b-out" href="#">View public page</a>
+    </div>
+  </div>
+</div>
+
+<div class="note warn">
+  <b>Why it wraps.</b> Five links sit in a <code>flex items-center gap-2</code> with no
+  <code>whitespace-nowrap</code>, inside a <code>max-w-4xl</code> page. The sector list makes the
+  title block greedy, flex shrinks the buttons to fit, and the labels break mid-phrase — so
+  &ldquo;Live control center&rdquo; becomes two lines and &ldquo;View public page&rdquo; three, at
+  three different heights.
+  <br><br>
+  There is a second problem underneath it: <b>five buttons, no hierarchy.</b> Two coloured fills of
+  equal weight compete for the eye, and three of the five are just navigation to other pages rather
+  than actions on this one.
+</div>
+
+<!-- OPTION A -->
+<div class="lbl">Option A — <b>keep the row, fix the wrap</b></div>
+<div class="frame">
+  <p class="back">← All events</p>
+  <div class="rowflex">
+    <div style="min-width:0">
+      <p class="htitle">iCFO PE Expo — Las Vegas | Sept 22</p>
+      <p class="hmeta" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">/icfo-pe-expo-las-vegas-sept-22 · Published · FinTech, HealthTech, SaaS / B2B Software, EdTech, CleanTech, E-commerce, AI / ML, Consumer, Deep Tech, Marketplace, Logistics, Hardware, Other</p>
+    </div>
+    <div class="acts" style="flex:none">
+      <a class="btn b-navy nw" href="#">Live control</a>
+      <a class="btn b-out nw" href="#">Marketing</a>
+      <a class="btn b-out nw" href="#">Registrations</a>
+      <a class="btn b-out nw" href="#">Leads</a>
+      <a class="btn b-out nw" href="#">View public ↗</a>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <b>The smallest change that works.</b> <code>whitespace-nowrap</code> and
+  <code>flex-none</code> on the group, <code>min-w-0</code> on the title, two shorter labels, and
+  the second fill demoted so one primary leads. Still five controls in a row — fine at this width,
+  tight on a laptop.
+  <div class="verdict"><span class="k">Cost</span><span>~4 class changes, 2 label strings.</span></div>
+  <div class="verdict"><span class="k">Risk</span><span>Wraps again the moment a sixth button is added.</span></div>
+</div>
+
+<!-- OPTION B -->
+<div class="lbl">Option B — <b>navigation becomes a tab strip</b> <span class="win">Recommended</span></div>
+<div class="frame">
+  <p class="back">← All events</p>
+  <div class="rowflex">
+    <div style="min-width:0">
+      <p class="htitle">iCFO PE Expo — Las Vegas | Sept 22</p>
+      <p class="hmeta" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">/icfo-pe-expo-las-vegas-sept-22 · Published · FinTech, HealthTech, SaaS / B2B Software, EdTech, CleanTech, E-commerce, AI / ML, Consumer, Deep Tech, Marketplace, Logistics, Hardware, Other</p>
+    </div>
+    <div class="acts" style="flex:none">
+      <a class="btn b-out nw" href="#">View public ↗</a>
+      <a class="btn b-navy nw" href="#">Live control center</a>
+    </div>
+  </div>
+  <div class="seg">
+    <a class="on" href="#">Details</a>
+    <a href="#">Marketing Hub</a>
+    <a href="#">Registrations</a>
+    <a href="#">Leads</a>
+    <a href="#">Sponsors</a>
+    <a href="#">Analytics</a>
+  </div>
+</div>
+<div class="note">
+  <b>Splits the two jobs that are currently mixed.</b> The header keeps what you <i>do</i> to this
+  event — run it live, look at it publicly. The strip carries where you <i>go</i>, and it scrolls
+  rather than wraps, so adding Sponsors or Analytics costs nothing.
+  <br><br>
+  It also matches what the sidebar already does: Applications, Sponsors, Event Template, Brochure,
+  Analytics and Gamification are children of Event Hub. Right now half the event&apos;s sub-pages
+  are in the sidebar and half are buttons in the header, with no rule saying which is which.
+  <div class="verdict"><span class="k">Cost</span><span>One small strip component; the links already exist.</span></div>
+  <div class="verdict"><span class="k">Risk</span><span>Two nav surfaces for the same pages unless the sidebar children are reconciled.</span></div>
+</div>
+
+<!-- OPTION C -->
+<div class="lbl">Option C — <b>one primary, rest behind a menu</b></div>
+<div class="frame">
+  <p class="back">← All events</p>
+  <div class="rowflex">
+    <div style="min-width:0">
+      <p class="htitle">iCFO PE Expo — Las Vegas | Sept 22</p>
+      <p class="hmeta" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">/icfo-pe-expo-las-vegas-sept-22 · Published · FinTech, HealthTech, SaaS / B2B Software, EdTech, CleanTech, E-commerce, AI / ML, Consumer, Deep Tech, Marketplace, Logistics, Hardware, Other</p>
+    </div>
+    <div class="acts" style="flex:none;align-items:flex-start">
+      <a class="btn b-navy nw" href="#">Live control center</a>
+      <div class="menu">
+        <a class="btn b-out nw" href="#">More ▾</a>
+        <div class="sheet">
+          <a href="#"><span class="ico">◧</span> Marketing Hub</a>
+          <a href="#"><span class="ico">☰</span> Registrations</a>
+          <a href="#"><span class="ico">◔</span> Leads</a>
+          <div class="sep"></div>
+          <a href="#"><span class="ico">↗</span> View public page</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <b>Tidiest header, most clicks.</b> Everything secondary is one tap away and the row can never
+  wrap again. The cost is that Registrations and Leads — the two you probably open most during a
+  live event — go from visible to hidden, and you lose the at-a-glance sense that they exist.
+  <div class="verdict"><span class="k">Cost</span><span>A dropdown with open/close state and outside-click handling.</span></div>
+  <div class="verdict"><span class="k">Risk</span><span>Hides the pages staff use most on event day.</span></div>
+</div>
+
+<div class="note">
+  <b>Which I&apos;d pick.</b> <b>B</b>. The wrap is a symptom; the real problem is that page
+  navigation is dressed as buttons. A is the right answer if you want it fixed in one commit and
+  moved on from — it is genuinely a four-class change. C only pays off if the header is going to
+  keep growing.
+</div>
+
+</div>
+</body>
+</html>

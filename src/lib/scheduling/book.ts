@@ -4,18 +4,28 @@ import { getGoogleBusyIntervals } from "@/lib/integrations/google-freebusy";
 import { listEvents, createEvent, insertLocalEvent } from "@/lib/calendar/events";
 import { loadAvailability } from "./store";
 import { configFromSettings, expandWindows } from "./availability";
+import { createBooking } from "./bookings";
+import { logActivity } from "@/lib/sales/activity";
 import type { CalendarEventRecord, TimeInterval } from "./types";
+import type { SourceConfidence } from "@/lib/attribution/source";
 
 export interface BookSlotInput {
   hostId: string;
   /** id is null for guest bookers (no iCapOS account). */
-  booker: { id: string | null; email: string | null; name: string | null; phone?: string | null };
+  booker: { id: string | null; email: string | null; name: string | null; phone?: string | null; company?: string | null };
   startTime: string;
   endTime: string;
   timezone: string;
   title?: string;
   note?: string | null;
   answers?: Array<{ label: string; value: string }>;
+  /**
+   * Campaign this meeting is attributed to, already resolved by the caller
+   * against the precedence ladder in `@/lib/attribution/source`. The route
+   * decides the winner because only it can see the cookie; this function just
+   * records what it is told.
+   */
+  source?: { tag: string; confidence: SourceConfidence } | null;
 }
 
 export interface BookSlotResult {
@@ -23,6 +33,9 @@ export interface BookSlotResult {
   meetUrl: string | null;
   hostEmail: string | null;
   hostName: string | null;
+  /** The structured booking row id (for cancel/reschedule links). Null if the
+   *  best-effort booking-record write failed. */
+  bookingId: string | null;
 }
 
 /** Throws if [start,end] is outside the host's hours or conflicts with busy time. */
@@ -77,7 +90,11 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
   const hostName = (hostProfile as { full_name: string | null } | null)?.full_name ?? null;
 
   const bookerLabel = input.booker.name ?? input.booker.email ?? "a member";
-  const title = input.title?.trim() || `Meeting with ${bookerLabel}`;
+  // Auto titles embed the OTHER party's name, so each calendar shows who they're
+  // meeting: the host's event says "Meeting with <booker>", the booker's mirror
+  // says "Meeting with <host>" (below) — never the viewer's own name.
+  const isAutoTitle = !input.title?.trim();
+  const title = isAutoTitle ? `Meeting with ${bookerLabel}` : (input.title as string).trim();
   const description = [
     input.note ?? null,
     input.booker.name ? `Booked by: ${input.booker.name}` : null,
@@ -101,7 +118,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
   // local only, since the host's Google event already invites them.
   if (input.booker.id) {
     await insertLocalEvent(admin, input.booker.id, {
-      title: hostName ? `${title} (${hostName})` : title,
+      title: isAutoTitle ? (hostName ? `Meeting with ${hostName}` : title) : (hostName ? `${title} (with ${hostName})` : title),
       description: input.note ?? null,
       startTime: input.startTime,
       endTime: input.endTime,
@@ -111,5 +128,52 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     });
   }
 
-  return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName };
+  // Persist a structured booking (Calendly-style detail) + link it to the CRM and the
+  // contact timeline. All best-effort: a failure here must never fail the booking.
+  let bookingId: string | null = null;
+  try {
+    const answers = (input.answers ?? []).filter((a) => a.value);
+    const company = input.booker.company?.trim() || null;
+    let contactCrmId: string | null = null;
+    if (input.booker.email) {
+      const { data } = await admin.from("crm_contacts").select("id, overrides, company").ilike("email", input.booker.email).maybeSingle();
+      const contact = data as { id: string; overrides: Record<string, unknown> | null; company: string | null } | null;
+      contactCrmId = contact?.id ?? null;
+      // Best-effort enrichment of the linked contact: fill lead source from "how did
+      // you hear", and Company from the booking — only when each is currently blank.
+      if (contactCrmId) {
+        const overrides = { ...(contact?.overrides ?? {}) };
+        let changed = false;
+        const heard = answers.find((a) => /how did you hear|hear about/i.test(a.label))?.value;
+        if (heard && !overrides.lead_source) { overrides.lead_source = heard; changed = true; }
+        const existingCompany = (overrides.company as string | undefined) || contact?.company || "";
+        if (company && !existingCompany.trim()) { overrides.company = company; changed = true; }
+        if (changed) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (admin.from("crm_contacts") as any).update({ overrides }).eq("id", contactCrmId);
+        }
+      }
+    }
+
+    bookingId = await createBooking({
+      host_id: input.hostId, event_id: hostEvent.id, event_type: title,
+      booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: input.booker.phone ?? null,
+      booker_company: company,
+      contact_crm_id: contactCrmId,
+      start_time: input.startTime, end_time: input.endTime, timezone: input.timezone,
+      meet_url: hostEvent.meet_url, note: input.note ?? null, answers,
+      // The booking is now the attributed record. Attribution used to be
+      // inferred through the contact, which for a cold lead does not exist —
+      // that is why meetings booked outside the /fit funnel counted as zero.
+      source_tag: input.source?.tag ?? null,
+      source_confidence: input.source?.confidence ?? null,
+    });
+
+    if (contactCrmId) {
+      const when = new Date(input.startTime).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      await logActivity({ kind: "call", summary: `Booked: ${title} · ${when}`, actorId: input.hostId, contactCrmId });
+    }
+  } catch { /* never block a confirmed booking on bookkeeping */ }
+
+  return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName, bookingId };
 }

@@ -1,8 +1,13 @@
 "use client";
 
 import { SalesHubTabs } from "./SalesHubTabs";
+import { useAdminChrome } from "@/lib/ui/admin-chrome";
 
 export function SalesHubHeader() {
+  const chrome = useAdminChrome();
+  // Compact chrome: the top bar shows "Sales" and the hub tabs; the View Me / Team control
+  // sits at the far right of each page's own toolbar (SalesViewControl). Nothing here.
+  if (chrome === "compact") return null;
   return (
     <>
       <div style={{ marginBottom: 14 }}>

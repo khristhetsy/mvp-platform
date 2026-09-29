@@ -50,7 +50,7 @@ export function SyncCrmToMarketing() {
             <p className="text-xs text-slate-500">Pushes your imported contacts into the Marketing Hub contact list (matched by email). Safe to re-run.</p>
           </div>
         </div>
-        <button onClick={run} disabled={running} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+        <button type="button" onClick={run} disabled={running} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
           {running ? <Loader2 className="h-4 w-4 animate-spin" /> : done ? <Check className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />}
           {running ? "Syncing…" : done ? "Synced" : "Sync now"}
         </button>

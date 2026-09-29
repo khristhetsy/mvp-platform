@@ -17,11 +17,12 @@ export type Opportunity = {
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
   status: "open" | "won" | "lost" | "archived"; notes: string | null;
   created_at: string; updated_at: string | null; last_activity_at: string | null;
+  owner_id: string | null; owner_name: string | null;
   lead_assignees: string[]; // names of the linked contact's Lead-assigned reps (read-only mirror)
 };
 
 const SELECT =
-  "id, title, contact_name, contact_email, contact_crm_id, stage_id, value_cents, billing, probability, expected_close, priority, tags, source, lead_status, status, notes, created_at, updated_at, last_activity_at, stage:sales_stages(name)";
+  "id, title, contact_name, contact_email, contact_crm_id, stage_id, value_cents, billing, probability, expected_close, priority, tags, source, lead_status, status, notes, created_at, updated_at, last_activity_at, owner_id, stage:sales_stages(name)";
 
 function mapRow(r: Record<string, unknown>): Opportunity {
   return {
@@ -46,6 +47,8 @@ function mapRow(r: Record<string, unknown>): Opportunity {
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) ?? null,
     last_activity_at: (r.last_activity_at as string) ?? null,
+    owner_id: (r.owner_id as string) ?? null,
+    owner_name: null,
     lead_assignees: [],
   };
 }
@@ -64,11 +67,35 @@ export async function getDefaultPipeline(): Promise<{ id: string; stages: Stage[
 }
 
 export async function listOpportunities(includeArchived = false, ownerId?: string | null): Promise<Opportunity[]> {
-  let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false });
-  if (!includeArchived) q = q.neq("status", "archived");
-  if (ownerId) q = q.eq("owner_id", ownerId);
-  const { data } = await q;
-  return ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);
+  // Page through every row — Supabase caps a single select at 1000, which truncated the
+  // list after the Odoo import (~1100 opps). No cap: loop until a short page. Filtering
+  // is client-side.
+  const PAGE = 1000;
+  const rows: Array<Record<string, unknown>> = [];
+  for (let from = 0; from < 200000; from += PAGE) {
+    let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false }).range(from, from + PAGE - 1);
+    if (!includeArchived) q = q.neq("status", "archived");
+    if (ownerId) q = q.eq("owner_id", ownerId);
+    const { data } = await q;
+    const page = (data ?? []) as Array<Record<string, unknown>>;
+    rows.push(...page);
+    if (page.length < PAGE) break;
+  }
+  return rows.map(mapRow);
+}
+
+/**
+ * Just the given opportunities (bulk actions). Throws on a database error — a bulk action
+ * must never quietly run on "no rows" because a lookup timed out.
+ */
+export async function listOpportunitiesByIds(ids: string[]): Promise<Opportunity[]> {
+  const out: Opportunity[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await db().from("sales_opportunities").select(SELECT).in("id", ids.slice(i, i + 200));
+    if (error) throw new Error(`Couldn't load the selected opportunities: ${error.message}`);
+    out.push(...((data ?? []) as Array<Record<string, unknown>>).map(mapRow));
+  }
+  return out;
 }
 
 export async function getOpportunity(id: string): Promise<Opportunity | null> {
@@ -131,6 +158,7 @@ export type UpdateOpportunityPatch = {
   title?: string; stageId?: string | null; valueCents?: number | null; billing?: "yearly" | "monthly";
   probability?: number | null; expectedClose?: string | null; priority?: number; tags?: string[];
   source?: string | null; leadStatus?: string | null; status?: Opportunity["status"]; notes?: string | null;
+  ownerId?: string | null;
 };
 
 export async function updateOpportunity(id: string, patch: UpdateOpportunityPatch, actorId?: string | null): Promise<void> {
@@ -147,6 +175,7 @@ export async function updateOpportunity(id: string, patch: UpdateOpportunityPatc
   if (patch.leadStatus !== undefined) update.lead_status = patch.leadStatus || null;
   if (patch.status !== undefined) update.status = patch.status;
   if (patch.notes !== undefined) update.notes = patch.notes;
+  if (patch.ownerId !== undefined) update.owner_id = patch.ownerId || null;
   const { error } = await db().from("sales_opportunities").update(update).eq("id", id);
   if (error) throw new Error(error.message);
 

@@ -5,21 +5,24 @@ import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { industryOptionsFor } from "@/lib/industries";
 import {
-  REVENUE_STAGE_OPTIONS,
   INVESTOR_TYPE_OPTIONS,
   CAPITAL_TYPE_OPTIONS,
   INVESTOR_PREFERENCE_OPTIONS,
   FUNDING_STAGE_OPTIONS,
   OPERATING_STAGE_OPTIONS,
+  REVENUE_SIZE_OPTIONS,
+  ARR_BAND_OPTIONS,
+  MRR_BAND_OPTIONS,
   BUSINESS_ENTITY_OPTIONS,
+  FUNDING_AMOUNT_BAND_OPTIONS,
+  EBITDA_BAND_OPTIONS,
+  moneyBandFor,
   splitProfileCsv,
 } from "@/lib/profile/options";
-
-/* ── Revenue stage options (shared canonical list) ──────────── */
-
-const STAGES = REVENUE_STAGE_OPTIONS;
+import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
+import { labelOf, offered, type VocabularyList, type VocabularyOption } from "@/lib/vocabulary/lists";
+import type { ResolvedSurface } from "@/lib/profile-fields/display";
 
 /* ── Draft generators ───────────────────────────────────────── */
 
@@ -70,7 +73,10 @@ function generateDescriptionDraft(company: Company | null): string {
 function generateUseOfFundsDraft(company: Company | null): string {
   const name = company?.company_name ?? "Your company";
   const stage = company?.revenue_stage ?? "pre_revenue";
-  const amount = company?.funding_amount ? `$${Number(company.funding_amount).toLocaleString()}` : "this round";
+  const band = (company as unknown as Record<string, unknown> | null)?.funding_amount_band;
+  const amount = company?.funding_amount
+    ? `$${Number(company.funding_amount).toLocaleString()}`
+    : typeof band === "string" && band ? `A raise of ${band}` : "this round";
 
   if (stage === "pre_revenue") {
     return `${amount} will be deployed over [12–18 months] across three areas:\n\n1. **Product development** (~40%) — complete [specific milestone, e.g. MVP v1 / beta launch / core feature set]\n2. **Early customer acquisition** (~35%) — [first X paying customers / pilot programme / design partners]\n3. **Operations & infrastructure** (~25%) — cloud costs, legal/compliance setup, and founding team salaries\n\nPrimary milestone: [your key proof point, e.g. "achieving $10K MRR" / "closing first enterprise contract" / "reaching 1,000 active users"]`;
@@ -111,6 +117,8 @@ type FieldDef = {
   options?: readonly string[];
   section?: string;
   hint?: string;
+  /** Managed list on Profile and fields: labels, order and retired values come from there. */
+  list?: VocabularyList;
 };
 
 // Layout order: company basics first, then the 11 investor-fit categories in the
@@ -131,37 +139,52 @@ const FIELDS: FieldDef[] = [
   { key: "seeking_investor_types", label: "Type of investor(s)", type: "chips-multi", options: INVESTOR_TYPE_OPTIONS, section: "Investor fit profile" },
   { key: "seeking_capital_types", label: "Type(s) of capital", type: "chips-multi", options: CAPITAL_TYPE_OPTIONS, section: "Investor fit profile" },
   { key: "active_investor_preference", label: "Active investor preference", type: "chips-multi", options: INVESTOR_PREFERENCE_OPTIONS, section: "Investor fit profile" },
-  { key: "funding_amount", label: "Amount of capital (USD)", type: "number", placeholder: "e.g. 1500000", section: "Investor fit profile" },
+  // A selection from the investment size bands already in the contact records,
+  // so founder and investor compare like for like. Saved to funding_amount_band;
+  // a database trigger keeps funding_amount (read by ~90 files) consistent.
+  { key: "funding_amount_band", label: "Amount of capital (USD)", type: "chips-single", options: FUNDING_AMOUNT_BAND_OPTIONS, list: "money_band", section: "Investor fit profile" },
   { key: "founder_goals", label: "Investor-fit notes", type: "textarea", ai: "goals", hint: "What you want beyond capital — network, board experience, portfolio synergies.", section: "Investor fit profile" },
   { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds", section: "Investor fit profile" },
   { key: "funding_stage", label: "Funding stage", type: "chips-multi", options: FUNDING_STAGE_OPTIONS, section: "Investor fit profile" },
-  { key: "industry", label: "Type of industries", type: "select-industry", required: true, section: "Investor fit profile" },
+  { key: "industry", label: "Industry", type: "select-industry", required: true, section: "Investor fit profile" },
   { key: "revenue_stage", label: "Revenue stage", type: "select-stage", section: "Investor fit profile" },
-  { key: "annual_ebitda", label: "Annual EBITDA", type: "text", placeholder: "e.g. -$120,000 (0 if pre-revenue)", section: "Investor fit profile" },
+  // Current EBITDA only, never projected. Same bands the contact records use for
+  // entrepreneur EBITDA and investor EBITDA preferences.
+  { key: "annual_ebitda", label: "Annual EBITDA", type: "chips-single", options: EBITDA_BAND_OPTIONS, list: "money_band", hint: "Current EBITDA only, not projected.", section: "Investor fit profile" },
   { key: "operating_stage", label: "Operating stage", type: "chips-multi", options: OPERATING_STAGE_OPTIONS, section: "Investor fit profile" },
   { key: "management_team", label: "Management team", type: "textarea", placeholder: "e.g. 2 co-founders, 3 full-time", section: "Investor fit profile" },
+  // Traction — asked at onboarding step 8, editable here afterwards. Revenue
+  // size and highlights are investor-facing; EBITDA above is not.
+  { key: "annual_revenue_size", label: "Annual revenue size", type: "chips-single", options: REVENUE_SIZE_OPTIONS, list: "revenue_size", section: "Investor fit profile" },
+  // Bands, not free text: the matcher compares ARR and MRR against the
+  // investor's stated range, and "e.g. $240,000" could never be compared to
+  // anything. Both factors were quietly dropping out of every match.
+  { key: "arr", label: "ARR", type: "chips-single", options: [...ARR_BAND_OPTIONS], list: "arr_band", section: "Investor fit profile" },
+  { key: "mrr", label: "MRR", type: "chips-single", options: [...MRR_BAND_OPTIONS], list: "mrr_band", section: "Investor fit profile" },
+  { key: "key_highlights", label: "Five key highlights", type: "textarea", placeholder: "One per line — these become the bullets on your one-pager", section: "Investor fit profile" },
   { key: "business_entity", label: "Business entity", type: "chips-single", options: BUSINESS_ENTITY_OPTIONS, section: "Investor fit profile" },
 ];
 
-// The first field key of each section — used to render a section header above it
-// without mutating state during render.
-const SECTION_FIRST_KEYS: Set<string> = (() => {
-  const seen = new Set<string>();
-  const firsts = new Set<string>();
-  for (const f of FIELDS) {
-    if (f.section && !seen.has(f.section)) {
-      seen.add(f.section);
-      firsts.add(f.key);
-    }
-  }
-  return firsts;
-})();
 
-type Props = { company: Company | null };
+type Props = {
+  company: Company | null;
+  /** Shown and Required per field, from Admin, Profile and fields. Absent means every field shown with its built in requirement. */
+  display?: ResolvedSurface;
+};
 
-export function CompanySettingsForm({ company }: Props) {
+export function CompanySettingsForm({ company, display }: Props) {
   const router = useRouter();
   const { getError, setApiErrors, clearError } = useFormValidation();
+  // Option lists from Profile and fields (falls back to the built in lists).
+  const vocab = useVocabularies();
+  /** Offered options for a managed field, plus a retired value the record still holds. */
+  const managed = (list: VocabularyList, held: string): VocabularyOption[] => {
+    const all = vocab[list];
+    return [...offered(all), ...all.filter((o) => o.archived && o.slug === held)];
+  };
+  const stages = vocab.revenue_stage;
+  // Fields hidden on Admin, Profile and fields are left out entirely.
+  const visibleFields = FIELDS.filter((f) => display?.[f.key]?.shown !== false);
 
   // Seeking + Company & stage columns (migration 20260803002) aren't in the
   // generated Company type yet, so read them through a Record view.
@@ -175,7 +198,8 @@ export function CompanySettingsForm({ company }: Props) {
     industry: company?.industry ?? "",
     logo_url: company?.logo_url ?? "",
     revenue_stage: company?.revenue_stage ?? "",
-    funding_amount: company?.funding_amount ? String(Number(company.funding_amount)) : "",
+    // The stored band, or the band an existing exact amount falls in.
+    funding_amount_band: str(cx.funding_amount_band) || (moneyBandFor(company?.funding_amount ?? null) ?? ""),
     use_of_funds: company?.use_of_funds ?? "",
     founder_goals: company?.founder_goals ?? "",
     team_summary: company?.team_summary ?? "",
@@ -191,9 +215,14 @@ export function CompanySettingsForm({ company }: Props) {
     business_entity: str(cx.business_entity),
     annual_ebitda: str(cx.annual_ebitda),
     management_team: str(cx.management_team),
+    annual_revenue_size: str(cx.annual_revenue_size),
+    arr: str(cx.arr),
+    mrr: str(cx.mrr),
+    key_highlights: str(cx.key_highlights),
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [company]);
 
+  const { options: industryOptions } = useVocabulary("industry", company?.industry ?? null);
   const [values, setValues] = useState<Record<string, string>>(seed);
   const [orig, setOrig] = useState<Record<string, string>>(seed);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -205,7 +234,7 @@ export function CompanySettingsForm({ company }: Props) {
   const setVal = (k: string, v: string) => setValues((p) => ({ ...p, [k]: v }));
 
   const liveSnapshot: Company | null = company
-    ? { ...company, industry: values.industry, revenue_stage: values.revenue_stage || company.revenue_stage, funding_amount: values.funding_amount ? Number(values.funding_amount) : company.funding_amount }
+    ? ({ ...company, industry: values.industry, revenue_stage: values.revenue_stage || company.revenue_stage, funding_amount_band: values.funding_amount_band } as Company)
     : null;
 
   async function saveField(key: string) {
@@ -214,7 +243,8 @@ export function CompanySettingsForm({ company }: Props) {
     if (trimmed === (orig[key] ?? "").trim()) { setEditingKey(null); return; }
 
     const def = FIELDS.find((f) => f.key === key);
-    if (def?.required && trimmed.length < (key === "business_description" ? 20 : 2)) {
+    const isRequired = display?.[key]?.required ?? def?.required;
+    if (isRequired && trimmed.length < (key === "business_description" ? 20 : 2)) {
       setApiErrors({ formErrors: [], fieldErrors: { [key]: [key === "business_description" ? "At least 20 characters." : "This field is required."] } });
       return;
     }
@@ -222,9 +252,7 @@ export function CompanySettingsForm({ company }: Props) {
     setIsSaving(true);
     setMessage(null);
     clearError(key);
-    const payload: Record<string, unknown> = key === "funding_amount"
-      ? (trimmed ? { funding_amount: Number(trimmed) } : {})
-      : { [key]: trimmed };
+    const payload: Record<string, unknown> = { [key]: trimmed };
     const res = await fetch(`/api/companies/${company.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -273,7 +301,7 @@ export function CompanySettingsForm({ company }: Props) {
     const v = values[f.key] ?? "";
     if (!v) return <span className="text-slate-400">—</span>;
     if (f.type === "chips-multi" || f.type === "chips-single") {
-      const parts = f.type === "chips-multi" ? splitProfileCsv(v) : [v];
+      const parts = f.type === "chips-multi" ? splitProfileCsv(v) : [f.list ? labelOf(vocab[f.list], v) : v];
       return (
         <span className="flex flex-wrap gap-1">
           {parts.map((p) => (
@@ -282,10 +310,9 @@ export function CompanySettingsForm({ company }: Props) {
         </span>
       );
     }
-    if (f.key === "funding_amount") return <span className="text-slate-800">${Number(v).toLocaleString()}</span>;
     if (f.type === "select-stage") {
-      const s = STAGES.find((x) => x.id === v);
-      return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{s ? `${s.label} · ${s.sub}` : v}</span>;
+      const s = stages.find((x) => x.slug === v);
+      return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{s ? (s.description ? `${s.label} · ${s.description}` : s.label) : v}</span>;
     }
     if (f.type === "select-industry") return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{v}</span>;
     if (f.key === "website") return <span className="text-[#185FA5]">{v}</span>;
@@ -299,6 +326,27 @@ export function CompanySettingsForm({ company }: Props) {
 
   function editControl(f: FieldDef) {
     const v = values[f.key] ?? "";
+    if (f.type === "chips-single" && f.list) {
+      const opts = managed(f.list, v);
+      return (
+        <div className="flex flex-wrap gap-2">
+          {opts.map((o) => {
+            const on = v === o.slug;
+            return (
+              <button
+                key={o.slug}
+                type="button"
+                onClick={() => setVal(f.key, on ? "" : o.slug)}
+                className="rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
+                style={{ background: on ? "#2E78F5" : "transparent", borderColor: on ? "#2E78F5" : "#e2e8f0", color: on ? "white" : "#475569" }}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
     if (f.type === "chips-multi" || f.type === "chips-single") {
       const opts = f.options ?? [];
       const selected = f.type === "chips-multi" ? splitProfileCsv(v) : (v ? [v] : []);
@@ -330,7 +378,10 @@ export function CompanySettingsForm({ company }: Props) {
       return (
         <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
           {!v ? <option value="">— Select an industry —</option> : null}
-          {industryOptionsFor(v).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+          {industryOptions.map((opt) => <option key={opt.slug} value={opt.label}>{opt.label}</option>)}
+          {/* A value set before this list existed stays selectable rather than
+              being silently replaced by whatever sorts first. */}
+          {v && !industryOptions.some((o) => o.label === v) ? <option value={v}>{v}</option> : null}
         </select>
       );
     }
@@ -338,7 +389,7 @@ export function CompanySettingsForm({ company }: Props) {
       return (
         <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
           <option value="">— Select stage —</option>
-          {STAGES.map((s) => <option key={s.id} value={s.id}>{s.label} · {s.sub}</option>)}
+          {[...offered(stages), ...stages.filter((s) => s.archived && s.slug === v)].map((s) => <option key={s.slug} value={s.slug}>{s.description ? `${s.label} · ${s.description}` : s.label}</option>)}
         </select>
       );
     }
@@ -380,10 +431,12 @@ export function CompanySettingsForm({ company }: Props) {
       </div>
 
       <div>
-        {FIELDS.map((f) => {
+        {visibleFields.map((f, i) => {
             const editing = editingKey === f.key;
             const err = getError(f.key);
-            const header = f.section && SECTION_FIRST_KEYS.has(f.key) ? f.section : null;
+            // A section's header goes on its first visible field, so hiding
+            // the first one never drops the heading.
+            const header = f.section && (i === 0 || visibleFields[i - 1].section !== f.section) ? f.section : null;
 
             const sectionHeader = header ? (
               <p className="mb-1.5 mt-6 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 first:mt-0">{header}</p>
@@ -398,8 +451,8 @@ export function CompanySettingsForm({ company }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">{editControl(f)}</div>
-                        <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50"><i className="ti ti-check" aria-hidden="true" /></button>
-                        <button onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
+                        <button type="button" onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50"><i className="ti ti-check" aria-hidden="true" /></button>
+                        <button type="button" onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
                       </div>
                       {f.hint ? <p className="mt-1 text-xs text-slate-400">{f.hint}</p> : null}
                       {err ? <p className="mt-1 text-xs text-red-600">{err}</p> : null}

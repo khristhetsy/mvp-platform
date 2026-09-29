@@ -8,7 +8,8 @@ describe("aggregateFacetRows", () => {
       { industries: ["Industrial", "Information Technology"], capital: ["Debt", "Equity"] },
     ];
     const f = aggregateFacetRows(rows);
-    expect(f.industries).toEqual(["Healthcare", "Industrial", "Information Technology"]);
+    // "Information Technology" canonicalizes to "Data/IoT"; list is canonical + sorted.
+    expect(f.industries).toEqual(["Data/IoT", "Healthcare", "Industrial"]);
     expect(f.capital).toEqual(["Debt", "Equity"]);
   });
 

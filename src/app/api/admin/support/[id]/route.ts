@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { addSupportMessage, assignSupportRequest, resolveSupportRequest, getSupportThread } from "@/lib/support/support";
+import { addSupportMessage, assignSupportRequest, resolveSupportRequest, getSupportThread, staffSupportLink, founderSupportLink } from "@/lib/support/support";
 import { createNotification } from "@/lib/notifications/notifications";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +51,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       message: thread.request.subject,
       entityType: "company",
       entityId: thread.request.company_id,
+      deepLink: founderSupportLink(id),
     }).catch(() => {});
     return NextResponse.json({ ok: true });
   }
@@ -66,6 +67,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         message: thread.request.subject,
         entityType: "company",
         entityId: thread.request.company_id,
+        deepLink: staffSupportLink(id),
       }).catch(() => {});
     }
     return NextResponse.json({ ok: true });
@@ -81,6 +83,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     message: thread.request.subject,
     entityType: "company",
     entityId: thread.request.company_id,
+    deepLink: founderSupportLink(id),
   }).catch(() => {});
   return NextResponse.json({ ok: true });
 }

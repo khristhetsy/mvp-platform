@@ -10,7 +10,7 @@ function loose(client: unknown): SupabaseClient {
 }
 
 // POST — admin-direct account creation (spec §3a, §4). Provisions a comped,
-// email-dispatch-disabled org of either type directly, no Stripe/checkout.
+// email-dispatch-disabled org of either type directly, no Lemon Squeezy checkout.
 // For demo + internal use only — real founders always go through signup.
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["admin", "analyst"]);

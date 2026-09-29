@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Open as founder — make the other eight behave like Financial model</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .cb{padding:15px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+  .why h2{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 8px;font-size:12.8px;color:var(--s600);line-height:1.62}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:var(--ink)}
+
+  pre{background:#0F172A;color:#E2E8F0;border-radius:9px;padding:13px 15px;font-size:11.5px;line-height:1.7;overflow:auto;margin:0}
+  pre .c{color:#64748B}
+  pre .k{color:#93C5FD}
+  pre .s{color:#86EFAC}
+  pre .r{color:#FCA5A5}
+  pre .g{color:#86EFAC}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .two h4{margin:0 0 7px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .h-bad{color:#B91C1C}.h-good{color:#065F46}
+
+  /* screen mocks */
+  .screen{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .sbar{display:flex;align-items:center;gap:7px;background:#F8FAFC;border-bottom:1px solid var(--line);padding:7px 11px;font-size:10.5px;color:var(--s500)}
+  .sbar .dot{width:8px;height:8px;border-radius:99px;background:#E2E8F0}
+  .sbody{padding:14px;min-height:150px}
+  .bnr{display:flex;align-items:center;gap:9px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;
+       padding:7px 11px;font-size:11.5px;color:#78350F;margin-bottom:10px}
+  .bnr .sp{flex:1}
+  .bnr .btn{font-size:10.5px;border:1px solid #92400E;background:transparent;color:#78350F;border-radius:6px;padding:3px 8px}
+  .bnr.dup{border-color:#FCA5A5;background:#FEF2F2;color:#991B1B}
+  .locked{border:1px dashed #E2E8F0;border-radius:9px;padding:22px 14px;text-align:center;background:#F8FAFC}
+  .locked .lk{font-size:20px;color:#CBD5E1}
+  .locked .t{font-size:12.5px;font-weight:600;color:#64748B;margin-top:6px}
+  .locked .d{font-size:11px;color:#94A3B8;margin-top:3px}
+  .eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#4F46E5}
+  .h2m{font-size:16px;font-weight:700;margin:3px 0 4px}
+  .pm{font-size:11px;color:var(--s500);line-height:1.5}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+  .box{border:1px solid var(--line);border-radius:8px;padding:9px}
+  .box .bt{font-size:10.5px;font-weight:650;color:var(--s600)}
+  .box .bv{font-size:10px;color:var(--s400);margin-top:4px}
+  .row{display:flex;justify-content:space-between;font-size:10px;color:var(--s500);padding:3px 0;border-bottom:1px solid var(--l100)}
+  .row:last-child{border-bottom:none}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:8px 8px 8px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .t-ok{background:#ECFDF5;color:#065F46}
+  .t-bad{background:#FEE2E2;color:#991B1B}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Make the other eight behave like Financial model</h1>
+<p class="sub">Founder&apos;s Preparation menu · Open as founder · mockup</p>
+
+<div class="why">
+  <h2>Why only Financial model works</h2>
+  <p><b>It is the only one of the nine that lets the acting session through the gate.</b> Its page body
+     branches on <code>acting</code> — when staff are acting as the founder it renders the content
+     directly; otherwise it wraps in <code>FounderJourneyGate</code>. The other eight wrap in that gate
+     <b>unconditionally</b>.</p>
+  <p>So &ldquo;Open as founder&rdquo; does start the session correctly on all nine — the founder page
+     then refuses to render, and you land on the stage-gate screen instead of the founder&apos;s Cap table
+     or Pitch deck. The button is right. The eight pages are not.</p>
+  <p>I checked all nine: <code>acting ? … : &lt;Gate&gt;</code> appears in
+     <b>financial-model only</b>. That is the whole difference.</p>
+</div>
+
+<div class="lbl">The one line of difference</div>
+<div class="two">
+  <div class="card"><div class="cb">
+    <h4 class="h-bad">The other eight — gate always applies</h4>
+<pre><span class="c">// business-plan / pitch-deck / cap-table /
+// valuation / documents / readiness ×3</span>
+
+<span class="k">return</span> (
+  &lt;FounderAppShell …&gt;
+    <span class="r">&lt;FounderJourneyGate minStage=<span class="s">"qualify"</span>&gt;</span>
+      &lt;PageHeader … /&gt;
+      &lt;CapTableClient /&gt;
+    <span class="r">&lt;/FounderJourneyGate&gt;</span>
+  &lt;/FounderAppShell&gt;
+);
+
+<span class="c">// acting staff hit the gate → wrong screen</span></pre>
+  </div></div>
+
+  <div class="card"><div class="cb">
+    <h4 class="h-good">Financial model — acting bypasses it</h4>
+<pre><span class="c">// financial-model, the one that works</span>
+
+<span class="k">return</span> (
+  &lt;FounderAppShell …&gt;
+    {acting ? (
+      <span class="g">&lt;&gt;</span>
+        &lt;PageHeader … /&gt;
+        &lt;FinancialModelClient /&gt;
+      <span class="g">&lt;/&gt;</span>
+    ) : (
+      &lt;FounderJourneyGate minStage=<span class="s">"qualify"</span>&gt;
+        …
+      &lt;/FounderJourneyGate&gt;
+    )}
+  &lt;/FounderAppShell&gt;
+);</pre>
+  </div></div>
+</div>
+
+<div class="lbl">What you see</div>
+<div class="two">
+  <div>
+    <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin:0 0 6px">Now — Cap table, opened as founder</p>
+    <div class="screen">
+      <div class="sbar"><span class="dot"></span><span>icapos.com/founder/cap-table</span></div>
+      <div class="sbody">
+        <div class="bnr"><span>Acting as Vincent Njoku — changes save to the founder&apos;s account</span><span class="sp"></span><button class="btn">Exit</button></div>
+        <div class="bnr dup"><span>Acting as Vincent Njoku — changes save to the founder&apos;s account</span><span class="sp"></span><button class="btn">Exit</button></div>
+        <p style="font-size:10px;color:#B91C1C;margin:0 0 9px">↑ the banner renders twice</p>
+        <div class="locked">
+          <div class="lk">🔒</div>
+          <div class="t">Complete Preparation to unlock</div>
+          <div class="d">FounderJourneyGate · minStage &ldquo;qualify&rdquo;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin:0 0 6px">Proposed — same as Financial model does today</p>
+    <div class="screen">
+      <div class="sbar"><span class="dot"></span><span>icapos.com/founder/cap-table</span></div>
+      <div class="sbody">
+        <div class="bnr"><span>Acting as <b>Vincent Njoku</b> · Njoku Holdings</span><span class="sp"></span><button class="btn">Exit</button></div>
+        <div class="eyebrow">Raise toolkit</div>
+        <div class="h2m">Cap table</div>
+        <p class="pm">Who owns what today, and what the round you are modelling does to it.</p>
+        <div class="grid2">
+          <div class="box">
+            <div class="bt">Shareholders</div>
+            <div class="row"><span>Vincent Njoku</span><span>62.0%</span></div>
+            <div class="row"><span>Co-founder</span><span>23.0%</span></div>
+            <div class="row"><span>Option pool</span><span>15.0%</span></div>
+          </div>
+          <div class="box">
+            <div class="bt">Modelled round</div>
+            <div class="row"><span>Raise</span><span>$750,000</span></div>
+            <div class="row"><span>Pre-money</span><span>$4.2M</span></div>
+            <div class="row"><span>Post dilution</span><span>15.2%</span></div>
+          </div>
+        </div>
+        <p style="font-size:10px;color:#059669;margin:10px 0 0">Real founder data · one banner · no gate</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">The duplicate banner</div>
+<div class="card"><div class="cb">
+  <p style="font-size:12.6px;color:#475569;margin:0 0 9px;line-height:1.6">
+    <code>FounderAppShell</code> renders <code>&lt;ActingAsBanner /&gt;</code> for every founder page —
+    it was put there so impersonation can never render unwarned. <code>financial-model</code> <b>also</b>
+    renders one inside the shell, from before the shell carried it. Hence the two identical bars in your
+    screenshot.
+  </p>
+<pre><span class="c">// FounderAppShell.tsx:63 — every founder page gets this</span>
+&lt;ActingAsBanner /&gt;
+
+<span class="c">// financial-model/page.tsx:44 — leftover, now a duplicate</span>
+<span class="r">&lt;ActingAsBanner /&gt;   ← remove</span></pre>
+  <p style="font-size:12px;color:#64748B;margin:9px 0 0;line-height:1.55">
+    Removing the page-level one is the right direction: the shell guarantees it on all nine, so no page
+    has to remember.
+  </p>
+</div></div>
+
+<div class="lbl">The nine, after</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:26%">Page</th><th style="width:15%">Today</th><th>Change</th></tr>
+    <tr><td><code>financial-model</code></td><td><span class="tag t-ok">works</span></td>
+        <td>Drop the duplicate <code>&lt;ActingAsBanner /&gt;</code>. Gate branch already correct — this is the pattern the rest copy.</td></tr>
+    <tr><td><code>cap-table</code></td><td><span class="tag t-bad">gated</span></td><td rowspan="8" style="vertical-align:middle">
+        Wrap the content in the same <code>acting ? … : &lt;Gate&gt;</code> branch. No new component, no new
+        permission — the acting session is already resolved at the top of every one of these files.</td></tr>
+    <tr><td><code>business-plan</code></td><td><span class="tag t-bad">gated</span></td></tr>
+    <tr><td><code>pitch-deck</code></td><td><span class="tag t-bad">gated</span></td></tr>
+    <tr><td><code>valuation</code></td><td><span class="tag t-bad">gated</span></td></tr>
+    <tr><td><code>documents</code></td><td><span class="tag t-bad">gated</span></td></tr>
+    <tr><td><code>readiness</code></td><td><span class="tag t-bad">gated</span></td></tr>
+    <tr><td><code>readiness/wizard</code></td><td><span class="tag t-bad">gated</span></td></tr>
+    <tr><td><code>readiness/data-room</code></td><td><span class="tag t-bad">gated</span></td></tr>
+  </table>
+</div></div>
+
+<div class="note">
+  <b>Why bypassing the gate is right here, and is not a hole.</b> The journey gate exists to stop a
+  <i>founder</i> skipping ahead of their own stage. A staff member acting on their behalf is doing the
+  opposite job — looking at what the founder has, usually to help them past that very stage. The
+  authorization that matters already ran: <code>resolveActingFounderScope</code> re-proves on every
+  request that the caller is staff, still holds <code>act_on_behalf</code>, and started this session
+  themselves. The gate is a product rule, not a security boundary.
+  <br><br>
+  <b>The plan gate is a different question.</b> Some of these pages also sit behind the founder&apos;s
+  subscription plan (the padlocks in your sidebar). Bypassing a <i>stage</i> gate for staff is clearly
+  right; bypassing a <i>paid-plan</i> gate is a decision — it lets staff see a surface the founder has
+  not bought. Financial model currently bypasses both, because the branch is around the whole body. Worth
+  saying which you want before this is built.
+  <br><br>
+  <b>Still open from the previous mockup.</b> The company the session lands on is still the founder&apos;s
+  oldest, not the one whose workspace you clicked from. That is separate from this and still unbuilt.
+</div>
+
+</div>
+</body>
+</html>

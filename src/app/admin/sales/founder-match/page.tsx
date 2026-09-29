@@ -18,6 +18,7 @@ type CompanyRow = {
   company_name: string | null;
   industry: string | null;
   funding_amount: number | null;
+  funding_amount_band?: string | null;
   revenue_stage: string | null;
   use_of_funds: string | null;
 };
@@ -46,7 +47,7 @@ export default async function FounderMatchPage({
       const db = createServiceRoleClient() as any;
       const { data } = await db
         .from("companies")
-        .select("id, company_name, industry, funding_amount, revenue_stage, use_of_funds")
+        .select("id, company_name, industry, funding_amount, funding_amount_band, revenue_stage, use_of_funds")
         .limit(800);
       const companies = (data ?? []) as CompanyRow[];
       rows = companies
@@ -54,6 +55,7 @@ export default async function FounderMatchPage({
           const match = scoreInvestorPreferenceMatch(
             {
               fundingAmount: c.funding_amount,
+              fundingBand: c.funding_amount_band ?? null,
               revenue: null,
               revenueStage: c.revenue_stage,
               useOfFunds: c.use_of_funds,

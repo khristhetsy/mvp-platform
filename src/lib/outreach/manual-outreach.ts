@@ -327,6 +327,8 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
         // Route replies to the tokenized inbound address so the sequence can stop
         // on reply (falls back to no reply-to when inbound isn't configured).
         replyTo: replyAddressFor(r.id) ?? undefined,
+        source: "manual-outreach",
+        audience: "investor",
       });
       if (ok) {
         sent += 1;

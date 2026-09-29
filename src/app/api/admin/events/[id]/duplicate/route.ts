@@ -14,6 +14,10 @@ const optionsSchema = z
     branding: z.boolean().optional(),
     sessions: z.boolean().optional(),
     sponsors: z.boolean().optional(),
+    presenters: z.boolean().optional(),
+    exhibitors: z.boolean().optional(),
+    talkShowGuests: z.boolean().optional(),
+    panelists: z.boolean().optional(),
   })
   .default({});
 

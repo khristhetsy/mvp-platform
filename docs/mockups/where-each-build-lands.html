@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where each change lands</title>
+<style>
+  :root{ --navy:#0A1A40; --blue:#2563eb; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:860px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:32px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:880px}
+  code{font:10.8px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  .cols{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  /* nav tree */
+  .nav{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .nav .grp{display:flex;align-items:center;gap:7px;font-size:12.6px;font-weight:700;color:var(--navy);
+            padding:9px 12px;border-bottom:1px solid #f1f5f9;background:#fafcff}
+  .nav .it{display:flex;align-items:center;gap:7px;padding:7px 12px 7px 24px;font-size:12.2px;
+           color:#475569;border-bottom:1px solid #f7f9fc}
+  .nav .it:last-child{border-bottom:0}
+  .nav .it.new{background:#f0f7ff;color:var(--navy);font-weight:600}
+  .nav .it.touch{background:#fffdf5}
+  .nav .it.gone{color:#cbd5e1;text-decoration:line-through;background:#fdfdfe}
+  .nav .sub2{display:block;padding:5px 12px 5px 40px;font-size:11.4px;color:#64748b;
+             border-bottom:1px solid #f7f9fc;background:#f8fbff}
+  .dotn{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+        border-radius:3px;padding:2px 6px;white-space:nowrap}
+  .d-new{background:#eff6ff;color:#1d4ed8}
+  .d-edit{background:#fffbeb;color:#b45309}
+  .d-gone{background:#f1f5f9;color:#94a3b8}
+
+  table{width:100%;border-collapse:collapse;font-size:12.2px}
+  th{text-align:left;font-size:10.2px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:9px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td b{color:var(--navy)}
+  .path{display:block;margin-top:3px;font:10.6px ui-monospace,Menlo,monospace;color:#94a3b8}
+  .pill{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+        border-radius:3px;padding:2px 6px;white-space:nowrap}
+  .ui{background:#eff6ff;color:#1d4ed8}
+  .db{background:#f5f3ff;color:#6d28d9}
+  .new{background:#fffbeb;color:#b45309}
+
+  .where{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:860px){.where{grid-template-columns:1fr}}
+  .w{border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden}
+  .w .h{padding:9px 12px;border-bottom:1px solid #f1f5f9;background:#fafcff}
+  .w .h b{font-size:12.4px;color:var(--navy);display:block}
+  .w .h span{font:10.4px ui-monospace,Menlo,monospace;color:#94a3b8}
+  .w ul{margin:0;padding:9px 12px 11px 26px;font-size:12px;color:#475569}
+  .w li{margin-bottom:5px}
+  .w li:last-child{margin-bottom:0}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:890px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Where each change lands</h1>
+  <p class="sub">Two new menu items, one removed, four existing pages touched, and three surfaces outside the admin menu entirely.</p>
+
+  <div class="cols">
+    <!-- NAV -->
+    <div>
+      <div class="nav">
+        <div class="grp">Event Hub <code style="margin-left:auto;background:none;color:#94a3b8">/admin/events</code></div>
+        <div class="it touch">All events <span class="dotn d-edit">edited</span></div>
+        <div class="it">Applications</div>
+        <div class="it">Sponsors</div>
+        <div class="it touch">Event Template <span class="dotn d-edit">edited</span></div>
+        <div class="it new">Registration <span class="dotn d-new">new</span></div>
+        <div class="sub2">Registrations · Fields</div>
+        <div class="it gone">Registration fields <span class="dotn d-gone">moved</span></div>
+        <div class="it new">Networking Matching <span class="dotn d-new">new</span></div>
+        <div class="it">Event Brochure</div>
+        <div class="it">Analytics</div>
+        <div class="it">Gamification</div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">Menu order matters: Registration sits where
+      Registration&nbsp;fields used to, so the muscle memory still lands somewhere sensible. Networking Matching
+      goes under it because it only makes sense once people have registered.</p>
+    </div>
+
+    <!-- TABLE -->
+    <div class="panel">
+      <table>
+        <thead><tr><th style="width:30%">Menu item</th><th style="width:44%">What changes there</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>All events</b> → an event<span class="path">/admin/events/[id]</span></td>
+            <td>Confirmation when the date moves or the event ends. Session order fixed in the Sessions list.</td>
+            <td><span class="pill ui">UI</span></td>
+          </tr>
+          <tr>
+            <td><b>Live control center</b><span class="path">/admin/events/[id]/control</span></td>
+            <td>Confirmation before ending a session, counting who is watching and who is queued. Lighter confirm on unpinning the main stage.</td>
+            <td><span class="pill ui">UI</span></td>
+          </tr>
+          <tr>
+            <td><b>Event Template</b><span class="path">/admin/events/email</span></td>
+            <td>Auditorium before Talk Show. Attendee rows below Presenting companies, with their own include tick.</td>
+            <td><span class="pill ui">UI</span> <span class="pill db">DB</span></td>
+          </tr>
+          <tr>
+            <td><b>Registration</b> · tab 1<span class="path">/admin/events/registrations</span></td>
+            <td>All-events registrant list — name, type, event, date, and whether they are listed publicly.</td>
+            <td><span class="pill ui">UI</span></td>
+          </tr>
+          <tr>
+            <td><b>Registration</b> · tab 2<span class="path">…/registrations?tab=fields</span></td>
+            <td>The existing field editor, unchanged. Gains the &ldquo;List my name&rdquo; question for investors and founders.</td>
+            <td><span class="pill ui">UI</span></td>
+          </tr>
+          <tr>
+            <td><b>Networking Matching</b><span class="path">/admin/events/networking</span></td>
+            <td>The whole page: matches, statuses, bulk invite with digest, and the two editable templates.</td>
+            <td><span class="pill new">new</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- OUTSIDE THE MENU -->
+  <h2>Three surfaces with no menu item</h2>
+  <div class="where">
+    <div class="w">
+      <div class="h"><b>Public event page</b><span>/events/[slug]</span></div>
+      <ul>
+        <li>Auditorium before Talk Show, same rule as the email</li>
+        <li>&ldquo;Who&rsquo;s attending&rdquo; chips, grouped Investors then Founders</li>
+        <li>Signed out: opted-in names plus a count. Signed in and registered: everyone</li>
+      </ul>
+    </div>
+    <div class="w">
+      <div class="h"><b>Registration form</b><span>/events/[slug]/register</span></div>
+      <ul>
+        <li>&ldquo;List my name and badge on the event page&rdquo;, default off</li>
+        <li>Shown to investors and founders only</li>
+        <li>Edited from Registration → Fields, not in code</li>
+      </ul>
+    </div>
+    <div class="w">
+      <div class="h"><b>What an attendee gets</b><span>email · signed link</span></div>
+      <ul>
+        <li>Invitation to the investor, about the founder</li>
+        <li>Founder follow-up, capped at two</li>
+        <li>Accept page → lounge, talk now, book a time, or message</li>
+      </ul>
+    </div>
+    <div class="w">
+      <div class="h"><b>Event Brochure</b><span>/admin/events/brochure</span></div>
+      <ul>
+        <li>Inherits the session order automatically — same builder</li>
+        <li>No attendee list: a booklet is printed before anyone registers</li>
+        <li>Nothing else changes</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b>The per-event registrations board stays where it is.</b>
+    <code>/admin/events/[id]/registrations</code> is still linked from the event&rsquo;s own More menu. The new page
+    is the all-events view of the same rows — one list to search, one place to export.</p>
+    <p style="margin:0 0 8px"><b>Nothing lands in Analytics.</b> Match and acceptance rates belong on the Networking
+    page beside the rows they describe, not in a separate report you would have to remember to open.</p>
+    <p style="margin:0"><b>One redirect to keep.</b> <code>/admin/events/registration-fields</code> should redirect
+    to the new tab rather than 404 — that URL is a year old and will be in someone&rsquo;s bookmarks.</p>
+  </div>
+
+</div>
+</body>
+</html>

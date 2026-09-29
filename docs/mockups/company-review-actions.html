@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Review &amp; marketplace actions — 3 samples</title>
+<style>
+  :root{ --navy:#0f2544; --border:#e2e8f0; --muted:#64748b; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:800px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 10px;font-weight:700}
+  .card{border:1px solid var(--border);border-radius:14px;background:#fff;
+        box-shadow:0 1px 2px rgba(15,23,42,.06);padding:18px}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  .muted{color:#94a3b8}
+
+  /* sample header */
+  .shead{display:flex;align-items:baseline;gap:9px;margin:0 0 9px}
+  .snum{width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;flex:none;
+        display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .shead b{font-size:14.5px;color:var(--navy)}
+  .shead span{font-size:12px;color:var(--muted)}
+
+  /* company block */
+  .co{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .co .meta{min-width:0;flex:1}
+  .co .ind{font-size:12px;color:#64748b;margin:0 0 3px}
+  .co h3{margin:0;font-size:17px;color:#020617}
+  .co .who{margin:4px 0 0;font-size:12.5px;color:#64748b}
+  .state{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+         font-size:11px;font-weight:700}
+  .state.live{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+  /* buttons */
+  .b{border-radius:999px;padding:7px 15px;font-size:12.6px;font-weight:600;border:1px solid var(--border);
+     background:#fff;color:#334155;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .b.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .b.warn{border-color:#fcd34d;color:#b45309}
+  .b.dngr{border-color:#fecaca;color:#b91c1c}
+  .b.sm{padding:5px 12px;font-size:12px}
+  .b.ghost{border-color:transparent;color:#475569}
+  .b.off{opacity:.42;cursor:not-allowed}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+
+  /* legacy cloud */
+  .cloud{display:flex;flex-wrap:wrap;gap:8px;max-width:520px}
+  .old{border-radius:999px;padding:7px 15px;font-size:12.6px;font-weight:600;white-space:nowrap}
+  .o1{border:1px solid #fecaca;color:#b91c1c;background:#fff}
+  .o2{border:1px solid #fde68a;color:#b45309;background:#fff}
+  .o3{background:#047857;color:#fff}
+  .o4{background:#4f46e5;color:#fff}
+  .o5{border:1px solid var(--border);color:#334155;background:#fff}
+  .flag{border:1px solid #fecaca;background:#fef2f2;border-radius:9px;padding:10px 12px;
+        font-size:12px;color:#991b1b;margin-top:11px;max-width:620px}
+
+  /* grouped rows */
+  .grp{border-top:1px solid #f1f5f9;padding-top:11px;margin-top:11px}
+  .grp:first-child{border-top:0;padding-top:0;margin-top:0}
+  .cap{font-size:10.4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+       color:#94a3b8;margin:0 0 7px}
+  .why{font-size:11px;color:#94a3b8;margin:6px 0 0}
+
+  /* menu */
+  .menuwrap{position:relative;display:inline-block}
+  .menu{position:absolute;right:0;top:calc(100% + 6px);width:236px;background:#fff;
+        border:1px solid var(--border);border-radius:11px;box-shadow:0 12px 30px rgba(15,23,42,.14);
+        padding:5px;z-index:5}
+  .mi{display:flex;align-items:center;gap:8px;border-radius:7px;padding:7px 10px;font-size:12.6px;color:#334155}
+  .mi:hover{background:#f8fafc}
+  .mi.dngr{color:#b91c1c}
+  .mi.off{opacity:.4}
+  .mi .r{margin-left:auto;font-size:10px;color:#cbd5e1}
+  .msep{height:1px;background:#f1f5f9;margin:4px 6px}
+  .mcap{font-size:9.6px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+        color:#94a3b8;padding:7px 10px 3px}
+
+  /* decision strip */
+  .strip{border:1px solid #a7f3d0;background:#f0fdf4;border-radius:11px;padding:11px 13px;
+         display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .strip .txt{min-width:0;flex:1;font-size:12.5px;color:#065f46}
+  .strip .txt b{color:#064e3b}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .yes{color:#047857;font-weight:700}
+  .no{color:#b91c1c;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Review &amp; marketplace actions</h1>
+  <p class="sub">Nine buttons in one cloud, four colours, no order. The bigger problem is underneath: several of them can&rsquo;t run in this company&rsquo;s current state and say so only after you click.</p>
+
+  <!-- TODAY -->
+  <h2>Today</h2>
+  <div class="card">
+    <div class="co">
+      <div class="meta">
+        <p class="ind">Deep Tech &nbsp;·&nbsp; <span class="state live"><span class="dot"></span>Published</span></p>
+        <h3>Impervitex Corp</h3>
+        <p class="who">Cynthia Mcbreen · impervitex@gmail.com</p>
+      </div>
+      <div class="cloud">
+        <span class="old o1">Reject</span>
+        <span class="old o2">Request Changes</span>
+        <span class="old o3">Approve</span>
+        <span class="old o4">Publish to Marketplace</span>
+        <span class="old o5">Unpublish from Marketplace</span>
+        <span class="old o5">Mark as sample</span>
+        <span class="old o5">View Company</span>
+        <span class="old o5">View Documents</span>
+        <span class="old o5">View Pitch Deck</span>
+      </div>
+    </div>
+    <div class="flag">
+      This company is <b>approved and live</b>. Of the nine, <b>Approve</b> and <b>Publish to Marketplace</b> will
+      both refuse — &ldquo;already approved&rdquo;, &ldquo;already live on the marketplace&rdquo; — and
+      <b>View Pitch Deck</b> refuses whenever no deck was uploaded. All three are drawn as loud as the ones that work.
+    </div>
+  </div>
+
+  <!-- SAMPLE A -->
+  <h2>Sample A — one primary, the rest behind More</h2>
+  <div class="card">
+    <div class="shead"><span class="snum">A</span><b>Same pattern as the event header</b>
+      <span>· the move this state calls for, up front</span></div>
+    <div class="co">
+      <div class="meta">
+        <p class="ind">Deep Tech &nbsp;·&nbsp; <span class="state live"><span class="dot"></span>Published</span></p>
+        <h3>Impervitex Corp</h3>
+        <p class="who">Cynthia Mcbreen · impervitex@gmail.com</p>
+      </div>
+      <div class="row" style="align-items:flex-start">
+        <span class="b">View Pitch Deck</span>
+        <span class="b pri">Unpublish from Marketplace</span>
+        <span class="menuwrap">
+          <span class="b">More ▾</span>
+          <div class="menu">
+            <p class="mcap">Review</p>
+            <div class="mi dngr">Reject</div>
+            <div class="mi">Request changes</div>
+            <div class="mi off">Approve <span class="r">already approved</span></div>
+            <div class="msep"></div>
+            <p class="mcap">Marketplace</p>
+            <div class="mi off">Publish <span class="r">already live</span></div>
+            <div class="mi">Mark as sample</div>
+            <div class="msep"></div>
+            <p class="mcap">Open</p>
+            <div class="mi">Company details</div>
+            <div class="mi">Documents</div>
+          </div>
+        </span>
+      </div>
+    </div>
+    <p class="note">The primary changes with the state: <b>Approve</b> while pending, <b>Publish to Marketplace</b> once
+      approved but not live, <b>Unpublish</b> while live. Impossible moves stay in the menu, dimmed, with the reason
+      beside them — so it&rsquo;s clear they exist and why they&rsquo;re unavailable. One row, never wraps.</p>
+  </div>
+
+  <!-- SAMPLE B -->
+  <h2>Sample B — three labelled groups</h2>
+  <div class="card">
+    <div class="shead"><span class="snum">B</span><b>Everything stays visible</b>
+      <span>· captions give the cloud an order</span></div>
+    <div class="co">
+      <div class="meta">
+        <p class="ind">Deep Tech &nbsp;·&nbsp; <span class="state live"><span class="dot"></span>Published</span></p>
+        <h3>Impervitex Corp</h3>
+        <p class="who">Cynthia Mcbreen · impervitex@gmail.com</p>
+      </div>
+      <div style="min-width:300px">
+        <div class="grp">
+          <p class="cap">Review</p>
+          <div class="row">
+            <span class="b dngr">Reject</span>
+            <span class="b warn">Request changes</span>
+            <span class="b off">Approve</span>
+          </div>
+          <p class="why">Approved 3 Sep — nothing to approve.</p>
+        </div>
+        <div class="grp">
+          <p class="cap">Marketplace</p>
+          <div class="row">
+            <span class="b pri">Unpublish</span>
+            <span class="b off">Publish</span>
+            <span class="b">Mark as sample</span>
+          </div>
+          <p class="why">Live since 3 Sep.</p>
+        </div>
+        <div class="grp">
+          <p class="cap">Open</p>
+          <div class="row">
+            <span class="b sm">Company</span>
+            <span class="b sm">Documents</span>
+            <span class="b sm">Pitch deck</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Nothing is hidden, so nobody has to learn where a button went. Unavailable ones are dimmed and the
+      caption line says why. Costs the most vertical space of the three, and the card is already tall.</p>
+  </div>
+
+  <!-- SAMPLE C -->
+  <h2>Sample C — say the state, offer only the legal moves</h2>
+  <div class="card">
+    <div class="shead"><span class="snum">C</span><b>The state leads</b>
+      <span>· buttons follow from it</span></div>
+    <div class="co">
+      <div class="meta">
+        <p class="ind">Deep Tech</p>
+        <h3>Impervitex Corp</h3>
+        <p class="who">Cynthia Mcbreen · impervitex@gmail.com</p>
+      </div>
+    </div>
+
+    <div class="strip">
+      <span class="txt"><b>Approved and live on the marketplace</b> since 3 Sep 2026 · not a sample</span>
+      <span class="b pri sm">Unpublish</span>
+      <span class="b sm">Request changes</span>
+      <span class="b dngr sm">Reject</span>
+      <span class="menuwrap"><span class="b sm ghost">⋯</span></span>
+    </div>
+
+    <div class="row" style="margin-top:11px">
+      <span class="b sm ghost">Company details</span>
+      <span class="b sm ghost">Documents (4)</span>
+      <span class="b sm ghost">Pitch deck</span>
+      <span class="b sm ghost">Mark as sample</span>
+    </div>
+
+    <p class="note" style="margin-top:12px">A button appears only when it would work, so <b>Approve</b> and
+      <b>Publish</b> simply aren&rsquo;t drawn here — they return the moment the state allows them. Opening things is
+      separated out, because viewing a document isn&rsquo;t a decision. The strongest fit with the house rule
+      (&ldquo;never show a control that cannot run&rdquo;), and the biggest change to what you&rsquo;re used to seeing.</p>
+  </div>
+
+  <!-- COMPARE -->
+  <h2>Side by side</h2>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr><th style="width:34%"></th><th>A · One + More</th><th>B · Three groups</th><th>C · State-led</th></tr></thead>
+      <tbody>
+        <tr><td>Never wraps</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+        <tr><td>Dead buttons gone</td><td>dimmed, in menu</td><td>dimmed, in place</td><td class="yes">not drawn</td></tr>
+        <tr><td>Says why unavailable</td><td class="yes">yes</td><td class="yes">yes</td><td>state line implies it</td></tr>
+        <tr><td>Vertical space</td><td class="yes">smallest</td><td class="no">largest</td><td>middle</td></tr>
+        <tr><td>Clicks to a hidden action</td><td>2</td><td class="yes">1</td><td>1 — or 2 under ⋯</td></tr>
+        <tr><td>Matches the event header</td><td class="yes">exactly</td><td>no</td><td>no</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note" style="margin-top:14px">All three also fix the same three bugs of prominence: <b>Approve</b> hidden or
+  dimmed once approved, <b>Publish</b> likewise once live, and <b>Pitch deck</b> absent when the company never uploaded
+  one — today it renders at full strength and fails on click.</p>
+
+</div>
+</body>
+</html>

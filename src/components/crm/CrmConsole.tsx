@@ -152,7 +152,7 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
               { v: "board", Icon: Columns },
               { v: "cards", Icon: LayoutGrid },
             ] as const).map(({ v, Icon }) => (
-              <button
+              <button type="button"
                 key={v}
                 onClick={() => setParam("view", v)}
                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold capitalize ${
@@ -164,7 +164,7 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
               </button>
             ))}
           </div>
-          <button
+          <button type="button"
             onClick={() => exportListCsv(module, filtered)}
             disabled={filtered.length === 0}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
@@ -175,7 +175,7 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
 
         {view !== "board" && (
           <div className="flex flex-wrap gap-1.5">
-            <button
+            <button type="button"
               onClick={() => setFilter("")}
               className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
                 filter === "" ? "border-[var(--blue)] bg-[var(--blue-muted)] text-[var(--blue-hover)]" : "border-slate-200 text-slate-600"
@@ -191,7 +191,7 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
                   ...INVESTOR_RELS.map((r) => ({ key: r.key, label: r.label })),
                 ]
             ).map((chip) => (
-              <button
+              <button type="button"
                 key={chip.key}
                 onClick={() => setFilter(chip.key)}
                 className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -350,7 +350,7 @@ function CardsView({
       {records.map((r) => {
         const active = r.id === selectedId;
         return (
-          <button
+          <button type="button"
             key={r.id}
             onClick={() => onSelect(r.id)}
             className={`rounded-xl border bg-white p-4 text-left transition hover:border-[var(--blue)] ${active ? "border-[var(--blue)] ring-2 ring-[var(--blue-muted)]" : "border-slate-200"}`}
@@ -415,7 +415,7 @@ function BoardView({
             </div>
             <div className="space-y-2 rounded-xl bg-slate-50 p-2">
               {cards.map((r) => (
-                <button
+                <button type="button"
                   key={r.id}
                   onClick={() => onSelect(r.id)}
                   className="w-full rounded-lg border border-slate-200 bg-white p-3 text-left hover:border-[var(--blue)]"
@@ -544,7 +544,7 @@ function DetailDrawer({
               <Maximize2 className="h-4 w-4" />
             </Link>
           )}
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <X className="h-4 w-4" />
           </button>
         </div>

@@ -1,10 +1,10 @@
-// COUNSEL-REVIEWABLE FILE — matching lifecycle email copy.
+// COUNSEL-REVIEWED FILE: matching lifecycle email copy.
 //
 // These emails are issuer/intermediary-adjacent communications. The strings below
-// are PLACEHOLDERS and are NOT approved legal copy. Email delivery is disabled
-// until MATCHING_EMAILS_LIVE=true is set AFTER securities counsel signs off on
-// the wording (mirrors the INVESTOR_OUTREACH_LIVE gate). Until then, the send
-// helper is a no-op and only the in-app notifications fire.
+// were approved by legal on 2026-09-28; any change to the wording needs a new
+// legal review. Delivery still requires MATCHING_EMAILS_LIVE=true (mirrors the
+// INVESTOR_OUTREACH_LIVE gate). Without it the send helper is a no-op and only
+// the in-app notifications fire.
 //
 // Tombstone-safe rules for these templates: facts and process only — no
 // performance claims, no solicitation, no guarantee of funding/allocations/returns.

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR Weights · the four rounds · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1040px;line-height:1.55}
+.frame{width:1040px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 8px;border-bottom:1px solid #E2E7F0}
+td{padding:7px 8px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.grn{background:#E7F7EE;color:#137A3B}.amb{background:#FFF4DE;color:#9A5B00}.red{background:#FDE8E8;color:#B42323}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.lock{font-size:10.5px;color:#94A3B8}
+code{font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.warnbox{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:12px;line-height:1.55}
+.okbox{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:12px;line-height:1.55}
+.infobox{border:1px solid #CFD8EA;background:#F8FAFD;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-top:10px;line-height:1.55}
+.inp{display:inline-block;width:46px;border:1px solid #C9D3E3;border-radius:6px;padding:3px 6px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;background:#fff}
+.delta{font-size:10.5px;font-variant-numeric:tabular-nums;margin-left:3px}
+.up{color:#137A3B}.down{color:#B42323}.same{color:#C3CCDA}
+/* progression sparkline */
+.prog{display:inline-flex;align-items:flex-end;gap:3px;height:26px}
+.prog i{width:14px;background:#4F46E5;border-radius:2px 2px 0 0;display:block;opacity:.85}
+.prog.bad i{background:#D9534F}
+.arrow{color:#94A3B8;font-size:11px}
+</style></head><body>
+
+<p class="note">
+<b>Weights tab, the four rounds as you have them.</b> The stage mapping stays exactly as shipped. What this mockup does
+is set the five dimension weights for each round from <i>who actually writes the cheque at that round</i> — which is
+already written in your mapping text.
+</p>
+
+<!-- ─────────── 1 ─────────── -->
+<h2>1. Your mapping, with the reader it implies</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:96px">Profile</th><th style="width:300px">Round</th><th style="width:170px">Who reads it</th><th>What that reader weighs most</th></tr>
+    <tr><td><b>Pre-seed</b></td><td>Angel round — friends &amp; family, angels, pre-seed funds</td><td class="lock">individuals, own money</td><td class="lock">the founder, and whether the story holds up — there is nothing else yet</td></tr>
+    <tr><td><b>Seed</b></td><td>Seed round — institutional seed funds</td><td class="lock">small funds, first institutional money</td><td class="lock">first real demand evidence, and a cap table clean enough to build on</td></tr>
+    <tr><td><b>Series A</b></td><td>Series A round <span class="lock">· also the single profile every investor-facing screen uses</span></td><td class="lock">VCs, ownership targets</td><td class="lock">traction that can compound, and unit economics that survive scale</td></tr>
+    <tr><td><b>Growth</b></td><td>Expansion, Series B or Series C</td><td class="lock">growth funds, institutional</td><td class="lock">the numbers — repeatability, margin, efficiency</td></tr>
+  </table>
+  <div class="okbox">
+    <b>No fork after all.</b> Who invests is determined by the round, so the four stage profiles already encode the four
+    investor types. Nothing needs re-keying — the mapping you wrote does the work.
+  </div>
+</div>
+
+<!-- ─────────── 2 ─────────── -->
+<h2>2. The weights</h2>
+<p class="note">Same editor, same five dimensions, same “must total 100” rule, same versioning and Preview impact. Only the numbers.</p>
+<div class="frame">
+  <table>
+    <tr>
+      <th style="width:112px">Dimension</th>
+      <th style="width:128px">Pre-seed</th><th style="width:128px">Seed</th><th style="width:128px">Series A</th><th style="width:128px">Growth</th>
+      <th style="width:110px">Across the four</th>
+      <th>The idea</th>
+    </tr>
+    <tr>
+      <td><b>Team</b></td>
+      <td><span class="inp">32</span><span class="delta up">+2</span></td>
+      <td><span class="inp">28</span><span class="delta down">−2</span></td>
+      <td><span class="inp">20</span><span class="delta up">+5</span></td>
+      <td><span class="inp">12</span><span class="delta up">+2</span></td>
+      <td><span class="prog"><i style="height:26px"></i><i style="height:23px"></i><i style="height:16px"></i><i style="height:10px"></i></span></td>
+      <td class="lock">an angel backs a person; a growth fund buys a machine</td>
+    </tr>
+    <tr>
+      <td><b>Narrative</b></td>
+      <td><span class="inp">26</span><span class="delta down">−4</span></td>
+      <td><span class="inp">14</span><span class="delta up">+4</span></td>
+      <td><span class="inp">8</span><span class="delta down">−2</span></td>
+      <td><span class="inp">4</span><span class="delta down">−1</span></td>
+      <td><span class="prog"><i style="height:26px"></i><i style="height:14px"></i><i style="height:8px"></i><i style="height:4px"></i></span></td>
+      <td class="lock">the story is the evidence until there is other evidence</td>
+    </tr>
+    <tr>
+      <td><b>Traction</b></td>
+      <td><span class="inp">16</span><span class="delta up">+1</span></td>
+      <td><span class="inp">26</span><span class="delta up">+1</span></td>
+      <td><span class="inp">32</span><span class="delta up">+2</span></td>
+      <td><span class="inp">30</span><span class="delta same">—</span></td>
+      <td><span class="prog"><i style="height:11px"></i><i style="height:19px"></i><i style="height:26px"></i><i style="height:24px"></i></span></td>
+      <td class="lock">climbs to Series A, then financial takes over</td>
+    </tr>
+    <tr>
+      <td><b>Financial</b></td>
+      <td><span class="inp">12</span><span class="delta down">−3</span></td>
+      <td><span class="inp">14</span><span class="delta down">−1</span></td>
+      <td><span class="inp">24</span><span class="delta down">−1</span></td>
+      <td><span class="inp">34</span><span class="delta down">−1</span></td>
+      <td><span class="prog"><i style="height:8px"></i><i style="height:10px"></i><i style="height:18px"></i><i style="height:26px"></i></span></td>
+      <td class="lock">rises the whole way — the one clean monotonic line</td>
+    </tr>
+    <tr>
+      <td><b>Cap table</b></td>
+      <td><span class="inp">14</span><span class="delta up">+4</span></td>
+      <td><span class="inp">18</span><span class="delta down">−2</span></td>
+      <td><span class="inp">16</span><span class="delta down">−4</span></td>
+      <td><span class="inp">20</span><span class="delta same">—</span></td>
+      <td><span class="prog"><i style="height:14px"></i><i style="height:19px"></i><i style="height:17px"></i><i style="height:22px"></i></span></td>
+      <td class="lock">peaks where money first gets structured, and again at scale</td>
+    </tr>
+    <tr style="background:#FBFBFF">
+      <td class="lock">Total</td>
+      <td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td>
+      <td><span class="pill grn">100</span></td><td><span class="pill grn">100</span></td>
+      <td colspan="2" class="lock">each column still validates independently</td>
+    </tr>
+  </table>
+  <p class="lock" style="margin-top:8px">Deltas are against what is saved today in <code>crr-profiles-v1</code>.</p>
+
+  <div class="infobox">
+    <b>Cap table is the one line that is not monotonic, deliberately.</b> It rises at Seed — the first institutional
+    cheque is when the cap table actually gets cleaned up — dips slightly at Series A where traction dominates, then rises
+    again at Growth. If you would rather it climb straight, the fix is Series A 16 → 18 with Team 20 → 18.
+  </div>
+</div>
+
+<!-- ─────────── 3 ─────────── -->
+<h2>3. What is actually wrong with the current set <span>— two cliffs</span></h2>
+<p class="note">The existing numbers are broadly right. Most of the changes above are ±2. Two of them are not, and those are the ones worth making.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:112px">Dimension</th><th style="width:210px">Today, across the four</th><th style="width:120px"></th><th style="width:210px">Proposed</th><th>Why it matters</th></tr>
+    <tr>
+      <td><b>Narrative</b></td>
+      <td><b>30 · 10 · 10 · 5</b><div class="prog bad" style="margin-top:3px"><i style="height:26px"></i><i style="height:9px"></i><i style="height:9px"></i><i style="height:5px"></i></div></td>
+      <td><span class="pill red">cliff</span> <span class="arrow">30 → 10</span></td>
+      <td><b>26 · 14 · 8 · 4</b><div class="prog" style="margin-top:3px"><i style="height:26px"></i><i style="height:14px"></i><i style="height:8px"></i><i style="height:4px"></i></div></td>
+      <td class="lock">a company that moves pre-seed → seed loses 20 points of weighting on the same deck overnight. A smooth decline means the score reflects a changing audience, not a step change in the company.</td>
+    </tr>
+    <tr>
+      <td><b>Team</b></td>
+      <td><b>30 · 30 · 15 · 10</b><div class="prog bad" style="margin-top:3px"><i style="height:26px"></i><i style="height:26px"></i><i style="height:13px"></i><i style="height:9px"></i></div></td>
+      <td><span class="pill red">cliff</span> <span class="arrow">30 → 15</span></td>
+      <td><b>32 · 28 · 20 · 12</b><div class="prog" style="margin-top:3px"><i style="height:26px"></i><i style="height:23px"></i><i style="height:16px"></i><i style="height:10px"></i></div></td>
+      <td class="lock">flat across the first two rounds, then halves. Team never stops mattering that abruptly.</td>
+    </tr>
+    <tr>
+      <td><b>Traction</b></td>
+      <td><b>15 · 25 · 30 · 30</b></td>
+      <td><span class="pill grn">fine</span></td>
+      <td><b>16 · 26 · 32 · 30</b></td>
+      <td class="lock">already the right shape</td>
+    </tr>
+    <tr>
+      <td><b>Financial</b></td>
+      <td><b>15 · 15 · 25 · 35</b></td>
+      <td><span class="pill grn">fine</span></td>
+      <td><b>12 · 14 · 24 · 34</b></td>
+      <td class="lock">already the right shape</td>
+    </tr>
+    <tr>
+      <td><b>Cap table</b></td>
+      <td><b>10 · 20 · 20 · 20</b></td>
+      <td><span class="pill amb">flat</span></td>
+      <td><b>14 · 18 · 16 · 20</b></td>
+      <td class="lock">identical for three of four rounds today, which says the dimension was never really tuned</td>
+    </tr>
+  </table>
+  <div class="okbox">
+    <b>Honest summary: this is a tidy-up, not a rebuild.</b> Two cliffs smoothed, one flat line given shape, everything
+    else within a couple of points. If you only make one change, make Narrative.
+  </div>
+</div>
+
+<!-- ─────────── 4 ─────────── -->
+<h2>4. Before you save</h2>
+<div class="frame">
+  <div class="warnbox" style="margin-top:0">
+    <b>Run Preview impact first, and expect it to be small.</b> Every company currently scores under 40 and nothing has
+    reached the 65 outreach gate. Re-weighting moves companies a point or two; it will not move anyone across a band.
+    That is worth seeing on screen before deciding whether this was the right thing to spend a version on.
+  </div>
+  <div class="infobox">
+    <b>Nothing else changes.</b> Same four columns, same stage mapping strip, same validation, same History and revert.
+    One save, one new version, one reason recorded.
+  </div>
+</div>
+
+</body></html>

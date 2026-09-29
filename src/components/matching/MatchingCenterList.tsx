@@ -6,6 +6,8 @@
 // brokered introduction without revealing the investor's identity.
 import { useState } from "react";
 import { InvestorDetailModal, type InvestorDetail } from "@/components/founder/InvestorDetailModal";
+import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar";
+import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 
 export type MatchCenterCard = {
   matchScore: number;
@@ -18,6 +20,10 @@ export type MatchCenterCard = {
   detail?: InvestorDetail;
   /** True once an intro has been facilitated — enables the Follow-up action. */
   connected?: boolean;
+  /** Where the founder's own introduction request stands. Absent or null = none sent. */
+  introStatus?: "reviewing" | "introduced" | "declined" | null;
+  /** iCFO's note on a declined request. */
+  introNote?: string | null;
   /** Data used to create the founder-CRM lead on "Add to follow-up". */
   followUp?: { name: string; firm: string | null; investorType: string | null };
 };
@@ -28,25 +34,70 @@ function barColor(score: number): string {
   return "#cbd5e1";
 }
 
+/**
+ * The introduction gate, on the button itself.
+ *
+ * The engine has always refused to broker below the rating gate; the button
+ * did not know, so a founder at 51 could ask and be silently declined. Locked
+ * and legible beats live and futile.
+ */
+function IntroLocked({ gate, score }: { gate: number; score: number | null }) {
+  return (
+    <span
+      className="cursor-not-allowed rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-400"
+      title={score === null
+        ? `Introductions open once your Capital Readiness Rating reaches ${gate}.`
+        : `Your CRR is ${score}. Introductions open at ${gate}.`}
+    >
+      Locked until CRR {gate}
+    </span>
+  );
+}
+
+/** The founder's request, once sent: iCFO reviewing, introduced, or declined with iCFO's note. */
+function IntroStatusPill({ status, note }: { status: "reviewing" | "introduced" | "declined"; note?: string | null }) {
+  if (status === "introduced") {
+    return <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><i className="ti ti-check" aria-hidden="true" /> Introduced</span>;
+  }
+  if (status === "declined") {
+    return (
+      <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600" title={note || "iCFO declined this introduction."}>
+        Declined{note ? ` · ${note.length > 60 ? `${note.slice(0, 60)}…` : note}` : ""}
+      </span>
+    );
+  }
+  return <span className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900"><i className="ti ti-clock" aria-hidden="true" /> iCFO reviewing</span>;
+}
+
 function IntroButton({ introRef, endpoint }: { introRef: string; endpoint: string }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
 
   async function request() {
     setState("loading");
+    setMessage(null);
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ref: introRef }),
       });
-      setState(res.ok ? "done" : "error");
+      if (res.ok) {
+        setState("done");
+        return;
+      }
+      // Show why (plan limit, plan required, gate) instead of a bare retry.
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setMessage(body?.error ?? null);
+      setState("error");
     } catch {
       setState("error");
     }
   }
 
-  if (state === "done") {
-    return <span className="text-xs font-medium text-emerald-600">Requested — the iCapOS team will follow up.</span>;
+  if (state === "done") return <IntroStatusPill status="reviewing" />;
+  if (state === "error" && message) {
+    return <span className="max-w-[16rem] text-[11px] leading-snug text-amber-800">{message}</span>;
   }
   return (
     <button
@@ -115,16 +166,21 @@ export function MatchingCenterList({
   introEndpoint,
   followUpEndpoint,
   draftEndpoint,
+  scope,
+  gate,
 }: {
   cards: MatchCenterCard[];
   emptyText: string;
   introEndpoint?: string;
   followUpEndpoint?: string;
   draftEndpoint?: string;
+  /** Saved-views key. Omit on the investor side, which has no founder toolbar. */
+  scope?: string;
+  /** The CRR gate. Omitted on the investor side, which has no rating to hold. */
+  gate?: { score: number | null; gate: number; unlocked: boolean };
 }) {
   const [selected, setSelected] = useState<MatchCenterCard | null>(null);
-  const [q, setQ] = useState("");
-  const [minMatch, setMinMatch] = useState(0);
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [view, setView] = useState<"list" | "cards">("list");
 
   if (cards.length === 0) {
@@ -135,49 +191,64 @@ export function MatchingCenterList({
     );
   }
 
-  const query = q.trim().toLowerCase();
-  const visible = cards.filter((c) => {
-    if (c.matchScore < minMatch) return false;
-    if (!query) return true;
-    return `${c.title} ${c.subtitle ?? ""} ${c.tag} ${c.reasons.join(" ")}`.toLowerCase().includes(query);
+  const visible = applySearch(cards, search, {
+    text: (c) => `${c.title} ${c.subtitle ?? ""} ${c.tag} ${c.reasons.join(" ")}`,
+    quick: {
+      fit90: (c) => c.matchScore >= 90,
+      fit70: (c) => c.matchScore >= 70,
+      fit45: (c) => c.matchScore >= 45,
+      connected: (c) => !!c.connected,
+      not_connected: (c) => !c.connected,
+      can_intro: (c) => !!c.introRef,
+    },
+    field: {
+      type: (c) => c.tag,
+      reason: (c) => c.reasons,
+    },
   });
-  const FILTERS: [string, number][] = [["All", 0], ["≥ 70%", 70], ["≥ 90%", 90]];
 
   return (
     <>
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      <div className="flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-        <i className="ti ti-search text-slate-400" aria-hidden="true" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search matches — type, sector, reason…"
-          className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
-          aria-label="Search matches"
-        />
-      </div>
-      {FILTERS.map(([label, v]) => (
-        <button
-          key={label}
-          type="button"
-          onClick={() => setMinMatch(v)}
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${minMatch === v ? "border-[var(--brand-indigo,#2E78F5)] bg-indigo-50 text-[var(--brand-indigo,#2E78F5)]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}
-        >
-          {label}
-        </button>
-      ))}
-      <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
-        {(["list", "cards"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setView(m)}
-            className={`px-3 py-1 text-xs font-medium capitalize transition-colors ${view === m ? "bg-[var(--brand-indigo,#2E78F5)] text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
+    <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <FounderToolbar
+        scope={scope ?? "matches"}
+        state={search}
+        onChange={setSearch}
+        count={visible.length}
+        countLabel="matches"
+        placeholder="Search matches — type, sector, reason…"
+        quick={[
+          { key: "fit90", label: "Fit ≥ 90" },
+          { key: "fit70", label: "Fit ≥ 70" },
+          { key: "fit45", label: "Fit ≥ 45" },
+          { key: "connected", label: "Introduced", sep: true },
+          { key: "not_connected", label: "Not yet introduced" },
+          { key: "can_intro", label: "Intro available" },
+        ]}
+        fields={[
+          { key: "type", label: "Investor type", options: [...new Set(cards.map((c) => c.tag).filter(Boolean))] },
+          { key: "reason", label: "Match reason", options: [...new Set(cards.flatMap((c) => c.reasons))].slice(0, 40) },
+        ]}
+        groups={[
+          { id: "none", label: "None" },
+          { id: "type", label: "Investor type" },
+          { id: "fit", label: "Fit band" },
+        ]}
+        right={
+          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
+            {(["list", "cards"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setView(m)}
+                className={`px-3 py-1 text-xs font-medium capitalize transition-colors ${view === m ? "bg-[var(--brand-indigo,#2E78F5)] text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        }
+      />
     </div>
     {visible.length === 0 ? (
       <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
@@ -217,7 +288,13 @@ export function MatchingCenterList({
               {(introEndpoint || followUpEndpoint) ? (
                 <div className="flex items-center gap-2 sm:justify-end" onClick={(e) => e.stopPropagation()}>
                   {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
-                  {introEndpoint && c.introRef && <IntroButton introRef={c.introRef} endpoint={introEndpoint} />}
+                  {introEndpoint && c.introRef && (
+                    c.introStatus
+                      ? <IntroStatusPill status={c.introStatus} note={c.introNote} />
+                      : gate && !gate.unlocked
+                      ? <IntroLocked gate={gate.gate} score={gate.score} />
+                      : <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
+                  )}
                 </div>
               ) : <span />}
             </div>
@@ -265,7 +342,13 @@ export function MatchingCenterList({
           {(introEndpoint || followUpEndpoint) && (
             <div className="mt-4 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
               {followUpEndpoint && c.followUp && <FollowUpButton card={c} endpoint={followUpEndpoint} />}
-              {introEndpoint && c.introRef && <IntroButton introRef={c.introRef} endpoint={introEndpoint} />}
+              {introEndpoint && c.introRef && (
+                c.introStatus
+                  ? <IntroStatusPill status={c.introStatus} note={c.introNote} />
+                  : gate && !gate.unlocked
+                  ? <IntroLocked gate={gate.gate} score={gate.score} />
+                  : <IntroButton introRef={c.introRef} endpoint={introEndpoint} />
+              )}
             </div>
           )}
         </div>

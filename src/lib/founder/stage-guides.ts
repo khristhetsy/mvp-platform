@@ -60,16 +60,9 @@ const GUIDES: Record<StageSlug, StageGuide> = {
   preparation: {
     slug: "preparation",
     stageLabel: "Stage 2 – Preparation",
-    title: "Prepare your materials",
-    intro: "Assemble the documents and get an honest read on how investable you are — then close the gaps before investors see you.",
+    title: "Preparation of completion",
+    intro: "Assemble your materials and get an honest read on how investable you are. Your Capital Readiness Rating is what opens introductions in Stage 3.",
     steps: [
-      {
-        title: "Get your Capital Readiness Rating",
-        desc: "An AI assessment of how investable you are right now, with the specific gaps to fix.",
-        href: "/founder/readiness/wizard",
-        hrefLabel: "Open the rating wizard",
-        ai: { kind: "tool", href: "/founder/readiness/wizard", label: "Run AI rating" },
-      },
       {
         title: "Build your business plan",
         desc: "Draft a full plan with AI, section by section, from your company profile.",
@@ -85,18 +78,25 @@ const GUIDES: Record<StageSlug, StageGuide> = {
         ai: { kind: "tool", href: "/founder/pitch-deck", label: "Generate with AI" },
       },
       {
-        title: "Complete your data room",
-        desc: "Upload the documents investors expect. Missing items lower your rating.",
-        href: "/founder/readiness/data-room",
-        hrefLabel: "Open data room",
-        ai: { kind: "assistant", prompt: "What documents am I missing in my data room, and which should I prioritize?" },
-      },
-      {
         title: "Run an AI diligence review",
         desc: "See the questions investors will ask — and how your materials answer them.",
         href: "/founder/report",
         hrefLabel: "Open diligence report",
         ai: { kind: "tool", href: "/founder/report", label: "Run AI review" },
+      },
+      {
+        title: "Get your Capital Readiness Rating",
+        desc: "An AI assessment of how investable you are right now, weighted for your stage. It is what opens introductions.",
+        href: "/founder/readiness",
+        hrefLabel: "Open your rating",
+        ai: { kind: "tool", href: "/founder/readiness/wizard", label: "Run AI rating" },
+      },
+      {
+        title: "Complete your data room",
+        desc: "Upload the documents investors expect. Missing items lower your rating.",
+        href: "/founder/readiness/data-room",
+        hrefLabel: "Open data room",
+        ai: { kind: "assistant", prompt: "What documents am I missing in my data room, and which should I prioritize?" },
       },
     ],
   },

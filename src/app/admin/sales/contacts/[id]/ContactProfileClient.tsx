@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
+import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabel } from "@/lib/sales/investor-profile";
+import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
+import { SalesChatter } from "@/components/sales/SalesChatter";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
@@ -13,16 +16,30 @@ type Contact = {
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
   extra: Array<{ label: string; values: string[] }>;
+  /** sourceKey → rule id for values this platform derived rather than was told. */
+  derivedSources?: Record<string, string>;
 };
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
-type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null };
+type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null; isNote?: boolean };
+type BookingLite = { id: string; event_type: string | null; start_time: string; end_time: string; timezone: string | null; meet_url: string | null; status: string; answers: { label: string; value: string }[]; booker_phone: string | null };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
-const FREE_TEXT_FIELD_LABELS = new Set(["Management team", "Note", "Request", "Pitch frame to use", "If other, referred you"]);
+const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Company Name", "Company name", "Contact preference", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Short bio", "Special skills", "Work experience", "Business summary", "Management team"]);
+// A value that is a URL (the Social section, a website in Other details) renders as a
+// link rather than a chip. Detected from the value, not the label, so it works for any
+// synced field. Requires an alphabetic TLD so numbers like "1.5" aren't caught.
+const URLISH = /^(https?:\/\/\S+|(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?)$/i;
+const hrefOf = (v: string) => (/^https?:\/\//i.test(v) ? v : `https://${v}`);
+// Fields that hold exactly one value (a range/band) — the picker is single-select.
+const SINGLE_SELECT_FIELD_LABELS = new Set(["ARR", "MRR"]);
+
+// Standard investor investment-size bands, smallest → largest. Used to derive
+// "all bands up to the Reg D raised" for SEC Form D-only investors.
+const INVESTMENT_SIZE_BANDS = ["Less than $50k", "$50k - $100k", "$100k - $250k", "$250k - $500k", "$500k - $1m", "$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"];
 // Curated option lists for the structured contact fields (rendered as dropdowns).
 // Any existing/legacy value that isn't in a list is preserved and pinned on top.
 const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];
@@ -50,6 +67,22 @@ function actWhen(iso: string): string {
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
+// Responsive field columns: two-up when there's room, collapsing to one column as
+// the panel narrows (Odoo-style). minmax floor sets the drop-to-one threshold.
+const RESP_COLS = "repeat(auto-fit, minmax(240px, 1fr))";
+// Tags: each name maps to a stable color (same tag → same color everywhere), so no
+// per-tag color store is needed. Hash the name into a fixed pastel palette.
+const TAG_PALETTE = [
+  { bg: "#D5F5E8", fg: "#0F6E56" }, { bg: "#E6F1FB", fg: "#185FA5" },
+  { bg: "#FBE7F0", fg: "#993556" }, { bg: "#FAEEDA", fg: "#854F0B" },
+  { bg: "#EEEDFE", fg: "#0A1A40" }, { bg: "#FCEBEB", fg: "#A32D2D" },
+  { bg: "#EAF3DE", fg: "#3B6D11" }, { bg: "#F1EFE8", fg: "#5F5E5A" },
+];
+function tagColor(name: string): { bg: string; fg: string } {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return TAG_PALETTE[h % TAG_PALETTE.length];
+}
 const outlineBtn: React.CSSProperties = { fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" };
 
 const LEAD_TONE: Record<string, { bg: string; c: string }> = {
@@ -102,31 +135,100 @@ function InvestorRatingChip({ score, tier }: { score: number | null; tier: strin
     </div>
   );
 }
-function Row({ icon, label, value, link }: { icon: string; label: string; value: string | null; link?: boolean }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
-      <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
-      <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>
-      <span style={{ color: link && value ? "#185FA5" : "var(--foreground)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value || "—"}</span>
-    </div>
-  );
+/** Odoo-style field actions: hovering a phone / email / website row reveals the link. */
+type RowAction = "tel" | "email" | "web";
+function actionHref(kind: RowAction, value: string): string {
+  if (kind === "tel") return `tel:${value.replace(/[^+\d]/g, "")}`;
+  if (kind === "email") return `/admin/inbox?compose=1&to=${encodeURIComponent(value.trim())}`;
+  return /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, "")}`;
 }
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", margin: "10px 0 4px" }}>{title}</div>
-      {children}
-    </div>
-  );
-}
+const ACTION_META: Record<RowAction, { icon: string; title: string }> = {
+  tel: { icon: "ti-phone-call", title: "Call" },
+  email: { icon: "ti-send", title: "Send email" },
+  web: { icon: "ti-external-link", title: "Open site" },
+};
 
+/**
+ * One Details field. Read: label + value; hovering shows a pencil (and, for phone /
+ * email / website, the action icon). Click → that field alone becomes an input (or a
+ * select when it has an option list) with save ✓ / undo ↶; Enter saves, Esc cancels.
+ * `readOnly` rows (synced values) show no pencil and don't react to clicks.
+ */
+function Row({ icon, label, value, link, action, options, placeholder, readOnly = false, onSave, display }: {
+  icon: string; label: string; value: string | null; link?: boolean; action?: RowAction;
+  options?: string[]; placeholder?: string; readOnly?: boolean;
+  /** Persist the new value; resolve with an error message, or null on success. */
+  onSave?: (next: string) => Promise<string | null>;
+  /** Optional custom read rendering (e.g. a badge) — the value is still what gets edited. */
+  display?: React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const editable = !readOnly && !!onSave;
+  const act = action && value ? ACTION_META[action] : null;
+
+  function open() { if (!editable) return; setDraft(value ?? ""); setErr(null); setEditing(true); }
+  function cancel() { setEditing(false); setErr(null); }
+  async function commit() {
+    if (!onSave) return;
+    if (draft.trim() === (value ?? "")) { setEditing(false); return; }
+    setSaving(true);
+    const e = await onSave(draft.trim());
+    setSaving(false);
+    if (e) setErr(e); else setEditing(false);
+  }
+  const rowStyle: React.CSSProperties = { display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6 };
+  const iconEl = <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />;
+  const labelEl = <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>;
+
+  if (editing) {
+    const listed = options ? (draft && !options.includes(draft) ? [draft, ...options] : options) : null;
+    const keys = (e: React.KeyboardEvent) => { if (e.key === "Enter") { e.preventDefault(); void commit(); } else if (e.key === "Escape") cancel(); };
+    return (
+      <div className="field-row field-editing" style={rowStyle}>
+        {iconEl}{labelEl}
+        {listed ? (
+          <select autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={keys} disabled={saving} style={{ ...inp, flex: "1 1 160px", minWidth: 0, padding: "4px 8px" }}>
+            <option value="">—</option>
+            {listed.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ) : (
+          <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={keys} disabled={saving} placeholder={placeholder} style={{ ...inp, flex: "1 1 160px", minWidth: 0, padding: "4px 8px" }} />
+        )}
+        <button type="button" onClick={() => void commit()} disabled={saving} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", alignSelf: "center", opacity: saving ? 0.6 : 1 }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+        <button type="button" onClick={cancel} disabled={saving} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", alignSelf: "center" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+        {err && <span style={{ flexBasis: "100%", fontSize: 11, color: "#A32D2D", paddingLeft: 26 }}>{err}</span>}
+      </div>
+    );
+  }
+  return (
+    <div className={editable || act ? "field-row" : undefined} onClick={editable ? open : undefined} title={editable ? "Click to edit" : undefined} style={{ ...rowStyle, cursor: editable ? "pointer" : undefined }}>
+      {iconEl}{labelEl}
+      <span className={act ? "field-val field-link" : "field-val"} style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{display ?? (value || "—")}</span>
+      {act && value && (
+        <a href={actionHref(action!, value)} target={action === "tel" ? undefined : "_blank"} rel="noopener noreferrer" title={act.title} aria-label={`${act.title}: ${value}`} className="field-act" onClick={(e) => e.stopPropagation()}
+          style={{ alignSelf: "center", width: 24, height: 24, borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#185FA5", background: "#E6F1FB", textDecoration: "none", flexShrink: 0 }}>
+          <i className={`ti ${act.icon}`} aria-hidden="true" style={{ fontSize: 14 }} />
+        </a>
+      )}
+      {editable && <i className="ti ti-pencil field-pen" aria-hidden="true" style={{ alignSelf: "center", fontSize: 13, color: "var(--muted-foreground)", flexShrink: 0 }} />}
+    </div>
+  );
+}
 // One click-to-edit profile field. In edit mode, fields with a known option list
 // (Odoo selection / many2many) show a searchable checkbox dropdown with chips
 // (Option 1); free-text fields fall back to a plain input. Inline save (check) + undo.
 function EditablePrefRow({
-  label, value, changed, editing, rating, options, onOpen, onChange, onSave, onUndo,
+  label, value, changed, editing, rating, options, freeText = false, single = false, strict = false, derivedFrom, onOpen, onChange, onSave, onUndo,
 }: {
   label: string; value: string; changed: boolean; editing: boolean; rating: boolean; options: string[];
+  freeText?: boolean; single?: boolean;
+  /** The option list is authoritative (e.g. Odoo's Investor Profile): values off the list are flagged "unlisted". */
+  strict?: boolean;
+  /** Set when we derived this value ourselves rather than being told it. */
+  derivedFrom?: string;
   onOpen: () => void; onChange: (v: string) => void; onSave: () => void; onUndo: () => void;
 }) {
   const [hover, setHover] = useState(false);
@@ -135,11 +237,14 @@ function EditablePrefRow({
 
   if (editing && options.length > 0) {
     const selSet = new Set(selected);
-    const allOpts = [...new Set([...options, ...selected])];
+    const allOpts = strict ? [...options] : [...new Set([...options, ...selected])];
     const filtered = allOpts.filter((o) => o.toLowerCase().includes(search.trim().toLowerCase()));
-    const toggle = (o: string) => onChange((selSet.has(o) ? selected.filter((x) => x !== o) : [...selected, o]).join(", "));
+    // Single-select fields (ARR/MRR bands) replace the value; multi-select toggle.
+    const toggle = (o: string) => single
+      ? onChange(selSet.has(o) ? "" : o)
+      : onChange((selSet.has(o) ? selected.filter((x) => x !== o) : [...selected, o]).join(", "));
     const chipBg = rating ? "#E1F5EE" : "#EEEDFE";
-    const chipFg = rating ? "#0F6E56" : "#3C3489";
+    const chipFg = rating ? "#0F6E56" : "#0A1A40";
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
         <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)", paddingTop: 6 }}>{label}</span>
@@ -154,8 +259,8 @@ function EditablePrefRow({
                 </span>
               ))}
             </div>
-            <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
-            <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
+            <button type="button" onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
+            <button type="button" onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
           </div>
           <div style={{ marginTop: 5, border: "0.5px solid var(--border)", borderRadius: 8, background: "#fff", padding: 5, maxWidth: 320 }}>
             <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" style={{ width: "100%", boxSizing: "border-box", height: 28, fontSize: 12, border: "0.5px solid var(--border)", borderRadius: 5, padding: "0 8px", marginBottom: 4 }} />
@@ -163,7 +268,7 @@ function EditablePrefRow({
               {filtered.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>No matches.</div>}
               {filtered.map((o) => (
                 <label key={o} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", fontSize: 12, cursor: "pointer" }}>
-                  <input type="checkbox" checked={selSet.has(o)} onChange={() => toggle(o)} style={{ width: 14, height: 14 }} />
+                  <input type={single ? "radio" : "checkbox"} name={single ? `pick-${label}` : undefined} checked={selSet.has(o)} onChange={() => toggle(o)} style={{ width: 14, height: 14 }} />
                   <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o}</span>
                 </label>
               ))}
@@ -175,42 +280,77 @@ function EditablePrefRow({
   }
 
   if (editing) {
+    // Long free-text fields (Business summary, Management team) get a multi-line
+    // textarea; other plain fields keep a single-line input.
     return (
-      <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
-        <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onSave(); if (e.key === "Escape") onUndo(); }}
-          placeholder="Type a value…"
-          style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
-        />
-        <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
-        <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
+      <div style={{ display: "flex", gap: 8, alignItems: freeText ? "flex-start" : "center", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
+        <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)", paddingTop: freeText ? 6 : 0 }}>{label}</span>
+        {freeText ? (
+          <textarea
+            autoFocus
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSave(); if (e.key === "Escape") onUndo(); }}
+            placeholder="Type a value…  (⌘/Ctrl+Enter to save)"
+            rows={4}
+            style={{ flex: 1, minWidth: 0, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "6px 8px", boxShadow: "0 0 0 2px #EEEDFE", resize: "vertical", lineHeight: 1.5 }}
+          />
+        ) : (
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onSave(); if (e.key === "Escape") onUndo(); }}
+            placeholder="Type a value…"
+            style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
+          />
+        )}
+        <button type="button" onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
+        <button type="button" onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
       </div>
     );
   }
-  const values = value.split(",").map((s) => s.trim()).filter(Boolean);
+  // Free-text fields render as one paragraph; option/multi fields split into chips.
+  const values = freeText ? (value.trim() ? [value.trim()] : []) : value.split(",").map((s) => s.trim()).filter(Boolean);
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", alignItems: "flex-start", padding: "5px 0", fontSize: 12.5 }}>
       <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
       <span
         onClick={onOpen}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         title="Click to edit"
-        style={{ flex: 1, minWidth: 0, cursor: "pointer", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, borderRadius: 6, padding: "2px 4px", margin: "-2px -4px", background: hover ? "#F1EFE8" : "transparent" }}
+        style={{ flex: "1 1 160px", minWidth: 0, cursor: "pointer", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, borderRadius: 6, padding: "2px 4px", margin: "-2px -4px", background: hover ? "#F1EFE8" : "transparent", overflowWrap: "anywhere", lineHeight: 1.5 }}
       >
         {values.length === 0 ? (
           <span style={{ color: "var(--muted-foreground)" }}>—</span>
+        ) : values.length === 1 && URLISH.test(values[0]) ? (
+          // stopPropagation so following the link doesn't also open the editor; the
+          // pencil and the rest of the row still start an edit.
+          <a
+            href={hrefOf(values[0])} target="_blank" rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ color: "#0A1A40", textDecoration: "underline", overflowWrap: "anywhere" }}
+          >
+            {values[0]} <i className="ti ti-external-link" aria-hidden="true" style={{ fontSize: 11 }} />
+          </a>
         ) : values.length === 1 && values[0].length > 40 ? (
-          <span style={{ color: "var(--foreground)" }}>{values[0]}</span>
-        ) : values.map((v) => (
-          <span key={v} style={{ fontSize: 11, background: rating ? "#E1F5EE" : "#EEEDFE", color: rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
-        ))}
+          <span style={{ color: "var(--foreground)", overflowWrap: "anywhere" }}>{values[0]}</span>
+        ) : values.map((v) => {
+          const unlisted = strict && !options.includes(v);
+          return <span key={v} title={unlisted ? "Not one of the Odoo options — open the field and pick the matching one." : undefined}
+            style={{ fontSize: 11, background: unlisted ? "#FAEEDA" : rating ? "#E1F5EE" : "#EEEDFE", color: unlisted ? "#633806" : rating ? "#0F6E56" : "#0A1A40", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{unlisted ? `Unlisted · ${v}` : v}</span>;
+        })}
         <i className="ti ti-pencil" aria-hidden="true" style={{ fontSize: 12.5, color: "var(--muted-foreground)", opacity: hover ? 1 : 0, marginLeft: 2 }} />
         {changed ? <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>edited</span> : null}
+        {/* An assumption we made from the investor's type — not something they told us.
+            Without this a derived stage is indistinguishable from a stated one. */}
+        {derivedFrom && !changed ? (
+          <span
+            title={`Assumed from investor profile (${derivedFrom.replace("derived:", "").replace(/_/g, " ")}). Not stated by the investor — edit to confirm.`}
+            style={{ fontSize: 10, color: "#6B3FA0", background: "#F3ECFB", border: "0.5px solid #C9B8E6", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}
+          >assumed</span>
+        ) : null}
       </span>
     </div>
   );
@@ -222,6 +362,8 @@ export type LinkedCompany = {
   industry: string | null;
   revenueStage: string | null;
   fundingAmount: number | null;
+  /** Amount of capital band (companies.funding_amount_band). */
+  fundingBand: string | null;
   description: string | null;
   website: string | null;
   country: string | null;
@@ -236,15 +378,39 @@ export type LinkedCompany = {
   seekingInvestorTypes: string | null;
   seekingCapitalTypes: string | null;
   activeInvestorPreference: string | null;
+  // Traction (migration 20260921002). These exist on `companies` and the CRM
+  // simply never read them, so they showed as dashes with no way to fill them.
+  annualRevenueSize: string | null;
+  arr: string | null;
+  mrr: string | null;
+  keyHighlights: string | null;
+  /** True once the founder submitted the wizard step that collects the fields above. */
+  fundingInfoCaptured: boolean;
+};
+
+/**
+ * The contact's portal subscription, read whole rather than as a plan key.
+ * `founder_free` alone can't say whether the free access is legitimate, and the
+ * plan key alone carries no price — both of which a salesperson needs on a call.
+ */
+export type MemberPlan = {
+  label: string;
+  /** null for the free tiers, which have no price to show. */
+  priceLabel: string | null;
+  status: string;
+  statusLabel: string;
+  /** Free access with no grandfather entitlement — shouldn't exist. */
+  discontinued: boolean;
+  since: string | null;
 };
 
 // Read-only display row for linked / recap sections (not click-to-edit).
 function RoRow({ label, children }: { label: string; children: React.ReactNode }) {
   const empty = children == null || children === "" || children === "—";
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
       <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
-      <span style={{ flex: 1, minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", display: "flex", flexWrap: "wrap", gap: 5, wordBreak: "break-word" }}>{empty ? "—" : children}</span>
+      <span style={{ flex: "1 1 160px", minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", display: "flex", flexWrap: "wrap", gap: 5, overflowWrap: "anywhere" }}>{empty ? "—" : children}</span>
     </div>
   );
 }
@@ -252,7 +418,7 @@ function RoRow({ label, children }: { label: string; children: React.ReactNode }
 type FormdFirmSummary = { regd_footprint: number | null; vehicle_count: number | null; fund_types: string[] | null; last_investment_at: string | null; last_investment_issuer: string | null; last_investment_round_size: number | null; activity_band: string | null; state_or_country: string | null; investments_24mo: number | null };
 const fmtUsdM = (n: number | null | undefined) => (n == null ? "—" : `$${(n / 1_000_000).toFixed(1)}M`);
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], investorRating = null, formdFirm = null, crr = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; basePath?: string }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null, odooMessages = [], bookings = [], investorRating = null, formdFirm = null, crr = null, memberPlan = null, basePath = "/admin/sales/contacts" }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null; odooMessages?: OdooMsg[]; bookings?: BookingLite[]; investorRating?: { score: number | null; tier: string } | null; formdFirm?: FormdFirmSummary | null; crr?: { score: number; tier: string } | null; memberPlan?: MemberPlan | null; basePath?: string }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -267,7 +433,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
-  const [editing, setEditing] = useState(false);
+  // Details are edited one field at a time (see Row); these hold the two composite editors.
+  const [addrOpen, setAddrOpen] = useState(false);
+  const [addrDraft, setAddrDraft] = useState({ street: "", street2: "", city: "", state: "", zip: "", country: "" });
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [nameOpen, setNameOpen] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
   // Self-contained editor for the structured "Additional details" fields.
   const [prefBusy, setPrefBusy] = useState(false);
   // Click-to-edit: values are staged in prefEdits (keyed by save-label);
@@ -276,6 +449,21 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const seedPrefs = () => {
     const o: Record<string, string> = {};
     for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.values.join(", ");
+    // SEC Form D-only investors: fill EMPTY thesis/rating fields with defaults
+    // derived from the filing. Real synced values (non-empty above) are left as-is,
+    // and this is display-only — seeded into both edits + baseline, so nothing is
+    // written unless staff actually change it.
+    if (initialProfile.type === "investor" && formdFirm) {
+      const regd = formdFirm.regd_footprint ?? null;
+      const bands = regd != null
+        ? INVESTMENT_SIZE_BANDS.filter((b) => { const r = parseMoneyBand(b); return r != null && r.min < regd; })
+        : [];
+      const fill = (key: string, val: string) => { if (!o[key]?.trim() && val) o[key] = val; };
+      fill("Active investor", "5-Excellent");
+      fill("Investor investment size?", bands.join(", "));
+      fill(INVESTOR_PROFILE_LABEL, "Venture Capital, Hedge Fund, Family Office, Fund Manager, Other");
+      fill("Investor preferences for the number of deals per year?", "5 - 10 Deals");
+    }
     return o;
   };
   const [prefEdits, setPrefEdits] = useState<Record<string, string>>(seedPrefs);
@@ -283,6 +471,26 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
   const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog" | "tasks">("profile");
+  // ── Send message: a real email composer (same engine as mass-email) ──────────
+  type MailTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
+  const [mailTemplates, setMailTemplates] = useState<MailTemplate[]>([]);
+  const [mailChannel, setMailChannel] = useState<"icapos" | "gmail">("icapos");
+  const [mailTemplateId, setMailTemplateId] = useState("");
+  const [mailSubject, setMailSubject] = useState("");
+  const [mailBody, setMailBody] = useState("");
+  const [mailBusy, setMailBusy] = useState(false);
+  const [mailMsg, setMailMsg] = useState<string | null>(null);
+  // Emails sent from this screen this session — prepended to the history for instant
+  // feedback (they also persist to the sales timeline server-side via the send route).
+  const [sentMail, setSentMail] = useState<{ id: string; author: string; date: string; subject: string; body: string }[]>([]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/marketing/templates")
+      .then((r) => (r.ok ? r.json() : { templates: [] }))
+      .then((d) => { if (active) setMailTemplates((d.templates ?? d ?? []) as MailTemplate[]); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   // Option lists per profile field (Odoo selection / many2many) for the pickers.
   const [fieldOptions, setFieldOptions] = useState<Record<string, string[]>>({});
   useEffect(() => {
@@ -299,19 +507,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [leadSearch, setLeadSearch] = useState("");
   const [leadSaving, setLeadSaving] = useState(false);
   const [leadMsg, setLeadMsg] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: initialContact.name ?? "",
-    lead_status: initialContact.lead_status ?? "new",
-    email: initialContact.email ?? "", company: initialContact.company ?? "",
-    phone: initialContact.phone ?? "", phone2: initialContact.phone2 ?? "",
-    website: initialContact.website ?? "", owner: initialContact.owner ?? "", owner_id: initialContact.owner_id ?? "",
-    assignee_ids: initialContact.assignee_ids ?? [],
-    membership: initialContact.membership ?? "", job_position: initialContact.job_position ?? "",
-    lead_source: initialContact.lead_source ?? "", language: initialContact.language ?? "",
-    street: initialContact.street ?? "", street2: initialContact.street2 ?? "",
-    city: initialContact.city ?? "", state: initialContact.state ?? "", zip: initialContact.zip ?? "", country: initialContact.country ?? "",
-    tags: initialContact.tags.join(", "),
-  });
   const [section, setSection] = useState<"details" | "activity" | "onepager">("details");
   const [actFilter, setActFilter] = useState<"all" | "call" | "note" | "task" | "stage">("all");
   const [acts, setActs] = useState<Activity[]>(activity);
@@ -340,29 +535,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     } finally { setBusy(false); }
   }
 
-  async function saveEdit() {
-    setBusy(true);
-    setActionErr(null);
+  /** Persist one or more Details fields. Returns an error message, or null on success. */
+  async function saveFields(patch: Record<string, unknown>): Promise<string | null> {
     try {
-      const body = {
-        name: form.name.trim() || contact.name,
-        lead_status: form.lead_status,
-        email: form.email || null, company: form.company || null,
-        phone: form.phone || null, phone2: form.phone2 || null,
-        website: form.website || null, owner: form.owner || null, owner_id: form.owner_id || null,
-        membership: form.membership || null, job_position: form.job_position || null,
-        lead_source: form.lead_source || null, language: form.language || null,
-        street: form.street || null, street2: form.street2 || null,
-        city: form.city || null, state: form.state || null, zip: form.zip || null, country: form.country || null,
-        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      };
-      const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
-      else setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t save the contact. Please try again.");
-    } catch {
-      setActionErr("Network error — couldn’t save the contact.");
-    } finally { setBusy(false); }
+      const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      if (res.ok) { setContact((c) => ({ ...c, ...patch })); return null; }
+      return (await res.json().catch(() => ({})))?.error || "Couldn’t save. Please try again.";
+    } catch { return "Network error — couldn’t save."; }
   }
+  const saveText = (key: string) => async (next: string) => saveFields({ [key]: next || null });
 
   async function savePreferences() {
     setPrefBusy(true);
@@ -451,6 +632,44 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       setNote(""); setNoteMsg("Saved.");
     } catch (e) { setNoteMsg(e instanceof Error ? e.message : "Save failed."); } finally { setBusy(false); }
   }
+  function pickMailTemplate(id: string) {
+    setMailTemplateId(id);
+    const t = mailTemplates.find((x) => x.id === id);
+    if (t) { setMailSubject(t.subject); setMailBody(t.html_body); }
+  }
+  // One shared POST to the mass-email engine, scoped to this single contact.
+  async function postMail(body: Record<string, unknown>) {
+    return fetch("/api/marketing/mass-email", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "contacts", mode: "ids", ids: [contact.id], channel: mailChannel, templateId: mailTemplateId || null, subject: mailSubject || null, html: mailBody || null, ...body }),
+    });
+  }
+  async function sendMailTest() {
+    setMailBusy(true); setMailMsg(null);
+    try {
+      const r = await postMail({ action: "test", testEmail: "" });
+      const j = await r.json().catch(() => ({}));
+      setMailMsg(r.ok ? `Test sent to ${j.to ?? "you"}.` : (j.error ?? "Test failed."));
+    } catch { setMailMsg("Network error — test not sent."); } finally { setMailBusy(false); }
+  }
+  async function sendMail() {
+    if (!contact.email) { setMailMsg("Add an email to this contact first."); return; }
+    if (!mailSubject.trim() && !mailBody.trim()) { setMailMsg("Pick a template or write a subject and body first."); return; }
+    setMailBusy(true); setMailMsg(null);
+    try {
+      const r = await postMail({ action: "send" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setMailMsg(j.error ?? "Send failed."); return; }
+      if ((j.sent ?? 0) === 0 && (j.skipped || j.skippedNoEmail)) {
+        setMailMsg(j.skipped ? "Not sent — the contact is unsubscribed." : "Not sent — no email on file.");
+        return;
+      }
+      const now = new Date().toISOString();
+      setSentMail((p) => [{ id: `sent-${Date.now()}`, author: "You", date: now, subject: mailSubject.trim(), body: mailBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() }, ...p]);
+      setActs((p) => [{ id: `tmp-${Date.now()}`, kind: "email", summary: `Email sent${mailSubject.trim() ? `: ${mailSubject.trim()}` : ""}`, actor_name: "You", created_at: now }, ...p]);
+      setMailSubject(""); setMailBody(""); setMailTemplateId(""); setMailMsg(`Sent via ${mailChannel === "gmail" ? "Gmail" : "iCapOS"}.`);
+    } catch { setMailMsg("Network error — email not sent."); } finally { setMailBusy(false); }
+  }
   async function createTask() {
     if (!task.title.trim()) return;
     setBusy(true); setActionErr(null);
@@ -530,7 +749,17 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#E6F1FB", color: "#185FA5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 600, flex: "0 0 auto" }}>{contact.name.slice(0, 2).toUpperCase()}</div>
             <div style={{ flex: "1 1 240px", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 18, fontWeight: 600 }}>{contact.name}</span>
+                {nameOpen ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} onKeyDown={async (e) => { if (e.key === "Escape") setNameOpen(false); if (e.key === "Enter" && nameDraft.trim()) { const err = await saveFields({ name: nameDraft.trim() }); if (err) setActionErr(err); else setNameOpen(false); } }} style={{ ...inp, fontSize: 16, fontWeight: 600, padding: "3px 8px", minWidth: 220 }} />
+                    <button type="button" onClick={async () => { if (!nameDraft.trim()) return; const err = await saveFields({ name: nameDraft.trim() }); if (err) setActionErr(err); else setNameOpen(false); }} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                    <button type="button" onClick={() => setNameOpen(false)} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                  </span>
+                ) : (
+                  <span className="field-row" title="Click to edit" onClick={() => { setNameDraft(contact.name); setNameOpen(true); }} style={{ fontSize: 18, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6 }}>
+                    {contact.name}<i className="ti ti-pencil field-pen" aria-hidden="true" style={{ fontSize: 13, color: "var(--muted-foreground)" }} />
+                  </span>
+                )}
                 {contact.lead_status ? <StatusPill status={contact.lead_status} /> : null}
               </div>
               <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 2 }}>{subtitle}</div>
@@ -545,7 +774,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               {contact.phone
                 ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
-              {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
@@ -560,105 +788,129 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 0, padding: "0 16px", borderBottom: "0.5px solid #eef1f5" }}>
-          <button onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
+          <button type="button" onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
           {onePager ? (
-            <button onClick={() => setSection("onepager")} style={{ fontSize: 12.5, fontWeight: section === "onepager" ? 600 : 400, color: section === "onepager" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "onepager" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>One pager</button>
+            <button type="button" onClick={() => setSection("onepager")} style={{ fontSize: 12.5, fontWeight: section === "onepager" ? 600 : 400, color: section === "onepager" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "onepager" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>One pager</button>
           ) : null}
         </div>
 
         {section === "details" && (<>
-        {/* Field grid */}
-        {editing ? (
-          <div style={{ padding: "14px 16px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Name</label>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" style={{ ...inp, width: "100%", marginTop: 4 }} />
+        {/* Field grid — every field is click-to-edit in place (hover shows the pencil). */}
+          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+            {/* LEFT column — Odoo field order */}
+            <div>
+              <Row icon="ti-id-badge" label="Membership Type" value={contact.membership} options={MEMBERSHIP_OPTS} onSave={saveText("membership")} />
+              {/* Member Portal Plan — live subscription plan (read-only). */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
+                <i className="ti ti-crown" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+                <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Member Portal Plan</span>
+                {memberPlan ? (
+                  <span style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minWidth: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#0A1A40", background: "#EEEDFE", borderRadius: 20, padding: "1px 9px" }}>
+                      {memberPlan.label}{memberPlan.priceLabel ? ` · ${memberPlan.priceLabel}` : ""}
+                    </span>
+                    <span
+                      title={memberPlan.since ? `Since ${new Date(memberPlan.since).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}` : undefined}
+                      style={{
+                        fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "1px 9px",
+                        ...(memberPlan.status === "active"
+                          ? { color: "#047857", background: "#ECFDF5" }
+                          : memberPlan.status === "pending_payment" || memberPlan.status === "trialing"
+                            ? { color: "#92400E", background: "#FFFBEB" }
+                            : { color: "#64748B", background: "#F1F5F9" }),
+                      }}
+                    >
+                      {memberPlan.statusLabel}
+                    </span>
+                    {/* Free access with no grandfather entitlement — the one state
+                        that used to be indistinguishable from a legitimate one. */}
+                    {memberPlan.discontinued ? (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#B91C1C", background: "#FEF2F2", borderRadius: 20, padding: "1px 9px" }}>
+                        Discontinued tier
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>Not a portal member</span>
+                )}
               </div>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label>
-                <select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                  {(LEAD_STATUSES.includes(form.lead_status) || !form.lead_status ? LEAD_STATUSES : [form.lead_status, ...LEAD_STATUSES]).map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              {isSuperAdmin && staff.length > 0 && (
-                <div>
-                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead owner <span style={{ color: "var(--muted-foreground)" }}>(super admin)</span></label>
-                  <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                    <option value="">Unassigned</option>
-                    {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+              <Row icon="ti-flag" label="Lead Status" value={contact.lead_status} options={LEAD_STATUSES} onSave={saveText("lead_status")} />
+              <Row icon="ti-arrow-down-circle" label="Lead Source" value={contact.lead_source} options={LEAD_SOURCE_OPTS} onSave={saveText("lead_source")} />
+              {/* Contact (address) — six parts, edited together in a small inline block. */}
+              {addrOpen ? (
+                <div className="field-row field-editing" style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6 }}>
+                  <i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+                  <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Contact</span>
+                  <div style={{ flex: "1 1 160px", minWidth: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {([["street", "Street", "1 / -1"], ["street2", "Street 2", "1 / -1"], ["city", "City", "auto"], ["state", "State", "auto"], ["zip", "ZIP", "auto"], ["country", "Country", "auto"]] as const).map(([k, ph, span]) => (
+                      <input key={k} value={addrDraft[k]} onChange={(e) => setAddrDraft({ ...addrDraft, [k]: e.target.value })} placeholder={ph} autoFocus={k === "street"}
+                        onKeyDown={(e) => { if (e.key === "Escape") setAddrOpen(false); }}
+                        style={{ ...inp, padding: "4px 8px", gridColumn: span === "1 / -1" ? "1 / -1" : undefined }} />
+                    ))}
+                    <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6, alignItems: "center" }}>
+                      <button type="button" onClick={async () => { const e = await saveFields({ street: addrDraft.street.trim() || null, street2: addrDraft.street2.trim() || null, city: addrDraft.city.trim() || null, state: addrDraft.state.trim() || null, zip: addrDraft.zip.trim() || null, country: addrDraft.country.trim() || null }); if (e) setActionErr(e); else setAddrOpen(false); }} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                      <button type="button" onClick={() => setAddrOpen(false)} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="field-row" title="Click to edit" onClick={() => { setAddrDraft({ street: contact.street ?? "", street2: contact.street2 ?? "", city: contact.city ?? "", state: contact.state ?? "", zip: contact.zip ?? "", country: contact.country ?? "" }); setAddrOpen(true); }}
+                  style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px", padding: "5px 0", fontSize: 12.5, borderRadius: 6, cursor: "pointer" }}>
+                  <i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+                  <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>Contact</span>
+                  <span className="field-val" style={{ flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{address || "—"}</span>
+                  <i className="ti ti-pencil field-pen" aria-hidden="true" style={{ alignSelf: "center", fontSize: 13, color: "var(--muted-foreground)", flexShrink: 0 }} />
                 </div>
               )}
-              {([
-                ["email", "Email", "name@company.com"], ["company", "Company", ""],
-                ["phone", "Phone", "+1 …"], ["phone2", "Phone 2", ""],
-                ["website", "Website", "example.com"], ["owner", "Owner", ""],
-                ["membership", "Membership", ""], ["job_position", "Job position", ""],
-                ["lead_source", "Lead source", ""], ["language", "Language", ""],
-              ] as const).map(([key, label, ph]) => {
-                const opts =
-                  key === "owner" ? staff.map((s) => s.name)
-                  : key === "membership" ? MEMBERSHIP_OPTS
-                  : key === "job_position" ? JOB_POSITION_OPTS
-                  : key === "lead_source" ? LEAD_SOURCE_OPTS
-                  : null;
-                const cur = form[key];
-                const listed = opts && (cur && !opts.includes(cur) ? [cur, ...opts] : opts);
+              <Row icon="ti-hash" label="EIN" value={null} readOnly />
+              <Row icon="ti-certificate" label="Operator Licence" value={null} readOnly />
+              <Row icon="ti-id" label="CURP" value={null} readOnly />
+            </div>
+            {/* RIGHT column — Odoo field order */}
+            <div>
+              <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} options={JOB_POSITION_OPTS} onSave={saveText("job_position")} />
+              <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" placeholder="+1 …" onSave={saveText("phone")} />
+              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" onSave={saveText("phone2")} />
+              <Row icon="ti-device-mobile" label="Mobile" value={null} action="tel" readOnly />
+              <Row icon="ti-mail" label="Email" value={contact.email} link action="email" placeholder="name@company.com" onSave={saveText("email")} />
+              <Row icon="ti-world" label="Website" value={contact.website} link action="web" placeholder="example.com" onSave={saveText("website")} />
+              <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} readOnly />
+              {/* Tags — colored pills; click to edit as chips (Enter / comma adds, Backspace removes). */}
+              {tagsOpen ? (() => {
+                const addTag = (raw: string) => {
+                  const name = raw.trim();
+                  if (name && !tagsDraft.some((t) => t.toLowerCase() === name.toLowerCase())) setTagsDraft([...tagsDraft, name]);
+                  setTagInput("");
+                };
                 return (
-                  <div key={key}>
-                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
-                    {listed ? (
-                      <select value={cur} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                        <option value="">—</option>
-                        {listed.map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    ) : (
-                      <input value={cur} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
-                    )}
+                  <div className="field-row field-editing" style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5, borderRadius: 6 }}>
+                    <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 6 }} />
+                    <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 6 }}>Tags</span>
+                    <div style={{ ...inp, flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minHeight: 30, padding: "3px 8px" }}>
+                      {tagsDraft.map((tg) => { const c = tagColor(tg); return (
+                        <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 4px 1px 8px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {tg}<i className="ti ti-x" aria-hidden="true" style={{ fontSize: 10, cursor: "pointer" }} onClick={() => setTagsDraft(tagsDraft.filter((t) => t !== tg))} />
+                        </span>
+                      ); })}
+                      <input autoFocus value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); } else if (e.key === "Backspace" && !tagInput && tagsDraft.length) setTagsDraft(tagsDraft.slice(0, -1)); else if (e.key === "Escape") setTagsOpen(false); }}
+                        placeholder={tagsDraft.length ? "Add a tag…" : "Type a tag, press Enter…"}
+                        style={{ border: "none", outline: "none", flex: 1, minWidth: 90, fontSize: 12, background: "transparent", color: "var(--foreground)" }} />
+                    </div>
+                    <button type="button" onClick={async () => { const pending = tagInput.trim(); const next = pending && !tagsDraft.some((t) => t.toLowerCase() === pending.toLowerCase()) ? [...tagsDraft, pending] : tagsDraft; const e = await saveFields({ tags: next }); if (e) setActionErr(e); else { setTagsOpen(false); setTagInput(""); } }} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", marginTop: 3 }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
+                    <button type="button" onClick={() => { setTagsOpen(false); setTagInput(""); }} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", marginTop: 3 }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
                   </div>
                 );
-              })}
-            </div>
-
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Address</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 16px" }}>
-                {([
-                  ["street", "Street", "1 / -1"], ["street2", "Street 2", "1 / -1"],
-                  ["city", "City", "auto"], ["state", "State", "auto"], ["zip", "ZIP", "auto"], ["country", "Country", "auto"],
-                ] as const).map(([key, label, span]) => (
-                  <div key={key} style={span === "1 / -1" ? { gridColumn: "1 / -1" } : undefined}>
-                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
-                    <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags (comma-separated)</label>
-              <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} />
-            </div>
-
-            <div style={{ marginTop: 12, display: "flex", gap: 6 }}>
-              <button onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
-              <button onClick={() => setEditing(false)} style={{ ...outlineBtn, padding: "8px 16px" }}>Cancel</button>
-              <span style={{ fontSize: 10.5, color: "var(--muted-foreground)", alignSelf: "center" }}>Edits save to your CRM mirror and persist across Odoo re-syncs.</span>
-            </div>
-          </div>
-        ) : (
-          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
-            <Section title="Contact">
-              <Row icon="ti-mail" label="Email" value={contact.email} link />
-              <Row icon="ti-phone" label="Phone" value={contact.phone} />
-              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} />
-              <Row icon="ti-world" label="Website" value={contact.website} link />
-              <Row icon="ti-language" label="Language" value={contact.language} />
-            </Section>
-            <Section title="Lead">
-              <Row icon="ti-flag" label="Lead status" value={contact.lead_status} />
-              <Row icon="ti-arrow-down-circle" label="Lead source" value={contact.lead_source} />
+              })() : (
+                <div className="field-row" title="Click to edit" onClick={() => { setTagsDraft(contact.tags); setTagInput(""); setTagsOpen(true); }} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5, borderRadius: 6, cursor: "pointer" }}>
+                  <i className="ti ti-tag" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 2 }}>Tags</span>
+                  <span style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {contact.tags.length === 0 ? <span style={{ color: "var(--muted-foreground)" }}>—</span> : contact.tags.map((tg) => { const c = tagColor(tg); return <span key={tg} style={{ fontSize: 11, background: c.bg, color: c.fg, borderRadius: 12, padding: "1px 9px" }}>{tg}</span>; })}
+                  </span>
+                  <i className="ti ti-pencil field-pen" aria-hidden="true" style={{ alignSelf: "center", fontSize: 13, color: "var(--muted-foreground)", flexShrink: 0 }} />
+                </div>
+              )}
               {/* Lead assign — under Lead source. Editable by super admin only. */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
                 <i className="ti ti-users" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 3 }} />
@@ -700,7 +952,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                                 })}
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderTop: "0.5px solid #eef1f5" }}>
-                                <button onClick={saveLeadAssign} disabled={leadSaving} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer", opacity: leadSaving ? 0.6 : 1 }}>{leadSaving ? "Saving…" : "Save"}</button>
+                                <button type="button" onClick={saveLeadAssign} disabled={leadSaving} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer", opacity: leadSaving ? 0.6 : 1 }}>{leadSaving ? "Saving…" : "Save"}</button>
                                 <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{leadSel.length} selected</span>
                                 {leadMsg && <span style={{ fontSize: 11, color: "#A32D2D" }}>{leadMsg}</span>}
                               </div>
@@ -716,53 +968,50 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   )}
                 </div>
               </div>
-              {/* Owner + Source — moved here from the header, directly under Lead assign. */}
-              <Row icon="ti-user-check" label="Owner" value={contact.owner} />
-              <Row icon="ti-plug" label="Source" value={contact.source} />
-              <Row icon="ti-id-badge" label="Membership" value={contact.membership} />
-              <Row icon="ti-briefcase" label="Job position" value={contact.job_position} />
-              <Row icon="ti-tag" label="Tags" value={contact.tags.length ? contact.tags.join(", ") : null} />
-            </Section>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Section title="Address">
-                <Row icon="ti-map-pin" label="Location" value={address} />
-              </Section>
+              {/* Owner + Source — iCapOS internal, kept below the Odoo fields. */}
+              {isSuperAdmin && staff.length > 0
+                ? <Row icon="ti-user-check" label="Owner" value={contact.owner} options={staff.map((s) => s.name)} onSave={async (name) => saveFields({ owner: name || null, owner_id: staff.find((s) => s.name === name)?.id ?? null })} />
+                : <Row icon="ti-user-check" label="Owner" value={contact.owner} readOnly />}
+              <Row icon="ti-plug" label="Source" value={contact.source} readOnly />
             </div>
             {(() => {
-              const profile = groupContactProfile(contact.extra, contact.membership);
+              const profile = groupContactProfile(contact.extra, contact.membership, contact.derivedSources);
               if (profile.sections.length === 0) return null;
+              const hasInfoSection = profile.sections.some((s) => s.title.toLowerCase().includes("information"));
+              // "Other details" (leftover unmapped fields) is folded into the merged
+              // overview section, so it never renders as its own block.
+              const overviewTitle = profile.type === "investor" ? "Investor overview" : profile.type === "founder" ? "Founder overview" : "Overview";
+              const otherDetailsFields = profile.sections.find((s) => s.title === "Other details")?.fields ?? [];
+              // "Investor profile" (profile.investorTypes) — an editable pick from Odoo's option
+              // list; the same value the Group-by "Investor profile" dimension reads.
+              const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => isInvestorProfileLabel(f.label))?.saveKey ?? INVESTOR_PROFILE_LABEL;
+              const formdBlock = formdFirm ? (
+                <div style={{ marginTop: 14 }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
+                  <div style={{ display: "grid", gridTemplateColumns: RESP_COLS, gap: "2px 28px" }}>
+                    <RoRow label="Capital raised (Reg D)">{fmtUsdM(formdFirm.regd_footprint)}</RoRow>
+                    <RoRow label="Vehicles / funds">{formdFirm.vehicle_count != null ? String(formdFirm.vehicle_count) : null}</RoRow>
+                    <RoRow label="Fund types">{formdFirm.fund_types && formdFirm.fund_types.length ? formdFirm.fund_types.join(", ") : null}</RoRow>
+                    <RoRow label="Activity band">{formdFirm.activity_band || null}</RoRow>
+                    <RoRow label="Filings (24mo)">{formdFirm.investments_24mo != null ? String(formdFirm.investments_24mo) : null}</RoRow>
+                    <RoRow label="Most recent raise">{formdFirm.last_investment_issuer || null}</RoRow>
+                  </div>
+                  <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "5px 0 0" }}>Capital raised across the fund&rsquo;s Reg D filings &mdash; SEC-verified public record, not assets under management.</p>
+                </div>
+              ) : null;
               return (
               <div style={{ gridColumn: "1 / -1" }}>
                 <div>
                   {/* Founder/Investor Profile · Note Log · Activity strip */}
                   <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
-                    {([["sendmsg", "Send message"], ["profile", profile.title]] as const).map(([k, label]) => (
-                      <button key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
+                    {([["sendmsg", "Send message"], ["notelog", "Note Log"], ["profile", profile.title]] as const).map(([k, label]) => (
+                      <button type="button" key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
                     ))}
-                    <button onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
-                    <button onClick={() => setProfileSub("notelog")} style={{ background: "none", border: "none", borderBottom: profileSub === "notelog" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "notelog" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "notelog" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Note Log</button>
-                    <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
+                    <button type="button" onClick={openTasksTab} style={{ background: "none", border: "none", borderBottom: profileSub === "tasks" ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === "tasks" ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === "tasks" ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Tasks{tasksLoaded && contactTasks.length ? ` · ${contactTasks.length}` : ""}</button>
+                    <button type="button" onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
                   </div>
                   {profileSub === "profile" && (<>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 4, minHeight: 18 }}>
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
-                      <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
-                    </span>
-                  </div>
-                  {formdFirm && (
-                    <div style={{ marginTop: 14 }}>
-                      <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
-                        <RoRow label="Capital raised (Reg D)">{fmtUsdM(formdFirm.regd_footprint)}</RoRow>
-                        <RoRow label="Vehicles / funds">{formdFirm.vehicle_count != null ? String(formdFirm.vehicle_count) : null}</RoRow>
-                        <RoRow label="Fund types">{formdFirm.fund_types && formdFirm.fund_types.length ? formdFirm.fund_types.join(", ") : null}</RoRow>
-                        <RoRow label="Activity band">{formdFirm.activity_band || null}</RoRow>
-                        <RoRow label="Filings (24mo)">{formdFirm.investments_24mo != null ? String(formdFirm.investments_24mo) : null}</RoRow>
-                        <RoRow label="Most recent raise">{formdFirm.last_investment_issuer || null}</RoRow>
-                      </div>
-                      <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "5px 0 0" }}>Capital raised across the fund’s Reg D filings — SEC-verified public record, not assets under management.</p>
-                    </div>
-                  )}
+                  {!hasInfoSection && formdBlock}
                   {company && <CompanyLinkedRecordEditor company={company} onePager={onePager} />}
                   {profile.sections.map((sec) => {
                     // The linked-company section above now carries Seeking +
@@ -770,9 +1019,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     // CRM-import duplicates when a company is linked.
                     if (company && (sec.title === "Seeking" || sec.title === "Company & stage")) return null;
                     const rating = sec.title.toLowerCase().includes("rating");
+                    const isInfo = sec.title.toLowerCase().includes("information");
+                    // Investor profile is rendered in the overview — drop it here to avoid a duplicate.
+                    const visibleFields = sec.fields.filter((f) => f.saveKey !== investorProfileKey);
+                    // Other details is folded into the merged overview section below.
+                    if (sec.title === "Other details") return null;
                     return (
-                      <div key={sec.title} style={{ marginTop: 14 }}>
-                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
+                      <div key={sec.title}>
+                        <div style={{ marginTop: 14 }}>
+                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{isInfo ? overviewTitle : sec.title}</p>
                         {sec.title === "Highlights" ? (
                           (() => {
                             const text = sec.fields.flatMap((f) => f.values).join(" ").trim();
@@ -786,25 +1041,58 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             );
                           })()
                         ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2px 28px" }}>
                           {sec.title.toLowerCase().includes("information") && (
                             <>
+                              {/* Contact / lead / address rows live in the top block above — not repeated here. */}
                               <RoRow label="Full name">{contact.name || null}</RoRow>
-                              <RoRow label="Job position">{contact.job_position || null}</RoRow>
                               <RoRow label="Company">{contact.company || null}</RoRow>
-                              <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
-                              <RoRow label="Phone">{contact.phone || null}</RoRow>
-                              <RoRow label="Phone 2">{contact.phone2 || null}</RoRow>
-                              <RoRow label="Website">{contact.website ? <a href={contact.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{contact.website}</a> : null}</RoRow>
-                              <RoRow label="Location">{address}</RoRow>
-                              <RoRow label="Language">{contact.language || null}</RoRow>
+                              <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
+                              {profile.type === "investor" && (
+                                <div style={{ gridColumn: "1 / -1" }}>
+                                  <EditablePrefRow
+                                    label={INVESTOR_PROFILE_LABEL}
+                                    rating={false}
+                                    strict
+                                    options={[...INVESTOR_PROFILE_OPTIONS]}
+                                    value={prefEdits[investorProfileKey] ?? ""}
+                                    changed={(prefEdits[investorProfileKey] ?? "") !== (prefOrig[investorProfileKey] ?? "")}
+                                    editing={editingKey === investorProfileKey}
+                                    onOpen={() => setEditingKey(investorProfileKey)}
+                                    onChange={(v) => setPrefEdits((p) => ({ ...p, [investorProfileKey]: v }))}
+                                    onSave={() => saveField(investorProfileKey)}
+                                    onUndo={() => { setPrefEdits((p) => ({ ...p, [investorProfileKey]: prefOrig[investorProfileKey] ?? "" })); setEditingKey(null); }}
+                                  />
+                                </div>
+                              )}
                             </>
                           )}
-                          {sec.fields.map((f) => (
+                          {visibleFields.map((f) => (
                             <EditablePrefRow
                               key={f.saveKey}
                               label={f.label}
                               rating={rating}
+                              freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
+                              single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
+                              derivedFrom={f.derivedFrom}
+                              options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
+                              value={prefEdits[f.saveKey] ?? ""}
+                              changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
+                              editing={editingKey === f.saveKey}
+                              onOpen={() => setEditingKey(f.saveKey)}
+                              onChange={(v) => setPrefEdits((p) => ({ ...p, [f.saveKey]: v }))}
+                              onSave={() => saveField(f.saveKey)}
+                              onUndo={() => { setPrefEdits((p) => ({ ...p, [f.saveKey]: prefOrig[f.saveKey] ?? "" })); setEditingKey(null); }}
+                            />
+                          ))}
+                          {isInfo && otherDetailsFields.filter((f) => f.saveKey !== investorProfileKey).map((f) => (
+                            <EditablePrefRow
+                              key={`od-${f.saveKey}`}
+                              label={f.label}
+                              rating={false}
+                              freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
+                              single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
+                              derivedFrom={f.derivedFrom}
                               options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
@@ -817,6 +1105,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                           ))}
                         </div>
                         )}
+                        </div>
+                        {isInfo ? formdBlock : null}
                       </div>
                     );
                   })}
@@ -827,25 +1117,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
                         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{changedKeys.length} unsaved change{changedKeys.length === 1 ? "" : "s"}</span>
                         <span style={{ marginLeft: "auto" }} />
-                        <button onClick={() => { setPrefEdits({ ...prefOrig }); setEditingKey(null); }} disabled={prefBusy} style={{ fontSize: 12, padding: "6px 12px", border: "0.5px solid #d7dbe3", borderRadius: 6, background: "none", color: "var(--muted-foreground)", cursor: "pointer" }}>Undo all</button>
-                        <button onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", border: "none", borderRadius: 6, background: "#0F6E56", color: "#fff", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>{prefBusy ? "Saving…" : "Save changes"}</button>
+                        <button type="button" onClick={() => { setPrefEdits({ ...prefOrig }); setEditingKey(null); }} disabled={prefBusy} style={{ fontSize: 12, padding: "6px 12px", border: "0.5px solid #d7dbe3", borderRadius: 6, background: "none", color: "var(--muted-foreground)", cursor: "pointer" }}>Undo all</button>
+                        <button type="button" onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", border: "none", borderRadius: 6, background: "#0F6E56", color: "#fff", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>{prefBusy ? "Saving…" : "Save changes"}</button>
                       </div>
                     );
                   })()}
-                  <div style={{ marginTop: 14 }}>
-                    <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>Contact &amp; lead</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
-                      <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
-                      <RoRow label="Job position">{contact.job_position || null}</RoRow>
-                      <RoRow label="Lead source">{contact.lead_source || null}</RoRow>
-                      <RoRow label="Owner">{contact.owner || null}</RoRow>
-                      <RoRow label="Membership">{contact.membership || null}</RoRow>
-                      <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
-                      </div>
-                    </div>
-                  </div>
                   </>)}
                   {profileSub === "tasks" && (
                     <div style={{ paddingTop: 4 }}>
@@ -856,7 +1132,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
                         <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{assignableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                         <div style={{ gridColumn: "1 / -1" }}>
-                          <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button>
+                          <button type="button" onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button>
                         </div>
                       </div>
 
@@ -875,8 +1151,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <div key={ct.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
                                 <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{ct.title}&rdquo;? This can&rsquo;t be undone.</span>
                                 <span style={{ display: "flex", gap: 6 }}>
-                                  <button onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
-                                  <button onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
+                                  <button type="button" onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
+                                  <button type="button" onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
                                 </span>
                               </div>
                             );
@@ -889,8 +1165,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
                               <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
                               <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                {!cdone && <button onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
-                                <button onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                                {!cdone && <button type="button" onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
+                                <button type="button" onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                               </span>
                             </div>
                           );
@@ -900,68 +1176,115 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   )}
                   {profileSub === "sendmsg" && (
                     <div style={{ paddingTop: 4 }}>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                        {contact.email
-                          ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
-                          : <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No email on file</span>}
-                        {contact.phone
-                          ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>
-                          : null}
+                      {/* To + channel */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                          To {contact.email
+                            ? <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{contact.email}</span>
+                            : <span style={{ color: "#A32D2D" }}>no email on file</span>}
+                        </div>
+                        <div style={{ display: "inline-flex", gap: 2, background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 7, padding: 2 }}>
+                          {(["icapos", "gmail"] as const).map((c) => (
+                            <button type="button" key={c} onClick={() => setMailChannel(c)} style={{ fontSize: 10.5, fontWeight: mailChannel === c ? 600 : 400, color: mailChannel === c ? "#fff" : "var(--muted-foreground)", background: mailChannel === c ? "#4338CA" : "transparent", border: "none", borderRadius: 5, padding: "3px 10px", cursor: "pointer" }}>{c === "icapos" ? "iCapOS" : "Gmail"}</button>
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message on this record</div>
-                      <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Write a message…" style={{ ...inp, width: "100%", minHeight: 64, resize: "vertical" }} />
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                        <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Send message</button>
-                        {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg === "Saved." ? "Message posted." : noteMsg}</span>}
+                      {/* Template */}
+                      <select value={mailTemplateId} onChange={(e) => pickMailTemplate(e.target.value)} style={{ ...inp, width: "100%", marginBottom: 8 }}>
+                        <option value="">Use template…</option>
+                        {mailTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                      <input value={mailSubject} onChange={(e) => setMailSubject(e.target.value)} placeholder="Subject… ({{first_name}}, {{company}})" style={{ ...inp, width: "100%", marginBottom: 8 }} />
+                      <textarea value={mailBody} onChange={(e) => setMailBody(e.target.value)} placeholder="Write your email… (HTML ok · merge {{first_name}} {{company}})" style={{ ...inp, width: "100%", minHeight: 96, resize: "vertical", fontFamily: "var(--font-mono)" }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        <button type="button" onClick={sendMail} disabled={mailBusy || !contact.email} title={contact.email ? "" : "Add an email to this contact to send"} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: mailBusy || !contact.email ? "not-allowed" : "pointer", opacity: mailBusy || !contact.email ? 0.5 : 1 }}><i className="ti ti-send" aria-hidden="true" /> Send email</button>
+                        <button type="button" onClick={sendMailTest} disabled={mailBusy} style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cdd9ec)", borderRadius: 6, padding: "6px 12px", cursor: mailBusy ? "not-allowed" : "pointer", opacity: mailBusy ? 0.5 : 1 }}>Send test to me</button>
+                        {contact.phone && <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 6, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>}
+                        {mailMsg && <span style={{ fontSize: 11, color: /sent|Sent/.test(mailMsg) ? "#0F6E56" : "#A32D2D" }}>{mailMsg}</span>}
                       </div>
-                      <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Message history{odooMessages.length ? ` · ${odooMessages.length} from Odoo` : ""}</div>
-                        {odooMessages.length > 0 ? (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
-                            {odooMessages.map((m) => (
-                              <div key={m.id} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
-                                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                                  <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{m.author ?? "—"}</span>
-                                  {m.date ? ` · ${new Date(m.date).toLocaleString()}` : ""}
+                      {/* Unified history: emails sent from iCapOS + messages imported from Odoo */}
+                      <div style={{ marginTop: 16 }}>
+                        {(() => {
+                          type H = { key: string; source: "icapos" | "odoo" | "odoo-note"; author: string; date: string; subject: string; body: string };
+                          const hist: H[] = [
+                            ...sentMail.map((s) => ({ key: s.id, source: "icapos" as const, author: s.author, date: s.date, subject: s.subject, body: s.body })),
+                            ...acts.filter((a) => a.kind === "email" && a.summary.startsWith("Email sent") && !a.id.startsWith("tmp-")).map((a) => ({ key: a.id, source: "icapos" as const, author: a.actor_name ?? "iCapOS", date: a.created_at, subject: a.summary.replace(/^Email sent:?\s*/, ""), body: "" })),
+                            // The full Odoo thread — messages AND logged notes (both are real
+                            // communication history with this contact). Notes are tagged so the
+                            // distinction is clear; the Note Log tab still shows notes on their own.
+                            ...odooMessages.filter((m) => m.body || m.subject).map((m) => ({ key: `odoo-${m.id}`, source: (m.isNote ? "odoo-note" : "odoo") as "odoo" | "odoo-note", author: m.author ?? "—", date: m.date ?? "", subject: m.isNote ? "" : (m.subject ?? ""), body: m.body })),
+                          ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+                          const odooCount = hist.filter((h) => h.source === "odoo" || h.source === "odoo-note").length;
+                          return (
+                            <>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Message history{hist.length ? ` · ${hist.length}` : ""}{odooCount ? ` · ${odooCount} from Odoo` : ""}</div>
+                              {hist.length > 0 ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
+                                  {hist.map((m) => (
+                                    <div key={m.key} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)", flexWrap: "wrap" }}>
+                                        <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{m.author}</span>
+                                        {m.date ? <span>· {new Date(m.date).toLocaleString()}</span> : null}
+                                        {m.source === "odoo"
+                                          ? <span style={{ fontSize: 9.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-cloud-download" aria-hidden="true" /> from Odoo</span>
+                                          : m.source === "odoo-note"
+                                          ? <span style={{ fontSize: 9.5, fontWeight: 600, color: "#854D0E", background: "#FAEEDA", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-note" aria-hidden="true" /> Odoo note</span>
+                                          : <span style={{ fontSize: 9.5, fontWeight: 600, color: "#3B6D11", background: "#EAF3DE", borderRadius: 20, padding: "1px 8px" }}><i className="ti ti-send" aria-hidden="true" /> sent · iCapOS</span>}
+                                      </div>
+                                      {m.subject ? <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{m.subject}</div> : null}
+                                      {m.body ? <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div> : null}
+                                    </div>
+                                  ))}
                                 </div>
-                                {m.subject ? <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{m.subject}</div> : null}
-                                {m.body ? <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div> : null}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No messages yet."}</div>
-                        )}
+                              ) : (
+                                <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>No messages yet. Emails you send here and messages synced from Odoo will appear in this thread.</div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
-                  {profileSub === "notelog" && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>
+                  {profileSub === "notelog" && (() => { const odooNotes = odooMessages.filter((m) => m.isNote && m.body); return (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, paddingTop: 4 }}>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
                         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 56, resize: "vertical" }} />
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                          <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
+                          <button type="button" onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
                           {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
                         </div>
+                        {savedNotes ? <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, marginTop: 8 }}>{savedNotes}</div> : null}
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Notes</div>
-                        <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No notes yet."}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log notes{odooNotes.length ? ` · ${odooNotes.length} from Odoo` : ""}</div>
+                        {odooNotes.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflow: "auto" }}>
+                            {odooNotes.map((m) => (
+                              <div key={m.id} style={{ borderBottom: "0.5px solid #eef1f5", paddingBottom: 8 }}>
+                                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                                  <span style={{ fontWeight: 600, color: "#854D0E" }}>📝 {m.author ?? "—"}</span>{m.date ? ` · ${new Date(m.date).toLocaleString()}` : ""} <span style={{ fontSize: 9, color: "var(--muted-foreground)" }}>· from Odoo</span>
+                                </div>
+                                <div style={{ fontSize: 11.5, color: "var(--foreground)", whiteSpace: "pre-wrap", lineHeight: 1.5, marginTop: 2 }}>{m.body}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>No log notes yet.</div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  ); })()}
                 </div>
               </div>
               );
             })()}
           </div>
-        )}
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "12px 16px", borderTop: "0.5px solid #eef1f5", borderBottom: "0.5px solid #eef1f5" }}>
           <Link href={`/admin/sales/contacts/${contact.id}/convert`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", textDecoration: "none" }}><i className="ti ti-arrow-right" aria-hidden="true" /> Convert to opportunity</Link>
-          <button onClick={() => setShowTask((v) => !v)} style={outlineBtn}><i className="ti ti-calendar-plus" aria-hidden="true" /> Create task</button>
+          <button type="button" onClick={() => setShowTask((v) => !v)} style={outlineBtn}><i className="ti ti-calendar-plus" aria-hidden="true" /> Create task</button>
         </div>
 
         {showTask && (
@@ -971,20 +1294,20 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
             <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
-              <button onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
+              <button type="button" onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
+              <button type="button" onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
           </div>
         )}
 
         {/* Log note + timeline — profile contacts use the Note Log strip above */}
-        {groupContactProfile(contact.extra, contact.membership).sections.length === 0 && (
+        {groupContactProfile(contact.extra, contact.membership, contact.derivedSources).sections.length === 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: "14px 16px" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 56, resize: "vertical" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
+              <button type="button" onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
               {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
             </div>
           </div>
@@ -1017,9 +1340,39 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {section === "activity" && (
         <div style={{ padding: "14px 16px" }}>
+          {bookings.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Bookings · {bookings.length}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {bookings.map((bk) => {
+                  const s = new Date(bk.start_time), e = new Date(bk.end_time);
+                  const when = `${s.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${s.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}–${e.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+                  return (
+                    <div key={bk.id} style={{ border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{bk.event_type ?? "Meeting"}</span>
+                        <span style={{ fontSize: 9.5, background: bk.status === "cancelled" ? "#FCEBEB" : "#E8F5F1", color: bk.status === "cancelled" ? "#A32D2D" : "#0F6E56", borderRadius: 20, padding: "1px 7px" }}>{bk.status}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>{when}{bk.timezone ? ` ${bk.timezone}` : ""}</span>
+                      </div>
+                      {(bk.booker_phone || bk.answers.length > 0) && (
+                        <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                          {bk.booker_phone ? <div><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Phone</div><div style={{ fontSize: 12 }}>{bk.booker_phone}</div></div> : null}
+                          {bk.answers.map((a, i) => <div key={i}><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>{a.label}</div><div style={{ fontSize: 12 }}>{a.value}</div></div>)}
+                        </div>
+                      )}
+                      {bk.meet_url ? <a href={bk.meet_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 11, color: "#185FA5" }}>📹 Join Meet</a> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div style={{ marginBottom: 16 }}>
+            <SalesChatter contactCrmId={initialContact.id} contactName={initialContact.name} contactEmail={initialContact.email} staff={staff} />
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
             {([["all", "All"], ["call", "Calls"], ["note", "Notes"], ["task", "Tasks"], ["stage", "Stage changes"]] as const).map(([f, label]) => (
-              <button key={f} onClick={() => setActFilter(f)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 14, padding: "3px 11px", background: actFilter === f ? "#2E78F5" : "var(--muted)", color: actFilter === f ? "#fff" : "var(--muted-foreground)" }}>{label}</button>
+              <button type="button" key={f} onClick={() => setActFilter(f)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 14, padding: "3px 11px", background: actFilter === f ? "#2E78F5" : "var(--muted)", color: actFilter === f ? "#fff" : "var(--muted-foreground)" }}>{label}</button>
             ))}
           </div>
 
@@ -1030,7 +1383,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <select value={call.outcome} onChange={(e) => setCall({ ...call, outcome: e.target.value })} style={inp}><option value="connected">Connected</option><option value="voicemail">Voicemail</option><option value="no_answer">No answer</option><option value="wrong_number">Wrong number</option></select>
               <input value={call.duration} onChange={(e) => setCall({ ...call, duration: e.target.value })} placeholder="Duration" style={inp} />
               <input value={call.notes} onChange={(e) => setCall({ ...call, notes: e.target.value })} placeholder="Call notes / outcome…" style={inp} />
-              <button onClick={logCall} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>Log</button>
+              <button type="button" onClick={logCall} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>Log</button>
             </div>
           </div>
 
@@ -1062,7 +1415,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Linked opportunities</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {opportunities.map((o) => (
-                <button key={o.id} onClick={() => router.push(`/admin/sales/opportunities/${o.id}`)} style={{ textAlign: "left", background: "var(--muted)", border: "none", borderRadius: 8, padding: 10, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button type="button" key={o.id} onClick={() => router.push(`/admin/sales/opportunities/${o.id}`)} style={{ textAlign: "left", background: "var(--muted)", border: "none", borderRadius: 8, padding: 10, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 12, fontWeight: 500 }}>{o.title}</span>
                   <span style={{ fontSize: 11, color: "#185FA5" }}>{money(o.value_cents)}{o.probability != null ? ` · ${o.probability}%` : ""}{o.stage_name ? ` · ${o.stage_name}` : ""}</span>
                 </button>

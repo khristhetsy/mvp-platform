@@ -7,7 +7,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { DocumentUploadForm } from "@/components/DocumentUploadForm";
+import { DocumentUploadForm, type CategoryFile } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -15,6 +15,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getUploadLimits } from "@/lib/settings/platform-settings";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 // Human-readable label lookup — covers canonical codes + upload-API aliases
 const DOC_TYPE_LABEL_MAP: Record<string, string> = {};
@@ -42,39 +43,38 @@ for (const t of _FOUNDER_DOCUMENT_TYPES_RAW) {
 const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[] }[] = _FOUNDER_DOCUMENT_TYPES_RAW;
 
 export default async function DocumentUploadPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
-  const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
+  const { data: documents } = company ? await listCompanyDocuments(db, company.id) : { data: [] };
   const notApplicableTypes = company
     ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
     : [];
   const uploadLimits = await getUploadLimits();
   const maxUploadBytes = uploadLimits.maxMb * 1024 * 1024;
 
-  const existingByType: Record<string, { fileName?: string | null } | undefined> = {};
+  // Active files per category (newest first). Archived rows stay out of the folders.
+  const filesByType: Record<string, CategoryFile[]> = {};
   for (const type of FOUNDER_DOCUMENT_TYPES) {
     const matchValues = new Set([type.value, ...(type.aliases ?? [])].map((v) => v.toUpperCase()));
-    const latest =
-      (documents ?? []).find(
-        (doc) =>
-          doc.document_type &&
-          matchValues.has(String(doc.document_type).toUpperCase()) &&
-          String(doc.status ?? "").toLowerCase() !== "archived",
-      ) ?? null;
-    if (latest) {
-      existingByType[type.value.toUpperCase()] = { fileName: latest.file_name ?? null };
-    }
+    filesByType[type.value.toUpperCase()] = (documents ?? [])
+      .filter((doc) => doc.document_type && matchValues.has(String(doc.document_type).toUpperCase()) && String(doc.status ?? "").toLowerCase() !== "archived")
+      .map((doc) => ({ id: doc.id, fileName: doc.file_name ?? "document.pdf", label: doc.label ?? null, createdAt: doc.created_at, summarized: Boolean(doc.ai_summary) }));
   }
 
   const debugEnabled = process.env.NODE_ENV !== "production";
   const membership =
     debugEnabled && company
-      ? await supabase
+      ? await db
           .from("company_members")
           .select("role")
           .eq("company_id", company.id)
@@ -103,22 +103,14 @@ export default async function DocumentUploadPage() {
               <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
             </div>
             <p className="mt-1.5 text-[13px] leading-6 text-slate-600">
-              Upload PDF, Word, Excel, or CSV files, up to 25&nbsp;MB each. For the AI diligence report to read a
-              document, use one of these formats:{" "}
-              <span className="font-medium text-slate-800">PDF (.pdf)</span>,{" "}
-              <span className="font-medium text-slate-800">Word (.docx)</span>,{" "}
-              <span className="font-medium text-slate-800">Excel (.xlsx, .xls)</span>, or{" "}
-              <span className="font-medium text-slate-800">CSV (.csv)</span>.
+              Upload <span className="font-medium text-slate-800">PDF (.pdf)</span> files only, up to 25&nbsp;MB each.
+              Other formats — Word, Excel, PowerPoint, CSV — aren&rsquo;t accepted; export or print them to PDF first.
             </p>
             <ul className="mt-2.5 space-y-1.5 text-[12.5px] leading-5 text-slate-600">
               <li className="flex items-start gap-2">
                 <span aria-hidden="true" className="text-slate-400">•</span>
-                The <span className="font-medium text-slate-800">pitch deck must be a PDF</span>.
-              </li>
-              <li className="flex items-start gap-2">
-                <span aria-hidden="true" className="text-amber-600">•</span>
-                Old <span className="font-medium text-slate-800">.doc</span> files upload but can&apos;t be analyzed — save as{" "}
-                <span className="font-medium text-slate-800">.docx</span> first.
+                Every document — pitch deck, financials, cap table, all of them — must be a{" "}
+                <span className="font-medium text-slate-800">PDF</span>.
               </li>
               <li className="flex items-start gap-2">
                 <span aria-hidden="true" className="text-amber-600">•</span>
@@ -143,7 +135,7 @@ export default async function DocumentUploadPage() {
               companyId={company.id}
               companyName={company.company_name}
               documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value }) => ({ label, value }))}
-              existingByType={existingByType}
+              filesByType={filesByType}
               notApplicableTypes={notApplicableTypes}
               maxUploadBytes={maxUploadBytes}
               maxPages={uploadLimits.maxPages}
@@ -190,7 +182,7 @@ export default async function DocumentUploadPage() {
                   return (
                     <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</p>
+                        <p className="truncate font-medium text-slate-800">{document.label ?? document.file_name ?? document.document_type}</p>
                         {typeLabel && (
                           <p className="text-xs text-slate-400">{typeLabel}</p>
                         )}

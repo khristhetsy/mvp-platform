@@ -76,6 +76,8 @@ export interface EventRegistrationRow {
   contactPhone: string | null;
   answers: Record<string, unknown>;
   createdAt: string;
+  /** "staff" when added from the admin board, "self" when the attendee registered. */
+  registeredBy: "self" | "staff";
 }
 
 function mapReg(r: Record<string, unknown>): EventRegistrationRow {
@@ -92,7 +94,17 @@ function mapReg(r: Record<string, unknown>): EventRegistrationRow {
     contactPhone: ov("phone"),
     answers,
     createdAt: String(r.created_at),
+    registeredBy: registeredByOf(r),
   };
+}
+
+/**
+ * Who registered this row (migration 20260924006). Guests who register
+ * themselves have no account either, so a missing account says nothing:
+ * only the column decides, and it defaults to "self".
+ */
+function registeredByOf(r: Record<string, unknown>): "self" | "staff" {
+  return r.registered_by === "staff" ? "staff" : "self";
 }
 
 /** All registrations for an event, newest first (staff only). */
@@ -107,6 +119,28 @@ export async function listEventRegistrations(
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as Record<string, unknown>[]).map(mapReg);
+}
+
+/**
+ * Every registration across every event, newest first (staff only).
+ *
+ * The per-event board answers "who is coming to this?"; this answers "who has
+ * ever registered?" — one list to search and one place to export from.
+ */
+export async function listAllRegistrations(
+  supabase: SupabaseClient<Database>,
+  limit = 2000,
+): Promise<(EventRegistrationRow & { eventTitle: string | null })[]> {
+  const { data, error } = await raw(supabase)
+    .from("registrations")
+    .select("*, profiles:attendee_id(full_name, email), events:event_id(title)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    ...mapReg(r),
+    eventTitle: ((r.events as { title?: string | null } | null)?.title) ?? null,
+  }));
 }
 
 /** Edit a registrant's contact details (stored as overrides in answers). */
@@ -174,17 +208,30 @@ export async function createManualRegistration(
     attendeeId = ((prof as { id?: string } | null)?.id) ?? null;
   }
   const row = { event_id: eventId, attendee_type: input.attendeeType, answers: input.answers };
-  const { data, error } = attendeeId
+  const select = "*, profiles:attendee_id(full_name, email)";
+
+  // Someone who already registered themselves keeps "self": staff are updating
+  // their answers, not registering them. Everything staff create is "staff".
+  const existing = attendeeId
+    ? await db.from("registrations").select("id").eq("event_id", eventId).eq("attendee_id", attendeeId).maybeSingle()
+    : { data: null };
+  const existingId = (existing.data as { id?: string } | null)?.id ?? null;
+
+  const insertStaff = () =>
+    db
+      .from("registrations")
+      .insert({ ...row, attendee_id: attendeeId, registered_by: "staff" })
+      .select(select)
+      .single();
+
+  const { data, error } = existingId
     ? await db
         .from("registrations")
-        .upsert({ ...row, attendee_id: attendeeId }, { onConflict: "event_id,attendee_id" })
-        .select("*, profiles:attendee_id(full_name, email)")
+        .update({ attendee_type: input.attendeeType, answers: input.answers })
+        .eq("id", existingId)
+        .select(select)
         .single()
-    : await db
-        .from("registrations")
-        .insert({ ...row, attendee_id: null })
-        .select("*, profiles:attendee_id(full_name, email)")
-        .single();
+    : await insertStaff();
   if (error) throw new Error(error.message);
   return mapReg(data as Record<string, unknown>);
 }

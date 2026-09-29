@@ -42,9 +42,10 @@ export function buildDocumentChecklist(
 
   for (const document of documents) {
     if (!document.document_type) continue;
+    if ((document.status ?? "").toLowerCase() === "archived") continue;   // archived files don't satisfy a slot
     const key = document.document_type.toUpperCase();
     const existing = uploadedByType.get(key);
-    // Keep the most recently uploaded document for each type.
+    // Keep the most recently uploaded document for each type (a category may hold several).
     if (!existing || (document.created_at ?? "") > (existing.created_at ?? "")) {
       uploadedByType.set(key, document);
     }

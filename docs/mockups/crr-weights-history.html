@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR weights · History · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+h2{font-size:15px;margin:22px 0 6px}.note{font-size:12px;color:#5B6B86;margin:0 0 8px;max-width:1080px}
+.frame{width:1080px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:18px 22px}
+.frame *{box-sizing:border-box}
+h1{font-size:20px;margin:0}.sub{font-size:12.5px;color:#5B6B86;margin:4px 0 0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #E2E7F0;margin:14px 0 0}
+.tabs span{font-size:12.5px;padding:8px 14px;color:#5B6B86}.tabs span.on{color:#0A1A40;font-weight:600;border-bottom:2px solid #4F46E5}
+.bar{display:flex;align-items:center;gap:10px;margin:14px 0}
+.btn{font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:#4F46E5;border-color:#4F46E5;color:#fff}.btn.sm{font-size:11.5px;padding:5px 9px}
+.sel{height:34px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;background:#fff}
+.pill{font-size:11px;padding:3px 9px;border-radius:12px;white-space:nowrap}
+.ok{background:#E7F7EE;color:#137A3B}.warn{background:#FFF4DE;color:#9A5B00}.bad{background:#FDE8E8;color:#B42323}.gray{background:#EEF1F6;color:#5B6B86}.info{background:#EAF1FD;color:#1A5FC8}.vio{background:#F3EEFF;color:#6D28D9}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}
+td{padding:9px 10px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.row-open{background:#F8FAFF}
+.delta{font-variant-numeric:tabular-nums;font-size:12px}.up{color:#137A3B}.down{color:#B42323}.flat{color:#94A3B8}
+.ver{font-weight:600}
+.reason{color:#475569;font-size:12.5px;line-height:1.5}
+.chev{color:#94A3B8;font-size:11px;display:inline-block;width:10px}
+.panel{background:#F8FAFF;border-top:1px solid #E2E7F0;padding:0}
+.pgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;padding:16px 20px 18px 34px}
+.card{border:1px solid #E2E7F0;border-radius:10px;background:#fff;padding:12px 14px}
+.card h4{margin:0 0 8px;font-size:12px;color:#5B6B86;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.mini{width:100%;font-size:12.5px;border-collapse:collapse}.mini td{padding:5px 0;border-bottom:1px solid #F1F5F9}.mini tr:last-child td{border-bottom:0}.mini td.n{text-align:right;font-variant-numeric:tabular-nums}
+.track{height:5px;background:#E6ECF5;border-radius:3px;overflow:hidden;width:70px;display:inline-block;vertical-align:middle}
+.track i{display:block;height:100%;background:#CBD5E1}.track.now i{background:#4F46E5}
+.stat{display:flex;gap:16px;margin-bottom:10px}
+.stat div{flex:1;border:1px solid #E2E7F0;border-radius:9px;padding:9px 11px;background:#fff}
+.stat b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:#5B6B86}
+.modal{width:540px;border:1px solid #D6DDE8;border-radius:12px;box-shadow:0 14px 34px rgba(10,26,64,.16);background:#fff;padding:18px}
+.inp{width:100%;height:34px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;font-size:12.5px;display:flex;align-items:center;color:#8A98B3;margin-top:4px}
+.lbl{font-size:11px;color:#5B6B86;text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
+.warnbox{border:1px solid #FCD34D;background:#FFFBEB;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#92400E;margin-top:12px}
+.spark{display:flex;align-items:flex-end;gap:3px;height:34px}
+.spark i{width:16px;background:#C7D2FE;border-radius:2px 2px 0 0}.spark i.cur{background:#4F46E5}
+.tl{position:relative;padding-left:18px}
+.tl:before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:#E2E7F0}
+.tl .ev{position:relative;padding:7px 0;font-size:12.5px}
+.tl .ev:before{content:"";position:absolute;left:-18px;top:12px;width:8px;height:8px;border-radius:50%;background:#4F46E5}
+.tl .ev small{color:#5B6B86;display:block;font-size:11px}
+</style></head><body>
+
+<p class="note"><b>Weights → History.</b> Every save writes a new version rather than editing in place, so this is the audit trail: what changed, who changed it, why, and what it did to real companies. Scores carry the version that produced them (<code>score_version</code>), which is what makes the "scores on this version" count and the revert safe.</p>
+
+<h2>1. History — the version list</h2>
+<div class="frame">
+  <h1>Capital Readiness Rating</h1>
+  <p class="sub">AI-powered readiness scores across all companies. Scores are visible to investors and admins only — founders cannot see their score.</p>
+  <div class="tabs"><span>Companies</span><span>Weights</span><span class="on">History</span></div>
+
+  <div class="bar">
+    <span class="sel">Profile · All ▾</span>
+    <span class="sel">Changed by · Anyone ▾</span>
+    <span class="sel">Last 12 months ▾</span>
+    <span style="margin-left:auto" class="btn">Compare two versions</span>
+    <span class="btn">Export CSV</span>
+  </div>
+
+  <table>
+    <tr><th style="width:20px"></th><th>Version</th><th>What changed</th><th>By</th><th>When</th><th class="n">Scores on it</th><th class="n">Avg impact</th><th style="width:150px"></th></tr>
+
+    <tr class="row-open">
+      <td><span class="chev">▾</span></td>
+      <td><span class="ver">crr-profiles-v2</span><br><span class="pill ok">Active</span></td>
+      <td>Series A · Team 15→10, Traction 30→35<div class="reason" style="margin-top:3px">Traction matters more than team pedigree at A — per Sep partner review</div></td>
+      <td>Khris Thetsy</td>
+      <td>Sep 19<br><span style="font-size:11px;color:#5B6B86">12:20 AM</span></td>
+      <td class="n">5</td>
+      <td class="n"><span class="delta up">26 → 28 &nbsp;+2</span></td>
+      <td><span class="btn sm">Compare</span> <span class="btn sm">Revert to this</span></td>
+    </tr>
+    <tr><td colspan="8" class="panel">
+      <div class="pgrid">
+        <div>
+          <div class="card"><h4>Weight diff · Series A profile</h4>
+            <table class="mini">
+              <tr><td style="width:100px">Narrative</td><td class="n">10</td><td class="n" style="width:34px">→</td><td class="n">10</td><td class="n"><span class="delta flat">—</span></td><td style="width:80px"><span class="track"><i style="width:10%"></i></span></td></tr>
+              <tr><td>Team</td><td class="n">15</td><td class="n">→</td><td class="n"><b>10</b></td><td class="n"><span class="delta down">−5</span></td><td><span class="track now"><i style="width:10%"></i></span></td></tr>
+              <tr><td>Financial</td><td class="n">25</td><td class="n">→</td><td class="n">25</td><td class="n"><span class="delta flat">—</span></td><td><span class="track"><i style="width:25%"></i></span></td></tr>
+              <tr><td>Traction</td><td class="n">30</td><td class="n">→</td><td class="n"><b>35</b></td><td class="n"><span class="delta up">+5</span></td><td><span class="track now"><i style="width:35%"></i></span></td></tr>
+              <tr><td>Cap table</td><td class="n">20</td><td class="n">→</td><td class="n">20</td><td class="n"><span class="delta flat">—</span></td><td><span class="track"><i style="width:20%"></i></span></td></tr>
+              <tr><td colspan="6" style="padding-top:8px;color:#5B6B86;font-size:11.5px">Factor points, bands and floors unchanged in this version.</td></tr>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="stat">
+            <div><b>5</b><span>companies re-scored</span></div>
+            <div><b>0</b><span>changed band</span></div>
+            <div><b>1</b><span>crossed outreach gate</span></div>
+          </div>
+          <div class="card"><h4>Who moved</h4>
+            <table class="mini">
+              <tr><td>Impervitex Corp</td><td class="n">62 → 66</td><td class="n"><span class="delta up">+4</span></td><td class="n"><span class="pill ok">unlocked</span></td></tr>
+              <tr><td>Cognitive Science &amp; Solutions</td><td class="n">34 → 37</td><td class="n"><span class="delta up">+3</span></td><td class="n"></td></tr>
+              <tr><td>Nimbus Labs</td><td class="n">21 → 24</td><td class="n"><span class="delta up">+3</span></td><td class="n"></td></tr>
+              <tr><td>Healthfleet</td><td class="n">71 → 69</td><td class="n"><span class="delta down">−2</span></td><td class="n"></td></tr>
+              <tr><td>GreenGrid</td><td class="n">48 → 47</td><td class="n"><span class="delta down">−1</span></td><td class="n"></td></tr>
+            </table>
+          </div>
+          <p class="note" style="margin:8px 0 0">Applied on save · arithmetic only, no AI calls. Admin overrides were left untouched.</p>
+        </div>
+      </div>
+    </td></tr>
+
+    <tr>
+      <td><span class="chev">▸</span></td>
+      <td><span class="ver">crr-factors-v2</span></td>
+      <td>Factor points · Burn &amp; runway 8→6, Customer traction 13→15<div class="reason" style="margin-top:3px">Runway reads as noise pre-revenue; traction is the signal</div></td>
+      <td>Khris Thetsy</td>
+      <td>Sep 2<br><span style="font-size:11px;color:#5B6B86">4:18 PM</span></td>
+      <td class="n">3</td>
+      <td class="n"><span class="delta up">24 → 26 &nbsp;+2</span></td>
+      <td><span class="btn sm">Compare</span> <span class="btn sm">Revert to this</span></td>
+    </tr>
+
+    <tr>
+      <td><span class="chev">▸</span></td>
+      <td><span class="ver">crr-bands-v1</span></td>
+      <td>Bands · Strong 80→75, Solid 65→60<div class="reason" style="margin-top:3px">Bands were stricter than the investor conversation warranted</div></td>
+      <td>Daniela Felix</td>
+      <td>Aug 22<br><span style="font-size:11px;color:#5B6B86">10:02 AM</span></td>
+      <td class="n">0</td>
+      <td class="n"><span class="delta flat">no score change</span> <span class="pill gray">bands only</span></td>
+      <td><span class="btn sm">Compare</span> <span class="btn sm">Revert to this</span></td>
+    </tr>
+
+    <tr>
+      <td><span class="chev">▸</span></td>
+      <td><span class="ver">crr-profiles-v1</span></td>
+      <td>Seeded from code defaults — four profiles, 13 factors, four bands<div class="reason" style="margin-top:3px">Initial profile weighting</div></td>
+      <td><span class="pill gray">System</span></td>
+      <td>Aug 4<br><span style="font-size:11px;color:#5B6B86">on migration</span></td>
+      <td class="n">2</td>
+      <td class="n"><span class="delta flat">baseline</span></td>
+      <td><span class="btn sm">View</span></td>
+    </tr>
+  </table>
+  <p class="note" style="margin-top:10px">“Scores on it” counts companies whose current score still carries that version stamp — a score from August stays interpretable because you can see exactly which weights produced it.</p>
+</div>
+
+<h2>2. Compare any two versions</h2>
+<p class="note">Side by side, differences only by default. Useful when a number looks wrong and you want to know which change caused it.</p>
+<div class="frame">
+  <div class="bar"><span class="sel">crr-profiles-v1 ▾</span><span style="color:#5B6B86">compared with</span><span class="sel">crr-profiles-v2 ▾</span><label style="font-size:12.5px;margin-left:12px"><input type="checkbox" checked> Differences only</label><span style="margin-left:auto" class="pill vio">3 changes across 2 sections</span></div>
+  <table>
+    <tr><th>Section</th><th>Setting</th><th class="n">crr-profiles-v1</th><th class="n">crr-profiles-v2</th><th class="n">Change</th></tr>
+    <tr><td>Profile · Series A</td><td>Team</td><td class="n">15</td><td class="n">10</td><td class="n"><span class="delta down">−5</span></td></tr>
+    <tr><td>Profile · Series A</td><td>Traction</td><td class="n">30</td><td class="n">35</td><td class="n"><span class="delta up">+5</span></td></tr>
+    <tr><td>Factor points</td><td>Customer traction &amp; LOIs</td><td class="n">13</td><td class="n">15</td><td class="n"><span class="delta up">+2</span></td></tr>
+    <tr><td colspan="5" style="color:#5B6B86;font-size:12px">Angel, Seed and Growth profiles identical · bands identical · floors identical</td></tr>
+  </table>
+</div>
+
+<h2>3. Revert</h2>
+<p class="note">Revert never edits or deletes an old version — it copies those numbers forward as a new one, so the trail stays whole and you can revert the revert.</p>
+<div class="frame" style="width:600px">
+  <div class="modal" style="border:0;box-shadow:none;padding:0;width:auto">
+    <h3 style="margin:0;font-size:15px">Revert to crr-profiles-v1</h3>
+    <p style="margin:4px 0 0;font-size:12.5px;color:#5B6B86">Creates <b>crr-profiles-v3</b> carrying v1's numbers. v2 stays in the history.</p>
+    <div class="card" style="margin-top:12px"><h4>This will change</h4>
+      <table class="mini"><tr><td>Series A · Team</td><td class="n">10 → 15</td></tr><tr><td>Series A · Traction</td><td class="n">35 → 30</td></tr></table>
+    </div>
+    <div class="lbl">Why (recorded)</div><div class="inp">Partner review reversed — revisit after Q4 data</div>
+    <div class="lbl">Apply to</div>
+    <div style="font-size:12.5px;margin-top:6px;line-height:1.9">
+      <div>◉ Save and re-score all 5 companies now</div>
+      <div>○ Save only — existing scores keep their current numbers</div>
+    </div>
+    <div class="warnbox">Impervitex Corp drops 66 → 62 and falls back below the outreach gate (65). Its distribution is paused until it clears again.</div>
+    <div class="bar" style="margin-top:14px"><span style="margin-left:auto" class="btn">Cancel</span><span class="btn pri">Revert</span></div>
+  </div>
+</div>
+
+<h2>4. One company's score over time</h2>
+<p class="note">Reached from a company row on the Companies tab. Separates the three reasons a score moves — new documents, changed weights, admin override — which today is impossible to tell apart.</p>
+<div class="frame" style="width:720px">
+  <div class="bar"><b style="font-size:14px">Impervitex Corp</b><span class="pill info">Series A profile</span><span style="margin-left:auto;font-size:12.5px;color:#5B6B86">Current 66 · Solid</span></div>
+  <div class="bar"><span class="spark"><i style="height:38%"></i><i style="height:46%"></i><i style="height:62%"></i><i style="height:62%"></i><i class="cur" style="height:66%"></i></span><span style="font-size:12px;color:#5B6B86">Aug 4 → today</span></div>
+  <div class="tl" style="margin-top:6px">
+    <div class="ev"><b>66</b> · weights changed to crr-profiles-v2 <span class="delta up">+4</span><small>Sep 19, 12:20 AM · Khris Thetsy · “Traction matters more than team pedigree at A”</small></div>
+    <div class="ev"><b>62</b> · re-scored after 3 new documents <span class="delta up">+9</span><small>Sep 12 · Financials, Legal Documents, Market Research uploaded</small></div>
+    <div class="ev"><b>53</b> · admin override lifted <span class="delta down">−4</span><small>Aug 28 · Khris Thetsy · “AI score now reflects the data room”</small></div>
+    <div class="ev"><b>57</b> · admin override applied <small>Aug 20 · Khris Thetsy · “Deck understates traction; verified with founder”</small></div>
+    <div class="ev"><b>44</b> · first scored on crr-profiles-v1 <small>Aug 4 · System</small></div>
+  </div>
+</div>
+</body></html>

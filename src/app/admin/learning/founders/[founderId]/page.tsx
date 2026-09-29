@@ -37,12 +37,6 @@ type AssignmentRow = {
   assigned_at: string;
 };
 
-type DeliverableRow = {
-  ai_score: number | null;
-  ai_feedback: string | null;
-  submitted_at: string;
-};
-
 type UcRow = {
   company_id: string;
   companies: { company_name: string } | null;

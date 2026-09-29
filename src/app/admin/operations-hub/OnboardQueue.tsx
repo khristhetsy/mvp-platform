@@ -27,7 +27,7 @@ export function OnboardQueue({ rows }: { rows: OnboardRow[] }) {
       ) : rows.map((r) => (
         <Fragment key={r.id}>
           <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: r.pastDue ? "#FEF6F6" : undefined }}>
-            <button onClick={() => setOpen(open === r.id ? null : r.id)} aria-label="Toggle tasks" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12, transform: open === r.id ? "rotate(90deg)" : "none", transition: "transform .12s" }}>▸</button>
+            <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} aria-label="Toggle tasks" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12, transform: open === r.id ? "rotate(90deg)" : "none", transition: "transform .12s" }}>▸</button>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.founderName}</div>
               <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.founderEmail}</div>

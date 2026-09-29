@@ -5,6 +5,8 @@
 
 import type { EventMergeData } from "@/lib/event-email/merge";
 import { THEMES, type BrochurePage, type BrochureSize, type BrochureTheme, type ThemeColors } from "./types";
+import { orderSessions } from "@/lib/event-email/agenda";
+import { avatarSource } from "./avatar";
 
 const NAVY = "#0c2340";
 const esc = (s: string) =>
@@ -76,11 +78,23 @@ function introPage(m: EventMergeData, o: Record<string, Record<string, string>>)
 
 function agendaPage(m: EventMergeData, o: Record<string, Record<string, string>>): string {
   const intro = o?.agenda?.intro ? paras(o.agenda.intro) : "";
-  const rows = m.sessions.length
-    ? m.sessions.map((s) => `<div class="bk-agenda"><span class="bk-agenda-type" style="color:${s.accent}">${esc(s.type.replace(/_/g, " "))}</span>
+  // Shared ordering, so the printed agenda matches the email and the page.
+  const ordered = orderSessions(m.sessions);
+  const rows = ordered.length
+    ? ordered.map((s) => `<div class="bk-agenda"><span class="bk-agenda-type" style="color:${s.accent}">${esc(s.type.replace(/_/g, " "))}</span>
         <div><div class="bk-agenda-title">${esc(s.title)}</div>${s.abstract ? `<div class="bk-agenda-abs">${esc(s.abstract)}</div>` : ""}</div></div>`).join("")
     : `<p class="bk-p">Agenda to be announced.</p>`;
   return `<div class="bk-body"><h2 class="bk-h2">${esc(ov(o, "agenda", "heading", "Agenda"))}</h2><div class="bk-agenda-date">${esc(m.dateLabel)}${m.timeRange ? ` · ${esc(m.timeRange)}` : ""}</div>${intro}${rows}</div>`;
+}
+
+type PresenterAv = EventMergeData["presenters"][number];
+// Avatar order: headshot, then company logo (contained on white), then initials.
+function avatarHtml(p: PresenterAv): string {
+  const src = avatarSource(p);
+  return src.kind === "initials" ? esc(p.initials) : `<img src="${esc(src.url)}" alt="">`;
+}
+function avClass(p: PresenterAv): string {
+  return avatarSource(p).kind === "logo" ? " bk-pres-av-logo" : "";
 }
 
 function presentersPages(m: EventMergeData, o: Record<string, Record<string, string>>): string {
@@ -95,7 +109,7 @@ function presentersPages(m: EventMergeData, o: Record<string, Record<string, str
     const pages: string[] = [];
     for (let i = 0; i < m.presenters.length; i += 6) {
       const cards = m.presenters.slice(i, i + 6).map((p) => `<div class="bk-pres">
-        <div class="bk-pres-av">${p.headshotUrl ? `<img src="${esc(p.headshotUrl)}" alt="">` : esc(p.initials)}</div>
+        <div class="bk-pres-av${avClass(p)}">${avatarHtml(p)}</div>
         <div class="bk-pres-nm">${esc(p.name)}</div>
         ${p.role ? `<div class="bk-pres-rl">${esc(p.role)}</div>` : ""}
         ${p.company ? `<div class="bk-pres-co">${esc(p.company)}</div>` : ""}
@@ -112,11 +126,11 @@ function presentersPages(m: EventMergeData, o: Record<string, Record<string, str
       const meta = [p.role, p.company].filter(Boolean).map(esc).join(" · ");
       return `<div class="bk-pres-full">
         <div class="bk-pres-full-h">
-          <div class="bk-pres-av bk-pres-av-sm">${p.headshotUrl ? `<img src="${esc(p.headshotUrl)}" alt="">` : esc(p.initials)}</div>
+          <div class="bk-pres-av bk-pres-av-sm${avClass(p)}">${avatarHtml(p)}</div>
           <div><div class="bk-pres-nm">${esc(p.name)}</div>${meta ? `<div class="bk-pres-rl">${meta}</div>` : ""}</div>
         </div>
         ${p.bio ? `<p class="bk-pres-bio">${esc(p.bio)}</p>` : ""}
-        ${p.companySummary ? `<div class="bk-pres-cobox"><span class="bk-pres-colabel">Company</span> ${esc(p.companySummary)}</div>` : ""}
+        ${p.companySummary ? `<div class="bk-pres-cobox">${p.companyLogoUrl ? `<div class="bk-pres-cologo"><img src="${esc(p.companyLogoUrl)}" alt=""></div>` : ""}<div><span class="bk-pres-colabel">Company</span> ${esc(p.companySummary)}</div></div>` : ""}
       </div>`;
     }).join("");
     pages.push(`<div class="bk-body"><h2 class="bk-h2">${esc(heading)}${i > 0 ? " (cont.)" : ""}</h2>${i === 0 ? intro : ""}${entries}</div>`);
@@ -241,6 +255,8 @@ export function renderBookletHTML(
     .bk-pres { text-align: center; }
     .bk-pres-av { width: 74px; height: 74px; border-radius: 50%; background: ${primary}; color: #fff; font-family: Arial, sans-serif; font-size: 22px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; overflow: hidden; }
     .bk-pres-av img { width: 100%; height: 100%; object-fit: cover; }
+    .bk-pres-av-logo { background: #fff; border: 1px solid #d9e1ec; }
+    .bk-pres-av-logo img { object-fit: contain; padding: 14%; box-sizing: border-box; }
     .bk-pres-nm { font-size: 14px; font-weight: bold; color: ${primary}; }
     .bk-pres-rl { font-size: 12px; color: #4a5568; }
     .bk-pres-co { font-size: 11.5px; color: #6a7690; }
@@ -249,7 +265,9 @@ export function renderBookletHTML(
     .bk-pres-full-h { display: flex; align-items: center; gap: 12px; }
     .bk-pres-av-sm { width: 46px; height: 46px; font-size: 15px; margin: 0; }
     .bk-pres-bio { font-size: 12.5px; line-height: 1.55; color: #33414f; margin: 8px 0 0; }
-    .bk-pres-cobox { font-size: 12px; line-height: 1.5; color: #33414f; margin-top: 8px; background: #f2f6fc; border-radius: 6px; padding: 9px 12px; }
+    .bk-pres-cobox { font-size: 12px; line-height: 1.5; color: #33414f; margin-top: 8px; background: #f2f6fc; border-radius: 6px; padding: 9px 12px; display: flex; gap: 10px; align-items: flex-start; }
+    .bk-pres-cologo { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 6px; background: #fff; border: 1px solid #d9e1ec; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .bk-pres-cologo img { max-width: 80%; max-height: 80%; object-fit: contain; }
     .bk-pres-colabel { font-family: Arial, sans-serif; font-size: 9px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; display: block; margin-bottom: 2px; }
     .bk-spon-tier { margin-bottom: 14px; }
     .bk-spon-tier-h { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; margin-bottom: 6px; }

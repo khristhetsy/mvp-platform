@@ -19,7 +19,7 @@ export type ReadinessTrend = {
   sparkline: number[];
 };
 
-function sortedPoints<T>(
+function sortedPoints(
   snapshots: MetricSnapshot[],
   value: (s: MetricSnapshot) => number | null,
 ): { t: number; v: number }[] {

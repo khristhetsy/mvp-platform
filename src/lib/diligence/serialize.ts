@@ -62,6 +62,7 @@ export function applyRoleFilter(raw: ReportPayload, role: DiligenceRole, gate: G
   return {
     ...raw,
     claims: undefined, // never to non-admin
+    domains: show("findings") ? raw.domains : [], // domain ratings/conclusions follow the findings gate (matches dd_dom_* RLS)
     findings: show("findings") ? raw.findings.map(stripCandor) : [],
     responses: show("responses") ? raw.responses.map(stripReview) : [],
     docRequests: show("data_room") ? raw.docRequests : [],
@@ -70,8 +71,10 @@ export function applyRoleFilter(raw: ReportPayload, role: DiligenceRole, gate: G
       ...eng,
       posture: show("verdict") ? eng.posture : null,
       recommendation: show("verdict") ? eng.recommendation : null,
+      confidence_pct: show("verdict") ? eng.confidence_pct : null, // confidence is a judgement: released with the verdict
       owner_id: undefined,
     },
+    confidence: show("verdict") ? raw.confidence : 0,
   };
 }
 

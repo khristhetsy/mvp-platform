@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CRR gate for Stage 3 · and the intro note the investor never sees</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .cb{padding:15px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+  .why h2{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 8px;font-size:12.8px;color:var(--s600);line-height:1.62}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .t-bad{background:#FEE2E2;color:#991B1B}
+  .t-ok{background:#ECFDF5;color:#065F46}
+  .t-new{background:#4F46E5;color:#fff}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+
+  pre{background:#0F172A;color:#E2E8F0;border-radius:9px;padding:13px 15px;font-size:11.5px;line-height:1.7;overflow:auto;margin:10px 0 0}
+  pre .c{color:#64748B}
+  pre .k{color:#93C5FD}
+  pre .s{color:#86EFAC}
+  pre .r{color:#FCA5A5}
+  pre .g{color:#86EFAC}
+
+  /* stage rail */
+  .rail{display:flex;align-items:center;gap:0;margin:4px 0 2px}
+  .st{flex:1;text-align:center;position:relative}
+  .st .bub{width:26px;height:26px;border-radius:99px;margin:0 auto;display:flex;align-items:center;justify-content:center;
+           font-size:11px;font-weight:700;color:#fff;background:#CBD5E1}
+  .st.done .bub{background:#059669}
+  .st.cur .bub{background:#4F46E5}
+  .st.blocked .bub{background:#DC2626}
+  .st .nm{font-size:10.5px;font-weight:650;margin-top:5px;color:var(--s600)}
+  .st .sm{font-size:9.5px;color:var(--s400)}
+  .bar{position:absolute;top:13px;left:50%;width:100%;height:2px;background:#E2E8F0;z-index:-1}
+
+  .gatebox{border:1px solid #FECACA;background:#FEF2F2;border-radius:10px;padding:12px 14px;margin-top:11px}
+  .gatebox.ok{border-color:#A7F3D0;background:#F0FDF9}
+  .gatebox h4{margin:0 0 7px;font-size:12px;font-weight:700;color:#991B1B;display:flex;align-items:center;gap:6px}
+  .gatebox.ok h4{color:#065F46}
+  .req{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;color:var(--s600)}
+  .req .ic{width:16px;height:16px;border-radius:99px;font-size:9px;font-weight:700;color:#fff;
+           display:flex;align-items:center;justify-content:center;flex:none}
+  .req .ic.no{background:#DC2626}.req .ic.yes{background:#059669}
+  .req .sp{flex:1}
+  .req .val{font-variant-numeric:tabular-nums;font-weight:650;color:var(--ink)}
+
+  .btnrow{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .btn{font-size:11.5px;border-radius:7px;padding:6px 12px;border:1px solid var(--line);background:#fff;color:var(--s600)}
+  .btn.dis{opacity:.45;cursor:not-allowed;border-style:dashed}
+  .btn.pri{background:var(--ind);border-color:var(--ind);color:#fff}
+
+  /* intro note cards */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pane{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+  .pane .ph{background:#F8FAFC;border-bottom:1px solid var(--line);padding:8px 12px;font-size:11px;font-weight:650;color:var(--s600)}
+  .pane .pb{padding:12px}
+  .notebox{border:1px solid #C7D2FE;background:#EEF2FF;border-radius:8px;padding:9px 11px}
+  .notebox .nl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4F46E5}
+  .notebox .nt{font-size:11.5px;font-style:italic;color:#334155;margin-top:4px;line-height:1.5}
+  .missing{border:1px dashed #FECACA;background:#FEF2F2;border-radius:8px;padding:14px;text-align:center}
+  .missing .t{font-size:11.5px;font-weight:600;color:#991B1B}
+  .missing .d{font-size:10.5px;color:#B91C1C;margin-top:3px}
+  .ico{font-size:11px;color:var(--s500);margin-bottom:7px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>The CRR gate, and the intro note the investor never sees</h1>
+<p class="sub">Company Workspace → Preparation · traced through the code · mockup</p>
+
+<!-- ══════ 1 ══════ -->
+<div class="why">
+  <h2>1 · Three different numbers gate three different things</h2>
+  <p>Your screenshot says <b>CRR 32/100 · gate 65 · 33 short</b> and, on the same row,
+     <b>Company&apos;s current stage: Marketing</b>. Both are true, because stage advancement does not
+     use the CRR at all.</p>
+  <p><code>evaluate.ts:117</code> gates Qualify → Deploy on
+     <code>readinessScore &gt;= 75</code>, where that score is <code>computeReadinessScore()</code> —
+     <b>a count of uploaded document types</b>. Upload enough files and you advance to Marketing with a
+     CRR of 32.</p>
+  <p>Meanwhile investor <b>Introduction</b> has <b>no gate whatsoever</b>:
+     <code>/api/founder/matching/intro</code> checks <code>requireApiProfile(["founder"])</code> and
+     nothing else. Only Automated Outreach actually uses the engine.</p>
+</div>
+
+<div class="lbl">What gates what, today</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:26%">Action</th><th style="width:30%">Gate today</th><th style="width:13%">Threshold</th><th>Verdict</th></tr>
+    <tr>
+      <td><b>Advance to Stage 3</b></td>
+      <td class="mono">computeReadinessScore()<br><span style="color:#94A3B8">document count</span></td>
+      <td class="mono">≥ 75</td>
+      <td><span class="tag t-bad">wrong score</span> Not the CRR. This is why a CRR-32 company is in Marketing.</td>
+    </tr>
+    <tr>
+      <td><b>Investor Introduction</b></td>
+      <td class="mono">requireApiProfile only</td>
+      <td class="mono">—</td>
+      <td><span class="tag t-bad">no gate</span> Any founder at any score can request an intro.</td>
+    </tr>
+    <tr>
+      <td><b>Automated Outreach</b></td>
+      <td class="mono">effective_score<br><span style="color:#94A3B8">the CRR engine</span></td>
+      <td class="mono">≥ 65</td>
+      <td><span class="tag t-ok">correct</span> Already the engine, already the gate.</td>
+    </tr>
+  </table>
+</div></div>
+
+<div class="lbl">Proposed — one score, one gate, three doors</div>
+<div class="card">
+  <div class="ch"><h3>Preparation · Vincent Njoku · HealthTech</h3><span class="sp"></span>
+    <span style="font-size:11px;color:#64748B">CRR 32 · gate 65 · 33 short</span></div>
+  <div class="cb">
+    <div class="rail">
+      <div class="st done"><div class="bub">✓</div><div class="nm">Onboarding</div><div class="sm">complete</div></div>
+      <div class="st cur"><div class="bub">2</div><div class="nm">Preparation</div><div class="sm">current</div></div>
+      <div class="st blocked"><div class="bub">🔒</div><div class="nm">Marketing</div><div class="sm">blocked · CRR 32</div></div>
+      <div class="st"><div class="bub">4</div><div class="nm">Closing</div><div class="sm">—</div></div>
+    </div>
+
+    <div class="gatebox">
+      <h4>⚠ Stage 3 is blocked — the CRR has not met the minimum</h4>
+      <div class="req"><span class="ic no">✕</span><span class="sp">Capital Readiness Rating reaches the outreach gate</span><span class="val">32 / 65</span></div>
+      <div class="req"><span class="ic yes">✓</span><span class="sp">Core documents uploaded</span><span class="val">3 of 3</span></div>
+      <div class="req"><span class="ic yes">✓</span><span class="sp">Stage approved by staff</span><span class="val">approved</span></div>
+      <p style="font-size:11.5px;color:#7F1D1D;margin:9px 0 0;line-height:1.55">
+        <b>33 points short.</b> The fixes listed on the CRR card are worth +43 — enough to clear the gate.
+        Documents alone no longer advance a company: the score has to move.
+      </p>
+      <div class="btnrow">
+        <span class="btn dis">🔒 Investor Introduction</span>
+        <span class="btn dis">🔒 Automated Outreach</span>
+        <span class="btn dis">🔒 Advance to Marketing</span>
+        <a class="btn pri" href="#">Open the CRR fixes</a>
+      </div>
+    </div>
+
+    <div class="gatebox ok" style="margin-top:14px">
+      <h4>✓ Once the CRR reaches 65 — all three unlock together</h4>
+      <div class="req"><span class="ic yes">✓</span><span class="sp">Capital Readiness Rating reaches the outreach gate</span><span class="val">68 / 65</span></div>
+      <div class="btnrow">
+        <a class="btn" href="#">Investor Introduction</a>
+        <a class="btn" href="#">Automated Outreach</a>
+        <a class="btn pri" href="#">Advance to Marketing</a>
+      </div>
+      <p style="font-size:11.5px;color:#065F46;margin:9px 0 0">
+        One number, one threshold — the same <code>OUTREACH_GATE</code> the engine already publishes.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="card"><div class="cb">
+<pre><span class="c">// evaluate.ts — today: a document count, and its own threshold</span>
+<span class="k">const</span> computedReadiness = computeReadinessScore(uploadedTypeCodes);
+<span class="k">const</span> readinessScore = diligenceData?.readiness_score ?? computedReadiness;
+<span class="k">const</span> readinessQualified = readinessScore &gt;= <span class="r">75</span>;   <span class="r">// ← not the CRR</span>
+
+<span class="c">// proposed: the engine, and the gate the engine publishes</span>
+<span class="k">const</span> crr = <span class="k">await</span> crrFor(companyId);
+<span class="k">const</span> readinessQualified = crr.outreachUnlocked;   <span class="g">// score ≥ OUTREACH_GATE</span>
+
+<span class="c">// and the intro route gains the gate it never had</span>
+<span class="k">const</span> crr = <span class="k">await</span> crrFor(company.id);
+<span class="k">if</span> (!crr.outreachUnlocked) {
+  <span class="k">return</span> NextResponse.json(
+    { error: `Introductions unlock at CRR ${crr.gate}. You are ${crr.pointsToGate} short.` },
+    { status: <span class="s">403</span> },
+  );
+}</pre>
+</div></div>
+
+<!-- ══════ 2 ══════ -->
+<div class="why" style="border-left-color:var(--warn);margin-top:30px">
+  <h2 style="color:#92400E">2 · The founder&apos;s intro note stops at the admin</h2>
+  <p>The founder writes a note when requesting an introduction, and it is stored correctly —
+     <code>intro_requests.message</code>. Both admin surfaces render it:
+     <code>AdminIntroQueue</code> shows &ldquo;Founder&apos;s intro note&rdquo;, and so does
+     <code>ProspectIntrosClient</code>.</p>
+  <p><b>The investor never sees it.</b> <code>InvestorFacilitatedIntrosPanel</code> selects
+     <code>id, company_id, facilitated_at, created_at, companies(…)</code> — <code>message</code> is not
+     in the query and not on the screen. The founder writes the one thing that would make the
+     introduction land, and it is dropped at the last step.</p>
+</div>
+
+<div class="lbl">Where the note travels, and where it stops</div>
+<div class="two">
+  <div class="pane">
+    <div class="ph">✓ Admin — Intro Requests (works today)</div>
+    <div class="pb">
+      <p class="ico">Vincent Njoku · HealthTech → Anne Whitcombe</p>
+      <div class="notebox">
+        <div class="nl">✎ Founder&apos;s intro note</div>
+        <div class="nt">&ldquo;We&apos;ve just signed our second hospital pilot and I saw Anne led the
+          Series A at Medlyn. Happy to share the pilot data.&rdquo;</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane">
+    <div class="ph" style="color:#991B1B">✕ Investor — Facilitated intros (today)</div>
+    <div class="pb">
+      <p class="ico">HealthTech · Introduced 18 Sept</p>
+      <div class="missing">
+        <div class="t">No note shown</div>
+        <div class="d"><code>message</code> is never selected or rendered</div>
+      </div>
+      <p style="font-size:10.5px;color:#94A3B8;margin:8px 0 0">
+        The investor sees a company name and a date, and has to guess why they were introduced.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">Proposed — the investor sees what the founder wrote</div>
+<div class="card">
+  <div class="ch"><h3>Investor → Facilitated introductions</h3></div>
+  <div class="cb">
+    <div class="pane">
+      <div class="pb">
+        <p class="ico"><b style="color:#1E293B;font-size:12.5px">HealthTech</b> · Digital health · Introduced 18 Sept</p>
+        <div class="notebox">
+          <div class="nl">✎ Note from the founder</div>
+          <div class="nt">&ldquo;We&apos;ve just signed our second hospital pilot and I saw Anne led the
+            Series A at Medlyn. Happy to share the pilot data.&rdquo;</div>
+        </div>
+        <div class="btnrow">
+          <a class="btn pri" href="#">View company</a>
+          <a class="btn" href="#">Reply to founder</a>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:11.8px;color:#64748B;margin:11px 0 0;line-height:1.6">
+      Same component the two admin surfaces already use, pointed at the same column. The only change is
+      adding <code>message</code> to the select and rendering it — and showing nothing at all when the
+      founder left the note blank, rather than the default placeholder string.
+    </p>
+  </div>
+</div>
+
+<div class="note">
+  <b>Why one gate rather than three.</b> Right now a founder can be blocked from Outreach at CRR 64 and
+  still request an Introduction at CRR 12, having already advanced to Marketing on document count alone.
+  Three doors, three rules, and the number on the card explains none of them. Using
+  <code>crr.outreachUnlocked</code> everywhere means the 33-short figure on the CRR card is the literal,
+  only reason any of the three is shut.
+  <br><br>
+  <b>This will block companies that are already through.</b> Enforcing the CRR on Stage 3 is retroactive
+  — companies that advanced on the old document rule may sit below 65 today, like the one in your
+  screenshot. Worth deciding whether the gate applies to <i>advancing</i> only (already-advanced
+  companies keep Marketing), or to <i>acting</i> too (they keep the stage but lose Introduction and
+  Outreach until the score catches up). The first is kinder; the second is the one that actually
+  protects the firm&apos;s name.
+  <br><br>
+  <b>One thing I did not verify.</b> Whether a staff override should bypass the gate — an admin
+  approving a company they know is ready despite the score. The CRR engine already supports an override
+  on the score itself, which may be the cleaner lever than a second bypass.
+</div>
+
+</div>
+</body>
+</html>

@@ -16,7 +16,6 @@ export function AdminBetaSupportActions({
   profileId,
   role,
   companyId,
-  investorProfileId,
   loginLink,
   signupLink,
 }: Props) {
@@ -85,7 +84,7 @@ export function AdminBetaSupportActions({
         </Link>
       ) : null}
       {role === "founder" && companyId ? (
-        <Link href={`/admin/deal-rooms?company=${companyId}`} className="text-xs font-semibold text-indigo-700 hover:underline">
+        <Link href="/admin/deal-rooms" className="text-xs font-semibold text-indigo-700 hover:underline">
           Deal rooms
         </Link>
       ) : role === "investor" ? (

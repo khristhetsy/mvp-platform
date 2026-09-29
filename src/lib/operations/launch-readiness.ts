@@ -19,7 +19,8 @@ export type LaunchReadinessSnapshot = {
   generatedAt: string;
   operational: OperationalSystemSnapshot;
   environment: ReturnType<typeof getEnvironmentStatusSummary> & {
-    stripeConfigured: boolean;
+    /** Lemon Squeezy checkout is wired (buy links or API). */
+    paymentsConfigured: boolean;
     privateBetaMode: boolean;
   };
   migrations: MigrationVerificationResult;
@@ -234,7 +235,7 @@ export async function buildLaunchReadinessSnapshot(): Promise<LaunchReadinessSna
 
     const environment = {
       ...env,
-      stripeConfigured: isPaymentsEnabled(),
+      paymentsConfigured: isPaymentsEnabled(),
       privateBetaMode: isPrivateBetaMode(),
     };
 
@@ -262,7 +263,7 @@ export async function buildLaunchReadinessSnapshot(): Promise<LaunchReadinessSna
       operational: await loadOperationalSnapshotSafe(),
       environment: {
         ...env,
-        stripeConfigured: isPaymentsEnabled(),
+        paymentsConfigured: isPaymentsEnabled(),
         privateBetaMode: isPrivateBetaMode(),
       },
       migrations: fallbackMigrations(),

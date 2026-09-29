@@ -258,13 +258,28 @@ export function WorkspaceSidebar({
   planBadge,
   mobileOpen = false,
   onClose,
+  compact = false,
 }: Readonly<{
   workspace: WorkspaceId;
   planBadge?: ReactNode;
   mobileOpen?: boolean;
   onClose?: () => void;
+  /** Icon rail (44px) with flyouts for groups — admin compact chrome. Desktop only; mobile keeps the full drawer. */
+  compact?: boolean;
 }>) {
   const pathname = usePathname();
+  const [flyout, setFlyout] = useState<string | null>(null);
+  // Compact rail: folded (icons, flyouts) or unfolded (labels, accordion groups). Remembered.
+  const [unfolded, setUnfolded] = useState(false);
+  const [accordion, setAccordion] = useState<Record<string, boolean>>({});
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- read the remembered state after hydration
+  useEffect(() => { try { setUnfolded(window.localStorage.getItem("admin.sidebar") === "open"); } catch { /* ignore */ } }, []);
+  function toggleUnfolded() {
+    setUnfolded((v) => { const next = !v; try { window.localStorage.setItem("admin.sidebar", next ? "open" : "rail"); } catch { /* ignore */ } return next; });
+    setFlyout(null);
+  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- close the flyout after navigating
+  useEffect(() => { setFlyout(null); }, [pathname]);
   const locale = useLocale();
   const adminNav = useAdminNavPermissions(workspace);
   const deptAccess = useDepartmentAccess(workspace);
@@ -391,24 +406,23 @@ export function WorkspaceSidebar({
     };
   }, [deptAccess, workspace]);
 
-  const items = useMemo(() => {
+  // Recursive gate: permission + feature-control + department at EVERY level, so a group
+  // (e.g. Operational Tools, which carries no permission of its own) shows only the pages
+  // this member may open, and disappears when none are left. Nested groups work the same.
+  const gateItems = useMemo(() => {
     const hidden = new Set(disabledHrefs);
     if (!points.enabled) hidden.add("/credits");
-    return getWorkspaceNav(workspace)
+    const gate = (list: WorkspaceNavItem[]): WorkspaceNavItem[] => list
       .filter(canShowNavItem)
-      .map((item) => {
-        if (item.children?.length) {
-          return { ...item, children: item.children.filter((c) => !hidden.has(c.href) && deptAllows(c.href)) };
-        }
-        return item;
-      })
+      .map((item) => (item.children?.length ? { ...item, children: gate(item.children) } : item))
       .filter((item) => {
-        // Drop leaf items whose href is hidden/out-of-department, and groups whose children are all gone.
-        if (item.children?.length === 0) return false;
-        if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
-        return true;
+        if (item.children) return item.children.length > 0;
+        return !hidden.has(item.href) && deptAllows(item.href);
       });
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled]);
+    return gate;
+  }, [canShowNavItem, deptAllows, disabledHrefs, points.enabled]);
+
+  const items = useMemo(() => gateItems(getWorkspaceNav(workspace)), [gateItems, workspace]);
 
   const sections = useMemo(() => {
     const source =
@@ -418,23 +432,10 @@ export function WorkspaceSidebar({
           ? getFounderWorkspaceNavSections(founderNavV2)
           : getInvestorWorkspaceNavSections();
     if (!source) return null;
-    const hidden = new Set(disabledHrefs);
-    if (!points.enabled) hidden.add("/credits");
     return source
-      .map((section) => ({
-        ...section,
-        items: section.items
-          .filter(canShowNavItem)
-          .map((item) => (item.children?.length ? { ...item, children: item.children.filter((c) => !hidden.has(c.href) && deptAllows(c.href)) } : item))
-          .filter((item) => {
-            // Drop groups whose children are all gone, and hidden/out-of-department leaf items.
-            if (item.children?.length === 0) return false;
-            if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
-            return true;
-          }),
-      }))
+      .map((section) => ({ ...section, items: gateItems(section.items) }))
       .filter((section) => section.items.length > 0);
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled, founderNavV2]);
+  }, [gateItems, workspace, founderNavV2]);
 
   const label = workspaceLabel(workspace);
 
@@ -459,8 +460,8 @@ export function WorkspaceSidebar({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  function isChildActive(item: WorkspaceNavItem) {
-    return item.children?.some((child) => isNavItemActive(child.href)) ?? false;
+  function isChildActive(item: WorkspaceNavItem): boolean {
+    return item.children?.some((child) => (child.children?.length ? isChildActive(child) : isNavItemActive(child.href))) ?? false;
   }
 
   // ── Drill-in sub-menu (Vercel-style) ──────────────────────────────────────
@@ -535,6 +536,16 @@ export function WorkspaceSidebar({
         ) : null}
       </Link>
     );
+  }
+
+  // A group's children, one level deep — nested groups render as a heading + their pages.
+  function renderChildren(children: WorkspaceNavItem[]) {
+    return children.map((child) => child.children?.length ? (
+      <div key={`${child.href}|${child.label}`} className="pt-1">
+        <p className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{tLabel(child.label)}</p>
+        <div className="ml-2 border-l border-slate-200/80 pl-1">{child.children.map((g) => renderLeafLink(g, isLocked(g)))}</div>
+      </div>
+    ) : renderLeafLink(child, isLocked(child)));
   }
 
   function renderTopLevel(item: WorkspaceNavItem, locked = false) {
@@ -628,7 +639,7 @@ export function WorkspaceSidebar({
                 <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                 <span className="truncate">{tLabel(drilledItem.label)}</span>
               </button>
-              {drilledItem.children!.map((child) => renderLeafLink(child, isLocked(child)))}
+              {renderChildren(drilledItem.children!)}
             </nav>
           ) : null}
         </div>
@@ -639,6 +650,105 @@ export function WorkspaceSidebar({
       </div>
     </>
   );
+
+  // ── Compact icon rail ─────────────────────────────────────────────────────
+  // Same items, same gating; each top-level entry is one icon. Groups open a flyout
+  // with their children instead of the drill-in panel.
+  const railItems = allNavItems;
+  const toggleBtn = (
+    <button type="button" onClick={toggleUnfolded} title={unfolded ? "Collapse sidebar" : "Expand sidebar"} aria-label={unfolded ? "Collapse sidebar" : "Expand sidebar"}
+      className={`mt-auto flex items-center gap-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 ${unfolded ? "px-3 py-2 text-[12.5px]" : "h-9 w-9 justify-center"}`}>
+      {unfolded ? <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> : <ChevronRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
+      {unfolded && <span>Collapse</span>}
+    </button>
+  );
+  // Unfolded: labels + inline accordion for groups (the group holding the current page opens itself).
+  const wide = (
+    <nav aria-label={`${label} navigation`} className="flex h-full flex-col gap-0.5 overflow-y-auto px-2 py-2">
+      {railItems.map((item) => {
+        const Icon = getWorkspaceNavIcon(item.href);
+        const hasChildren = !!item.children?.length;
+        const active = hasChildren ? isChildActive(item) : isNavItemActive(item.href);
+        const locked = isLocked(item);
+        if (!hasChildren) return renderLeafLink(item, locked);
+        const open = accordion[item.href] ?? active;
+        return (
+          <div key={item.href}>
+            <button type="button" aria-expanded={open} onClick={() => setAccordion((a) => ({ ...a, [item.href]: !open }))}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${active ? "text-[var(--blue-hover)]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"} ${locked ? "opacity-55" : ""}`}>
+              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--blue)]" : "text-slate-400"}`} strokeWidth={1.75} aria-hidden />
+              <span className="truncate">{tLabel(item.label)}</span>
+              <ChevronRight className={`ml-auto h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-90" : ""}`} strokeWidth={2} aria-hidden />
+            </button>
+            {open && <div className="ml-4 border-l border-slate-200/80 pl-1.5">{renderChildren(item.children!)}</div>}
+          </div>
+        );
+      })}
+      {toggleBtn}
+    </nav>
+  );
+  const rail = (
+    <nav aria-label={`${label} navigation`} className="flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2">
+      {railItems.map((item) => {
+        const Icon = getWorkspaceNavIcon(item.href);
+        const hasChildren = !!item.children?.length;
+        const active = hasChildren ? isChildActive(item) : isNavItemActive(item.href);
+        const locked = isLocked(item);
+        const cls = `relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${active ? "bg-[var(--blue-muted)] text-[var(--blue)]" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"} ${locked ? "opacity-55" : ""}`;
+        const badge = item.href.endsWith("/inbox") && unreadEmail > 0 ? (unreadEmail > 99 ? "99+" : String(unreadEmail)) : null;
+        if (!hasChildren) {
+          return (
+            <Link key={item.href} href={item.href} title={locked ? lockHint(item) : tLabel(item.label)} aria-label={tLabel(item.label)} aria-current={active ? "page" : undefined} className={cls}>
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+              {badge && <span className="absolute -right-0.5 -top-0.5 rounded-full bg-[#2E78F5] px-1 text-[9px] font-semibold leading-4 text-white">{badge}</span>}
+            </Link>
+          );
+        }
+        const open = flyout === item.href;
+        return (
+          <div key={item.href} className="relative">
+            <button type="button" title={tLabel(item.label)} aria-label={tLabel(item.label)} aria-haspopup="true" aria-expanded={open}
+              onClick={() => setFlyout(open ? null : item.href)} className={cls}>
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+            </button>
+            {open && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFlyout(null)} />
+                <div className="absolute left-full top-0 z-50 ml-1 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[var(--shadow-panel)]">
+                  <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tLabel(item.label)}</p>
+                  {renderChildren(item.children!)}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+      {toggleBtn}
+    </nav>
+  );
+
+  if (compact) {
+    return (
+      <>
+        {mobileOpen ? (
+          <button type="button" className="fixed inset-0 z-40 bg-[var(--blue)]/20 lg:hidden" aria-label="Close navigation" onClick={onClose} />
+        ) : null}
+        {/* Mobile: the full drawer. Desktop: the 44px rail. */}
+        <aside aria-label={`${label} sidebar`}
+          className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          {nav}
+        </aside>
+        <aside aria-label={`${label} rail`} className={`relative z-30 hidden h-screen shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] transition-[width] duration-150 lg:flex ${unfolded ? "w-56" : "w-11"}`}>
+          {unfolded ? wide : rail}
+          {/* Edge handle — the second way to fold / unfold, always at mid-height. */}
+          <button type="button" onClick={toggleUnfolded} aria-label={unfolded ? "Collapse sidebar" : "Expand sidebar"} title={unfolded ? "Collapse" : "Expand"}
+            className="absolute -right-2.5 top-1/2 z-40 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 shadow-sm hover:text-slate-900">
+            {unfolded ? <ChevronLeft className="h-3 w-3" strokeWidth={2.5} aria-hidden /> : <ChevronRight className="h-3 w-3" strokeWidth={2.5} aria-hidden />}
+          </button>
+        </aside>
+      </>
+    );
+  }
 
   return (
     <>

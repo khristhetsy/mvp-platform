@@ -214,7 +214,7 @@ export function InvestorActivityTimelineClient({
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {FILTER_TABS.map((t) => (
-            <button
+            <button type="button"
               key={t.key}
               onClick={() => setFilter(t.key)}
               style={{

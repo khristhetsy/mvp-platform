@@ -31,7 +31,7 @@ const CRM_ACTIVITY_TYPES = [
 
 export type CrmActivityFilter = (typeof CRM_ACTIVITY_TYPES)[number];
 
-const COMPANY_STATUS_ALIASES = ["pending_review", "published"] as const;
+type CompanyStatusAlias = "pending_review" | "published";
 const COMPANY_QUEUE_TYPES = ["remediation"] as const;
 
 const INVESTOR_APPROVAL_STATUSES: InvestorApprovalStatus[] = [
@@ -211,7 +211,7 @@ export function shouldShowCrmInvestorPanels(filters: CrmQueryFilters): boolean {
 }
 
 export type CompanyQueryFilters = {
-  status: (typeof COMPANY_STATUS_ALIASES)[number] | string | null;
+  status: CompanyStatusAlias | string | null;
   reviewStatus: string | null;
   queue: (typeof COMPANY_QUEUE_TYPES)[number] | null;
   company: string | null;

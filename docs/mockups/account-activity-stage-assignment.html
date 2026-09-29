@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3 · Stage assignment — who gets each stage</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 9px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .ch .cnt{font-size:11px;color:var(--s500)}
+  .btn{font-size:12px;border:1px solid var(--line);background:#fff;color:var(--s600);border-radius:7px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+  .btn.pri{background:var(--ind);border-color:var(--ind);color:#fff}
+  .btn.warn{border-color:#FCA5A5;color:#B91C1C;background:#FEF2F2}
+  .cb{padding:13px 15px}
+
+  details{border-bottom:1px solid var(--l100)}
+  details:last-of-type{border-bottom:none}
+  summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 15px}
+  summary::-webkit-details-marker{display:none}
+  summary.unassigned{background:#FEF2F2}
+  .caret{width:9px;height:9px;border-right:2px solid var(--s400);border-bottom:2px solid var(--s400);
+         transform:rotate(-45deg);transition:transform .15s;flex:none;margin-left:2px}
+  details[open] > summary .caret{transform:rotate(45deg)}
+  summary .sgrow{flex:1;min-width:0;font-size:11.5px;color:var(--s500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dbody{padding:2px 15px 15px 34px}
+
+  .stagepill{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;padding:2px 8px;white-space:nowrap}
+  .st1{background:#EEF2FF;color:#3730A3}.st2{background:#ECFEFF;color:#0E7490}
+  .st3{background:#FFF7ED;color:#9A3412}.st4{background:#ECFDF5;color:#065F46}
+  .iv{background:#F5F3FF;color:#5B21B6}
+  .warnpill{background:#FEE2E2;color:#B91C1C}
+
+  .av{width:23px;height:23px;border-radius:99px;font-size:9.5px;font-weight:700;color:#fff;
+      display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-7px;flex:none}
+  .who{display:flex;align-items:center}
+  .av:first-child{margin-left:0}
+  .av.add{background:#fff;color:var(--s400);border:1px dashed var(--line);font-size:13px;font-weight:400;margin-left:-7px}
+  .av.none{background:#FEE2E2;color:#B91C1C;border:2px solid #fff;font-size:12px}
+  .a1{background:#4F46E5}.a2{background:#0891B2}.a3{background:#EA580C}.a4{background:#059669}.a5{background:#7C3AED}
+
+  .sf{display:flex;align-items:center;gap:9px;padding:6px 6px;border-radius:7px;font-size:12.3px}
+  .sf.sel{background:#EEF2FF}
+  .sf .r{font-size:10.5px;color:var(--s500)}
+  .sf .ck{margin-left:auto;color:var(--ind);font-weight:700}
+  .sf .no{margin-left:auto;font-size:10px;color:var(--s400)}
+  .sf .ld{margin-left:auto;font-size:9.5px;font-weight:700;background:#4F46E5;color:#fff;border-radius:99px;padding:1px 7px}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px;background:#fff}
+  .seg span{padding:5px 11px;color:var(--s600);border-right:1px solid var(--line);white-space:nowrap}
+  .seg span:last-child{border-right:none}
+  .seg span.on{background:var(--ind);color:#fff;font-weight:600}
+  .tag{display:inline-block;font-size:10.5px;background:var(--l100);color:var(--s600);border-radius:6px;padding:1px 6px}
+  .sel2{border:1px solid var(--line);border-radius:7px;padding:4px 9px;font-size:12px;background:#fff;color:var(--s600);display:inline-flex;gap:7px;align-items:center}
+  .sel2::after{content:"▾";color:#94A3B8;font-size:10px}
+
+  .mini{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);margin-bottom:6px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border-top:1px solid var(--l100);margin-top:11px;padding-top:11px}
+  .hint{font-size:11.6px;color:var(--s500);line-height:1.6}
+  .hint b{color:var(--ink)}
+
+  /* matrix */
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);
+     text-align:center;padding:0 0 7px;border-bottom:1px solid var(--line)}
+  th.l{text-align:left}
+  td{padding:8px 4px;border-bottom:1px solid var(--l100);text-align:center}
+  td.l{text-align:left}
+  tr:last-child td{border-bottom:none}
+  .mk{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:700}
+  .mk.on{background:#EEF2FF;color:#4F46E5}
+  .mk.lead{background:#4F46E5;color:#fff}
+  .mk.off{background:#F8FAFC;border:1px dashed var(--line);color:transparent}
+
+  /* checkboxes + selection */
+  .cbx{width:15px;height:15px;border:1.5px solid #CBD5E1;border-radius:4px;display:inline-flex;
+       align-items:center;justify-content:center;font-size:10px;color:transparent;background:#fff;vertical-align:middle}
+  .cbx.on{background:var(--ind);border-color:var(--ind);color:#fff}
+  .cbx.some{background:var(--ind);border-color:var(--ind);color:#fff}
+  .cbx.some::after{content:"–";font-weight:700;line-height:1}
+  th .colall{display:flex;flex-direction:column;align-items:center;gap:3px}
+  th .allw{font-size:8.5px;font-weight:700;letter-spacing:.04em;color:#CBD5E1}
+  tr.selrow td{background:#F5F7FF}
+  td.pickcol{width:26px;padding-left:2px;padding-right:2px}
+
+  .selbar{display:flex;align-items:center;gap:9px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:9px;
+          padding:8px 12px;font-size:12.3px;color:#312E81;margin-bottom:11px;flex-wrap:wrap}
+  .selbar b{color:#1E1B4B}
+  .selbar .lnk{color:#4F46E5;text-decoration:underline;cursor:pointer}
+  .selbar .gap{flex:1}
+  .btn.sm{padding:4px 9px;font-size:11.5px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:16px;line-height:1.62}
+  .note b{color:var(--ink)}
+  .note code,.cb code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .alert{background:#FEF2F2;border:1px solid #FECACA;border-radius:9px;padding:10px 13px;font-size:12.3px;
+         color:#7F1D1D;line-height:1.6;margin-bottom:12px;display:flex;gap:9px}
+  .alert b{color:#450A0A}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>3 · Stage assignment</h1>
+<p class="sub">Replaces the single &ldquo;Who gets Stage 2&rdquo; card · every founder and investor stage, assignable · mockup</p>
+
+<div class="alert">
+  <span>⚠</span>
+  <span><b>One stage has nobody on it.</b> Marketing is assigned to Sara Mendez only, and she is on leave until
+    3 Oct — so its events currently fall through to the super_admin fallback. A stage is only really assigned
+    when somebody who is <i>available</i> holds it.</span>
+</div>
+
+<!-- ======= MATRIX ======= -->
+<div class="lbl">At a glance — who holds what</div>
+<div class="card">
+  <div class="ch"><h3>Stage assignment</h3><span class="sp"></span>
+    <span class="cnt">9 stages · 5 staff</span>
+    <div class="seg"><span class="on">Founder</span><span>Investor</span><span>Both</span></div>
+    <button class="btn">Copy from…</button><button class="btn pri">Save</button></div>
+  <div class="cb">
+
+    <div class="selbar">
+      <span class="cbx some"></span>
+      <span><b>3 stages selected</b> · Preparation, Marketing, Investor · Engaged</span>
+      <span class="lnk">Select all 9</span>
+      <span class="lnk">Clear</span>
+      <span class="gap"></span>
+      <button class="btn sm">Assign staff…</button>
+      <button class="btn sm">Remove staff…</button>
+      <button class="btn sm">Set lead…</button>
+      <button class="btn sm">Set escalation…</button>
+      <button class="btn sm">Copy from a stage…</button>
+    </div>
+
+    <table>
+      <tr>
+        <th class="pickcol"><span class="cbx some"></span></th>
+        <th class="l" style="width:32%">Stage</th>
+        <th><div class="colall"><span>KT</span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">khris</span>
+          <span class="cbx some"></span><span class="allw">ALL</span></div></th>
+        <th><div class="colall"><span>DR</span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">Dan</span>
+          <span class="cbx some"></span><span class="allw">ALL</span></div></th>
+        <th><div class="colall"><span>SM</span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">Sara</span>
+          <span class="cbx some"></span><span class="allw">ALL</span></div></th>
+        <th><div class="colall"><span>PL</span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">Priya</span>
+          <span class="cbx some"></span><span class="allw">ALL</span></div></th>
+        <th><div class="colall"><span>RV</span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">Rafa</span>
+          <span class="cbx"></span><span class="allw">ALL</span></div></th>
+        <th style="width:17%">Escalates to</th></tr>
+
+      <tr><td class="pickcol"><span class="cbx"></span></td>
+        <td class="l"><span class="stagepill st1">Stage 1 · Onboarding</span></td>
+        <td><span class="mk on">✓</span></td><td><span class="mk lead">★</span></td><td><span class="mk off">·</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk off">·</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 4h</td></tr>
+
+      <tr class="selrow"><td class="pickcol"><span class="cbx on">✓</span></td>
+        <td class="l"><span class="stagepill st2">Stage 2 · Preparation</span></td>
+        <td><span class="mk on">✓</span></td><td><span class="mk off">·</span></td><td><span class="mk on">✓</span></td>
+        <td><span class="mk lead">★</span></td><td><span class="mk off">·</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 4h</td></tr>
+
+      <tr class="selrow"><td class="pickcol"><span class="cbx on">✓</span></td>
+        <td class="l"><span class="stagepill st3">Stage 3 · Marketing</span>
+          <span class="stagepill warnpill" style="margin-left:6px">1 on leave</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk off">·</span></td><td><span class="mk lead">★</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk off">·</span></td>
+        <td style="font-size:11.5px;color:#B91C1C">khris · <b>immediate</b></td></tr>
+
+      <tr><td class="pickcol"><span class="cbx"></span></td>
+        <td class="l"><span class="stagepill st4">Stage 4 · Closing</span></td>
+        <td><span class="mk lead">★</span></td><td><span class="mk off">·</span></td><td><span class="mk off">·</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk on">✓</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 1h</td></tr>
+
+      <tr><td class="pickcol" style="padding-top:14px"><span class="cbx"></span></td>
+        <td class="l" style="padding-top:14px"><span class="stagepill iv">Investor · Prospect</span></td>
+        <td style="padding-top:14px"><span class="mk off">·</span></td><td style="padding-top:14px"><span class="mk lead">★</span></td>
+        <td style="padding-top:14px"><span class="mk off">·</span></td><td style="padding-top:14px"><span class="mk off">·</span></td>
+        <td style="padding-top:14px"><span class="mk off">·</span></td>
+        <td style="padding-top:14px;font-size:11.5px;color:#475569">khris · 24h</td></tr>
+
+      <tr><td class="pickcol"><span class="cbx"></span></td>
+        <td class="l"><span class="stagepill iv">Investor · Outreach</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk on">✓</span></td><td><span class="mk lead">★</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk off">·</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 24h</td></tr>
+
+      <tr class="selrow"><td class="pickcol"><span class="cbx on">✓</span></td>
+        <td class="l"><span class="stagepill iv">Investor · Engaged</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk off">·</span></td><td><span class="mk lead">★</span></td>
+        <td><span class="mk on">✓</span></td><td><span class="mk off">·</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 4h</td></tr>
+
+      <tr><td class="pickcol"><span class="cbx"></span></td>
+        <td class="l"><span class="stagepill iv">Investor · Diligence</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk off">·</span></td><td><span class="mk off">·</span></td>
+        <td><span class="mk lead">★</span></td><td><span class="mk on">✓</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 4h</td></tr>
+
+      <tr><td class="pickcol"><span class="cbx"></span></td>
+        <td class="l"><span class="stagepill iv">Investor · Committed</span></td>
+        <td><span class="mk on">✓</span></td><td><span class="mk off">·</span></td><td><span class="mk off">·</span></td>
+        <td><span class="mk off">·</span></td><td><span class="mk lead">★</span></td>
+        <td style="font-size:11.5px;color:#475569">khris · 1h</td></tr>
+    </table>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#64748B;margin-top:11px;padding-top:10px;border-top:1px solid #F1F5F9">
+      <span><span class="mk lead" style="width:15px;height:15px;font-size:9px">★</span> Lead — named in the alert, escalation starts from them</span>
+      <span><span class="mk on" style="width:15px;height:15px;font-size:9px">✓</span> Also notified</span>
+      <span><span class="cbx some"></span> Some, not all — the header box and each <b>ALL</b> box show this
+        when the column or table is partly filled</span>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">What the three select-alls do</div>
+<div class="card"><div class="cb">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px">
+    <div>
+      <div class="mini">Top-left box · all stages</div>
+      <div class="hint">Ticks all nine rows. With the <b>Founder</b> filter on it selects the four founder
+        stages only — <b>select all means all visible</b>, never rows hidden behind the filter.
+        The bar then offers <i>Select all 9</i> explicitly.</div>
+    </div>
+    <div>
+      <div class="mini">Column <b>ALL</b> box · one person, every stage</div>
+      <div class="hint">Puts that person on every visible stage in one click — the common case for a
+        super_admin who wants sight of everything. Un-ticking removes them from all of it, and if they were
+        <b>lead</b> anywhere the confirm names those stages, because clearing a lead is not the same as
+        clearing a watcher.</div>
+    </div>
+    <div>
+      <div class="mini">Row box · bulk over stages</div>
+      <div class="hint">Select any set of stages and act on all of them: assign, remove, set lead, set
+        escalation, or copy one stage&apos;s whole setup onto them. This is the Odoo selection bar the
+        platform already uses on Contacts and Opportunities.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ======= PER-STAGE EDITORS ======= -->
+<div class="lbl">Per stage — expand to edit</div>
+<div class="card">
+  <div class="ch"><h3>Assign stages</h3><span class="sp"></span>
+    <span class="cnt">4 founder · 5 investor</span>
+    <button class="btn">Collapse all</button><button class="btn">Apply Stage 2 to all</button></div>
+
+  <!-- collapsed rows -->
+  <details>
+    <summary><span class="caret"></span><span class="stagepill st1">Stage 1 · Onboarding</span>
+      <span class="sgrow">Company profile · My Progress · Action Center · One pager &nbsp;·&nbsp; 4 alert classes</span>
+      <span class="who"><span class="av a2">DR</span><span class="av a1">KT</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Dan leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor as Stage 2 below.</div></div>
+  </details>
+
+  <!-- EXPANDED: STAGE 2 -->
+  <details open>
+    <summary><span class="caret"></span><span class="stagepill st2">Stage 2 · Preparation</span>
+      <span class="sgrow">CRR · Checklist · Data room · Documents · Business plan · Pitch deck · Financial model · Cap table · Valuation &nbsp;·&nbsp; 6 alert classes</span>
+      <span class="who"><span class="av a4">PL</span><span class="av a1">KT</span><span class="av a3">SM</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Priya leads</span></summary>
+    <div class="dbody">
+
+      <div class="mini">Who is notified</div>
+      <div class="cols2">
+        <div class="sf sel"><span class="av a4">PL</span><span>Priya Lal<div class="r">analyst · Diligence</div></span><span class="ld">Lead</span></div>
+        <div class="sf"><span class="av a2">DR</span><span>Dan Roth<div class="r">manager · Onboarding</div></span></div>
+        <div class="sf sel"><span class="av a1">KT</span><span>khris<div class="r">super_admin</div></span><span class="ck">✓</span></div>
+        <div class="sf"><span class="av a5">RV</span><span>Rafa Vidal<div class="r">admin · SPV</div></span></div>
+        <div class="sf sel"><span class="av a3">SM</span><span>Sara Mendez<div class="r">manager · Sales</div>
+          </span><span class="ck">✓</span></div>
+        <div class="sf" style="opacity:.55"><span class="av" style="background:#94A3B8">JC</span>
+          <span>Jon Carr<div class="r">regular_user</div></span><span class="no">no admin access</span></div>
+      </div>
+
+      <div class="grid3">
+        <div>
+          <div class="mini">Escalation</div>
+          <div class="hint">Unopened <b>high</b> or <b>critical</b> after
+            <span class="sel2">4 hours</span> → <span class="sel2">khris</span></div>
+        </div>
+        <div>
+          <div class="mini">Out of office</div>
+          <div class="hint">Lead unavailable → hand to
+            <span class="sel2">next assignee</span><br>
+            <span style="color:#94A3B8">reads the staff availability already on the profile</span></div>
+        </div>
+        <div>
+          <div class="mini">Load</div>
+          <div class="hint"><b>41 companies</b> sit in Preparation today ·
+            <b>~28 events/week</b> at the switched-on classes<br>
+            <span style="color:#94A3B8">measured from the last 30 days</span></div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #F1F5F9;margin-top:11px;padding-top:11px">
+        <div class="mini">Overrides — these ignore the stage owners</div>
+        <div class="hint">
+          <b>Document or file deleted</b> → also <b>Compliance</b> ·
+          <b>CRR crossed the 65 gate</b> → also <b>CEO</b> ·
+          <b>Data-room access changed</b> → also <b>Compliance</b><br>
+          <span style="color:#94A3B8">Set on the alert row in section 2, shown here so the stage owner can see
+          what leaves their stage.</span>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- UNASSIGNED STAGE 3 -->
+  <details>
+    <summary class="unassigned"><span class="caret"></span><span class="stagepill st3">Stage 3 · Marketing</span>
+      <span class="sgrow">Matches · Matching Center · Outreach · Investor CRM · Events · Marketplace &nbsp;·&nbsp; 6 alert classes</span>
+      <span class="who"><span class="av a3">SM</span></span>
+      <span class="stagepill warnpill" style="margin-left:8px">Lead on leave → falls back</span>
+      <button class="btn warn">Fix</button></summary>
+    <div class="dbody"><div class="hint">Same editor. The red state clears when at least one
+      <b>available</b> assignee holds the stage.</div></div>
+  </details>
+
+  <details>
+    <summary><span class="caret"></span><span class="stagepill st4">Stage 4 · Closing</span>
+      <span class="sgrow">Deal Room · Offering type · SPVs &amp; closings · Capital Raise · Updates · Milestones · Analytics &nbsp;·&nbsp; 5 alert classes</span>
+      <span class="who"><span class="av a1">KT</span><span class="av a5">RV</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">khris leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor.</div></div>
+  </details>
+
+  <details>
+    <summary><span class="caret"></span><span class="stagepill iv">Investor · Prospect</span>
+      <span class="sgrow">Signed up · profile · thesis · saved searches &nbsp;·&nbsp; 3 alert classes</span>
+      <span class="who"><span class="av a2">DR</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Dan leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor.</div></div>
+  </details>
+  <details>
+    <summary><span class="caret"></span><span class="stagepill iv">Investor · Outreach</span>
+      <span class="sgrow">Campaign replies · meeting booked · opted out &nbsp;·&nbsp; 3 alert classes</span>
+      <span class="who"><span class="av a3">SM</span><span class="av a2">DR</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Sara leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor.</div></div>
+  </details>
+  <details>
+    <summary><span class="caret"></span><span class="stagepill iv">Investor · Engaged</span>
+      <span class="sgrow">Watchlist · saved deals · deck views · messages &nbsp;·&nbsp; 4 alert classes</span>
+      <span class="who"><span class="av a3">SM</span><span class="av a4">PL</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Sara leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor.</div></div>
+  </details>
+  <details>
+    <summary><span class="caret"></span><span class="stagepill iv">Investor · Diligence</span>
+      <span class="sgrow">Data-room access · downloads · Q&amp;A · meetings &nbsp;·&nbsp; 4 alert classes</span>
+      <span class="who"><span class="av a4">PL</span><span class="av a5">RV</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Priya leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor.</div></div>
+  </details>
+  <details>
+    <summary><span class="caret"></span><span class="stagepill iv">Investor · Committed</span>
+      <span class="sgrow">SPV participation · signature · funding · withdrawal &nbsp;·&nbsp; 4 alert classes</span>
+      <span class="who"><span class="av a5">RV</span><span class="av a1">KT</span></span>
+      <span style="font-size:11px;color:#64748B;margin-left:8px">Rafa leads</span></summary>
+    <div class="dbody"><div class="hint">Same editor.</div></div>
+  </details>
+</div>
+
+<div class="note">
+  <b>Every stage has a lead, not just a list.</b> Three people on a stage with no lead is three people each
+  assuming one of the others has it. The lead is named in the alert (&ldquo;Priya — Tinski Tech deleted 2
+  data-room files&rdquo;) and the escalation clock starts from them.
+  <br><br>
+  <b>Unassigned is a visible failure, not a silent one.</b> A stage with no available assignee turns its row
+  red, shows a Fix button, and routes to all super_admins. Note that Marketing above is <i>technically</i>
+  assigned — Sara holds it — but she is away, so the design treats it as unassigned rather than letting alerts
+  land in an inbox nobody is reading.
+  <br><br>
+  <b>Load is shown because assignment without it is guesswork.</b> 41 companies in Preparation at ~28
+  events/week is the difference between a fair split and one person quietly drowning. It is measured from the
+  last 30 days of real events — so it reads <i>unmeasured</i> until the emitters ship, rather than showing a
+  plausible zero.
+  <br><br>
+  <b>What this needs in the schema.</b> A small table —
+  <code>activity_stage_assignments (audience, stage, user_id, is_lead, escalate_after_minutes, escalate_to)</code>.
+  Nine rows per staff member at worst. Nothing here needs a per-event join.
+  <br><br>
+  <b>Select all has one trap worth naming.</b> Ticking a column <i>ALL</i> box makes someone a watcher on
+  every stage, which is cheap. Un-ticking it can silently strip a <b>lead</b> — and a stage with no lead is a
+  stage where three people each assume someone else has it. So the un-tick confirms, naming the stages where
+  they lead, and the row stays red until a new lead is picked.
+  <br><br>
+  <b>One thing to decide.</b> Whether &ldquo;on leave&rdquo; is real. The design reads staff availability to
+  demote a lead, but nothing on the platform records it today — either that gets a field, or the out-of-office
+  row comes out and Marketing shows as assigned when it effectively isn&apos;t.
+</div>
+
+</div>
+</body>
+</html>

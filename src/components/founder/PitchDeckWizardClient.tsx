@@ -124,17 +124,17 @@ export function PitchDeckWizardClient() {
           <div style={{ height: 6, background: "var(--muted)", borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${(doneCount / DECK_SLIDES.length) * 100}%`, height: 6, background: INDIGO, borderRadius: 4 }} /></div>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <button onClick={() => save()} disabled={busy || locked} style={{ ...btn, opacity: locked ? 0.45 : 1 }}><i className="ti ti-device-floppy" aria-hidden="true" /> Save</button>
+          <button type="button" onClick={() => save()} disabled={busy || locked} style={{ ...btn, opacity: locked ? 0.45 : 1 }}><i className="ti ti-device-floppy" aria-hidden="true" /> Save</button>
           <a href="/api/founder/pitch-deck/pdf" style={btn}><i className="ti ti-file-type-pdf" aria-hidden="true" /> PDF</a>
           <a href="/api/founder/pitch-deck/pptx" style={btn}><i className="ti ti-presentation" aria-hidden="true" /> PPTX</a>
-          <button onClick={share} disabled={busy} style={btn}><i className="ti ti-link" aria-hidden="true" /> Share link</button>
+          <button type="button" onClick={share} disabled={busy} style={btn}><i className="ti ti-link" aria-hidden="true" /> Share link</button>
           {locked ? (
             <>
               <span style={{ fontSize: 12, fontWeight: 600, color: "#0F6E56", background: "#E1F5EE", borderRadius: 8, padding: "7px 13px" }}><i className="ti ti-lock-check" aria-hidden="true" /> Finalized</span>
-              <button onClick={unlock} disabled={busy} style={btn}><i className="ti ti-lock-open" aria-hidden="true" /> Unlock to edit</button>
+              <button type="button" onClick={unlock} disabled={busy} style={btn}><i className="ti ti-lock-open" aria-hidden="true" /> Unlock to edit</button>
             </>
           ) : (
-            <button onClick={finalize} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: INDIGO, border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer" }}>Finalize</button>
+            <button type="button" onClick={finalize} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: INDIGO, border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer" }}>Finalize</button>
           )}
         </div>
         {/* Theme picker */}
@@ -143,7 +143,7 @@ export function PitchDeckWizardClient() {
           {DECK_THEMES.map((t) => {
             const on = t.id === deck.theme;
             return (
-              <button key={t.id} onClick={() => changeTheme(t.id)} disabled={busy || locked} title={t.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, padding: "4px 9px", borderRadius: 8, border: on ? `2px solid ${INDIGO}` : "0.5px solid var(--border-strong, #cbd5e1)", background: on ? "#F2F7FF" : "transparent", color: "var(--foreground)", cursor: locked ? "not-allowed" : "pointer", opacity: locked && !on ? 0.5 : 1 }}>
+              <button type="button" key={t.id} onClick={() => changeTheme(t.id)} disabled={busy || locked} title={t.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, padding: "4px 9px", borderRadius: 8, border: on ? `2px solid ${INDIGO}` : "0.5px solid var(--border-strong, #cbd5e1)", background: on ? "#F2F7FF" : "transparent", color: "var(--foreground)", cursor: locked ? "not-allowed" : "pointer", opacity: locked && !on ? 0.5 : 1 }}>
                 <span style={{ width: 13, height: 13, borderRadius: 4, background: t.swatch, border: t.id === "light" ? "0.5px solid #cbd5e1" : "none" }} />{t.label}
               </button>
             );
@@ -160,8 +160,8 @@ export function PitchDeckWizardClient() {
           <div style={{ flex: 1 }} />
           <a href="/api/founder/pitch-deck/pdf" style={{ ...btn, background: "#fff" }}><i className="ti ti-file-type-pdf" aria-hidden="true" /> Download PDF</a>
           <a href="/api/founder/pitch-deck/pptx" style={{ ...btn, background: "#fff" }}><i className="ti ti-presentation" aria-hidden="true" /> Download PPTX</a>
-          <button onClick={share} disabled={busy} style={{ ...btn, background: "#fff" }}><i className="ti ti-link" aria-hidden="true" /> Copy share link</button>
-          <button onClick={unlock} disabled={busy} style={btn}><i className="ti ti-lock-open" aria-hidden="true" /> Unlock to edit</button>
+          <button type="button" onClick={share} disabled={busy} style={{ ...btn, background: "#fff" }}><i className="ti ti-link" aria-hidden="true" /> Copy share link</button>
+          <button type="button" onClick={unlock} disabled={busy} style={btn}><i className="ti ti-lock-open" aria-hidden="true" /> Unlock to edit</button>
         </div>
       )}
 
@@ -175,7 +175,7 @@ export function PitchDeckWizardClient() {
                 const filled = (deck.slides[s.id]?.body ?? "").trim() && !(deck.slides[s.id]?.body ?? "").includes("[Add your points");
                 const on = s.id === activeId;
                 return (
-                  <button key={s.id} onClick={() => setActiveId(s.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: on ? 600 : 400, color: on ? "#185FA5" : "var(--foreground)", background: on ? "#E6F1FB" : "transparent", border: "none", borderRadius: 7, padding: "7px 8px", cursor: "pointer" }}>
+                  <button type="button" key={s.id} onClick={() => setActiveId(s.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: on ? 600 : 400, color: on ? "#185FA5" : "var(--foreground)", background: on ? "#E6F1FB" : "transparent", border: "none", borderRadius: 7, padding: "7px 8px", cursor: "pointer" }}>
                     <span style={{ color: filled ? INDIGO : "var(--muted-foreground)", fontSize: 9 }}>●</span> {s.title}
                   </button>
                 );
@@ -193,12 +193,12 @@ export function PitchDeckWizardClient() {
           <div style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 12px" }}>{activeDef.help}</div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <button onClick={() => draft(activeId)} disabled={busy || locked} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 16, padding: "6px 13px", cursor: locked ? "not-allowed" : "pointer", opacity: locked ? 0.5 : 1 }}><i className="ti ti-sparkles" aria-hidden="true" /> Write from my plan</button>
+            <button type="button" onClick={() => draft(activeId)} disabled={busy || locked} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 16, padding: "6px 13px", cursor: locked ? "not-allowed" : "pointer", opacity: locked ? 0.5 : 1 }}><i className="ti ti-sparkles" aria-hidden="true" /> Write from my plan</button>
             {active.aiGenerated && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>AI draft — edit to make it yours</span>}
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", background: "var(--muted)", borderRadius: 7, padding: 2 }}>
-              <button onClick={() => setView("edit")} style={{ fontSize: 11, border: "none", borderRadius: 5, padding: "4px 9px", cursor: "pointer", background: view === "edit" ? INDIGO : "transparent", color: view === "edit" ? "#fff" : "var(--muted-foreground)" }}>Edit</button>
-              <button onClick={() => setView("preview")} style={{ fontSize: 11, border: "none", borderRadius: 5, padding: "4px 9px", cursor: "pointer", background: view === "preview" ? INDIGO : "transparent", color: view === "preview" ? "#fff" : "var(--muted-foreground)" }}>Preview</button>
+              <button type="button" onClick={() => setView("edit")} style={{ fontSize: 11, border: "none", borderRadius: 5, padding: "4px 9px", cursor: "pointer", background: view === "edit" ? INDIGO : "transparent", color: view === "edit" ? "#fff" : "var(--muted-foreground)" }}>Edit</button>
+              <button type="button" onClick={() => setView("preview")} style={{ fontSize: 11, border: "none", borderRadius: 5, padding: "4px 9px", cursor: "pointer", background: view === "preview" ? INDIGO : "transparent", color: view === "preview" ? "#fff" : "var(--muted-foreground)" }}>Preview</button>
             </div>
           </div>
 
@@ -218,10 +218,10 @@ export function PitchDeckWizardClient() {
           {activeDef.chart && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8 }}><i className="ti ti-sparkles" aria-hidden="true" /> This slide auto-draws its {CHART_LABEL[activeDef.chart]} chart from your business plan. Edit those numbers on the Business plan page.</div>}
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
-            <button onClick={() => setActiveId(DECK_SLIDES[Math.max(0, activeIdx - 1)].id)} disabled={activeIdx === 0} style={btn}><i className="ti ti-arrow-left" aria-hidden="true" /> Prev</button>
-            <button onClick={() => save()} disabled={busy || locked} style={{ ...btn, color: "#0F6E56", opacity: locked ? 0.45 : 1 }}><i className="ti ti-device-floppy" aria-hidden="true" /> Save</button>
+            <button type="button" onClick={() => setActiveId(DECK_SLIDES[Math.max(0, activeIdx - 1)].id)} disabled={activeIdx === 0} style={btn}><i className="ti ti-arrow-left" aria-hidden="true" /> Prev</button>
+            <button type="button" onClick={() => save()} disabled={busy || locked} style={{ ...btn, color: "#0F6E56", opacity: locked ? 0.45 : 1 }}><i className="ti ti-device-floppy" aria-hidden="true" /> Save</button>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setActiveId(DECK_SLIDES[Math.min(DECK_SLIDES.length - 1, activeIdx + 1)].id)} disabled={activeIdx === DECK_SLIDES.length - 1} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: INDIGO, border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer" }}>Next <i className="ti ti-arrow-right" aria-hidden="true" /></button>
+            <button type="button" onClick={() => setActiveId(DECK_SLIDES[Math.min(DECK_SLIDES.length - 1, activeIdx + 1)].id)} disabled={activeIdx === DECK_SLIDES.length - 1} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: INDIGO, border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer" }}>Next <i className="ti ti-arrow-right" aria-hidden="true" /></button>
           </div>
         </div>
       </div>

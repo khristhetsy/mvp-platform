@@ -126,7 +126,7 @@ export function DiligenceReportDocument({
         <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Contents</p>
         <div className="space-y-0.5">
           {toc.map((item) => (
-            <button
+            <button type="button"
               key={item.id}
               onClick={() => scrollTo(item.id)}
               className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-slate-600 hover:bg-slate-100 hover:text-slate-900"

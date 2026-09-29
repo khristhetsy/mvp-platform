@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { listTasks, createTask } from "@/lib/sales/tasks";
+import { listOdooActivities } from "@/lib/sales/odoo-activities";
 import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Super-admin "viewing as": overrides the assignee filter (undefined = no override).
   const sales = await getSalesScope(profile, req.nextUrl.searchParams.get("viewAs"));
   const tasks = await listTasks({ scope, assigneeId: profile.id, viewOwner: sales.viewOwnerId, opportunityId, contactCrmId });
-  return NextResponse.json({ tasks });
+  // Merge in Odoo activities — but only on the standalone Tasks list (not when a
+  // specific opportunity/contact is being scoped, which is a Supabase-only view).
+  const odoo = opportunityId || contactCrmId ? [] : await listOdooActivities({ onlyOverdue: scope === "overdue" });
+  return NextResponse.json({ tasks: [...odoo, ...tasks] });
 }
 
 const createSchema = z.object({

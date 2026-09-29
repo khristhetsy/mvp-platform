@@ -1,4 +1,5 @@
 import { sendTransactionalEmail } from "@/lib/email/transactional-send";
+import { renderEmail, type EmailBlock, type RenderedEmail } from "@/lib/email/layout";
 import { getAppUrl } from "@/lib/env";
 import { getAICoachRecommendations } from "@/lib/learning/recommendations";
 import {
@@ -9,14 +10,41 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { LearningReminderRecord, LearningReminderType } from "@/lib/learning/types";
 
-function appendLearningEmailFooter(body: string) {
-  const appUrl = getAppUrl() ?? "http://localhost:3000";
-  return `${body.trim()}\n\n---\niCapOS founder learning — educational content only, not legal, tax, or investment advice.\nContinue learning: ${appUrl}/founder/learning`;
+function learningUrl(): string {
+  return `${(getAppUrl() ?? "http://localhost:3000").replace(/\/$/, "")}/founder/learning`;
 }
 
-function greeting(name: string | null) {
-  const first = name?.trim().split(/\s+/)[0];
-  return first ? `Hello ${first},` : "Hello,";
+function firstName(name: string | null): string | null {
+  return name?.trim().split(/\s+/)[0] || null;
+}
+
+/** Shared frame for the three learning emails. Pure. */
+export function buildLearningEmail(input: {
+  subject: string;
+  preheader: string;
+  eyebrow: string;
+  headline: string;
+  intro: string;
+  companyName: string;
+  blocks?: EmailBlock[];
+  cta: string;
+}): RenderedEmail {
+  return renderEmail({
+    audience: "founder",
+    subject: input.subject,
+    preheader: input.preheader,
+    context: "Learning path",
+    eyebrow: input.eyebrow,
+    headline: input.headline,
+    intro: input.intro,
+    blocks: input.blocks,
+    primary: { label: input.cta, url: learningUrl() },
+    footer: {
+      reason: `You get this because ${input.companyName} is on the iCapOS founder learning path.`,
+      preferencesUrl: "/founder/settings",
+      lines: ["Educational content only, not legal, tax, or investment advice. No funding guarantees."],
+    },
+  });
 }
 
 async function buildInactivityNudgeEmail(input: {
@@ -39,20 +67,20 @@ async function buildInactivityNudgeEmail(input: {
       return bTime - aTime;
     });
   const resumeModule = inProgress[0] ? moduleById.get(inProgress[0].module_id) : null;
-  const resumeLine = resumeModule
-    ? `Pick up where you left off with "${resumeModule.title}" (${inProgress[0]?.percent_complete ?? 0}% complete).`
-    : "Browse your learning catalog and start your next module when you have a few minutes.";
-
-  const subject = `Your iCapOS learning path — ${daysInactive} days since your last session`;
-  const body = appendLearningEmailFooter(`${greeting(input.founderName)}
-
-You haven't logged in to your learning path in ${daysInactive} days. ${resumeLine}
-
-Company: ${input.companyName}
-
-We're here to help you build investor-readiness skills at your own pace — no funding guarantees.`);
-
-  return { subject, body };
+  const name = firstName(input.founderName);
+  const pct = inProgress[0]?.percent_complete ?? 0;
+  return buildLearningEmail({
+    subject: `Your learning path: ${daysInactive} days since your last session`,
+    preheader: resumeModule ? `Pick up "${resumeModule.title}" where you left off (${pct}% complete).` : "Start your next module when you have a few minutes.",
+    eyebrow: "Learning",
+    headline: resumeModule ? "Pick up where you left off" : "Your next module is waiting",
+    intro: `${name ? `Hi ${name}, y` : "Y"}ou haven't opened your learning path in ${daysInactive} days.`,
+    companyName: input.companyName,
+    blocks: resumeModule
+      ? [{ type: "progress", label: resumeModule.title, value: `${pct}% complete`, percent: pct }]
+      : [{ type: "paragraph", text: "Browse your learning catalog and start your next module when you have a few minutes." }],
+    cta: resumeModule ? "Resume module" : "Browse the catalog",
+  });
 }
 
 async function buildMilestoneCelebrationEmail(input: {
@@ -68,14 +96,16 @@ async function buildMilestoneCelebrationEmail(input: {
       ? `You completed "${moduleTitle}"`
       : "You hit a new learning milestone";
 
-  const subject = "Congratulations on your learning milestone";
-  const body = appendLearningEmailFooter(`${greeting(input.founderName)}
-
-${milestone} for ${input.companyName}. Keep going — consistent learning progress strengthens your investor-readiness story on iCapOS.
-
-Open your learning workspace to continue the next recommended module.`);
-
-  return { subject, body };
+  const name = firstName(input.founderName);
+  return buildLearningEmail({
+    subject: badgeName ? `You earned the "${badgeName}" badge` : "Congratulations on your learning milestone",
+    preheader: `${milestone} for ${input.companyName}. Your next recommended module is ready.`,
+    eyebrow: "Learning · Milestone",
+    headline: `${milestone}`,
+    intro: `${name ? `Nice work, ${name}. ` : "Nice work. "}Consistent learning progress strengthens your investor readiness story on iCapOS.`,
+    companyName: input.companyName,
+    cta: "Continue learning",
+  });
 }
 
 async function buildWeeklyDigestEmail(input: {
@@ -95,18 +125,28 @@ async function buildWeeklyDigestEmail(input: {
   };
   const nextModule = recommendations[0];
 
-  const subject = `Your weekly iCapOS learning summary — ${summary.percentComplete}% complete`;
-  const body = appendLearningEmailFooter(`${greeting(input.founderName)}
-
-Your weekly learning summary for ${input.companyName}:
-- Overall progress: ${summary.percentComplete}% complete
-- Modules completed: ${summary.modulesCompleted}
-- Modules engaged: ${summary.modulesEngaged}
-${nextModule ? `- Next recommended module: ${nextModule.title} — ${nextModule.reason}` : ""}
-
-Sign in to continue your founder academy journey.`);
-
-  return { subject, body };
+  const name = firstName(input.founderName);
+  const blocks: EmailBlock[] = [
+    {
+      type: "stats",
+      items: [
+        { value: `${summary.percentComplete}%`, label: "overall progress" },
+        { value: String(summary.modulesCompleted), label: "modules completed" },
+        { value: String(summary.modulesEngaged), label: "modules engaged" },
+      ],
+    },
+  ];
+  if (nextModule) blocks.push({ type: "note", text: `Next recommended: ${nextModule.title}. ${nextModule.reason}` });
+  return buildLearningEmail({
+    subject: `Your weekly learning summary: ${summary.percentComplete}% complete`,
+    preheader: `${summary.modulesCompleted} completed, ${summary.modulesEngaged} engaged${nextModule ? `. Next: ${nextModule.title}` : ""}.`,
+    eyebrow: "Learning · Weekly",
+    headline: "Your learning this week",
+    intro: `${name ? `Hi ${name}, h` : "H"}ere is your weekly summary for ${input.companyName}.`,
+    companyName: input.companyName,
+    blocks,
+    cta: "Open learning workspace",
+  });
 }
 
 async function buildReminderEmail(
@@ -213,7 +253,7 @@ export async function sendReminder(reminderId: string) {
   }
 
   const companyName = company?.company_name ?? "Your company";
-  const { subject, body } = await buildReminderEmail(
+  const { subject, text, html } = await buildReminderEmail(
     reminder as LearningReminderRecord,
     founder.full_name ?? null,
     companyName,
@@ -222,7 +262,8 @@ export async function sendReminder(reminderId: string) {
   const delivery = await sendTransactionalEmail({
     to: founder.email,
     subject,
-    body,
+    body: text,
+    html,
     founderId: reminder.founder_id,
     notificationType: `learning.${reminder.type}`,
     deepLink: "/founder/learning",

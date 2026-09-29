@@ -19,7 +19,7 @@ export function DepartmentsControls() {
     <div>
       <div style={{ display: "flex", gap: 2, borderBottom: "1px solid #E4E8F0", marginBottom: 18 }}>
         {TABS.map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ padding: "9px 16px", fontSize: 13, fontWeight: 600, color: tab === key ? navy : "#6B7690", background: "none", border: "none", borderBottom: tab === key ? `2px solid ${royal}` : "2px solid transparent", marginBottom: -1, cursor: "pointer" }}>{label}</button>
+          <button type="button" key={key} onClick={() => setTab(key)} style={{ padding: "9px 16px", fontSize: 13, fontWeight: 600, color: tab === key ? navy : "#6B7690", background: "none", border: "none", borderBottom: tab === key ? `2px solid ${royal}` : "2px solid transparent", marginBottom: -1, cursor: "pointer" }}>{label}</button>
         ))}
       </div>
       {tab === "global" && <FeatureControlsClient />}
@@ -144,8 +144,8 @@ function DepartmentMatrix() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: navy, color: "#fff", borderRadius: 10, padding: "10px 16px", marginTop: 12 }}>
           <span style={{ fontSize: 12.5 }}>{changes.length} change{changes.length === 1 ? "" : "s"} staged</span>
           <div style={{ flex: 1 }} />
-          <button onClick={() => data && setDraft({ ...data.grants })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "6px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Discard</button>
-          <button onClick={save} disabled={busy} style={{ background: royal, border: "none", color: "#fff", borderRadius: 8, padding: "6px 15px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{busy ? "Saving…" : "Save changes"}</button>
+          <button type="button" onClick={() => data && setDraft({ ...data.grants })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "6px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Discard</button>
+          <button type="button" onClick={save} disabled={busy} style={{ background: royal, border: "none", color: "#fff", borderRadius: 8, padding: "6px 15px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{busy ? "Saving…" : "Save changes"}</button>
         </div>
       )}
     </div>
@@ -189,7 +189,7 @@ function MembersTab() {
               {depts.map((d) => {
                 const on = u.departmentIds.includes(d.id);
                 return (
-                  <button key={d.id} onClick={() => toggle(u.userId, d.id, !on)} style={{ fontSize: 11.5, fontWeight: 600, borderRadius: 16, padding: "4px 11px", cursor: "pointer", border: on ? `1px solid ${royal}` : "1px solid #E4E8F0", background: on ? "#E8F0FD" : "#fff", color: on ? royal : "#6B7690" }}>
+                  <button type="button" key={d.id} onClick={() => toggle(u.userId, d.id, !on)} style={{ fontSize: 11.5, fontWeight: 600, borderRadius: 16, padding: "4px 11px", cursor: "pointer", border: on ? `1px solid ${royal}` : "1px solid #E4E8F0", background: on ? "#E8F0FD" : "#fff", color: on ? royal : "#6B7690" }}>
                     {on ? <i className="ti ti-check" aria-hidden="true" /> : "+"} {d.name}
                   </button>
                 );
@@ -230,7 +230,7 @@ function AuditTab() {
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button onClick={() => onChange(!on)} aria-pressed={on} style={{ width: 34, height: 19, borderRadius: 10, border: "none", background: on ? "#12A150" : "#D3D9E6", position: "relative", cursor: "pointer" }}>
+    <button type="button" onClick={() => onChange(!on)} aria-pressed={on} style={{ width: 34, height: 19, borderRadius: 10, border: "none", background: on ? "#12A150" : "#D3D9E6", position: "relative", cursor: "pointer" }}>
       <span style={{ position: "absolute", top: 2, left: on ? 17 : 2, width: 15, height: 15, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
     </button>
   );

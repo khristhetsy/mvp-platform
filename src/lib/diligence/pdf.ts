@@ -1,129 +1,147 @@
-// iCFO diligence memo → PDF (§14). Server-only, uses pdfkit (already a repo dep).
-// Role-aware input: pass the output of serializeReport(role). Claims/candor only
-// appear for the admin payload (the serializer drops them for other roles).
+// iCFO diligence report → PDF (§14 v2). Server-only, uses pdfkit (already a repo dep).
+// Role-aware input: pass the output of serializeReport(role). What each recipient
+// sees is decided in report-model.ts (unit-tested); this file only draws it.
 
-import PDFDocument from "pdfkit";
 import type { ReportPayload } from "./serialize";
+import type { DiligenceRole } from "./types";
+import { buildReportModel, type ReportExtras, type ReportModel, type Tone } from "./report-model";
+import { ALERT_INK, M, MUTED, NAVY, RULE, SANS, SANS_B, SERIF, MONO, INK, W, createCanvas, docToBuffer, masthead, newReportDoc, safe } from "./pdf-primitives";
 
-const INK = "#0c1826";
-const BRAND = "#234f86";
-const MUTED = "#5d6b7e";
+export async function renderDiligenceMemoPdf(
+  payload: ReportPayload,
+  role: DiligenceRole,
+  extras: ReportExtras = {},
+): Promise<Buffer> {
+  const model = buildReportModel(payload, role, extras);
+  return renderModel(model);
+}
 
-const sev = (s: unknown) => String(s ?? "").toUpperCase();
+export async function renderModel(model: ReportModel): Promise<Buffer> {
+  const doc = newReportDoc(`Due Diligence Report · ${model.company}`);
+  return docToBuffer(doc, () => {
+    const c = createCanvas(doc);
 
-export async function renderDiligenceMemoPdf(payload: ReportPayload, role: "admin" | "founder" | "investor"): Promise<Buffer> {
-  const eng = payload.engagement as Record<string, unknown>;
-  const company = String(eng.company_name ?? "Company");
-  const reportCode = String(eng.report_code ?? "");
-  const asOf = new Date().toISOString().slice(0, 10);
+    // ── Page 1: masthead ────────────────────────────────────────────────
+    const meta: [string, string][] = [
+      ["Report code", model.reportCode],
+      ["Version", model.versionLabel],
+      ["Generated", model.generatedAt.toISOString().slice(0, 16).replace("T", " ") + " UTC"],
+      ...(model.generatedBy ? ([["Prepared by", model.generatedBy]] as [string, string][]) : []),
+    ];
+    masthead(c, { title: "Due Diligence Report", subtitle: `${model.company} · ${model.audienceLabel}`, meta, titleSize: 26 });
+    c.y -= 2;
 
-  return await new Promise<Buffer>((resolve) => {
-    const doc = new PDFDocument({ margin: 56, size: "LETTER", bufferPages: true });
-    const chunks: Buffer[] = [];
-    doc.on("data", (c) => chunks.push(Buffer.from(c)));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    // Stage tracker
+    c.label("Engagement stage", M, c.y);
+    c.y += 14;
+    const sgap = 5;
+    const sw = (W - sgap * (model.stages.length - 1)) / model.stages.length;
+    model.stages.forEach((s, i) => {
+      const x = M + i * (sw + sgap);
+      doc.roundedRect(x, c.y, sw, 4, 2).fill(i <= model.stageIndex ? "#2F5D8A" : RULE);
+      c.text(s, x, c.y + 8, { size: 7, color: i === model.stageIndex ? NAVY : MUTED, font: i === model.stageIndex ? SANS_B : SANS, width: sw, lineGap: 0 });
+    });
+    c.y += 34;
 
-    const left = doc.page.margins.left;
-    const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
-    const h1 = (t: string) => { doc.moveDown(0.8); doc.font("Helvetica-Bold").fontSize(13).fillColor(BRAND).text(t); doc.moveDown(0.3); doc.fillColor(INK); };
-    const h2 = (t: string) => { doc.moveDown(0.5); doc.font("Helvetica-Bold").fontSize(10.5).fillColor(INK).text(t); doc.moveDown(0.2); };
-    const body = (t: string) => doc.font("Times-Roman").fontSize(10.5).fillColor(INK).text(t, { align: "justify" });
-    const small = (t: string) => doc.font("Helvetica").fontSize(8.5).fillColor(MUTED).text(t);
-    const bullet = (t: string) => doc.font("Times-Roman").fontSize(10).fillColor(INK).text(`•  ${t}`, { indent: 10 });
-
-    // Masthead
-    doc.font("Helvetica-Bold").fontSize(16).fillColor(BRAND).text("iCFO iCapOS");
-    doc.font("Helvetica").fontSize(9).fillColor(MUTED).text("The Capital Readiness Platform · iCFO Venture Group");
-    doc.moveDown(0.6);
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(INK).text(`Diligence Memorandum — ${company}`);
-    doc.font("Helvetica").fontSize(9).fillColor(MUTED).text(
-      [reportCode, eng.round_label, eng.sector].filter(Boolean).join("  ·  ") || reportCode,
-    );
-    doc.moveDown(0.4);
-    doc.strokeColor("#d7dde5").moveTo(left, doc.y).lineTo(left + width, doc.y).stroke();
-
-    // Verdict (only present in admin/investor-when-gated payloads)
-    if (eng.posture || eng.recommendation) {
-      h1("Verdict");
-      if (eng.posture) { h2("Posture"); body(String(eng.posture)); }
-      if (eng.recommendation) { h2("Recommendation"); body(String(eng.recommendation)); }
+    // Verdict + readiness panels
+    const pw = (W - 14) / 2;
+    const v = model.verdict;
+    const recText = v.recommendation ?? v.placeholder;
+    const recFont = v.recommendation ? SERIF : "Times-Italic";
+    const recSize = v.recommendation ? 15 : 13;
+    const postureH = v.posture ? c.height(v.posture, pw - 28, SANS, 8.5) + 6 : 0;
+    const leftH = 18 + c.height(recText, pw - 28, recFont, recSize, 0) + 8 + postureH + 16 + 24;
+    const rightH = 118;
+    const ph = Math.max(leftH, rightH);
+    doc.roundedRect(M, c.y, pw, ph, 8).lineWidth(0.8).strokeColor(RULE).stroke();
+    doc.roundedRect(M + pw + 14, c.y, pw, ph, 8).lineWidth(0.8).strokeColor(RULE).stroke();
+    // left
+    let ly = c.y + 14;
+    c.label("Recommendation", M + 14, ly);
+    ly += 16;
+    c.text(recText, M + 14, ly, { font: recFont, size: recSize, color: v.recommendation ? NAVY : MUTED, width: pw - 28, lineGap: 0 });
+    ly += c.height(recText, pw - 28, recFont, recSize, 0) + 8;
+    if (v.posture) { c.text(v.posture, M + 14, ly, { size: 8.5, width: pw - 28 }); ly += postureH; }
+    const facts = [
+      model.confidence == null ? null : `Confidence ${Math.round(model.confidence)}%`,
+      model.riskLevel == null ? null : `Risk level ${model.riskLevel}`,
+    ].filter(Boolean).join("     ");
+    if (facts) c.text(facts, M + 14, c.y + ph - 22, { size: 8.5, color: MUTED, width: pw - 28, lineGap: 0 });
+    // right
+    const rx = M + pw + 28;
+    const rw = pw - 28;
+    let ry = c.y + 14;
+    if (model.readiness) {
+      c.label("Capital Readiness Rating", rx, ry);
+      ry += 16;
+      const score = model.readiness.score;
+      c.text(score == null ? "Not scored" : String(Math.round(score)), rx, ry, { font: SERIF, size: 26, color: score == null ? "#8A94A6" : NAVY, lineGap: 0 });
+      ry += 34;
+      const bands = [49, 20, 20, 11];
+      let bx = rx;
+      bands.forEach((b, i) => {
+        const bw = (b / 100) * rw - 3;
+        const lo = [0, 50, 70, 90][i];
+        const hi = [49, 69, 89, 100][i];
+        const active = score != null && score >= lo && score <= hi;
+        doc.roundedRect(bx, ry, bw, 6, 2).fill(active ? "#2F5D8A" : "#E8ECF1");
+        c.text(i === 3 ? "90+" : `${lo}-${hi}`, bx, ry + 9, { size: 7, color: MUTED, width: bw, lineGap: 0 });
+        bx += bw + 3;
+      });
+      ry += 24;
+      if (score == null) c.text("Action: founder has not completed the readiness assessment.", rx, ry, { size: 8, color: ALERT_INK, width: rw, lineGap: 0 });
+    } else {
+      const fc = model.findingCounts;
+      c.label("Findings overview", rx, ry);
+      ry += 16;
+      c.text(String(fc.total), rx, ry, { font: SERIF, size: 26, color: NAVY, lineGap: 0 });
+      c.text(`finding${fc.total === 1 ? "" : "s"} disclosed, ${fc.open} open`, rx + 40, ry + 10, { size: 9, color: MUTED, width: rw - 40, lineGap: 0 });
+      ry += 36;
+      let px = rx;
+      ([["High", fc.high, "high"], ["Medium", fc.medium, "medium"], ["Low", fc.low, "low"]] as [string, number, Tone][]).forEach(([l, n, tone]) => {
+        px += c.drawPill(`${n} ${l}`, tone, px, ry) + 6;
+      });
     }
-    h1("Confidence");
-    body(`Verification confidence: ${Math.round(Number(eng.confidence_pct ?? payload.confidence ?? 0))}%.`);
+    c.y += ph + 18;
 
-    // Domains
-    if (payload.domains.length) {
-      h1("Domain assessment");
-      for (const d of payload.domains as Record<string, unknown>[]) {
-        h2(`${d.code ?? ""} — ${d.name ?? ""}${d.risk_rating ? `  (${sev(d.risk_rating)} risk)` : ""}`);
-        if (d.overview) body(String(d.overview));
-        const strengths = Array.isArray(d.strengths) ? (d.strengths as unknown[]) : [];
-        const mitigation = Array.isArray(d.mitigation) ? (d.mitigation as unknown[]) : [];
-        if (strengths.length) { small("Strengths"); strengths.forEach((s) => bullet(String(s))); }
-        if (mitigation.length) { small("Mitigation"); mitigation.forEach((s) => bullet(String(s))); }
-        if (d.conclusion) { small("Conclusion"); body(String(d.conclusion)); }
-      }
-    }
+    c.label("Key metrics", M, c.y);
+    c.y += 14;
+    c.tiles(model.metrics);
 
-    // Appendix A — Findings register
-    h1("Appendix A · Findings register");
-    if (payload.findings.length === 0) small("No findings disclosed.");
-    for (const f of payload.findings as Record<string, unknown>[]) {
-      h2(`${f.finding_code ?? ""} · ${f.title ?? ""}`);
-      small(`Severity ${sev(f.severity)} · Status ${String(f.status ?? "")} · ${String(f.verification ?? "")}`);
-      if (f.detail) body(String(f.detail));
-      if (role === "admin" && f.internal_note) { doc.font("Helvetica-Oblique").fontSize(9).fillColor("#b06a00").text(`Internal note: ${String(f.internal_note)}`); doc.fillColor(INK); }
-    }
+    c.text("What the reader needs to know", M, c.y, { font: SERIF, size: 14, color: NAVY, lineGap: 0 });
+    c.y += 22;
+    model.takeaways.forEach((t, i) => {
+      const body = `${t.title} ${t.body}`;
+      // Measure in the bold face: the title is bold, so this never underestimates the wrap.
+      const h = c.height(body, W - 24, SANS_B, 9.5, 2);
+      c.ensure(h + 6);
+      c.text(String(i + 1).padStart(2, "0"), M, c.y, { font: MONO, size: 9, color: "#2F5D8A", lineGap: 0 });
+      doc.font(SANS_B).fontSize(9.5).fillColor(INK).text(safe(t.title) + " ", M + 24, c.y, { width: W - 24, continued: true, lineGap: 2 });
+      doc.font(SANS).text(safe(t.body), { lineGap: 2 });
+      c.y += h + 6;
+    });
 
-    // Appendix B — Verification ledger (admin only; claims absent otherwise)
-    if (payload.claims && payload.claims.length) {
-      h1("Appendix B · Verification ledger");
-      for (const c of payload.claims as Record<string, unknown>[]) {
-        bullet(`${c.claim ?? ""}${c.claimed_value ? ` — ${c.claimed_value}` : ""}  [${String(c.verification ?? "")}]`);
-      }
-    }
+    // Contents: only sections this recipient actually gets.
+    c.y += 4;
+    c.ensure(30 + Math.ceil(model.sections.length / 2) * 13);
+    c.rule(c.y);
+    c.y += 10;
+    c.label("Contents", M, c.y);
+    c.y += 14;
+    const half = Math.ceil(model.sections.length / 2);
+    model.sections.forEach((s, i) => {
+      const col = i < half ? 0 : 1;
+      const row = col === 0 ? i : i - half;
+      c.text(`${i + 2} · ${s.title}`, M + col * (W / 2 + 10), c.y + row * 13, { size: 9, width: W / 2 - 10, lineGap: 0 });
+    });
 
-    // Appendix C — Conditions
-    if (payload.conditions.length) {
-      h1("Appendix C · Conditions");
-      for (const c of payload.conditions as Record<string, unknown>[]) bullet(`${c.label ?? ""}  [${String(c.status ?? "")}]`);
-    }
-
-    // Appendix D — Founder response & rebuttal
-    if (payload.responses.length) {
-      h1("Appendix D · Founder response & rebuttal");
-      for (const r of payload.responses as Record<string, unknown>[]) {
-        h2(`${Array.isArray(r.finding_codes) ? (r.finding_codes as string[]).join(", ") : ""} · ${String(r.disposition ?? "")}`);
-        body(String(r.body ?? ""));
-        if (role === "admin" && r.icfo_review) small(`iCFO review: ${String(r.icfo_review)}`);
-      }
-    }
-
-    // Appendix E — Data-room request list
-    if (payload.docRequests.length) {
-      h1("Appendix E · Data-room request list");
-      for (const d of payload.docRequests as Record<string, unknown>[]) {
-        bullet(`${d.label ?? ""}  [${String(d.status ?? "")}]${Array.isArray(d.closes_findings) && (d.closes_findings as string[]).length ? ` → ${(d.closes_findings as string[]).join(", ")}` : ""}`);
-      }
-    }
-
-    // Appendix F — Consent & sign-off
-    h1("Appendix F · Consent & sign-off");
-    small("Consent is captured via the iCFO iCapOS in-platform e-signature. Sealed versions are hash-anchored and immutable.");
-
-    // Running header/footer on every page.
-    const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) {
-      doc.switchToPage(range.start + i);
-      const top = doc.page.margins.top - 28;
-      doc.font("Helvetica").fontSize(7.5).fillColor(MUTED);
-      doc.text(`Re: Diligence — ${company}   ·   As of ${asOf}`, left, top, { width, align: "left" });
-      const bottom = doc.page.height - doc.page.margins.bottom + 14;
-      doc.text(`iCFO iCapOS · Confidential${role !== "admin" ? " · Recipient cut" : ""}`, left, bottom, { width, align: "left" });
-      doc.text(`Page ${i + 1} of ${range.count}`, left, bottom, { width, align: "right" });
-    }
-
-    doc.end();
+    // ── Sections, from page 2 ─────────────────────────────────────────────
+    c.newPage();
+    c.sections(model.sections, 2);
+    c.finish({
+      left: `iCapOS · Due Diligence Report · ${model.company}`,
+      right: `${model.reportCode} · ${model.versionLabel}`,
+      footer: `iCFO Capital Global, Inc. · Confidential · ${model.audienceLabel}`,
+    });
   });
 }

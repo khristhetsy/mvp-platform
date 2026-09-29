@@ -7,7 +7,7 @@ import { ReadinessAnalyzer } from "@/components/marketing-site/ReadinessAnalyzer
 export const metadata: Metadata = {
   title: "Capital Readiness Rating — iCapOS",
   description:
-    "A free, structured readiness score across five dimensions investors screen on, with an ordered list of what to fix. Run it with whatever you have today — readiness is what iCapOS produces, not what it requires.",
+    "A structured readiness score across five dimensions investors screen on, with an ordered list of what to fix. Run it with whatever you have today — readiness is what iCapOS produces, not what it requires.",
   alternates: { canonical: "/readiness" },
 };
 

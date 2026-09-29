@@ -47,7 +47,7 @@ const STEP_TIPS: Record<Step, string> = {
   outreach:
     "Automated outreach runs itself once your CRR clears the threshold. Manual outreach is for the investors you want to touch personally — use the tools to build sequences and updates.",
   analytics:
-    "Compare automated vs. manual performance. Click any insight card to see what I'd change next — reply rate and follow-up debt are usually the fastest wins.",
+    "Compare automated vs. manual performance. Click any insight card to see what I'd change next — reply rate and unanswered opens are usually the fastest wins.",
   settings:
     "Decide when I nudge you. Auto-pause on reply keeps a sequence from talking over a live conversation, and the weekly digest rolls everything into one email.",
 };
@@ -118,21 +118,27 @@ function InsightCard({ insight }: { insight: DeployInsight }) {
   );
 }
 
-const TOGGLE_GROUPS: { group: string; items: { key: string; label: string; hint?: string; on: boolean }[] }[] = [
+const TOGGLE_GROUPS: {
+  group: string;
+  description: string;
+  items: { key: string; label: string; hint?: string; recommended?: boolean; on: boolean }[];
+}[] = [
   {
-    group: "Email activity",
+    group: "Email activity alerts",
+    description: "Get notified as investors engage with your outreach. Turn off the ones that feel noisy.",
     items: [
       { key: "sent", label: "When an email is sent", on: true },
       { key: "opened", label: "When an email is opened", on: true },
       { key: "reviewed", label: "When your profile is reviewed", on: true },
-      { key: "responded", label: "When an investor responds", on: true },
+      { key: "responded", label: "When an investor replies", recommended: true, on: true },
     ],
   },
   {
-    group: "Reminders & automation",
+    group: "Reminders and automation",
+    description: "Keeps follow-ups on schedule without talking over a live conversation.",
     items: [
       { key: "followup", label: "Follow-up reminders", hint: "Nudge me when a thread goes quiet", on: true },
-      { key: "autopause", label: "Auto-pause a sequence on reply", hint: "Stop automated sends once someone replies", on: true },
+      { key: "autopause", label: "Auto-pause a sequence on reply", hint: "Stops automated emails once someone answers", recommended: true, on: true },
       { key: "digest", label: "Weekly digest", hint: "One roll-up email every Monday", on: false },
     ],
   },
@@ -227,9 +233,24 @@ function SettingsPanel() {
 
   return (
     <div className="space-y-5">
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-xs leading-relaxed text-indigo-900">
+        <p className="text-sm font-semibold">What this page does</p>
+        <p className="mt-1">
+          These settings control how outreach behaves after you send: which updates you get, when iCapOS nudges you,
+          and who is never contacted. They apply to both automated and manual outreach.
+        </p>
+        <p className="mt-2 font-semibold">How to use it</p>
+        <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+          <li>Keep reply alerts on so you can answer an interested investor the same day.</li>
+          <li>Leave auto-pause on, so a sequence stops the moment someone answers.</li>
+          <li>Add current investors and competitors to the do-not-contact list before your first batch goes out.</li>
+          <li>Press Save changes at the bottom.</li>
+        </ol>
+      </div>
       {TOGGLE_GROUPS.map((g) => (
         <div key={g.group} className="rounded-xl border border-slate-200 bg-white px-4 py-1">
-          <p className="pt-3 pb-1.5 text-sm font-medium text-slate-900">{g.group}</p>
+          <p className="pt-3 text-sm font-medium text-slate-900">{g.group}</p>
+          <p className="pb-2 text-xs text-slate-500">{g.description}</p>
           <div>
             {g.items.map((i) => (
               <div
@@ -237,7 +258,14 @@ function SettingsPanel() {
                 className="flex items-center justify-between gap-4 border-t border-slate-100 py-3 first:border-t-0"
               >
                 <div className="min-w-0">
-                  <p className="text-sm text-slate-700">{i.label}</p>
+                  <p className="text-sm text-slate-700">
+                    {i.label}
+                    {i.recommended ? (
+                      <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        Recommended
+                      </span>
+                    ) : null}
+                  </p>
                   {i.hint ? <p className="mt-0.5 text-xs text-slate-400">{i.hint}</p> : null}
                 </div>
                 <Toggle
@@ -252,9 +280,9 @@ function SettingsPanel() {
       ))}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="text-sm font-medium text-slate-900">Sender identity &amp; do-not-contact</p>
-        <p className="mt-0.5 text-xs text-slate-400">
-          Domains or emails here are suppressed from every automated and manual send. One per line.
+        <p className="text-sm font-medium text-slate-900">Do-not-contact list</p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Anyone listed here is skipped in every automated and manual send. Enter one domain or email per line.
         </p>
         <textarea
           value={doNotContact}
@@ -299,6 +327,7 @@ export function DeployWorkflow({
   automated,
   manual,
   analytics,
+  outreachAnalytics,
 }: {
   companyName: string;
   investableScore: number;
@@ -307,6 +336,8 @@ export function DeployWorkflow({
   automated: ReactNode;
   manual: ReactNode;
   analytics: DeployAnalytics;
+  /** The full analytics view — funnel, segments, follow-up debt, messages. */
+  outreachAnalytics?: ReactNode;
 }) {
   const [step, setStep] = useState<Step>("profile");
   const [otab, setOtab] = useState<OutreachTab>("automated");
@@ -405,6 +436,10 @@ export function DeployWorkflow({
       {/* ---------- STEP 3 · ANALYTICS ---------- */}
       {step === "analytics" ? (
         <div className="space-y-5">
+          {/* What happened after the send — counted from the recipient rows.
+              The two bar groups below stay as the top-of-funnel summary. */}
+          {outreachAnalytics}
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <MiniBars title="Automated outreach" data={analytics.automated} accent="#6366f1" />
             <MiniBars title="Manual outreach" data={analytics.manual} accent="#0ea5e9" />

@@ -5,11 +5,20 @@ import { executeKw, odooConfigured } from "./client";
 
 export interface OdooContactMessage {
   id: number;
-  date: string | null;
+  date: string | null;   // ISO (UTC)
   author: string | null;
   subject: string | null;
   body: string; // plain text
   type: string | null;
+  isNote: boolean; // internal "Log note" (subtype Note) vs an outgoing message
+}
+
+// Odoo datetimes come as "YYYY-MM-DD HH:MM:SS" in UTC with no zone — normalize to ISO
+// so the chatter timeline sorts and displays them correctly.
+function toIso(d: string | false | undefined): string | null {
+  if (!d) return null;
+  const s = String(d).trim();
+  return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s) ? `${s.replace(" ", "T")}Z` : s;
 }
 
 function stripHtml(html: string): string {
@@ -35,16 +44,44 @@ type RawMessage = {
   message_type?: string | false;
   author_id?: [number, string] | false;
   email_from?: string | false;
+  subtype_id?: [number, string] | false;
 };
 
-/** Fetch the most recent chatter messages for an Odoo partner (by res.partner id). */
+const MSG_FIELDS = ["id", "date", "subject", "body", "message_type", "author_id", "email_from", "subtype_id"];
+
+function mapMessage(r: RawMessage): OdooContactMessage {
+  const subtype = (r.subtype_id && r.subtype_id[1]) || "";
+  return {
+    id: r.id,
+    date: toIso(r.date),
+    author: (r.author_id && r.author_id[1]) || (r.email_from || null),
+    subject: r.subject || null,
+    body: r.body ? stripHtml(r.body) : "",
+    type: r.message_type || null,
+    // A chatter entry is an internal "Log note" ONLY when Odoo tagged it with the
+    // Note subtype (mail.mt_note). Everything else — Discussions, emails, and
+    // integration-posted messages that arrive as message_type 'notification' — is a
+    // real message to the contact. (We do NOT key off message_type here: 'notification'
+    // is used for both real outbound mail logged by integrations and for system
+    // tracking, so subtype is the reliable signal.)
+    isNote: /note/i.test(subtype),
+  };
+}
+
+/**
+ * Fetch a partner's chatter. Primary path is a mail.message search on the record
+ * (model=res.partner, res_id). Some chatter — posts authored by an integration, or
+ * left behind after a partner merge/recreate — isn't returned by that search, so we
+ * fall back to reading the partner's own message_ids and loading those records
+ * directly. Read-only, best-effort: any failure yields [].
+ */
 export async function fetchPartnerMessages(externalId: string, limit = 30): Promise<OdooContactMessage[]> {
   if (!odooConfigured() || !externalId) return [];
   const partnerId = Number(externalId);
   if (!Number.isFinite(partnerId)) return [];
 
   try {
-    const rows = await executeKw<RawMessage[]>(
+    let rows = await executeKw<RawMessage[]>(
       "mail.message",
       "search_read",
       [
@@ -52,20 +89,61 @@ export async function fetchPartnerMessages(externalId: string, limit = 30): Prom
           ["model", "=", "res.partner"],
           ["res_id", "=", partnerId],
         ],
-        ["id", "date", "subject", "body", "message_type", "author_id", "email_from"],
+        MSG_FIELDS,
       ],
       { limit, order: "date desc" },
     );
 
-    return (rows ?? []).map((r) => ({
-      id: r.id,
-      date: r.date || null,
-      author: (r.author_id && r.author_id[1]) || (r.email_from || null),
-      subject: r.subject || null,
-      body: r.body ? stripHtml(r.body) : "",
-      type: r.message_type || null,
-    }));
+    // Fallback: read the partner's linked message_ids and load them directly.
+    if (!rows || rows.length === 0) {
+      const partner = await executeKw<Array<{ message_ids?: number[] }>>(
+        "res.partner", "read", [[partnerId], ["message_ids"]],
+      );
+      const ids = (partner?.[0]?.message_ids ?? []).slice(-limit).reverse();
+      if (ids.length) {
+        const read = await executeKw<RawMessage[]>("mail.message", "read", [ids, MSG_FIELDS]);
+        rows = (read ?? []).sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+      }
+    }
+
+    return (rows ?? []).map(mapMessage);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Fetch the chatter on any Odoo record (e.g. crm.lead for an opportunity). Same
+ * mapping as the partner fetch. Read-only, best-effort: any failure yields [].
+ */
+export async function fetchRecordMessages(model: string, resId: number, limit = 50): Promise<OdooContactMessage[]> {
+  if (!odooConfigured() || !Number.isInteger(resId) || resId <= 0) return [];
+  try {
+    const rows = await executeKw<RawMessage[]>(
+      "mail.message",
+      "search_read",
+      [
+        [
+          ["model", "=", model],
+          ["res_id", "=", resId],
+        ],
+        MSG_FIELDS,
+      ],
+      { limit, order: "date desc" },
+    );
+    return (rows ?? []).map(mapMessage);
+  } catch {
+    return [];
+  }
+}
+
+/** Read one Odoo message by id (used before an Odoo note is edited or hidden in iCapOS). */
+export async function fetchMessageById(id: number): Promise<OdooContactMessage | null> {
+  if (!odooConfigured() || !Number.isInteger(id) || id <= 0) return null;
+  try {
+    const rows = await executeKw<RawMessage[]>("mail.message", "read", [[id], MSG_FIELDS]);
+    return rows?.[0] ? mapMessage(rows[0]) : null;
+  } catch {
+    return null;
   }
 }

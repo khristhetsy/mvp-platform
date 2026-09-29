@@ -10,8 +10,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { scoreCompanyReadiness } from "@/lib/ai/readiness-scoring";
-import { rollupToDimensions, scoreForProfile, SCORE_VERSION } from "@/lib/crr/profiles";
+import { loadActiveSet } from "@/lib/crr/weight-sets-db";
+import { scoreColumnsFor } from "@/lib/crr/weight-sets";
 import { writeAuditLog } from "@/lib/data/audit";
+import { stageToProfile } from "@/lib/crr/profiles";
+import { normalizeFundingStage } from "@/lib/crr/select-score";
 
 const schema = z.object({
   companyId: z.string().uuid(),
@@ -48,7 +51,8 @@ export async function POST(request: Request) {
   const { data: documents } = await auth.supabase
     .from("documents")
     .select("document_type, ai_summary")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .neq("status", "archived");
 
   const documentSummaries = (documents ?? [])
     .filter((d) => d.ai_summary && d.document_type)
@@ -80,18 +84,31 @@ export async function POST(request: Request) {
     );
   }
 
-  const outreachUnlocked = result.totalScore >= 65;
+  // The company's own stage decides which of the four point sets scores it — and
+  // therefore what total_score and the outreach gate mean for this company.
+  // funding_stage is on the table (migration 20260803002) but not in the generated types.
+  const { data: stageRow } = await auth.supabase
+    .from("companies").select("funding_stage").eq("id", companyId).maybeSingle();
+  const stageProfile = stageToProfile(
+    normalizeFundingStage((stageRow as unknown as { funding_stage?: string | null } | null)?.funding_stage),
+  );
+
+  // Weighting comes from the active weight set (admin-editable), not constants.
+  const set = await loadActiveSet(auth.supabase);
+  const cols = scoreColumnsFor(result.factorScores, set, stageProfile);
+  const outreachUnlocked = cols.outreach_unlocked;
 
   // Re-weight the 13 factors into the audience profiles (single source of truth:
   // src/lib/crr/profiles.ts). Store every profile so founder surfaces can read the
   // stage-matched score and investor surfaces read the canonical (Series A) one.
-  const dims = rollupToDimensions(result.factorScores);
   const profileScores = {
-    score_angel: scoreForProfile(dims, "angel"),
-    score_seed_institutional: scoreForProfile(dims, "seed_institutional"),
-    score_seriesa_institutional: scoreForProfile(dims, "seriesA_institutional"),
-    score_growth_institutional: scoreForProfile(dims, "growth_institutional"),
-    score_version: SCORE_VERSION,
+    score_angel: cols.score_angel,
+    score_seed_institutional: cols.score_seed_institutional,
+    score_seriesa_institutional: cols.score_seriesa_institutional,
+    score_growth_institutional: cols.score_growth_institutional,
+    score_version: cols.score_version,
+    change_kind: "scored" as const,
+    weight_set_id: set.id,
   };
 
   // Persist
@@ -99,10 +116,10 @@ export async function POST(request: Request) {
     .from("company_readiness_scores")
     .insert({
       company_id: companyId,
-      total_score: result.totalScore,
+      total_score: cols.total_score,
       factor_scores: result.factorScores,
       scored_by: result.generatedBy,
-      document_count: documentSummaries.length,
+      document_count: result.documentsUsed ?? documentSummaries.length,
       outreach_unlocked: outreachUnlocked,
       ...profileScores,
     } as never)

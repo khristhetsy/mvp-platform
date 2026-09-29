@@ -38,7 +38,7 @@ export function HubShell({
         const activeColor = flat ? "#1A6CE4" : "#fff";
         const idleColor = flat ? "var(--muted-foreground)" : "#B7CBEF";
         return (
-          <button
+          <button type="button"
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             style={{

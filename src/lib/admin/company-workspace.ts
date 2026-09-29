@@ -30,6 +30,8 @@ import type { SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/typ
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import type { DocumentRecord } from "@/lib/supabase/types";
+import { crrFor } from "@/lib/crr/crr-for";
+import { diagnoseAllStages } from "@/lib/admin/stage-diagnosis";
 
 const TIMELINE_LIMIT = 25;
 const COMPLIANCE_LIMIT = 10;
@@ -285,10 +287,14 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     factor_scores: unknown;
     created_at: string;
   }>;
+  // The headline figure comes from the one platform reader, so the admin card
+  // shows the company's own-stage CRR under the active weight set — the same
+  // number the founder sees — rather than the stored Series A column.
+  const engineCrr = await crrFor(companyId);
   const investable = investableRows.length > 0
     ? {
         totalScore: investableRows[0].total_score,
-        effectiveScore: investableRows[0].effective_score,
+        effectiveScore: engineCrr.score ?? investableRows[0].effective_score,
         isOverridden: investableRows[0].override_score != null,
         factorScores: (investableRows[0].factor_scores ?? {}) as AdminInvestableFactorScores,
         scoredAt: investableRows[0].created_at,
@@ -384,6 +390,9 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     },
     investable,
     journey: journeyState,
+    // Per-stage diagnosis resolved server-side: the workspace shell is a client
+    // component, so it cannot await this itself.
+    stageDiagnosis: await diagnoseAllStages(companyId, journeyState),
     investorActivity: {
       savedDeals: savedDealsCount.count ?? 0,
       interests: interestsResult.count ?? 0,
@@ -398,6 +407,8 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       openCount: openEvents.length,
       criticalCount: criticalEvents.length,
       highCount: highEvents.length,
+      // Denominator for the ring: open is only meaningful against the total raised.
+      totalCount: complianceEvents.length,
       recentEvents: complianceEvents.slice(0, COMPLIANCE_LIMIT),
       nextAction: nextCompliance ? `Review: ${nextCompliance.title}` : null,
     },

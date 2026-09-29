@@ -89,12 +89,12 @@ export function SuppressionsClient({ suppressions: initial }: { suppressions: Su
         <div>
           <h2 style={S.title}>Suppression list</h2>
           <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>
-            {rows.length} suppressed — emails on this list will not receive any campaigns or sequences
+            {search ? `${filtered.length} of ${rows.length}` : rows.length} suppressed — emails on this list will not receive any campaigns or sequences
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <input style={S.input} placeholder="Search email…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <button style={S.btn("primary")} onClick={() => setShowAdd(true)}>+ Add</button>
+          <button type="button" style={S.btn("primary")} onClick={() => setShowAdd(true)}>+ Add</button>
         </div>
       </div>
 
@@ -123,7 +123,7 @@ export function SuppressionsClient({ suppressions: initial }: { suppressions: Su
                   {new Date(row.unsubscribed_at).toLocaleString()}
                 </td>
                 <td style={{ ...S.td, textAlign: "right" }}>
-                  <button
+                  <button type="button"
                     style={{ ...S.btn("danger"), fontSize: 11, padding: "4px 10px", opacity: removing === row.email ? 0.5 : 1 }}
                     onClick={() => remove(row.email)}
                     disabled={removing === row.email}
@@ -150,8 +150,8 @@ export function SuppressionsClient({ suppressions: initial }: { suppressions: Su
               autoFocus
             />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button style={S.btn("ghost")} onClick={() => setShowAdd(false)}>Cancel</button>
-              <button
+              <button type="button" style={S.btn("ghost")} onClick={() => setShowAdd(false)}>Cancel</button>
+              <button type="button"
                 style={{ ...S.btn("primary"), opacity: saving || !addEmail.includes("@") ? 0.6 : 1 }}
                 onClick={add}
                 disabled={saving || !addEmail.includes("@")}

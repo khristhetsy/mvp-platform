@@ -13,7 +13,7 @@ type Tone = "blue" | "purple" | "amber" | "gray" | "red" | "teal" | "green";
 
 const TONES: Record<Tone, { icon: string; line: string }> = {
   blue: { icon: "#185FA5", line: "#B5D4F4" },
-  purple: { icon: "#534AB7", line: "#CECBF6" },
+  purple: { icon: "#1A6CE4", line: "#CECBF6" },
   amber: { icon: "#BA7517", line: "#FAC775" },
   gray: { icon: "#5F5E5A", line: "#D3D1C7" },
   red: { icon: "#A32D2D", line: "#F0C7C7" },
@@ -29,6 +29,7 @@ export function WorkspaceSection({
   action,
   children,
   className = "",
+  defaultOpen = true,
 }: Readonly<{
   icon: string;
   tone?: Tone;
@@ -37,16 +38,19 @@ export function WorkspaceSection({
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Initial state when the browser has no remembered choice (default open). */
+  defaultOpen?: boolean;
 }>) {
   const c = TONES[tone];
   const storageKey = `cw.section.${title}`;
-  // Default open; hydrate the remembered choice after mount to avoid SSR mismatch.
-  const [open, setOpen] = useState(true);
+  // Default per prop; hydrate the remembered choice after mount to avoid SSR mismatch.
+  const [open, setOpen] = useState(defaultOpen);
 
   useEffect(() => {
     try {
+      const saved = window.localStorage.getItem(storageKey);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate persisted collapse state after mount
-      if (window.localStorage.getItem(storageKey) === "0") setOpen(false);
+      if (saved === "0") setOpen(false); else if (saved === "1") setOpen(true);
     } catch { /* ignore */ }
   }, [storageKey]);
 

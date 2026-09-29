@@ -18,12 +18,14 @@ import { CompanyWorkspaceReportsPanel } from "@/components/admin/company-workspa
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
-import { ReachOutCard } from "@/components/admin/company-workspace/ReachOutCard";
+import { ReachOutPanel } from "@/components/admin/company-workspace/ReachOutPanel";
 import { getStageMirror, stageLabel } from "@/lib/admin/stage-menu-mirror";
 import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
 import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import { CompanyActivityLog } from "@/components/admin/company-workspace/CompanyActivityLog";
+import { SentEmailsClient } from "@/components/admin/activity/SentEmailsClient";
+import { ScheduledReachOuts } from "@/components/admin/company-workspace/ScheduledReachOuts";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
@@ -60,7 +62,6 @@ export function AdminCompanyWorkspace({
   adminRole = "admin",
   riskSignals = [],
   founderContactId = null,
-  canActOnBehalf = false,
   founderCanDistribute = false,
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
@@ -69,17 +70,13 @@ export function AdminCompanyWorkspace({
   adminRole?: NextBestActionRole;
   riskSignals?: RiskSignal[];
   founderContactId?: string | null;
-  canActOnBehalf?: boolean;
   founderCanDistribute?: boolean;
 }>) {
-  const founderId = data.founder?.id ?? null;
   const founderName = data.founder?.full_name ?? data.founder?.email ?? "the founder";
   const founderEmail = data.founder?.email ?? null;
   const companyId = data.company.id;
   // Pending gates for the Onboarding (initialize) stage — the reach-out draft
   // summarizes these, and the count drives the card + banner jump-link.
-  const initMirror = getStageMirror(data.journey, "initialize");
-  const initPendingItems = initMirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
   const t = useTranslations("adminCmp");
   const [tab, setTab] = useState<TabKey>("overview");
 
@@ -148,28 +145,24 @@ export function AdminCompanyWorkspace({
     </WorkspaceSection>
   ) : null;
 
-  // Per-stage "Reach out to founder" card: drafts an email about THAT stage's
-  // pending gates. When a stage is all-clear, show a compact all-good note instead.
-  const reachOutFor = (stage: "initialize" | "qualify" | "deploy" | "optimize") => {
-    const items = getStageMirror(data.journey, stage).items
-      .filter((i) => i.status === "attention" || i.status === "missing")
-      .map((i) => i.label);
-    if (!companyId) return null;
-    return items.length > 0 ? (
-      <ReachOutCard
-        companyId={companyId}
-        founderName={founderName}
-        founderEmail={founderEmail}
-        stageLabel={stageLabel(stage)}
-        pendingItems={items}
-        founderCanDistribute={founderCanDistribute}
-      />
-    ) : (
-      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-medium text-emerald-800">
-        <i className="ti ti-circle-check" aria-hidden="true" /> Nothing pending in {stageLabel(stage)} — no outreach needed right now.
-      </div>
-    );
-  };
+  // "Reach out to founder" for the founder's CURRENT stage, rendered in a section
+  // header. Each stage tab has its own copy in the menu card's header, scoped to
+  // that stage; this is the Overview one.
+  const currentStage = (["initialize", "qualify", "deploy", "optimize"] as const)[data.journey.stageIndex] ?? "qualify";
+  const reachOutAction = companyId ? (
+    <ReachOutPanel
+      companyId={companyId}
+      founderName={founderName}
+      founderEmail={founderEmail}
+      stageLabel={stageLabel(currentStage)}
+      pendingItems={getStageMirror(data.journey, currentStage)
+        .items.filter((i) => i.status === "attention" || i.status === "missing")
+        .map((i) => i.label)}
+      facts={data.stageDiagnosis?.[currentStage]?.facts ?? []}
+      situation={data.stageDiagnosis?.[currentStage]?.situation ?? "blocking"}
+      founderCanDistribute={founderCanDistribute}
+    />
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -224,27 +217,16 @@ export function AdminCompanyWorkspace({
       {/* ---------- OVERVIEW (dashboard, default) ---------- */}
       {tab === "overview" ? (
         <div className="space-y-7">
-          <WorkspaceSection icon="ti-gauge" tone="blue" title="At a glance" subtitle="The company's current health">
+          <WorkspaceSection icon="ti-gauge" tone="blue" title="At a glance" subtitle="The company's current health" action={reachOutAction}>
             <CompanyWorkspaceMetrics data={data} />
           </WorkspaceSection>
 
-          <WorkspaceSection icon="ti-route" tone="purple" title="Where they are" subtitle="Current stage, gates, and what's pending to advance">
+          <WorkspaceSection icon="ti-route" tone="purple" title="Where they are" subtitle="Current stage, gates, and what's pending to advance" action={reachOutAction}>
             <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
           </WorkspaceSection>
 
-          {(companyId && initPendingItems.length > 0) || workflowDependencies.length > 0 || nextBestActions.length > 0 ? (
-            <WorkspaceSection icon="ti-checklist" tone="amber" title="Do next" subtitle="What needs your action">
-              {companyId && initPendingItems.length > 0 ? (
-                <ReachOutCard
-                  companyId={companyId}
-                  founderName={founderName}
-                  founderEmail={founderEmail}
-                  stageLabel={stageLabel("initialize")}
-                  pendingItems={initPendingItems}
-                  founderCanDistribute={founderCanDistribute}
-                />
-              ) : null}
-
+          {workflowDependencies.length > 0 || nextBestActions.length > 0 ? (
+            <WorkspaceSection icon="ti-checklist" tone="amber" title="Do next" subtitle="What needs your action" action={reachOutAction}>
               {workflowDependencies.length > 0 ? (
                 <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("company_workflow_blockers")} />
               ) : null}
@@ -263,15 +245,17 @@ export function AdminCompanyWorkspace({
           ) : null}
 
           <WorkspaceSection icon="ti-list-check" tone="gray" title="Operations" subtitle={t("items_affecting_this_company_across_operatio")}>
-            <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
+            <CompanyQueuesPanel items={data.queueItems} />
           </WorkspaceSection>
 
           {/* Staff controls — review/publish, stage override, and the destructive
               delete all live here on the dashboard (were spread across tabs / page). */}
           <WorkspaceSection icon="ti-settings-bolt" tone="red" title="Company controls" subtitle="Review, stage &amp; account — staff only">
             {reviewMarketplace}
-            {data.founder ? (
-              <>
+          </WorkspaceSection>
+          {data.founder ? (
+            <WorkspaceSection icon="ti-adjustments-alt" tone="amber" title="Override settings" subtitle="Staff-only overrides and irreversible actions — every change is recorded with a reason" defaultOpen={false}>
+              <div className="space-y-4">
                 <FounderStageOverride
                   founderId={data.founder.id}
                   founderName={data.founder.full_name ?? data.founder.email ?? null}
@@ -281,9 +265,9 @@ export function AdminCompanyWorkspace({
                   userName={data.founder.full_name ?? null}
                   userEmail={data.founder.email ?? null}
                 />
-              </>
-            ) : null}
-          </WorkspaceSection>
+              </div>
+            </WorkspaceSection>
+          ) : null}
         </div>
       ) : null}
 
@@ -291,8 +275,7 @@ export function AdminCompanyWorkspace({
       {tab === "initialize" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="initialize" />
-          {reachOutFor("initialize")}
-          <StageMenuMirror journey={data.journey} stage="initialize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="initialize" diagnosis={data.stageDiagnosis?.initialize ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
         </div>
       ) : null}
 
@@ -300,8 +283,7 @@ export function AdminCompanyWorkspace({
       {tab === "qualify" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="qualify" />
-          {reachOutFor("qualify")}
-          <StageMenuMirror journey={data.journey} stage="qualify" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="qualify" diagnosis={data.stageDiagnosis?.qualify ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           <div className="grid gap-6 xl:grid-cols-2">
             <WorkspaceSection icon="ti-chart-line" tone="blue" title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
@@ -330,8 +312,7 @@ export function AdminCompanyWorkspace({
       {tab === "deploy" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="deploy" />
-          {reachOutFor("deploy")}
-          <StageMenuMirror journey={data.journey} stage="deploy" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="deploy" diagnosis={data.stageDiagnosis?.deploy ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investablePanel}
           {investorActivity}
@@ -343,8 +324,7 @@ export function AdminCompanyWorkspace({
       {tab === "optimize" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="optimize" />
-          {reachOutFor("optimize")}
-          <StageMenuMirror journey={data.journey} stage="optimize" founderId={founderId} canActOnBehalf={canActOnBehalf} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="optimize" diagnosis={data.stageDiagnosis?.optimize ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investorActivity}
           {spvOperations}
@@ -369,6 +349,8 @@ export function AdminCompanyWorkspace({
             <AdminCompanyAIAssessment companyId={data.company.id} />
           </WorkspaceSection>
 
+          <ScheduledReachOuts companyId={data.company.id} founderName={founderName} />
+
           <WorkspaceSection icon="ti-timeline" tone="blue" title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
             <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />
           </WorkspaceSection>
@@ -376,6 +358,12 @@ export function AdminCompanyWorkspace({
           <WorkspaceSection icon="ti-history" tone="gray" title="Activity log" subtitle="Reminder & gate activity — click a row to expand">
             <CompanyActivityLog companyId={data.company.id} />
           </WorkspaceSection>
+
+          {data.founder?.id ? (
+            <WorkspaceSection icon="ti-mail" tone="blue" title="Emails sent" subtitle="Every email the platform sent this founder, and whether it was delivered and opened">
+              <SentEmailsClient userId={data.founder.id} compact />
+            </WorkspaceSection>
+          ) : null}
 
           <WorkspaceSection icon="ti-messages" tone="teal" title={t("team_discussion")} subtitle={t("entity_scoped_comments_not_investor_messagin")}>
             <CollaborationDiscussionPanel entityType="company" entityId={data.company.id} title={t("company_discussion")} />

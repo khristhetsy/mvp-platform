@@ -60,7 +60,7 @@ export function SponsorIntroButton({
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="cap-btn-primary inline-flex items-center rounded-md px-4 py-2 text-sm font-medium">
+      <button type="button" onClick={() => setOpen(true)} className="cap-btn-primary inline-flex items-center rounded-md px-4 py-2 text-sm font-medium">
         Request an intro
       </button>
     );
@@ -82,10 +82,10 @@ export function SponsorIntroButton({
       />
       {error && <p className="mt-1 text-sm text-rose-700">{error}</p>}
       <div className="mt-2 flex gap-2">
-        <button onClick={submit} disabled={busy} className="cap-btn-primary rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50">
+        <button type="button" onClick={submit} disabled={busy} className="cap-btn-primary rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50">
           {busy ? "Sending…" : "Send request"}
         </button>
-        <button onClick={() => setOpen(false)} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)]">
+        <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)]">
           Cancel
         </button>
       </div>

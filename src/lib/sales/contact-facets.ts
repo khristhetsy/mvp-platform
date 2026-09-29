@@ -11,6 +11,8 @@
 // scan only runs occasionally. The .rpc() path is kept as a fast path when it
 // happens to work, but we no longer depend on it.
 
+import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
+
 export type ContactFacets = {
   industries: string[];
   capital: string[];
@@ -47,6 +49,8 @@ export function aggregateFacetRows(rows: Array<Record<string, unknown>>): Contac
   }
   const out = { ...EMPTY };
   for (const key of FACET_KEYS) out[key] = Array.from(sets[key]).sort((a, b) => a.localeCompare(b));
+  // Industries use the canonical taxonomy (merges/dedupes, "Other" last).
+  out.industries = sortSectors(canonicalizeIndustries(out.industries));
   out.leadSource = Array.from(leadSources).sort((a, b) => a.localeCompare(b));
   return out;
 }
@@ -57,7 +61,7 @@ function isNonEmpty(f: ContactFacets | null | undefined): f is ContactFacets {
 
 const PAGE = 1000;
 const MAX_PAGES = 60; // safety cap (~60k rows)
-const SELECT = FACET_KEYS.map((k) => `${k}:raw->__profile->${k}`).join(", ") + ", ls_ov:overrides->>lead_source, ls_pr:raw->__profile->>leadSource";
+const SELECT = FACET_KEYS.map((k) => `${k}:profile->${k}`).join(", ") + ", ls_ov:overrides->>lead_source, ls_pr:profile->>leadSource";
 
 // Module-level cache — facet options change rarely (only when Odoo data re-syncs).
 let cache: { at: number; data: ContactFacets } | null = null;
@@ -77,7 +81,7 @@ export async function getContactFilterFacets(db: any, force = false): Promise<Co
     const { data } = await db.rpc("contact_filter_facets");
     if (data && typeof data === "object") {
       const f: ContactFacets = {
-        industries: Array.isArray(data.industries) ? data.industries : [],
+        industries: Array.isArray(data.industries) ? sortSectors(canonicalizeIndustries(data.industries)) : [],
         capital: Array.isArray(data.capital) ? data.capital : [],
         fundingStages: Array.isArray(data.fundingStages) ? data.fundingStages : [],
         investorTypes: Array.isArray(data.investorTypes) ? data.investorTypes : [],

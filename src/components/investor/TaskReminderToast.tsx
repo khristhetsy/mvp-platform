@@ -181,7 +181,7 @@ export function TaskReminderToast() {
         </div>
 
         {/* Dismiss button */}
-        <button
+        <button type="button"
           onClick={() => setDismissed(true)}
           aria-label="Dismiss reminder"
           style={{

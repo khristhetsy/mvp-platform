@@ -3,9 +3,9 @@
  * only — never the full CRR, which is behind the paywall. No account is created.
  */
 export const assessment = {
-  eyebrow: "Free assessment",
+  eyebrow: "Readiness check",
   title: "See your score band.",
-  sub: "Ten quick questions. You'll get the band your company lands in and what it means for reaching investors — no account, no card. Create a free account any time for the full per-dimension rating.",
+  sub: "Ten quick questions. You'll get the band your company lands in and what it means for reaching investors — no account needed. Get started any time for the full per-dimension rating.",
   emailStep: {
     title: "Where should we send your band?",
     sub: "One email, no spam. We'll show your result right here.",
@@ -19,7 +19,7 @@ export const assessment = {
   },
   result: {
     scoreLabel: "Your band",
-    bandNote: "This is a directional band from your answers — the full per-dimension rating is in your free account.",
+    bandNote: "This is a directional band from your answers — the full per-dimension rating is in your account.",
     ctaFallback: "See plans",
     ctaFallbackHref: "/pricing",
     learningNote: "New to the raise? Create your account and choose a plan to unlock the tools and start with the fundamentals.",

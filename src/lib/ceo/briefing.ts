@@ -10,7 +10,8 @@ import { sendEmail } from "@/lib/email/send-email";
 import { computeWeekSnapshots } from "./snapshot";
 import { loadCeoPayload } from "./hub-data";
 import { ensureTodayPhrase } from "./phrase";
-import { status as kpiStatus, deptScore } from "./kpi";
+import { status as kpiStatus, deptScore, formatKpi } from "./kpi";
+import { renderEmail } from "@/lib/email/layout";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return serviceRoleClientUntyped(); }
@@ -118,8 +119,34 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
         const { data: people } = await db().from("profiles").select("email").in("id", ids);
         const emails = ((people ?? []) as Array<{ email: string | null }>).map((p) => p.email).filter((e): e is string => Boolean(e));
         if (emails.length) {
-          const sections = (briefCtx.misses.length ? `<p>${briefCtx.misses.length} KPI(s) below target.</p>` : "");
-          const ok = await sendEmail({ to: emails, subject: `CEO brief — ${today()}`, html: `<h2 style="font-family:sans-serif;color:#0A1A40">${briefHeadline}</h2>${sections}<p><a href="https://icapos.com/admin/ceo">Open the CEO Hub →</a></p>` });
+          const off = withStatus.filter((x) => x.st !== "g");
+          const fmtVal = (v: unknown, fmt: string) => (typeof v === "number" && Number.isFinite(v) ? formatKpi(v, fmt) : "n/a");
+          const cadence = mode === "weekly" ? "Weekly" : "Daily";
+          const mail = renderEmail({
+            audience: "admin",
+            subject: `CEO brief, ${today()}${off.length ? `: ${off.length} KPI${off.length === 1 ? " needs" : "s need"} attention` : ""}`,
+            preheader: briefHeadline,
+            context: `CEO Hub · ${today()}`,
+            eyebrow: `CEO brief · ${cadence}`,
+            headline: briefHeadline,
+            intro: off.length
+              ? `${off.length} KPI${off.length === 1 ? " is" : "s are"} yellow or red. Each has a diagnosis and suggested next steps in the CEO Hub.`
+              : "Every tracked KPI is green.",
+            blocks: off.length
+              ? [{
+                  type: "rows",
+                  title: "Needs attention",
+                  items: off.map((x) => ({
+                    title: x.k.label,
+                    subtitle: [x.st === "r" ? "Red" : "Yellow", x.k.owner ? `Owner: ${x.k.owner}` : null].filter(Boolean).join(" · "),
+                    right: `${fmtVal(x.cur, x.k.fmt)} vs ${fmtVal(x.k.target, x.k.fmt)}`,
+                  })),
+                }]
+              : [],
+            primary: { label: "Open the CEO Hub", url: "/admin/ceo" },
+            footer: { reason: `Internal. Sent to leaders who opted in to the ${cadence.toLowerCase()} CEO brief.` },
+          });
+          const ok = await sendEmail({ to: emails, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" });
           if (ok) emailsSent = emails.length;
         }
       }

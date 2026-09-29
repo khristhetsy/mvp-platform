@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR · Pre-seed rename, factor labels, stage mapping · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 6px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1080px;line-height:1.55}
+.frame{width:1080px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:16px 18px}
+.frame *{box-sizing:border-box}
+.dim{opacity:.55}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 8px}
+.tabs{display:flex;gap:6px;align-items:center}
+.tab{font-size:12.5px;padding:5px 12px;border-radius:8px;border:1px solid transparent;color:#334155}
+.tab.on{background:#4F46E5;color:#fff;font-weight:600}
+.tab.plain{border-color:#D6DDE8}
+.sub{font-size:11.5px;color:#5B6B86;margin:4px 0 0}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:8px 10px;border-bottom:1px solid #E2E7F0}
+td{padding:9px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.co{display:flex;align-items:center;gap:9px}
+.av{width:28px;height:28px;border-radius:8px;background:#EEF0FE;color:#4F46E5;font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:600}
+.red{background:#FDE8E8;color:#B42323}.amb{background:#FFF4DE;color:#9A5B00}.grn{background:#E7F7EE;color:#137A3B}.gry{background:#F1F5F9;color:#64748B}
+.blu{background:#EEF0FE;color:#4F46E5}
+/* old factor bars */
+.bars{display:flex;gap:5px}
+.bar{width:11px;height:24px;background:#F1F5F9;border-radius:2px;position:relative;overflow:hidden}
+.bar i{position:absolute;bottom:0;left:0;right:0;display:block;border-radius:2px}
+/* new factor chips */
+.chips{display:flex;flex-wrap:wrap;gap:4px;max-width:560px}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid #E2E7F0;border-radius:7px;padding:2px 7px;font-size:11px;background:#fff;cursor:pointer;line-height:1.7}
+.chip:hover{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE}
+.chip b{font-variant-numeric:tabular-nums;font-weight:600}
+.chip .dot{width:6px;height:6px;border-radius:99px;flex:none}
+.c-g{color:#137A3B}.c-a{color:#9A5B00}.c-r{color:#B42323}.c-z{color:#94A3B8}
+.d-g{background:#1D9E75}.d-a{background:#E8922A}.d-r{background:#D9534F}.d-z{background:#CBD5E1}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+.pop{width:420px;border:1px solid #D6DDE8;border-radius:12px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.14);padding:14px 16px}
+.kv{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #F1F5F9}
+.map{display:grid;grid-template-columns:150px 22px 1fr 90px;gap:0 10px;align-items:center;font-size:12.5px}
+.map div{padding:7px 0;border-bottom:1px solid #F1F5F9}
+.arrow{color:#94A3B8;text-align:center}
+.warn{border:1px solid #FFE0A8;background:#FFFBF2;border-radius:10px;padding:10px 12px;font-size:12px;color:#7A4A00;margin-top:10px}
+.ok{border:1px solid #BFE8D2;background:#F3FBF6;border-radius:10px;padding:10px 12px;font-size:12px;color:#12693A;margin-top:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.7}
+</style></head><body>
+
+<p class="note"><b>Three changes, no code written yet.</b> (1) the profile tab called “Angel” becomes “Pre-seed”; (2) the Factors column on the Companies tab gets readable labels and numbers instead of thirteen unlabelled bars; (3) the mapping from a founder’s stage to the weighting profile gets stated on screen, because right now it happens silently.</p>
+
+<!-- ─────────────────────────── 1 ─────────────────────────── -->
+<h2>1. Profile tabs — “Angel” → “Pre-seed”</h2>
+<p class="note">Before / after. This is a <b>display label only</b>. The stored key stays <code>angel</code> — it is the name of a database column (<code>score_angel</code>) and it is written into every saved weight-set version and every historical score row. Renaming the key would mean a migration plus rewriting saved history; renaming the label costs one line and changes every screen.</p>
+
+<div class="frame dim" style="margin-bottom:10px">
+  <p class="lbl">Before</p>
+  <div class="tabs">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Profile</span>
+    <span class="tab on">Angel</span><span class="tab">Seed</span>
+    <span class="tab">Series A <span style="font-size:10px;opacity:.7">investor-facing</span></span>
+    <span class="tab">Growth</span>
+  </div>
+</div>
+
+<div class="frame">
+  <p class="lbl">After</p>
+  <div class="tabs">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Profile</span>
+    <span class="tab on">Pre-seed</span><span class="tab">Seed</span>
+    <span class="tab">Series A <span style="font-size:10px;opacity:.7">investor-facing</span></span>
+    <span class="tab">Growth</span>
+  </div>
+  <p class="sub">Also updates: the validation messages (“Pre-seed profile weights total 105…”), the traction-floor card heading (<b>TRACTION FLOOR · PRE-SEED</b>), and the History tab diff rows (“Pre-seed · Team 30→25”).</p>
+</div>
+
+<!-- ─────────────────────────── 2 ─────────────────────────── -->
+<h2>2. Companies tab — Factors with labels and numbers</h2>
+<p class="note">Today the column is thirteen coloured bars, ~11px wide, with the label only in a browser tooltip. You can see that something is red but not <i>what</i>. They are already clickable; the problem is that nothing says so.</p>
+
+<div class="frame dim" style="margin-bottom:10px">
+  <p class="lbl">Before</p>
+  <table>
+    <tr><th>Company</th><th>Score</th><th>Factors</th><th>Outreach</th></tr>
+    <tr>
+      <td><div class="co"><div class="av">BA</div><div><div style="font-weight:600">Brainiest AI Technology</div><div class="sub">SaaS / B2B Software</div></div></div></td>
+      <td><span class="pill red">28</span></td>
+      <td><div class="bars">
+        <span class="bar"><i style="height:45%;background:#E8922A"></i></span><span class="bar"><i style="height:20%;background:#D9534F"></i></span>
+        <span class="bar"><i style="height:30%;background:#D9534F"></i></span><span class="bar"><i style="height:10%;background:#D9534F"></i></span>
+        <span class="bar"><i style="height:10%;background:#D9534F"></i></span><span class="bar"><i style="height:55%;background:#E8922A"></i></span>
+        <span class="bar"><i style="height:25%;background:#D9534F"></i></span><span class="bar"><i style="height:50%;background:#E8922A"></i></span>
+        <span class="bar"><i style="height:80%;background:#1D9E75"></i></span><span class="bar"><i style="height:100%;background:#1D9E75"></i></span>
+        <span class="bar"><i style="height:33%;background:#D9534F"></i></span><span class="bar"><i style="height:100%;background:#1D9E75"></i></span>
+        <span class="bar"><i style="height:100%;background:#1D9E75"></i></span>
+      </div></td>
+      <td><span class="pill gry">Locked</span></td>
+    </tr>
+  </table>
+</div>
+
+<div class="frame">
+  <p class="lbl">After — option A (recommended): labelled chips, wrapped</p>
+  <table>
+    <tr><th>Company</th><th>Score</th><th style="width:560px">Factors <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#B6C0D0">— click one for the detail</span></th><th>Outreach</th></tr>
+    <tr>
+      <td><div class="co"><div class="av">BA</div><div><div style="font-weight:600">Brainiest AI Technology</div><div class="sub">SaaS / B2B Software</div></div></div></td>
+      <td><span class="pill red">28</span><div class="sub">Seed profile</div></td>
+      <td><div class="chips">
+        <span class="chip"><i class="dot d-a"></i>Revenue <b class="c-a">7/15</b></span>
+        <span class="chip"><i class="dot d-r"></i>Traction <b class="c-r">3/13</b></span>
+        <span class="chip"><i class="dot d-r"></i>Team <b class="c-r">3/11</b></span>
+        <span class="chip"><i class="dot d-r"></i>Market <b class="c-r">1/10</b></span>
+        <span class="chip"><i class="dot d-r"></i>Unit econ <b class="c-r">1/10</b></span>
+        <span class="chip"><i class="dot d-a"></i>Governance <b class="c-a">5/9</b></span>
+        <span class="chip"><i class="dot d-r"></i>IP moat <b class="c-r">2/8</b></span>
+        <span class="chip"><i class="dot d-a"></i>Runway <b class="c-a">4/8</b></span>
+        <span class="chip"><i class="dot d-g"></i>Exit <b class="c-g">6/7</b></span>
+        <span class="chip"><i class="dot d-g"></i>Pitch <b class="c-g">4/4</b></span>
+        <span class="chip"><i class="dot d-r"></i>Deal terms <b class="c-r">1/3</b></span>
+        <span class="chip"><i class="dot d-g"></i>Industry fit <b class="c-g">1/1</b></span>
+        <span class="chip"><i class="dot d-g"></i>ESG <b class="c-g">1/1</b></span>
+      </div></td>
+      <td><span class="pill gry">Locked</span></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CF</div><div><div style="font-weight:600">CCREP F1</div><div class="sub">Real Estate</div></div></div></td>
+      <td><span class="pill red">11</span><div class="sub">Pre-seed profile</div></td>
+      <td><div class="chips">
+        <span class="chip"><i class="dot d-r"></i>Revenue <b class="c-r">2/15</b></span>
+        <span class="chip"><i class="dot d-z"></i>Traction <b class="c-z">0/13</b></span>
+        <span class="chip"><i class="dot d-r"></i>Team <b class="c-r">2/11</b></span>
+        <span class="chip"><i class="dot d-z"></i>Market <b class="c-z">0/10</b></span>
+        <span class="chip"><i class="dot d-z"></i>Unit econ <b class="c-z">0/10</b></span>
+        <span class="chip"><i class="dot d-r"></i>Governance <b class="c-r">1/9</b></span>
+        <span class="chip"><i class="dot d-z"></i>IP moat <b class="c-z">0/8</b></span>
+        <span class="chip"><i class="dot d-r"></i>Runway <b class="c-r">1/8</b></span>
+        <span class="chip"><i class="dot d-a"></i>Exit <b class="c-a">3/7</b></span>
+        <span class="chip"><i class="dot d-g"></i>Pitch <b class="c-g">4/4</b></span>
+        <span class="chip"><i class="dot d-z"></i>Deal terms <b class="c-z">0/3</b></span>
+        <span class="chip"><i class="dot d-z"></i>Industry fit <b class="c-z">0/1</b></span>
+        <span class="chip"><i class="dot d-z"></i>ESG <b class="c-z">0/1</b></span>
+      </div></td>
+      <td><span class="pill gry">Locked</span></td>
+    </tr>
+  </table>
+  <p class="sub">Short names in the chip, full name in the popup. Grey means the factor scored zero — worth distinguishing from red, because zero usually means “no document to read”, not “read it and it was bad”. Rows get taller (two chip lines at this width); the Factors column already hides below <code>lg</code> and would keep doing so.</p>
+</div>
+
+<div class="frame" style="margin-top:10px">
+  <p class="lbl">After — option B: the row stays one line, factors expand underneath</p>
+  <table>
+    <tr><th>Company</th><th>Score</th><th>Factors</th><th>Outreach</th></tr>
+    <tr>
+      <td><div class="co"><div class="av">CS</div><div><div style="font-weight:600">COGNITIVE SCIENCE &amp; SOLUTIONS, INC</div><div class="sub">SaaS / B2B Software</div></div></div></td>
+      <td><span class="pill amb">34</span></td>
+      <td><span style="font-size:12px;color:#334155">4 strong · 3 partial · <b style="color:#B42323">6 weak</b></span>
+        <span class="chip" style="margin-left:8px">Show all 13 ▾</span></td>
+      <td><span class="pill gry">Locked</span></td>
+    </tr>
+    <tr><td colspan="4" style="background:#FAFBFD">
+      <div class="chips" style="max-width:none">
+        <span class="chip"><i class="dot d-a"></i>Revenue &amp; Cash Flow <b class="c-a">8/15</b></span>
+        <span class="chip"><i class="dot d-a"></i>Customer Traction &amp; LOIs <b class="c-a">6/13</b></span>
+        <span class="chip"><i class="dot d-g"></i>Founder &amp; Team <b class="c-g">9/11</b></span>
+        <span class="chip"><i class="dot d-r"></i>Market Evidence <b class="c-r">2/10</b></span>
+        <span class="chip"><i class="dot d-r"></i>Unit Economics <b class="c-r">3/10</b></span>
+        <span class="chip"><i class="dot d-g"></i>Governance &amp; Legal <b class="c-g">7/9</b></span>
+        <span class="chip"><i class="dot d-r"></i>IP &amp; Moat <b class="c-r">2/8</b></span>
+        <span class="chip"><i class="dot d-r"></i>Burn &amp; Runway <b class="c-r">2/8</b></span>
+        <span class="chip"><i class="dot d-a"></i>Exit Strategy <b class="c-a">4/7</b></span>
+        <span class="chip"><i class="dot d-g"></i>Pitch Quality <b class="c-g">4/4</b></span>
+        <span class="chip"><i class="dot d-r"></i>Deal Structure <b class="c-r">1/3</b></span>
+        <span class="chip"><i class="dot d-g"></i>Industry Fit <b class="c-g">1/1</b></span>
+        <span class="chip"><i class="dot d-r"></i>Impact / ESG <b class="c-r">0/1</b></span>
+      </div>
+    </td></tr>
+  </table>
+  <p class="sub">Keeps the table scannable at 22 rows and has room for full factor names — but costs a click before you can see anything. A is better if you usually look at one or two companies; B is better if you scroll the whole list.</p>
+</div>
+
+<h2 style="font-size:14px">The detail popup, reached by clicking a chip</h2>
+<p class="note">This already exists and already shows sub-scores, evidence and flags — it is just hard to discover today. Two additions: the company name in the header (so it is obvious whose detail this is), and a link through to the company.</p>
+<div class="pop">
+  <div style="display:flex;justify-content:space-between;align-items:start">
+    <div>
+      <div style="font-size:13.5px;font-weight:600">Customer Traction &amp; LOIs</div>
+      <div class="sub">Brainiest AI Technology · Traction · max 13 pts</div>
+    </div>
+    <span class="pill red">3 / 13</span>
+  </div>
+  <div style="margin-top:10px">
+    <div class="kv"><span>Paying customers documented</span><b>0 / 5</b></div>
+    <div class="kv"><span>LOIs, pilots or waitlist evidence</span><b>1 / 4</b></div>
+    <div class="kv"><span>Retention / usage metrics</span><b>0 / 2</b></div>
+    <div class="kv" style="border:0"><span>Named reference customers</span><b>2 / 2</b></div>
+  </div>
+  <div class="warn" style="margin-top:10px"><b>Missing traction evidence.</b> No customer contracts or pilot agreements in the data room. This is the single largest gap against the Seed profile.</div>
+  <div style="margin-top:10px;display:flex;gap:8px">
+    <span class="chip">Open company ↗</span><span class="chip">Re-score</span><span class="chip">Close</span>
+  </div>
+</div>
+
+<!-- ─────────────────────────── 3 ─────────────────────────── -->
+<h2>3. Stage → profile, said out loud</h2>
+<p class="note">The mapping you described is <b>already what the code does</b> — it reads <code>companies.funding_stage</code>, normalises it, and picks the profile. What is missing is that no screen says so, so the Weights tab looks like four abstract presets rather than four real cohorts. This adds a mapping strip under the profile tabs and a count of who is actually in each.</p>
+
+<div class="frame">
+  <div class="tabs">
+    <span style="font-size:12px;color:#5B6B86;margin-right:6px">Profile</span>
+    <span class="tab on">Pre-seed</span><span class="tab">Seed</span>
+    <span class="tab">Series A <span style="font-size:10px;opacity:.7">investor-facing</span></span>
+    <span class="tab">Growth</span>
+    <span style="margin-left:auto;font-size:11.5px;color:#94A3B8">Active <code>crr-profiles-v1</code></span>
+  </div>
+
+  <div style="margin-top:12px;border:1px solid #E2E7F0;border-radius:10px;padding:12px 14px">
+    <p class="lbl" style="margin-bottom:6px">Which founders are scored with which profile</p>
+    <div class="map">
+      <div style="font-weight:600">Pre-seed</div><div class="arrow">→</div><div>Angel round — friends &amp; family, angels, pre-seed funds</div><div style="text-align:right"><span class="pill blu">6 companies</span></div>
+      <div style="font-weight:600">Seed</div><div class="arrow">→</div><div>Seed round — institutional seed funds</div><div style="text-align:right"><span class="pill blu">11 companies</span></div>
+      <div style="font-weight:600">Series A</div><div class="arrow">→</div><div>Series A round <span style="color:#94A3B8">· also the single profile every investor-facing screen uses, so companies stay comparable</span></div><div style="text-align:right"><span class="pill blu">4 companies</span></div>
+      <div style="font-weight:600;border:0">Growth</div><div class="arrow" style="border:0">→</div><div style="border:0">Expansion, Series B or Series C</div><div style="text-align:right;border:0"><span class="pill blu">1 company</span></div>
+    </div>
+    <p class="sub" style="margin-top:8px">Taken from each company&rsquo;s <b>Funding stage</b>. A founder who has not set one is scored as Seed. Change a company&rsquo;s stage and its score moves to that profile at the next re-score.</p>
+  </div>
+
+  <div class="ok">
+    <b>What a founder sees vs. what an investor sees.</b> The founder&rsquo;s own score uses their stage profile — a pre-seed founder is not judged on Series A traction weights. Investor-facing surfaces all read the Series A profile instead, so one company can be compared to another. Both numbers are already stored per company; nothing is recomputed.
+  </div>
+
+  <div class="warn">
+    <b>One thing to fix while we are here.</b> There are two copies of this mapping. The canonical one (<code>normalizeFundingStage</code>) understands “pre-seed”, “preseed”, “idea”, “angel”, “series-b/c/d”, “growth”, “expansion”, “bridge”, “pre-IPO”. The weights preview (<code>weight-sets-db.ts</code>) has its own shorter version that matches on <code>stage.includes("a")</code> — so a company whose stage is written “Angel” lands in the wrong bucket in the impact preview. The fix is to delete the second copy and call the first.
+  </div>
+</div>
+
+<!-- ─────────────────────────── scope ─────────────────────────── -->
+<h2>What each one costs</h2>
+<div class="frame">
+  <div class="two">
+    <div>
+      <p class="lbl">Small</p>
+      <ul class="tight">
+        <li><b>Pre-seed rename</b> — one label map, plus the traction-floor heading. No migration, no data change.</li>
+        <li><b>Stage mapping strip</b> — the counts come from a query already being run; the mapping text is static.</li>
+        <li><b>Delete the duplicate mapping</b> — replace nine lines with a call to the existing function, and add the case it gets wrong to the test file.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="lbl">Needs a decision from you</p>
+      <ul class="tight">
+        <li><b>Option A or B</b> for the Factors column. A makes every row ~2 lines taller across 22 companies; B keeps the table tight but hides the numbers behind a click.</li>
+        <li><b>Short names.</b> A chip cannot hold “Revenue &amp; Cash Flow Trajectory”. Option A needs a short label per factor — a second name alongside the existing one. Option B has room for the full names.</li>
+        <li><b>“View the detail”</b> — I read that as the existing factor popup, now obviously clickable. If you meant jump to the company&rsquo;s own page instead, say so and the chip becomes a link.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</body></html>

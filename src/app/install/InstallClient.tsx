@@ -115,7 +115,7 @@ export function InstallClient() {
           const isOpen = open === c.id;
           return (
             <section key={c.id} style={isOpen ? cardOpen : card}>
-              <button
+              <button type="button"
                 onClick={() => setOpen(isOpen ? ("" as CardId) : c.id)}
                 aria-expanded={isOpen}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "18px 20px", background: "none", border: "none", cursor: "pointer", fontSize: "1.05rem", fontWeight: 600, color: NAVY, textAlign: "left" }}
@@ -130,7 +130,7 @@ export function InstallClient() {
               {isOpen && (
                 <div style={{ padding: "4px 20px 22px" }}>
                   {promptEvent && c.id !== "ios" && (
-                    <button
+                    <button type="button"
                       onClick={install}
                       style={{ width: "100%", margin: "14px 0 4px", padding: 14, border: "none", borderRadius: 12, cursor: "pointer", background: `linear-gradient(90deg, ${NAVY}, ${ROYAL})`, color: "#fff", fontSize: "1rem", fontWeight: 600, letterSpacing: ".01em" }}
                     >

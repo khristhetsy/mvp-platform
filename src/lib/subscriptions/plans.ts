@@ -15,7 +15,9 @@ export type SubscriptionStatus =
   | "expired"
   | "canceled"
   | "free"
-  | "internal";
+  | "internal"
+  /** New founder, signed up but checkout not finished. No paid entitlements. */
+  | "pending_payment";
 
 export type FeatureKey =
   | "dashboard"
@@ -55,7 +57,8 @@ export type SubscriptionRecord = {
   ls_customer_id:     string | null;
   ls_subscription_id: string | null;
   ls_variant_id:      string | null;
-  // Stripe (legacy, kept for audit)
+  // Stripe columns: unused since the move to Lemon Squeezy; kept only because
+  // the database still has them. Nothing reads or writes them.
   stripe_customer_id:     string | null;
   stripe_subscription_id: string | null;
   stripe_price_id:        string | null;
@@ -69,11 +72,13 @@ export type SubscriptionRecord = {
 export const FREE_RETIRED_AT = "2026-09-05T00:00:00Z";
 
 export const PLAN_LABELS: Record<PlanType, string> = {
-  founder_free: "Free (grandfathered)",
+  // Whether an account is genuinely grandfathered lives on the row, not in the
+  // label — use planLabelFor() so the two can never disagree.
+  founder_free: "Free",
   founder_trial: "Free (legacy)",
   founder_basic: "Basic",
   founder_professional: "Professional",
-  founder_managed_ir: "Managed IR",
+  founder_managed_ir: "SPV Program",
   investor_free: "Investor Free",
   investor_pro: "Investor Pro",
   investor_premium: "Investor Premium",
@@ -83,8 +88,8 @@ export const PLAN_LABELS: Record<PlanType, string> = {
 export const PLAN_PRICES: Record<PlanType, number> = {
   founder_free: 0,
   founder_trial: 0,
-  founder_basic: 49900,
-  founder_professional: 100000,
+  founder_basic: 4900,
+  founder_professional: 19900,
   founder_managed_ir: 350000,
   investor_free: 0,
   investor_pro: 50000,
@@ -128,55 +133,45 @@ export type SignupPlanOption = {
   contactSales?: boolean;
 };
 
+// Free is NOT here. It was discontinued for new signups when Basic launched at
+// $49 (16 Sep 2026); existing accounts keep it via subscriptions.is_grandfathered.
+// Re-adding it here would auto-grant free accounts again — see isAutoGrantSignupPlan.
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
-  {
-    planType: "founder_free",
-    title: "Free",
-    priceLabel: "$0",
-    priceSubtext: "Readiness",
-    badge: "Start here",
-    features: [
-      "All tools: CRR, valuation, data room, e-learning",
-      "See that matches exist — count, sector, fit tier",
-      "Investor identities hidden · no distribution",
-      "Your qualification layer, prescored for you",
-    ],
-  },
   {
     planType: "founder_basic",
     title: "Basic",
-    priceLabel: "$499",
+    priceLabel: "$49",
     priceSubtext: "/month",
     paidPlan: true,
     features: [
-      "Everything in Free",
-      "Up to 25 matched investors receive your one-pager",
-      "Event spotlight",
+      "All tools: CRR, valuation, data room, e-learning",
+      "Up to 5 matched investors receive your one-pager",
+      "Attend the Investor Conference Virtual Event",
       "DIY outreach unlocked — you can now reach investors",
+      "Up to 5 intro requests a month, through iCFO",
       "Fully self-serve",
     ],
   },
   {
     planType: "founder_professional",
     title: "Professional",
-    priceLabel: "$1,000",
+    priceLabel: "$199",
     priceSubtext: "/month",
     badge: "Most popular",
     paidPlan: true,
     features: [
       "Everything in Basic",
-      "Up to 100 investors",
-      "Monthly presentation slot",
-      "Brokered intro requests",
-      "Additional company accounts $800/mo",
+      "Up to 50 investors",
+      "Monthly live presentation slot",
+      "Up to 20 intro requests a month",
       "Self-serve, with a call available",
     ],
   },
   {
     planType: "founder_managed_ir",
-    title: "Managed IR",
-    priceLabel: "$3,500",
-    priceSubtext: "/month · 3-month minimum",
+    title: "SPV Program",
+    priceLabel: "Pricing on request",
+    priceSubtext: "3-month minimum",
     contactSales: true,
     features: [
       "Done-for-you investor relations",
@@ -204,7 +199,8 @@ export const SIGNUP_INVESTOR_PLAN: SignupPlanOption = {
 };
 
 const SIGNUP_PLAN_TYPES = new Set<PlanType>([
-  "founder_free",
+  // founder_free deliberately absent — a crafted ?plan=founder_free must not
+  // re-open the discontinued tier.
   "founder_basic",
   "founder_professional",
   "investor_free",
@@ -227,5 +223,22 @@ export function isAutoGrantSignupPlan(role: "founder" | "investor", planType: Pl
     return planType === "investor_free";
   }
 
-  return planType === "founder_free";
+  // Founders have no free tier to auto-grant — every founder plan goes through
+  // checkout. This returning true for founder_free is what let new signups skip
+  // payment entirely.
+  return false;
+}
+
+/**
+ * Plan label for one account.
+ *
+ * The plan type alone can't say whether free access is legitimate: the label
+ * used to read "Free (grandfathered)" for every free row, including accounts
+ * created after the tier was discontinued. This reads the stored flag instead.
+ */
+export function planLabelFor(planType: PlanType, isGrandfathered = false): string {
+  if (planType === "founder_free") {
+    return isGrandfathered ? "Free (grandfathered)" : "Free — discontinued tier";
+  }
+  return PLAN_LABELS[planType];
 }

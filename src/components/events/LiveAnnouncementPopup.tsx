@@ -41,7 +41,7 @@ export function LiveAnnouncementPopup() {
               Join now ↗
             </Link>
           )}
-          <button
+          <button type="button"
             onClick={dismissAnnouncement}
             className="w-full rounded-lg border px-4 py-2 text-sm"
             style={{ borderColor: "#d8dce1", color: "#5b6470" }}

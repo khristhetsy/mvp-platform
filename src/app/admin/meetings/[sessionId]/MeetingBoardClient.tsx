@@ -83,7 +83,7 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
 
       <div style={{ display: "flex", gap: 4, borderBottom: "0.5px solid var(--border)", marginBottom: 16, flexWrap: "wrap" }}>
         {FLOW_TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 14px", fontSize: 12.5, background: "none", border: "none", cursor: "pointer", color: tab === t.key ? BLUE : MUTED, fontWeight: tab === t.key ? 600 : 400, borderBottom: tab === t.key ? `2px solid ${BLUE}` : "2px solid transparent" }}>{t.label}</button>
+          <button type="button" key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 14px", fontSize: 12.5, background: "none", border: "none", cursor: "pointer", color: tab === t.key ? BLUE : MUTED, fontWeight: tab === t.key ? 600 : 400, borderBottom: tab === t.key ? `2px solid ${BLUE}` : "2px solid transparent" }}>{t.label}</button>
         ))}
       </div>
 
@@ -192,7 +192,7 @@ function DepartmentsTab({ sessionId, sections, entries, deptNames }: { sessionId
     <div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
         {keys.map((k) => (
-          <button key={k} onClick={() => setActive(k)} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: active === k ? "none" : "0.5px solid var(--border)", background: active === k ? BLUE : "#fff", color: active === k ? "#fff" : NAVY, cursor: "pointer", fontWeight: active === k ? 600 : 400 }}>{label(k)}</button>
+          <button type="button" key={k} onClick={() => setActive(k)} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: active === k ? "none" : "0.5px solid var(--border)", background: active === k ? BLUE : "#fff", color: active === k ? "#fff" : NAVY, cursor: "pointer", fontWeight: active === k ? 600 : 400 }}>{label(k)}</button>
         ))}
       </div>
       {active !== "__general__" && (
@@ -239,10 +239,10 @@ function MeetingLifecycleControls({ sessionId, status, startedAt, isAdmin }: { s
     <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <span style={{ fontSize: 10.5, fontWeight: 600, background: tone.bg, color: tone.c, borderRadius: 6, padding: "3px 9px" }}>{tone.l}</span>
       {isAdmin && !live && !closed && (
-        <button onClick={() => void run("start")} disabled={busy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "start" ? "Starting…" : "▶ Start meeting"}</button>
+        <button type="button" onClick={() => void run("start")} disabled={busy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "start" ? "Starting…" : "▶ Start meeting"}</button>
       )}
       {isAdmin && live && !closed && (
-        <button onClick={() => void run("close")} disabled={busy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "close" ? "Closing…" : "■ Close meeting"}</button>
+        <button type="button" onClick={() => void run("close")} disabled={busy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "close" ? "Closing…" : "■ Close meeting"}</button>
       )}
       {msg && <span style={{ fontSize: 11.5, color: MUTED }}>{msg}</span>}
     </div>
@@ -282,8 +282,8 @@ function MeetingScheduleControls({ sessionId, date, time }: { sessionId: string;
     return (
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "#FCEBEB", border: "0.5px solid #F0C7C7", borderRadius: 8, padding: "8px 12px" }}>
         <span style={{ fontSize: 12, color: "#A32D2D" }}><i className="ti ti-alert-triangle" aria-hidden="true" /> Delete this meeting? Its agenda entries and tasks are removed too. This can&rsquo;t be undone.</span>
-        <button onClick={() => void del()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>{busy ? "Deleting…" : "Delete"}</button>
-        <button onClick={() => setConfirm(false)} disabled={busy} style={{ fontSize: 12, color: MUTED, background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+        <button type="button" onClick={() => void del()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>{busy ? "Deleting…" : "Delete"}</button>
+        <button type="button" onClick={() => setConfirm(false)} disabled={busy} style={{ fontSize: 12, color: MUTED, background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
       </div>
     );
   }
@@ -293,16 +293,16 @@ function MeetingScheduleControls({ sessionId, date, time }: { sessionId: string;
         <input type="date" value={d} onChange={(e) => setD(e.target.value)} style={inp} />
         <input type="time" value={t} onChange={(e) => setT(e.target.value)} aria-label="Meeting time" style={inp} />
         <span style={{ fontSize: 12, color: MUTED }} title="Pacific Time">{tzAbbr()}</span>
-        <button onClick={() => void save()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 13px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
-        <button onClick={() => { setEditing(false); setD(date); setT(time ?? "09:00"); }} disabled={busy} style={{ fontSize: 12.5, color: MUTED, background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+        <button type="button" onClick={() => void save()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 13px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
+        <button type="button" onClick={() => { setEditing(false); setD(date); setT(time ?? "09:00"); }} disabled={busy} style={{ fontSize: 12.5, color: MUTED, background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
         {err && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{err}</span>}
       </div>
     );
   }
   return (
     <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-      <button onClick={() => { setErr(null); setEditing(true); }} style={outline}><i className="ti ti-edit" aria-hidden="true" /> Edit schedule</button>
-      <button onClick={() => setConfirm(true)} style={{ ...outline, color: "#A32D2D", borderColor: "#F0C7C7" }}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
+      <button type="button" onClick={() => { setErr(null); setEditing(true); }} style={outline}><i className="ti ti-edit" aria-hidden="true" /> Edit schedule</button>
+      <button type="button" onClick={() => setConfirm(true)} style={{ ...outline, color: "#A32D2D", borderColor: "#F0C7C7" }}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
     </div>
   );
 }
@@ -359,9 +359,9 @@ function GoogleMeetBar({ sessionId, meetLink }: { sessionId: string; meetLink: s
       {link ? (
         <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#185FA5", borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>▷ Join Google Meet</a>
       ) : (
-        <button onClick={() => void push()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Adding…" : "Add Google Meet"}</button>
+        <button type="button" onClick={() => void push()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Adding…" : "Add Google Meet"}</button>
       )}
-      {link && <button onClick={() => void push()} disabled={busy} title="Re-sync to Google" style={{ fontSize: 11.5, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>↻ Sync</button>}
+      {link && <button type="button" onClick={() => void push()} disabled={busy} title="Re-sync to Google" style={{ fontSize: 11.5, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>↻ Sync</button>}
       {err && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{err}</span>}
     </div>
   );
@@ -435,17 +435,17 @@ function SectionCard({ sessionId, section, entry }: { sessionId: string; section
       </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: "#185FA5" }}><i className="ti ti-sparkles" aria-hidden="true" /> AI</span>
-        <button onClick={() => void assist("draft")} disabled={ai !== null} style={aiBtn}>{ai === "draft" ? "Drafting…" : "Draft"}</button>
-        <button onClick={() => void assist("polish")} disabled={ai !== null || !content.trim()} style={aiBtn}>{ai === "polish" ? "Polishing…" : "Polish"}</button>
-        <button onClick={() => void assist("points")} disabled={ai !== null} style={aiBtn}>{ai === "points" ? "Thinking…" : "Talking points"}</button>
+        <button type="button" onClick={() => void assist("draft")} disabled={ai !== null} style={aiBtn}>{ai === "draft" ? "Drafting…" : "Draft"}</button>
+        <button type="button" onClick={() => void assist("polish")} disabled={ai !== null || !content.trim()} style={aiBtn}>{ai === "polish" ? "Polishing…" : "Polish"}</button>
+        <button type="button" onClick={() => void assist("points")} disabled={ai !== null} style={aiBtn}>{ai === "points" ? "Thinking…" : "Talking points"}</button>
       </div>
       <textarea value={content} onChange={(e) => setContent(e.target.value)} onBlur={() => { if (content !== entry.content) void save({ content }); }}
         rows={4} placeholder={`${section.title} — journal / prep notes`} style={{ width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", resize: "vertical" }} />
       <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <button onClick={() => void save({ content })} style={btn("#F1EFE8", NAVY)}>Save</button>
-        <button onClick={() => setStatusAndSave("draft")} style={btn("#FAEEDA", "#854F0B")}>Mark draft</button>
-        <button onClick={() => setStatusAndSave("ready")} style={btn("#E1F5EE", "#0F6E56")}>Mark ready</button>
-        <button onClick={() => void loadVersions()} style={{ ...btn("transparent", MUTED), border: "0.5px solid var(--border)" }}>{versions ? "Hide history" : "History"}</button>
+        <button type="button" onClick={() => void save({ content })} style={btn("#F1EFE8", NAVY)}>Save</button>
+        <button type="button" onClick={() => setStatusAndSave("draft")} style={btn("#FAEEDA", "#854F0B")}>Mark draft</button>
+        <button type="button" onClick={() => setStatusAndSave("ready")} style={btn("#E1F5EE", "#0F6E56")}>Mark ready</button>
+        <button type="button" onClick={() => void loadVersions()} style={{ ...btn("transparent", MUTED), border: "0.5px solid var(--border)" }}>{versions ? "Hide history" : "History"}</button>
       </div>
       {versions && (
         <div style={{ marginTop: 10, borderTop: "0.5px solid #F1F4F9", paddingTop: 8 }}>

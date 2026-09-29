@@ -50,14 +50,14 @@ export function CampaignsClient({ initialSchedule, initialResults, initialRomi }
 
       <div style={{ display: "flex", gap: 14, borderBottom: "0.5px solid var(--border)", marginBottom: 16 }}>
         {(["schedule", "results"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} style={{ paddingBottom: 8, fontSize: 12.5, background: "none", border: "none", cursor: "pointer", textTransform: "capitalize", color: tab === t ? BLUE : MUTED, fontWeight: tab === t ? 600 : 400, borderBottom: tab === t ? `2px solid ${BLUE}` : "2px solid transparent" }}>{t === "schedule" ? "Email Schedule" : "Campaign Results"}</button>
+          <button type="button" key={t} onClick={() => setTab(t)} style={{ paddingBottom: 8, fontSize: 12.5, background: "none", border: "none", cursor: "pointer", textTransform: "capitalize", color: tab === t ? BLUE : MUTED, fontWeight: tab === t ? 600 : 400, borderBottom: tab === t ? `2px solid ${BLUE}` : "2px solid transparent" }}>{t === "schedule" ? "Email Schedule" : "Campaign Results"}</button>
         ))}
       </div>
 
       {tab === "schedule" ? (
         <div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-            <button onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ Schedule email</button>
+            <button type="button" onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ Schedule email</button>
           </div>
           {schedule.length === 0 ? <p style={{ fontSize: 12.5, color: MUTED }}>No scheduled emails yet.</p> : (
             <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
@@ -104,7 +104,7 @@ function ResultsTab({ results, onCreated }: { results: CampaignResult[]; onCreat
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-        <button onClick={() => setShow(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ Log campaign</button>
+        <button type="button" onClick={() => setShow(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ Log campaign</button>
       </div>
       {results.length === 0 ? <p style={{ fontSize: 12.5, color: MUTED }}>No campaign results logged yet.</p> : (
         <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "auto" }}>
@@ -163,8 +163,8 @@ function NewScheduleModal({ onClose, onCreated }: { onClose: () => void; onCreat
         <select value={platform} onChange={(e) => setPlatform(e.target.value)} style={field}><option value="resend">Resend</option><option value="sendgrid">SendGrid</option></select>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <button onClick={() => void create()} disabled={busy || !week || !topic.trim()} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Adding…" : "Add"}</button>
-        <button onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+        <button type="button" onClick={() => void create()} disabled={busy || !week || !topic.trim()} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Adding…" : "Add"}</button>
+        <button type="button" onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
       </div>
     </>
   ));
@@ -199,8 +199,8 @@ function NewResultModal({ onClose, onCreated }: { onClose: () => void; onCreated
         {numField("positive_replies", "Positive replies")}{numField("meetings", "Meetings")}
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <button onClick={() => void create()} disabled={busy || !strategy.trim() || !runDate} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
-        <button onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+        <button type="button" onClick={() => void create()} disabled={busy || !strategy.trim() || !runDate} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
+        <button type="button" onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
       </div>
     </>
   ));

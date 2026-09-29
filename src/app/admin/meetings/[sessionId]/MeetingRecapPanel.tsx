@@ -55,12 +55,12 @@ function SummaryRecap({ sessionId, isAdmin }: { sessionId: string; isAdmin: bool
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Meeting summary</span>
-        <button onClick={() => void generate()} disabled={busy !== null} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "gen" ? "Summarizing…" : "Generate summary"}</button>
+        <button type="button" onClick={() => void generate()} disabled={busy !== null} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "gen" ? "Summarizing…" : "Generate summary"}</button>
       </div>
       <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={7} placeholder="Generate a summary, then edit before publishing…" style={{ width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", resize: "vertical" }} />
       <input value={decisions} onChange={(e) => setDecisions(e.target.value)} placeholder="Decisions (comma-separated)" style={{ width: "100%", fontSize: 12, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", marginTop: 8 }} />
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-        {isAdmin && <button onClick={() => void publish()} disabled={busy !== null || !note.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy === "pub" ? "Publishing…" : "Publish to record"}</button>}
+        {isAdmin && <button type="button" onClick={() => void publish()} disabled={busy !== null || !note.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy === "pub" ? "Publishing…" : "Publish to record"}</button>}
         {!isAdmin && <span style={{ fontSize: 11.5, color: MUTED }}>Only the CEO/Admin can publish.</span>}
         {msg && <span style={{ fontSize: 11.5, color: MUTED }}>{msg}</span>}
       </div>
@@ -94,7 +94,7 @@ function Recommendations({ sessionId, onTaskCreated }: { sessionId: string; onTa
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Cross-department recommendations</span>
-        <button onClick={() => void generate()} disabled={busy} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Analyzing…" : "Generate"}</button>
+        <button type="button" onClick={() => void generate()} disabled={busy} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Analyzing…" : "Generate"}</button>
       </div>
       {cards.length === 0 ? <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>Advisory cards from carryover age and KPI gaps across departments.</p> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -105,7 +105,7 @@ function Recommendations({ sessionId, onTaskCreated }: { sessionId: string; onTa
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", background: tone.bg, color: tone.c, borderRadius: 5, padding: "1px 6px" }}>{rec.priority}</span>
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, flex: 1 }}>{rec.title}</span>
-                  <button onClick={() => void createTask(rec)} disabled={created[rec.title]} style={{ fontSize: 11, fontWeight: 600, color: created[rec.title] ? MUTED : "#0F6E56", background: created[rec.title] ? "#F1EFE8" : "#E1F5EE", border: "none", borderRadius: 6, padding: "3px 9px", cursor: created[rec.title] ? "default" : "pointer" }}>{created[rec.title] ? "Created" : "Create task"}</button>
+                  <button type="button" onClick={() => void createTask(rec)} disabled={created[rec.title]} style={{ fontSize: 11, fontWeight: 600, color: created[rec.title] ? MUTED : "#0F6E56", background: created[rec.title] ? "#F1EFE8" : "#E1F5EE", border: "none", borderRadius: 6, padding: "3px 9px", cursor: created[rec.title] ? "default" : "pointer" }}>{created[rec.title] ? "Created" : "Create task"}</button>
                 </div>
                 {rec.detail && <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{rec.detail}</div>}
               </div>

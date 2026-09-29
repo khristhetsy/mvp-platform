@@ -88,14 +88,6 @@ export function AdminSpvManagement({
   const [minimumCommitment, setMinimumCommitment] = useState("");
   const [description, setDescription] = useState("");
 
-  function requirementsForSpv(spvId: string, parts: SpvParticipationRecord[]) {
-    const rows: SpvParticipationRequirementRecord[] = [];
-    for (const part of parts) {
-      rows.push(...(requirementsByParticipation[part.id] ?? []));
-    }
-    return rows;
-  }
-
   const totalsBySpv = useMemo(() => {
     const map: Record<string, { count: number; total: number }> = {};
     for (const [spvId, rows] of Object.entries(participationsBySpv)) {

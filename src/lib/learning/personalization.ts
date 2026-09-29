@@ -1,4 +1,4 @@
-import { encodeLessonKey, lessonHref } from "@/lib/learning/lesson-keys";
+import { lessonHref } from "@/lib/learning/lesson-keys";
 import { getModuleContent } from "@/lib/learning/modules";
 import { enrichLesson } from "@/lib/learning/lesson-enrichment";
 import type { LessonRecommendation, LearningModuleRecord } from "@/lib/learning/types";

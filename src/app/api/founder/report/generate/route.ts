@@ -56,6 +56,7 @@ export async function POST(): Promise<NextResponse> {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Report generation failed.";
+    console.error("[founder-report] generation failed:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

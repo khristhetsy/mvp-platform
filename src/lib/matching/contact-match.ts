@@ -31,16 +31,24 @@ export function buildCompanyMatchProfile(company: {
   state?: string | null;
   country?: string | null;
   funding_amount?: number | null;
+  /** The amount-of-capital band picked in settings (companies.funding_amount_band). */
+  funding_amount_band?: string | null;
   review_status?: string | null;
   is_published?: boolean | null;
   marketplace_visible?: boolean | null;
   published_at?: string | null;
   readinessScore?: number | null;
+  /**
+   * ARR / MRR from either source: a number when a CRM contact supplied an exact
+   * figure, or the band the founder picked in settings — `companies.arr` and
+   * `.mrr` are text columns, so a row passed straight in arrives as a string.
+   */
+  arr?: number | string | null;
+  mrr?: number | string | null;
 }): CompanyMatchProfile {
-  // Funding stage + operating stage + revenue stage all feed the stage factor.
-  const stageParts = [company.funding_stage, company.operating_stage, company.revenue_stage]
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter(Boolean);
+  // Funding stage is the one stage vocabulary investors pick from, so it alone
+  // feeds the stage factor (same rule as companyToMatchProfile).
+  const fundingStage = typeof company.funding_stage === "string" && company.funding_stage.trim() ? company.funding_stage.trim() : null;
   const soughtInvestorTypes = splitProfileCsv(company.seeking_investor_types);
   const soughtCapitalTypes = splitProfileCsv(company.seeking_capital_types);
   return {
@@ -48,15 +56,20 @@ export function buildCompanyMatchProfile(company: {
     companyName: company.company_name ?? "",
     slug: company.slug ?? null,
     industry: company.industry ?? null,
-    stage: stageParts.length ? stageParts.join(", ") : (company.revenue_stage ?? null),
+    stage: fundingStage,
     geography: [company.state, company.country].filter(Boolean).join(", ") || null,
     fundingAmount: company.funding_amount ?? null,
+    fundingBand: company.funding_amount_band ?? null,
     readinessScore: company.readinessScore ?? null,
     onboardingPercent: 100,
     reviewStatus: company.review_status ?? null,
     isPublished: Boolean(company.is_published),
     marketplaceVisible: Boolean(company.marketplace_visible),
     publishedAt: company.published_at ?? null,
+    arr: typeof company.arr === "number" ? company.arr : null,
+    mrr: typeof company.mrr === "number" ? company.mrr : null,
+    arrBand: typeof company.arr === "string" ? company.arr : null,
+    mrrBand: typeof company.mrr === "string" ? company.mrr : null,
     ...(soughtInvestorTypes.length ? { soughtInvestorTypes } : {}),
     ...(soughtCapitalTypes.length ? { soughtCapitalTypes } : {}),
   };
@@ -73,6 +86,8 @@ export function investorProfileFromContact(s: ScoredInvestorContact): InvestorMa
     preferred_sectors: s.sectors,
     preferred_geographies: [],
     preferred_stages: s.preferences.useOfFunds,
+    preferred_arr_range: s.preferences.arrRange[0] ?? null,
+    preferred_mrr_range: s.preferences.mrrRange[0] ?? null,
     approval_status: "approved",
     capitalTypes: s.capitalTypes,
     activeRating: activeRatingScore(s.preferences),

@@ -61,7 +61,7 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: navy }}>Customers <span style={{ fontSize: 12.5, fontWeight: 400, color: "#6B7690" }}>· {customers.length}</span></div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: navy }}>Customers <span style={{ fontSize: 12.5, fontWeight: 400, color: "#6B7690" }}>· {filtered.length === customers.length ? customers.length : `${filtered.length} of ${customers.length}`}</span></div>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#6B7690", background: "#F1EFE8", borderRadius: 99, padding: "3px 10px" }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: health.configured ? "#0F6E56" : "#A32D2D" }} />
           Billing sync {health.configured ? `· last ${ago(health.lastSyncAt)}` : "not configured"}

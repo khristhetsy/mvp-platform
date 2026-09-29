@@ -9,6 +9,7 @@ import type { Database } from "@/lib/supabase/types";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { STAGE_SLUGS, type StageSlug } from "@/lib/founder/stage-guides";
 import { requiredDocumentTypes } from "@/lib/documents/required-types";
+import { outreachBlocker, type CrrSummary } from "@/lib/crr/blocker";
 
 export type GateItemState = "done" | "active" | "todo";
 export type GateCta = { label: string; href: string };
@@ -69,7 +70,7 @@ export type JourneyOverview = {
 export async function getJourneyOverview(
   supabase: SupabaseClient<Database>,
   profileId: string,
-  opts?: { outreachReady?: boolean },
+  opts?: { outreachReady?: boolean; crr?: CrrSummary | null },
 ): Promise<JourneyOverview> {
   const state = await evaluateFounderJourney(supabase, profileId);
   const founderIdx = state.stageIndex;
@@ -85,9 +86,13 @@ export async function getJourneyOverview(
       if (state.approvalStatus === "pending") line = "Under review — we'll email you";
       else if (state.approvalStatus === "rejected") line = "Changes requested — resubmit";
       else if (!c.requiredDocsUploaded) line = "Upload your 3 core documents";
-      else if (!c.readinessQualified) line = `Readiness ${Math.round(c.readinessScore ?? 0)}/75 — a little more`;
+      else if (!c.readinessQualified) line = `Preparation ${Math.round(c.readinessScore ?? 0)}% of 75% — a little more`;
       else line = "Ready — submitting for review";
-    } else if (slug === "marketing") line = c.hasDealRoom || c.hasInvestorInterest ? "In market" : "Open a data room to advance";
+    } else if (slug === "marketing") {
+      line = opts?.crr && !opts.crr.outreachUnlocked && opts.crr.score !== null
+        ? `Held at CRR ${opts.crr.score} — outreach opens at ${opts.crr.gate}`
+        : c.hasDealRoom || c.hasInvestorInterest ? "In market" : "Open a data room to advance";
+    }
     else line = "Closing your round";
     return { slug, stageNumber: idx + 1, name: STAGE_NAMES[slug], relation, line };
   });
@@ -104,14 +109,27 @@ export async function getJourneyOverview(
     } else if (!c.requiredDocsUploaded) {
       nextAction = { title: "Upload your 3 core documents", description: "Pitch deck, financials, and cap table — the last requirements before investor matching.", cta: { label: "Upload documents", href: "/founder/qualify" }, secondaryCta: { label: "See what's left", href: "/founder/stages/preparation" } };
     } else if (!c.readinessQualified) {
-      nextAction = { title: `Reach a readiness of 75 — you're at ${Math.round(c.readinessScore ?? 0)}`, description: "A little more strengthens your materials and opens investor matching.", cta: { label: "Improve your readiness", href: "/founder/readiness" } };
+      nextAction = { title: `Reach 75% Preparation complete — you're at ${Math.round(c.readinessScore ?? 0)}%`, description: "A little more strengthens your materials and opens investor matching.", cta: { label: "Improve your Preparation", href: "/founder/readiness" } };
     } else {
       nextAction = { title: "You're ready — submitting for review", description: "We'll email you the moment Marketing opens.", cta: { label: "See your Preparation status", href: "/founder/stages/preparation" } };
     }
   } else if (cur === "marketing") {
-    nextAction = opts?.outreachReady
-      ? { title: "Send your one-pager to your matched investors", description: "You're outreach-ready — reaching out now is the highest-impact move this week.", cta: { label: "Open outreach", href: "/founder/deploy" }, secondaryCta: { label: "Review matches", href: "/founder/matches" } }
-      : { title: "Open a data room to move toward Closing", description: "A ready data room is what investors ask for next.", cta: { label: "Open your data room", href: "/founder/deal-room" } };
+    // Held at the gate: name the number that caused it. Suggesting an unrelated
+    // task while the score is what blocks them is how a founder spends a week
+    // on the wrong thing.
+    const blocker = opts?.crr ? outreachBlocker(opts.crr) : null;
+    if (opts?.outreachReady) {
+      nextAction = { title: "Send your one-pager to your matched investors", description: "You're outreach-ready — reaching out now is the highest-impact move this week.", cta: { label: "Open outreach", href: "/founder/deploy" }, secondaryCta: { label: "Review matches", href: "/founder/matches" } };
+    } else if (blocker) {
+      nextAction = {
+        title: blocker.title,
+        description: blocker.description,
+        cta: { label: `Fix the ${opts?.crr?.pointsToGate ?? 0} points`, href: "/founder/readiness/wizard" },
+        secondaryCta: { label: "See what investors will ask", href: "/founder/report" },
+      };
+    } else {
+      nextAction = { title: "Open a data room to move toward Closing", description: "A ready data room is what investors ask for next.", cta: { label: "Open your data room", href: "/founder/deal-room" } };
+    }
   } else if (cur === "closing") {
     nextAction = { title: "Close your round", description: "Track commitments and coordinate closing.", cta: { label: "Open your deal room", href: "/founder/deal-room" } };
   }
@@ -146,6 +164,8 @@ export async function getStageGateStatus(
   supabase: SupabaseClient<Database>,
   profileId: string,
   guideSlug: StageSlug,
+  /** The rating, so a cleared stage cannot claim more than it earned. */
+  crr?: CrrSummary | null,
 ): Promise<StageGate> {
   const state = await evaluateFounderJourney(supabase, profileId);
   const founderIdx = state.stageIndex;
@@ -155,7 +175,17 @@ export async function getStageGateStatus(
   const base = { slug: guideSlug, stageNumber: guideIdx + 1, stageName: STAGE_NAMES[guideSlug], nextStageName, relation, headline: "", items: [] as GateItem[] };
 
   if (relation === "complete") {
-    return { ...base, headline: "Complete", summary: `You've cleared ${base.stageName}.` };
+    // Preparation clears on documents, the checklist and approval — none of
+    // which is the rating. Saying "Complete" while the rating still holds
+    // introductions shut is how a founder reads a green panel and waits.
+    const held = guideSlug === "preparation" && crr && !crr.outreachUnlocked && crr.score !== null;
+    return {
+      ...base,
+      headline: "Complete",
+      summary: held
+        ? `You've cleared ${base.stageName}. Your rating is ${crr.score} of ${crr.gate}, so introductions and automated outreach stay closed until it reaches the gate.`
+        : `You've cleared ${base.stageName}.`,
+    };
   }
   if (relation === "locked") {
     const prev = STAGE_NAMES[STAGE_SLUGS[guideIdx - 1]];
@@ -196,12 +226,12 @@ export async function getStageGateStatus(
         cta: { label: "Upload documents", href: "/founder/qualify" },
       },
       {
-        label: "Reach a Capital Readiness score of 75",
+        label: "Reach 75% Preparation complete",
         detail: c.readinessQualified
           ? undefined
-          : `You're at ${Math.round(c.readinessScore ?? 0)}.${missing ? ` Add your ${missing} to raise it.` : " Strengthen your materials to raise it."}`,
+          : `You're at ${Math.round(c.readinessScore ?? 0)}%.${missing ? ` Add your ${missing} to raise it.` : " Strengthen your materials to raise it."}`,
         state: c.readinessQualified ? "done" : "active",
-        cta: { label: "Improve your readiness", href: "/founder/readiness" },
+        cta: { label: "Improve your Preparation", href: "/founder/readiness" },
       },
     ];
     const review: GateReview | undefined =

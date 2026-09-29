@@ -5,7 +5,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { getStorageBucket } from "@/lib/data/documents";
 import { extractDocumentText } from "@/lib/documents/extract-text";
-import { claudeComplete, CLAUDE_HAIKU, isClaudeConfigured } from "@/lib/claude";
+import { claudeComplete, claudeCompleteWithPdf, CLAUDE_HAIKU, isClaudeConfigured } from "@/lib/claude";
+
+/** Largest PDF sent to Claude directly. Base64 adds a third, and a request caps at 32 MB. */
+const MAX_DIRECT_PDF_BYTES = 20 * 1024 * 1024;
+
+function isPdfDoc(mime: string | null, name: string | null) {
+  return mime === "application/pdf" || (name ?? "").toLowerCase().endsWith(".pdf");
+}
+
+function skip(documentId: string, reason: string): SummarizeResult {
+  // Every skip used to be silent, which is how a production-wide failure went
+  // unnoticed. Log the reason so it shows up in Vercel runtime logs.
+  console.warn("[summarize] skipped", { documentId, reason });
+  return { status: "skipped", reason };
+}
 
 export type SummarizeResult = { status: "ok" | "skipped"; reason?: string };
 
@@ -43,46 +57,61 @@ export async function summarizeDocumentById(
   documentId: string,
   opts: { force?: boolean } = {},
 ): Promise<SummarizeResult> {
-  if (!isClaudeConfigured()) return { status: "skipped", reason: "no_api_key" };
+  if (!isClaudeConfigured()) return skip(documentId, "no_api_key");
 
   const doc = await loadDoc(admin, documentId);
-  if (!doc) return { status: "skipped", reason: "not_found" };
+  if (!doc) return skip(documentId, "not_found");
   if (!opts.force && doc.ai_summary && doc.ai_summary.trim().length > 0) {
     return { status: "skipped", reason: "already_summarized" };
   }
-  if (!doc.file_path) return { status: "skipped", reason: "no_file_path" };
+  if (!doc.file_path) return skip(documentId, "no_file_path");
 
   const bucket = getStorageBucket(doc.document_type ?? "");
   const { data: blob, error } = await admin.storage.from(bucket).download(doc.file_path);
-  if (error || !blob) return { status: "skipped", reason: "download_failed" };
+  if (error || !blob) return skip(documentId, "download_failed");
 
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const text = await extractDocumentText(bytes, doc.mime_type, doc.file_name ?? "");
-  if (!text || text.trim().length < 40) return { status: "skipped", reason: "no_text" };
+  const hasText = Boolean(text && text.trim().length >= 40);
 
+  // Summaries are always written in English: the readiness engine matches
+  // English evidence keywords, so a localized summary would score as empty.
   let summary: string;
   try {
-    summary = await claudeComplete(
-      [
-        {
-          role: "user",
-          content: `Document type: ${doc.document_type ?? "unknown"}\nFile: ${doc.file_name ?? ""}\n\n---\n${text}\n---\n\nSummarize per the instructions.`,
-        },
-      ],
-      { model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM },
-    );
-  } catch {
+    if (hasText) {
+      summary = await claudeComplete(
+        [
+          {
+            role: "user",
+            content: `Document type: ${doc.document_type ?? "unknown"}\nFile: ${doc.file_name ?? ""}\n\n---\n${text}\n---\n\nSummarize per the instructions.`,
+          },
+        ],
+        { model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM, locale: "en" },
+      );
+    } else if (isPdfDoc(doc.mime_type, doc.file_name) && bytes.byteLength > 0 && bytes.byteLength <= MAX_DIRECT_PDF_BYTES) {
+      // No text layer (scanned or image-only PDF), or local extraction failed:
+      // let Claude read the PDF pages directly.
+      summary = await claudeCompleteWithPdf(
+        bytes,
+        `Document type: ${doc.document_type ?? "unknown"}\nFile: ${doc.file_name ?? ""}\n\nSummarize per the instructions.`,
+        { model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM },
+      );
+    } else {
+      return skip(documentId, "no_text");
+    }
+  } catch (err) {
+    console.error("[summarize] AI call failed", { documentId, err: String(err) });
     return { status: "skipped", reason: "ai_failed" };
   }
 
   const clean = (summary ?? "").trim();
-  if (!clean) return { status: "skipped", reason: "empty_summary" };
+  if (!clean) return skip(documentId, "empty_summary");
 
   const { error: upErr } = await admin
     .from("documents")
     .update({ ai_summary: clean } as never)
     .eq("id", documentId);
-  if (upErr) return { status: "skipped", reason: "save_failed" };
+  if (upErr) return skip(documentId, "save_failed");
 
   return { status: "ok" };
 }
@@ -116,7 +145,7 @@ export async function listDocumentsNeedingSummary(
   let q = admin
     .from("documents")
     .select("id, company_id, ai_summary, file_path")
-    .is("ai_summary", null)
+    .is("ai_summary", null).neq("status", "archived")
     .not("file_path", "is", null)
     .order("created_at", { ascending: false })
     .limit(opts.limit ?? 15);

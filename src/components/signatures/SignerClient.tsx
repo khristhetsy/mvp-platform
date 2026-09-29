@@ -171,7 +171,7 @@ function PdfSignSurface({
   onText: (id: string, v: string) => void;
   onOpenSignature: (id: string) => void;
 }) {
-  const t = useTranslations("sharedCmp");
+  useTranslations("sharedCmp");
   const [error, setError] = useState<string | null>(previewUrl ? null : "The document could not be loaded.");
 
   useEffect(() => {

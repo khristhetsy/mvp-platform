@@ -175,7 +175,7 @@ function ReviewPanel({
             <span className="capitalize">{r}</span>
           </label>
         ))}
-        <button
+        <button type="button"
           onClick={saveReview}
           disabled={savingReview}
           className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
@@ -190,14 +190,14 @@ function ReviewPanel({
       <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("final_decision")}</p>
         <div className="mt-2 flex gap-2">
-          <button
+          <button type="button"
             disabled={busy}
             onClick={() => decide("approve")}
             className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             Approve
           </button>
-          <button
+          <button type="button"
             disabled={busy}
             onClick={() => decide("decline")}
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50"
@@ -238,7 +238,7 @@ export function ApplicationsQueue({ initialApplications }: { initialApplications
 
       <div className="mt-4 flex gap-2">
         {(["open", "approved", "declined", "all"] as const).map((f) => (
-          <button
+          <button type="button"
             key={f}
             onClick={() => setFilter(f)}
             className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
@@ -290,7 +290,7 @@ export function ApplicationsQueue({ initialApplications }: { initialApplications
                   )}
                 </div>
                 {(a.status === "submitted" || a.status === "under_review") && (
-                  <button
+                  <button type="button"
                     onClick={() => setOpenId(openId === a.id ? null : a.id)}
                     className="cap-btn-primary flex-none rounded-md px-3 py-1.5 text-sm font-medium"
                   >

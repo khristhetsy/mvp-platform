@@ -139,9 +139,9 @@ export default async function FounderQualifyPage() {
           {readinessScore === null ? (
             <div className="mt-3">
               <p className="text-sm text-slate-600">
-                Your readiness hasn&apos;t been assessed yet.{" "}
+                Your Preparation hasn&apos;t been assessed yet.{" "}
                 <Link href="/founder/readiness" className="font-medium text-indigo-600 hover:text-indigo-500">
-                  Run your readiness assessment →
+                  Run your Preparation assessment →
                 </Link>
               </p>
             </div>
@@ -181,7 +181,7 @@ export default async function FounderQualifyPage() {
                   href="/founder/readiness"
                   className="mt-3 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-500"
                 >
-                  Improve your completion →
+                  Improve your Preparation →
                 </Link>
               ) : null}
             </>

@@ -81,7 +81,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
 };
 
 const CARD_META: Record<Exclude<Card, "none">, { title: string; body: string; href?: string; cta: string; demo?: boolean }> = {
-  readiness: { title: "Capital Readiness Rating", body: "Free, structured, and scored across five dimensions investors screen on.", href: "/readiness", cta: "Open the rating" },
+  readiness: { title: "Capital Readiness Rating", body: "Structured and scored across five dimensions investors screen on.", href: "/readiness", cta: "Open the rating" },
   pricing: { title: "Plans & pricing", body: "Two self-serve plans unlock the tools and your investor distribution.", href: "/pricing", cta: "See pricing" },
   demo: { title: "Book a 30-minute demo", body: "Optional walkthrough — everything is self-serve without one.", cta: "Book a demo", demo: true },
   events: { title: "iCFO events", body: "Expos and conferences where matched founders meet investors in person.", href: "/events", cta: "See events" },
@@ -107,7 +107,7 @@ function fmtEventDate(iso: string | null): string {
   return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
-export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
+export function AiFirstMode({ nextEvent = null, autoOpen = true }: { nextEvent?: NextEvent; autoOpen?: boolean }) {
   const pathname = usePathname() ?? "/";
   const ctx = contextFor(pathname);
   const cfg = CONTEXTS[ctx];
@@ -124,18 +124,29 @@ export function AiFirstMode({ nextEvent = null }: { nextEvent?: NextEvent }) {
     if (!sessionId.current) sessionId.current = crypto.randomUUID();
     const openHandler = () => setOpen(true);
     window.addEventListener("icapos:open-ai-first", openHandler);
-    return () => window.removeEventListener("icapos:open-ai-first", openHandler);
+    // Tells SiteNav this page can open the overlay in place.
+    (window as unknown as { __icaposAiFirst?: boolean }).__icaposAiFirst = true;
+    return () => {
+      window.removeEventListener("icapos:open-ai-first", openHandler);
+      (window as unknown as { __icaposAiFirst?: boolean }).__icaposAiFirst = false;
+    };
   }, []);
 
   // Auto-open only on "/" and "/events" (per-context dismissal + ?pages=1).
+  // Admin "Public site default view" = Browse → never auto-open.
   useEffect(() => {
-    if (!isAutoOpen(pathname)) return;
     const params = new URLSearchParams(window.location.search);
+    // "?ai=1" is the AI Mode link from pages without the overlay: always open.
+    if (params.get("ai") === "1") {
+      const id = requestAnimationFrame(() => setOpen(true));
+      return () => cancelAnimationFrame(id);
+    }
+    if (!autoOpen || !isAutoOpen(pathname)) return;
     if (params.get("pages") === "1") return;
     if (sessionStorage.getItem(`icapos-aifirst-dismissed:${ctx}`) === "1") return;
     const id = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(id);
-  }, [pathname, ctx]);
+  }, [pathname, ctx, autoOpen]);
 
   /** Dismiss AI-first: remember for the session per context and, where it
    *  auto-opens, reflect it in the URL (?pages=1). pushState is guarded (§15). */

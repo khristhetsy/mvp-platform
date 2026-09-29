@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withCronGate } from "@/lib/cron/gate";
 import { runOperationsEscalations } from "@/lib/operations/escalations";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -6,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // GET — cron-triggered (Vercel sends Authorization: Bearer ${CRON_SECRET}).
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function scheduledGET(req: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return NextResponse.json({ error: "Misconfigured" }, { status: 503 });
   if (req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
@@ -23,3 +24,6 @@ export async function POST(): Promise<NextResponse> {
   const result = await runOperationsEscalations();
   return NextResponse.json({ ok: true, ...result });
 }
+
+// Pause switch and run log: Admin, System, Scheduled jobs.
+export const GET = withCronGate("/api/cron/operations-escalations", scheduledGET);

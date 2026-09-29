@@ -7,9 +7,26 @@ import { listAssignableStaff, listLeadAssignableStaff } from "@/lib/sales/settin
 import { listContactActivity } from "@/lib/sales/activity";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { fetchPartnerMessages } from "@/lib/crm-connectors/odoo/messages";
+import { listContactBookings } from "@/lib/scheduling/bookings";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
-import type { LinkedCompany } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
+import { planLabelFor, type PlanType, type SubscriptionStatus } from "@/lib/subscriptions/plans";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { priceShort } from "@/lib/subscriptions/pricing-catalog";
+import { parseOnboardingStepState } from "@/lib/onboarding/progress";
+import { crrFor } from "@/lib/crr/crr-for";
+import type { LinkedCompany, MemberPlan } from "@/app/admin/sales/contacts/[id]/ContactProfileClient";
+
+/** Plain-English status, so the chip never shows a raw enum. */
+const STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  active: "Active",
+  trialing: "Trial",
+  pending_payment: "Awaiting payment",
+  expired: "Expired",
+  canceled: "Canceled",
+  free: "Free",
+  internal: "Internal",
+};
 
 type ProfileLike = { id: string; email?: string | null; role?: string | null; is_super_admin?: boolean | null };
 
@@ -23,61 +40,115 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     ? await Promise.all([listAssignableStaff(), listLeadAssignableStaff()])
     : [[] as { id: string; name: string }[], [] as { id: string; name: string }[]];
   const activity = await listContactActivity(id);
+  const bookings = await listContactBookings(id).catch(() => []);
 
   const odooMessages =
     data.contact.source === "odoo" && data.contact.external_id
-      ? await fetchPartnerMessages(data.contact.external_id)
+      ? await fetchPartnerMessages(data.contact.external_id, 80)
       : [];
 
   let onePager: { slug: string | null; published: boolean; companyName: string | null } | null = null;
   let linkedCompany: LinkedCompany | null = null;
   let crr: { score: number; tier: string } | null = null;
+  // Member Portal Plan — the contact's live subscription, when their email matches
+  // a portal account. Read-only.
+  //
+  // This reads the whole row rather than the plan key alone. `founder_free` means
+  // two different things — legitimately grandfathered, or a discontinued tier that
+  // should not exist — and `PLAN_LABELS[plan]` cannot tell them apart. The price
+  // comes from the active pricing catalogue, so it tracks a pricing change rather
+  // than going stale in the UI.
+  let memberPlan: MemberPlan | null = null;
   if (data.contact.email) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
     const { data: prof } = await admin.from("profiles").select("id").eq("email", data.contact.email).maybeSingle();
     if (prof?.id) {
-      const { data: comp } = await admin
+      try {
+        const { data: sub } = await admin
+          .from("subscriptions")
+          .select("plan_type, subscription_status, is_grandfathered, created_at")
+          .eq("profile_id", prof.id)
+          .maybeSingle();
+        if (sub?.plan_type) {
+          const planType = sub.plan_type as PlanType;
+          const status = sub.subscription_status as SubscriptionStatus;
+          const paid = planType !== "founder_free" && planType !== "founder_trial" && planType !== "investor_free";
+          memberPlan = {
+            label: planLabelFor(planType, Boolean(sub.is_grandfathered)),
+            priceLabel: paid ? priceShort(await loadPricing(), planType) : null,
+            status,
+            statusLabel: STATUS_LABEL[status] ?? status,
+            // The one case worth shouting about: free access with no entitlement to it.
+            discontinued: planType === "founder_free" && !sub.is_grandfathered,
+            since: sub.created_at ?? null,
+          };
+        }
+      } catch { /* ignore — plan stays null, rendered as "not a portal member" */ }
+      // One read, every column the panel needs. `readiness_score` used to be in
+      // this list and has never existed on `companies` — it lives on
+      // `company_readiness_scores` — so PostgREST failed the whole select and
+      // the linked-company panel silently never rendered.
+      const { data: comp, error: compError } = await admin
         .from("companies")
-        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds, readiness_score")
+        .select(
+          "id, slug, is_published, company_name, industry, revenue_stage, funding_amount, funding_amount_band," +
+            " business_description, website, country, state, use_of_funds, onboarding_step_state," +
+            " funding_stage, operating_stage, business_entity, annual_ebitda, management_team," +
+            " seeking_investor_types, seeking_capital_types, active_investor_preference,"  +
+            " annual_revenue_size, arr, mrr, key_highlights",
+        )
         .eq("founder_id", prof.id)
         .maybeSingle();
+
+      // A failed lookup is not the same as "this contact has no company", and
+      // rendering it as one is what hid this for so long.
+      if (compError) {
+        console.error("[sales/contact] company lookup failed:", compError.message);
+      }
+
       if (comp) {
         onePager = { slug: comp.slug ?? null, published: Boolean(comp.is_published), companyName: comp.company_name ?? null };
-        if (comp.readiness_score != null) {
-          const s = comp.readiness_score as number;
-          crr = { score: s, tier: s >= 80 ? "Raise-ready" : s >= 60 ? "Building" : s >= 40 ? "Emerging" : "Early" };
-        }
         linkedCompany = {
           id: comp.id,
           companyName: comp.company_name ?? null,
           industry: comp.industry ?? null,
           revenueStage: comp.revenue_stage ?? null,
           fundingAmount: comp.funding_amount ?? null,
+          fundingBand: comp.funding_amount_band ?? null,
           description: comp.business_description ?? null,
           website: comp.website ?? null,
           country: comp.country ?? null,
           state: comp.state ?? null,
           useOfFunds: comp.use_of_funds ?? null,
-          fundingStage: null, operatingStage: null, businessEntity: null,
-          annualEbitda: null, managementTeam: null, seekingInvestorTypes: null,
-          seekingCapitalTypes: null, activeInvestorPreference: null,
+          fundingStage: comp.funding_stage ?? null,
+          operatingStage: comp.operating_stage ?? null,
+          businessEntity: comp.business_entity ?? null,
+          annualEbitda: comp.annual_ebitda ?? null,
+          managementTeam: comp.management_team ?? null,
+          seekingInvestorTypes: comp.seeking_investor_types ?? null,
+          seekingCapitalTypes: comp.seeking_capital_types ?? null,
+          activeInvestorPreference: comp.active_investor_preference ?? null,
+          annualRevenueSize: comp.annual_revenue_size ?? null,
+          arr: comp.arr ?? null,
+          mrr: comp.mrr ?? null,
+          keyHighlights: comp.key_highlights ?? null,
+          // Seeking / Company & stage / Traction are all collected in the wizard's
+          // `funding_information` step. Whether that step was submitted is what
+          // separates "the founder hasn't been asked" from "asked and left blank" —
+          // without it every gap renders as the same dash.
+          fundingInfoCaptured: Boolean(
+            parseOnboardingStepState(comp.onboarding_step_state).steps.funding_information?.completed,
+          ),
         };
-        const { data: extra } = await admin
-          .from("companies")
-          .select("funding_stage, operating_stage, business_entity, annual_ebitda, management_team, seeking_investor_types, seeking_capital_types, active_investor_preference")
-          .eq("founder_id", prof.id)
-          .maybeSingle();
-        if (extra) {
-          linkedCompany.fundingStage = extra.funding_stage ?? null;
-          linkedCompany.operatingStage = extra.operating_stage ?? null;
-          linkedCompany.businessEntity = extra.business_entity ?? null;
-          linkedCompany.annualEbitda = extra.annual_ebitda ?? null;
-          linkedCompany.managementTeam = extra.management_team ?? null;
-          linkedCompany.seekingInvestorTypes = extra.seeking_investor_types ?? null;
-          linkedCompany.seekingCapitalTypes = extra.seeking_capital_types ?? null;
-          linkedCompany.activeInvestorPreference = extra.active_investor_preference ?? null;
-        }
+
+        // The real CRR, from the scoring table. The old chip divided a column
+        // that doesn't exist into invented bands ("Raise-ready" at 80), which
+        // had nothing to do with the engine's gate or its profile bands.
+        // A company that has never been scored comes back with a null score and
+        // no band — shown as no chip at all, rather than a zero.
+        const real = await crrFor(comp.id).catch(() => null);
+        if (real?.score != null && real.band) crr = { score: real.score, tier: real.band };
       }
     }
   }
@@ -110,9 +181,11 @@ export async function loadContactPageProps(profile: ProfileLike, id: string) {
     onePager,
     company: linkedCompany,
     odooMessages,
+    bookings,
     investorRating,
     formdFirm,
     crr,
+    memberPlan,
   };
 }
 

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Networking Matching — actions &amp; accepting</title>
+<style>
+  :root{ --navy:#0A1A40; --blue:#2563eb; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:850px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  h2 .n{display:inline-flex;width:17px;height:17px;border-radius:50%;background:var(--navy);color:#fff;
+        align-items:center;justify-content:center;font-size:10px;margin-right:7px;vertical-align:-3px}
+  .note{font-size:12.5px;color:#475569;max-width:880px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+
+  .btn{border-radius:7px;padding:5px 11px;font-size:12px;font-weight:600;border:1px solid var(--border);
+       background:#fff;color:#334155;white-space:nowrap;display:inline-block}
+  .btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn.blue{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn.sm{padding:3px 9px;font-size:11.4px}
+  .btn.off{opacity:.4}
+
+  /* action cards */
+  .acts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:880px){.acts{grid-template-columns:1fr}}
+  .act{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .act .h{display:flex;align-items:center;gap:9px;padding:10px 13px;border-bottom:1px solid #f1f5f9;background:#fafcff}
+  .act .h b{font-size:12.6px;color:var(--navy)}
+  .act .b{padding:11px 13px}
+  .step{display:flex;gap:9px;align-items:flex-start;font-size:12.2px;color:#40546f;padding:5px 0;
+        border-bottom:1px solid #f6f8fb}
+  .step:last-child{border-bottom:0}
+  .step .i{flex:none;width:17px;height:17px;border-radius:50%;background:#eef2f7;color:#5b6b80;
+           font-size:9.4px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .step .i.mail{background:#eff6ff;color:#1d4ed8}
+  .step .i.db{background:#f5f3ff;color:#6d28d9}
+  .step .i.no{background:#fef2f2;color:#b91c1c}
+  .st{font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .s-new{background:#f1f5f9;color:#64748b}
+  .s-sent{background:#eff6ff;color:#1d4ed8}
+  .s-acc{background:#ecfdf5;color:#047857}
+  .s-dec{background:#fef2f2;color:#b91c1c}
+  .s-f1{background:#fffbeb;color:#b45309}
+  .arrow{color:#cbd5e1;font-weight:700;margin:0 5px}
+
+  /* rename table */
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{text-align:left;font-size:10.3px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 14px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 14px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .old{color:#94a3b8;text-decoration:line-through}
+
+  /* accept flow */
+  .flow{display:grid;grid-template-columns:1fr 34px 1fr;gap:0;align-items:center}
+  @media(max-width:860px){.flow{grid-template-columns:1fr}}
+  .card{border:1px solid var(--border);border-radius:10px;background:#fff;padding:13px 14px}
+  .card .t{font-size:10.4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .card b{font-size:13.4px;color:var(--navy);display:block}
+  .card p{margin:4px 0 0;font-size:12.1px;color:#5b6b80;line-height:1.5}
+  .chev{display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:19px}
+
+  .choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  @media(max-width:620px){.choice{grid-template-columns:1fr}}
+  .opt{border:1px solid var(--border);border-radius:9px;padding:11px 12px;background:#fff}
+  .opt.sel{border-color:#bfdbfe;background:#f7fbff;box-shadow:0 0 0 2px rgba(191,219,254,.45)}
+  .opt b{display:block;font-size:12.6px;color:var(--navy)}
+  .opt span{display:block;font-size:11.2px;color:#64748b;margin-top:3px;line-height:1.45}
+  .opt .tagx{display:inline-block;margin-top:7px;font-size:9px;font-weight:800;letter-spacing:.06em;
+             text-transform:uppercase;border-radius:3px;padding:2px 6px}
+  .have{background:#ecfdf5;color:#047857}
+  .need{background:#fffbeb;color:#b45309}
+
+  .mail{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff;max-width:470px}
+  .mail .mh{padding:9px 12px;border-bottom:1px solid #f1f5f9;background:#fafcff;font-size:11.3px;color:#5b6b80}
+  .mail .mb{padding:12px 14px;font-size:12.3px;color:#334155;line-height:1.6}
+  .tok{background:#eef4ff;color:#1d4ed8;border-radius:3px;padding:0 4px;font-weight:600;font-size:11.5px}
+  .meetbox{border:1px solid #d7e3f7;background:#f7fbff;border-radius:8px;padding:10px 11px;margin-top:9px;font-size:11.8px}
+  .meetbox b{color:var(--navy)}
+
+  .bad{border:1px solid #fecaca;background:#fef2f2;border-radius:11px;padding:13px 15px;
+       font-size:12.5px;color:#991b1b;max-width:890px}
+  .bad b{color:#b91c1c}
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:890px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Networking Matching — the buttons, and what Accept does</h1>
+  <p class="sub">Menu and Registration stay exactly as mocked. This covers the two open questions.</p>
+
+  <!-- RENAME -->
+  <h2><span class="n">1</span>The founder does the chasing</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:34%">Was</th><th style="width:34%">Now</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td class="old">Send chasers now (29)</td><td><b>Send founder follow-ups (29)</b></td><td>Toolbar</td></tr>
+        <tr><td class="old">Chase now</td><td><b>Founder follow-up</b></td><td>Row action</td></tr>
+        <tr><td class="old">Chased once</td><td><span class="st s-f1">Followed up · 1</span></td><td>Status</td></tr>
+        <tr><td class="old">No answer · chase due</td><td><b>Awaiting investor · follow-up due</b></td><td>Stat tile</td></tr>
+        <tr><td class="old">Chaser template</td><td><b>Founder follow-up</b></td><td>Message tab</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:9px">Read as: the founder is pursuing the investor, so the follow-up is
+  <b>on the founder&rsquo;s behalf</b> and the thing being waited on is the <b>investor&rsquo;s</b> answer. That
+  also fixes the direction of the invitation — it goes <em>to the investor</em>, about the founder. Say if you meant
+  it the other way round and I&rsquo;ll flip it before anything is built.</p>
+
+  <!-- ACTIONS -->
+  <h2><span class="n">2</span>What each button does</h2>
+  <div class="acts">
+
+    <div class="act">
+      <div class="h"><span class="btn sm pri">Invite</span><b>one row, not invited yet</b></div>
+      <div class="b">
+        <div class="step"><span class="i db">DB</span><span>Writes the invitation and freezes the score and shared interests as they are today — so the email can&rsquo;t say one thing and the table another next week.</span></div>
+        <div class="step"><span class="i mail">✉</span><span>Sends the invitation <b>to the investor</b>, naming the founder.</span></div>
+        <div class="step"><span class="i">→</span><span>Row becomes <span class="st s-sent">Sent</span>, dated. Follow-up clock starts.</span></div>
+        <div class="step"><span class="i no">✕</span><span>Nothing is sent to the founder — they don&rsquo;t need to know they were put forward and declined.</span></div>
+      </div>
+    </div>
+
+    <div class="act">
+      <div class="h"><span class="btn sm">Founder follow-up</span><b>one row, no answer yet</b></div>
+      <div class="b">
+        <div class="step"><span class="i mail">✉</span><span>Sends the follow-up message — same match, shorter copy.</span></div>
+        <div class="step"><span class="i">→</span><span><span class="st s-sent">Sent</span><span class="arrow">→</span><span class="st s-f1">Followed up · 1</span></span></div>
+        <div class="step"><span class="i no">✕</span><span>Greyed out after two. A third follow-up is how mail gets marked as spam.</span></div>
+        <div class="step"><span class="i no">✕</span><span>Greyed out on a declined row, and within 24h of the event.</span></div>
+      </div>
+    </div>
+
+    <div class="act">
+      <div class="h"><span class="btn sm">Invite all uninvited (26)</span><b>bulk</b></div>
+      <div class="b">
+        <div class="step"><span class="i">1</span><span>Opens a confirmation listing what will go: <b>26 emails to 19 investors</b>, some appearing in more than one match.</span></div>
+        <div class="step"><span class="i">2</span><span>Names anyone receiving more than two — an investor matched to six founders gets six emails, which reads as spam from us.</span></div>
+        <div class="step"><span class="i">3</span><span>Offers <b>one digest per investor</b> instead: a single email listing their matches.</span></div>
+        <div class="step"><span class="i no">✕</span><span>No send happens on the click itself. This button opens a dialog, never a mailing.</span></div>
+      </div>
+    </div>
+
+    <div class="act">
+      <div class="h"><span class="btn sm">Open thread</span><b>accepted rows only</b></div>
+      <div class="b">
+        <div class="step"><span class="i">→</span><span>Opens the existing message thread between the two, in the messaging surface that already exists.</span></div>
+        <div class="step"><span class="i no">✕</span><span>Read-only for staff. Staff do not post into an introduction they brokered.</span></div>
+        <div class="step"><span class="i">→</span><span>Shows the meeting, if one was booked — see below.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ACCEPT -->
+  <h2><span class="n">3</span>What happens when they accept</h2>
+  <div class="flow">
+    <div class="card">
+      <p class="t">Investor clicks</p>
+      <b>Accept the introduction</b>
+      <p>Signed-link page, no login needed. Declining tells nobody who declined.</p>
+    </div>
+    <div class="chev">›</div>
+    <div class="card">
+      <p class="t">Immediately</p>
+      <b>Both sides are named to each other</b>
+      <p>Company and badge become visible — until this moment each had only a name. A thread opens between them.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:14px"><b>Then they&rsquo;re asked how to meet</b>, rather than being dropped into an empty thread:</p>
+  <div class="choice">
+    <div class="opt sel">
+      <b>Meet in the event lounge</b>
+      <span>On the day, in the lounge both are already attending. No calendar, no link to lose.</span>
+      <span class="tagx have">Lounge exists</span>
+    </div>
+    <div class="opt">
+      <b>Talk now</b>
+      <span>Creates a Google Meet on the spot and drops both into it.</span>
+      <span class="tagx have">Built · works today</span>
+    </div>
+    <div class="opt">
+      <b>Book a time</b>
+      <span>Pick a slot during the event. Calendar invites to both, with the Meet link on the invitation.</span>
+      <span class="tagx need">Needs building</span>
+    </div>
+    <div class="opt">
+      <b>Just message</b>
+      <span>Thread only. Some people want to read a deck before agreeing to a call.</span>
+      <span class="tagx have">Threads exist</span>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:14px"><b>What the founder receives:</b></p>
+  <div class="mail">
+    <div class="mh">Subject: <b>Marcus Reyes accepted your introduction</b></div>
+    <div class="mb">
+      Hi <span class="tok">{{first_name}}</span>,<br /><br />
+      <b>Marcus Reyes</b> — Tessellate Ventures, Investor — accepted the introduction at
+      <span class="tok">{{event_title}}</span>.
+      <div class="meetbox">
+        <b>Booked:</b> Tue 22 Sep, 1:30 PM PDT · 20 minutes<br />
+        <span style="color:#5b6b80">meet.google.com/ynk-cirw-kko — also on both calendars</span>
+      </div>
+      <span class="btn blue" style="margin-top:10px">Open the conversation →</span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:9px">When they chose the lounge or messaging instead, that box says so and the
+  link goes to the lounge or the thread. The email is the same shape either way.</p>
+
+  <!-- HONESTY -->
+  <h2>Worth knowing</h2>
+  <div class="bad">
+    <p style="margin:0 0 8px"><b>&ldquo;Talk now&rdquo; is the only one of the four that exists, and it has a catch.</b>
+    The Meet is created from <em>the clicker&rsquo;s own connected Google account</em>. If neither has connected
+    Google — and most attendees haven&rsquo;t — the button fails. Today that failure happens after the accept, which
+    is the worst possible moment.</p>
+    <p style="margin:0"><b>So the fix is that the link comes from us, not from them.</b> The event already mints
+    rooms for its sessions; introductions should use the same path, so neither party needs a Google account at all.
+    That is the part of &ldquo;Book a time&rdquo; that actually costs work.</p>
+  </div>
+
+  <div class="warn" style="margin-top:14px">
+    <p style="margin:0 0 8px"><b>A booked slot can collide with the event itself.</b> An introduction at 1:30 PM
+    puts both of them in a side call during the talk show. The slot picker should offer times inside the event but
+    outside a session either of them is presenting in, and say plainly when a slot overlaps something on the agenda.</p>
+    <p style="margin:0"><b>Accepting reveals identity both ways.</b> The investor accepts and the founder learns the
+    investor&rsquo;s firm — but the investor also becomes visible to the founder, having previously seen only a name.
+    That is the right trade, and the invitation says so; it is worth making sure the decline path stays silent,
+    because a declined introduction the founder can see is worse than no introduction.</p>
+  </div>
+
+</div>
+</body>
+</html>

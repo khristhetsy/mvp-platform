@@ -56,7 +56,14 @@ function companyPatchFromStep(parsed: ReturnType<typeof founderOnboardingStepSch
     ["operating_stage", "operating_stage"],
     ["business_entity", "business_entity"],
     ["annual_ebitda", "annual_ebitda"],
+    // Amount of capital band (20260924002); the trigger keeps funding_amount consistent.
+    ["funding_amount_band", "funding_amount_band"],
     ["management_team", "management_team"],
+    // Traction, added in 20260921002.
+    ["annual_revenue_size", "annual_revenue_size"],
+    ["arr", "arr"],
+    ["mrr", "mrr"],
+    ["key_highlights", "key_highlights"],
   ];
   for (const [key, col] of seekingStage) {
     const v = parsed[key];

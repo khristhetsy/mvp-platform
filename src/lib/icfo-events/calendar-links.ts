@@ -32,3 +32,34 @@ export function formatSlot(iso: string, timezone: string | null): string {
     return new Date(iso).toLocaleString();
   }
 }
+
+/**
+ * A downloadable .ics, for everyone who does not live in Google Calendar.
+ *
+ * A data URL rather than a route: the file is four lines of text built from
+ * values the page already has, and an endpoint for it would be one more thing
+ * to authorise.
+ */
+export function icsDataUrl(opts: {
+  title: string;
+  startISO: string;
+  endISO?: string | null;
+  url?: string | null;
+  location?: string | null;
+}): string {
+  const end = opts.endISO || new Date(new Date(opts.startISO).getTime() + 30 * 60_000).toISOString();
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//iCapOS//Events//EN",
+    "BEGIN:VEVENT",
+    `SUMMARY:${opts.title}`,
+    `DTSTART:${stamp(opts.startISO)}`,
+    `DTEND:${stamp(end)}`,
+    opts.url ? `URL:${opts.url}` : "",
+    `LOCATION:${opts.location ?? "Online"}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean);
+  return `data:text/calendar;charset=utf-8,${encodeURIComponent(lines.join("\r\n"))}`;
+}

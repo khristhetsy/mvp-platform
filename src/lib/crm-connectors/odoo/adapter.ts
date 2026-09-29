@@ -1,5 +1,6 @@
 import type { ContactModule, ContactSource, CrmContact, SourcePage } from "@/lib/crm-connectors/source-types";
 import { executeKw, odooConfigured } from "@/lib/crm-connectors/odoo/client";
+import { odooInvestorTypes } from "@/lib/sales/backfill-investor-type";
 
 // ── Classification config (env-overridable) ─────────────────────────────────
 // Primary signal: the member-type field (Studio: x_studio_membership_type with
@@ -194,6 +195,14 @@ function mapPartner(row: PartnerRow, cats: Map<number, string>, fields: StudioFi
   const tagNames = (row.category_id ?? []).map((id) => cats.get(id)).filter((n): n is string => Boolean(n));
   const profile = buildProfile(row, fields);
   const mod = classify(profile, row, tagNames);
+  // Durable Investor Type: an investor's own type lives in the Odoo "Investor Profile"
+  // field (captured under extra). The semantic `investorTypes` key is the entrepreneur's
+  // *sought* types, which is blank for most investors — so when it's empty, derive the
+  // investor's type from their profile field. Runs every sync, so it survives re-syncs.
+  if (mod === "investor" && (profile.investorTypes?.length ?? 0) === 0) {
+    const { types } = odooInvestorTypes(profile);
+    if (types.length) profile.investorTypes = types;
+  }
   return {
     source: "odoo",
     externalId: String(row.id),

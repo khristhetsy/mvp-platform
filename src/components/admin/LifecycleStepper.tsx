@@ -56,7 +56,7 @@ export function LifecycleStepper({
           </span>
           {headerRight}
         </span>
-        <button onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
           style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: accent, background: tint(accent, 0.1), border: "none", borderRadius: 8, padding: "5px 11px", cursor: "pointer" }}>
           {open ? "Collapse" : "Expand"} <i className={`ti ti-chevron-${open ? "up" : "down"}`} aria-hidden="true" />
         </button>
@@ -114,7 +114,7 @@ export function LifecycleStepper({
                 Biggest leak: {leak.from.label} → {leak.to.label} — {leak.lost.toLocaleString()} contacts lost ({leak.pct}%). That&rsquo;s the highest-volume recovery on the board.
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={ask} style={{ fontSize: 12, fontWeight: 500, color: "#fff", background: accent, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Ask {askLabel} how to fix it</button>
+                <button type="button" onClick={ask} style={{ fontSize: 12, fontWeight: 500, color: "#fff", background: accent, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Ask {askLabel} how to fix it</button>
                 {leak.from.href && <Link href={leak.from.href} style={{ fontSize: 12, fontWeight: 500, color: accent, background: tint(accent, 0.12), borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>Open {leak.from.label} →</Link>}
               </div>
             </div>

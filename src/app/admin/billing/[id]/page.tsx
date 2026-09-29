@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { BillingCustomerProfile } from "@/components/admin/billing/BillingCustomerProfile";
 import { getBillingCustomerDetail } from "@/lib/billing/admin-billing";
 import { requireRole } from "@/lib/supabase/auth";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing customer" };
@@ -19,7 +20,7 @@ export default async function AdminBillingCustomerPage({ params }: { params: Pro
       profileSubtitle="Billing"
       profileEmail={profile.email ?? undefined}
     >
-      <BillingCustomerProfile detail={detail} />
+      <BillingCustomerProfile detail={detail} pricing={await loadPricing()} />
     </AppShell>
   );
 }

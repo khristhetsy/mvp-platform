@@ -21,7 +21,7 @@ export type ExistingMatch = {
 export function buildDuplicateKey(
   importType: ImportType,
   mapped: Record<string, string>,
-  context: ImportContextIndex,
+  _context: ImportContextIndex,
 ): string | undefined {
   switch (importType) {
     case "companies": {

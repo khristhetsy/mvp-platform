@@ -45,7 +45,7 @@ export function MeetingsDashboardClient({ payload }: { payload: DashboardPayload
   const readyPct = n && n.total > 0 ? Math.round((n.ready / n.total) * 100) : 0;
 
   const seg = (v: View, label: string) => (
-    <button onClick={() => pick(v)} style={{ fontSize: 12, padding: "6px 12px", background: view === v ? BLUE : "transparent", color: view === v ? "#fff" : MUTED, border: "none", cursor: "pointer" }}>{label}</button>
+    <button type="button" onClick={() => pick(v)} style={{ fontSize: 12, padding: "6px 12px", background: view === v ? BLUE : "transparent", color: view === v ? "#fff" : MUTED, border: "none", cursor: "pointer" }}>{label}</button>
   );
 
   return (

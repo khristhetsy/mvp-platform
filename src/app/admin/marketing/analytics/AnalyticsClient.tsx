@@ -193,8 +193,8 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, marginBottom: 2 }}>Analytics</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · icapos.com</div>
+          <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Marketing Analytics</h1>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>How your outreach performs — deliverability, engagement, and per-campaign results. Last 30 days · icapos.com</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button type="button" onClick={() => setShowLog((v) => !v)} title="Click to see the raw webhook activity from Resend." style={{ display: "flex", alignItems: "center", gap: 7, background: hook.bg, border: `0.5px solid ${hook.border}`, borderRadius: 10, padding: "6px 12px", cursor: "pointer" }}>
@@ -472,7 +472,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {QUICK_PROMPTS.map((p) => (
-            <button key={p} onClick={() => send(p)}
+            <button type="button" key={p} onClick={() => send(p)}
               style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>
               {p}
             </button>
@@ -483,7 +483,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(input)}
             placeholder="Ask your CMO anything..."
             style={{ flex: 1, padding: "8px 12px", fontSize: 13, borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
-          <button onClick={() => send(input)} disabled={loading || !input.trim()}
+          <button type="button" onClick={() => send(input)} disabled={loading || !input.trim()}
             style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 }}>
             Send
           </button>

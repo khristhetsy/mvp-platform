@@ -9,10 +9,12 @@ import { createClient } from "@/lib/supabase/client";
 import {
   SIGNUP_FOUNDER_PLANS,
   SIGNUP_INVESTOR_PLAN,
+  type SignupPlanOption,
   type PlanType,
 } from "@/lib/subscriptions/plans";
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 type SignupRole = "founder" | "investor";
 
@@ -22,7 +24,8 @@ function signUpDestinationByRole(role: SignupRole, privateBetaMode: boolean) {
 }
 
 function defaultPlanForRole(role: SignupRole): PlanType {
-  return role === "founder" ? "founder_trial" : "investor_free";
+  // Founder Free and the trial are gone for new sign ups; Basic is the default.
+  return role === "founder" ? "founder_basic" : "investor_free";
 }
 
 function PlanCard({
@@ -30,7 +33,7 @@ function PlanCard({
   selected,
   onSelect,
 }: Readonly<{
-  plan: (typeof SIGNUP_FOUNDER_PLANS)[number] | typeof SIGNUP_INVESTOR_PLAN;
+  plan: SignupPlanOption | typeof SIGNUP_INVESTOR_PLAN;
   selected: boolean;
   onSelect: () => void;
 }>) {
@@ -94,14 +97,20 @@ const signUpSchema = z.object({
 const BASE_INPUT =
   "rounded-xl border px-4 py-3 font-normal text-slate-900 outline-none transition";
 
-export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMode?: boolean }>) {
+export function SignUpForm({
+  privateBetaMode = false,
+}: Readonly<{
+  privateBetaMode?: boolean;
+  /** Active pricing, passed by the server page. Defaults to the code constants. */
+  pricing?: PricingCatalog;
+}>) {
   const t = useTranslations("sharedCmp");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getError, inputCls, validate, clearError } = useFormValidation();
 
   const [role, setRole] = useState<SignupRole>("founder");
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_trial");
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_basic");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -114,6 +123,11 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
     if (requestedRole === "founder" || requestedRole === "investor") {
       setRole(requestedRole);
       setSelectedPlan(defaultPlanForRole(requestedRole));
+    }
+    // /start passes the plan the founder chose; only paid founder plans are honored.
+    const requestedPlan = searchParams.get("plan");
+    if (requestedRole !== "investor" && (requestedPlan === "founder_basic" || requestedPlan === "founder_professional")) {
+      setSelectedPlan(requestedPlan);
     }
     const prefillEmail = searchParams.get("email");
     if (prefillEmail) setEmail(prefillEmail);

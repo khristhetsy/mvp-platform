@@ -6,7 +6,7 @@ import { FounderVideoCaptionsPanel } from "@/components/FounderVideoCaptionsPane
 import { FounderVideoScriptPanel } from "@/components/FounderVideoScriptPanel";
 import { FounderVideoSlidesPanel } from "@/components/FounderVideoSlidesPanel";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { FounderLessonVideoAssetRecord, VideoRenderStatus } from "@/lib/learning/video/video-types";
+import type { FounderLessonVideoAssetRecord } from "@/lib/learning/video/video-types";
 import { VIDEO_LESSON_DISCLAIMER } from "@/lib/learning/video/video-types";
 
 type VideoTab = "video" | "script" | "captions" | "slides";

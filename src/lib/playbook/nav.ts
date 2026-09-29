@@ -5,7 +5,7 @@
 // Stable id = the item's href (already unique + stable across renames; renaming
 // only changes the label, which the playbook follows automatically).
 
-import { adminWorkspaceNavSections } from "@/lib/workspace-nav";
+import { adminWorkspaceNavLeaves } from "@/lib/workspace-nav";
 
 export interface PlaybookNavSurface {
   id: string; // = href, the join key against playbook_module.nav_id
@@ -18,12 +18,10 @@ export interface PlaybookNavSurface {
 export function playbookNavSurfaces(): PlaybookNavSurface[] {
   const out: PlaybookNavSurface[] = [];
   const seen = new Set<string>();
-  for (const section of adminWorkspaceNavSections) {
-    for (const item of section.items) {
-      if (!seen.has(item.href)) {
-        seen.add(item.href);
-        out.push({ id: item.href, label: item.label, group: section.title ?? "", href: item.href });
-      }
+  for (const { item, group } of adminWorkspaceNavLeaves()) {
+    if (!seen.has(item.href)) {
+      seen.add(item.href);
+      out.push({ id: item.href, label: item.label, group, href: item.href });
     }
   }
   return out;

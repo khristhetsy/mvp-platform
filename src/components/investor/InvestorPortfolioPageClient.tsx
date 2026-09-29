@@ -13,6 +13,7 @@ import type {
   PledgeRecord,
 } from "@/lib/portfolio/types";
 import { STAGE_LABELS } from "@/lib/portfolio/types";
+import { matchRows } from "@/lib/ui/live-search";
 
 /* ── format helpers ── */
 const fmt = (n: number) =>
@@ -186,14 +187,21 @@ export function InvestorPortfolioPageClient() {
   const committedList = useMemo(() => investments.filter((i) => i.status === "committed"), [investments]);
   const trackingList  = useMemo(() => investments.filter((i) => i.status === "tracking"),  [investments]);
 
-  const applySearch = <T extends { company_name: string; sector?: string | null }>(list: T[]) =>
-    search
-      ? list.filter(
-          (i) =>
-            i.company_name.toLowerCase().includes(search.toLowerCase()) ||
-            (i.sector ?? "").toLowerCase().includes(search.toLowerCase())
-        )
-      : list;
+  // Multi-term, and covering the stage/status the rows display — not just the
+  // company name and sector.
+  const applySearch = <T extends { company_name: string; sector?: string | null; stage?: string | null; status?: string | null }>(
+    list: T[],
+  ) =>
+    matchRows(
+      list,
+      [
+        { label: "company", get: (i) => i.company_name },
+        { label: "sector", get: (i) => i.sector },
+        { label: "stage", get: (i) => i.stage },
+        { label: "status", get: (i) => i.status },
+      ],
+      search,
+    ).rows;
 
   /* stats */
   const totalDeployed  = investedList.reduce((s, i) => s + Number(i.amount_invested), 0);

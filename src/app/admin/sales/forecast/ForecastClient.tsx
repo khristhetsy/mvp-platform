@@ -102,7 +102,7 @@ export function ForecastClient(props: {
           {props.canToggleScope && (
             <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
               {([["all", "All company"], ["mine", "My pipeline"]] as const).map(([val, label]) => (
-                <button key={val} onClick={() => router.push(`/admin/sales/forecast?scope=${val}`)}
+                <button type="button" key={val} onClick={() => router.push(`/admin/sales/forecast?scope=${val}`)}
                   style={{ fontSize: 12, fontWeight: props.viewScope === val ? 600 : 400, color: props.viewScope === val ? "#fff" : MUTED, background: props.viewScope === val ? BLUE : "transparent", border: "none", padding: "6px 12px", cursor: "pointer" }}>{label}</button>
               ))}
             </div>
@@ -112,7 +112,7 @@ export function ForecastClient(props: {
             {props.scenarios.length === 0 && <option value="">No scenarios</option>}
             {props.scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_active ? " · active" : ""}</option>)}
           </select>
-          <button onClick={() => void compute()} disabled={computing || !scenarioId}
+          <button type="button" onClick={() => void compute()} disabled={computing || !scenarioId}
             style={{ fontSize: 12.5, fontWeight: 600, padding: "7px 14px", borderRadius: 8, border: "none", background: BLUE, color: "#fff", cursor: "pointer", opacity: computing || !scenarioId ? 0.6 : 1 }}>
             {computing ? "Computing…" : "Compute forecast"}
           </button>
@@ -123,7 +123,7 @@ export function ForecastClient(props: {
 
       <div style={{ display: "flex", gap: 14, borderBottom: "0.5px solid var(--border)", marginBottom: 16, flexWrap: "wrap" }}>
         {TABS.map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)}
+          <button type="button" key={k} onClick={() => setTab(k)}
             style={{ paddingBottom: 8, fontSize: 12.5, background: "none", border: "none", cursor: "pointer",
               color: tab === k ? BRIGHT : MUTED, fontWeight: tab === k ? 600 : 400,
               borderBottom: tab === k ? `2px solid ${BRIGHT}` : "2px solid transparent" }}>
@@ -226,7 +226,7 @@ function OpenTasks() {
       <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 8 }}>Open tasks</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="New task…" style={{ flex: 1, ...inp(0), width: "auto" }} />
-        <button onClick={() => void add()} disabled={adding} style={btn(BLUE, "#fff")}>+</button>
+        <button type="button" onClick={() => void add()} disabled={adding} style={btn(BLUE, "#fff")}>+</button>
       </div>
       {tasks.length === 0 ? <p style={{ fontSize: 12, color: MUTED }}>No open tasks.</p> : tasks.map((t) => (
         <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "0.5px solid #F1F4F9", fontSize: 12.5 }}>
@@ -347,9 +347,9 @@ function Assumptions({ scenarioId, onComputed }: { scenarioId: string | null; on
     <div>
       {dirty && <div style={{ fontSize: 12, background: "#FAEEDA", color: "#854F0B", borderRadius: 8, padding: "7px 11px", marginBottom: 10 }}>Unsaved changes — save, then Compute forecast to snapshot.</div>}
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <button onClick={addRow} style={btn("#EEF3FC", BLUE)}>+ Driver row</button>
-        <button onClick={() => void save()} disabled={saving} style={btn(NAVY, "#fff")}>{saving ? "Saving…" : "Save"}</button>
-        <button onClick={() => onComputed()} style={btn("#E1F5EE", "#0F6E56")}>Compute forecast</button>
+        <button type="button" onClick={addRow} style={btn("#EEF3FC", BLUE)}>+ Driver row</button>
+        <button type="button" onClick={() => void save()} disabled={saving} style={btn(NAVY, "#fff")}>{saving ? "Saving…" : "Save"}</button>
+        <button type="button" onClick={() => onComputed()} style={btn("#E1F5EE", "#0F6E56")}>Compute forecast</button>
         {note && <span style={{ fontSize: 12, color: /fail/i.test(note) ? "#A32D2D" : "#0F6E56", alignSelf: "center" }}>{note}</span>}
       </div>
       <div style={{ overflowX: "auto", border: "0.5px solid var(--border)", borderRadius: 10 }}>
@@ -363,7 +363,7 @@ function Assumptions({ scenarioId, onComputed }: { scenarioId: string | null; on
                 <td style={{ padding: "4px 8px" }}><input type="number" value={r.month_from} onChange={(e) => update(i, { month_from: Number(e.target.value) })} style={inp(56)} /></td>
                 <td style={{ padding: "4px 8px" }}><input type="number" value={r.month_to} onChange={(e) => update(i, { month_to: Number(e.target.value) })} style={inp(56)} /></td>
                 <td style={{ padding: "4px 8px" }}><input type="number" step="any" value={r.value} onChange={(e) => update(i, { value: Number(e.target.value) })} style={inp(96)} /></td>
-                <td style={{ padding: "4px 8px" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 13 }} aria-label="Remove">×</button></td>
+                <td style={{ padding: "4px 8px" }}><button type="button" onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 13 }} aria-label="Remove">×</button></td>
               </tr>
             ))}
           </tbody>
@@ -397,7 +397,7 @@ function Weights() {
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-        <button onClick={() => void save()} disabled={saving} style={btn(NAVY, "#fff")}>{saving ? "Saving…" : "Save weights"}</button>
+        <button type="button" onClick={() => void save()} disabled={saving} style={btn(NAVY, "#fff")}>{saving ? "Saving…" : "Save weights"}</button>
         {note && <span style={{ fontSize: 12, color: /fail/i.test(note) ? "#A32D2D" : "#0F6E56" }}>{note}</span>}
       </div>
       <div style={{ overflowX: "auto", border: "0.5px solid var(--border)", borderRadius: 10 }}>
@@ -469,7 +469,7 @@ function Comparison() {
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
         {(["weekly", "monthly", "quarterly", "yearly"] as const).map((g) => (
-          <button key={g} onClick={() => setGrain(g)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99, border: g === grain ? `1px solid ${BRIGHT}` : "0.5px solid var(--border)", background: g === grain ? "#E6F1FB" : "transparent", color: g === grain ? "#0C447C" : MUTED, cursor: "pointer", textTransform: "capitalize" }}>{g}</button>
+          <button type="button" key={g} onClick={() => setGrain(g)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99, border: g === grain ? `1px solid ${BRIGHT}` : "0.5px solid var(--border)", background: g === grain ? "#E6F1FB" : "transparent", color: g === grain ? "#0C447C" : MUTED, cursor: "pointer", textTransform: "capitalize" }}>{g}</button>
         ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>
@@ -522,10 +522,10 @@ function Journal() {
           </select>
         </div>
         <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void add(); }} rows={2} placeholder="What happened? Use #tags. ⌘/Ctrl+Enter to save." style={{ width: "100%", fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
-        <div style={{ marginTop: 8 }}><button onClick={() => void add()} style={btn(NAVY, "#fff")}>Add entry</button></div>
+        <div style={{ marginTop: 8 }}><button type="button" onClick={() => void add()} style={btn(NAVY, "#fff")}>Add entry</button></div>
       </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        {JTYPES.map(([k, label]) => <button key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, padding: "4px 10px", borderRadius: 99, border: k === filter ? `1px solid ${BRIGHT}` : "0.5px solid var(--border)", background: k === filter ? "#E6F1FB" : "transparent", color: k === filter ? "#0C447C" : MUTED, cursor: "pointer" }}>{label}</button>)}
+        {JTYPES.map(([k, label]) => <button type="button" key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, padding: "4px 10px", borderRadius: 99, border: k === filter ? `1px solid ${BRIGHT}` : "0.5px solid var(--border)", background: k === filter ? "#E6F1FB" : "transparent", color: k === filter ? "#0C447C" : MUTED, cursor: "pointer" }}>{label}</button>)}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {entries.length === 0 && <p style={{ fontSize: 12.5, color: MUTED }}>No entries yet.</p>}
@@ -536,7 +536,7 @@ function Journal() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 10, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 5, padding: "1px 7px", textTransform: "uppercase" }}>{e.entry_type}</span>
                 <span style={{ fontSize: 11, color: MUTED }}>{e.author_name ?? "System"} · {new Date(e.created_at).toLocaleString()}</span>
-                <button onClick={() => void pin(e.id, !e.pinned)} title="Pin" style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: e.pinned ? BRIGHT : MUTED }}>{e.pinned ? <i className="ti ti-star-filled" aria-hidden="true" /> : <i className="ti ti-star" aria-hidden="true" />}</button>
+                <button type="button" onClick={() => void pin(e.id, !e.pinned)} title="Pin" style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: e.pinned ? BRIGHT : MUTED }}>{e.pinned ? <i className="ti ti-star-filled" aria-hidden="true" /> : <i className="ti ti-star" aria-hidden="true" />}</button>
               </div>
               <div style={{ fontSize: 12.5, color: NAVY, whiteSpace: "pre-wrap" }}>{e.body}</div>
               {e.tags.length > 0 && <div style={{ marginTop: 4, display: "flex", gap: 5, flexWrap: "wrap" }}>{e.tags.map((tag) => <span key={tag} style={{ fontSize: 10, color: "#185FA5" }}>#{tag}</span>)}</div>}
@@ -563,7 +563,7 @@ function InsightDrawer({ metric, scenarioId, onClose, onAction }: { metric: Metr
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`AI insight — ${LABEL[metric]}`} style={{ width: "min(440px, 96vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}><i className="ti ti-sparkles" aria-hidden="true" /> AI Sales — {LABEL[metric]}</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
         </div>
         {loading ? <p style={{ fontSize: 12.5, color: MUTED }}>Analyzing…</p> : insight ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -576,11 +576,11 @@ function InsightDrawer({ metric, scenarioId, onClose, onAction }: { metric: Metr
             )}
             {insight.suggested_actions.length > 0 && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {insight.suggested_actions.map((a, i) => <button key={i} onClick={() => onAction(a.action_key)} style={btn("#EEF3FC", BLUE)}>{a.text}</button>)}
+                {insight.suggested_actions.map((a, i) => <button type="button" key={i} onClick={() => onAction(a.action_key)} style={btn("#EEF3FC", BLUE)}>{a.text}</button>)}
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button onClick={() => { setLoading(true); load(true); }} style={btn("#F1EFE8", NAVY)}>↻ Regenerate</button>
+              <button type="button" onClick={() => { setLoading(true); load(true); }} style={btn("#F1EFE8", NAVY)}>↻ Regenerate</button>
               <span style={{ fontSize: 10.5, color: MUTED }}>{insight.model ? `${insight.cached ? "cached" : "fresh"} · ${insight.model}` : "heuristic (AI not configured)"}</span>
             </div>
           </div>

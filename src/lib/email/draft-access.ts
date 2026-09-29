@@ -1,6 +1,6 @@
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { isTemplateAllowedForRole } from "@/lib/email/templates";
-import type { EmailDraftRequest, EmailTemplateType } from "@/lib/email/types";
+import type { EmailDraftRequest } from "@/lib/email/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";

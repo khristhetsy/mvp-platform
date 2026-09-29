@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event registration — Founder and Investor</title>
+<style>
+  :root{--navy:#10233f;--blue:#2E78F5;--blue-soft:#EEF3FE;--gold:#BA7517;--muted:#7a8296;--sub:#5a6376;--line:#e4e7ee;--line2:#f1f3f7;--warn:#854F0B;--warnbg:#FAEEDA;--warnbd:#EFD2A2;--bad:#A32D2D;--badbg:#FCEBEB;--ok:#0F6E56;--okbg:#E1F5EE;--purple:#534AB7;--purple-soft:#EEEDFE;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:34px 24px 90px;font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1d2432;background:#f7f8fa;}
+  main{max-width:1060px;margin:0 auto;}
+  .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0;}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:6px 0 0;color:var(--navy);}
+  .lede{font-size:13.5px;color:var(--sub);margin:9px 0 24px;max-width:70ch;}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;align-items:start;}
+  .form{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .form header{padding:14px 18px;border-bottom:1px solid var(--line);background:#fcfcfd;}
+  .form header p{margin:0;}
+  .role{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .step{font-size:17px;font-weight:600;color:var(--navy);margin-top:3px;}
+  .body{padding:16px 18px;}
+  .fld{padding:12px 0;border-bottom:1px solid var(--line2);}
+  .fld:last-child{border-bottom:none;}
+  .lbl{font-size:12.5px;font-weight:600;color:#2b3346;}
+  .req{color:#d14;font-weight:400;}
+  .ctl{margin-top:7px;}
+  input[type=text],select{font:inherit;font-size:13px;padding:7px 10px;border:1px solid #cfd5e0;border-radius:7px;width:100%;background:#fff;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{font-size:12px;border:1px solid #d6dae4;border-radius:20px;padding:5px 12px;color:#394051;}
+  .chip.sel{background:#378ADD;border-color:#378ADD;color:#fff;}
+  .wire{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;color:var(--purple);}
+  .wire.none{color:#9aa1b0;}
+  .m{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--purple-soft);color:var(--purple);}
+  .m.none{background:#f2f3f6;color:#9aa1b0;}
+  .m.plat{background:#E6F1FB;color:#185FA5;}
+  .live{margin-top:9px;font-size:12px;color:var(--ok);background:var(--okbg);border-radius:7px;padding:8px 10px;}
+  .ph{display:inline-block;min-width:22px;text-align:center;color:#7fae9c;letter-spacing:2px;}
+  .foot{padding:13px 18px;border-top:1px solid var(--line);background:#fcfcfd;font-size:11.5px;color:var(--sub);}
+  .warnbox{border-left:3px solid var(--warn);background:var(--warnbg);padding:11px 14px;border-radius:0 7px 7px 0;margin:18px 0 0;font-size:12.5px;color:#5c3a08;}
+  .note{border-left:3px solid var(--blue);background:#f4f8ff;padding:11px 14px;border-radius:0 7px 7px 0;margin:18px 0 0;font-size:12.5px;}
+  h2{font-size:17px;font-weight:600;margin:34px 0 10px;color:var(--navy);}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);}
+  td{padding:10px 12px;border-bottom:1px solid var(--line2);}
+  .legend{font-size:11.5px;color:var(--muted);margin-top:20px;}
+</style>
+</head>
+<body>
+<main>
+
+<p class="eyebrow">iCapOS · Mockup</p>
+<h1>Event registration — Founder and Investor</h1>
+<p class="lede">Every answer annotated with the field it is compared against on the networking board. One sector question, asked once.</p>
+
+<div class="two">
+
+  <!-- ── FOUNDER ─────────────────────────────────────────────── -->
+  <div class="form">
+    <header>
+      <p class="role">Founder</p>
+      <p class="step">Tell us about your company</p>
+    </header>
+    <div class="body">
+
+      <div class="fld">
+        <p class="lbl">Industry <span class="req">*</span></p>
+        <div class="ctl chips">
+          <span class="chip sel">SaaS</span><span class="chip">Fintech</span><span class="chip">Healthcare</span>
+          <span class="chip">AgTech</span><span class="chip">Data/IoT</span>
+        </div>
+        <p class="wire">→ Investor · Industry <span class="m">networking</span></p>
+        <p class="live">Investors here in these industries: <span class="ph">••</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Funding stage <span class="req">*</span></p>
+        <div class="ctl chips">
+          <span class="chip">Pre-seed</span><span class="chip sel">Seed</span><span class="chip">Series A</span>
+          <span class="chip">Series B</span><span class="chip">Growth</span>
+        </div>
+        <p class="wire">→ Investor · Stage focus <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Amount of capital <span class="req">*</span></p>
+        <div class="ctl"><select><option>$1,500,000</option></select></div>
+        <p class="wire">→ Investor · Check size <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Type of investor(s) you want <span class="req">*</span></p>
+        <div class="ctl chips">
+          <span class="chip sel">Angel Investor</span><span class="chip sel">Venture Capital</span>
+          <span class="chip">Family Office</span><span class="chip">Private Equity</span>
+        </div>
+        <p class="wire">→ Investor · Investor type <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Country <span class="req">*</span></p>
+        <div class="ctl"><select><option>United States</option></select></div>
+        <p class="wire">→ Investor · Geography <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Currently raising? <span class="req">*</span></p>
+        <div class="ctl"><select><option>Raising now</option></select></div>
+        <p class="wire none">→ nothing <span class="m none">not matched</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">One-line pitch <span class="req">*</span></p>
+        <div class="ctl"><input type="text" placeholder="What you do, in a sentence"></div>
+        <p class="wire none">→ read by a person <span class="m none">not matched</span></p>
+      </div>
+
+    </div>
+    <div class="foot">Shown in the introduction an investor receives, alongside the reason the two were paired.</div>
+  </div>
+
+  <!-- ── INVESTOR ────────────────────────────────────────────── -->
+  <div class="form">
+    <header>
+      <p class="role">Investor</p>
+      <p class="step">Tell us what you back</p>
+    </header>
+    <div class="body">
+
+      <div class="fld">
+        <p class="lbl">Industry <span class="req">*</span></p>
+        <div class="ctl chips">
+          <span class="chip sel">SaaS</span><span class="chip sel">Fintech</span><span class="chip">Healthcare</span>
+          <span class="chip">AgTech</span><span class="chip">Data/IoT</span>
+        </div>
+        <p class="wire">→ Founder · Industry <span class="m">networking</span></p>
+        <p class="live">Founders here in these industries: <span class="ph">••</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Stage focus <span class="req">*</span></p>
+        <div class="ctl chips">
+          <span class="chip sel">Pre-seed</span><span class="chip sel">Seed</span><span class="chip">Series A</span>
+          <span class="chip">Series B</span><span class="chip">Growth</span>
+        </div>
+        <p class="wire">→ Founder · Funding stage <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Typical check size <span class="req">*</span></p>
+        <div class="ctl"><select><option>$100,000 – $500,000</option></select></div>
+        <p class="wire">→ Founder · Amount of capital <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Investor type <span class="req">*</span></p>
+        <div class="ctl"><select><option>Venture Capital</option></select></div>
+        <p class="wire">→ Founder · Type of investor(s) <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Country <span class="req">*</span></p>
+        <div class="ctl"><select><option>United States</option></select></div>
+        <p class="wire">→ Founder · Geography <span class="m">networking</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Investment thesis <span class="req">*</span></p>
+        <div class="ctl"><input type="text" placeholder="What you look for"></div>
+        <p class="wire none">→ read by a person <span class="m none">not matched</span></p>
+      </div>
+
+      <div class="fld">
+        <p class="lbl">Accredited investor</p>
+        <div class="ctl"><label style="font-size:13px;color:var(--sub);"><input type="checkbox" checked> Yes</label></div>
+        <p class="wire none">→ nothing <span class="m none">not matched</span></p>
+      </div>
+
+    </div>
+    <div class="foot">Peer pairings compare industry, stage focus and country only — check size and investor type have no meaning between two investors.</div>
+  </div>
+
+</div>
+
+<div class="warnbox">
+  <strong>The duplicate is gone.</strong> The form asks “Sectors of interest” and then “Networking interests” separately today — the same question twice, stored in two places under two spellings. One question, stored as keys, replaces both. That pair is also why a guest registered by staff currently shares no sector with one who registered themselves.
+</div>
+
+<h2>What the board scores, before and after</h2>
+<table>
+  <tr><th style="width:26%">Factor</th><th style="width:12%">Weight</th><th style="width:31%">Board today</th><th style="width:31%">With these answers</th></tr>
+  <tr><td>Industry</td><td>25</td><td style="color:var(--ok);">Scored — shared sectors ×2</td><td style="color:var(--ok);">Scored</td></tr>
+  <tr><td>Funding stage</td><td>20</td><td style="color:var(--bad);">Collected, ignored</td><td style="color:var(--ok);">Scored</td></tr>
+  <tr><td>Check size vs raise</td><td>15</td><td style="color:var(--bad);">Collected, ignored</td><td style="color:var(--ok);">Scored</td></tr>
+  <tr><td>Investor type</td><td>10</td><td style="color:var(--bad);">Not asked of founders</td><td style="color:var(--ok);">Scored</td></tr>
+  <tr><td>Geography</td><td>10</td><td style="color:var(--bad);">Collected, ignored</td><td style="color:var(--ok);">Scored</td></tr>
+  <tr><td>Role complement</td><td>10</td><td style="color:var(--ok);">Scored — +3 flat</td><td style="color:var(--ok);">Scored</td></tr>
+  <tr><td>ARR · MRR · Capital type</td><td>22</td><td style="color:var(--muted);">Not asked at registration</td><td style="color:var(--muted);">Drops out of the denominator</td></tr>
+</table>
+
+<div class="note">
+  A factor neither side can answer is dropped rather than scored zero, so an event score stays comparable to a platform score. That is what makes “78” mean the same thing on the board as in a founder’s match list.
+</div>
+
+<p class="legend">Mockup only — no code behind it. Every <span class="ph">••</span> is a live count in the built form; none are shown because none have been measured.</p>
+
+</main>
+</body>
+</html>

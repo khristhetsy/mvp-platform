@@ -50,6 +50,38 @@ function outcomeFromGate(reason: string | undefined): StepOutcome {
 }
 
 /** Execute one cadence step for a contact. Returns how to advance. */
+/**
+ * The text sent when a cadence step has no body of its own. Names the sender
+ * and why, invites a reply (inbound replies reach every staff member, see
+ * inbound-replies.ts) and keeps STOP. Stays within one 160-character SMS:
+ * a long first name is dropped before anything else.
+ */
+export function defaultFollowUpSms(input: { firstName: string | null; audience: "founder" | "investor" | null }): string {
+  const about =
+    input.audience === "investor"
+      ? "following up about deal flow that fits your focus"
+      : "following up on getting your company investor ready";
+  const build = (hi: string) => `${hi}, it's the iCFO Capital team ${about}. Reply here to set up a short call. Reply STOP to opt out.`;
+  const named = input.firstName ? build(`Hi ${input.firstName}`) : null;
+  return named && named.length <= 160 ? named : build("Hi");
+}
+
+async function followUpContext(contactId: string, campaignId: string): Promise<{ firstName: string | null; audience: "founder" | "investor" | null }> {
+  const supabase = raw(createServiceRoleClient());
+  const [{ data: contact }, { data: camp }] = await Promise.all([
+    supabase.from("crm_contacts").select("name").eq("source", "odoo").eq("external_id", contactId).maybeSingle(),
+    supabase.from("voice_campaigns").select("audience").eq("id", campaignId).maybeSingle(),
+  ]);
+  const name = ((contact as { name: string | null } | null)?.name ?? "").trim();
+  const first = name.split(/\s+/)[0] ?? "";
+  const audience = (camp as { audience: string } | null)?.audience;
+  return {
+    // A company-style record ("Acme Inc") has no first name worth using.
+    firstName: first && /^[A-Za-z][a-z'-]+$/.test(first) ? first : null,
+    audience: audience === "founder" || audience === "investor" ? audience : null,
+  };
+}
+
 async function executeStep(contactId: string, campaignId: string, step: CadenceStep): Promise<StepOutcome> {
   if (step.channel === "email") {
     // Email steps are owned by the Marketing Hub; log a touch and move on.
@@ -76,7 +108,7 @@ async function executeStep(contactId: string, campaignId: string, step: CadenceS
   // sms | whatsapp
   const gate = await messageGate(contactId, step.channel);
   if (!gate.eligible) return outcomeFromGate(gate.reason);
-  const body = step.body?.trim() || "Following up from iCFO Capital. Reply STOP to opt out.";
+  const body = step.body?.trim() || defaultFollowUpSms(await followUpContext(contactId, campaignId));
   const res = await sendMessage(contactId, step.channel, body, { campaignId });
   return res.ok ? "sent" : outcomeFromGate(res.reason);
 }

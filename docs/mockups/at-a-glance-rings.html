@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>At a glance — circle graphs</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:26px 0 9px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #DC2626;border-radius:8px;padding:13px 15px;margin-bottom:8px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why ul{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .why li{margin-bottom:4px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+  .c{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px}
+  .cap{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s400);margin-bottom:11px}
+  .body{display:flex;align-items:center;gap:13px}
+  .txt{min-width:0}
+  .big{font-size:23px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .big small{font-size:11px;font-weight:600;color:var(--s400)}
+  .sup{font-size:11.5px;color:var(--s500);margin-top:4px}
+  .sup b{color:var(--ink)}
+  .warnline{font-size:11px;color:#B45309;margin-top:5px}
+  .okline{font-size:11px;color:#047857;margin-top:5px}
+  .g{color:#059669}.a{color:#B45309}.r{color:#DC2626}.m{color:#94A3B8}
+
+  /* flat comparison */
+  .flat .big{font-size:26px}
+  .flat .body{display:block}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid #4F46E5;border-radius:8px;
+        padding:12px 14px;font-size:12.5px;color:var(--s600);margin-top:14px}
+  .note b{color:var(--ink)}
+  .legend{display:flex;gap:15px;flex-wrap:wrap;font-size:11px;color:var(--s400);margin-top:10px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .sw{width:9px;height:9px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>At a glance — circle graphs</h1>
+<p class="sub">Admin → company workspace → Impervitex Corp. Five cards, each number given the denominator it needs.</p>
+
+<div class="why">
+  <h2>Why the flat numbers don't read</h2>
+  <ul>
+    <li><b>78, 45, 8, 0, 1 — five numbers on five different scales.</b> Two are percentages of 100, two are counts with no ceiling, one is a count where zero is good.</li>
+    <li><b>No sense of good or bad.</b> 45 is well below the outreach gate of 65; 8 open remediation items is a lot. Both look identical to 78, which is fine.</li>
+    <li><b>The two that matter most are indistinguishable from the two that don't.</b></li>
+  </ul>
+</div>
+
+<div class="lbl">Current — for comparison</div>
+<div class="grid flat">
+  <div class="c"><div class="cap">Completion</div><div class="big">78</div><div class="sup">Diligence Verified</div></div>
+  <div class="c"><div class="cap">Capital Readiness Rating</div><div class="big">45</div><div class="sup">13-factor model</div></div>
+  <div class="c"><div class="cap">Open remediation</div><div class="big">8</div><div class="sup">2 high priority</div></div>
+  <div class="c"><div class="cap">Investor interests</div><div class="big">0</div><div class="sup">0 intro requests</div></div>
+  <div class="c"><div class="cap">Open compliance</div><div class="big">1</div><div class="sup">0 critical</div></div>
+</div>
+
+<div class="lbl">With rings</div>
+<div class="grid">
+
+  <!-- COMPLETION 78/100 -->
+  <div class="c">
+    <div class="cap">Completion</div>
+    <div class="body">
+      <svg width="62" height="62" viewBox="0 0 62 62" role="img" aria-label="Completion 78 of 100">
+        <circle cx="31" cy="31" r="23" fill="none" stroke="#EEEDFE" stroke-width="7.75"/>
+        <path d="M 31 8 A 23 23 0 1 1 13.5 47.9" fill="none" stroke="#059669" stroke-width="7.75" stroke-linecap="round"/>
+        <text x="31" y="35" text-anchor="middle" font-size="16" font-weight="700" fill="#059669">78</text>
+      </svg>
+      <div class="txt">
+        <div class="sup"><b>Diligence verified</b></div>
+        <div class="okline">✓ onboarding complete</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRR 45/100, gate 65 -->
+  <div class="c">
+    <div class="cap">Capital Readiness Rating</div>
+    <div class="body">
+      <svg width="62" height="62" viewBox="0 0 62 62" role="img" aria-label="CRR 45 of 100, gate at 65">
+        <circle cx="31" cy="31" r="23" fill="none" stroke="#EEEDFE" stroke-width="7.75"/>
+        <path d="M 31 8 A 23 23 0 0 1 49.9 44.5" fill="none" stroke="#D97706" stroke-width="7.75" stroke-linecap="round"/>
+        <!-- gate marker at 65% -->
+        <line x1="15.6" y1="42.5" x2="8.4" y2="47.6" stroke="#DC2626" stroke-width="2"/>
+        <text x="31" y="33" text-anchor="middle" font-size="16" font-weight="700" fill="#D97706">45</text>
+        <text x="31" y="43" text-anchor="middle" font-size="7.5" fill="#94A3B8">/100</text>
+      </svg>
+      <div class="txt">
+        <div class="sup">Pre-seed · band <b>Developing</b></div>
+        <div class="warnline"><span style="color:#DC2626">▎</span> gate <b>65</b> — 20 short</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REMEDIATION 8 open of 42 -->
+  <div class="c">
+    <div class="cap">Open remediation</div>
+    <div class="body">
+      <svg width="62" height="62" viewBox="0 0 62 62" role="img" aria-label="34 of 42 remediation tasks closed">
+        <circle cx="31" cy="31" r="23" fill="none" stroke="#FEE2E2" stroke-width="7.75"/>
+        <path d="M 31 8 A 23 23 0 1 1 20.1 50.1" fill="none" stroke="#059669" stroke-width="7.75" stroke-linecap="round"/>
+        <text x="31" y="33" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">8</text>
+        <text x="31" y="43" text-anchor="middle" font-size="7.5" fill="#94A3B8">of 42</text>
+      </svg>
+      <div class="txt">
+        <div class="sup"><b>34</b> closed · 81%</div>
+        <div class="warnline">⚠ 2 high priority open</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVESTOR INTERESTS 0 -->
+  <div class="c">
+    <div class="cap">Investor interests</div>
+    <div class="body">
+      <svg width="62" height="62" viewBox="0 0 62 62" role="img" aria-label="No investor interests yet">
+        <circle cx="31" cy="31" r="23" fill="none" stroke="#F1F5F9" stroke-width="7.75"/>
+        <circle cx="31" cy="31" r="23" fill="none" stroke="#CBD5E1" stroke-width="7.75"
+                stroke-dasharray="2 6" stroke-linecap="round"/>
+        <text x="31" y="36" text-anchor="middle" font-size="17" font-weight="700" fill="#94A3B8">0</text>
+      </svg>
+      <div class="txt">
+        <div class="sup">0 intro requests</div>
+        <div class="warnline">Outreach locked until CRR 65</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLIANCE 1 open, 0 critical -->
+  <div class="c">
+    <div class="cap">Open compliance</div>
+    <div class="body">
+      <svg width="62" height="62" viewBox="0 0 62 62" role="img" aria-label="1 open compliance event, none critical">
+        <circle cx="31" cy="31" r="23" fill="none" stroke="#F1F5F9" stroke-width="7.75"/>
+        <path d="M 31 8 A 23 23 0 0 1 43.5 12.1" fill="none" stroke="#D97706" stroke-width="7.75" stroke-linecap="round"/>
+        <text x="31" y="33" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">1</text>
+        <text x="31" y="43" text-anchor="middle" font-size="7.5" fill="#94A3B8">of 12</text>
+      </svg>
+      <div class="txt">
+        <div class="sup"><b>11</b> resolved</div>
+        <div class="okline">✓ none critical</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span><i class="sw" style="background:#059669"></i> on track</span>
+  <span><i class="sw" style="background:#D97706"></i> needs attention</span>
+  <span><i class="sw" style="background:#DC2626"></i> gate marker</span>
+  <span><i class="sw" style="background:#CBD5E1"></i> nothing recorded yet</span>
+</div>
+
+<div class="note">
+  <b>Each ring needs a denominator, and three of the five didn't have one.</b>
+  Completion and CRR are already out of 100. Remediation becomes <b>8 open of 42 tracked</b> and compliance
+  <b>1 open of 12</b> — both then read as progress rather than a bare count, and the ring fills green as they close.
+  <br><br>
+  <b>Investor interests has no ceiling at all</b>, so it gets a dashed empty ring rather than a fake one — the honest
+  shape for "nothing recorded yet". Its supporting line carries the reason: outreach is locked until CRR 65, which is
+  the same number the ring beside it is 20 short of.
+  <br><br>
+  <b>The CRR ring marks the gate.</b> A red tick at 65 turns "45" from a number into a distance, which is the only
+  thing a reviewer needs from this card.
+  <br><br>
+  Uses the existing <b>ScoreRing</b> component, so these match the pipeline cards and the stage drawers.
+</div>
+
+</div>
+</body>
+</html>

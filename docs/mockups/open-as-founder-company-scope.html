@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Open as founder — why it lands on the wrong company</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .cb{padding:15px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+  .why h2{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 8px;font-size:12.8px;color:var(--s600);line-height:1.62}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:var(--ink)}
+
+  /* trace */
+  .trace{display:flex;align-items:stretch;gap:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}
+  .tn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;min-width:128px;flex:none}
+  .tn .t{font-size:11.5px;font-weight:650;line-height:1.3}
+  .tn .d{font-size:10px;color:var(--s500);margin-top:3px;line-height:1.4}
+  .tn.ok{border-color:#A7F3D0;background:#F0FDF9}.tn.ok .t{color:#065F46}
+  .tn.bad{border-color:#FECACA;background:#FEF2F2}.tn.bad .t{color:#991B1B}
+  .tn.new{border-color:#C7D2FE;background:#EEF2FF}.tn.new .t{color:#3730A3}
+  .ar{flex:none;align-self:center;width:24px;height:2px;background:#CBD5E1;position:relative;margin:0 2px}
+  .ar::after{content:"";position:absolute;right:-1px;top:-3px;border:4px solid transparent;border-left-color:#CBD5E1}
+  .ar.bad{background:#FCA5A5}.ar.bad::after{border-left-color:#FCA5A5}
+  .ar.new{background:#A5B4FC}.ar.new::after{border-left-color:#A5B4FC}
+  .drop{flex:none;align-self:center;display:flex;flex-direction:column;align-items:center;width:44px}
+  .drop .x{width:20px;height:20px;border-radius:99px;background:#DC2626;color:#fff;font-size:12px;font-weight:700;
+           display:flex;align-items:center;justify-content:center}
+  .drop .c{font-size:8.5px;color:#B91C1C;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-top:3px;text-align:center;line-height:1.2}
+
+  pre{background:#0F172A;color:#E2E8F0;border-radius:9px;padding:13px 15px;font-size:11.5px;line-height:1.65;overflow:auto;margin:10px 0 0}
+  pre .c{color:#64748B}
+  pre .k{color:#93C5FD}
+  pre .s{color:#86EFAC}
+  pre .r{color:#FCA5A5}
+  pre .g{color:#86EFAC}
+
+  /* banner mock */
+  .bnr{display:flex;align-items:center;gap:10px;border-radius:9px;padding:9px 13px;font-size:12.4px;flex-wrap:wrap}
+  .bnr.now{background:#FEF3C7;border:1px solid #FDE68A;color:#78350F}
+  .bnr.fix{background:#FEF3C7;border:1px solid #FDE68A;color:#78350F}
+  .bnr b{color:#451A03}
+  .bnr .pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:99px;padding:2px 8px;background:#92400E;color:#fff}
+  .bnr .sp{flex:1}
+  .bnr .btn{font-size:11.5px;border:1px solid #92400E;background:transparent;color:#78350F;border-radius:7px;padding:4px 10px}
+
+  .err{display:flex;gap:10px;align-items:flex-start;background:#FEF2F2;border:1px solid #FECACA;border-radius:9px;
+       padding:11px 14px;font-size:12.4px;color:#7F1D1D;line-height:1.6}
+  .err b{color:#450A0A}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em}
+  .t-bug{background:#FEE2E2;color:#991B1B}
+  .t-new{background:#4F46E5;color:#fff}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Open as founder lands on the wrong company</h1>
+<p class="sub">Founder&apos;s Preparation menu · traced through the code · mockup</p>
+
+<div class="why">
+  <h2>The cause — one missing value</h2>
+  <p><b>The button never sends the company you are looking at.</b>
+     <code>OpenFounderItem</code> posts only <code>{ founderId }</code> to
+     <code>/api/admin/act-on-behalf</code>. The company id in the URL you are standing on —
+     <code>/admin/companies/0c716114-…</code> — is dropped on the floor.</p>
+  <p>The acting session then has to guess, and the guess is hard-coded:
+     <code>resolveActingFounderScope</code> ends with
+     <code>.order("created_at", { ascending: true }).limit(1)</code> — <b>the founder&apos;s OLDEST
+     company</b>. For any founder with more than one company row, every one of the nine Preparation
+     links opens a different company than the one on your screen.</p>
+  <p>The platform explicitly supports several companies per founder — orgs, Deal Companies, second
+     orgs — and <code>getActiveCompanyForUser</code> exists precisely to pick between them. The
+     act-on-behalf resolver ignores all of it.</p>
+</div>
+
+<div class="lbl">What happens on click, today</div>
+<div class="card"><div class="cb">
+  <div class="trace">
+    <div class="tn ok"><div class="t">You&apos;re on<br>Tinski Tech</div><div class="d">/admin/companies/<b>0c716114…</b></div></div>
+    <span class="ar"></span>
+    <div class="tn ok"><div class="t">Click<br>Open as founder</div><div class="d">on &ldquo;Cap table&rdquo;</div></div>
+    <span class="ar bad"></span>
+    <div class="tn bad"><div class="t">POST act-on-behalf</div><div class="d">body: { founderId }<br><b>no companyId</b></div></div>
+    <span class="drop"><span class="x">✕</span><span class="c">company<br>dropped</span></span>
+    <div class="tn bad"><div class="t">Cookie written</div><div class="d">{ f: founder, s: staff, t }</div></div>
+    <span class="ar bad"></span>
+    <div class="tn bad"><div class="t">Resolver guesses</div><div class="d">order created_at asc<br>limit 1</div></div>
+    <span class="ar bad"></span>
+    <div class="tn bad"><div class="t">Opens the<br>OLDEST company</div><div class="d">not the one you clicked from</div></div>
+  </div>
+</div></div>
+
+<div class="lbl">Proposed — carry the company through the session</div>
+<div class="card"><div class="cb">
+  <div class="trace">
+    <div class="tn ok"><div class="t">You&apos;re on<br>Tinski Tech</div><div class="d">/admin/companies/<b>0c716114…</b></div></div>
+    <span class="ar"></span>
+    <div class="tn new"><div class="t">Click<br>Open as founder</div><div class="d">companyId already on the page</div></div>
+    <span class="ar new"></span>
+    <div class="tn new"><div class="t">POST act-on-behalf</div><div class="d">{ founderId, <b>companyId</b> }</div></div>
+    <span class="ar new"></span>
+    <div class="tn new"><div class="t">Cookie written</div><div class="d">{ f, <b>c</b>, s, t }<br>signed, unchanged otherwise</div></div>
+    <span class="ar new"></span>
+    <div class="tn new"><div class="t">Resolver honours it</div><div class="d">verifies the company<br>belongs to that founder</div></div>
+    <span class="ar new"></span>
+    <div class="tn ok"><div class="t">Opens<br>Tinski Tech</div><div class="d">the company you clicked</div></div>
+  </div>
+
+<pre><span class="c">// act-on-behalf.ts — the session becomes founder + company, not founder alone</span>
+<span class="k">export type</span> ActingContext = { founderId: <span class="k">string</span>; companyId: <span class="k">string</span>; staffId: <span class="k">string</span> };
+
+<span class="c">// resolveActingFounderScope — today</span>
+  .from(<span class="s">"companies"</span>).select(<span class="s">"*"</span>)
+  .eq(<span class="s">"founder_id"</span>, founder.id)
+  .order(<span class="s">"created_at"</span>, { ascending: <span class="k">true</span> }).limit(<span class="s">1</span>)   <span class="r">// ← the guess</span>
+
+<span class="c">// proposed: the company the staff member actually chose, re-verified</span>
+  .from(<span class="s">"companies"</span>).select(<span class="s">"*"</span>)
+  .eq(<span class="s">"id"</span>, ctx.companyId)
+  .eq(<span class="s">"founder_id"</span>, founder.id)     <span class="g">// ← ownership re-proved server-side,</span>
+  .maybeSingle();                  <span class="g">//   a tampered cookie resolves to nothing</span></pre>
+</div></div>
+
+<div class="lbl">The banner has to name the company, not just the founder</div>
+<div class="card">
+  <div class="ch"><h3>Acting-as banner</h3></div>
+  <div class="cb" style="display:flex;flex-direction:column;gap:10px">
+    <div>
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin:0 0 5px">Now</p>
+      <div class="bnr now">
+        <span class="pill">Acting as</span>
+        <span>You are viewing as <b>Martin Goldberg</b></span>
+        <span class="sp"></span>
+        <button class="btn">Stop</button>
+      </div>
+      <p style="font-size:11.5px;color:#64748B;margin:5px 0 0">
+        Names the person, never the company — so landing on the wrong one looks identical to landing on the right one.
+      </p>
+    </div>
+    <div>
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin:0 0 5px">Proposed</p>
+      <div class="bnr fix">
+        <span class="pill">Acting as</span>
+        <span>You are viewing as <b>Martin Goldberg</b> · <b>Tinski Tech</b>
+          <span style="opacity:.75">· 1 of 2 companies</span></span>
+        <span class="sp"></span>
+        <button class="btn">Switch company</button>
+        <button class="btn">Stop</button>
+      </div>
+      <p style="font-size:11.5px;color:#64748B;margin:5px 0 0">
+        The company count only appears when the founder has more than one — otherwise it is noise.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="lbl">And the silent bounce, which hides the failure</div>
+<div class="card"><div class="cb">
+  <p style="font-size:12.6px;color:#475569;margin:0 0 10px;line-height:1.6">
+    When <code>resolveActingFounderScope</code> returns null for any reason — no company row, an expired
+    cookie, a missing signing secret — the page falls through to
+    <code>requireRole(["founder"])</code>, which redirects staff to <code>/admin/dashboard</code>.
+    <b>No message, no explanation.</b> From your side that is indistinguishable from the link being
+    broken, which is part of why this was hard to pin down.
+  </p>
+  <div class="err">
+    <span>⚠</span>
+    <span><b>Proposed:</b> the founder page shows an explicit acting-as failure instead of bouncing —
+      <i>&ldquo;Couldn&apos;t open as Martin Goldberg: this company isn&apos;t linked to that founder.&rdquo;</i>
+      with a link back to the company workspace. A redirect that eats the reason is how a
+      configuration problem looks exactly like a bug.</span>
+  </div>
+</div></div>
+
+<div class="lbl">What changes</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:11%"></th><th style="width:30%">Where</th><th>Change</th></tr>
+    <tr>
+      <td><span class="tag t-bug">bug</span></td>
+      <td><code>OpenFounderItem.tsx</code></td>
+      <td>Takes and sends <code>companyId</code> alongside <code>founderId</code>. The workspace already
+          has it — it is in the page URL.</td>
+    </tr>
+    <tr>
+      <td><span class="tag t-bug">bug</span></td>
+      <td><code>act-on-behalf.ts</code><br><span style="font-size:11px;color:#94A3B8">resolveActingFounderScope</span></td>
+      <td>Resolve <code>ctx.companyId</code> instead of the oldest row, and re-verify
+          <code>founder_id</code> matches so a tampered cookie resolves to nothing.</td>
+    </tr>
+    <tr>
+      <td><span class="tag t-new">new</span></td>
+      <td>Signed cookie payload</td>
+      <td><code>{ f, c, s, t }</code>. An old two-field cookie still verifies but has no company —
+          treated as expired rather than falling back to a guess.</td>
+    </tr>
+    <tr>
+      <td><span class="tag t-new">new</span></td>
+      <td><code>ActingAsBanner</code></td>
+      <td>Shows the company, and a switcher when the founder has more than one.</td>
+    </tr>
+    <tr>
+      <td><span class="tag t-new">new</span></td>
+      <td>The nine founder pages</td>
+      <td>On a failed resolve, render the reason instead of redirecting staff to the admin dashboard.</td>
+    </tr>
+  </table>
+</div></div>
+
+<div class="note">
+  <b>Why the ownership check has to stay server-side.</b> The company id now travels in a cookie, and a
+  cookie is something the holder can try to edit. The signature stops tampering, but the resolver should
+  still prove the company belongs to that founder on every read — the same posture the module already
+  takes with the staff permission, which it re-checks on every request rather than trusting the token.
+  <br><br>
+  <b>Why not read the company from the referrer.</b> It would work for this button and fail for every
+  other entry point, and a referrer is not something to make an authorization decision on. The company
+  belongs in the session because the session is what the founder pages read.
+  <br><br>
+  <b>One thing worth deciding.</b> Whether an acting session should be allowed to <i>switch</i> company
+  mid-session, or whether Stop-and-reopen is safer. Switching is more convenient; reopening makes every
+  acting session traceable to a single company in the audit trail, which is easier to defend later.
+</div>
+
+</div>
+</body>
+</html>

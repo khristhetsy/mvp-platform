@@ -5,8 +5,14 @@
  *
  * Required env vars:
  *   RESEND_API_KEY   — from https://resend.com/api-keys
- *   EMAIL_FROM       — e.g. "iCapOS <no-reply@mail.icapos.com>"
+ *   EMAIL_FROM       — e.g. "iCapOS <no-reply@icapos.com>" (must be on a domain
+ *                      verified in Resend; see resolveFrom below)
  */
+
+import { recordDelivery } from "@/lib/cron/job-deliveries";
+import { logOutboundEmail, type EmailRole } from "@/lib/email/email-log";
+import { holdForFounderDigest } from "@/lib/notifications/founder-email-budget/gate";
+import { personalFromHeader, verifiedSenderDomains } from "@/lib/email/sender-domains";
 
 const RESEND_API = "https://api.resend.com/emails";
 
@@ -29,64 +35,174 @@ export type EmailPayload = {
   /** Personalize the From display name (e.g. the sender's name) while keeping
    *  the verified platform sending address. */
   fromName?: string;
+  /** Send as this person's own address (with fromName) when its domain is verified
+   *  in Resend. Falls back to the platform address when it isn't. */
+  fromAddress?: string | null;
   /** File attachments — base64 content (Resend format). */
   attachments?: Array<{ filename: string; content: string }>;
+  /** Extra message headers (List-Unsubscribe and the like). */
+  headers?: Record<string, string>;
+  /** Resend tags, echoed back on webhook events (letters, digits, _ and - only). */
+  tags?: Array<{ name: string; value: string }>;
+  /** For the email log (Admin, Activity, Sent): what triggered the send.
+   *  Defaults to the scheduled job, else the route or page that ran it. */
+  source?: string;
+  /** For the email log: who it is for when the recipient has no account. */
+  audience?: EmailRole;
+  /** For the email log: the signed-in person whose action sent it. */
+  triggeredBy?: string | null;
 };
 
 // Must be an address on a domain verified for sending in Resend. icapos.com is
 // verified; mail.icapos.com and resend.dev are NOT — sending from those 403s.
-const DEFAULT_FROM = "iCapOS <no-reply@icapos.com>";
+export const VERIFIED_FROM_ADDRESS = "no-reply@icapos.com";
+const DEFAULT_FROM_NAME = "iCapOS";
+const UNVERIFIED_SENDING_DOMAINS = new Set(["mail.icapos.com", "resend.dev"]);
 
-/** Bare address from EMAIL_FROM, whether it's "Name <addr>" or just "addr". */
-function baseFromAddress(): string {
-  const raw = process.env.EMAIL_FROM ?? DEFAULT_FROM;
-  const m = raw.match(/<([^>]+)>/);
-  return (m ? m[1] : raw).trim();
+type ParsedFrom = { name: string | null; address: string };
+
+/** Parse "Name <addr>" or a bare "addr". Blank or address-less values return null. */
+export function parseFromHeader(raw: string | null | undefined): ParsedFrom | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const m = value.match(/^(.*?)<([^>]+)>\s*$/);
+  const address = (m ? m[2] : value).trim();
+  if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)) return null;
+  const name = m ? m[1].replace(/"/g, "").trim() || null : null;
+  return { name, address };
+}
+
+/**
+ * The From header for every platform email. Tries each env var in `envKeys`
+ * in order and uses the first usable one; a blank value, a value with no
+ * address, or an address on a domain Resend has not verified is skipped, so a
+ * missing or mistyped env var can never make a send 403. With nothing usable,
+ * falls back to VERIFIED_FROM_ADDRESS. `displayName` replaces the configured
+ * name (the address always stays the verified one).
+ */
+export function resolveFrom(
+  opts: { displayName?: string | null; envKeys?: readonly string[] } = {},
+): string {
+  const keys = opts.envKeys ?? ["EMAIL_FROM"];
+  let picked: ParsedFrom | null = null;
+  for (const key of keys) {
+    const parsed = parseFromHeader(process.env[key]);
+    if (!parsed) continue;
+    const domain = parsed.address.split("@")[1]?.toLowerCase() ?? "";
+    if (UNVERIFIED_SENDING_DOMAINS.has(domain)) {
+      console.warn(`[email] ${key} uses ${domain}, which is not verified in Resend. Sending from ${VERIFIED_FROM_ADDRESS} instead.`);
+      continue;
+    }
+    picked = parsed;
+    break;
+  }
+  const address = picked?.address ?? VERIFIED_FROM_ADDRESS;
+  const clean = (v: string | null | undefined) => (v ?? "").replace(/[<>"]/g, "").trim();
+  const name = clean(opts.displayName) || clean(picked?.name) || DEFAULT_FROM_NAME;
+  return `${name} <${address}>`;
+}
+
+/** Env vars for transactional mail, most specific first. */
+export const TRANSACTIONAL_FROM_ENV = ["TRANSACTIONAL_EMAIL_FROM", "EMAIL_FROM"] as const;
+
+/** The From header a send would use: the person's own address when allowed, else the platform one. */
+export async function previewFrom(name: string | null | undefined, email: string | null | undefined): Promise<{ from: string; personal: boolean }> {
+  const personal = personalFromHeader(name, email, await verifiedSenderDomains());
+  return personal ? { from: personal, personal: true } : { from: resolveFrom({ displayName: name }), personal: false };
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
+  // Founder email budget: inside a founder facing scheduled job, an email to a
+  // founder in the rollout may be held for their digest or dropped (instant
+  // alerts only). Returns null in every other case, including any error, so the
+  // send below is unchanged for everyone else. A held email counts as handled.
+  const held = await holdForFounderDigest(payload);
+  const result = held
+    ? { ok: true, skipped: true, error: held.reason, providerId: null }
+    : await sendEmailNow(payload);
+  // Inside a scheduled job, the send is recorded for its Sent tab. No-op otherwise.
+  await recordDelivery({
+    channel: "email",
+    toEmail: parseRecipients(payload.to).join(", ") || null,
+    subject: payload.subject,
+    bodyHtml: payload.html,
+    status: held ? "skipped" : result.ok ? "sent" : result.skipped ? "skipped" : "failed",
+    error: result.error ?? null,
+  });
+  // Every send, job or not, goes to the platform email log.
+  await logOutboundEmail({
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text ?? null,
+    status: held ? "skipped" : result.ok ? "sent" : result.skipped ? "skipped" : "failed",
+    error: result.error ?? null,
+    providerId: result.providerId ?? null,
+    source: payload.source ?? null,
+    audience: payload.audience ?? null,
+    triggeredBy: payload.triggeredBy ?? null,
+  });
+  return result.ok;
+}
+
+async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipped?: boolean; error?: string; providerId?: string | null }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = payload.fromName
-    ? `${payload.fromName.replace(/[<>"]/g, "").trim()} <${baseFromAddress()}>`
-    : process.env.EMAIL_FROM ?? DEFAULT_FROM;
+  const personal = payload.fromAddress
+    ? personalFromHeader(payload.fromName, payload.fromAddress, await verifiedSenderDomains())
+    : null;
+  const from = personal ?? resolveFrom({ displayName: payload.fromName });
 
   if (!apiKey) {
     // Not configured — log in dev, skip silently in prod
     if (process.env.NODE_ENV !== "production") {
       console.info("[email] RESEND_API_KEY not set — skipping email:", payload.subject);
     }
-    return false;
+    return { ok: false, skipped: true, error: "Email sending is not configured" };
   }
 
   try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: parseRecipients(payload.to),
-        cc: parseRecipients(payload.cc).length ? parseRecipients(payload.cc) : undefined,
-        bcc: parseRecipients(payload.bcc).length ? parseRecipients(payload.bcc) : undefined,
-        subject: payload.subject,
-        html: payload.html,
-        text: payload.text,
-        reply_to: payload.replyTo,
-        attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
-      }),
-    });
+    // Resend allows 10 requests/second. Bulk sends (event introductions) can
+    // exceed that, so a 429 waits (Retry-After, else a short backoff) and retries.
+    const MAX_ATTEMPTS = 4;
+    let res: Response | null = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      res = await fetch(RESEND_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: parseRecipients(payload.to),
+          cc: parseRecipients(payload.cc).length ? parseRecipients(payload.cc) : undefined,
+          bcc: parseRecipients(payload.bcc).length ? parseRecipients(payload.bcc) : undefined,
+          subject: payload.subject,
+          html: payload.html,
+          text: payload.text,
+          reply_to: payload.replyTo,
+          attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
+          tags: payload.tags && payload.tags.length > 0 ? payload.tags : undefined,
+          headers: payload.headers && Object.keys(payload.headers).length > 0 ? payload.headers : undefined,
+        }),
+      });
+      if (res.status !== 429 || attempt === MAX_ATTEMPTS) break;
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 5000) : 400 * attempt;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+    if (!res) return { ok: false, error: "Send failed" };
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       console.error("[email] Resend error:", res.status, body);
-      return false;
+      return { ok: false, error: `Email provider error ${res.status}` };
     }
 
-    return true;
+    const sent = (await res.json().catch(() => null)) as { id?: string } | null;
+    return { ok: true, providerId: sent?.id ?? null };
   } catch (err) {
     console.error("[email] Failed to send email:", err);
-    return false;
+    return { ok: false, error: err instanceof Error ? err.message : "Send failed" };
   }
 }

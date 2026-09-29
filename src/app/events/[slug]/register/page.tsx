@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
@@ -8,6 +8,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { EventRegistrationForm } from "@/components/events/EventRegistrationForm";
+import { loadRegistrationFieldSet } from "@/lib/icfo-events/registration-field-sets-server";
+import { VocabularyProvider } from "@/lib/vocabulary/provider";
+import { loadVocabularies } from "@/lib/vocabulary/store";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Register — iCFO Events", robots: { index: false } };
@@ -19,8 +22,8 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || event.status === "draft" || event.status === "archived") notFound();
 
-  const profile = await getCurrentUserProfile();
-  if (!profile) redirect(`/auth/sign-in?next=/events/${slug}/register`);
+  // Registration is open without an account; signed in users get their details prefilled.
+  const profile = await getCurrentUserProfile().catch(() => null);
 
   return (
     <MarketingShell>
@@ -32,7 +35,9 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
         <p className="mt-1 text-sm text-[var(--text-muted)]">{t("free_registration_a_few_quick_questions_so_we")}</p>
 
         <div className="mt-6">
-          <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile.email ?? undefined} defaultName={profile.full_name ?? undefined} />
+          <VocabularyProvider value={await loadVocabularies()}>
+            <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile?.email ?? undefined} defaultName={profile?.full_name ?? undefined} fieldSet={await loadRegistrationFieldSet()} signedIn={Boolean(profile)} />
+          </VocabularyProvider>
         </div>
       </section>
       <MarketingFooter />

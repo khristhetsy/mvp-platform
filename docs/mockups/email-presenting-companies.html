@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event email — presenting companies</title>
+<style>
+  :root{ --navy:#0c2340; --blue:#2E78F5; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 22px 80px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:830px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:34px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+  code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f7;
+       padding:1px 5px;border-radius:4px;color:#334155}
+
+  .cols{display:grid;grid-template-columns:330px 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  /* left control panel */
+  .panel{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden}
+  .panel h3{margin:0;padding:11px 13px;font-size:10.6px;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--muted);border-bottom:1px solid #f1f5f9;background:#fafcff;font-weight:700}
+  .opt{display:flex;align-items:flex-start;gap:8px;padding:9px 13px;border-bottom:1px solid #f4f6fa;font-size:12.6px}
+  .opt:last-child{border-bottom:0}
+  .opt .bx{width:14px;height:14px;border-radius:3px;border:1.5px solid #c3cbd9;flex:none;margin-top:1px;
+           display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+  .opt.on .bx{background:var(--blue);border-color:var(--blue)}
+  .opt.on .bx::after{content:"✓"}
+  .opt .t{min-width:0}
+  .opt .t b{display:block;font-weight:500;color:#1e293b}
+  .opt .t span{display:block;font-size:10.8px;color:var(--muted);margin-top:1px}
+  .opt.new{background:#f2f8ff}
+  .opt.off{opacity:.5}
+  .pill{margin-left:auto;flex:none;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;
+        background:#eef4ff;color:#1d4ed8}
+  .seg{display:flex;gap:0;margin:8px 13px 11px;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .seg span{flex:1;text-align:center;padding:5px 4px;font-size:11px;font-weight:600;color:#64748b;background:#fff}
+  .seg span.sel{background:var(--navy);color:#fff}
+
+  /* email preview */
+  .mail{border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden;max-width:560px}
+  .hero{background:var(--navy);color:#fff;padding:20px 22px}
+  .hero .eb{font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin:0 0 5px}
+  .hero h4{margin:0;font-size:19px;line-height:1.25}
+  .hero p{margin:6px 0 13px;font-size:12px;opacity:.82}
+  .cta{display:inline-block;background:var(--blue);color:#fff;border-radius:6px;padding:8px 15px;
+       font-size:12.6px;font-weight:700}
+  .body{padding:18px 22px}
+  .h2{margin:0 0 10px;font-size:15px;color:var(--navy);font-weight:700}
+  .h2.sp{margin-top:22px}
+
+  .cal{border-left:3px solid #2E78F5;background:#f7faff;border-radius:0 6px 6px 0;padding:9px 12px;margin-bottom:8px}
+  .cal .k{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+          background:#2E78F5;color:#fff;border-radius:3px;padding:1px 6px;margin-bottom:4px}
+  .cal b{display:block;font-size:13px;color:var(--navy)}
+  .cal p{margin:3px 0 0;font-size:11.5px;color:#4a5568;line-height:1.5}
+
+  /* the new block */
+  .co{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .co > div{background:#fff;padding:9px 11px}
+  .co b{display:block;font-size:12.6px;color:var(--navy);line-height:1.3}
+  .co span{display:block;font-size:10.8px;color:var(--muted);margin-top:2px}
+  .newwrap{position:relative;padding:5px;margin:-5px;border-radius:9px;
+           box-shadow:0 0 0 2px #93c5fd, 0 0 0 6px rgba(147,197,253,.22)}
+  .newtag{position:absolute;top:-10px;right:8px;background:#1d4ed8;color:#fff;font-size:9px;
+          font-weight:800;letter-spacing:.07em;border-radius:999px;padding:2px 9px}
+  .foot{border-top:1px solid var(--border);padding:14px 22px;font-size:10.5px;color:#8a93a6;line-height:1.5}
+
+  /* variants */
+  .vars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media(max-width:880px){.vars{grid-template-columns:1fr}}
+  .v{border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden}
+  .v .vh{padding:8px 12px;border-bottom:1px solid #f1f5f9;background:#fafcff;font-size:11.5px;font-weight:700;color:var(--navy)}
+  .v .vb{padding:11px 12px}
+  .logo{height:26px;border-radius:4px;background:#eef2f7;display:flex;align-items:center;
+        justify-content:center;font-size:9.5px;font-weight:700;color:#94a3b8}
+  .grid3{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .inline{font-size:12px;color:#33415a;line-height:1.8}
+
+  table{width:100%;border-collapse:collapse;font-size:12.4px}
+  th{text-align:left;font-size:10.4px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+     padding:8px 13px;background:#fafcff;border-bottom:1px solid var(--border);font-weight:700}
+  td{padding:8px 13px;border-bottom:1px solid #f4f6fa;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+
+  .warn{border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:13px 15px;
+        font-size:12.5px;color:#78350f;max-width:880px}
+  .warn b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Presenting companies in the event email</h1>
+  <p class="sub">The roster is already loaded for this email — name, role, company and bio all arrive with the merge data — and then nothing is done with it. Only sessions render. This turns it on.</p>
+
+  <div class="cols">
+    <!-- CONTROLS -->
+    <div>
+      <div class="panel">
+        <h3>Content &amp; preview</h3>
+        <div class="opt on"><span class="bx"></span><span class="t"><b>Banner image</b><span>else solid navy hero</span></span></div>
+        <div class="opt"><span class="bx"></span><span class="t"><b>Lobby CTA</b></span></div>
+        <div class="opt on new">
+          <span class="bx"></span>
+          <span class="t"><b>Presenting companies</b><span>from the event roster</span></span>
+          <span class="pill">11</span>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:10px">
+        <h3>Presenting companies — layout</h3>
+        <div class="seg">
+          <span class="sel">Two columns</span><span>Logos</span><span>One line</span>
+        </div>
+        <div class="opt on" style="border-top:1px solid #f4f6fa"><span class="bx"></span><span class="t"><b>Show the presenter&rsquo;s name</b><span>under each company</span></span></div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.8px">Sits with Banner and Lobby, because it&rsquo;s the same kind of choice: a block that&rsquo;s either in the email or not. Every block stays editable afterwards in the block editor.</p>
+    </div>
+
+    <!-- EMAIL -->
+    <div>
+      <div class="mail">
+        <div class="hero">
+          <p class="eb">iCFO PE Expo</p>
+          <h4>iCFO PE Expo — Las Vegas | Sept 22</h4>
+          <p>Tuesday, September 22, 2026 · 12:00 PM – 4:00 PM PDT · Webinar · Free registration</p>
+          <span class="cta">Register to attend →</span>
+        </div>
+        <div class="body">
+          <p class="h2">Agenda</p>
+          <div class="cal">
+            <span class="k">Keynote</span>
+            <b>Auditorium</b>
+            <p>Experience our prequalified deal flows, learn from dynamic presentations, and engage with experts through interactive Q&amp;A sessions.</p>
+          </div>
+          <div class="cal" style="border-left-color:#7c3aed">
+            <span class="k" style="background:#7c3aed">Talk show</span>
+            <b>Inside the Investor&rsquo;s Mind Vol. 3</b>
+            <p>A monthly, investor-grade talk show revealing how CEOs think, decide and lead under real-world pressure.</p>
+          </div>
+
+          <div class="newwrap" style="margin-top:26px">
+            <span class="newtag">NEW BLOCK</span>
+            <p class="h2" style="margin-bottom:9px">Presenting companies</p>
+            <div class="co">
+              <div><b>ClearPool Digital</b><span>Dr. Jamie Allsop · CEO</span></div>
+              <div><b>SOHM</b><span>Shailesh Shah · Founder</span></div>
+              <div><b>Scriptive</b><span>Bob Wood · President &amp; CEO</span></div>
+              <div><b>Harvard MedTech</b><span>Shan Padda · CEO</span></div>
+              <div><b>Amynas</b><span>Lode Debrabandere · Founder &amp; CEO</span></div>
+              <div><b>Brainlest AI</b><span>Alan Steinberg · CEO</span></div>
+              <div><b>Revolution5 Global</b><span>Tyler Mackay · CEO</span></div>
+              <div><b>Doyle Organics</b><span>John Kelser · CEO</span></div>
+              <div><b>NovaRhythm Biosciences</b><span>Paul E. Miller, PhD · Founding Partner</span></div>
+              <div><b>LivIQ</b><span>Steve Gatt · CEO &amp; Co-Founder</span></div>
+              <div><b>NAI Technology</b><span>Exhibitor</span></div>
+              <div><b>Impervitex Corp</b><span>Exhibitor</span></div>
+            </div>
+          </div>
+
+          <p style="margin:20px 0 0;font-size:11.5px;color:var(--muted)">Presented by iCFO Capital Global</p>
+        </div>
+        <div class="foot">
+          iCFO events are for education and community only. Nothing in this email is an offer to sell or a
+          solicitation to buy any security…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYOUTS -->
+  <h2>The three layouts</h2>
+  <div class="vars">
+    <div class="v">
+      <div class="vh">Two columns · default</div>
+      <div class="vb">
+        <div class="co">
+          <div><b>ClearPool Digital</b><span>Dr. Jamie Allsop · CEO</span></div>
+          <div><b>SOHM</b><span>Shailesh Shah · Founder</span></div>
+          <div><b>Scriptive</b><span>Bob Wood · CEO</span></div>
+          <div><b>Harvard MedTech</b><span>Shan Padda · CEO</span></div>
+        </div>
+        <p class="note" style="margin-top:9px;font-size:11.4px">Reads as a roster. Collapses to one column on a phone.</p>
+      </div>
+    </div>
+    <div class="v">
+      <div class="vh">Logos</div>
+      <div class="vb">
+        <div class="grid3">
+          <span class="logo">no logo</span><span class="logo">no logo</span>
+          <span class="logo">no logo</span><span class="logo">no logo</span>
+        </div>
+        <p class="note" style="margin-top:9px;font-size:11.4px">
+          <b>Not offered.</b> There is no company-logo field on the roster — only a presenter headshot path, which
+          isn&rsquo;t a logo and isn&rsquo;t populated. A grid of placeholders is worse than a list.
+        </p>
+      </div>
+    </div>
+    <div class="v">
+      <div class="vh">One line</div>
+      <div class="vb">
+        <p class="inline">ClearPool Digital · SOHM · Scriptive · Harvard MedTech · Amynas · Brainlest AI · Revolution5 Global · Doyle Organics</p>
+        <p class="note" style="margin-top:9px;font-size:11.4px">For a reminder or day-of email, where the agenda already carries the weight.</p>
+      </div>
+    </div>
+  </div>
+  <p class="note" style="margin-top:10px">So: <b>two columns</b> and <b>one line</b>. The logo grid is left out rather than
+  shipped empty — same reason the booklet&rsquo;s presenter page hides itself when the roster is empty.</p>
+
+  <!-- WHERE DATA COMES FROM -->
+  <h2>Where each line comes from</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:26%">Line</th><th style="width:30%">Field</th><th>If it&rsquo;s missing</th></tr></thead>
+      <tbody>
+        <tr><td><b>Company</b></td><td><code>event_presenters.headline</code></td><td>Falls back to the presenter&rsquo;s name, so the row still says something</td></tr>
+        <tr><td>Presenter</td><td><code>display_name</code></td><td>Always present — it&rsquo;s required on the roster</td></tr>
+        <tr><td>Role</td><td><code>role_label</code></td><td>Omitted; the name stands alone</td></tr>
+        <tr><td>Order</td><td><code>position</code></td><td>Nothing writes it, so this is database order — see below</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Worth knowing</h2>
+  <div class="warn">
+    <p style="margin:0 0 8px"><b><code>headline</code> is a topic field, not a company name.</b> On your roster most
+    rows already hold the company — SOHM, Harvard MedTech, Amynas — but one reads
+    &ldquo;ClearPool&nbsp;Digital&nbsp;(cplx.oi)&rdquo;, which is a talk title with a ticker in it. The block prints
+    what&rsquo;s on the roster; it can&rsquo;t know which is which. Tidy the topic field and the email tidies with it.</p>
+    <p style="margin:0 0 8px"><b>Order is arbitrary.</b> Presenters sort by <code>position</code> and nothing in the
+    codebase ever sets it, so every row sits at 0 and the list comes out in whatever order the database returns —
+    the same limitation the booklet has. Alphabetical by company would be a defensible default here; say if
+    you&rsquo;d rather have that than roster order.</p>
+    <p style="margin:0"><b>Invited ≠ presenting.</b> Only accepted invitations create a roster row, so anyone still
+    sitting at &ldquo;invited&rdquo; won&rsquo;t appear. That&rsquo;s correct for an email going to attendees, but
+    it&rsquo;s worth knowing before you send.</p>
+  </div>
+
+</div>
+</body>
+</html>

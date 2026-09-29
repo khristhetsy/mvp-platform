@@ -1,6 +1,6 @@
 // Pure scoring for the public assessment. Answers -> lead_prescore (0-100) ->
 // score band. The band decides routing (§5.4): Foundation -> e-learning -> Basic,
-// Emerging -> Basic, Ready -> Managed IR. Server-authoritative; unit-tested.
+// Emerging -> Basic, Ready -> SPV Program. Server-authoritative; unit-tested.
 
 import { ASSESSMENT_QUESTIONS, ASSESSMENT_MAX_POINTS } from "@/lib/assessment/questions";
 
@@ -12,7 +12,7 @@ export type AssessmentAnswers = Record<string, string>;
 export const BAND_ROUTING: Record<ScoreBand, { plan: "free" | "basic" | "managed_ir"; href: string; ctaLabel: string; viaLearning: boolean }> = {
   foundation: { plan: "free", href: "/start?plan=free", ctaLabel: "Create your free account", viaLearning: true },
   emerging: { plan: "free", href: "/start?plan=free", ctaLabel: "Create your free account", viaLearning: false },
-  ready: { plan: "managed_ir", href: "/start?plan=managed_ir", ctaLabel: "Talk to us about Managed IR", viaLearning: false },
+  ready: { plan: "managed_ir", href: "/start?plan=managed_ir", ctaLabel: "Talk to us about the SPV Program", viaLearning: false },
 };
 
 export const BAND_HEADLINES: Record<ScoreBand, string> = {

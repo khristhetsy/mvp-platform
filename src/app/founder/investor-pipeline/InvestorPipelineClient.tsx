@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INVESTOR_TYPE_OPTIONS, FUNDING_STAGE_OPTIONS } from "@/lib/profile/options";
-import { INDUSTRY_OPTIONS } from "@/lib/industries";
+import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar";
+import { SelectionBar, type SelectionAction } from "@/components/admin/sales/SelectionBar";
+import { ScoreRing } from "@/components/ui/ScoreRing";
+import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
@@ -14,11 +18,31 @@ type PipelineStage = "new" | "contacted" | "interested" | "meeting" | "committed
 const PIPELINE_STAGES: { id: PipelineStage; label: string; color: string }[] = [
   { id: "new",        label: "New",        color: "#185FA5" },
   { id: "contacted",  label: "Contacted",  color: "#BA7517" },
-  { id: "interested", label: "Interested", color: "#534AB7" },
+  { id: "interested", label: "Interested", color: "#1A6CE4" },
   { id: "meeting",    label: "Meeting",    color: "#1D9E75" },
   { id: "committed",  label: "Committed",  color: "#0F6E56" },
   { id: "passed",     label: "Passed",     color: "#A32D2D" },
 ];
+
+/** Small donut used by the pipeline stat cards: the number sits in the middle,
+ *  the arc is `fraction` (0–1) of the circle. */
+function StatRing({ value, fraction, color, label }: { value: number; fraction: number; color: string; label: string }) {
+  const r = 17;
+  const c = 2 * Math.PI * r;
+  const f = Math.max(0, Math.min(1, fraction));
+  return (
+    <svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label={`${label}: ${value}`} className="shrink-0">
+      <circle cx="22" cy="22" r={r} fill="none" stroke="#E2E8F0" strokeWidth="5" />
+      {f > 0 ? (
+        <circle
+          cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={`${(f * c).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 22 22)"
+        />
+      ) : null}
+      <text x="22" y="26.5" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text-primary)">{value}</text>
+    </svg>
+  );
+}
 
 interface PipelineInvestor {
   id: string;
@@ -80,7 +104,6 @@ const MEETING_LABELS: Record<MeetingStatus, string> = {
 };
 
 const STAGE_OPTIONS: string[] = [...FUNDING_STAGE_OPTIONS];
-const SECTOR_OPTIONS: string[] = [...INDUSTRY_OPTIONS];
 
 // ─── Badge sub-components ────────────────────────────────────────────────────
 
@@ -170,9 +193,10 @@ const EMPTY_FORM = {
 
 export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
   const router = useRouter();
+  // Focus sectors offer the stored industry list, the same one investors pick from.
+  const SECTOR_OPTIONS: string[] = useVocabulary("industry").options.map((o) => o.label);
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
-  const [search, setSearch] = useState("");
-  const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [viewMode, setViewMode] = useState<"table" | "board">("board");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
@@ -195,12 +219,28 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importBusy, setImportBusy] = useState(false);
 
+  // Rows picked for a bulk action. Separate from selectedIds, which the import
+  // modal uses for platform matches.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   // ── Derived ──────────────────────────────────────────────────────────────────
-  const filtered = investors.filter((inv) => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || inv.name.toLowerCase().includes(q) || (inv.location ?? "").toLowerCase().includes(q) || inv.investor_type.toLowerCase().includes(q);
-    const matchOutreach = outreachFilter === "all" || inv.outreach_status === outreachFilter;
-    return matchSearch && matchOutreach;
+  const filtered = applySearch(investors, search, {
+    text: (i) => [i.name, i.location ?? "", i.investor_type, ...(i.focus_sectors ?? [])].join(" "),
+    quick: {
+      interested: (i) => i.interested,
+      has_meeting: (i) => i.meeting_requested !== "none",
+      pledged: (i) => (i.pledge_amount ?? 0) > 0,
+      not_contacted: (i) => i.outreach_status === "not_started",
+      from_matches: (i) => i.source === "platform_match",
+      added_by_me: (i) => i.source === "manual",
+    },
+    field: {
+      stage: (i) => i.pipeline_stage ?? "new",
+      outreach: (i) => i.outreach_status,
+      type: (i) => i.investor_type,
+      sector: (i) => i.focus_sectors ?? [],
+    },
   });
 
   const stats = {
@@ -208,7 +248,44 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
     interested: investors.filter((i) => i.interested).length,
     meetings: investors.filter((i) => i.meeting_requested !== "none").length,
     closed: investors.filter((i) => i.outreach_status === "closed").length,
+    pastNew: investors.filter((i) => i.pipeline_stage !== "new").length,
   };
+  const pctOfTotal = (n: number) => `${stats.total ? Math.round((n / stats.total) * 100) : 0}% of total`;
+
+  // ── Bulk actions ──────────────────────────────────────────────────────────────
+  const pickedIds = () => [...picked];
+  const togglePick = (id: string) => setPicked((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  async function bulkPatch(body: Record<string, unknown>) {
+    const ids = pickedIds();
+    if (!ids.length) return;
+    setBulkBusy(true);
+    // One PATCH per row — the per-row route already checks founder ownership, so
+    // this cannot touch another founder's pipeline even if an id were guessed.
+    await Promise.all(ids.map((id) =>
+      fetch(`/api/founder/investor-pipeline/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }),
+    ));
+    setBulkBusy(false);
+    setPicked(new Set());
+    await refresh();
+  }
+
+  const bulkActions: SelectionAction[] = [
+    {
+      key: "stage", icon: "ti-arrow-right", label: "Move to stage",
+      options: PIPELINE_STAGES.map((s) => ({ value: s.id, label: s.label })),
+      runWith: (v) => void bulkPatch({ pipeline_stage: v }),
+    },
+    {
+      key: "outreach", icon: "ti-progress", label: "Set outreach",
+      options: (Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((k) => ({ value: k, label: OUTREACH_LABELS[k] })),
+      runWith: (v) => void bulkPatch({ outreach_status: v }),
+    },
+    { key: "interested", icon: "ti-star", label: "Mark interested", run: () => void bulkPatch({ interested: true }) },
+    { key: "export", icon: "ti-download", label: "Export CSV", run: () => { exportCSV(); setPicked(new Set()); } },
+  ];
 
   // ── Data actions ──────────────────────────────────────────────────────────────
   async function refresh() {
@@ -292,7 +369,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   }
 
   function toggleSelect(id: string) {
-    setSelectedIds((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    setSelectedIds((prev) => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
   }
 
   async function handleImport() {
@@ -378,39 +455,69 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
   return (
     <div className="space-y-5">
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Stats — compact cards with a ring. Interested / Meetings / Closed show
+          their share of all investors; Total shows how many have moved past New. */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {(
           [
-            { label: "Total Investors", value: stats.total, warn: false },
-            { label: "Interested", value: stats.interested, warn: false },
-            { label: "Meetings", value: stats.meetings, warn: false },
-            { label: "Closed", value: stats.closed, warn: false },
-          ] as { label: string; value: number; warn: boolean }[]
-        ).map(({ label, value, warn }) => (
-          <div key={label} className="rounded-xl border bg-white p-4" style={{ borderColor: warn ? "#fca5a5" : "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{label}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums" style={{ color: warn ? "#dc2626" : "var(--text-primary)" }}>{value}</p>
+            { label: "Total investors", value: stats.total, part: stats.pastNew, note: `${stats.pastNew} past New`, color: "#378ADD" },
+            { label: "Interested", value: stats.interested, part: stats.interested, note: pctOfTotal(stats.interested), color: "#1D9E75" },
+            { label: "Meetings", value: stats.meetings, part: stats.meetings, note: pctOfTotal(stats.meetings), color: "#7F77DD" },
+            { label: "Closed", value: stats.closed, part: stats.closed, note: pctOfTotal(stats.closed), color: "#BA7517" },
+          ] as { label: string; value: number; part: number; note: string; color: string }[]
+        ).map(({ label, value, part, note, color }) => (
+          <div
+            key={label}
+            className="flex items-center gap-3 rounded-xl border bg-white px-3 py-2.5"
+            style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}
+          >
+            <StatRing value={value} fraction={stats.total ? part / stats.total : 0} color={color} label={label} />
+            <div className="min-w-0">
+              <p className="truncate text-[12.5px] font-semibold" style={{ color: "var(--text-primary)" }}>{label}</p>
+              <p className="truncate text-[11px]" style={{ color: "var(--text-muted)" }}>{note}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Toolbar */}
+      {/* Toolbar — the shared founder pattern: primary · gear · search · View */}
+      <div className="rounded-xl border bg-white" style={{ borderColor: "var(--border-subtle)" }}>
+        <FounderToolbar
+          scope="investor-pipeline"
+          state={search}
+          onChange={setSearch}
+          count={filtered.length}
+          countLabel="investors"
+          placeholder="Search investor, firm, sector…"
+          primary={<button type="button" onClick={openAdd} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">+ Add Investor</button>}
+          quick={[
+            { key: "interested", label: "Interested" },
+            { key: "has_meeting", label: "Meeting requested or booked" },
+            { key: "pledged", label: "Pledged" },
+            { key: "not_contacted", label: "Not yet contacted", sep: true },
+            { key: "from_matches", label: "From platform matches" },
+            { key: "added_by_me", label: "Added by me" },
+          ]}
+          fields={[
+            { key: "stage", label: "Stage", options: PIPELINE_STAGES.map((s) => s.id) },
+            { key: "outreach", label: "Outreach", options: Object.keys(OUTREACH_LABELS) },
+            { key: "type", label: "Investor type", options: [...new Set(investors.map((i) => i.investor_type).filter(Boolean))] },
+            { key: "sector", label: "Sector", options: [...new Set(investors.flatMap((i) => i.focus_sectors ?? []))] },
+          ]}
+          groups={[
+            { id: "none", label: "None" },
+            { id: "stage", label: "Stage" },
+            { id: "outreach", label: "Outreach" },
+            { id: "type", label: "Investor type" },
+          ]}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
-        <input type="text" placeholder="Search investors…" value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-56 rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-          style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} />
-        <select value={outreachFilter} onChange={(e) => setOutreachFilter(e.target.value as OutreachStatus | "all")}
-          className="rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
-          <option value="all">All Outreach</option>
-          {(Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((s) => (
-            <option key={s} value={s}>{OUTREACH_LABELS[s]}</option>
-          ))}
-        </select>
         <div className="flex-1" />
         <div className="inline-flex overflow-hidden rounded-lg border" style={{ borderColor: "var(--border-subtle)" }}>
           {(["board", "table"] as const).map((m) => (
-            <button
+            <button type="button"
               key={m}
               onClick={() => setViewMode(m)}
               className="px-3 py-2 text-sm font-medium capitalize transition-colors"
@@ -422,14 +529,11 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             </button>
           ))}
         </div>
-        <button onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
+        <button type="button" onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
           Export CSV
         </button>
-        <button onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
           Import from Matches
-        </button>
-        <button onClick={openAdd} className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
-          + Add Investor
         </button>
       </div>
 
@@ -472,20 +576,26 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                         className="cursor-grab rounded-lg border bg-white p-2.5 active:cursor-grabbing"
                         style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", opacity: draggingId === inv.id ? 0.5 : 1 }}
                       >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
-                          {inv.source === "platform_match" && !inv.platform_investor_id && (
-                            <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
-                          )}
+                        <div className="flex items-start gap-2.5">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <button type="button" onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                              {inv.source === "platform_match" && !inv.platform_investor_id && (
+                                <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                              {inv.investor_type}{inv.investment_size ? ` · ${inv.investment_size}` : ""}
+                            </p>
+                          </div>
+                          {/* Match at a glance. A never-scored investor gets an empty ring
+                              and a dash — "not scored" is not the same claim as "scored 0". */}
+                          <span className="mt-0.5 flex-none">
+                            <ScoreRing score={inv.match_score} size={42} sublabel="match" />
+                          </span>
                         </div>
-                        <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                          {inv.investor_type}{inv.investment_size ? ` · ${inv.investment_size}` : ""}
-                        </p>
-                        {inv.match_score != null && (
-                          <p className="mt-0.5 text-right text-[11px]" style={{ color: inv.match_score >= 70 ? "#0F6E56" : "var(--text-muted)" }}>{inv.match_score}% match</p>
-                        )}
                         <div className="mt-2 flex items-center gap-1.5">
-                          <button onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
+                          <button type="button" onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
                           <select
                             value={inv.pipeline_stage ?? "new"}
                             onChange={(e) => handleStageChange(inv.id, e.target.value as PipelineStage)}
@@ -511,10 +621,28 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
       {/* Table */}
       {viewMode === "table" && (
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
+        <SelectionBar
+          count={picked.size}
+          total={filtered.length}
+          onSelectAll={() => setPicked(new Set(filtered.map((i) => i.id)))}
+          onClear={() => setPicked(new Set())}
+          actions={bulkActions}
+          busy={bulkBusy}
+          heading="Selected investors"
+        />
         <div className="overflow-x-auto">
           <table className="enterprise-table enterprise-table--comfortable w-full min-w-[900px] border-collapse bg-white">
             <thead>
               <tr>
+                <th className="px-3 py-3 w-9">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={filtered.length > 0 && filtered.every((i) => picked.has(i.id))}
+                    onChange={(e) => setPicked(e.target.checked ? new Set(filtered.map((i) => i.id)) : new Set())}
+                    style={{ width: 14, height: 14, cursor: "pointer" }}
+                  />
+                </th>
                 {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3">{h}</th>
                 ))}
@@ -523,15 +651,18 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                  <td colSpan={10} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
                     {investors.length === 0 ? "Add your first investor or import from platform matches." : "No investors match your search."}
                   </td>
                 </tr>
               ) : filtered.map((inv) => (
-                <tr key={inv.id} className="border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                <tr key={inv.id} className="border-t" style={{ borderColor: "var(--border-subtle)", background: picked.has(inv.id) ? "#F5F9FF" : undefined }}>
+                  <td className="px-3 py-3">
+                    <input type="checkbox" checked={picked.has(inv.id)} onChange={() => togglePick(inv.id)} aria-label={`Select ${inv.name}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => setProfileOf(inv)} className="text-sm font-semibold text-left hover:underline" style={{ color: "var(--blue)" }}>
+                      <button type="button" onClick={() => setProfileOf(inv)} className="text-sm font-semibold text-left hover:underline" style={{ color: "var(--blue)" }}>
                         {inv.name}
                       </button>
                       {inv.source === "platform_match" && (
@@ -556,7 +687,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                     <OutreachBadge status={inv.outreach_status} editable onChange={(s) => handleOutreachChange(inv.id, s)} />
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => openEdit(inv)} title="Edit" className="rounded-md p-1.5 transition-colors hover:bg-slate-100" style={{ color: "var(--text-muted)" }}>
+                    <button type="button" onClick={() => openEdit(inv)} title="Edit" className="rounded-md p-1.5 transition-colors hover:bg-slate-100" style={{ color: "var(--text-muted)" }}>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
@@ -584,7 +715,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 </div>
                 {profileOf.location && <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>{profileOf.location}</p>}
               </div>
-              <button onClick={() => setProfileOf(null)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+              <button type="button" onClick={() => setProfileOf(null)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -640,7 +771,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Import from Platform Matches</h3>
                 <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>Select ranked investors to add to your pipeline. Already-imported investors are disabled.</p>
               </div>
-              <button onClick={() => setShowImport(false)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+              <button type="button" onClick={() => setShowImport(false)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -708,8 +839,8 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select investors to import"}
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setShowImport(false)} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
-                <button onClick={handleImport} disabled={selectedIds.size === 0 || importBusy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
+                <button type="button" onClick={() => setShowImport(false)} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
+                <button type="button" onClick={handleImport} disabled={selectedIds.size === 0 || importBusy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
                   {importBusy ? "Importing…" : `Import ${selectedIds.size > 0 ? selectedIds.size : ""} Investor${selectedIds.size !== 1 ? "s" : ""}`}
                 </button>
               </div>
@@ -724,7 +855,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           <div className="relative rounded-2xl bg-white w-full max-w-lg mx-4 shadow-2xl flex flex-col enterprise-animate-in" style={{ maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "var(--border-subtle)" }}>
               <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{editingId ? "Edit Investor" : "Add Investor"}</h3>
-              <button onClick={closeModal} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+              <button type="button" onClick={closeModal} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -794,8 +925,8 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 p-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
-              <button onClick={closeModal} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
-              <button onClick={handleSave} disabled={busy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
+              <button type="button" onClick={closeModal} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
+              <button type="button" onClick={handleSave} disabled={busy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
                 {busy ? "Saving…" : editingId ? "Save Changes" : "Add Investor"}
               </button>
             </div>

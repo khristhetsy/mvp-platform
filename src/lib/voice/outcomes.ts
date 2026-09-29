@@ -8,6 +8,7 @@ import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { executeKw, odooConfigured } from "@/lib/crm-connectors/odoo/client";
 import { recordCallTouchInMarketing } from "@/lib/marketing/voice-sync";
+import { logIrCall } from "@/lib/ir/call-log";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -80,6 +81,9 @@ export async function recordCallOutcome(input: CallOutcomeInput): Promise<{ atte
 
   // Reflect the call as a touch in the Marketing Hub (best-effort — one funnel).
   await recordCallTouchInMarketing(input.contactId, input.disposition, input.booked ?? false).catch(() => undefined);
+
+  // Investors on an IR project: the call also counts on their IR record. contactId is the Odoo partner id.
+  await logIrCall({ externalId: input.contactId, outcome: input.disposition, duration: input.duration != null ? `${Math.round(input.duration)}s` : null, source: "voice" });
 
   return { attemptNo };
 }

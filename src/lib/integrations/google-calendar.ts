@@ -232,6 +232,39 @@ export async function createAllDayCalendarEvent(
   return { eventId: payload.id };
 }
 
+/**
+ * Create a plain timed calendar event (no Meet conference) — used to mirror a
+ * scheduled social post onto the user's primary calendar.
+ */
+export async function createTimedCalendarEvent(
+  input: { title: string; startTime: string; endTime: string; timezone: string; notes?: string | null },
+  accessToken: string,
+): Promise<{ eventId: string }> {
+  if (!isGoogleCalendarConfigured()) {
+    throw new Error("Google Calendar integration is not configured.");
+  }
+
+  const body = {
+    summary: input.title,
+    description: input.notes ?? undefined,
+    start: { dateTime: input.startTime, timeZone: input.timezone },
+    end: { dateTime: input.endTime, timeZone: input.timezone },
+    reminders: { useDefault: true },
+  };
+
+  const response = await fetch(CALENDAR_EVENTS_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await response.json().catch(() => null)) as GoogleCalendarEventResponse | null;
+  if (!response.ok || !payload?.id) {
+    throw new Error(payload?.error?.message ?? "Unable to create Google Calendar event.");
+  }
+  return { eventId: payload.id };
+}
+
 export type GoogleEventLite = {
   id: string;
   title: string;

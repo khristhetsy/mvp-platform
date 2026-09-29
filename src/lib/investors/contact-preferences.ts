@@ -34,7 +34,7 @@ export async function loadInvestorPreferences(
   if (!profile) return [];
 
   const grouped = groupContactProfile(profile.contact.extra, profile.contact.membership);
-  const section = grouped.sections.find((s) => s.title === "Investor preferences");
+  const section = grouped.sections.find((s) => s.title === "Investor thesis");
   if (!section) return [];
 
   return section.fields

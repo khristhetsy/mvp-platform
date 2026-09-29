@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/marketing-site/SiteFooter";
 import { DemoDialog } from "@/components/marketing-site/DemoDialog";
 import { AiFirstMode } from "@/components/marketing-site/AiFirstMode";
 import { loadNextEvent } from "@/lib/marketing-site/next-event";
+import { loadSiteDefaultView } from "@/lib/marketing-site/default-view";
 import { siteFontVariables } from "@/lib/marketing-site/fonts";
 
 /**
@@ -11,10 +12,10 @@ import { siteFontVariables } from "@/lib/marketing-site/fonts";
  * (which owns <html>/<body>), so this only provides the site chrome: font
  * variables, skip-to-content link (§11), the top Nav, <main>, the Footer, the
  * demo dialog, and the full-screen AI-first mode — the single AI surface, opened
- * by the nav "AI Mode" button, its bottom-right launcher, or by default on "/".
+ * by the nav "AI Mode" button, its bottom-right launcher, or by default on "/" when the admin default view is AI mode.
  */
 export default async function MarketingLayout({ children }: { children: ReactNode }) {
-  const nextEvent = await loadNextEvent();
+  const [nextEvent, defaultView] = await Promise.all([loadNextEvent(), loadSiteDefaultView()]);
   return (
     <div className={`${siteFontVariables} min-h-screen bg-white font-site-body text-site-ink antialiased`}>
       <a
@@ -27,7 +28,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
       <main id="main">{children}</main>
       <SiteFooter />
       <DemoDialog />
-      <AiFirstMode nextEvent={nextEvent} />
+      <AiFirstMode nextEvent={nextEvent} autoOpen={defaultView === "ai"} />
     </div>
   );
 }

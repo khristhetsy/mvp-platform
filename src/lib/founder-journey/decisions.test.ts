@@ -11,6 +11,8 @@ function conditions(overrides: Partial<StageConditions> = {}): StageConditions {
     onboardingComplete: false,
     readinessScore: 0,
     readinessQualified: false,
+    crrScore: null,
+    crrQualified: false,
     requiredDocsUploaded: false,
     hasDealRoom: false,
     hasInvestorInterest: false,

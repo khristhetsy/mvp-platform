@@ -49,5 +49,10 @@ next-env.d.ts
 /mvp-platform/
 *.patch
 
-# Local agent cache
-.claude/
+# Local agent cache (shared Claude Code config is versioned; personal + cache files are not)
+.claude/*
+!.claude/settings.json
+!.claude/commands/
+!.claude/hooks/
+!.claude/ship-output.md
+.env*.local

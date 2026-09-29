@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discontinue the free plan — signup + grandfathering</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:26px 0 9px}
+
+  .find{background:#fff;border:1px solid var(--line);border-left:3px solid #DC2626;border-radius:8px;padding:13px 15px;margin-bottom:10px}
+  .find h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .find ol{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .find li{margin-bottom:6px}
+  .find code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .find b{color:var(--ink)}
+
+  .q{background:#fff;border:1px solid var(--line);border-left:3px solid #B45309;border-radius:8px;padding:13px 15px;margin:14px 0}
+  .q h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B45309}
+  .q p{margin:0 0 7px;font-size:12.5px;color:var(--s600)}
+  .q p:last-child{margin-bottom:0}
+  .q b{color:var(--ink)}
+
+  /* signup plan cards */
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px}
+  .p{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;position:relative}
+  .p.gone{opacity:.42;border-style:dashed}
+  .p.gone::after{content:"REMOVED";position:absolute;top:11px;right:11px;font-size:9px;font-weight:800;letter-spacing:.06em;color:#B91C1C;background:#FEF2F2;border:1px solid #FECACA;border-radius:99px;padding:2px 7px}
+  .p.pick{border-color:#4F46E5;box-shadow:0 0 0 3px #EEF2FF}
+  .p .badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.05em;background:#EEF2FF;color:#3730A3;border-radius:99px;padding:2px 8px;margin-bottom:7px}
+  .p h3{margin:0;font-size:14px;font-weight:650}
+  .p .pr{font-size:24px;font-weight:700;margin:5px 0 1px;font-variant-numeric:tabular-nums}
+  .p .pu{font-size:11px;color:var(--s500)}
+  .p ul{margin:10px 0 0;padding-left:15px;font-size:11.5px;color:var(--s600)}
+  .p li{margin-bottom:3px}
+  .p .cta{margin-top:12px;display:block;text-align:center;border-radius:8px;padding:8px;font-size:12px;font-weight:600;background:#4F46E5;color:#fff}
+  .p .cta.ghost{background:#fff;border:1px solid var(--line);color:#334155}
+
+  .row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:9px;display:flex;gap:12px;align-items:flex-start}
+  .row .n{width:21px;height:21px;border-radius:50%;background:#EEF2FF;color:#4F46E5;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+  .row .b{flex:1;font-size:12.5px;color:var(--s600);line-height:1.6}
+  .row .b b{color:var(--ink)}
+  .row code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .row .tag{font-size:9.5px;font-weight:700;border-radius:99px;padding:2px 7px;white-space:nowrap}
+  .tag.sql{background:#FFF7ED;color:#9A3412}
+  .tag.code{background:#EEF2FF;color:#3730A3}
+
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--s400);padding:8px 11px;border-bottom:1px solid var(--line);background:#FAFBFC}
+  .tbl td{padding:8px 11px;border-bottom:1px solid var(--l100);color:var(--s600)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl b{color:var(--ink)}
+  .ok{color:#047857;font-weight:600}.no{color:#B91C1C;font-weight:600}
+
+  .adm{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .adm .hd{display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--l100);padding-bottom:9px;margin-bottom:10px}
+  .adm h3{margin:0;font-size:13px;font-weight:650}
+  .chip{border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:600}
+  .chip.gf{background:#ECFDF5;color:#047857}
+  .chip.new{background:#FEF2F2;color:#B91C1C}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Discontinue the free plan</h1>
+<p class="sub">Ticket: new founders can still sign up free. Findings first — one of your three points has an answer you won&apos;t like.</p>
+
+<div class="find">
+  <h2>What the code actually does</h2>
+  <ol>
+    <li><b>Your removal was reverted, same day.</b> <code>d368fdb</code> (28 Aug) removed the free tier —
+      "founders require a paid plan". <code>b7ae05b</code>, also 28 Aug, reinstated it:
+      "restore previous-build pricing/signup/marketing". Current behaviour is what that commit restored.</li>
+    <li><b>Every new founder is granted free automatically.</b> <code>defaultPlanForRole()</code> returns
+      <code>founder_free</code> for role <code>founder</code>, and <code>isAutoGrantSignupPlan()</code> returns true
+      for it — so it&apos;s granted without ever reaching checkout.</li>
+    <li><b>There is no grandfathering. At all.</b> <code>founder_free</code> renders as the label
+      <b>"Free (grandfathered)"</b>, but nothing checks a signup date and no flag exists. Martin Goldberg
+      (2023) and a founder who signed up this morning show the identical badge.</li>
+    <li><b>The $49 plan is <code>founder_basic</code></b> — <code>PLAN_PRICES.founder_basic = 4900</code>,
+      shipped in <code>5786f92</code> on <b>16 Sep 2026</b>. That date is the natural cutoff.</li>
+  </ol>
+</div>
+
+<div class="q">
+  <h2>Point 3 — how are grandfathered accounts identified?</h2>
+  <p><b>Today: they aren&apos;t.</b> There is no flag and no date check. The word "grandfathered" is display text on
+    the plan label and nothing more.</p>
+  <p>So this needs deciding, not confirming. Two options, and I&apos;d take the second:</p>
+  <p><b>(a) By date</b> — treat <code>subscriptions.created_at &lt; cutoff</code> as grandfathered. No migration,
+    but it&apos;s a rule recomputed on every read, easy to get wrong in one place, and it silently re-grandfathers
+    anyone whose row is ever recreated.</p>
+  <p><b>(b) By an explicit flag</b> — add <code>subscriptions.is_grandfathered boolean</code>, backfill it once from
+    the cutoff date, then never compute it again. The account carries its own status, an admin can grant or revoke it
+    deliberately, and the label finally means something. <b>One migration, which you&apos;d run in the SQL editor.</b></p>
+</div>
+
+<!-- ============ 1. SIGNUP ============ -->
+<div class="lbl">1 · Signup — the Free card goes</div>
+<div class="plans">
+  <div class="p gone">
+    <span class="badge">Start here</span>
+    <h3>Free</h3>
+    <div class="pr">$0</div>
+    <div class="pu">Readiness</div>
+    <ul><li>All tools: CRR, valuation, data room</li><li>See that matches exist</li><li>Investor identities hidden</li></ul>
+    <span class="cta ghost">Choose Free</span>
+  </div>
+
+  <div class="p pick">
+    <span class="badge">Start here</span>
+    <h3>Basic</h3>
+    <div class="pr">$49</div>
+    <div class="pu">/month</div>
+    <ul><li>11 tools, up to 5 companies</li><li>Conference access</li><li>Full readiness suite</li></ul>
+    <span class="cta">Continue to checkout</span>
+  </div>
+
+  <div class="p">
+    <h3>Professional</h3>
+    <div class="pr">$199</div>
+    <div class="pu">/month</div>
+    <ul><li>Everything in Basic</li><li>Investor distribution</li><li>Priority review</li></ul>
+    <span class="cta ghost">Continue to checkout</span>
+  </div>
+
+  <div class="p">
+    <h3>Managed IR</h3>
+    <div class="pr">$3,500</div>
+    <div class="pu">/month · sales-led</div>
+    <ul><li>Dedicated IR team</li><li>Outreach run for you</li></ul>
+    <span class="cta ghost">Talk to us</span>
+  </div>
+</div>
+
+<!-- ============ 2. CHANGES ============ -->
+<div class="lbl">2 · What changes, file by file</div>
+
+<div class="row"><span class="n">1</span><span class="b">
+  <b>Remove Free from the signup options.</b> Drop the <code>founder_free</code> entry from
+  <code>SIGNUP_FOUNDER_PLANS</code> and from <code>SIGNUP_PLAN_TYPES</code>, so
+  <code>parseRequestedPlan()</code> can no longer accept it from a URL either.
+  <code>src/lib/subscriptions/plans.ts</code>
+</span><span class="tag code">code</span></div>
+
+<div class="row"><span class="n">2</span><span class="b">
+  <b>Stop auto-granting it.</b> <code>isAutoGrantSignupPlan("founder", …)</code> returns true for
+  <code>founder_free</code> — that&apos;s what lets signup skip checkout. Founders get no auto-grant plan;
+  only <code>investor_free</code> stays auto-granted.
+</span><span class="tag code">code</span></div>
+
+<div class="row"><span class="n">3</span><span class="b">
+  <b>Change the default for new founders.</b> <code>defaultPlanForRole()</code> currently returns
+  <code>founder_free</code> with the comment "founders start on permanent Free". New founders should land on
+  <code>founder_basic</code> with status <code>pending_payment</code> until checkout completes — not on a free plan
+  they then have to be moved off.
+  <code>src/lib/subscriptions/get-subscription.ts</code>
+</span><span class="tag code">code</span></div>
+
+<div class="row"><span class="n">4</span><span class="b">
+  <b>Add the flag and backfill it once.</b> <code>alter table subscriptions add column is_grandfathered boolean not null default false;</code>
+  then <code>update … set is_grandfathered = true where plan_type = 'founder_free' and created_at &lt; '2026-09-16';</code>
+  You run both in the SQL editor.
+</span><span class="tag sql">SQL</span></div>
+
+<div class="row"><span class="n">5</span><span class="b">
+  <b>Make the label honest.</b> <code>"Free (grandfathered)"</code> only when the flag is true; otherwise
+  <code>"Free (legacy)"</code>. Right now every free account claims to be grandfathered.
+</span><span class="tag code">code</span></div>
+
+<div class="row"><span class="n">6</span><span class="b">
+  <b>Marketing and pricing pages.</b> <code>b7ae05b</code> put Free back into <code>src/content/pricing.ts</code>,
+  <code>PlanComparisonSection</code>, <code>/pricing</code>, <code>/start</code>, home and founders content.
+  Those need the same treatment or the site still advertises a plan nobody can pick.
+</span><span class="tag code">code</span></div>
+
+<!-- ============ 3. WHO IS AFFECTED ============ -->
+<div class="lbl">3 · Who keeps free, who doesn&apos;t</div>
+<table class="tbl">
+  <tr><th>Account</th><th>Signed up</th><th>Today</th><th>After the change</th></tr>
+  <tr><td><b>Martin Goldberg</b> · Tinski Tech</td><td>10 Oct 2023</td><td>Free (grandfathered)</td><td class="ok">Free — flag set, untouched</td></tr>
+  <tr><td>Any founder before 16 Sep 2026</td><td>&lt; cutoff</td><td>Free</td><td class="ok">Free — flag set, untouched</td></tr>
+  <tr><td>Founder signed up 17 Sep +</td><td>&gt; cutoff</td><td>Free <b>(shouldn&apos;t be)</b></td><td class="no">Needs a decision — see below</td></tr>
+  <tr><td>New signup from now</td><td>—</td><td>Free, auto-granted</td><td class="no">Must pick a paid plan</td></tr>
+</table>
+
+<div class="q" style="border-left-color:#B91C1C">
+  <h2>The one that needs your call</h2>
+  <p>Anyone who signed up <b>between 16 Sep and today</b> got a free account they shouldn&apos;t have, because the
+    revert was still live. They&apos;re real users with real data.</p>
+  <p>Three options: <b>(i)</b> grandfather them too — simplest, costs you the revenue, defensible since it was our
+    error; <b>(ii)</b> give them a dated notice and convert; <b>(iii)</b> convert immediately. The backfill query
+    above assumes <b>(i)</b> only for pre-16-Sep accounts, so tell me which and I&apos;ll set the cutoff to match.</p>
+</div>
+
+<!-- ============ 4. ADMIN ============ -->
+<div class="lbl">4 · Admin — so you can see and control it</div>
+<div class="adm">
+  <div class="hd"><h3>Billing → Customers</h3><span style="flex:1"></span><span style="font-size:11.5px;color:var(--s400)">3 of 23 on free</span></div>
+  <table class="tbl" style="border:none">
+    <tr><th>Founder</th><th>Plan</th><th>Signed up</th><th>Status</th><th></th></tr>
+    <tr><td><b>Martin Goldberg</b></td><td>Free</td><td>10 Oct 2023</td><td><span class="chip gf">Grandfathered</span></td><td style="text-align:right;color:#4F46E5;font-weight:600">Revoke</td></tr>
+    <tr><td><b>Cynthia Mcbreen</b></td><td>Free</td><td>2 Sep 2026</td><td><span class="chip gf">Grandfathered</span></td><td style="text-align:right;color:#4F46E5;font-weight:600">Revoke</td></tr>
+    <tr><td><b>Alan Steinberg</b></td><td>Free</td><td>19 Sep 2026</td><td><span class="chip new">Post-cutoff</span></td><td style="text-align:right;color:#4F46E5;font-weight:600">Grant · Convert</td></tr>
+  </table>
+  <p style="margin:10px 0 0;font-size:11.5px;color:var(--s500)">The flag makes this list possible. With a date rule
+    there is nothing to display, nothing to grant, and nothing to revoke.</p>
+</div>
+
+</div>
+</body>
+</html>

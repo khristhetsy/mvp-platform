@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>IR Hub tabs · remove Create project · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 8px}
+.frame{width:1040px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;overflow:hidden;margin-bottom:22px}
+.frame *{box-sizing:border-box}
+.top{height:44px;display:flex;align-items:center;gap:6px;padding:0 14px;border-bottom:1px solid #E2E7F0}
+.logo{font-weight:600;font-size:13px;margin-right:10px}.logo span{color:#1A6CE4}
+.hub{font-size:12.5px;color:#5B6B86;margin-right:6px}
+.tab{font-size:12.5px;padding:6px 10px;border-radius:7px;color:#475569}.tab.on{background:#EAF1FD;color:#1A6CE4;font-weight:500}
+.tab.gone{color:#B42323;background:#FDE8E8;text-decoration:line-through}
+.body{display:flex}
+.side{width:150px;border-right:1px solid #E2E7F0;padding:10px 8px;font-size:12.5px}
+.side div{padding:6px 8px;border-radius:6px;color:#475569}.side .on{background:#EAF1FD;color:#1A6CE4;font-weight:500}.side .h{color:#0A1A40;font-weight:500}
+.main{flex:1;padding:16px 18px}
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.btn{font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:8px;background:#4F46E5;color:#fff}
+.btn.arrow{position:relative}
+.search{flex:1;height:34px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:12.5px;color:#8A98B3}
+.sel{height:34px;border:1px solid #C9D3E3;border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:12.5px}
+.card{width:260px;border:1px solid #E2E7F0;border-radius:12px;padding:14px;font-size:12.5px}
+.card b{display:block;font-size:13.5px}.card small{color:#5B6B86;display:block;margin-top:2px}
+.callout{font-size:12px;color:#137A3B;background:#E7F7EE;border-radius:6px;padding:4px 8px;display:inline-block;margin-top:6px}
+</style></head><body>
+
+<p class="note">BEFORE — "Create project" is a hub tab and also a "New" button on Projects.</p>
+<div class="frame">
+  <div class="top"><span class="logo">iCap<span>OS</span></span><span class="hub">Investor relations</span><span class="tab">Dashboard</span><span class="tab gone">Create project</span><span class="tab on">Projects</span><span class="tab">Tasks</span><span class="tab">Share Project</span><span class="tab">Founder report</span><span class="tab">Odoo import</span></div>
+</div>
+
+<p class="note">AFTER — six tabs. New projects come from the "New" button on Projects only (same form as before, same URL <code>/admin/ir/projects/new</code>). Sidebar unchanged.</p>
+<div class="frame">
+  <div class="top"><span class="logo">iCap<span>OS</span></span><span class="hub">Investor relations</span><span class="tab">Dashboard</span><span class="tab on">Projects</span><span class="tab">Tasks</span><span class="tab">Share Project</span><span class="tab">Founder report</span><span class="tab">Odoo import</span></div>
+  <div class="body">
+    <div class="side"><div class="h">Investor Relations Hub</div><div>Dashboard</div><div class="on">Projects</div><div>Tasks</div><div>Odoo import</div></div>
+    <div class="main">
+      <div class="bar"><span class="btn">New</span><span style="font-weight:600;font-size:14px">Projects</span><div class="search">Search founder, company, owner…</div><div class="sel">Active ▾</div></div>
+      <div class="card"><b>Dorrin Prophet's opportunity</b><small>Dorrin Prophet</small><small>Sep 18 to Mar 4, 2027 · 6 mo</small><small style="margin-top:8px">1 tasks · 0 matches · 0 held</small></div>
+      <div class="callout">"New" opens the same Create project form; the form's tab strip highlights Projects while you're on it.</div>
+    </div>
+  </div>
+</div>
+</body></html>

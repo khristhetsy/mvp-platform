@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Why Meetings reads 0 — and the four ways to fix it</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:30px 0 9px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ch{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--l100)}
+  .ch h3{margin:0;font-size:13.5px;font-weight:650}
+  .ch .sp{flex:1}
+  .cb{padding:14px 16px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+  .why h2{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why p{margin:0 0 8px;font-size:12.8px;color:var(--s600);line-height:1.6}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:var(--ink)}
+
+  /* the two paths */
+  .paths{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .path{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:#fff}
+  .path.ok{border-color:#A7F3D0;background:#F0FDF9}
+  .path.no{border-color:#FECACA;background:#FEF2F2}
+  .path h4{margin:0 0 9px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .path.ok h4{color:#065F46}.path.no h4{color:#991B1B}
+  .step{display:flex;align-items:flex-start;gap:8px;font-size:12.2px;color:var(--s600);padding:4px 0;line-height:1.5}
+  .step .n{width:16px;height:16px;border-radius:99px;font-size:9.5px;font-weight:700;display:flex;align-items:center;
+           justify-content:center;flex:none;margin-top:2px;color:#fff}
+  .path.ok .n{background:#059669}.path.no .n{background:#DC2626}
+  .step .n.grey{background:#CBD5E1}
+  .verdict{margin-top:10px;padding-top:9px;border-top:1px solid rgba(0,0,0,.06);font-size:12.2px;font-weight:600}
+  .path.ok .verdict{color:#065F46}.path.no .verdict{color:#991B1B}
+
+  /* options */
+  .opt{border-bottom:1px solid var(--l100);padding:13px 16px;display:grid;grid-template-columns:26px 1fr 128px 108px;gap:12px;align-items:start}
+  .opt:last-child{border-bottom:none}
+  .opt .k{width:22px;height:22px;border-radius:7px;background:var(--ind);color:#fff;font-size:11px;font-weight:700;
+          display:flex;align-items:center;justify-content:center}
+  .opt h4{margin:0 0 3px;font-size:13px;font-weight:650}
+  .opt p{margin:0;font-size:12.2px;color:var(--s600);line-height:1.55}
+  .opt .meta{font-size:11.3px;color:var(--s500);line-height:1.5}
+  .opt .meta b{color:var(--ink);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;margin-bottom:2px}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:99px;padding:2px 8px;letter-spacing:.04em;text-transform:uppercase}
+  .t-must{background:#EEF2FF;color:#3730A3}
+  .t-good{background:#ECFDF5;color:#065F46}
+  .t-weak{background:#FFF7ED;color:#9A3412}
+
+  pre{background:#0F172A;color:#E2E8F0;border-radius:9px;padding:13px 15px;font-size:11.5px;line-height:1.65;overflow:auto;margin:10px 0 0}
+  pre .c{color:#64748B}
+  pre .k2{color:#93C5FD}
+  pre .s{color:#86EFAC}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--good);border-radius:8px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);margin-top:16px;line-height:1.65}
+  .note b{color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);text-align:left;padding:0 0 7px;border-bottom:1px solid var(--line)}
+  td{padding:8px 0;border-bottom:1px solid var(--l100);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.c{text-align:center}
+  .yes{color:#059669;font-weight:700}.no2{color:#DC2626;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Why Meetings reads 0 when you are getting meetings</h1>
+<p class="sub">Social Media Hub → Command Center · traced through the code · mockup of the fix options</p>
+
+<div class="why">
+  <h2>The cause, in one line</h2>
+  <p><b>A booking is only ever attributed if the person walked the <code>/fit</code> funnel first, in the same
+     browser, before booking.</b> Your meetings do not come that way — so the Meetings ring is not undercounting,
+     it is counting a path almost nobody takes.</p>
+  <p>The whole chain hangs on one line: <code>book/route.ts:99</code> reads an <code>fs_session</code> cookie, and
+     only if it finds one calls <code>handoffFitSession</code>, which is the <b>only code anywhere</b> that writes
+     <code>lead_source = source_tag</code>. No cookie, no attribution, ever.</p>
+  <p><code>/schedule/[hostId]</code> reads no <code>?src=</code> and no <code>utm_*</code> — I grepped it, there is
+     nothing. And <code>scheduling_bookings</code> has <b>no source column at all</b>. So a direct scheduler booking
+     carries no record of where the person came from, and nothing downstream can recover it.</p>
+</div>
+
+<div class="lbl">The two paths a booking can take</div>
+<div class="paths">
+  <div class="path ok">
+    <h4>✓ Counted — the /fit funnel path</h4>
+    <div class="step"><span class="n">1</span><span>Clicks a tagged link → lands on <code>icapos.com/fit?src=…</code></span></div>
+    <div class="step"><span class="n">2</span><span><code>fit_sessions</code> row created with <code>source_tag</code>; <code>fs_session</code> cookie set</span></div>
+    <div class="step"><span class="n">3</span><span>Completes the funnel, then books <b>in the same browser</b></span></div>
+    <div class="step"><span class="n">4</span><span><code>handoffFitSession</code> writes <code>overrides.lead_source = source_tag</code></span></div>
+    <div class="step"><span class="n">5</span><span>Funnel joins booking → contact → tag. <b>Meetings +1</b></span></div>
+    <div class="verdict">Works. Rarely happens.</div>
+  </div>
+
+  <div class="path no">
+    <h4>✕ Invisible — every other path</h4>
+    <div class="step"><span class="n">1</span><span>Sees the post, DMs you, or clicks straight to the scheduler</span></div>
+    <div class="step"><span class="n">2</span><span>Lands on <code>/schedule/khris</code> — <b>no source captured</b></span></div>
+    <div class="step"><span class="n">3</span><span>Books. No <code>fs_session</code> cookie exists</span></div>
+    <div class="step"><span class="n grey">4</span><span><code>handoffFitSession</code> never runs. Nothing written</span></div>
+    <div class="step"><span class="n">5</span><span>Booking has no contact link and no tag. <b>Meetings +0</b></span></div>
+    <div class="verdict">This is where your meetings are.</div>
+  </div>
+</div>
+
+<div class="lbl">Two smaller breaks underneath, worth knowing about</div>
+<div class="card"><div class="cb">
+  <table>
+    <tr><th style="width:30%">Where</th><th>What it does</th><th style="width:22%">Effect</th></tr>
+    <tr>
+      <td><code>book.ts:131</code></td>
+      <td>Looks up an existing contact by email. It is a <b>read, never an upsert</b> — a cold lead who is not
+          already in the CRM gets <code>contact_crm_id = null</code>.</td>
+      <td>Meeting can never be attributed, even retroactively.</td>
+    </tr>
+    <tr>
+      <td><code>book.ts:139</code></td>
+      <td>Fills <code>lead_source</code> from the free-text answer to &ldquo;How did you hear about us?&rdquo; —
+          so it stores <code>"LinkedIn"</code>.</td>
+      <td>The funnel needs exact equality with <code>linkedin-icapos-sept</code>. <code>"LinkedIn"</code> never matches.</td>
+    </tr>
+  </table>
+</div></div>
+
+<div class="lbl">Four ways to fix it — they stack, they are not either/or</div>
+<div class="card">
+  <div class="ch"><h3>Options</h3><span class="sp"></span>
+    <span style="font-size:11px;color:#64748B">A + B are the real fix · C and D catch the remainder</span></div>
+
+  <div class="opt">
+    <span class="k">A</span>
+    <div>
+      <h4>Tag the scheduler link itself <span class="tag t-must" style="margin-left:6px">Core</span></h4>
+      <p><code>/schedule/khris?src=linkedin-sept</code> — the page reads <code>src</code> and the booking stores it
+         on the row. Every link you control gets tagged: the social bio, the post CTA, your email signature, the
+         QR on a slide.</p>
+      <p style="margin-top:5px;color:#94A3B8">Needs a <code>source_tag</code> column on <code>scheduling_bookings</code>.
+         The funnel then reads the booking directly instead of going through the contact.</p>
+    </div>
+    <div class="meta"><b>Catches</b>Anyone who clicks a link you posted</div>
+    <div class="meta"><b>Misses</b>DMs, word of mouth, someone typing the URL</div>
+  </div>
+
+  <div class="opt">
+    <span class="k">B</span>
+    <div>
+      <h4>Last-touch cookie on any landing <span class="tag t-must" style="margin-left:6px">Core</span></h4>
+      <p>Set a source cookie whenever <b>any</b> page on icapos.com is opened with <code>?src=</code> or
+         <code>utm_*</code> — not only <code>/fit</code>. Read it at booking time. Someone who lands on the
+         homepage from your post, browses, then books two days later still gets attributed.</p>
+      <p style="margin-top:5px;color:#94A3B8">This is the piece that makes A worth having: it generalises the
+         <code>fs_session</code> mechanism that already works to the whole site.</p>
+    </div>
+    <div class="meta"><b>Catches</b>Anyone who arrived from a tagged link, any page, any time in the window</div>
+    <div class="meta"><b>Misses</b>Different device, cleared cookies</div>
+  </div>
+
+  <div class="opt">
+    <span class="k">C</span>
+    <div>
+      <h4>Make &ldquo;How did you hear about us?&rdquo; a real picklist <span class="tag t-good" style="margin-left:6px">Useful</span></h4>
+      <p>Today it is free text that lands in <code>lead_source</code> and matches nothing. Make it a fixed list
+         whose options map to campaigns — <i>LinkedIn</i> → the LinkedIn campaign, not the literal string.</p>
+      <p style="margin-top:5px;color:#94A3B8">Self-reported, so treat it as a second-best signal: it should never
+         overwrite a tag captured from an actual click.</p>
+    </div>
+    <div class="meta"><b>Catches</b>DMs, word of mouth, offline — the ones A and B cannot see</div>
+    <div class="meta"><b>Misses</b>Whoever skips the question or guesses</div>
+  </div>
+
+  <div class="opt">
+    <span class="k">D</span>
+    <div>
+      <h4>Let staff set the source on a booking <span class="tag t-weak" style="margin-left:6px">Backstop</span></h4>
+      <p>A source field on the booking in Sales Hub → Bookings. You sat in the meeting; you know where they came
+         from. One dropdown after the call.</p>
+      <p style="margin-top:5px;color:#94A3B8">Unglamorous, but it is the only thing that will ever attribute
+         &ldquo;Johnny mentioned us to someone at a conference.&rdquo;</p>
+    </div>
+    <div class="meta"><b>Catches</b>Everything, if somebody does it</div>
+    <div class="meta"><b>Misses</b>Whatever nobody gets round to</div>
+  </div>
+</div>
+
+<div class="lbl">What A + B look like in the data</div>
+<div class="card"><div class="cb">
+  <div style="font-size:12.4px;color:#475569;margin-bottom:2px">
+    The booking becomes the attributed record, instead of the attribution being inferred through a contact that
+    may not exist. The funnel's Meetings query gets simpler and stops depending on email equality.
+  </div>
+<pre><span class="c">-- the column that does not exist today</span>
+<span class="k2">alter table</span> public.scheduling_bookings
+  <span class="k2">add column</span> source_tag text;          <span class="c">-- captured at booking, first-touch wins</span>
+
+<span class="c">-- Meetings, after: one join, no email matching, no contact required</span>
+<span class="k2">select</span> source_tag, <span class="k2">count</span>(*)
+  <span class="k2">from</span> public.scheduling_bookings
+ <span class="k2">where</span> created_at &gt;= $1 <span class="k2">and</span> created_at &lt; $2
+   <span class="k2">and</span> source_tag <span class="k2">is not null</span>
+ <span class="k2">group by</span> <span class="s">1</span>;
+
+<span class="c">-- Meetings, today: contact must exist AND its lead_source must equal the tag
+--                 AND its email must equal the booker's email</span></pre>
+</div></div>
+
+<div class="note">
+  <b>One thing the dashboard should say in the meantime, and does not.</b> &ldquo;Meetings 0 of 0 · no goal&rdquo;
+  reads as <i>no meetings happened</i>. What is true is <i>no meetings could be attributed</i> — those are
+  different facts and only one of them is alarming. Until the capture exists, that tile should say
+  <b>unmeasured</b>, the way the CRR tiles do when a company has never been scored, and name the reason.
+  <br><br>
+  <b>Why the Clicks number is real but the Meetings number is not.</b> Clicks come from
+  <code>social_clicks</code>, which the post's own tagged link writes directly — no identity needed, so it
+  works. Meetings need a person to be joined across two systems, and the join key is only ever created by the
+  <code>/fit</code> funnel. The 14 clicks are genuine; the funnel's &ldquo;Clicks → Meetings 0.0%, your weakest
+  step&rdquo; is measuring the gap in the plumbing, not a gap in your marketing.
+  <br><br>
+  <b>Worth deciding before anything is built.</b> Whether attribution should be <b>first-touch</b> (the post that
+  first brought them in) or <b>last-touch</b> (the one that brought them back to book). The existing
+  <code>/fit</code> code preserves first-touch — <code>if (!overrides.lead_source)</code> — so matching that
+  everywhere keeps one rule rather than two.
+</div>
+
+</div>
+</body>
+</html>

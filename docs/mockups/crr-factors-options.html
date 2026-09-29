@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CRR Companies tab · Factors column · five options</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40;padding:16px 16px 60px}
+h2{font-size:15px;margin:26px 0 4px}
+h2 span{font-weight:400;color:#5B6B86;font-size:13px}
+.note{font-size:12px;color:#5B6B86;margin:0 0 10px;max-width:1120px;line-height:1.55}
+.frame{width:1120px;background:#fff;border:1px solid #D6DDE8;border-radius:12px;padding:14px 16px}
+.frame *{box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#4F46E5;text-transform:uppercase;margin:0 0 8px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:600;padding:7px 9px;border-bottom:1px solid #E2E7F0}
+td{padding:8px 9px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.co{display:flex;align-items:center;gap:8px}
+.av{width:26px;height:26px;border-radius:7px;background:#EEF0FE;color:#4F46E5;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.nm{font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.sub{font-size:11px;color:#94A3B8;margin:2px 0 0}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:600}
+.red{background:#FDE8E8;color:#B42323}.amb{background:#FFF4DE;color:#9A5B00}.grn{background:#E7F7EE;color:#137A3B}.gry{background:#F1F5F9;color:#64748B}.blu{background:#EEF0FE;color:#4F46E5}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid #E2E7F0;border-radius:7px;padding:2px 7px;font-size:11px;background:#fff;cursor:pointer;line-height:1.7;white-space:nowrap}
+.chip:hover{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE}
+.chip b{font-variant-numeric:tabular-nums;font-weight:600}
+.dot{width:6px;height:6px;border-radius:99px;flex:none}
+.c-g{color:#137A3B}.c-a{color:#9A5B00}.c-r{color:#B42323}.c-z{color:#94A3B8}
+.d-g{background:#1D9E75}.d-a{background:#E8922A}.d-r{background:#D9534F}.d-z{background:#CBD5E1}
+code{font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+ul.tight{margin:6px 0 0;padding-left:18px;font-size:12px;color:#5B6B86;line-height:1.65}
+.verdict{display:flex;gap:18px;margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9}
+.verdict div{flex:1}
+.verdict p{margin:0;font-size:11.5px;line-height:1.6}
+.pro{color:#137A3B}.con{color:#B42323}
+.tag{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:#EEF0FE;color:#4F46E5}
+/* option C matrix */
+.mx th.f{font-size:9.5px;letter-spacing:0;text-transform:none;text-align:center;padding:6px 2px;width:44px;line-height:1.25;color:#64748B;font-weight:500;cursor:pointer}
+.mx th.f:hover{color:#4F46E5}
+.mx td.f{text-align:center;padding:6px 2px;font-size:11.5px;font-variant-numeric:tabular-nums;cursor:pointer;border-left:1px solid #F7F9FC}
+.mx td.f:hover{background:#EEF0FE}
+.mx td.f b{font-weight:600}
+.mx td.f i{display:block;font-style:normal;font-size:9px;color:#C3CCDA;margin-top:-1px}
+/* option E dimension groups */
+.dimrow{display:flex;gap:6px;flex-wrap:wrap}
+.dimbox{border:1px solid #E2E7F0;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer;min-width:104px}
+.dimbox:hover{border-color:#4F46E5;box-shadow:0 0 0 2px #EEF0FE}
+.dimbox .t{color:#64748B;font-size:10px;letter-spacing:.03em;text-transform:uppercase}
+.dimbox .v{font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.meter{height:3px;border-radius:99px;background:#F1F5F9;margin-top:3px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px}
+</style></head><body>
+
+<p class="note"><b>Companies tab → Factors column.</b> Options A and B from the last mockup are repeated small at the top for comparison; C, D and E are the three new ones. Same data in all five: real factor names, real maxima (15 / 13 / 11 / 10 / 10 / 9 / 8 / 8 / 7 / 4 / 3 / 1 / 1), and every number clickable to the factor detail for that company.</p>
+
+<!-- ── A ── -->
+<h2>A. Labelled chips, wrapped <span>— from the last mockup</span></h2>
+<div class="frame">
+  <table><tr><th style="width:190px">Company</th><th style="width:70px">Score</th><th>Factors</th></tr>
+  <tr>
+    <td><div class="co"><div class="av">BA</div><div class="nm">Brainiest AI</div></div></td>
+    <td><span class="pill red">28</span></td>
+    <td><div class="chips">
+      <span class="chip"><i class="dot d-a"></i>Revenue <b class="c-a">7/15</b></span><span class="chip"><i class="dot d-r"></i>Traction <b class="c-r">3/13</b></span>
+      <span class="chip"><i class="dot d-r"></i>Team <b class="c-r">3/11</b></span><span class="chip"><i class="dot d-r"></i>Market <b class="c-r">1/10</b></span>
+      <span class="chip"><i class="dot d-r"></i>Unit econ <b class="c-r">1/10</b></span><span class="chip"><i class="dot d-a"></i>Governance <b class="c-a">5/9</b></span>
+      <span class="chip"><i class="dot d-r"></i>IP moat <b class="c-r">2/8</b></span><span class="chip"><i class="dot d-a"></i>Runway <b class="c-a">4/8</b></span>
+      <span class="chip"><i class="dot d-g"></i>Exit <b class="c-g">6/7</b></span><span class="chip"><i class="dot d-g"></i>Pitch <b class="c-g">4/4</b></span>
+      <span class="chip"><i class="dot d-r"></i>Deal <b class="c-r">1/3</b></span><span class="chip"><i class="dot d-g"></i>Fit <b class="c-g">1/1</b></span>
+      <span class="chip"><i class="dot d-g"></i>ESG <b class="c-g">1/1</b></span>
+    </div></td>
+  </tr></table>
+</div>
+
+<!-- ── B ── -->
+<h2>B. Summary line, expand for the rest <span>— from the last mockup</span></h2>
+<div class="frame">
+  <table><tr><th style="width:190px">Company</th><th style="width:70px">Score</th><th>Factors</th></tr>
+  <tr>
+    <td><div class="co"><div class="av">BA</div><div class="nm">Brainiest AI</div></div></td>
+    <td><span class="pill red">28</span></td>
+    <td><span style="font-size:12px">3 strong · 3 partial · <b style="color:#B42323">7 weak</b></span> <span class="chip" style="margin-left:8px">Show all 13 ▾</span></td>
+  </tr></table>
+</div>
+
+<!-- ── C ── -->
+<h2>C. Fixed matrix — one column per factor, named once in the header</h2>
+<p class="note">The labels move to the table header, so they are written once instead of 22 times, and every company&rsquo;s numbers line up in the same column. You can read <i>down</i> a column — “nobody has unit economics” — which none of the other options let you do. Clicking a cell opens that company&rsquo;s detail for that factor; clicking a header sorts by it.</p>
+<div class="frame">
+  <table class="mx">
+    <tr>
+      <th style="width:172px">Company</th><th style="width:58px">Score</th>
+      <th class="f">Revenue<br>/15</th><th class="f">Traction<br>/13</th><th class="f">Team<br>/11</th><th class="f">Market<br>/10</th>
+      <th class="f">Unit&nbsp;econ<br>/10</th><th class="f">Govern.<br>/9</th><th class="f">IP&nbsp;moat<br>/8</th><th class="f">Runway<br>/8</th>
+      <th class="f">Exit<br>/7</th><th class="f">Pitch<br>/4</th><th class="f">Deal<br>/3</th><th class="f">Fit<br>/1</th><th class="f">ESG<br>/1</th>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">BA</div><div><div class="nm">Brainiest AI</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill red">28</span></td>
+      <td class="f"><b class="c-a">7</b></td><td class="f"><b class="c-r">3</b></td><td class="f"><b class="c-r">3</b></td><td class="f"><b class="c-r">1</b></td>
+      <td class="f"><b class="c-r">1</b></td><td class="f"><b class="c-a">5</b></td><td class="f"><b class="c-r">2</b></td><td class="f"><b class="c-a">4</b></td>
+      <td class="f"><b class="c-g">6</b></td><td class="f"><b class="c-g">4</b></td><td class="f"><b class="c-r">1</b></td><td class="f"><b class="c-g">1</b></td><td class="f"><b class="c-g">1</b></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CF</div><div><div class="nm">CCREP F1</div><div class="sub">Pre-seed profile</div></div></div></td>
+      <td><span class="pill red">11</span></td>
+      <td class="f"><b class="c-r">2</b></td><td class="f"><b class="c-z">0</b></td><td class="f"><b class="c-r">2</b></td><td class="f"><b class="c-z">0</b></td>
+      <td class="f"><b class="c-z">0</b></td><td class="f"><b class="c-r">1</b></td><td class="f"><b class="c-z">0</b></td><td class="f"><b class="c-r">1</b></td>
+      <td class="f"><b class="c-a">3</b></td><td class="f"><b class="c-g">4</b></td><td class="f"><b class="c-z">0</b></td><td class="f"><b class="c-z">0</b></td><td class="f"><b class="c-z">0</b></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CS</div><div><div class="nm">Cognitive Science</div><div class="sub">Series A profile</div></div></div></td>
+      <td><span class="pill amb">34</span></td>
+      <td class="f"><b class="c-a">8</b></td><td class="f"><b class="c-a">6</b></td><td class="f"><b class="c-g">9</b></td><td class="f"><b class="c-r">2</b></td>
+      <td class="f"><b class="c-r">3</b></td><td class="f"><b class="c-g">7</b></td><td class="f"><b class="c-r">2</b></td><td class="f"><b class="c-r">2</b></td>
+      <td class="f"><b class="c-a">4</b></td><td class="f"><b class="c-g">4</b></td><td class="f"><b class="c-r">1</b></td><td class="f"><b class="c-g">1</b></td><td class="f"><b class="c-r">0</b></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CI</div><div><div class="nm">Credtent, Inc.</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill amb">36</span></td>
+      <td class="f"><b class="c-g">12</b></td><td class="f"><b class="c-a">6</b></td><td class="f"><b class="c-a">5</b></td><td class="f"><b class="c-a">5</b></td>
+      <td class="f"><b class="c-r">2</b></td><td class="f"><b class="c-g">7</b></td><td class="f"><b class="c-a">4</b></td><td class="f"><b class="c-g">6</b></td>
+      <td class="f"><b class="c-r">2</b></td><td class="f"><b class="c-g">4</b></td><td class="f"><b class="c-a">2</b></td><td class="f"><b class="c-g">1</b></td><td class="f"><b class="c-z">0</b></td>
+    </tr>
+    <tr style="background:#FAFBFD">
+      <td style="font-size:11px;color:#64748B" colspan="2">Column average · 22 companies</td>
+      <td class="f" style="font-size:10.5px;color:#94A3B8">5.1</td><td class="f" style="font-size:10.5px;color:#94A3B8">2.4</td><td class="f" style="font-size:10.5px;color:#94A3B8">4.0</td><td class="f" style="font-size:10.5px;color:#94A3B8">1.9</td>
+      <td class="f" style="font-size:10.5px;color:#B42323">1.2</td><td class="f" style="font-size:10.5px;color:#94A3B8">4.4</td><td class="f" style="font-size:10.5px;color:#94A3B8">2.1</td><td class="f" style="font-size:10.5px;color:#94A3B8">3.2</td>
+      <td class="f" style="font-size:10.5px;color:#94A3B8">3.6</td><td class="f" style="font-size:10.5px;color:#94A3B8">3.8</td><td class="f" style="font-size:10.5px;color:#94A3B8">1.1</td><td class="f" style="font-size:10.5px;color:#94A3B8">0.8</td><td class="f" style="font-size:10.5px;color:#94A3B8">0.4</td>
+    </tr>
+  </table>
+  <div class="verdict">
+    <div><p class="pro"><b>Good</b><br>Densest of the five — 22 companies × 13 factors on one screen with no clicking. Columns are comparable, so the portfolio-wide weak spot is visible (unit economics, above). Row height unchanged.</p></div>
+    <div><p class="con"><b>Costs</b><br>The widest layout by far — needs the full table width, so Score/Outreach/Actions have to move or the column scrolls sideways. Denominators live in the header, not next to the number.</p></div>
+  </div>
+</div>
+
+<!-- ── D ── -->
+<h2>D. Weakest three, named — the rest behind a count</h2>
+<p class="note">Ranked by <i>points lost</i> against the company&rsquo;s own profile weighting, so the chips answer “what is actually holding this company back” rather than “which factor is smallest”. Narrow, and every row says something you can act on.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:190px">Company</th><th style="width:70px">Score</th><th>Biggest gaps <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#B6C0D0">— weighted for this company&rsquo;s stage</span></th></tr>
+    <tr>
+      <td><div class="co"><div class="av">BA</div><div><div class="nm">Brainiest AI</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill red">28</span></td>
+      <td><div class="chips">
+        <span class="chip"><i class="dot d-r"></i>Customer Traction <b class="c-r">3/13</b></span>
+        <span class="chip"><i class="dot d-r"></i>Founder &amp; Team <b class="c-r">3/11</b></span>
+        <span class="chip"><i class="dot d-r"></i>Market Evidence <b class="c-r">1/10</b></span>
+        <span class="chip" style="border-style:dashed;color:#64748B">10 more ▾</span>
+        <span class="chip" style="border:0;background:#E7F7EE;color:#137A3B">Pitch 4/4 · Fit 1/1 · ESG 1/1 full marks</span>
+      </div></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CF</div><div><div class="nm">CCREP F1</div><div class="sub">Pre-seed profile</div></div></div></td>
+      <td><span class="pill red">11</span></td>
+      <td><div class="chips">
+        <span class="chip"><i class="dot d-z"></i>Founder &amp; Team <b class="c-z">2/11</b></span>
+        <span class="chip"><i class="dot d-z"></i>Customer Traction <b class="c-z">0/13</b></span>
+        <span class="chip"><i class="dot d-r"></i>Revenue &amp; Cash Flow <b class="c-r">2/15</b></span>
+        <span class="chip" style="border-style:dashed;color:#64748B">10 more ▾</span>
+        <span class="chip" style="border:0;background:#F1F5F9;color:#64748B">7 factors scored zero — no documents</span>
+      </div></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CI</div><div><div class="nm">Credtent, Inc.</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill amb">36</span></td>
+      <td><div class="chips">
+        <span class="chip"><i class="dot d-r"></i>Unit Economics <b class="c-r">2/10</b></span>
+        <span class="chip"><i class="dot d-a"></i>Customer Traction <b class="c-a">6/13</b></span>
+        <span class="chip"><i class="dot d-r"></i>Exit Strategy <b class="c-r">2/7</b></span>
+        <span class="chip" style="border-style:dashed;color:#64748B">10 more ▾</span>
+        <span class="chip" style="border:0;background:#E7F7EE;color:#137A3B">Revenue 12/15 strongest</span>
+      </div></td>
+    </tr>
+  </table>
+  <div class="verdict">
+    <div><p class="pro"><b>Good</b><br>Full factor names fit. One line per company. Reads like a to-do list, and the ranking is stage-aware — traction outranks pitch quality for a Series A company but not for a pre-seed one.</p></div>
+    <div><p class="con"><b>Costs</b><br>Ten of thirteen factors are hidden by default. You cannot compare two companies on the same factor without expanding both. Needs the “points lost” ranking written, which is new arithmetic (small, but new).</p></div>
+  </div>
+</div>
+
+<!-- ── E ── -->
+<h2>E. Grouped into the five dimensions the weights actually use</h2>
+<p class="note">The 13 factors already roll up into 5 dimensions — Narrative, Team, Financial, Traction, Cap table — and those five are what the Weights tab edits. This column shows the rollup, so the Companies tab and the Weights tab finally speak the same language. Click a dimension to open the factors inside it.</p>
+<div class="frame">
+  <table>
+    <tr><th style="width:190px">Company</th><th style="width:70px">Score</th><th>Dimensions <span style="text-transform:none;letter-spacing:0;font-weight:400;color:#B6C0D0">— 0–100, the same five the weights use</span></th></tr>
+    <tr>
+      <td><div class="co"><div class="av">BA</div><div><div class="nm">Brainiest AI</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill red">28</span></td>
+      <td><div class="dimrow">
+        <div class="dimbox"><div class="t">Narrative</div><div class="v c-g">100</div><div class="meter"><i style="width:100%;background:#1D9E75"></i></div></div>
+        <div class="dimbox"><div class="t">Team</div><div class="v c-r">27</div><div class="meter"><i style="width:27%;background:#D9534F"></i></div></div>
+        <div class="dimbox"><div class="t">Financial</div><div class="v c-a">36</div><div class="meter"><i style="width:36%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Traction</div><div class="v c-r">17</div><div class="meter"><i style="width:17%;background:#D9534F"></i></div></div>
+        <div class="dimbox"><div class="t">Cap table</div><div class="v c-a">42</div><div class="meter"><i style="width:42%;background:#E8922A"></i></div></div>
+      </div></td>
+    </tr>
+    <tr style="background:#FAFBFD">
+      <td colspan="2" style="font-size:11px;color:#64748B;padding-left:20px">↳ Traction, expanded</td>
+      <td><div class="chips">
+        <span class="chip"><i class="dot d-r"></i>Customer Traction &amp; LOIs <b class="c-r">3/13</b></span>
+        <span class="chip"><i class="dot d-r"></i>Market &amp; Competitive Evidence <b class="c-r">1/10</b></span>
+        <span class="chip" style="border:0;color:#94A3B8">= 4 of 23 pts → 17</span>
+      </div></td>
+    </tr>
+    <tr>
+      <td><div class="co"><div class="av">CI</div><div><div class="nm">Credtent, Inc.</div><div class="sub">Seed profile</div></div></div></td>
+      <td><span class="pill amb">36</span></td>
+      <td><div class="dimrow">
+        <div class="dimbox"><div class="t">Narrative</div><div class="v c-g">100</div><div class="meter"><i style="width:100%;background:#1D9E75"></i></div></div>
+        <div class="dimbox"><div class="t">Team</div><div class="v c-a">45</div><div class="meter"><i style="width:45%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Financial</div><div class="v c-a">58</div><div class="meter"><i style="width:58%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Traction</div><div class="v c-a">48</div><div class="meter"><i style="width:48%;background:#E8922A"></i></div></div>
+        <div class="dimbox"><div class="t">Cap table</div><div class="v c-a">54</div><div class="meter"><i style="width:54%;background:#E8922A"></i></div></div>
+      </div></td>
+    </tr>
+  </table>
+  <div class="verdict">
+    <div><p class="pro"><b>Good</b><br>Five labelled boxes instead of thirteen — full names, comfortable width, one line per company. Matches the Weights tab exactly, so “Traction is weighted 25 for Seed and this company scores 17” is a sentence you can read straight off the screen.</p></div>
+    <div><p class="con"><b>Costs</b><br>It is one level up from what you asked for — the thirteen factors are a click away, not on the row. Narrative is a single 4-point factor, so it reads 100 or 0 and looks louder than it is.</p></div>
+  </div>
+</div>
+
+<!-- ── comparison ── -->
+<h2>Side by side</h2>
+<div class="frame">
+  <table>
+    <tr><th style="width:52px">Option</th><th style="width:210px">What&rsquo;s on the row</th><th style="width:110px">Row height</th><th style="width:130px">Column width</th><th>Best when you are…</th></tr>
+    <tr><td><span class="tag">A</span></td><td>13 short labels + n/max</td><td>~2 lines taller</td><td>wide (~560px)</td><td>…looking at one or two companies and want everything without clicking</td></tr>
+    <tr><td><span class="tag">B</span></td><td>a count, then expand</td><td>unchanged</td><td>narrow</td><td>…scrolling all 22 and only occasionally opening one</td></tr>
+    <tr><td><span class="tag">C</span></td><td>13 numbers, labels in the header</td><td>unchanged</td><td>widest — needs the table</td><td>…comparing companies, or hunting for a portfolio-wide gap</td></tr>
+    <tr><td><span class="tag">D</span></td><td>3 full names, ranked by damage</td><td>unchanged</td><td>medium</td><td>…deciding who to chase and what to ask them for</td></tr>
+    <tr><td><span class="tag">E</span></td><td>5 dimension scores</td><td>unchanged</td><td>medium</td><td>…tuning weights, since it speaks the same five words the Weights tab does</td></tr>
+  </table>
+  <p class="note" style="margin-top:10px">They are not exclusive. <b>C or D on the row plus the existing factor popup</b> covers most of it; E could live on the company detail panel that already opens when you click a row, rather than in the column. Say which one and whether you want a second one anywhere.</p>
+  <ul class="tight">
+    <li><b>Still open from last time:</b> clicking a number opens the factor popup (what exists today, now obviously clickable) — or should it jump to the company&rsquo;s own page instead?</li>
+    <li><b>A, C and D need short factor names</b> (“Revenue”, “Unit econ”, “Govern.”) alongside the existing long ones. E and B use the names already there.</li>
+  </ul>
+</div>
+
+</body></html>

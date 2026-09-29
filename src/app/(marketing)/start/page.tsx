@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { start } from "@/content/start";
 import { StartForm } from "@/components/marketing-site/StartForm";
+import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { priceLabel } from "@/lib/subscriptions/pricing-catalog";
 
 export const metadata: Metadata = {
   title: "Get started — iCapOS",
@@ -13,8 +15,11 @@ const Eyebrow = ({ children, onDark = false }: { children: React.ReactNode; onDa
   <p className={`font-site-mono text-xs font-semibold uppercase tracking-[0.16em] ${onDark ? "text-site-blue-lt" : "text-site-blue"}`}>{children}</p>
 );
 
-export default function StartPage() {
+export default async function StartPage() {
   const s = start;
+  // Plan cards show the live prices, so an admin price change reaches this page.
+  const pricing = await loadPricing();
+  const prices = { founder_basic: priceLabel(pricing, "founder_basic"), founder_professional: priceLabel(pricing, "founder_professional") };
   return (
     <>
       <section className="bg-gradient-to-b from-site-navy to-site-navy-2 px-6 pb-16 pt-20 text-white">
@@ -34,7 +39,7 @@ export default function StartPage() {
             </div>
           </div>
           <div className="text-site-ink">
-            <StartForm />
+            <StartForm prices={prices} />
           </div>
         </div>
       </section>

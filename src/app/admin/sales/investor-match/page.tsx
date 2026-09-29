@@ -12,6 +12,7 @@ type CompanyRow = {
   company_name: string | null;
   industry: string | null;
   funding_amount: number | null;
+  funding_amount_band?: string | null;
   revenue_stage: string | null;
   use_of_funds: string | null;
 };
@@ -28,7 +29,7 @@ export default async function InvestorMatchPage({
   const db = createServiceRoleClient() as any;
   const { data } = await db
     .from("companies")
-    .select("id, company_name, industry, funding_amount, revenue_stage, use_of_funds")
+    .select("id, company_name, industry, funding_amount, funding_amount_band, revenue_stage, use_of_funds")
     .order("company_name", { ascending: true })
     .limit(500);
   const companyRows = (data ?? []) as CompanyRow[];
@@ -46,6 +47,7 @@ export default async function InvestorMatchPage({
     const scored = await loadInvestorContacts({
       scoreAgainst: {
         fundingAmount: selected.funding_amount,
+        fundingBand: selected.funding_amount_band ?? null,
         revenue: null,
         revenueStage: selected.revenue_stage,
         useOfFunds: selected.use_of_funds,

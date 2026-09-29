@@ -100,7 +100,7 @@ export function EventModeratorsManager({
                   {m.email && <p className="text-xs text-[var(--text-muted)]">{m.email}</p>}
                 </div>
                 {canManage && (
-                  <button
+                  <button type="button"
                     onClick={() => remove(m.userId)}
                     disabled={busy}
                     className="text-xs text-rose-600 hover:underline disabled:opacity-50"
@@ -153,7 +153,7 @@ export function EventModeratorsManager({
               ))}
             </select>
           </label>
-          <button
+          <button type="button"
             onClick={() => {
               if (!addId) return;
               const id = addId;

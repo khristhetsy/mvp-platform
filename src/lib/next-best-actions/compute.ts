@@ -75,7 +75,7 @@ export async function loadAndComputeNextBestActions(input: {
   } else {
     const adminClient = createServiceRoleClient();
     const adminT = await getTranslations("actions.nba.admin").catch(() => undefined);
-    const ctx = await loadAdminNbaContext(adminClient);
+    const ctx = await loadAdminNbaContext(adminClient, input.options?.adminPreload);
     const [adminActions, executionActions] = await Promise.all([
       Promise.resolve(computeAdminActions(ctx, role, entityFilter, adminT)),
       loadDocumentExecutionNbaActions(role, entityFilter, 4),

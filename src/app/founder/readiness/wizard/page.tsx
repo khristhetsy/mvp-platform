@@ -19,7 +19,11 @@ import {
   type WizardDoc,
   type WizardProfileItem,
 } from "@/components/founder/ReadinessWizard";
+import { CrrImprovement } from "@/components/founder/CrrImprovement";
+import { crrFor } from "@/lib/crr/crr-for";
+import { improvementSteps, reachesGate } from "@/lib/crr/improvement";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
+import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +38,11 @@ const PROFILE_HINTS: Record<string, { hint: string; href: string }> = {
 };
 
 export default async function ReadinessWizardPage() {
-  const profile = await requireRole(["founder"]);
+  // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
+  const acting = await resolveActingFounderScope();
+  const profile = acting ? acting.profile : await requireRole(["founder"]);
   const t = await getTranslations("appPages");
-  const { company } = await getActiveCompanyForUser(profile);
+  const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
 
   // Deal Company (no active company) has no readiness to improve — show a single empty state.
   if (!company) {
@@ -58,8 +64,11 @@ export default async function ReadinessWizardPage() {
   }
 
   const supabase = await createServerSupabaseClient();
+  // Founder-scoped reads go through the acting client when staff are acting on
+  // behalf; otherwise the staff session hits RLS and the page renders empty.
+  const db = acting ? acting.supabase : supabase;
 
-  const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
+  const documents = company ? (await listCompanyDocuments(db, company.id)).data ?? [] : [];
   // Documents the founder marked "not applicable" (e.g. a SaaS with no customer
   // contracts) — excluded from the gap list and the score so they aren't nagged
   // to upload something that doesn't apply.
@@ -70,8 +79,13 @@ export default async function ReadinessWizardPage() {
   const profileCompletion = buildProfileCompletion(company);
 
   const { data: diligenceReport } = company
-    ? await getLatestDiligenceReport(supabase, company.id)
+    ? await getLatestDiligenceReport(db, company.id)
     : { data: null };
+
+  // The rating itself — what the gate reads, and what this page is now about.
+  const crr = await crrFor(company.id);
+  const steps = improvementSteps(crr.factorGaps);
+  const reach = reachesGate(steps, crr.pointsToGate);
 
   const uploadedTypeCodes = documents.flatMap((d) => (d.document_type ? [d.document_type] : []));
   const currentScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes, undefined, notApplicableCodes);
@@ -105,8 +119,38 @@ export default async function ReadinessWizardPage() {
           <PageHeader
             eyebrow={t("readiness")}
             title={t("score_improvement_wizard")}
-            description={t("complete_each_step_to_reach_80_and_unlock_inst")}
+            description={
+              crr.score === null
+                ? "Run your Capital Readiness Rating to see what to work on."
+                : crr.outreachUnlocked
+                  ? `Your CRR is ${crr.score}. Outreach is open — these still raise it.`
+                  : `Your CRR is ${crr.score}. Outreach unlocks at ${crr.gate}.`
+            }
           />
+
+          <CrrImprovement
+            companyName={company?.company_name ?? "Your company"}
+            score={crr.score}
+            band={crr.band}
+            gate={crr.gate}
+            pointsToGate={crr.pointsToGate}
+            outreachUnlocked={crr.outreachUnlocked}
+            dimensions={crr.dimensions.map((d) => ({
+              label: d.label, contributes: d.contributes, weight: d.weight,
+            }))}
+            steps={steps}
+            reach={reach}
+            scoredAt={crr.scoredAt}
+          />
+
+          <div>
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+              Document checklist
+            </h2>
+            <p className="mb-2 text-[11.5px] text-[var(--text-muted)]">
+              What is still missing from your data room. These feed the rating above rather than scoring separately.
+            </p>
+          </div>
           <ReadinessWizard
             currentScore={currentScore}
             targetScore={targetScore}

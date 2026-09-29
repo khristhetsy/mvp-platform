@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminBetaOperationsDashboard } from "@/components/admin/beta/AdminBetaOperationsDashboard";

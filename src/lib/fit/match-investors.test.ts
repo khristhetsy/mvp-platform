@@ -1,0 +1,89 @@
+import { describe, it, expect } from "vitest";
+import { scoreRow, rankRows } from "./match-investors";
+import { OP_STAGE_LABEL, INV_SIZE_LABEL, REVENUE_LABEL, type FitAnswers } from "./options";
+
+function inv(opts: {
+  id?: string;
+  company: string;
+  industries?: string[];
+  stage?: string[];
+  size?: string[];
+  revenue?: string[];
+  invTypes?: string[];
+  source?: string;
+  verifiedAt?: string;
+  overrides?: Record<string, unknown> | null;
+}) {
+  return {
+    id: opts.id ?? opts.company,
+    company: opts.company,
+    inv_source: opts.source ?? "verified",
+    inv_verified_at: opts.verifiedAt ?? "2026-09-01T00:00:00Z",
+    overrides: opts.overrides ?? null,
+    raw: {
+      __profile: {
+        industries: opts.industries ?? [],
+        investorTypes: opts.invTypes ?? [],
+        extra: {
+          [OP_STAGE_LABEL]: opts.stage ?? [],
+          [INV_SIZE_LABEL]: opts.size ?? [],
+          [REVENUE_LABEL]: opts.revenue ?? [],
+        },
+      },
+    },
+  };
+}
+
+// Multi-select answers; investorType empty = "open to any" (type factor is neutral +15).
+const ANSWERS: FitAnswers = { stage: ["revenue_pre_a"], raise: ["1m_10m"], industry: ["Cleantech"], revenue: ["1m_5m"], investorType: [] };
+
+describe("scoreRow", () => {
+  it("scores a full match at 100", () => {
+    const r = scoreRow(inv({ company: "Meridian", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $10m"] }), ANSWERS);
+    expect(r?.fit).toBe(100); // 30 + 25 + 20 + 15(any type) + 10
+  });
+
+  it("hard-filters a firm with no sector overlap (returns null)", () => {
+    const r = scoreRow(inv({ company: "OffSector", industries: ["Biotech"], stage: ["Expand Growth"] }), ANSWERS);
+    expect(r).toBeNull();
+  });
+
+  it("industry + open-to-any-type alone is 45", () => {
+    const r = scoreRow(inv({ company: "IndustryOnly", industries: ["Cleantech"] }), ANSWERS);
+    expect(r?.fit).toBe(45); // industry 30 + type 15 (any)
+  });
+
+  it("adds the investment weight only when the raise overlaps a stored band", () => {
+    const hit = scoreRow(inv({ company: "A", industries: ["Cleantech"], size: ["$1m - $10m"] }), ANSWERS);
+    const miss = scoreRow(inv({ company: "B", industries: ["Cleantech"], size: ["Less than $50k"] }), ANSWERS);
+    expect(hit?.fit).toBe(65);   // 30 + 20 + 15
+    expect(miss?.fit).toBe(45);  // 30 + 15
+  });
+
+  it("matches investor type when a specific type is selected", () => {
+    const answers: FitAnswers = { ...ANSWERS, investorType: ["vc"] };
+    const hit = scoreRow(inv({ company: "V", industries: ["Cleantech"], invTypes: ["Venture Capital"] }), answers);
+    const miss = scoreRow(inv({ company: "A", industries: ["Cleantech"], invTypes: ["Angel"] }), answers);
+    expect(hit?.fit).toBe(45);  // 30 + 15 (type overlap)
+    expect(miss?.fit).toBe(30); // 30, no type overlap
+  });
+});
+
+describe("rankRows", () => {
+  it("keeps sector-matching firms sorted by fit, and excludes off-sector", () => {
+    const out = rankRows([
+      inv({ company: "Strong", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"], revenue: ["$1m - $10m"] }), // 100
+      inv({ company: "SectorOnly", industries: ["Cleantech"] }), // 35 → shows (industry hard filter passed)
+      inv({ company: "OffSector", industries: ["Biotech"] }), // no sector overlap → excluded
+    ], ANSWERS);
+    expect(out.map((r) => r.company)).toEqual(["Strong", "SectorOnly"]);
+  });
+
+  it("returns one row per firm, preferring verified over self_reported", () => {
+    const out = rankRows([
+      inv({ id: "1", company: "Ridge Partners", source: "self_reported", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"] }),
+      inv({ id: "2", company: "ridge partners", source: "verified", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"] }),
+    ], ANSWERS);
+    expect(out).toHaveLength(1); // deduped by normalised company
+  });
+});

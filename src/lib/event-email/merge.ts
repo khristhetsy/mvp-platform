@@ -10,17 +10,19 @@ import { getEventById } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
+import { presenterImageSignedUrl } from "@/lib/icfo-events/presenter-images";
 import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
+import { listEventAttendees } from "@/lib/icfo-events/attendees";
 
 export const ORGANIZER_LINE = "iCFO Capital Global, Inc. · (619) 956-9114 · info@myicfos.com";
 export const EVENT_BADGE = "iCFO Capital · Ecosystem Showcase";
 
 /** Session accent by type — matches the approved template (§5). */
 export const SESSION_ACCENT: Record<string, string> = {
-  keynote: "#0D9488",
-  panel: "#0D9488",
-  workshop: "#0D9488",
-  founder_showcase: "#534AB7",
+  keynote: "#185FA5",
+  panel: "#185FA5",
+  workshop: "#185FA5",
+  founder_showcase: "#1A6CE4",
   talk_show: "#0c2340",
 };
 
@@ -40,7 +42,9 @@ export const eventMergeSchema = z.object({
   /** The event's live published booklet URL, when one exists. */
   bookletUrl: z.string().nullable().default(null),
   sessions: z.array(
-    z.object({ type: z.string(), title: z.string(), abstract: z.string(), accent: z.string() }),
+    // `id` is what lets a presenter be billed under their session rather than
+    // in the flat list — without it there is nothing to join a roster row to.
+    z.object({ id: z.string().default(""), type: z.string(), title: z.string(), abstract: z.string(), accent: z.string() }),
   ),
   sponsorLockup: z.string().nullable(),
   organizerLine: z.string(),
@@ -51,11 +55,21 @@ export const eventMergeSchema = z.object({
       role: z.string(),
       company: z.string(),
       headshotUrl: z.string().nullable(),
+      /** Avatar fallback when there is no headshot; also shown in the company box. */
+      companyLogoUrl: z.string().nullable().default(null),
       initials: z.string(),
       bio: z.string().default(""),
       companySummary: z.string().default(""),
+      /** Billed under this session when set; otherwise listed with the roster. */
+      sessionId: z.string().nullable().default(null),
     }),
   ),
+  /** Everyone registered as an investor or a founder, by name. */
+  attendees: z.object({
+    investors: z.array(z.string()),
+    founders: z.array(z.string()),
+    total: z.number(),
+  }),
   sponsorTiers: z.object({
     presenting: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
     track: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
@@ -86,6 +100,7 @@ export function buildEventMergeData(
     bannerUrl: string | null;
     presentingSponsors?: string[];
     presenters?: EventMergeData["presenters"];
+    attendees?: EventMergeData["attendees"];
     sponsorTiers?: EventMergeData["sponsorTiers"];
     bookletUrl?: string | null;
   },
@@ -103,10 +118,11 @@ export function buildEventMergeData(
     .filter((s: EventSession) => s.status !== "draft")
     .sort((a, b) => a.position - b.position)
     .map((s) => ({
+      id: s.id,
       type: s.type,
       title: s.title,
       abstract: s.abstract ?? "",
-      accent: SESSION_ACCENT[s.type] ?? "#0D9488",
+      accent: SESSION_ACCENT[s.type] ?? "#185FA5",
     }));
 
   return {
@@ -125,6 +141,7 @@ export function buildEventMergeData(
     sponsorLockup: presentingSponsors.length ? `Presented with ${presentingSponsors.join(", ")}` : null,
     organizerLine: ORGANIZER_LINE,
     presenters: extras.presenters ?? [],
+    attendees: extras.attendees ?? { investors: [], founders: [], total: 0 },
     sponsorTiers: extras.sponsorTiers ?? emptyTiers,
   };
 }
@@ -138,25 +155,45 @@ export async function loadEventMergeData(
   const event = await getEventById(supabase, eventId).catch(() => null);
   if (!event) return null;
   const bannerUrl = bannerPublicUrl(supabase, event.coverPath);
-  const [sponsors, presenterRows] = await Promise.all([
+  const [sponsors, presenterRows, attending] = await Promise.all([
     listEventSponsors(supabase, eventId).catch(() => []),
     listEventPresenters(supabase, eventId).catch(() => []),
+    listEventAttendees(eventId).catch(() => null),
   ]);
+  const attendees: EventMergeData["attendees"] = attending
+    ? {
+        investors: attending.investors.map((a) => a.name),
+        founders: attending.founders.map((a) => a.name),
+        total: attending.total,
+      }
+    : { investors: [], founders: [], total: 0 };
   const bookletUrl = await publishedBookletUrl(supabase, eventId, opts.baseUrl).catch(() => null);
   const presentingSponsors = sponsors.filter((s) => s.placement === "presenting").map((s) => s.name);
   const tierOf = (p: string) => (p === "presenting" ? "presenting" : p === "track" ? "track" : "community");
   const sponsorTiers: EventMergeData["sponsorTiers"] = { presenting: [], track: [], community: [] };
   for (const s of sponsors) sponsorTiers[tierOf(s.placement)].push({ name: s.name, logoUrl: s.logoUrl ?? null });
-  const presenters = presenterRows
-    .sort((a, b) => a.position - b.position)
-    .map((p) => ({
+  const sortedPresenters = presenterRows.sort((a, b) => a.position - b.position);
+  // Signed URLs for headshots and company logos (private bucket, 1 hour).
+  const presenterImages = await Promise.all(
+    sortedPresenters.map(async (p) => {
+      const [headshotUrl, companyLogoUrl] = await Promise.all([
+        presenterImageSignedUrl(p.headshotPath),
+        presenterImageSignedUrl(p.companyLogoPath),
+      ]);
+      return { headshotUrl, companyLogoUrl };
+    }),
+  );
+  const presenters = sortedPresenters
+    .map((p, i) => ({
       name: p.displayName,
       role: p.roleLabel ?? "",
       company: p.headline ?? "",
-      headshotUrl: null as string | null,
+      headshotUrl: presenterImages[i].headshotUrl,
+      companyLogoUrl: presenterImages[i].companyLogoUrl,
       initials: initialsOf(p.displayName),
       bio: p.bio ?? "",
       companySummary: p.companySummary ?? "",
+      sessionId: p.sessionId ?? null,
     }));
-  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers, bookletUrl });
+  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers, bookletUrl, attendees });
 }

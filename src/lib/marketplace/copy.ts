@@ -52,7 +52,7 @@ export const marketplaceCopy = {
   expressInterest: {
     rule206Lead: "Non-binding indication of interest.",
     rule206Body:
-      "No money or other consideration is being solicited, and if sent, will not be accepted. No offer to buy can be accepted and no part of the purchase price can be received until the offering is live on the registered funding portal, and any indication of interest involves no obligation or commitment of any kind.",
+      "No money or other consideration is being solicited, and if sent, will not be accepted. No offer to buy can be accepted and no part of the purchase price can be received until the offering is live on the portal. All indications of interest are nonbinding.",
     nameLabel: "Full name",
     emailLabel: "Email",
     amountLabel: "Intended amount (optional)",
@@ -65,12 +65,12 @@ export const marketplaceCopy = {
   },
   privateCta: {
     heading: "Looking for private-market deal flow?",
-    body: "Reg D opportunities are never listed publicly. Verified investors receive curated, fit-scored introductions through private matching — anonymized until both sides consent. Accreditation verification required for accredited-only offerings.",
+    body: "Reg D opportunities are never listed publicly. Verified investors receive curated, fit-scored introductions through private matching — anonymized until both sides consent. Accredited investors can request verified access.",
     ctaLabel: "Request verified investor access",
     ctaHref: "/investors/request-access",
   },
   footer: {
     lead: "Important compliance notice.",
-    body: "iCFO CapitalOS is a software platform operated by iCFO Capital Global, Inc. It is not a registered broker-dealer, funding portal, or investment adviser, and does not offer, sell, or recommend securities. Listings on this page are notices of Regulation Crowdfunding offerings conducted on SEC-registered funding portals; all investments are made on the applicable portal. Indications of interest are non-binding. Nothing on this platform is investment advice, a recommendation, or a guarantee of funding, investor participation, allocations, returns, or liquidity. Private offerings are risky and may result in loss of capital. Investors must conduct independent due diligence.",
+    body: "iCapOS is a software platform operated by iCFO Capital Global, Inc. It is not a registered broker-dealer, funding portal, or investment adviser, and does not offer, sell, or recommend securities. All securities offerings are conducted on SEC-registered funding portals.",
   },
 } as const;

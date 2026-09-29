@@ -53,11 +53,14 @@ describe("applyRoleFilter", () => {
     const out = applyRoleFilter(payload(), "founder", closed);
     expect(out.findings).toHaveLength(0);
     expect(out.conditions).toHaveLength(0); // conditions follow the findings gate
+    expect(out.domains).toHaveLength(0); // domains follow the findings gate
   });
 
   it("shows verdict only when the verdict gate is on", () => {
     const founder = applyRoleFilter(payload(), "founder", openGate); // verdict off for founder
     expect((founder.engagement as Record<string, unknown>).posture).toBeNull();
+    expect((founder.engagement as Record<string, unknown>).confidence_pct).toBeNull(); // confidence follows the verdict gate
+    expect(founder.confidence).toBe(0);
     const investor = applyRoleFilter(payload(), "investor", openGate); // verdict on for investor
     expect((investor.engagement as Record<string, unknown>).posture).toBe("Proceed");
   });

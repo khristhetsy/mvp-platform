@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review &amp; marketplace actions — three options</title>
+<style>
+  :root{--ink:#1E293B;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l100:#F1F5F9;--bg:#F8FAFC}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+
+  .why{background:#fff;border:1px solid var(--line);border-left:3px solid #DC2626;border-radius:8px;padding:13px 15px;margin-bottom:24px}
+  .why h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#B91C1C}
+  .why ol{margin:0;padding-left:18px;color:var(--s600);font-size:12.5px}
+  .why li{margin-bottom:5px}
+  .why code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+  .opt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 8px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px}
+  .verdict{margin-top:9px;font-size:12px;color:var(--s500);padding-left:2px}
+  .verdict b{color:var(--ink)}
+
+  /* shared header */
+  .co{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .co h3{margin:0;font-size:17px;font-weight:650}
+  .co .meta{font-size:12px;color:var(--s500);margin-top:2px}
+  .tag{border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:700}
+  .tag.pub{background:#ECFDF5;color:#047857}
+  .tag.dt{background:#F1F5F9;color:#475569}
+
+  /* buttons */
+  .b{border-radius:99px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:#334155}
+  .b.sm{padding:6px 12px;font-size:12px}
+  .b.pri{background:#047857;border-color:#047857;color:#fff}
+  .b.ind{background:#4338CA;border-color:#4338CA;color:#fff}
+  .b.dngr{border-color:#FECACA;color:#B91C1C}
+  .b.warn{border-color:#FDE68A;color:#92400E}
+  .b.ghost{border-color:transparent;color:#4F46E5;background:transparent;padding-left:4px;padding-right:4px}
+  .b.dis{opacity:.45;cursor:not-allowed}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+
+  /* ---- current ---- */
+  .cur .row{margin-bottom:8px}
+
+  /* ---- A ---- */
+  .statusline{display:flex;align-items:center;gap:10px;background:#F0FDF9;border:1px solid #A7F3D0;
+              border-radius:10px;padding:10px 13px;margin-bottom:12px}
+  .statusline .ic{color:#047857}
+  .statusline p{margin:0;font-size:12.5px;color:#065F46}
+  .statusline b{color:#064E3B}
+  .statusline .sp{flex:1}
+  .menu{position:relative}
+  .menubtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:13px;color:var(--s600);cursor:pointer}
+  .menulist{position:absolute;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);
+            border-radius:10px;box-shadow:0 10px 24px rgba(15,23,42,.12);min-width:230px;overflow:hidden;z-index:3}
+  .menulist div{padding:8px 12px;font-size:12.5px;color:var(--s600);border-bottom:1px solid var(--l100);cursor:pointer}
+  .menulist div:last-child{border-bottom:none}
+  .menulist div:hover{background:var(--l100)}
+  .menulist .dz{color:#B91C1C}
+  .links{display:flex;gap:16px;margin-top:12px;padding-top:11px;border-top:1px solid var(--l100)}
+  .links a{font-size:12.5px;color:#4F46E5;text-decoration:none;font-weight:600}
+
+  /* ---- B ---- */
+  .grp{margin-bottom:14px}
+  .grp:last-child{margin-bottom:0}
+  .glab{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s400);margin-bottom:6px}
+  .segc{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .segc button{border:none;background:#fff;padding:7px 14px;font-size:12.5px;color:var(--s600);cursor:pointer;border-right:1px solid var(--line)}
+  .segc button:last-child{border-right:none}
+  .segc .act{background:#047857;color:#fff;font-weight:600}
+  .segc .dz{color:#B91C1C}
+  .sw{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--s600)}
+  .track{width:38px;height:21px;border-radius:99px;background:#047857;position:relative;cursor:pointer}
+  .track i{position:absolute;top:2px;right:2px;width:17px;height:17px;border-radius:50%;background:#fff;display:block}
+  .track.off{background:#CBD5E1}
+  .track.off i{right:auto;left:2px}
+  .chk{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--s600);margin-left:18px}
+
+  /* ---- C ---- */
+  .stbar{display:flex;align-items:center;margin-bottom:13px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .st{flex:1;padding:9px 12px;font-size:12px;font-weight:600;color:var(--s400);text-align:center;position:relative;background:#FAFBFC}
+  .st + .st{border-left:1px solid var(--line)}
+  .st.done{color:#047857;background:#F0FDF9}
+  .st.now{color:#fff;background:#4338CA}
+  .st small{display:block;font-weight:400;font-size:10px;opacity:.85;margin-top:1px}
+  .cbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cbar .sp{flex:1}
+  .gear{border:1px solid var(--line);background:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--s500)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Review &amp; marketplace actions — three options</h1>
+<p class="sub">Admin → company workspace. Impervitex Corp is <b>Approved</b> and <b>Published</b>, which is what makes the current layout misleading.</p>
+
+<div class="why">
+  <h2>What's wrong with the nine buttons</h2>
+  <ol>
+    <li><b>Four of them can't do anything right now.</b> This company is already approved and published, so
+      <code>Approve</code> and <code>Publish to Marketplace</code> both fail on click via <code>failAction</code>
+      — "Company is already approved", "Company is already live". You only find out after clicking.</li>
+    <li><b>The loudest button on screen is one of the dead ones.</b> Publish to Marketplace is solid indigo;
+      Approve is solid green. Two filled primaries competing, neither usable.</li>
+    <li><b>Publish and Unpublish are mutually exclusive</b> but shown side by side at equal weight.</li>
+    <li><b>Destructive sits next to routine.</b> Reject is one pill away from Approve, same size, no confirmation
+      step implied.</li>
+    <li><b>Three of them aren't actions at all.</b> View Company / View Documents are expand toggles —
+      navigation dressed as buttons, and their labels flip to "Hide…".</li>
+    <li><b>Nothing shows current state in the cluster.</b> The Published chip is far away at the top of the card.</li>
+  </ol>
+</div>
+
+<!-- ===================== CURRENT ===================== -->
+<div class="opt">Current — for comparison</div>
+<div class="card cur">
+  <div class="co">
+    <div><h3>Impervitex Corp</h3><div class="meta">Cynthia Mcbreen · impervitex@gmail.com</div></div>
+  </div>
+  <div class="row"><button class="b dngr">Reject</button><button class="b warn">Request Changes</button><button class="b pri">Approve</button></div>
+  <div class="row"><button class="b ind">Publish to Marketplace</button><button class="b">Unpublish from Marketplace</button><button class="b">Mark as sample</button></div>
+  <div class="row"><button class="b">View Company</button><button class="b">View Documents</button><button class="b">View Pitch Deck</button></div>
+</div>
+
+<!-- ===================== A ===================== -->
+<div class="opt">Option A · State first, one action</div>
+<div class="card">
+  <div class="co">
+    <div><h3>Impervitex Corp</h3><div class="meta">Cynthia Mcbreen · impervitex@gmail.com</div></div>
+  </div>
+
+  <div class="statusline">
+    <span class="ic">✓</span>
+    <p><b>Approved</b> 3 Sep · <b>Live on the marketplace</b> since 5 Sep · not a sample</p>
+    <span class="sp"></span>
+  </div>
+
+  <div class="row" style="align-items:center">
+    <button class="b">Unpublish from Marketplace</button>
+    <button class="b">Mark as sample</button>
+    <span style="flex:1"></span>
+    <div class="menu">
+      <button class="menubtn">⋯</button>
+      <div class="menulist">
+        <div>Re-run review</div>
+        <div class="dz">Request changes…</div>
+        <div class="dz">Reject…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="links">
+    <a href="#">Company details →</a><a href="#">Documents →</a><a href="#">Pitch deck →</a>
+  </div>
+</div>
+<p class="verdict"><b>Only what's possible is shown.</b> Approve and Publish disappear once done — replaced by a
+  status line that says when. Reject and Request Changes move into ⋯ because reversing an approved, live company
+  should take deliberate effort. The three View buttons become links, which is what they actually are.
+  <b>Fewest clicks, least noise; the trade is that reversing a decision is one level deeper.</b></p>
+
+<!-- ===================== B ===================== -->
+<div class="opt">Option B · Grouped by what it controls</div>
+<div class="card">
+  <div class="co">
+    <div><h3>Impervitex Corp</h3><div class="meta">Cynthia Mcbreen · impervitex@gmail.com</div></div>
+  </div>
+
+  <div class="grp">
+    <div class="glab">Review decision</div>
+    <div class="segc">
+      <button class="dz">Reject</button>
+      <button>Request changes</button>
+      <button class="act">Approved ✓</button>
+    </div>
+    <span style="margin-left:11px;font-size:11.5px;color:var(--s400)">set 3 Sep by you</span>
+  </div>
+
+  <div class="grp">
+    <div class="glab">Marketplace</div>
+    <span class="sw"><span class="track"><i></i></span> <b style="color:#047857">Live</b> — visible to investors</span>
+    <label class="chk"><input type="checkbox"> Mark as sample <span style="color:var(--s400)">· hides from public</span></label>
+  </div>
+
+  <div class="grp">
+    <div class="glab">Open</div>
+    <div class="row">
+      <button class="b sm">Company</button><button class="b sm">Documents</button><button class="b sm">Pitch deck</button>
+    </div>
+  </div>
+</div>
+<p class="verdict"><b>Every control shows its current value.</b> The review decision is one segmented control
+  instead of three buttons — you can see it's Approved and still change it in one click. Publish/Unpublish
+  becomes a switch, which is what a two-state setting should be.
+  <b>Best at a glance and nothing is hidden; the trade is that a destructive change is only one click away.</b></p>
+
+<!-- ===================== C ===================== -->
+<div class="opt">Option C · Odoo status bar (matches your IR task form)</div>
+<div class="card">
+  <div class="co">
+    <div><h3>Impervitex Corp</h3><div class="meta">Cynthia Mcbreen · impervitex@gmail.com</div></div>
+    <span style="flex:1"></span>
+    <span class="tag dt">Deep Tech</span><span class="tag pub">Published</span>
+  </div>
+
+  <div class="stbar">
+    <div class="st done">Submitted<small>28 Aug</small></div>
+    <div class="st done">Approved<small>3 Sep</small></div>
+    <div class="st now">Published<small>since 5 Sep</small></div>
+    <div class="st">Archived<small>—</small></div>
+  </div>
+
+  <div class="cbar">
+    <button class="b sm">Unpublish</button>
+    <button class="b sm">Mark as sample</button>
+    <button class="b sm ghost">Company</button>
+    <button class="b sm ghost">Documents</button>
+    <button class="b sm ghost">Pitch deck</button>
+    <span class="sp"></span>
+    <button class="gear">⚙</button>
+  </div>
+</div>
+<p class="verdict"><b>Same vocabulary as the rest of your admin.</b> The stage bar you already built for the IR
+  task form, applied here: stages are clickable to move the company, completed ones carry their date, and the
+  current one is filled. Actions shrink to a compact bar; Reject / Request changes / Re-review live in the gear.
+  <b>Most consistent with the platform and it shows history, not just state — the trade is a taller header.</b></p>
+
+</div>
+</body>
+</html>

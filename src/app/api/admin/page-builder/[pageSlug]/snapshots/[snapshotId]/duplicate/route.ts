@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { requirePageBuilderApi } from "@/lib/api/permissions";
 import {
   duplicateSnapshotToDraft,
-  getOrCreateDraft,
   isPageBuilderSlug,
   listSnapshotsWithMeta,
 } from "@/lib/page-builder/drafts";

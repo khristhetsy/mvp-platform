@@ -25,11 +25,11 @@ export async function POST(req: Request): Promise<Response> {
     if (parsed.data.companyId) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data } = await (admin as any).from("companies").select("id, company_name, owner_id").eq("id", parsed.data.companyId).maybeSingle();
+        const { data } = await (admin as any).from("companies").select("id, company_name, founder_id").eq("id", parsed.data.companyId).maybeSingle();
         if (data) {
           companyName = data.company_name ?? companyName;
           companyId = data.id;
-          recipientUserId = recipientUserId ?? (data.owner_id ?? null);
+          recipientUserId = recipientUserId ?? (data.founder_id ?? null);
         }
       } catch { /* owner column may differ → fall back to staff */ }
     }

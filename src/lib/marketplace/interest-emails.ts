@@ -1,18 +1,17 @@
-// COUNSEL-REVIEWABLE FILE — marketplace interest-list email.
+// COUNSEL-REVIEWED FILE: marketplace interest-list email.
 //
 // This email is an ISSUER communication (it tells people who expressed interest
-// that an offering is live on a registered portal). The copy below is a
-// PLACEHOLDER and is NOT approved legal wording. Delivery is disabled until
-// MARKETPLACE_INTEREST_EMAILS_LIVE=true is set AFTER securities counsel signs off
-// (mirrors INVESTOR_OUTREACH_LIVE / MATCHING_EMAILS_LIVE). Until then the
-// dispatcher is a no-op and only reports how many would be notified.
-//
-// Tombstone-safe: facts and process only — no performance claims, no
-// solicitation, no guarantee of funding/allocations/returns.
+// that an offering is live on a registered portal). The copy below was approved
+// by legal on 2026-09-28. Any change to the wording needs a new legal review;
+// interest-emails.test.ts pins it. Delivery still requires
+// MARKETPLACE_INTEREST_EMAILS_LIVE=true (mirrors INVESTOR_OUTREACH_LIVE /
+// MATCHING_EMAILS_LIVE). Without it the dispatcher only reports how many would
+// be notified.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
+import { renderEmail } from "@/lib/email/layout";
 
 export function marketplaceInterestEmailsEnabled(): boolean {
   return process.env.MARKETPLACE_INTEREST_EMAILS_LIVE === "true";
@@ -26,12 +25,19 @@ function template(companyName: string, portalName: string): { subject: string; h
     `iCapOS is a software platform. It is not a registered broker-dealer, funding portal, or investment adviser, ` +
     `is not involved in this offering, and does not offer, sell, or recommend securities. Investing involves risk, ` +
     `including possible loss of capital.`;
-  return {
+  // Layout only: the body is one fixed paragraph, kept whole so the risk
+  // disclosure stays in the body and is not moved to small footer print.
+  return renderEmail({
+    audience: "investor",
     subject,
-    text: body,
-    html: `<p>${body}</p>`,
-  };
+    preheader: `The offering you expressed interest in, ${companyName}, is now live on ${portalName}.`,
+    blocks: [{ type: "paragraph", text: body }],
+    footer: { reason: "" },
+  });
 }
+
+/** Exposed for tests and the admin preview. */
+export const offeringLiveEmail = template;
 
 export type InterestNotifyResult = { intended: number; sent: number; live: boolean };
 
@@ -67,7 +73,7 @@ export async function notifyInterestListOfferingLive(listingId: string): Promise
   let sent = 0;
   for (const to of emails) {
     // Individual sends — never expose the interest list to recipients.
-    const ok = await sendEmail({ to, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    const ok = await sendEmail({ to, subject: tpl.subject, html: tpl.html, text: tpl.text, source: "marketplace-offering-live", audience: "investor" });
     if (ok) sent += 1;
   }
   return { intended: emails.length, sent, live };

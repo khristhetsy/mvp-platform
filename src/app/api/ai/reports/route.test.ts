@@ -42,9 +42,15 @@ function buildAuthSupabase(options: {
     }
 
     if (table === "documents") {
+      // The report reads ACTIVE documents: .select().eq(company).neq(status, archived)
+      const result = options.documents ?? { data: [], error: null };
       return {
         select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue(options.documents ?? { data: [], error: null }),
+          eq: vi.fn().mockReturnValue({
+            neq: vi.fn().mockResolvedValue(result),
+            ...result,
+            then: (resolve: (v: unknown) => unknown) => resolve(result),
+          }),
         }),
       };
     }

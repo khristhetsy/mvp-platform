@@ -9,8 +9,8 @@ export const home = {
   hero: {
     eyebrow: "Investor relations, run as software",
     title: "Get your company in front of investors whose mandate fits.",
-    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. Every tool is always free; upgrade your plan when you're ready to raise capital.",
-    primaryCta: { label: "Run your free Readiness Rating", href: "/readiness" },
+    sub: "We do the heavy lifting on outreach. iCapOS scores your profile against investor mandates in the iCFO network — sector, stage, check size, geography — builds the list, and sends your materials to the ones that fit. Every plan includes all the tools; choose Basic or Professional to get started.",
+    primaryCta: { label: "Find the right fit investors", href: "/fit" },
     secondaryCta: { label: "See plans", href: "/pricing" },
     compliance:
       "iCapOS is a software platform. It is not a broker-dealer, funding portal, investment adviser, or placement agent, and it does not raise capital or guarantee funding.",
@@ -39,7 +39,7 @@ export const home = {
     title: "Three steps, and we run two of them.",
     sub: "The sequence matters: we rate you first, so you find the weak spots before an investor does.",
     steps: [
-      { n: "01", h: "We rate your readiness", p: "The Capital Readiness Rating scores your company across the dimensions investors screen on, and tells you exactly what to fix. Free, and you can re-run it whenever something changes." },
+      { n: "01", h: "We rate your readiness", p: "The Capital Readiness Rating scores your company across the dimensions investors screen on, and tells you exactly what to fix. Included in every plan, and you can re-run it whenever something changes." },
       { n: "02", h: "We build your investor list", p: "Your profile is matched against investor mandates in the iCFO network. Every match carries an Investor Fit Score, so you can see why each name is on the list." },
       { n: "03", h: "We send on your behalf", p: "Your one-pager or investor newsletter goes out to the matched list, on a cadence each investor has agreed to accept. Replies come straight back to you." },
     ],
@@ -84,7 +84,7 @@ export const home = {
       "Most platforms want you arriving with a finished deck, a clean cap table and a three-statement model. If you had those, you wouldn't need much help.",
       "Readiness is what iCapOS produces, not what it requires. Run the rating with whatever you have today — a rough deck, a spreadsheet, an idea of the raise — and you'll get back a specific, ordered list of what to fix before investors see it.",
     ],
-    cta: { label: "Run the free rating", href: "/readiness" },
+    cta: { label: "Find the right fit investors", href: "/fit" },
     cardTitle: "Capital Readiness Rating",
     cardScore: "0",
     cardBand: "Developing",
@@ -112,9 +112,9 @@ export const home = {
       h: "Founders",
       p: "Get rated, get matched, get your materials in front of investors whose mandate actually fits. Two self-serve plans, no sales call, cancel any time.",
       points: [
-        "Up to 25 or up to 100 matched investors per month",
-        "Spotlight or a live slot at the iCFO Investment Conference",
-        "Every iCapOS tool free, forever — plans only add distribution",
+        "Up to 5 or up to 50 matched investors per month",
+        "Attend the Investor Conference Virtual Event, or take a live slot",
+        "Every plan includes all tools: CRR, valuation, data room, e-learning",
       ],
       cta: { label: "For founders", href: "/founders" },
     },
@@ -170,7 +170,7 @@ export const home = {
   closing: {
     pre: "How iCFO has run the investor side for sixteen years",
     title: "See where you stand before you spend a dollar.",
-    sub: "The Capital Readiness Rating is free. No call, no card.",
-    cta: { label: "Run your free rating", href: "/readiness" },
+    sub: "Two self-serve plans. No sales call.",
+    cta: { label: "Find the right fit investors", href: "/fit" },
   },
 } as const;

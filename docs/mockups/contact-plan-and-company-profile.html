@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Contact — Member Portal Plan &amp; company profile from onboarding</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 10px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.3px;white-space:nowrap}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+         box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:12px}
+  .ph{padding:10px 15px;border-bottom:1px solid var(--l100);background:var(--l50);
+      font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--s500)}
+  .pb{padding:13px 15px}
+
+  .row{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:flex-start;padding:5px 0;font-size:12.5px;
+       border-bottom:.5px solid #F1F5F9}
+  .row:last-child{border-bottom:none}
+  .row .k{width:168px;flex-shrink:0;color:var(--s500)}
+  .row .v{flex:1 1 160px;min-width:0}
+  .row .v.em{color:var(--s400)}
+  .row.hl{background:#EEF2FF;box-shadow:inset 0 0 0 1px #C7D2FE;border-radius:6px;padding:6px 8px;margin:2px -8px}
+  .row.bad{background:#FEF2F2;box-shadow:inset 0 0 0 1px #FECACA;border-radius:6px;padding:6px 8px;margin:2px -8px}
+
+  .chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:600;border:1px solid}
+  .c-grey{background:var(--l100);color:var(--s600);border-color:var(--line)}
+  .c-blue{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE}
+  .c-ok{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
+  .c-warn{background:#FFFBEB;color:#92400E;border-color:#FDE68A}
+  .c-bad{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}
+  .miss{font-size:11.5px;color:var(--s400);font-style:italic}
+  .miss b{font-style:normal;color:var(--warn)}
+  .link{color:#4338CA;text-decoration:none;border-bottom:1px dotted #A5B4FC;font-size:11.5px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);
+     text-align:left;padding:0 9px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 9px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ind);border-radius:9px;
+        padding:13px 15px;font-size:12.6px;color:var(--s600);line-height:1.65;margin-bottom:12px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  .ask{border-left-color:#4338CA;background:#F5F7FF}
+  ul.t{margin:6px 0 0;padding-left:18px}
+  ul.t li{font-size:12.4px;margin-bottom:5px;line-height:1.55}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Contact record — plan chip &amp; company profile</h1>
+<p class="sub">Sales → Contacts → Vincent Njoku · mockup, nothing built</p>
+
+<!-- ═════ 1 · PLAN ═════ -->
+<div class="lbl">1 · Member Portal Plan</div>
+
+<div class="two">
+  <div class="panel">
+    <div class="ph">Today</div>
+    <div class="pb">
+      <div class="row"><span class="k">Membership Type</span><span class="v">Entrepreneur</span></div>
+      <div class="row bad"><span class="k">Member Portal Plan</span>
+        <span class="v"><span class="chip c-grey">Free</span></span></div>
+      <div class="row"><span class="k">Lead Status</span><span class="v">new</span></div>
+      <p class="miss" style="margin:8px 0 0">No price. No status. No way to tell a grandfathered
+        free account from one that shouldn&apos;t exist.</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ph">Proposed</div>
+    <div class="pb">
+      <div class="row"><span class="k">Membership Type</span><span class="v">Entrepreneur</span></div>
+      <div class="row hl"><span class="k">Member Portal Plan</span>
+        <span class="v"><span class="chip c-blue">Basic · $49/mo</span>
+          <span class="chip c-ok" style="margin-left:5px">Active</span></span></div>
+      <div class="row"><span class="k">Plan since</span><span class="v">16 Sep 2026</span></div>
+      <div class="row"><span class="k">Lead Status</span><span class="v">new</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="note warn">
+  <b>You are right about the price — $49 is correct and it is already in the code.</b>
+  <code>PLAN_PRICES.founder_basic</code> is <code>4900</code> cents, set when the free tier was
+  discontinued on 16 Sep 2026. (<code>CLAUDE.md</code> still says Basic is $499/mo — that line is
+  stale and worth correcting.)
+  <br><br>
+  <b>What I cannot tell from the code is whether this chip is lying.</b> It renders whatever
+  <code>subscriptions.plan_type</code> says for the profile whose email matches the contact. So
+  either:
+  <ul class="t">
+    <li><b>the row really does say <code>founder_free</code></b> — the
+      <code>20260921001</code> backfill marked every then-free founder
+      <code>is_grandfathered = true</code>, and this account may have been swept up. That is a data
+      fix, not a code fix; or</li>
+    <li><b>the row says <code>founder_basic</code> and the page is misreading it.</b></li>
+  </ul>
+  One query settles it, and it is in the Ship-it block at the bottom. Worth running before any code
+  changes, because the two causes have completely different fixes.
+</div>
+
+<div class="note">
+  <b>Either way, the chip itself is under-built.</b> <code>planLabelFor(planType, isGrandfathered)</code>
+  already exists in <code>plans.ts</code>, has its own passing tests, and returns
+  <i>&ldquo;Free (grandfathered)&rdquo;</i> vs <i>&ldquo;Free — discontinued tier&rdquo;</i> — the
+  exact distinction that matters here. <b>Nothing in the UI calls it.</b>
+  <code>contact-page-data.ts</code> reaches past it to <code>PLAN_LABELS[plan]</code> directly, which
+  is why you see a bare &ldquo;Free&rdquo;.
+  <br><br>
+  The proposed chip reads the whole subscription row — plan, price from the active
+  <code>pricing_sets</code> catalogue, status, and start date — rather than the plan key alone.
+</div>
+
+<!-- plan states -->
+<div class="lbl">Every state the chip has to cover</div>
+<div class="panel"><div class="pb">
+  <table>
+    <tr><th style="width:22%">Row says</th><th style="width:26%">Chip</th><th>Why it matters</th></tr>
+    <tr><td><code>founder_basic</code> · active</td>
+        <td><span class="chip c-blue">Basic · $49/mo</span> <span class="chip c-ok">Active</span></td>
+        <td>The normal case. Price comes from the catalogue, so it tracks a pricing change.</td></tr>
+    <tr><td><code>founder_basic</code> · pending_payment</td>
+        <td><span class="chip c-blue">Basic · $49/mo</span> <span class="chip c-warn">Awaiting payment</span></td>
+        <td>A new founder lands here. Looks identical to Active today — staff cannot tell who has
+            actually paid.</td></tr>
+    <tr><td><code>founder_free</code> · grandfathered</td>
+        <td><span class="chip c-grey">Free</span> <span class="chip c-ok">Grandfathered</span></td>
+        <td>Legitimate free access from before 16 Sep 2026.</td></tr>
+    <tr><td><code>founder_free</code> · not grandfathered</td>
+        <td><span class="chip c-grey">Free</span> <span class="chip c-bad">Discontinued tier</span></td>
+        <td>Should not exist. Today it is indistinguishable from the row above — this is the case
+            worth surfacing loudly.</td></tr>
+    <tr><td><code>founder_professional</code></td>
+        <td><span class="chip c-blue">Professional · $199/mo</span></td>
+        <td>—</td></tr>
+    <tr><td>no subscription row</td>
+        <td><span class="chip c-grey">Not a portal member</span></td>
+        <td>No account matches this contact&apos;s email. Different from &ldquo;free&rdquo;, and
+            currently shown as nothing at all.</td></tr>
+  </table>
+</div></div>
+
+<!-- ═════ 2 · COMPANY PROFILE ═════ -->
+<div class="lbl">2 · Company profile — filled from the onboarding wizard</div>
+
+<div class="note warn">
+  <b>The wiring already exists, end to end.</b> The conversational onboarding wizard writes every one
+  of these fields — <code>funding_stage</code>, <code>operating_stage</code>,
+  <code>business_entity</code>, <code>annual_ebitda</code>, <code>management_team</code>,
+  <code>seeking_investor_types</code>, <code>seeking_capital_types</code>,
+  <code>active_investor_preference</code>, <code>annual_revenue_size</code>, <code>arr</code>,
+  <code>mrr</code>, <code>key_highlights</code> — in one PATCH to
+  <code>/api/founder/onboarding</code> at steps 7–8. <code>contact-page-data.ts</code> reads them
+  back. The tab renders them.
+  <br><br>
+  So the dashes are not a broken pipe. They mean <b>this founder never reached steps 7–8</b> — and
+  the screen does not say so. It shows the same &ldquo;—&rdquo; for <i>never asked</i>,
+  <i>asked and skipped</i>, and <i>genuinely has none</i>. That is the thing to fix.
+</div>
+
+<div class="two">
+  <div class="panel">
+    <div class="ph">Today</div>
+    <div class="pb">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:var(--s400);margin:0 0 5px">SEEKING</div>
+      <div class="row"><span class="k">Type of investor(s)</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Type(s) of capital</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Amount of capital</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Use of funds</span><span class="v em">—</span></div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:var(--s400);margin:12px 0 5px">COMPANY &amp; STAGE</div>
+      <div class="row"><span class="k">Business summary</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Industries</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Funding stage</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Operating stage</span><span class="v em">—</span></div>
+      <div class="row"><span class="k">Annual revenue size</span><span class="v em">—</span></div>
+      <p class="miss" style="margin:9px 0 0">Twelve dashes and no explanation. Staff cannot tell
+        whether to chase the founder or the data.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">Proposed — the same record, honest about why</div>
+    <div class="pb">
+      <div style="display:flex;align-items:center;gap:7px;background:#FFFBEB;border:1px solid #FDE68A;
+                  border-radius:8px;padding:8px 10px;margin-bottom:10px">
+        <span style="color:#B45309">⊙</span>
+        <span style="font-size:11.8px;color:#78350F;line-height:1.5">
+          <b>Onboarding stopped at step 6 of 9.</b> Seeking, Company &amp; stage and Traction are
+          collected at steps 7–8, which this founder has not reached.
+          <a class="link" href="#">Open their onboarding →</a>
+        </span>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:var(--s400);margin:0 0 5px">
+        SEEKING <span style="font-weight:400;text-transform:none;letter-spacing:0">· step 7, not reached</span></div>
+      <div class="row"><span class="k">Type of investor(s)</span><span class="v"><span class="miss">not asked yet</span></span></div>
+      <div class="row"><span class="k">Type(s) of capital</span><span class="v"><span class="miss">not asked yet</span></span></div>
+      <div class="row hl"><span class="k">Amount of capital</span><span class="v">$1,500,000</span></div>
+      <div class="row hl"><span class="k">Use of funds</span><span class="v">Hiring, Product, Go-to-market</span></div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:var(--s400);margin:12px 0 5px">
+        COMPANY &amp; STAGE <span style="font-weight:400;text-transform:none;letter-spacing:0">· step 7, not reached</span></div>
+      <div class="row hl"><span class="k">Business summary</span><span class="v">AI-guided nutrition for chronic-condition management.</span></div>
+      <div class="row hl"><span class="k">Industries</span><span class="v">Health / Digital Therapeutics</span></div>
+      <div class="row"><span class="k">Funding stage</span><span class="v"><span class="miss">not asked yet</span></span></div>
+      <div class="row"><span class="k">Operating stage</span><span class="v"><span class="miss">not asked yet</span></span></div>
+      <div class="row"><span class="k">Annual revenue size</span><span class="v"><span class="miss">not asked yet</span></span></div>
+      <p class="miss" style="margin:9px 0 0">Highlighted rows are the ones steps 1–6 <i>did</i>
+        capture and the tab currently throws away.</p>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Three different blanks, three different words.</b> A dash that means four things is the same
+  failure as a status nobody measures being shown as done.
+  <ul class="t">
+    <li><span class="miss">not asked yet</span> — the wizard step that collects it has not been
+      reached. Actionable: chase the founder, and the panel links straight to their onboarding.</li>
+    <li><span class="miss"><b>left blank</b></span> — the step was completed and the founder skipped
+      this optional field. Nothing to chase.</li>
+    <li><span class="miss">no portal account</span> — the contact&apos;s email matches no founder
+      profile, so there is no company to read. Today this renders exactly like the other two.</li>
+  </ul>
+  Which one applies is already knowable: <code>companies.onboarding_step_state</code> records the
+  furthest step reached, and <code>computeFounderOnboardingProgress</code> already interprets it for
+  the founder&apos;s own dashboard. The contact tab just never asks.
+</div>
+
+<div class="note ask">
+  <b>One thing to decide before this gets built.</b> Steps 1–6 already capture amount, use of funds,
+  business summary and industry — the four highlighted rows above — but the Founder Profile tab
+  doesn&apos;t show them, so a partially-onboarded founder reads as completely empty. Do you want:
+  <ul class="t">
+    <li><b>Show everything captured so far</b>, with the per-field state above (what the mockup
+      shows); or</li>
+    <li><b>Keep the sections hidden until onboarding completes</b>, with just the amber strip
+      saying where they stopped.</li>
+  </ul>
+  The first is more useful to a salesperson on a live call. The second is tidier.
+</div>
+
+<!-- ═════ DIAGNOSE ═════ -->
+<div class="lbl">Run this first — it decides what the plan fix actually is</div>
+<div class="panel"><div class="pb">
+  <p style="margin:0 0 9px;font-size:12.5px;color:var(--s600);line-height:1.6">
+    In the Supabase SQL editor. It reports what the subscription row genuinely says for this contact,
+    so the plan chip can be fixed for the right reason.</p>
+  <pre style="margin:0;background:var(--l50);border:1px solid var(--line);border-radius:8px;padding:11px 13px;
+              font-size:11.5px;line-height:1.65;overflow-x:auto;color:#1E293B">select p.email,
+       s.plan_type,
+       s.subscription_status,
+       s.is_grandfathered,
+       s.monthly_price_cents,
+       s.created_at
+  from public.profiles p
+  left join public.subscriptions s on s.profile_id = p.id
+ where p.email = 'vincent.n2013@gmail.com';</pre>
+  <p style="margin:9px 0 0;font-size:12.3px;color:var(--s600);line-height:1.6">
+    <b>If <code>plan_type</code> is <code>founder_basic</code></b> — the row is right and the page is
+    misreading it; a code fix.<br>
+    <b>If it is <code>founder_free</code></b> — the chip is telling the truth and the row needs
+    correcting; then the code change is only the richer chip.<br>
+    <b>If there is no row at all</b> — the account was never given a subscription, and
+    <code>getUserPlan</code> is falling back to a default.</p>
+</div></div>
+
+</div>
+</body>
+</html>

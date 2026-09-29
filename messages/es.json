@@ -270,12 +270,23 @@
     "diligence": {
       "hello": "Hola,",
       "openHere": "Ábrelo aquí:",
-      "founderReadySubject": "La diligencia está lista para tu revisión — {company}",
+      "founderReadySubject": "La diligencia está lista para tu revisión: {company}",
       "founderReadyLine": "El informe de diligencia de {company} está listo para tu revisión y respuesta.",
-      "documentsRequestedSubject": "Documentos solicitados — {company}",
+      "documentsRequestedSubject": "Documentos solicitados: diligencia de {company}",
       "documentsRequestedLine": "Se han solicitado nuevos documentos para la diligencia de {company}.",
-      "releasedSubject": "Operación disponible — {company}",
-      "releasedLine": "El paquete de diligencia de {company} ya está disponible."
+      "releasedSubject": "Operación disponible: paquete de diligencia de {company}",
+      "releasedLine": "El paquete de diligencia de {company} ya está disponible.",
+      "eyebrow": "Diligencia debida",
+      "founderReadyHeadline": "Tu informe de diligencia está listo",
+      "founderReadyCta": "Revisar y responder",
+      "documentsRequestedHeadline": "Se solicitaron nuevos documentos",
+      "documentsRequestedCta": "Subir documentos",
+      "releasedHeadline": "El paquete de diligencia de {company} está listo",
+      "releasedCta": "Abrir la operación",
+      "footerFounder": "Recibes esto porque {company} tiene una diligencia abierta en iCapOS.",
+      "footerInvestor": "Recibes avisos de operaciones porque tienes una cuenta de inversionista en iCapOS.",
+      "noOffer": "Nada en este correo es una oferta de venta ni una solicitud de compra de ningún valor.",
+      "notBrokerDealer": "iCapOS no es un broker-dealer y no recauda capital ni garantiza financiamiento."
     }
   },
   "eventsAdmin": {
@@ -417,7 +428,9 @@
         "live": "En vivo",
         "ended": "Terminado",
         "archived": "Archivado"
-      }
+      },
+      "more": "Más",
+      "registrations": "Registros"
     },
     "control": {
       "stat": {
@@ -521,7 +534,11 @@
       "typePost": " para confirmar:",
       "deleting": "Eliminando…",
       "confirmDelete": "Confirmar eliminación",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "handOverTitle": "Transferir antes de eliminar",
+      "handOverDesc": "Estos registros necesitan un responsable. Elige al compañero que se hará cargo.",
+      "handOverPick": "Elige a un compañero",
+      "handOverNone": "Ningún otro administrador o analista activo puede hacerse cargo. Agrega uno primero."
     },
     "manage": {
       "eyebrow": "Admin",
@@ -581,7 +598,11 @@
         "deactivated": "{actor} desactivó a {target}",
         "reactivated": "{actor} reactivó a {target}",
         "invited": "{actor} invitó a {email} como {role}"
-      }
+      },
+      "handOverTitle": "Transferir antes de eliminar",
+      "handOverDesc": "Estos registros necesitan un responsable. Elige al compañero que se hará cargo.",
+      "handOverPick": "Elige a un compañero",
+      "handOverNone": "Ningún otro administrador o analista activo puede hacerse cargo. Agrega uno primero."
     },
     "permissions": {
       "eyebrow": "RBAC interno",
@@ -1325,9 +1346,7 @@
     "financial_literacy": "Educación financiera",
     "financial_model": "Modelo financiero",
     "founder_action_center": "Centro de acción del fundador",
-    "founder_basic_499_mo": "Founder Basic: 499 $/mes",
     "founder_kpi_glossary": "Glosario de KPI para fundadores",
-    "founder_professional_1_000_mo": "Founder Professional: 1.000 $/mes",
     "founder_workspace": "Espacio de trabajo del fundador",
     "founder_account": "Cuenta de fundador",
     "founder_deal_rooms": "Salas de operación del fundador",
@@ -1508,7 +1527,7 @@
     "read_only_activity_on_your_listing": "Actividad de solo lectura en tu listado",
     "readiness": "Preparación",
     "readiness_remediation_action_plan": "Plan de acción para mejorar la preparación",
-    "readiness_score": "Finalización",
+    "readiness_score": "Preparación completa",
     "readiness_capital_raise_investor_engagement_an": "Preparación, ronda de capital, interacción con inversores y publicación en el marketplace.",
     "recent_activity": "Actividad reciente",
     "recent_crm_activity": "Actividad reciente del CRM",
@@ -1629,6 +1648,14 @@
     "online_event": "Evento en línea",
     "youre_registered": "Estás registrado",
     "free_registration": "Registro gratuito",
+    "room_stats_title": "Coincidencias hasta ahora",
+    "room_stats_investors": "Inversores",
+    "room_stats_founders": "Fundadores",
+    "room_stats_registered": "Registrados",
+    "room_stats_matches": "Coincidencias",
+    "room_stats_of": "de {total}",
+    "room_stats_matchable": "{count} emparejables",
+    "room_stats_basis": "sector y rol",
     "countdown_days": "Días",
     "countdown_hours": "Horas",
     "countdown_minutes": "Minutos",
@@ -1857,8 +1884,8 @@
     "rank": "Posición",
     "ranked_investor_matches": "Coincidencias de inversores ordenadas",
     "read_only_activity_on_your_listing": "Actividad de solo lectura en tu listado",
-    "readiness_score": "Finalización",
-    "readiness_score_history": "Historial de finalización",
+    "readiness_score": "Preparación completa",
+    "readiness_score_history": "Historial de preparación completa",
     "red_flag": "Señal de alerta",
     "remaining": "Restante",
     "remediation_active": "Corrección activa",
@@ -2408,7 +2435,7 @@
     "re_run_the_advancement_rules_using_the_found": "Vuelve a ejecutar las reglas de avance usando los datos reales del fundador",
     "readiness": "Preparación",
     "readiness_only": "Solo preparación",
-    "readiness_score": "Finalización",
+    "readiness_score": "Preparación completa",
     "readiness_stage": "Etapa de preparación",
     "readiness_summary": "Resumen de preparación",
     "recent_activity_timeline": "Cronología de actividad reciente",
@@ -2493,8 +2520,8 @@
     "stage_access_override": "Anulación del acceso por etapa",
     "status": "Estado",
     "status_callbacks_and_execution_audit_trail": "Devoluciones de estado y registro de auditoría de ejecución",
-    "stripe": "Stripe",
-    "stripe_payments": "Pagos con Stripe",
+    "lemonsqueezy": "Lemon Squeezy",
+    "lemonsqueezy_payments": "Pagos con Lemon Squeezy",
     "strongest_company_alignment": "Mayor alineación de la empresa",
     "structured_review_recommendation_strengths_c": "Revisión estructurada: recomendación, fortalezas, preocupaciones y brechas de datos",
     "subscription_distribution": "Distribución de suscripciones",
@@ -3085,7 +3112,7 @@
     "quiet_hours": "Horario de silencio",
     "quiet_start": "Inicio del horario de silencio",
     "quiz": "Cuestionario",
-    "readiness_score": "Finalización",
+    "readiness_score": "Preparación completa",
     "readiness_check": "Verificación de preparación",
     "readiness_distribution": "Distribución de preparación",
     "readiness_intelligence": "Inteligencia de preparación",

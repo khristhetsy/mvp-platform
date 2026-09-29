@@ -1,12 +1,17 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { useDismiss } from "@/lib/ui/use-dismiss";
 import Link from "next/link";
 import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench, Pin } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
+import { sectorLabel } from "@/lib/icfo-events/sectors";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import { BannerEditor } from "@/components/admin-events/BannerEditor";
+import { EventInvitesPanel } from "@/components/admin-events/EventInvitesPanel";
+import { ImpactConfirm } from "@/components/ui/ImpactConfirm";
+import { useEventImpact } from "@/lib/ui/use-event-impact";
 import type {
   EventWithDetail,
   EventSession,
@@ -16,8 +21,76 @@ import type {
   EventSponsor,
   SessionType,
 } from "@/lib/icfo-events/types";
+import { isoToZonedInput, zonedInputToIso, zoneAbbrev } from "@/lib/icfo-events/zoned-time";
 
 const SESSION_TYPE_VALUES: SessionType[] = ["keynote", "panel", "talk_show", "founder_showcase", "workshop"];
+
+/**
+ * Secondary destinations for one event, behind a single trigger.
+ *
+ * These are navigation, not actions on this page — the only thing you *do* from
+ * the header is open the live control centre. Marketing Hub is edit-gated the
+ * same way it was as a button; the read-only ones are always listed.
+ */
+function EventHeaderMenu({
+  event,
+  canEdit,
+  moreLabel,
+  publicLabel,
+  marketingLabel,
+  leadsLabel,
+  registrationsLabel,
+}: Readonly<{
+  event: { id: string; slug: string };
+  canEdit: boolean;
+  moreLabel: string;
+  publicLabel: string;
+  marketingLabel: string;
+  leadsLabel: string;
+  registrationsLabel: string;
+}>) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss<HTMLDivElement>(open, () => setOpen(false));
+
+  const item = "flex items-center gap-2 rounded px-2.5 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-slate-50";
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+      >
+        {moreLabel} <span aria-hidden>▾</span>
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-[var(--border-subtle)] bg-white p-1 shadow-lg"
+        >
+          {canEdit ? (
+            <Link role="menuitem" href={`/admin/events/${event.id}/marketing`} className={item} onClick={() => setOpen(false)}>
+              {marketingLabel}
+            </Link>
+          ) : null}
+          <Link role="menuitem" href={`/admin/events/${event.id}/registrations`} className={item} onClick={() => setOpen(false)}>
+            {registrationsLabel}
+          </Link>
+          <Link role="menuitem" href={`/admin/events/${event.id}/leads`} className={item} onClick={() => setOpen(false)}>
+            {leadsLabel}
+          </Link>
+          <div className="my-1 h-px bg-slate-100" />
+          {/* Leaves the admin for the public site, so it is separated and opens away. */}
+          <Link role="menuitem" href={`/events/${event.slug}`} target="_blank" className={item} onClick={() => setOpen(false)}>
+            {publicLabel} <span aria-hidden className="text-[var(--text-muted)]">↗</span>
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 /** Clean business/line icons per session type (replaces emoji marks). */
 const SESSION_ICONS: Record<SessionType, typeof Mic> = {
@@ -56,13 +129,19 @@ function formatApiError(error: unknown, fallback: string): string {
   return fallback;
 }
 
-/** ISO → value for <input type="datetime-local"> in the viewer's local time. */
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** Human date for the confirmation subtitle — "not set" beats an empty gap. */
+function whenLabel(iso: string | null): string {
+  if (!iso) return "not set";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+    });
+  } catch { return iso; }
+}
+
+/** ISO → value for <input type="datetime-local">, shown in the event's timezone. */
+function toLocalInput(iso: string | null, timeZone?: string | null): string {
+  return isoToZonedInput(iso, timeZone);
 }
 
 function SessionLiveControls({
@@ -189,33 +268,33 @@ function SessionLiveControls({
                 {t("openLiveLink")}
               </a>
             )}
-            <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
+            <button type="button" onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
               {busy ? "…" : t("endSession")}
             </button>
             <span aria-hidden className="text-slate-300">·</span>
             {session.doorsOpen ? (
               <span className="inline-flex items-center gap-1.5">
                 <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Early access open</span>
-                <button onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--text-muted)] hover:underline disabled:opacity-50">
+                <button type="button" onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--text-muted)] hover:underline disabled:opacity-50">
                   Close
                 </button>
               </span>
             ) : (
-              <button onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50" title="Let attendees join before the scheduled start time">
+              <button type="button" onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50" title="Let attendees join before the scheduled start time">
                 {busy ? "…" : "Open early access"}
               </button>
             )}
           </>
         ) : session.status !== "ended" ? (
           <>
-            <button onClick={() => goLive({ useGoogleMeet: true })} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+            <button type="button" onClick={() => goLive({ useGoogleMeet: true })} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
               {busy ? t("starting") : t("createMeet")}
             </button>
-            <button onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+            <button type="button" onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
               {t("goLiveLink")}
             </button>
             {liveConfigured && (
-              <button onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+              <button type="button" onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
                 {t("wherebyRoom")}
               </button>
             )}
@@ -234,7 +313,7 @@ function SessionLiveControls({
             placeholder={t("pasteLinkPh")}
             className="min-w-[240px] flex-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs"
           />
-          <button
+          <button type="button"
             onClick={() => goLive({ liveUrl: liveUrl.trim() })}
             disabled={busy || !liveUrl.trim()}
             className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
@@ -251,7 +330,7 @@ function SessionLiveControls({
 
       <div className="mt-2 flex items-center gap-2 text-xs">
         <span className="text-[var(--text-muted)]">Attendee chat</span>
-        <button
+        <button type="button"
           onClick={toggleChat}
           disabled={busy}
           role="switch"
@@ -265,7 +344,7 @@ function SessionLiveControls({
         </button>
         <span className="mx-1 h-3 w-px bg-[var(--border-subtle)]" />
         <span className="text-[var(--text-muted)]">Call-in queue</span>
-        <button
+        <button type="button"
           onClick={toggleCallIn}
           disabled={busy}
           role="switch"
@@ -344,6 +423,9 @@ export function EventDetailManager({
   canEdit?: boolean;
 }) {
   const t = useTranslations("eventsAdmin.manage");
+  // Includes any sector this event already runs a track for, so retiring a
+  // value cannot make an existing track disappear from its own editor.
+  const { options: sectors } = useVocabulary("industry", event.sectors.map((s) => s.sectorSlug));
   const [sessions, setSessions] = useState<EventSession[]>(event.sessions);
   const [eventSponsors, setEventSponsors] = useState<EventSponsor[]>(initialEventSponsors);
   const [error, setError] = useState<string | null>(null);
@@ -353,8 +435,8 @@ export function EventDetailManager({
   const [summary, setSummary] = useState(event.summary ?? "");
   const [format, setFormat] = useState<EventFormat>(event.format);
   const [visibility, setVisibility] = useState<EventVisibility>(event.visibility);
-  const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt));
-  const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt));
+  const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt, event.timezone));
+  const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt, event.timezone));
   const [timezone, setTimezone] = useState<string>(event.timezone ?? "");
   const [sectorSlugs, setSectorSlugs] = useState<string[]>(event.sectors.map((s) => s.sectorSlug));
   const [headerTitle, setHeaderTitle] = useState(event.title);
@@ -367,8 +449,44 @@ export function EventDetailManager({
     setDetailsMsg(null);
   }
 
-  async function saveDetails(e: React.FormEvent) {
+  // Moving a published event's date reaches past the form: registrations hold
+  // the old one, and sessions keep their own times. Confirm on that change
+  // only — every other field saves as before.
+  const [confirmMove, setConfirmMove] = useState(false);
+  const impact = useEventImpact(event.id);
+  const dateMoved = () =>
+    zonedInputToIso(startsAt, timezone) !== (event.startsAt ? new Date(event.startsAt).toISOString() : null) ||
+    zonedInputToIso(endsAt, timezone) !== (event.endsAt ? new Date(event.endsAt).toISOString() : null);
+  const published = event.status === "published" || event.status === "live";
+
+  // Live check of what the public page will show for the typed times.
+  const previewStartIso = zonedInputToIso(startsAt, timezone);
+  const previewEndIso = zonedInputToIso(endsAt, timezone);
+  const schedulePreview = previewStartIso
+    ? (() => {
+        const tz = timezone || undefined;
+        const fmt = (iso: string) =>
+          new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: tz });
+        const day = new Date(previewStartIso).toLocaleDateString(undefined, {
+          weekday: "short", month: "short", day: "numeric", timeZone: tz,
+        });
+        const abbr = zoneAbbrev(previewStartIso, timezone);
+        return `${day} · ${fmt(previewStartIso)}${previewEndIso ? ` to ${fmt(previewEndIso)}` : ""}${abbr ? ` ${abbr}` : ""}`;
+      })()
+    : null;
+
+  function submitDetails(e: React.FormEvent) {
     e.preventDefault();
+    if (published && dateMoved()) {
+      impact.load();
+      setConfirmMove(true);
+      return;
+    }
+    void saveDetails();
+  }
+
+  async function saveDetails() {
+    setConfirmMove(false);
     setSavingDetails(true);
     setDetailsMsg(null);
     setError(null);
@@ -381,19 +499,20 @@ export function EventDetailManager({
           summary: summary || null,
           format,
           visibility,
-          startsAt: startsAt ? new Date(startsAt).toISOString() : null,
-          endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+          // Typed times are wall-clock times in the event's timezone.
+          startsAt: zonedInputToIso(startsAt, timezone),
+          endsAt: zonedInputToIso(endsAt, timezone),
           timezone: timezone || null,
           sectors: sectorSlugs.map((slug) => ({
             sectorSlug: slug,
-            label: EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug,
+            label: sectors.find((s) => s.slug === slug)?.label ?? slug,
           })),
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(formatApiError(json.error, "Could not save event."));
       setHeaderTitle(title);
-      setHeaderSectors(sectorSlugs.map((slug) => EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug));
+      setHeaderSectors(sectorSlugs.map((slug) => sectors.find((s) => s.slug === slug)?.label ?? slug));
       setDetailsMsg(t("saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save event.");
@@ -476,7 +595,7 @@ export function EventDetailManager({
           abstract: sAbstract || null,
           sectorSlug: sSector || null,
           hostSponsorId: sHost || null,
-          startsAt: sStartsAt ? new Date(sStartsAt).toISOString() : null,
+          startsAt: zonedInputToIso(sStartsAt, timezone),
           position: sessions.length,
         }),
       });
@@ -641,50 +760,28 @@ export function EventDetailManager({
         <ArrowLeft className="h-4 w-4" /> {t("allEvents")}
       </Link>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div>
+      {/* One primary action; everything else behind a menu. Five buttons in a flex
+          row with no whitespace-nowrap shrank inside max-w-4xl and broke their
+          labels across two and three lines at differing heights. `min-w-0` lets
+          the title truncate instead of squeezing the controls. */}
+      <div className="mt-3 flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             /{event.slug} · <span>{t(`status.${event.status}`)}</span> ·{" "}
             {headerSectors.join(", ") || t("noSectorTracks")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-none items-center gap-2">
           {canEdit && (
             <Link
               href={`/admin/events/${event.id}/control`}
-              className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              className="whitespace-nowrap rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
             >
               {t("liveControlCenter")}
             </Link>
           )}
-          {canEdit && (
-            <Link
-              href={`/admin/events/${event.id}/marketing`}
-              className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-            >
-              {t("marketingHub")}
-            </Link>
-          )}
-          <Link
-            href={`/admin/events/${event.id}/registrations`}
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            Registrations
-          </Link>
-          <Link
-            href={`/admin/events/${event.id}/leads`}
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            {t("leads")}
-          </Link>
-          <Link
-            href={`/events/${event.slug}`}
-            target="_blank"
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            {t("viewPublic")}
-          </Link>
+          <EventHeaderMenu event={event} canEdit={canEdit} moreLabel={t("more")} publicLabel={t("viewPublic")} marketingLabel={t("marketingHub")} leadsLabel={t("leads")} registrationsLabel={t("registrations")} />
         </div>
       </div>
 
@@ -701,7 +798,7 @@ export function EventDetailManager({
       {/* Event details */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
         <h2 className="font-semibold text-[var(--navy)]">{t("eventDetails")}</h2>
-        <form onSubmit={saveDetails} className="mt-4">
+        <form onSubmit={submitDetails} className="mt-4">
           <fieldset disabled={!canEdit} className="grid gap-4 min-w-0 border-0 p-0 m-0">
           <label className="block">
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("title")}</span>
@@ -764,6 +861,23 @@ export function EventDetailManager({
             </label>
           </div>
 
+          <label className="block">
+            <span className="text-xs font-medium text-[var(--text-muted)]">Timezone</span>
+            <select
+              value={timezone}
+              onChange={(e) => { setTimezone(e.target.value); setDetailsMsg(null); }}
+              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            >
+              <option value="">Not set</option>
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+              Start and end are entered in this timezone, and shown with it to attendees.
+            </span>
+          </label>
+
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
               <span className="text-xs font-medium text-[var(--text-muted)]">{t("startsAtOpt")}</span>
@@ -791,28 +905,17 @@ export function EventDetailManager({
             </label>
           </div>
 
-          <label className="block">
-            <span className="text-xs font-medium text-[var(--text-muted)]">Timezone</span>
-            <select
-              value={timezone}
-              onChange={(e) => { setTimezone(e.target.value); setDetailsMsg(null); }}
-              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-            >
-              <option value="">Not set</option>
-              {TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>{tz.label}</option>
-              ))}
-            </select>
-            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
-              Shown next to the schedule so attendees know which zone the times are in.
-            </span>
-          </label>
+          {schedulePreview && (
+            <p className="-mt-2 text-[11px] text-[var(--text-muted)]">
+              Attendees see: <span className="font-medium text-[var(--text-primary)]">{schedulePreview}</span>
+            </p>
+          )}
 
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("sectorTracks")}</span>
             <p className="text-xs text-[var(--text-muted)]">{t("sectorHint")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {EVENT_SECTORS.map((s) => {
+              {sectors.map((s) => {
                 const active = sectorSlugs.includes(s.slug);
                 return (
                   <button
@@ -960,7 +1063,7 @@ export function EventDetailManager({
                       {canEdit && (
                         <div className="flex items-center gap-3">
                           {s.type !== "talk_show" && (
-                            <button
+                            <button type="button"
                               onClick={() => setHeadline(s, !s.isHeadline)}
                               className={`text-xs font-medium hover:underline ${s.isHeadline ? "text-emerald-700" : "text-[var(--blue)]"}`}
                               title="Pin this session as the Main Stage headline — it stays on Main Stage even when other sessions go live"
@@ -968,10 +1071,10 @@ export function EventDetailManager({
                               {s.isHeadline ? "Unpin Main Stage" : "Pin to Main Stage"}
                             </button>
                           )}
-                          <button onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
+                          <button type="button" onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
                             Edit
                           </button>
-                          <button onClick={() => removeSession(s)} className="text-xs text-rose-600 hover:underline">
+                          <button type="button" onClick={() => removeSession(s)} className="text-xs text-rose-600 hover:underline">
                             {t("remove")}
                           </button>
                         </div>
@@ -1060,7 +1163,7 @@ export function EventDetailManager({
                   <span className="ml-2 text-xs capitalize text-[var(--text-muted)]">{s.tier}</span>
                 </div>
                 {canEdit && (
-                  <button onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
+                  <button type="button" onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
                     {t("remove")}
                   </button>
                 )}
@@ -1099,10 +1202,38 @@ export function EventDetailManager({
         )}
       </section>
 
+      {/* Invitations — outbound, as against speaker_applications which are inbound.
+          Last on the page because it attaches people to the event, like Sessions
+          and Sponsors above it. */}
+      <div className="mt-6">
+        <EventInvitesPanel
+          eventId={event.id}
+          canEdit={canEdit}
+          sessions={sessions.map((s) => ({ id: s.id, title: s.title }))}
+        />
+      </div>
+
+      <ImpactConfirm
+        open={confirmMove}
+        title="Move this event?"
+        subtitle={`${whenLabel(event.startsAt)} → ${whenLabel(zonedInputToIso(startsAt, timezone))}`}
+        loading={impact.loading}
+        lines={[
+          { count: impact.event?.registrations ?? null, text: "registrations, each holding a calendar invite for the old date" },
+          { count: impact.event?.scheduledEmails ?? null, text: "emails scheduled to send before the old start" },
+          { count: impact.event?.sessions ?? null, text: "sessions, whose own times do not move with the event" },
+          { count: impact.event?.publishedBooklets ?? null, text: "published booklets, with the old date printed in the PDF" },
+        ]}
+        note="Nobody is notified automatically. Sending the change is a separate step, from Event Template → Reminder."
+        confirmLabel="Move the event"
+        onConfirm={() => void saveDetails()}
+        onCancel={() => setConfirmMove(false)}
+      />
+
       {removedSession && (
         <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg bg-[var(--navy)] px-4 py-2.5 text-sm text-white shadow-lg">
           <span>Session “{removedSession.title}” removed</span>
-          <button onClick={undoRemove} className="font-semibold text-[#7fdcc0] hover:underline">
+          <button type="button" onClick={undoRemove} className="font-semibold text-[#7fdcc0] hover:underline">
             Undo
           </button>
         </div>

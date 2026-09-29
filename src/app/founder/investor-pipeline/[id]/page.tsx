@@ -59,15 +59,11 @@ export default async function InvestorDetailPage({
     const { data: p } = await untyped(admin).from("profiles").select("email").eq("id", link.platform_investor_id).maybeSingle();
     email = (p?.email as string | null) ?? null;
   }
-  if (!email && link?.name) {
-    const { data: pi } = await untyped(admin)
-      .from("prospect_investors")
-      .select("email")
-      .ilike("name", `${String(link.name).trim()}%`)
-      .limit(1)
-      .maybeSingle();
-    email = (pi?.email as string | null) ?? null;
-  }
+  // A third lookup used to search prospect_investors by firm name for an
+  // email. That table has no email column — only `domain` — so the query
+  // always failed and the result was always null. Removed rather than
+  // reworked: a domain is not an address, and guessing one would be worse
+  // than leaving the field empty.
   const preferences = await loadInvestorPreferences(admin, email).catch(() => []);
 
   // Investor rating = the member's Partner Score (via platform_investor_id) plus the

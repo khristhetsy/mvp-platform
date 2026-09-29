@@ -4,6 +4,7 @@ import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { createIntroRequest } from "@/lib/data/investor-interests";
+import { emitActivity } from "@/lib/activity/emit";
 import { openMessageThreadFromSignal } from "@/lib/messaging/open-thread-from-signal";
 import { notifyFounderInvestorIntro } from "@/lib/notifications/investor-events";
 import { investorIntroRequestSchema } from "@/lib/validation";
@@ -93,6 +94,20 @@ export async function POST(request: Request) {
       body: data.message?.trim() || "Investor requested an introduction.",
     });
   }
+
+  emitActivity({
+    classKey: "intro_requested",
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    companyId: data.company_id,
+    investorId: auth.profile.id,
+    entityType: "intro_request",
+    entityId: data.id,
+    sourceModule: "investor-intro-requests",
+    title: "Investor requested an introduction",
+    metadata: { status: data.status },
+    dedupeKey: `activity-intro:${data.id}`,
+  });
 
   return NextResponse.json({ introRequest: data });
 }

@@ -6,6 +6,7 @@ import { ensureCompanySlug } from "@/lib/data/marketplace";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
 import { track } from "@/lib/analytics/posthog";
+import { emitActivity } from "@/lib/activity/emit";
 import type { Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -76,6 +77,22 @@ export async function POST(request: Request) {
     }
 
     track("company_published", { founderId: auth.profile.id, companyId: company.id });
+
+    // The public page becoming reachable is a compliance fact, not just a
+    // founder milestone — anything on it is now outside the platform.
+    emitActivity({
+      classKey: "one_pager_visibility",
+      actorUserId: auth.profile.id,
+      actorRole: "founder",
+      companyId: company.id,
+      entityType: "company",
+      entityId: company.id,
+      sourceModule: "one-pager",
+      title: "Published the one-pager",
+      description: `/f/${slug} is now publicly reachable`,
+      metadata: { is_published: true, slug },
+    });
+
     return NextResponse.json({ slug, is_published: true });
   }
 
@@ -91,6 +108,19 @@ export async function POST(request: Request) {
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
+
+  emitActivity({
+    classKey: "one_pager_visibility",
+    actorUserId: auth.profile.id,
+    actorRole: "founder",
+    companyId: company.id,
+    entityType: "company",
+    entityId: company.id,
+    sourceModule: "one-pager",
+    title: "Unpublished the one-pager",
+    description: "The public page no longer resolves",
+    metadata: { is_published: false },
+  });
 
   return NextResponse.json({ slug: company.slug, is_published: false });
 }

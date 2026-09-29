@@ -64,7 +64,7 @@ export function TasksPanel({ sessionId, isAdmin, refreshToken = 0 }: { sessionId
     <div style={{ marginTop: 20 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Tasks · {tasks.length}</div>
-        <button onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ New task</button>
+        <button type="button" onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ New task</button>
       </div>
       <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
         {tasks.length === 0 ? <div style={{ padding: 14, fontSize: 12.5, color: MUTED }}>No tasks in this meeting yet.</div> : tasks.map((t, i) => (
@@ -129,8 +129,8 @@ function NewTaskModal({ sessionId, meta, onClose, onCreated }: { sessionId: stri
           <input type="date" value={due} onChange={(e) => setDue(e.target.value)} style={field} />
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <button onClick={() => void create()} disabled={busy || !title.trim()} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Creating…" : "Create task"}</button>
-          <button onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+          <button type="button" onClick={() => void create()} disabled={busy || !title.trim()} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Creating…" : "Create task"}</button>
+          <button type="button" onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { buildRemediationTaskDrafts } from "@/lib/remediation/rules";
 import { sortRemediationTasks } from "@/lib/remediation/rules";
-import type { RemediationTaskDraft, RemediationTaskRecord, RemediationStatus } from "@/lib/remediation/types";
+import type { RemediationTaskRecord, RemediationStatus } from "@/lib/remediation/types";
 import { createNotification } from "@/lib/notifications/notifications";
 import type { Company, DocumentRecord } from "@/lib/supabase/types";
 

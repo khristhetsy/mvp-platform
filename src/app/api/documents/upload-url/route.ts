@@ -5,6 +5,7 @@ import { buildStoragePath, getStorageBucket } from "@/lib/data/documents";
 import { userHasCompanyAccess } from "@/lib/onboarding/ensure-founder-setup";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getUploadLimits } from "@/lib/settings/platform-settings";
+import { validateFile, PDF_ONLY } from "@/lib/uploads/policy";
 
 export const dynamic = "force-dynamic";
 
@@ -37,11 +38,15 @@ export async function POST(req: Request): Promise<Response> {
   const documentType = typeof body?.documentType === "string" ? normalizeDocumentType(body.documentType) : "";
   const fileName = typeof body?.fileName === "string" ? body.fileName : "";
   const fileSize = typeof body?.fileSize === "number" ? body.fileSize : 0;
+  const contentType = typeof body?.contentType === "string" ? body.contentType : "";
 
   if (!documentType || !FOUNDER_ALLOWED_DOCUMENT_TYPES.has(documentType)) {
     return NextResponse.json({ error: "Invalid document type." }, { status: 400 });
   }
   if (!fileName) return NextResponse.json({ error: "A file name is required." }, { status: 400 });
+  // PDF-only for all founder documents (gate the signed URL before it's issued).
+  const pdfCheck = validateFile({ name: fileName, type: contentType, size: fileSize }, PDF_ONLY);
+  if (!pdfCheck.ok) return NextResponse.json({ error: pdfCheck.message }, { status: 400 });
   const limits = await getUploadLimits();
   const maxBytes = limits.maxMb * 1024 * 1024;
   if (fileSize > maxBytes) {

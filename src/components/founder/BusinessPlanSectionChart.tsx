@@ -19,7 +19,7 @@ function Head({ label, onFill, filling }: { label: string; onFill?: () => void; 
       <span style={{ width: 20, height: 20, borderRadius: 5, background: "#EEF2FF", color: "#4338CA", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-sparkles" aria-hidden="true" /></span>
       <span style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>
       <span style={{ fontSize: 10.5, color: "var(--text-muted)" }}>appears here and in the PDF</span>
-      {onFill && <button onClick={onFill} disabled={filling} style={{ marginLeft: "auto", fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>{filling ? "Filling…" : "Fill from my plan"}</button>}
+      {onFill && <button type="button" onClick={onFill} disabled={filling} style={{ marginLeft: "auto", fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>{filling ? "Filling…" : "Fill from my plan"}</button>}
     </div>
   );
 }

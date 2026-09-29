@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { updateTask, deleteTask } from "@/lib/sales/tasks";
+import { completeOdooActivity } from "@/lib/sales/odoo-activities";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  // Odoo-sourced rows (id "odoo:<n>") only support "mark done" → complete back in Odoo.
+  if (id.startsWith("odoo:")) {
+    if (parsed.data.status !== "done") return NextResponse.json({ error: "Odoo activities can only be completed here." }, { status: 400 });
+    const ok = await completeOdooActivity(Number(id.slice(5)));
+    return NextResponse.json({ ok }, { status: ok ? 200 : 502 });
+  }
   try {
     await updateTask(id, parsed.data, profile.id);
     return NextResponse.json({ ok: true });

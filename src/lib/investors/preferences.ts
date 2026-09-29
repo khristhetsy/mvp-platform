@@ -26,6 +26,13 @@ export type InvestorPreferences = {
   revenueRange: string[];
   /** Preferred company annual EBITDA ranges */
   ebitdaRange: string[];
+  /** Preferred company ARR ranges (e.g. ["$1M – $5M"]) */
+  arrRange: string[];
+  /** Preferred company MRR ranges (e.g. ["$80k – $400k"]) */
+  mrrRange: string[];
+  /** The investor's own type(s), e.g. ["Angel Investor", "Venture Capital"].
+   *  From the profile's investorTypes list (semantic key), set by the loader. */
+  investorType: string[];
   /** e.g. ["Strong Management Team"] */
   managementTeam: string[];
   /** e.g. "Verified" */
@@ -45,6 +52,9 @@ export const EMPTY_PREFERENCES: InvestorPreferences = {
   dealsPerYear: null,
   revenueRange: [],
   ebitdaRange: [],
+  arrRange: [],
+  mrrRange: [],
+  investorType: [],
   managementTeam: [],
   contactPreference: null,
   sectors: [],
@@ -74,6 +84,14 @@ const LABELS = {
     "investor preferences for the company with an annual ebitda range of?",
   ],
   managementTeam: ["investor preferences for the management team", "investor preferences for the management team?"],
+  arrRange: [
+    "investor preferences for the company with an arr range of",
+    "investor preferences for the company with an arr range of?",
+  ],
+  mrrRange: [
+    "investor preferences for the company with an mrr range of",
+    "investor preferences for the company with an mrr range of?",
+  ],
   contactPreference: ["investor contact preference"],
   shortBio: ["investor short bio"],
   workExperience: ["investor work experience"],
@@ -111,6 +129,10 @@ export function extractInvestorPreferences(extra: InvestorExtraField[] | null | 
     dealsPerYear: first(LABELS.dealsPerYear),
     revenueRange: find(LABELS.revenueRange),
     ebitdaRange: find(LABELS.ebitdaRange),
+    arrRange: find(LABELS.arrRange),
+    mrrRange: find(LABELS.mrrRange),
+    // investorType comes from the profile's investorTypes list, set by the loader.
+    investorType: [],
     managementTeam: find(LABELS.managementTeam),
     contactPreference: first(LABELS.contactPreference),
     // Sectors come from the profile's top-level industries list, set by the loader.

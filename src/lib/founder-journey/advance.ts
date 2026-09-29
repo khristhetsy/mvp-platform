@@ -72,7 +72,7 @@ export async function autoAdvanceStage(
     await notifyStageAdvance(
       profileId,
       "You're submitted for review",
-      "You've met every Qualify requirement. Our team is reviewing your readiness to unlock the Deploy stage.",
+      "You've met every Preparation requirement. Our team is reviewing your readiness to unlock the Marketing stage.",
     );
     await notifyStaffIfNotRecent({
       type: 'founder_stage_review',

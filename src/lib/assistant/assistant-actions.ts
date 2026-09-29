@@ -1,4 +1,4 @@
-import type { AssistantMode, AssistantRelatedLink, AssistantSuggestedAction, SanitizedAssistantContext } from "@/lib/assistant/types";
+import type { AssistantRelatedLink, AssistantSuggestedAction, SanitizedAssistantContext } from "@/lib/assistant/types";
 
 function pushAction(
   actions: AssistantSuggestedAction[],
@@ -163,7 +163,7 @@ export function buildSuggestedActions(ctx: SanitizedAssistantContext): Assistant
   if (ctx.mode === "spv_guidance" && ctx.entity?.type === "spv") {
     pushAction(actions, {
       label: "Open SPV workspace",
-      href: `/admin/spvs/${ctx.entity.id}`,
+      href: "/admin/spvs",
       type: "workflow",
       priority: "high",
     });

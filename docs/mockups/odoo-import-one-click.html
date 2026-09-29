@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Odoo import · one click · Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:Inter,system-ui,sans-serif;color:#0A1A40}
+.bar{background:#fff;border-bottom:1px solid #D6DDE8;padding:10px 16px;font-family:Archivo;font-weight:700;font-size:18px}.bar span{color:#1A6CE4}
+main{padding:16px;display:flex;flex-direction:column;gap:20px}
+.frame{width:1180px;background:#F4F6FA;border:1px solid #D6DDE8;border-radius:12px;padding:24px 28px;display:flex;flex-direction:column;gap:14px}
+.frame *{box-sizing:border-box}
+h1,h2,h3{font-family:Archivo;margin:0}h1{font-size:20px}h3{font-size:14px}
+.sub{font-size:13px;color:#5B6B86}
+.card{background:#fff;border:1px solid #E2E7F0;border-radius:12px;padding:18px}
+.btn{font:inherit;font-size:13px;font-weight:600;height:40px;padding:0 16px;border-radius:8px;border:1px solid #C9D3E3;background:#fff;display:inline-flex;align-items:center;gap:8px}
+.btn.pri{background:#1A6CE4;border-color:#1A6CE4;color:#fff;font-size:14px;height:44px}
+.pill{display:inline-block;font-size:11.5px;font-weight:500;padding:3px 8px;border-radius:6px}
+.ok{background:#E7F7EE;color:#137A3B}.warn{background:#FFF4DE;color:#9A5B00}.info{background:#EAF1FD;color:#1A5FC8}.gray{background:#EEF1F6;color:#5B6B86}
+table{border-collapse:collapse;width:100%;font-size:13.5px}th{text-align:left;font-size:12px;color:#5B6B86;font-weight:500;padding:8px 10px;border-bottom:1px solid #E2E7F0}td{padding:10px;border-bottom:1px solid #EEF1F6;vertical-align:middle}
+.row{display:flex;gap:12px;align-items:center}.grow{flex:1}
+.auto{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:13px}.auto .k{color:#5B6B86}
+.label{font-size:12px;color:#5B6B86;margin-bottom:4px}
+.note{font-size:12px;color:#5B6B86;padding:0 4px}
+.prog{height:8px;background:#E6ECF5;border-radius:4px;overflow:hidden}.prog i{display:block;height:100%;background:#1A6CE4;width:62%}
+</style></head><body>
+<div class="bar">iCap<span>OS</span> · Odoo import — one click (mockup)</div>
+<main>
+
+<div class="note">SCREEN A — before import. One button. Nothing to choose.</div>
+<section class="frame">
+  <div class="row"><div class="grow"><h1>Import deal flow from Odoo</h1><p class="sub" style="margin:4px 0 0">Odoo is read only. Everything below is created automatically; anything that needs a human shows up in <b>Needs attention</b> after the run.</p></div><span class="btn pri">Import everything from Odoo →</span></div>
+
+  <div class="card"><h3>What Odoo has right now</h3>
+    <table style="margin-top:8px"><tr><th>Founder</th><th>Odoo projects</th><th>Tasks</th><th>Investors on tasks</th><th>Agent</th><th>Status</th></tr>
+      <tr><td><b>Michael Doyle</b> · Doyle Organics</td><td>Month 1 · Month 2 · Month 3</td><td>19</td><td>112 (Matches 96 · Contact 41 · Meetings 9)</td><td>Johnny Rivera</td><td><span class="pill info">Ready</span></td></tr>
+      <tr><td><b>Healthfleet</b></td><td>Month 1 · Month 2</td><td>8</td><td>54</td><td>Johnny Rivera</td><td><span class="pill info">Ready</span></td></tr>
+      <tr><td><b>Nimbus Labs</b></td><td>Month 1</td><td>4</td><td>22</td><td>Johnny Rivera</td><td><span class="pill info">Ready</span></td></tr>
+      <tr><td><b>GreenGrid</b></td><td>Month 1 · Month 2 · Month 3 · Month 4</td><td>16</td><td>88</td><td>Dev Kapoor</td><td><span class="pill ok">Imported Sep 12</span> · will only add what is new</td></tr></table></div>
+
+  <div class="card"><h3>What happens automatically</h3>
+    <div class="auto" style="margin-top:10px">
+      <span class="k">IR project</span><span>One per founder, named after the founder's company. Term = number of Odoo months (min 4). Start date = earliest task date. Owner = the Odoo project owner.</span>
+      <span class="k">Founder link</span><span>Matched to the Sales Hub founder contact / company by name. If none exists, a founder contact is created (name + company from Odoo).</span>
+      <span class="k">Months and weeks</span><span>"Month 2" in the project name → month 2; "2nd Week" in the task name → week 2. Tasks with no week go to week 1 of their month.</span>
+      <span class="k">Investors</span><span>Read from the Matches, Contact and Meetings fields on each task. Matched to Investor Contacts by email, then name + firm, then name. Field name sets the stage (Matches → Matched, Contact → Contacted, Meetings → Meeting scheduled).</span>
+      <span class="k">Activities</span><span>Agent Field text parsed into dated emails / calls / meetings; stage history backdated so past-week reports are right.</span>
+      <span class="k">Re-running</span><span>Safe any time. Adds only what is missing; never duplicates, never changes Odoo.</span>
+    </div></div>
+</section>
+
+<div class="note">SCREEN B — during. Progress per founder; you can leave the page.</div>
+<section class="frame">
+  <div class="row"><h1 class="grow">Importing…</h1><span class="pill info">3 of 4 founders</span></div>
+  <div class="card"><div class="prog"><i></i></div>
+    <table style="margin-top:12px"><tr><th>Founder</th><th>Project</th><th>Tasks</th><th>Investors</th><th>Activities</th><th></th></tr>
+      <tr><td>Michael Doyle</td><td><span class="pill ok">Created</span></td><td>19 / 19</td><td>104 matched · 8 need attention</td><td>236</td><td><span class="pill ok">Done</span></td></tr>
+      <tr><td>Healthfleet</td><td><span class="pill ok">Created</span></td><td>8 / 8</td><td>51 matched · 3 need attention</td><td>97</td><td><span class="pill ok">Done</span></td></tr>
+      <tr><td>Nimbus Labs</td><td><span class="pill ok">Created</span></td><td>2 / 4</td><td>—</td><td>—</td><td><span class="pill info">Importing</span></td></tr>
+      <tr><td>GreenGrid</td><td>Existing</td><td>—</td><td>—</td><td>—</td><td><span class="pill gray">Queued</span></td></tr></table></div>
+</section>
+
+<div class="note">SCREEN C — after. Results plus the only decisions a human has to make.</div>
+<section class="frame">
+  <div class="row"><div class="grow"><h1>Import complete</h1><p class="sub" style="margin:4px 0 0">4 projects · 47 tasks · 239 investor matches · 512 activities · reconciled against Odoo: <span class="pill ok">counts match</span></p></div><span class="btn">Open IR Hub dashboard →</span></div>
+
+  <div class="card"><div class="row"><h3 class="grow">Needs attention <span class="pill warn">11</span></h3><span class="btn">Create all as new Investor Contacts</span></div>
+    <p class="sub" style="margin:4px 0 10px">Investors from Odoo with no Investor Contact in Sales Hub. Everything else on their tasks is already in. Pick one action each, or create them all.</p>
+    <table><tr><th>From Odoo</th><th>Founder · task</th><th>Field</th><th>Closest existing contact</th><th></th></tr>
+      <tr><td>Jonathan Wallace (BDEV Ventures) jonathan.wallace@bdevventures.com</td><td>Doyle · 1st Week</td><td>Matches</td><td>Jon Wallace · BDEV <span class="pill gray">name only</span></td><td><span class="btn" style="height:30px">Use this</span> <span class="btn" style="height:30px">Create new</span></td></tr>
+      <tr><td>Francesca Whitehead (Fifth Wall) fwhitehead@fifthwall.com</td><td>Doyle · 1st Week</td><td>Contact</td><td>—</td><td><span class="btn" style="height:30px">Create new</span> <span class="btn" style="height:30px">Search…</span></td></tr>
+      <tr><td>Matt Lapides (ABRY Partners) mlapides@abry.com</td><td>Doyle · 2nd Week</td><td>Meetings</td><td>—</td><td><span class="btn" style="height:30px">Create new</span> <span class="btn" style="height:30px">Search…</span></td></tr></table>
+    <p class="sub" style="margin:10px 0 0">Choosing an action here finishes their import on the spot — no re-run needed.</p></div>
+
+  <div class="card"><h3>Also created for you</h3><ul style="margin:8px 0 0;padding-left:18px;font-size:13px;line-height:1.7"><li>Founder contact <b>Michael Doyle · Doyle Organics</b> in Sales Hub (no match existed) — <a>open</a></li><li>Founder contact <b>Nimbus Labs</b> in Sales Hub — <a>open</a></li></ul></div>
+</section>
+</main></body></html>

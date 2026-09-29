@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export type ActivityKind = "note" | "call" | "email" | "message" | "contact_edit" | "task_created" | "task_done" | "converted" | "stage_changed" | "won" | "lost" | "opp_note" | "email_draft";
+export type ActivityKind = "note" | "call" | "email" | "message" | "contact_edit" | "task_created" | "task_done" | "converted" | "stage_changed" | "won" | "lost" | "opp_note" | "email_draft" | "odoo_message" | "odoo_note" | "note_edited" | "note_deleted" | "note_restored";
 export type Activity = { id: string; kind: ActivityKind; summary: string; actor_name: string | null; created_at: string };
 
 export async function logActivity(input: {
@@ -34,9 +34,12 @@ export async function logOutboundEmailActivity(
   recipients: string[],
   subject: string,
   actorId?: string | null,
+  limit = 25,
+  /** Which mailbox sent it, shown as a badge on the timeline. */
+  via?: "gmail" | "icapos",
 ): Promise<void> {
   try {
-    const emails = [...new Set(recipients.map((e) => e.trim().toLowerCase()).filter(Boolean))].slice(0, 25);
+    const emails = [...new Set(recipients.map((e) => e.trim().toLowerCase()).filter(Boolean))].slice(0, limit);
     if (emails.length === 0) return;
     const summary = `Email sent${subject ? `: ${subject.slice(0, 160)}` : ""}`;
     for (const email of emails) {
@@ -50,12 +53,34 @@ export async function logOutboundEmailActivity(
         .eq("status", "open");
       const openOpps = (opps ?? []) as Array<{ id: string }>;
       if (openOpps.length > 0) {
-        for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id });
+        for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id, meta: via ? { via } : undefined });
       } else {
-        await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId });
+        await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId, meta: via ? { via } : undefined });
       }
     }
   } catch { /* never block the send */ }
+}
+
+/** Timeline for an opportunity (its own logged events). */
+export async function listOpportunityActivity(opportunityId: string): Promise<Activity[]> {
+  const { data } = await db()
+    .from("sales_activity_log")
+    .select("id, kind, summary, created_at, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)")
+    .eq("opportunity_id", opportunityId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const a = r.actor as { full_name?: string | null; email?: string | null } | null;
+    return { id: String(r.id), kind: r.kind as ActivityKind, summary: String(r.summary), actor_name: a?.full_name ?? a?.email ?? null, created_at: String(r.created_at) };
+  });
+}
+
+/** Log a free-text note to the timeline (opportunity or contact). */
+export async function logNote(text: string, opts: { opportunityId?: string | null; contactCrmId?: string | null; actorId?: string | null }): Promise<void> {
+  const summary = text.trim().slice(0, 2000);
+  if (!summary) return;
+  await logActivity({ kind: opts.opportunityId ? "opp_note" : "note", summary, actorId: opts.actorId, opportunityId: opts.opportunityId ?? null, contactCrmId: opts.contactCrmId ?? null });
 }
 
 export async function listContactActivity(contactCrmId: string): Promise<Activity[]> {
@@ -63,6 +88,7 @@ export async function listContactActivity(contactCrmId: string): Promise<Activit
     .from("sales_activity_log")
     .select("id, kind, summary, created_at, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)")
     .eq("contact_crm_id", contactCrmId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {

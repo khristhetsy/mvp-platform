@@ -10,8 +10,20 @@
 // canonical label — still resolves to its options.
 
 import { ALL_SCHEMA_FIELDS } from "@/lib/sales/contact-profile-sections";
+import { canonicalizeIndustries, sortSectors } from "@/lib/industries/canonical";
 
 export type FieldOptions = Record<string, string[]>;
+
+/**
+ * Run the Industries option list through the canonical taxonomy so the picker
+ * shows clean values: stray Odoo number-ids dropped, Business Service(s)/biote/
+ * Hospitality/etc. merged, sorted with "Other" last. Read-time only — stored
+ * contact values are untouched. Returns a NEW object; other fields pass through.
+ */
+export function canonicalizeIndustryOptions(options: FieldOptions): FieldOptions {
+  if (!options.Industries) return options;
+  return { ...options, Industries: sortSectors(canonicalizeIndustries(options.Industries)) };
+}
 
 function norm(s: string): string {
   return s.trim().toLowerCase();
@@ -80,10 +92,14 @@ function preferredSpelling(a: string, b: string): string {
 }
 
 /** Collapse case-only duplicates (keyed by trimmed+lowercased value) to one
- *  canonical spelling, then return sorted. Stored contact values are unaffected. */
+ *  canonical spelling, then return sorted. Stored contact values are unaffected.
+ *  Pure-number values (e.g. "1", "7") are stray Odoo selection/many2many ids that
+ *  leak into the option list — never a real choice — so they're dropped from every
+ *  picker. (If a field ever needs bare numbers as genuine options, exempt it here.) */
 function dedupeCanonical(set: Set<string>): string[] {
   const canonical = new Map<string, string>();
   for (const raw of set) {
+    if (/^\d+$/.test(raw.trim())) continue;
     const v = canonicalizeValue(raw);
     const key = v.trim().toLowerCase();
     const existing = canonical.get(key);
@@ -102,19 +118,39 @@ export function buildFieldOptions(byLabel: Map<string, Set<string>>): FieldOptio
 
   // 2) Canonical Odoo labels: union values from any exact label matching the keyword.
   for (const f of ALL_SCHEMA_FIELDS) {
-    const key = norm(f.match);
+    // A field may declare several keywords (one concept, two Odoo labels) — union across
+    // all of them so the picker offers every value either label has been seen with.
+    const keys = (Array.isArray(f.match) ? f.match : [f.match]).map(norm);
     const union = new Set<string>();
     for (const [label, set] of byLabel) {
-      if (norm(label).includes(key)) for (const v of set) union.add(v);
+      if (keys.some((k) => norm(label).includes(k))) for (const v of set) union.add(v);
     }
     if (union.size && !out[f.odoo]) out[f.odoo] = sort(union);
   }
-  return out;
+  return canonicalizeIndustryOptions(out);
 }
 
 const PAGE = 1000;
 const MAX_PAGES = 40; // ~40k rows safety cap
-const SELECT = "extra:raw->__profile->extra";
+const SELECT = "extra:profile->extra, industries:profile->industries, investorTypes:profile->investorTypes";
+
+/** Curated option lists for fields that have no synced values yet (so the
+ *  click-to-edit picker is a select, not a text box). Merged with — never
+ *  replacing — any data-derived options for the same canonical label. */
+const ARR_BANDS = ["Less than $1M", "$1M – $5M", "$5M – $10M", "$10M – $25M", "$25M+"];
+const MRR_BANDS = ["Less than $80k", "$80k – $200k", "$200k – $400k", "$400k – $1M", "$1M+"];
+
+const CURATED_OPTIONS: Record<string, string[]> = {
+  "Investor preferences for the company with an ARR range of?": ARR_BANDS,
+  "Investor preferences for the company with an MRR range of?": MRR_BANDS,
+  // Founder actuals mirror the investor bands so a select — not a free-text box —
+  // and matching can compare like-for-like.
+  "Entrepreneur annual recurring revenue (ARR)?": ARR_BANDS,
+  "Entrepreneur monthly recurring revenue (MRR)?": MRR_BANDS,
+  // Ensure "Fund Manager" is always a selectable investor type (also used by the
+  // SEC Form D-only derived defaults).
+  "Investor profile": ["Fund Manager"],
+};
 
 let cache: { at: number; data: FieldOptions } | null = null;
 const TTL_MS = 10 * 60 * 1000;
@@ -128,15 +164,31 @@ const TTL_MS = 10 * 60 * 1000;
 export async function getContactFieldOptions(db: any, force = false): Promise<FieldOptions> {
   if (!force && cache && Date.now() - cache.at < TTL_MS) return cache.data;
   try {
-    const rows: Array<{ extra?: unknown }> = [];
+    const rows: Array<{ extra?: unknown; industries?: unknown; investorTypes?: unknown }> = [];
     for (let page = 0; page < MAX_PAGES; page++) {
       const from = page * PAGE;
       const { data, error } = await db.from("crm_contacts").select(SELECT).range(from, from + PAGE - 1);
       if (error || !data || data.length === 0) break;
-      rows.push(...(data as Array<{ extra?: unknown }>));
+      rows.push(...(data as Array<{ extra?: unknown; industries?: unknown; investorTypes?: unknown }>));
       if (data.length < PAGE) break;
     }
-    const options = buildFieldOptions(aggregateExactLabels(rows));
+    const byLabel = aggregateExactLabels(rows);
+    // Industries + Investor type live under semantic keys (__profile.industries /
+    // __profile.investorTypes), not in extra — fold their distinct values into the
+    // matching option sets so those fields are selects like the questionnaire ones.
+    const indSet = byLabel.get("Industries") ?? new Set<string>();
+    for (const row of rows) for (const v of normalizeValues(row.industries)) indSet.add(v);
+    if (indSet.size) byLabel.set("Industries", indSet);
+
+    const invTypeSet = byLabel.get("Investor profile") ?? new Set<string>();
+    for (const row of rows) for (const v of normalizeValues(row.investorTypes)) invTypeSet.add(v);
+    if (invTypeSet.size) byLabel.set("Investor profile", invTypeSet);
+
+    const options = buildFieldOptions(byLabel);
+    // Merge curated fallbacks (fields with no synced data yet) without clobbering data.
+    for (const [label, opts] of Object.entries(CURATED_OPTIONS)) {
+      options[label] = [...new Set([...(options[label] ?? []), ...opts])];
+    }
     cache = { at: Date.now(), data: options };
     return options;
   } catch {

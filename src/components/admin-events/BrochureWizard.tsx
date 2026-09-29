@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LOCKED_PAGES, PAGE_LABEL, THEMES, THEME_LABEL, coverToFreeformBlocks, newFreeformPage, type BrochurePage, type BrochureSize, type BrochureTheme, type FreeformBlock } from "@/lib/event-hub/brochure/types";
+import { suggestTitle } from "@/lib/event-hub/brochure/naming";
 import { BrochureCanvas } from "./BrochureCanvas";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
@@ -48,8 +49,12 @@ const COPY_FIELDS: Record<string, CopyField[]> = {
   ],
 };
 
-export function BrochureWizard({ initialEventId, baseEditionId }: { initialEventId?: string; baseEditionId?: string }) {
+export function BrochureWizard({ initialEventId, baseEditionId, openEditionId }: { initialEventId?: string; baseEditionId?: string; openEditionId?: string }) {
   const [step, setStep] = useState(1);
+  /** The event picked for a new booklet, before anything is written. */
+  const [picked, setPicked] = useState<{ eventId: string; title: string } | null>(null);
+  const [nameTaken, setNameTaken] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [events, setEvents] = useState<PickerEvent[]>([]);
   const [editionId, setEditionId] = useState<string | null>(null);
   const [eventId, setEventId] = useState<string | null>(null);
@@ -91,14 +96,68 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     })();
   }, []);
 
-  const createEdition = useCallback(async (evId: string) => {
+  // An ?eventId= link preselects the event and its suggested name; it no
+  // longer creates anything on its own. Derived so the picker below has one
+  // source of truth whether the event came from the URL or a click.
+  const preselected = !openEditionId && initialEventId
+    ? (() => {
+        const ev = events.find((e) => e.id === initialEventId);
+        return ev ? { eventId: ev.id, title: suggestTitle(ev.title) } : null;
+      })()
+    : null;
+
+  /** Load an existing booklet into the builder — what "Open →" now does. */
+  const loadEdition = useCallback(async (id: string) => {
     setError(null);
     try {
+      const res = await fetch(`/api/admin/events/brochure/${id}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Couldn't open the booklet.");
+      const ed = json.edition as {
+        id: string; eventId: string | null; title: string; pageConfig: BrochurePage[];
+        size: BrochureSize; theme?: BrochureTheme; overrides?: Record<string, Record<string, string>>;
+        status: string; published: boolean;
+      };
+      setEditionId(ed.id);
+      setEventId(ed.eventId);
+      setPages(ed.pageConfig);
+      setSize(ed.size);
+      setTheme(ed.theme ?? "navy");
+      setTitle(ed.title);
+      setOverrides(ed.overrides ?? {});
+      setGenerated(ed.status === "generated");
+      setPublished(Boolean(ed.published));
+      setStep(2);
+    } catch (e) {
+      setLoadFailed(true);
+      setError(e instanceof Error ? e.message : "Couldn't open the booklet.");
+    }
+  }, []);
+
+  /**
+   * Create the booklet. Only ever called from the Create button: picking an
+   * event used to write the row on its own, which left a draft behind whenever
+   * someone backed out, and produced a second identically-named row whenever
+   * they tried again.
+   */
+  const createEdition = useCallback(async (evId: string, wantedTitle: string) => {
+    setError(null);
+    setNameTaken(null);
+    setBusy(true);
+    try {
       const res = await fetch("/api/admin/events/brochure", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: evId, baseEditionId }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: evId, title: wantedTitle.trim(), baseEditionId }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Couldn't create the edition.");
+      if (!res.ok) {
+        if (res.status === 409 && typeof json.suggestion === "string") {
+          setPicked({ eventId: evId, title: json.suggestion });
+          setNameTaken(json.error as string);
+          return;
+        }
+        throw new Error(json.error ?? "Couldn't create the booklet.");
+      }
       setEditionId(json.edition.id);
       setEventId(json.edition.eventId ?? evId);
       setPages(json.edition.pageConfig);
@@ -108,15 +167,27 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
       setOverrides(json.edition.overrides ?? {});
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't create the edition.");
+      setError(e instanceof Error ? e.message : "Couldn't create the booklet.");
+    } finally {
+      setBusy(false);
     }
   }, [baseEditionId]);
 
   useEffect(() => {
-    if (!initialEventId) return;
-    const t = setTimeout(() => void createEdition(initialEventId), 0);
+    if (!openEditionId) return;
+    const t = setTimeout(() => void loadEdition(openEditionId), 0);
     return () => clearTimeout(t);
-  }, [initialEventId, createEdition]);
+  }, [openEditionId, loadEdition]);
+
+
+  // Warn before losing a booklet that was never generated. Anything arranged is
+  // already saved — this is about the booklet existing at all.
+  useEffect(() => {
+    if (!editionId || generated) return;
+    const onLeave = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onLeave);
+    return () => window.removeEventListener("beforeunload", onLeave);
+  }, [editionId, generated]);
 
   const renderPreview = useCallback(async (id: string) => {
     setBusy(true);
@@ -277,12 +348,19 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     <div>
       {error && <div className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-      {step === 1 && (
+      {step === 1 && !openEditionId && !loadFailed && (
         <div>
-          <p className="mb-3 text-sm text-[var(--text-muted)]">Pick a published or live event — the booklet builds itself from the event record.</p>
+          <p className="mb-3 text-sm text-[var(--text-muted)]">Pick a published or live event, then name the booklet. Nothing is saved until you press Create.</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {events.map((e) => (
-              <button key={e.id} type="button" onClick={() => createEdition(e.id)} className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-white p-3 text-left hover:border-[var(--blue)]">
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => { setPicked({ eventId: e.id, title: suggestTitle(e.title) }); setNameTaken(null); }}
+                className={`flex items-center gap-3 rounded-xl border bg-white p-3 text-left hover:border-[var(--blue)] ${
+                  picked?.eventId === e.id ? "border-[var(--blue)] ring-1 ring-[var(--blue)]" : "border-[var(--border-subtle)]"
+                }`}
+              >
                 <span className="h-12 w-16 flex-none overflow-hidden rounded-md bg-slate-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {e.coverUrl ? <img src={e.coverUrl} alt="" className="h-full w-full object-cover" /> : null}
@@ -295,7 +373,46 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
             ))}
             {events.length === 0 && <p className="text-sm text-[var(--text-muted)]">No published or live events yet.</p>}
           </div>
+
+          {(picked ?? preselected) && (
+            <div className="mt-4 max-w-xl rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+              <label className="block">
+                <span className="mb-1.5 block text-[10.6px] font-bold text-[var(--text-secondary)]">Booklet name</span>
+                <input
+                  value={(picked ?? preselected)!.title}
+                  onChange={(ev) => { setPicked({ ...(picked ?? preselected)!, title: ev.target.value }); setNameTaken(null); }}
+                  className={`w-full rounded-lg border px-2.5 py-1.5 text-[12.6px] text-[var(--text-secondary)] ${
+                    nameTaken ? "border-rose-300 bg-rose-50/40" : "border-[var(--border-subtle)]"
+                  }`}
+                />
+              </label>
+              <p className={`mt-1.5 text-[11px] ${nameTaken ? "text-rose-700" : "text-[var(--text-muted)]"}`}>
+                {nameTaken
+                  ? `${nameTaken} A free name has been filled in — change it or press Create.`
+                  : "Two booklets for the same event can't share a name. Suggested from the event; change it to anything you like."}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !(picked ?? preselected)!.title.trim()}
+                  onClick={() => { const n = (picked ?? preselected)!; void createEdition(n.eventId, n.title); }}
+                  className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {busy ? "Creating…" : "Create booklet"}
+                </button>
+                <button type="button" onClick={() => { setPicked(null); setNameTaken(null); }} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {loadFailed && (
+        <p className="text-sm text-[var(--text-muted)]">
+          <Link href="/admin/events/brochure" className="font-semibold text-[var(--blue)] hover:underline">← Back to the library</Link>
+        </p>
       )}
 
       {step === 2 && (
@@ -312,9 +429,24 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
             style={{ width: 340, marginLeft: panelOpen ? 0 : -364, marginRight: panelOpen ? 24 : 0, opacity: panelOpen ? 1 : 0, pointerEvents: panelOpen ? "auto" : "none", transition: "margin-left .35s ease, opacity .25s ease" }}
           >
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-[var(--navy)]">{title}</div>
-              <button type="button" onClick={() => setPanelOpen(false)} className="text-xs font-semibold text-[var(--blue)] hover:underline">‹ Hide</button>
+              <div className="min-w-0 text-sm font-semibold text-[var(--navy)]">{title}</div>
+              <button type="button" onClick={() => setPanelOpen(false)} className="flex-none text-xs font-semibold text-[var(--blue)] hover:underline">‹ Hide</button>
             </div>
+
+            {/* Leaving a booklet that has never been generated is the one exit
+                worth confirming — everything arranged is already saved. */}
+            <Link
+              href="/admin/events/brochure"
+              onClick={(ev) => {
+                if (generated) return;
+                if (!confirm(`“${title}” has never been generated — no PDF yet.\n\nIt stays in the library as a draft. Leave the builder?`)) {
+                  ev.preventDefault();
+                }
+              }}
+              className="inline-block text-[11.5px] font-semibold text-[var(--text-muted)] hover:text-[var(--blue)] hover:underline"
+            >
+              ← Back to the library
+            </Link>
 
             {/* preflight */}
             {preflight && preflight.warnings.length > 0 && (

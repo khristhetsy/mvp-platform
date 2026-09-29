@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
-import { createSupportRequest, listFounderRequests, autoAssignSupportRequest, SUPPORT_SOURCES } from "@/lib/support/support";
+import { createSupportRequest, listFounderRequests, autoAssignSupportRequest, SUPPORT_SOURCES, staffSupportLink } from "@/lib/support/support";
 import { createNotification, listStaffProfileIds, hasRecentNotification } from "@/lib/notifications/notifications";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,7 +34,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!company) return NextResponse.json({ error: "No active company." }, { status: 400 });
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "A subject is required." }, { status: 400 });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = String(issue?.path[0] ?? "");
+    const msg = field === "subject" ? "A subject is required (up to 160 characters)."
+      : field === "body" ? "Your message is too long — keep it under 4,000 characters."
+      : "Invalid request.";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
 
   const supabase = await createServerSupabaseClient();
   const result = await createSupportRequest(supabase, {
@@ -61,6 +68,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         message: `${company.company_name ?? "A founder"}: ${parsed.data.subject}`,
         entityType: "company",
         entityId: company.id,
+        deepLink: staffSupportLink(result.id),
       });
     } else {
       const staff = await listStaffProfileIds();
@@ -74,6 +82,7 @@ export async function POST(req: NextRequest): Promise<Response> {
           message: `${company.company_name ?? "A founder"}: ${parsed.data.subject}`,
           entityType: "company",
           entityId: company.id,
+          deepLink: staffSupportLink(result.id),
         });
       }
     }

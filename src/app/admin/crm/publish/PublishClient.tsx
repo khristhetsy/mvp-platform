@@ -73,7 +73,7 @@ export function PublishClient({ items, segmentSizes, canApprove }: { items: Publ
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <button onClick={() => setShowCreate((v) => !v)} className="rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={() => setShowCreate((v) => !v)} className="rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white">
           {showCreate ? "Close" : "+ New message"}
         </button>
       </div>
@@ -151,7 +151,7 @@ export function PublishClient({ items, segmentSizes, canApprove }: { items: Publ
                     </div>
                     <div className="shrink-0">
                       {it.status === "ready" && canApprove ? (
-                        <button onClick={() => approve(it.id)} disabled={busyId === it.id}
+                        <button type="button" onClick={() => approve(it.id)} disabled={busyId === it.id}
                           className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
                           {busyId === it.id ? "Sending…" : "Approve & send"}
                         </button>

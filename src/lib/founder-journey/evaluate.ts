@@ -4,6 +4,7 @@ import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, StageApprovalStatus, StageConditions, FounderJourneyState } from './types';
 import { allQualifyDocsUploaded } from './documents';
 import { computeReadinessScore } from '@/lib/data/founder-readiness';
+import { crrFor } from '@/lib/crr/crr-for';
 import { computeFounderOnboardingProgress } from '@/lib/onboarding/progress';
 import type { Company, DocumentRecord } from '@/lib/supabase/types';
 
@@ -116,6 +117,14 @@ export async function evaluateFounderJourney(
   const readinessScore = diligenceData?.readiness_score ?? computedReadiness;
   const readinessQualified = readinessScore >= 75;
 
+  // The Capital Readiness Rating — the engine score, read through the one
+  // platform-wide reader. `outreachUnlocked` is the engine's OWN gate; never
+  // compare against a threshold written here. This gates Automated Outreach and
+  // brokered introductions inside Marketing; it does NOT gate stage advancement.
+  const crr = companyId ? await crrFor(companyId) : null;
+  const crrScore = crr?.score ?? null;
+  const crrQualified = crr?.outreachUnlocked ?? false;
+
   // 5. Query deal_rooms — check if any exist for the company
   let hasDealRoom = false;
   if (companyId) {
@@ -148,6 +157,8 @@ export async function evaluateFounderJourney(
     onboardingComplete,
     readinessScore,
     readinessQualified,
+    crrScore,
+    crrQualified,
     requiredDocsUploaded,
     hasDealRoom,
     hasInvestorInterest,

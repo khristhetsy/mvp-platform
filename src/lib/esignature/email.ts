@@ -4,6 +4,8 @@
 
 import { getResendApiKey, getAppUrl } from "@/lib/env";
 import { BRAND } from "./types";
+import { fromFor, renderEmail, type RenderedEmail } from "@/lib/email/layout";
+import { logOutboundEmail } from "@/lib/email/email-log";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -19,27 +21,63 @@ export function buildSealedDocUrl(token: string): string {
   return `${base.replace(/\/$/, "")}/api/sign/${token}/document`;
 }
 
-/** From header — branded sender name "iCFO Venture Group" over the configured address. */
-function brandedFrom(): string {
-  const configured =
-    process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? process.env.EMAIL_FROM?.trim() ?? "";
-  // Extract a bare address if EMAIL_FROM is in "Name <addr>" form.
-  const addrMatch = configured.match(/<([^>]+)>/);
-  const address = addrMatch?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.icapos.com");
-  return `${BRAND.emailSender} <${address}>`;
-}
-
-async function send(input: { to: string; subject: string; text: string }): Promise<{ delivered: boolean }> {
+async function send(to: string, mail: RenderedEmail): Promise<{ delivered: boolean }> {
   const apiKey = getResendApiKey();
-  if (!apiKey || !input.to.includes("@")) return { delivered: false };
+  if (!apiKey || !to.includes("@")) return { delivered: false };
 
   const res = await fetch(RESEND_API_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: brandedFrom(), to: [input.to], subject: input.subject, text: input.text }),
+    body: JSON.stringify({ from: fromFor("shared", BRAND.emailSender), to: [to], subject: mail.subject, html: mail.html, text: mail.text }),
   });
-  if (!res.ok) throw new Error(`Email delivery failed: ${await res.text()}`);
+  if (!res.ok) {
+    const detail = await res.text();
+    await logOutboundEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, status: "failed", error: `Email provider error ${res.status}`, source: "e-signature" });
+    throw new Error(`Email delivery failed: ${detail}`);
+  }
+  const sent = (await res.json().catch(() => null)) as { id?: string } | null;
+  await logOutboundEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, status: "sent", providerId: sent?.id ?? null, source: "e-signature" });
   return { delivered: true };
+}
+
+const FOOTER = `Sent through iCapOS e-signature on behalf of ${BRAND.emailSender}.`;
+
+/** The signing invitation. Pure. */
+export function buildSigningInviteEmail(input: { signerName: string | null; documentName: string; dealLabel: string | null; signUrl: string }): RenderedEmail {
+  const first = input.signerName?.trim().split(/\s+/)[0];
+  return renderEmail({
+    audience: "shared",
+    subject: `Review and sign: ${input.documentName}`,
+    preheader: `${input.dealLabel ? `${input.dealLabel}. ` : ""}Secure, single use link from ${BRAND.emailSender}.`,
+    context: BRAND.emailSender,
+    eyebrow: "Signature requested",
+    headline: `Review and sign the ${input.documentName}`,
+    intro: `${first ? `Hi ${first}, ` : ""}${BRAND.emailSender} has sent you a document to review and sign.`,
+    blocks: [
+      { type: "facts", rows: [{ label: "Document", value: input.documentName }, ...(input.dealLabel ? [{ label: "Deal", value: input.dealLabel }] : [])] },
+      { type: "note", text: "This is a secure, single use link. If you weren't expecting this, you can ignore this email." },
+    ],
+    primary: { label: "Review and sign", url: input.signUrl },
+    footer: { reason: FOOTER },
+  });
+}
+
+/** The completion notice with the sealed copy. Pure. */
+export function buildCompletionEmail(input: { documentName: string; url: string; forSigner: boolean }): RenderedEmail {
+  const line = input.forSigner
+    ? `Your signed copy of "${input.documentName}" is ready.`
+    : `"${input.documentName}" has been signed and completed.`;
+  return renderEmail({
+    audience: "shared",
+    subject: `Completed: ${input.documentName}`,
+    preheader: line,
+    context: BRAND.emailSender,
+    eyebrow: "Signature complete",
+    headline: `${input.documentName} is signed`,
+    intro: line,
+    primary: { label: "View signed document", url: input.url },
+    footer: { reason: FOOTER },
+  });
 }
 
 /** Invite the signer to review and sign. */
@@ -50,23 +88,8 @@ export async function sendSigningInvite(input: {
   dealLabel: string | null;
   token: string;
 }): Promise<{ delivered: boolean }> {
-  const signUrl = buildSignUrl(input.token);
-  const hello = input.signerName ? `Hi ${input.signerName},` : "Hello,";
-  const dealLine = input.dealLabel ? ` (${input.dealLabel})` : "";
-  const text = [
-    hello,
-    "",
-    `${BRAND.emailSender} has sent you a document to review and sign: ${input.documentName}${dealLine}.`,
-    "",
-    "Review and sign:",
-    signUrl,
-    "",
-    "This is a secure, single-use link. If you weren't expecting this, you can ignore this email.",
-    "",
-    BRAND.emailSender,
-  ].join("\n");
-
-  return send({ to: input.to, subject: `Review and sign: ${input.documentName}`, text });
+  const mail = buildSigningInviteEmail({ signerName: input.signerName, documentName: input.documentName, dealLabel: input.dealLabel, signUrl: buildSignUrl(input.token) });
+  return send(input.to, mail);
 }
 
 /** Notify a party that the document is complete, with the sealed-copy link. */
@@ -76,19 +99,5 @@ export async function sendCompletionNotice(input: {
   token: string;
   forSigner: boolean;
 }): Promise<{ delivered: boolean }> {
-  const url = buildSealedDocUrl(input.token);
-  const text = [
-    input.forSigner ? "Hello," : "Hi,",
-    "",
-    input.forSigner
-      ? `Your signed copy of "${input.documentName}" is ready.`
-      : `"${input.documentName}" has been signed and completed.`,
-    "",
-    "View the signed document:",
-    url,
-    "",
-    BRAND.emailSender,
-  ].join("\n");
-
-  return send({ to: input.to, subject: `Completed: ${input.documentName}`, text });
+  return send(input.to, buildCompletionEmail({ documentName: input.documentName, url: buildSealedDocUrl(input.token), forSigner: input.forSigner }));
 }

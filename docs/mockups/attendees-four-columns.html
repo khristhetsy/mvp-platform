@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Who's attending — four columns</title>
+<style>
+  :root{ --navy:#0A1A40; --blue:#2563eb; --border:#e2e8f2; --muted:#6a7690; --bg:#f1f5f9; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#0f172a;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 22px 70px}
+  h1{font-size:21px;margin:0 0 4px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;max-width:820px}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     margin:30px 0 11px;font-weight:700}
+  .note{font-size:12.5px;color:#475569;max-width:860px}
+
+  .card{border:1px solid var(--border);border-radius:11px;background:#fff;padding:15px 16px}
+  .hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:9px;margin-bottom:12px}
+  .hd b{font-size:15px;color:var(--navy)}
+  .hd span{font-size:11.6px;color:var(--muted)}
+  .grp{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
+  .grp b{font-size:10.4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .grp .n{font-size:10.4px;color:#b6c0d0}
+
+  /* four columns of names */
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 16px;margin-bottom:14px}
+  @media(max-width:900px){.g4{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:680px){.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:440px){.g4{grid-template-columns:1fr}}
+  .p{display:flex;align-items:center;gap:7px;min-width:0;padding:4px 0}
+  .p .av{width:20px;height:20px;border-radius:50%;flex:none;font-size:8.2px;font-weight:800;
+         display:flex;align-items:center;justify-content:center}
+  .av.i{background:#eff6ff;color:#1d4ed8}
+  .av.f{background:#f5f3ff;color:#6d28d9}
+  .p .nm{min-width:0;flex:1;font-size:12.3px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .more{grid-column:1 / -1;padding-top:6px;font-size:11.8px;font-weight:600;color:var(--blue)}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:880px){.two{grid-template-columns:1fr}}
+  .tag{display:inline-block;font-size:10.4px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+       padding:2px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.a{background:#f1f5f9;color:#475569;border:1px solid var(--border)}
+  .tag.b{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;
+        padding:4px 10px 4px 4px;font-size:11.8px;background:#fff}
+  .chip .av{width:19px;height:19px}
+  .bd{font-size:8.4px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 5px}
+  .inv{background:#eff6ff;color:#1d4ed8}
+  .fnd{background:#f5f3ff;color:#6d28d9}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Who&rsquo;s attending — four columns</h1>
+  <p class="sub">Names in a four-column grid rather than chips. The badge moves into the avatar colour, so a hundred names read as a list instead of a wall of pills.</p>
+
+  <!-- MAIN -->
+  <h2>The block</h2>
+  <div class="card">
+    <div class="hd"><b>Who&rsquo;s attending</b><span>106 registered</span></div>
+
+    <div class="grp"><b>Investors</b><span class="n">101</span></div>
+    <div class="g4">
+      <span class="p"><span class="av i">AK</span><span class="nm">Aisha Kamara</span></span>
+      <span class="p"><span class="av i">AB</span><span class="nm">Alan Brooks</span></span>
+      <span class="p"><span class="av i">AN</span><span class="nm">Amara Nwosu</span></span>
+      <span class="p"><span class="av i">BT</span><span class="nm">Ben Tanaka</span></span>
+      <span class="p"><span class="av i">CM</span><span class="nm">Carla Mendes</span></span>
+      <span class="p"><span class="av i">DL</span><span class="nm">Daniel Lau</span></span>
+      <span class="p"><span class="av i">EO</span><span class="nm">Ekene Obi</span></span>
+      <span class="p"><span class="av i">FR</span><span class="nm">Farid Rahimi</span></span>
+      <span class="p"><span class="av i">GO</span><span class="nm">Grace Oduya</span></span>
+      <span class="p"><span class="av i">HF</span><span class="nm">Hana Fischer</span></span>
+      <span class="p"><span class="av i">IK</span><span class="nm">Ivan Kovač</span></span>
+      <span class="p"><span class="av i">JM</span><span class="nm">Jorge Molina</span></span>
+      <span class="p"><span class="av i">KO</span><span class="nm">Kwame Osei</span></span>
+      <span class="p"><span class="av i">LC</span><span class="nm">Lena Castellanos</span></span>
+      <span class="p"><span class="av i">MR</span><span class="nm">Marcus Reyes</span></span>
+      <span class="p"><span class="av i">NA</span><span class="nm">Nadia Aslam</span></span>
+      <span class="p"><span class="av i">PV</span><span class="nm">Priya Venkat</span></span>
+      <span class="p"><span class="av i">RD</span><span class="nm">Rafael Duarte</span></span>
+      <span class="p"><span class="av i">SM</span><span class="nm">Sofia Marchetti</span></span>
+      <span class="p"><span class="av i">TH</span><span class="nm">Tomás Herrera</span></span>
+      <span class="more">Show all 101 →</span>
+    </div>
+
+    <div class="grp"><b>Founders</b><span class="n">4</span></div>
+    <div class="g4" style="margin-bottom:0">
+      <span class="p"><span class="av f">AS</span><span class="nm">Alan Steinberg</span></span>
+      <span class="p"><span class="av f">BW</span><span class="nm">Bob Wood</span></span>
+      <span class="p"><span class="av f">SG</span><span class="nm">Steve Gatt</span></span>
+      <span class="p"><span class="av f">SP</span><span class="nm">Shan Padda</span></span>
+    </div>
+  </div>
+  <p class="note" style="margin-top:10px">Alphabetical, five rows of four before it expands. Founders fit in one row,
+  so nothing is hidden there.</p>
+
+  <!-- EXPANDED -->
+  <h2>Expanded</h2>
+  <div class="card">
+    <div class="grp"><b>Investors</b><span class="n">101</span><span class="more" style="margin-left:auto;padding:0">Collapse</span></div>
+    <div class="g4" style="margin-bottom:0">
+      <span class="p"><span class="av i">AK</span><span class="nm">Aisha Kamara</span></span>
+      <span class="p"><span class="av i">AB</span><span class="nm">Alan Brooks</span></span>
+      <span class="p"><span class="av i">AN</span><span class="nm">Amara Nwosu</span></span>
+      <span class="p"><span class="av i">AT</span><span class="nm">Arun Thakur</span></span>
+      <span class="p"><span class="av i">BT</span><span class="nm">Ben Tanaka</span></span>
+      <span class="p"><span class="av i">BK</span><span class="nm">Bianca Klein</span></span>
+      <span class="p"><span class="av i">CM</span><span class="nm">Carla Mendes</span></span>
+      <span class="p"><span class="av i">CN</span><span class="nm">Chen Ning</span></span>
+      <span class="p"><span class="av i">DL</span><span class="nm">Daniel Lau</span></span>
+      <span class="p"><span class="av i">DR</span><span class="nm">Dara Rossi</span></span>
+      <span class="p"><span class="av i">EO</span><span class="nm">Ekene Obi</span></span>
+      <span class="p"><span class="av i">EW</span><span class="nm">Elin Wahlberg</span></span>
+      <span class="p"><span class="av i">FR</span><span class="nm">Farid Rahimi</span></span>
+      <span class="p"><span class="av i">FS</span><span class="nm">Fiona Shaw</span></span>
+      <span class="p"><span class="av i">GO</span><span class="nm">Grace Oduya</span></span>
+      <span class="p"><span class="av i">GP</span><span class="nm">Gustavo Pires</span></span>
+      <span class="p"><span class="av i">HF</span><span class="nm">Hana Fischer</span></span>
+      <span class="p"><span class="av i">HM</span><span class="nm">Hugo Martin</span></span>
+      <span class="p"><span class="av i">IK</span><span class="nm">Ivan Kovač</span></span>
+      <span class="p"><span class="av i">IS</span><span class="nm">Iris Sandberg</span></span>
+      <span class="p"><span class="av i">JM</span><span class="nm">Jorge Molina</span></span>
+      <span class="p"><span class="av i">JD</span><span class="nm">Julia Dvořák</span></span>
+      <span class="p"><span class="av i">KO</span><span class="nm">Kwame Osei</span></span>
+      <span class="p"><span class="av i">KH</span><span class="nm">Kyung-ho Han</span></span>
+      <span class="p"><span class="av i">LC</span><span class="nm">Lena Castellanos</span></span>
+      <span class="p"><span class="av i">LB</span><span class="nm">Luc Bernard</span></span>
+      <span class="p"><span class="av i">MR</span><span class="nm">Marcus Reyes</span></span>
+      <span class="p"><span class="av i">MA</span><span class="nm">Mira Alavi</span></span>
+      <span class="p"><span class="av i">NA</span><span class="nm">Nadia Aslam</span></span>
+      <span class="p"><span class="av i">NO</span><span class="nm">Niall O&rsquo;Brien</span></span>
+      <span class="p"><span class="av i">PV</span><span class="nm">Priya Venkat</span></span>
+      <span class="p"><span class="av i">PW</span><span class="nm">Peter Wu</span></span>
+      <span class="p"><span class="av i">RD</span><span class="nm">Rafael Duarte</span></span>
+      <span class="p"><span class="av i">RK</span><span class="nm">Rina Kobayashi</span></span>
+      <span class="p"><span class="av i">SM</span><span class="nm">Sofia Marchetti</span></span>
+      <span class="p"><span class="av i">SB</span><span class="nm">Samir Boulos</span></span>
+      <span class="p"><span class="av i">TH</span><span class="nm">Tomás Herrera</span></span>
+      <span class="p"><span class="av i">TN</span><span class="nm">Thandi Ncube</span></span>
+      <span class="p"><span class="av i">VP</span><span class="nm">Vera Popescu</span></span>
+      <span class="p"><span class="av i">ZA</span><span class="nm">Zaid Almasi</span></span>
+      <span class="p" style="color:#94a3b8"><span class="av i" style="background:#f1f5f9;color:#b6c0d0">…</span><span class="nm" style="color:#94a3b8">and 61 more</span></span>
+    </div>
+  </div>
+
+  <!-- WHY -->
+  <h2>Why not chips</h2>
+  <div class="two">
+    <div>
+      <span class="tag a">Chips</span>
+      <div class="card" style="padding:12px 13px">
+        <div class="chips">
+          <span class="chip"><span class="av i">AK</span>Aisha Kamara<span class="bd inv">Investor</span></span>
+          <span class="chip"><span class="av i">AB</span>Alan Brooks<span class="bd inv">Investor</span></span>
+          <span class="chip"><span class="av i">AN</span>Amara Nwosu<span class="bd inv">Investor</span></span>
+          <span class="chip"><span class="av i">BT</span>Ben Tanaka<span class="bd inv">Investor</span></span>
+          <span class="chip"><span class="av i">CM</span>Carla Mendes<span class="bd inv">Investor</span></span>
+          <span class="chip"><span class="av i">DL</span>Daniel Lau<span class="bd inv">Investor</span></span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">Ragged right edge, the badge repeated on every pill,
+        and no column to scan down. Fine for six names.</p>
+    </div>
+    <div>
+      <span class="tag b">Four columns</span>
+      <div class="card" style="padding:12px 13px">
+        <div class="g4" style="margin-bottom:0;grid-template-columns:repeat(2,1fr)">
+          <span class="p"><span class="av i">AK</span><span class="nm">Aisha Kamara</span></span>
+          <span class="p"><span class="av i">AB</span><span class="nm">Alan Brooks</span></span>
+          <span class="p"><span class="av i">AN</span><span class="nm">Amara Nwosu</span></span>
+          <span class="p"><span class="av i">BT</span><span class="nm">Ben Tanaka</span></span>
+          <span class="p"><span class="av i">CM</span><span class="nm">Carla Mendes</span></span>
+          <span class="p"><span class="av i">DL</span><span class="nm">Daniel Lau</span></span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:9px;font-size:11.9px">Aligned columns, one badge per group heading instead of
+        101 times, and it scans alphabetically down each column.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:14px">The badge is carried by the avatar colour — blue for investors, violet for
+  founders — and named once in the group heading. Long names ellipsis rather than wrap, so rows stay aligned.
+  Four columns become three, two and one as the page narrows.</p>
+
+</div>
+</body>
+</html>

@@ -10,6 +10,7 @@ import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import type { StageConditions } from "@/lib/founder-journey/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { NOT_A_BROKER_DEALER, renderEmail } from "@/lib/email/layout";
 
 export const REMINDER_INTERVAL_DAYS = 3;
 const INTERVAL_MS = REMINDER_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
@@ -39,17 +40,17 @@ export const GATE_DEFS: GateDef[] = [
   },
   {
     key: "readiness",
-    label: "Readiness qualified",
-    detail: "Score needs to reach 75",
+    label: "Preparation complete",
+    detail: "Needs to reach 75%",
     path: "/founder/readiness",
     met: (c) => c.readinessQualified,
-    ask: "raise your Capital Readiness score to 75 or higher — the diligence checklist shows the gaps to close",
-    steps: ["Open your readiness checklist", "Close the flagged gaps", "Upload documents that lift the score"],
+    ask: "finish your Preparation document set — it needs to reach 75% complete, and the diligence checklist shows exactly which documents are still missing",
+    steps: ["Open your Preparation checklist", "Close the flagged gaps", "Upload the remaining required documents"],
   },
   {
     key: "docs",
     label: "Required documents uploaded",
-    detail: "Qualify-stage document set",
+    detail: "Preparation document set",
     path: "/founder/documents",
     met: (c) => c.requiredDocsUploaded,
     ask: "upload the required Preparation document set — financials, cap table, and corporate documents",
@@ -58,19 +59,22 @@ export const GATE_DEFS: GateDef[] = [
   {
     key: "dealroom",
     label: "Deal room created",
-    detail: "Needed to advance to Marketing",
+    detail: "Opens Closing",
     path: "/founder/deal-room",
-    met: (c) => c.hasDealRoom,
-    ask: "set up your deal room — the workspace investors use to diligence your company",
+    // Either this or a logged investor interest advances the stage
+    // (`shouldAdvanceDeployToOptimize`), so a founder who has one should not be
+    // chased for the other.
+    met: (c) => c.hasDealRoom || c.hasInvestorInterest,
+    ask: "set up your deal room — the workspace investors use to diligence your company. Logging your first investor interest does the same job, so whichever comes first is fine",
     steps: ["Open Deal Room", "Create your room", "Load your data-room documents"],
   },
   {
     key: "interest",
     label: "Investor interest logged",
-    detail: "Signal to move into Closing",
+    detail: "Opens Closing",
     path: "/founder/matches",
-    met: (c) => c.hasInvestorInterest,
-    ask: "review your investor matches and start outreach so your first investor interest gets logged",
+    met: (c) => c.hasInvestorInterest || c.hasDealRoom,
+    ask: "review your investor matches and start outreach so your first investor interest gets logged — setting up your deal room does the same job, so either one is enough",
     steps: ["Open your investor matches", "Reach out to the strongest fits", "Log the first expressed interest"],
   },
 ];
@@ -79,11 +83,21 @@ export const GATE_LABELS: Record<string, string> = Object.fromEntries(GATE_DEFS.
 
 function gateEmail(gate: GateDef, firstName: string) {
   const url = `${SITE_URL}${gate.path}`;
-  const subject = `Reminder: ${gate.label.toLowerCase()}`;
-  const stepsHtml = gate.steps.map((s) => `<li>${s}</li>`).join("");
-  const html = `<p>Hi ${firstName},</p><p>You're one step closer. To clear <b>${gate.label}</b>, please ${gate.ask}.</p><ol>${stepsHtml}</ol><p><a href="${url}">Take care of it now →</a></p><p style="color:#667;font-size:12px">You're receiving this because this item is still open on your iCapOS profile. It stops automatically once it's done. iCapOS is not a broker-dealer and does not raise capital or guarantee funding.</p>`;
-  const text = `Hi ${firstName}, to clear "${gate.label}", please ${gate.ask}. Steps: ${gate.steps.join("; ")}. ${url}`;
-  return { subject, html, text };
+  return renderEmail({
+    audience: "founder",
+    subject: `Reminder: ${gate.label.toLowerCase()}`,
+    preheader: `To clear ${gate.label}, please ${gate.ask}.`,
+    eyebrow: "Your raise · Next step",
+    headline: `One step to clear ${gate.label}`,
+    intro: `Hi ${firstName}, you're one step closer. To clear ${gate.label}, please ${gate.ask}.`,
+    blocks: [{ type: "checklist", title: "What to do", items: gate.steps.map((label) => ({ label, done: false })) }],
+    primary: { label: "Take care of it now", url },
+    footer: {
+      reason: "You're receiving this because this item is still open on your iCapOS profile. It stops automatically once it's done.",
+      preferencesUrl: `${SITE_URL}/founder/settings`,
+      lines: [NOT_A_BROKER_DEALER],
+    },
+  });
 }
 
 /** Preview of the reminder email for a gate (for the admin detail view). */

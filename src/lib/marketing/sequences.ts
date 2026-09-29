@@ -2,6 +2,7 @@ import { marketingDb } from "./db";
 import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured } from "./send";
 import { isUnsubscribed } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
+import { needsEmailReview } from "./recipient";
 
 export async function getSequences(): Promise<MarketingSequence[]> {
   const db = await marketingDb();
@@ -16,15 +17,46 @@ export async function getSequences(): Promise<MarketingSequence[]> {
   return (data ?? []) as MarketingSequence[];
 }
 
-export async function createSequence(name: string, createdBy?: string): Promise<MarketingSequence> {
+export async function createSequence(name: string, createdBy?: string, department?: string | null): Promise<MarketingSequence> {
   const db = await marketingDb();
   const { data, error } = await db
     .from("marketing_sequences")
-    .insert({ name, ...(createdBy ? { created_by: createdBy } : {}) })
+    .insert({ name, ...(createdBy ? { created_by: createdBy } : {}), ...(department ? { department } : {}) })
     .select()
     .single();
   if (error) throw error;
   return data as MarketingSequence;
+}
+
+/** Rename / move to a department (null = Unassigned). */
+export async function updateSequenceMeta(id: string, patch: { name?: string; department?: string | null }): Promise<void> {
+  const db = await marketingDb();
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.name !== undefined) update.name = patch.name.trim();
+  if (patch.department !== undefined) update.department = patch.department;
+  const { error } = await db.from("marketing_sequences").update(update).eq("id", id);
+  if (error) throw error;
+}
+
+/** "Save as": copy a sequence and its steps under a new name (draft, no enrollments). */
+export async function duplicateSequence(id: string, name: string, createdBy?: string, department?: string | null): Promise<MarketingSequence> {
+  const db = await marketingDb();
+  const { data: src, error: e1 } = await db.from("marketing_sequences").select("*, steps:marketing_sequence_steps(*)").eq("id", id).single();
+  if (e1 || !src) throw e1 ?? new Error("Sequence not found.");
+  const copy = await createSequence(name, createdBy, department === undefined ? (src.department as string | null) : department);
+  const steps = ((src.steps ?? []) as Array<Record<string, unknown>>).map((st) => ({
+    sequence_id: copy.id, step_order: st.step_order, template_id: st.template_id, delay_days: st.delay_days,
+    condition: st.condition, from_name: st.from_name, from_email: st.from_email,
+  }));
+  if (steps.length) { const { error } = await db.from("marketing_sequence_steps").insert(steps); if (error) throw error; }
+  return copy;
+}
+
+/** Active enrollments block a delete (archive instead). */
+export async function activeEnrollmentCount(sequenceId: string): Promise<number> {
+  const db = await marketingDb();
+  const { count } = await db.from("marketing_sequence_enrollments").select("id", { count: "exact", head: true }).eq("sequence_id", sequenceId).eq("status", "active");
+  return count ?? 0;
 }
 
 export async function updateSequenceStatus(
@@ -202,6 +234,77 @@ export async function enrollList(
   return { enrolled: rows.length };
 }
 
+/**
+ * Mass-enroll from the Opportunities selection. Opportunities carry a contact email, not a
+ * marketing_contacts id, so: mirror the emails into marketing_contacts (same upsert the
+ * mass-email path uses), skip ones already active in this sequence, then enroll. Preview
+ * mode reports the counts without writing anything.
+ */
+export async function enrollOpportunities(
+  sequenceId: string,
+  opps: Array<{ id: string; contact_name: string | null; contact_email: string | null }>,
+  mode: "preview" | "commit",
+): Promise<{ sequence: string; enrolled: number; skippedNoEmail: number; alreadyEnrolled: number; total: number }> {
+  const db = await marketingDb();
+  const { data: seq, error: e0 } = await db.from("marketing_sequences").select("id, name, status").eq("id", sequenceId).single();
+  if (e0 || !seq) throw new Error("Sequence not found.");
+  const byEmail = new Map<string, { email: string; first_name: string | null; last_name: string | null; company: string | null; source: string }>();
+  let skippedNoEmail = 0;
+  for (const o of opps) {
+    const email = (o.contact_email ?? "").trim().toLowerCase();
+    if (!email) { skippedNoEmail++; continue; }
+    if (byEmail.has(email)) continue;
+    const parts = (o.contact_name ?? "").trim().split(/\s+/);
+    byEmail.set(email, { email, first_name: parts[0] || null, last_name: parts.slice(1).join(" ") || null, company: null, source: "crm" });
+  }
+  const mirror = [...byEmail.values()];
+  const total = opps.length;
+  if (mirror.length === 0) return { sequence: seq.name, enrolled: 0, skippedNoEmail, alreadyEnrolled: 0, total };
+
+  // Preview must not create contacts: look up existing ids only, and count the rest as new.
+  const { data: existing } = await db.from("marketing_contacts").select("id, email").in("email", mirror.map((m) => m.email));
+  const existingIds = ((existing ?? []) as Array<{ id: string; email: string }>).map((c) => c.id);
+  let alreadyEnrolled = 0;
+  if (existingIds.length) {
+    const { count } = await db.from("marketing_sequence_enrollments").select("id", { count: "exact", head: true }).eq("sequence_id", sequenceId).eq("status", "active").in("contact_id", existingIds);
+    alreadyEnrolled = count ?? 0;
+  }
+  const enrolled = mirror.length - alreadyEnrolled;
+  if (mode === "preview") return { sequence: seq.name, enrolled, skippedNoEmail, alreadyEnrolled, total };
+
+  const { data: up, error: e1 } = await db.from("marketing_contacts").upsert(mirror, { onConflict: "email" }).select("id");
+  if (e1) throw e1;
+  const { data: firstStep } = await db.from("marketing_sequence_steps").select("delay_days").eq("sequence_id", sequenceId).order("step_order", { ascending: true }).limit(1).maybeSingle();
+  const nextSendAt = new Date(Date.now() + (firstStep?.delay_days ?? 0) * 86400000).toISOString();
+  // Upsert keeps existing active enrollments where they are (their step/next_send_at are
+  // not overwritten because we only insert the conflict key + next_send_at for new rows).
+  const rows = ((up ?? []) as Array<{ id: string }>).map((c) => ({ sequence_id: sequenceId, contact_id: c.id, next_send_at: nextSendAt }));
+  const { error: e2 } = await db.from("marketing_sequence_enrollments").upsert(rows, { onConflict: "sequence_id,contact_id", ignoreDuplicates: true });
+  if (e2) throw e2;
+  return { sequence: seq.name, enrolled, skippedNoEmail, alreadyEnrolled, total };
+}
+
+/** Which sequence (and step) each email is actively enrolled in — for the Opportunities "Sequence" column. */
+export async function sequenceMembershipByEmail(emails: string[]): Promise<Map<string, { name: string; step: number; steps: number }>> {
+  const out = new Map<string, { name: string; step: number; steps: number }>();
+  const clean = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  if (!clean.length) return out;
+  const db = await marketingDb();
+  const { data: contacts } = await db.from("marketing_contacts").select("id, email").in("email", clean);
+  const emailById = new Map(((contacts ?? []) as Array<{ id: string; email: string }>).map((c) => [c.id, c.email]));
+  if (!emailById.size) return out;
+  const { data: enr } = await db.from("marketing_sequence_enrollments")
+    .select("contact_id, current_step, sequence:marketing_sequences(name, steps:marketing_sequence_steps(id))")
+    .eq("status", "active").in("contact_id", [...emailById.keys()]);
+  type Enr = { contact_id: string; current_step: number; sequence: { name: string; steps: unknown[] } | { name: string; steps: unknown[] }[] | null };
+  for (const e of (enr ?? []) as unknown as Enr[]) {
+    const seq = Array.isArray(e.sequence) ? e.sequence[0] : e.sequence;   // PostgREST may shape the join as an array
+    const email = emailById.get(e.contact_id);
+    if (email && seq && !out.has(email)) out.set(email, { name: seq.name, step: e.current_step, steps: seq.steps?.length ?? 0 });
+  }
+  return out;
+}
+
 const CONDITION_EVENT: Record<string, string> = { no_open: "opened", no_click: "clicked", no_reply: "replied" };
 
 /**
@@ -361,12 +464,16 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string, 
       continue;
     }
     const token = makeUnsubscribeToken(contact.email);
-    const result = await sendMarketingEmail({
-      to: contact.email, first_name: contact.first_name, company: contact.company,
-      from_name: step.from_name, from_email: step.from_email,
-      subject: step.template.subject, html_body: step.template.html_body, text_body: step.template.text_body,
-      unsubscribe_token: token,
-    });
+    // Contacts flagged by the email cleanup are held back (logged as a skipped recipient)
+    // until someone fixes the address, so they never get a duplicate or bounced send.
+    const result = needsEmailReview(contact.tags)
+      ? { resend_id: null, ok: false, error: `Invalid recipient address: ${contact.email} (flagged for review)` }
+      : await sendMarketingEmail({
+          to: contact.email, first_name: contact.first_name, company: contact.company,
+          from_name: step.from_name, from_email: step.from_email,
+          subject: step.template.subject, html_body: step.template.html_body, text_body: step.template.text_body,
+          unsubscribe_token: token,
+        });
     await db.from("marketing_events").insert({
       sequence_id: e.sequence_id, step_id: step.id, contact_id: contact.id, email: contact.email,
       resend_id: result.resend_id, event_type: result.ok ? "sent" : "failed",

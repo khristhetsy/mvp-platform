@@ -11,6 +11,18 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "react/button-has-type": "warn",
+      // A leading underscore marks an intentionally-unused binding (interface-
+      // required params on adapter stubs, deliberately-ignored destructures).
+      // Treat those as intentional rather than flagging them.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   // Override default ignores of eslint-config-next.

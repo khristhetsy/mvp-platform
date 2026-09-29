@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Event — presenter invitations &amp; materials</title>
+<style>
+  :root{--ink:#0F172A;--s700:#334155;--s600:#475569;--s500:#64748B;--s400:#94A3B8;--line:#E2E8F0;--l50:#F8FAFC;--l100:#F1F5F9;
+        --navy:#0C2340;--ind:#4F46E5;--good:#059669;--warn:#B45309;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F5F9;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1020px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--s600);margin:0 0 20px;font-size:13px}
+  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s400);margin:28px 0 9px}
+  code{background:var(--l100);padding:1px 5px;border-radius:4px;font-size:11.2px;white-space:nowrap}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+         box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:12px}
+  .ph{display:flex;align-items:center;gap:9px;padding:10px 15px;border-bottom:1px solid var(--l100);background:var(--l50)}
+  .ph h3{margin:0;font-size:12.5px;font-weight:650}
+  .ph .sp{flex:1}
+  .pb{padding:14px 15px}
+
+  .btn{border-radius:7px;padding:5px 12px;font-size:12px;font-weight:550;border:1px solid var(--line);
+       background:#fff;color:var(--s600);text-decoration:none;display:inline-block;white-space:nowrap}
+  .btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn.ind{background:var(--ind);border-color:var(--ind);color:#fff}
+  .btn.sm{padding:3px 9px;font-size:11px}
+
+  .chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:650;border:1px solid}
+  .c-grey{background:var(--l100);color:var(--s600);border-color:var(--line)}
+  .c-ok{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
+  .c-amber{background:#FFFBEB;color:#92400E;border-color:#FDE68A}
+  .c-red{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}
+  .c-ind{background:#EEF2FF;color:#3730A3;border-color:#C7D2FE}
+
+  /* role cards */
+  .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .role{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff}
+  .role.sel{border-color:#C7D2FE;background:#F8F9FF;box-shadow:inset 0 0 0 1px #C7D2FE}
+  .role h4{margin:0 0 3px;font-size:12.8px;font-weight:650}
+  .role p{margin:0;font-size:11.3px;color:var(--s500);line-height:1.5}
+  .role .asks{margin-top:7px;padding-top:7px;border-top:1px solid var(--l100);font-size:10.5px;color:var(--s500)}
+  .role .asks b{color:var(--s700)}
+
+  /* rows */
+  .row{display:flex;align-items:center;gap:10px;padding:9px 15px;border-bottom:1px solid var(--l100)}
+  .row:last-child{border-bottom:none}
+  .row .nm{font-size:12.8px;font-weight:550;min-width:150px}
+  .row .em{font-size:11.3px;color:var(--s500);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .st{flex:none}
+
+  table{width:100%;border-collapse:collapse;font-size:12.2px}
+  th{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s400);
+     text-align:left;padding:0 9px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 9px 9px 0;border-bottom:1px solid var(--l100);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:11px;font-weight:600;color:var(--s600);margin-bottom:3px}
+  .inp{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px;color:var(--s700);background:#fff}
+  .inp.ph{color:var(--s400)}
+  .hint{font-size:10.8px;color:var(--s500);margin-top:3px;line-height:1.45}
+  .hint b{color:var(--s700)}
+  .err{font-size:10.8px;color:#B91C1C;margin-top:3px}
+
+  .drop{border:1.5px dashed #CBD5E1;border-radius:9px;padding:14px;text-align:center;background:var(--l50)}
+  .drop p{margin:0;font-size:12px;color:var(--s600)}
+  .drop .sm{font-size:10.8px;color:var(--s400);margin-top:3px}
+
+  .linkbox{display:flex;align-items:center;gap:8px;border:1px solid #C7D2FE;background:#F8F9FF;border-radius:8px;padding:8px 10px}
+  .linkbox .u{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.3px;color:#3730A3;
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .mail{border:1px solid var(--line);border-radius:9px;background:#fff;padding:13px 15px;font-size:12.4px;color:var(--s700);line-height:1.65}
+  .mail .hdr{font-size:11px;color:var(--s500);border-bottom:1px solid var(--l100);padding-bottom:7px;margin-bottom:9px}
+
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ind);border-radius:9px;
+        padding:12px 15px;font-size:12.5px;color:var(--s600);line-height:1.62;margin-bottom:12px}
+  .note b{color:var(--ink)}
+  .warn{border-left-color:#B45309;background:#FFFBEB;color:#78350F}
+  .warn b{color:#451A03}
+  .ok{border-left-color:#059669;background:#F0FDF9;color:#065F46}
+  .ok b{color:#022C22}
+  ul.t{margin:6px 0 0;padding-left:18px}
+  ul.t li{font-size:12.3px;margin-bottom:5px;line-height:1.55}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Event — presenter invitations &amp; materials</h1>
+<p class="sub">Admin → Events → Manage event · mockup, nothing built</p>
+
+<div class="note ok">
+  <b>Most of this already exists; the invitation is the missing half.</b>
+  <code>EventPresenter</code> already carries <code>email</code>, <code>meetingUrl</code>,
+  <code>links[]</code>, <code>startsAt</code> and <code>timezone</code>.
+  <code>SpeakerApplication</code> handles people applying <i>in</i>
+  (<code>presenter | panelist | founder_showcase</code>). What there is no path for is you reaching
+  <i>out</i> — and no place for a presenter to put a video or a deck.
+</div>
+
+<!-- ═════ 1 · INVITE ═════ -->
+<div class="lbl">1 · Invite presenters</div>
+<div class="panel">
+  <div class="ph"><h3>Invite to iCFO PE Expo — Las Vegas | Sept 22</h3><span class="sp"></span>
+    <span class="chip c-grey">Sept 22 · 9:00 PM PT</span></div>
+  <div class="pb">
+    <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:var(--s600)">Role</p>
+    <div class="roles">
+      <div class="role">
+        <h4>Founder</h4>
+        <p>Speaks on a panel or gives a talk. Not pitching.</p>
+        <p class="asks">Asks for: <b>bio, headshot</b></p>
+      </div>
+      <div class="role sel">
+        <h4>Founder Showcase</h4>
+        <p>Pitches from the main stage in a showcase slot.</p>
+        <p class="asks">Asks for: <b>bio, headshot, pitch video, deck</b></p>
+      </div>
+      <div class="role">
+        <h4>Exhibitor</h4>
+        <p>Runs a booth in the expo hall, no stage slot.</p>
+        <p class="asks">Asks for: <b>company blurb, logo, deck</b></p>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="field">
+      <label>Invite by email</label>
+      <input class="inp ph" value="vincent.n2013@gmail.com, hello@impervitex.com" readonly>
+      <p class="hint">One per line or comma-separated. A matching iCapOS founder is linked
+        automatically; anyone else is invited as a guest and can still upload.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+      <div class="field">
+        <label>Assign to session (optional)</label>
+        <input class="inp" value="Exhibitors — NAI Technology · Founder Showcase" readonly>
+      </div>
+      <div class="field">
+        <label>Materials due</label>
+        <input class="inp" value="09/18/2026" readonly>
+        <p class="hint">Reminders go out 7 days and 2 days before, then stop.</p>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:6px">
+      <label>Personal note (optional)</label>
+      <textarea class="inp ph" rows="2" readonly>We'd love to have NAI Technology showcase at the Expo — 6 minutes on the main stage.</textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+      <a class="btn pri" href="#">Send 2 invitations</a>
+      <a class="btn" href="#">Preview email</a>
+      <span style="flex:1"></span>
+      <span class="hint" style="margin:0">Each invite carries its own signed link — no iCapOS account needed.</span>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>The link is the login.</b> Same pattern as the booking cancel/reschedule links in
+  <code>lib/scheduling/tokens.ts</code>: HMAC-signed, scoped to one presenter id, bound to one
+  action, with an expiry. An exhibitor with no iCapOS account can still upload; nobody gets an
+  account they did not ask for; and the token dies after the event.
+</div>
+
+<!-- ═════ 2 · TRACKER ═════ -->
+<div class="lbl">2 · Who has sent what</div>
+<div class="panel">
+  <div class="ph"><h3>Invited presenters</h3><span class="sp"></span>
+    <span class="chip c-amber">2 waiting on materials</span>
+    <a class="btn sm" href="#">Chase all</a></div>
+
+  <div class="row">
+    <span class="nm">Vincent Njoku</span>
+    <span class="em">vincent.n2013@gmail.com · NutriFlex AI</span>
+    <span class="chip c-ind">Founder Showcase</span>
+    <span class="chip c-ok">Accepted</span>
+    <span class="chip c-ok">Video ✓</span>
+    <span class="chip c-ok">Deck ✓</span>
+    <span class="st"><a class="btn sm" href="#">Open</a></span>
+  </div>
+  <div class="row">
+    <span class="nm">Priya Raman</span>
+    <span class="em">priya@impervitex.com · Impervitex Corp</span>
+    <span class="chip c-ind">Founder Showcase</span>
+    <span class="chip c-ok">Accepted</span>
+    <span class="chip c-amber">Video —</span>
+    <span class="chip c-ok">Deck ✓</span>
+    <span class="st"><a class="btn sm" href="#">Chase</a></span>
+  </div>
+  <div class="row">
+    <span class="nm">Terry Okafor</span>
+    <span class="em">terry@holomd.ai · HoloMD</span>
+    <span class="chip c-grey">Exhibitor</span>
+    <span class="chip c-amber">Invited · 3d ago</span>
+    <span class="chip c-grey">—</span>
+    <span class="chip c-grey">—</span>
+    <span class="st"><a class="btn sm" href="#">Resend</a></span>
+  </div>
+  <div class="row">
+    <span class="nm">Khris Thetsy</span>
+    <span class="em">kthetsy@myicfos.com · iCFO Capital</span>
+    <span class="chip c-grey">Founder</span>
+    <span class="chip c-red">Declined</span>
+    <span class="chip c-grey">—</span>
+    <span class="chip c-grey">—</span>
+    <span class="st"><a class="btn sm" href="#">Note</a></span>
+  </div>
+</div>
+
+<!-- ═════ 3 · WHAT THEY SEE ═════ -->
+<div class="lbl">3 · What the presenter sees on their link</div>
+<div class="panel">
+  <div class="ph"><h3>icapos.com/e/invite/…</h3><span class="sp"></span>
+    <span class="chip c-grey">No login</span></div>
+  <div class="pb">
+    <p style="margin:0 0 3px;font-size:14px;font-weight:650">You're showcasing at iCFO PE Expo</p>
+    <p style="margin:0 0 14px;font-size:12px;color:var(--s500)">Tuesday 22 September, 9:00 PM PT · Main stage, 6 minutes</p>
+
+    <!-- google link -->
+    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:var(--s600)">Your stage link</p>
+    <div class="linkbox">
+      <span aria-hidden style="color:#3730A3">▷</span>
+      <span class="u">https://meet.google.com/kqw-drbz-hvx</span>
+      <a class="btn sm" href="#">Copy</a>
+      <a class="btn sm" href="#">Add to calendar</a>
+    </div>
+    <p class="hint" style="margin-top:5px">This link is yours for this session only. It opens 15
+      minutes early for a sound check. <b>Don't share it</b> — attendees join through the event page.</p>
+
+    <div style="height:16px"></div>
+
+    <!-- video -->
+    <div class="field">
+      <label>Pitch video — URL only</label>
+      <input class="inp" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ" readonly>
+      <p class="hint">YouTube, Vimeo or Loom. Paste the share link — we don't host video files.</p>
+    </div>
+    <div class="field">
+      <label style="color:#B91C1C">Pitch video — rejected example</label>
+      <input class="inp" value="my-pitch-final-v3.mp4" readonly style="border-color:#FECACA">
+      <p class="err">That looks like a file. Upload it to YouTube, Vimeo or Loom and paste the link
+        here instead.</p>
+    </div>
+
+    <div style="height:6px"></div>
+
+    <!-- deck -->
+    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:var(--s600)">Pitch deck — PDF only</p>
+    <div class="drop">
+      <p><b>Drop your deck here</b> or browse</p>
+      <p class="sm">PDF only · up to 25 MB</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:7px 10px">
+      <span aria-hidden style="color:#B91C1C">▤</span>
+      <span style="flex:1;min-width:0;font-size:12px">NutriFlex-AI-Expo-Deck.pdf <span style="color:var(--s400)">· 4.2 MB · uploaded 19 Sept</span></span>
+      <a class="btn sm" href="#">Replace</a>
+    </div>
+    <p class="err" style="margin-top:7px">Keynote-Deck.pptx — only PDF files can be uploaded. Please
+      convert this document to PDF and try again.</p>
+    <p class="err">NutriFlex-Full-Brand.pdf — file exceeds the 25MB limit.</p>
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <a class="btn ind" href="#">Save</a>
+      <a class="btn" href="#">I can no longer attend</a>
+    </div>
+  </div>
+</div>
+
+<div class="note ok">
+  <b>Both rules already exist in code.</b> <code>lib/uploads/policy.ts</code> exports
+  <code>PDF_ONLY</code> with <code>maxBytes: 25 * 1024 * 1024</code> and a
+  <code>validateFile()</code> whose messages are the two red lines above, word for word. The deck
+  rule is a reuse, not new work — and the same limit is already used by SPV documents, admin tasks
+  and e-signature, so 25 MB stays one number.
+  <br><br>
+  <b>Video is URL-only by design.</b> Nothing about hosting video is built, and a 6-minute pitch is
+  larger than the entire 25 MB document ceiling. Accepting a link keeps it that way, and the
+  rejection message says where to put the file rather than just refusing it.
+</div>
+
+<div class="note warn">
+  <b>One thing to confirm before this is built: where the stage link comes from.</b>
+  <code>EventPresenter.meetingUrl</code> exists and is editable today, but nothing generates it.
+  Three options, and they are not equivalent:
+  <ul class="t">
+    <li><b>Google Meet, generated per presenter</b> — the Google Calendar integration
+      (<code>GOOGLE_CLIENT_ID/SECRET</code>, <code>TOKEN_ENCRYPTION_SECRET</code>) is already
+      configured, so a calendar event with conferencing gives each presenter their own Meet link
+      plus a real calendar invite. What the mockup shows.</li>
+    <li><b>Whereby room</b> — <code>isLiveVideoConfigured()</code> and the event's own
+      <code>video/whereby</code> module already run the live sessions. A presenter link would then
+      be the same room the event uses, not a separate Meet.</li>
+    <li><b>Paste it yourself</b> — keep <code>meetingUrl</code> manual and just surface it on the
+      invite page. No new integration at all.</li>
+  </ul>
+  The event already has a live-session mechanism in Whereby, so generating Google Meet links
+  alongside it would give one event two video systems. Worth deciding deliberately rather than by
+  default.
+</div>
+
+<!-- ═════ 4 · SHAPE ═════ -->
+<div class="lbl">What it takes</div>
+<div class="panel"><div class="pb">
+  <table>
+    <tr><th style="width:30%">Piece</th><th>Notes</th></tr>
+    <tr><td><b>Migration</b></td>
+      <td><code>event_presenter_invites</code> — presenter id, role, email, status
+        (<code>invited | accepted | declined</code>), materials due date, sent/opened/responded
+        timestamps. Plus <code>video_url</code> and <code>deck_path</code> on
+        <code>event_presenters</code>.</td></tr>
+    <tr><td><b>Roles</b></td>
+      <td><code>SpeakerApplicationKind</code> already has <code>founder_showcase</code>;
+        <b>exhibitor</b> is genuinely new — today "Exhibitors — NAI Technology" is just a session
+        title someone typed, not a modelled thing.</td></tr>
+    <tr><td><b>Token</b></td>
+      <td>Generalise <code>lib/scheduling/tokens.ts</code> to sign any <code>{kind, id, action}</code>
+        rather than only bookings. One module, two callers.</td></tr>
+    <tr><td><b>Upload</b></td>
+      <td><code>PDF_ONLY</code> + <code>validateFile</code> as-is, server-side. A URL field validated
+        against a host allowlist (YouTube / Vimeo / Loom).</td></tr>
+    <tr><td><b>Public page</b></td>
+      <td><code>/e/invite/[token]</code> — no auth, reads the token, renders section 3.</td></tr>
+    <tr><td><b>Email</b></td>
+      <td>Invite, plus the two reminders. The scheduled-reminder machinery from
+        <code>stage-gate-reminders</code> is the closest existing pattern.</td></tr>
+  </table>
+</div></div>
+
+</div>
+</body>
+</html>
