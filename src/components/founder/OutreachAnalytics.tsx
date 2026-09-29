@@ -10,6 +10,23 @@ import {
 type ChartType = "bar" | "grouped" | "line" | "area" | "stacked" | "table";
 type SegmentBy = "type" | "sector" | "geography";
 
+/** Plain-language headings for the four headline cards, keyed by funnel step. */
+const STEP_HEADINGS: Record<string, { title: string; hint: string; icon: string }> = {
+  sent: { title: "Emails sent", hint: "Investors you reached", icon: "ti-send" },
+  opened: { title: "Opened", hint: "Read your email", icon: "ti-mail-opened" },
+  clicked: { title: "Viewed profile", hint: "Clicked your one-pager", icon: "ti-click" },
+  replied: { title: "Replied", hint: "Wrote back to you", icon: "ti-message" },
+};
+
+function CardHeading({ title, hint }: Readonly<{ title: string; hint: string }>) {
+  return (
+    <span className="block">
+      <span className="block text-[13px] font-semibold text-[var(--navy)]">{title}</span>
+      <span className="block text-[11px] text-[var(--text-muted)]">{hint}</span>
+    </span>
+  );
+}
+
 const PERIODS: Array<{ key: Period; label: string }> = [
   { key: "day", label: "Day" },
   { key: "week", label: "Week" },
@@ -143,7 +160,11 @@ export function OutreachAnalytics({ records, crrNote }: Readonly<{
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {steps.map((s, i) => (
             <div key={s.key} className="rounded-lg border border-[var(--border-subtle)] px-3 py-2">
-              <p className="text-[11px] text-[var(--text-muted)]">{s.label}</p>
+              <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--navy)]">
+                <i className={`ti ${STEP_HEADINGS[s.key]?.icon ?? "ti-point"}`} aria-hidden="true" />
+                {STEP_HEADINGS[s.key]?.title ?? s.label}
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)]">{STEP_HEADINGS[s.key]?.hint ?? ""}</p>
               <p className="text-[20px] font-semibold leading-tight text-[var(--navy)]">{s.count}</p>
               <Delta now={s.count} was={hasPrev ? prevSteps[i].count : null} />
             </div>
@@ -153,7 +174,7 @@ export function OutreachAnalytics({ records, crrNote }: Readonly<{
 
       <div className={CARD}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-[13px] text-[var(--navy)]">Your funnel · click a step</span>
+          <CardHeading title="Your funnel" hint="Where investors drop off. Click a step to see who is in it." />
           <span className="text-[11px] text-[var(--text-muted)]">
             {current.length} send{current.length === 1 ? "" : "s"} this {period}
           </span>
@@ -206,7 +227,7 @@ export function OutreachAnalytics({ records, crrNote }: Readonly<{
 
       <div className={CARD}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[13px] text-[var(--navy)]">Sends and replies</span>
+          <CardHeading title="Sends and replies over time" hint="Is your outreach activity growing?" />
           <div className="flex flex-wrap gap-1">
             {CHARTS.map((c) => (
               <button key={c.key} type="button" onClick={() => setChart(c.key)}
@@ -260,7 +281,7 @@ export function OutreachAnalytics({ records, crrNote }: Readonly<{
       <div className="grid gap-3 sm:grid-cols-2">
         <div className={CARD}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[13px] text-[var(--navy)]">Who replies</span>
+            <CardHeading title="Who replies most" hint="Reply rate by investor type, sector, or region" />
             <div className="flex gap-1">
               {(["type", "sector", "geography"] as SegmentBy[]).map((k) => (
                 <button key={k} type="button" onClick={() => setBy(k)}
@@ -297,9 +318,9 @@ export function OutreachAnalytics({ records, crrNote }: Readonly<{
         </div>
 
         <div className={CARD}>
-          <p className="text-[13px] text-[var(--navy)]">Follow-up debt</p>
+          <CardHeading title="Unanswered opens" hint="Investors to follow up with next" />
           <p className="text-[24px] font-semibold leading-tight text-[var(--navy)]">{debt.length}</p>
-          <p className="text-[11.5px] text-[var(--text-muted)]">opened, never replied, never chased</p>
+          <p className="text-[11.5px] text-[var(--text-muted)]">Opened your email, no reply, no follow-up yet</p>
 
           {debt.length > 0 ? (
             <div className="mt-2 border-t border-[var(--border-subtle)] pt-2">
@@ -318,7 +339,7 @@ export function OutreachAnalytics({ records, crrNote }: Readonly<{
       </div>
 
       <div className={CARD}>
-        <p className="text-[13px] text-[var(--navy)]">Which message is working</p>
+        <CardHeading title="Which message is working" hint="Opens and replies by subject line" />
         {msgs.length === 0 ? (
           <p className="mt-2 text-[11.5px] text-[var(--text-muted)]">No sends in this period.</p>
         ) : (
