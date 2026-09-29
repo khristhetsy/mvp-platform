@@ -115,6 +115,7 @@ export type Subscription = {
   currency: string;
   created_at: string;
   updated_at: string;
+  grandfathered_free?: boolean | null;
 };
 
 export type Campaign = {

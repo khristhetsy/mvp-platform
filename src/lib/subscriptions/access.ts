@@ -98,21 +98,24 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, _
     return new Set<FeatureKey>(["investor_workspace", "settings"]);
   }
 
-  // founder_free is a DISCONTINUED tier kept for grandfathered accounts only —
-  // they keep the full tool set they signed up with. New rows can no longer be
-  // created on it (see defaultPlanForRole / isAutoGrantSignupPlan); this branch
-  // exists to honour the existing ones, not to hand access to anyone new.
-  // Paid tiers add distribution, gated separately.
+  // Paid founders (Basic/Professional/Managed IR) get the full toolset; the paid
+  // difference is distribution, gated separately by founderEntitlements().
   if (
-    planType === "founder_free" ||
     planType === "founder_professional" ||
-    planType === "founder_managed_ir"
+    planType === "founder_managed_ir" ||
+    planType === "founder_basic"
   ) {
     return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
-  if (planType === "founder_basic") {
-    return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
+  // Free founders: grandfathered accounts (predating FREE_RETIRED_AT) keep the
+  // full toolset; new free accounts are paywalled to "settings" until they pick a
+  // paid plan. Fail-open — only an EXPLICIT false gates, so a missing flag on a
+  // legacy row keeps access rather than risking a lock-out.
+  if (planType === "founder_free") {
+    return subscription.grandfathered_free === false
+      ? new Set<FeatureKey>(["settings"])
+      : new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
   // Legacy 3-day trial rows are grandfathered into permanent Free (all tools).
@@ -157,6 +160,13 @@ export function canAccessFeature(
     return {
       allowed: false,
       reason: "Your tools are always free. Upgrade your plan when you're ready to raise capital — that reveals your matched investors and puts your materials in front of them.",
+    };
+  }
+
+  if (subscription.plan_type === "founder_free") {
+    return {
+      allowed: false,
+      reason: "Choose a plan to unlock the tools and reach your matched investors.",
     };
   }
 

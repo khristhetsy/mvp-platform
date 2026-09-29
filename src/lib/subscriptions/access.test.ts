@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTrialActive, isTrialExpired, isGracePeriodExpired, isSubscriptionActive } from "./access";
+import { isTrialActive, isTrialExpired, isGracePeriodExpired, isSubscriptionActive, canAccessFeature } from "./access";
 import type { SubscriptionRecord } from "./plans";
 
 function sub(overrides: Partial<SubscriptionRecord>): SubscriptionRecord {
@@ -37,6 +37,28 @@ describe("trial", () => {
 
   it("is expired once the trial end has passed", () => {
     expect(isTrialExpired(sub({ plan_type: "founder_trial", subscription_status: "trialing", trial_ends_at: "2026-05-20T00:00:00.000Z" }), NOW)).toBe(true);
+  });
+});
+
+describe("free-access retirement (grandfather gate)", () => {
+  const free = (gf?: boolean) => sub({ plan_type: "founder_free", subscription_status: "free", grandfathered_free: gf });
+
+  it("grandfathered free founder keeps tool access", () => {
+    expect(canAccessFeature(free(true), "documents").allowed).toBe(true);
+  });
+
+  it("new (non-grandfathered) free founder is paywalled off the tools", () => {
+    const r = canAccessFeature(free(false), "documents");
+    expect(r.allowed).toBe(false);
+    expect(r.reason ?? "").toMatch(/choose a plan/i);
+  });
+
+  it("free founder with an unknown flag fails open — keeps access", () => {
+    expect(canAccessFeature(free(undefined), "documents").allowed).toBe(true);
+  });
+
+  it("settings stays accessible even when paywalled", () => {
+    expect(canAccessFeature(free(false), "settings").allowed).toBe(true);
   });
 });
 
