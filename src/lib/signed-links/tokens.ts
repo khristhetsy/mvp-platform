@@ -16,7 +16,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** The subject a token points at. Add a kind here, not a new token module. */
-export type TokenKind = "booking" | "event_invite";
+export type TokenKind = "booking" | "event_invite" | "email_prefs";
 
 export type TokenInput = {
   kind: TokenKind;

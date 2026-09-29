@@ -11,6 +11,9 @@ import { DISPATCHER_PATH, loadScheduleOverrides } from "@/lib/cron/schedule-over
 import { nextRunsInZone, splitCron, utcToZonedLocal } from "@/lib/cron/zoned-schedule";
 import { ScheduledJobsClient, type JobRow } from "@/components/admin/ScheduledJobsClient";
 import { CodeUpdatesClient, type CodeUpdateRow } from "@/components/admin/CodeUpdatesClient";
+import { FounderEmailBudgetClient } from "@/components/admin/FounderEmailBudgetClient";
+import { JOB_DELIVERY, loadBudgetConfig } from "@/lib/notifications/founder-email-budget/config";
+import { loadBudgetMetrics } from "@/lib/notifications/founder-email-budget/metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +45,7 @@ function Tab({ href, active, label, count }: { href: string; active: boolean; la
 export default async function AdminScheduledJobsPage({ searchParams }: PageProps) {
   const { profile } = await requirePermissionPage("manage_integrations");
   const sp = await searchParams;
-  const tab = sp.tab === "code" ? "code" : "jobs";
+  const tab = sp.tab === "code" ? "code" : sp.tab === "email" ? "email" : "jobs";
   const now = new Date();
 
   const jobs = listCronJobs();
@@ -101,6 +104,11 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
   }));
   const waiting = updateRows.filter((u) => u.status === "Waiting").length;
 
+  // Founder email tab: rules and metrics load only when it is open.
+  const budget = tab === "email" ? await loadBudgetConfig({ fresh: true }) : null;
+  const budgetMetrics = budget ? await loadBudgetMetrics(budget) : null;
+  const budgetJobs = JOB_DELIVERY.map((d) => ({ ...d, schedule: rows.find((r) => r.path === d.path)?.schedule ?? "Not scheduled" }));
+
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Scheduled jobs">
       <WorkspacePageContainer>
@@ -113,6 +121,7 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
         <nav aria-label="Scheduled jobs sections" style={{ display: "flex", gap: 20, marginTop: 20, borderBottom: "0.5px solid #e2e6ed" }}>
           <Tab href="/admin/scheduled-jobs" active={tab === "jobs"} label="Jobs" />
           <Tab href="/admin/scheduled-jobs?tab=code" active={tab === "code"} label="Code updates" count={waiting} />
+          <Tab href="/admin/scheduled-jobs?tab=email" active={tab === "email"} label="Founder email" />
         </nav>
 
         {tab === "jobs" && attention.length > 0 && (
@@ -130,7 +139,13 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
         )}
 
         <div className="mt-6">
-          {tab === "jobs" ? <ScheduledJobsClient rows={rows} /> : <CodeUpdatesClient rows={updateRows} />}
+          {tab === "jobs" ? (
+            <ScheduledJobsClient rows={rows} />
+          ) : tab === "email" && budget && budgetMetrics ? (
+            <FounderEmailBudgetClient initial={budget} metrics={budgetMetrics} jobs={budgetJobs} />
+          ) : (
+            <CodeUpdatesClient rows={updateRows} />
+          )}
         </div>
       </WorkspacePageContainer>
     </AppShell>

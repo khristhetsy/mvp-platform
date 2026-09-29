@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-type SettingsTab = "company" | "billing" | "integrations" | "feedback" | "team";
+type SettingsTab = "company" | "billing" | "integrations" | "feedback" | "team" | "email";
 
 function IcoBuildingOffice() {
   return (
@@ -39,6 +39,15 @@ function IcoMessageSquare() {
   );
 }
 
+function IcoMail() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-10 6L2 7" />
+    </svg>
+  );
+}
+
 function IcoUsers() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
@@ -55,6 +64,7 @@ const SETTINGS_NAV = [
   { key: "team" as SettingsTab,         label: "Team",                   icon: IcoUsers,          href: "/founder/settings/team"          },
   { key: "billing" as SettingsTab,      label: "Billing & subscription", icon: IcoCreditCard,    href: "/founder/settings/billing"       },
   { key: "integrations" as SettingsTab, label: "Integrations",           icon: IcoLink,          href: "/founder/settings/integrations"  },
+  { key: "email" as SettingsTab,        label: "Email",                  icon: IcoMail,          href: "/founder/settings/email"         },
   { key: "feedback" as SettingsTab,     label: "Feedback",               icon: IcoMessageSquare, href: "/founder/settings/feedback"      },
 ];
 
