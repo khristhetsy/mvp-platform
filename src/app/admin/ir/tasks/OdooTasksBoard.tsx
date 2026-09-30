@@ -3,8 +3,8 @@
 /**
  * Tasks hub › "All founders", Odoo style (the Deals2Match "All Tasks" kanban).
  *
- * Columns are founder × month stages ("Michael Doyle · Month 2"); each card is one weekly
- * batch with its investors as tags. Toolbar follows the admin list pattern: New, gear,
+ * Columns are founder × month stages ("Michael Doyle 2nd Month", only those with tasks); each card is one weekly
+ * batch with all its investors as tags. Toolbar follows the admin list pattern: New, gear,
  * Odoo search bar (filters / group by / favorites), view switcher. Group by "Week" (or the
  * calendar view) shows the original weekly board, unchanged.
  *
@@ -34,7 +34,6 @@ type Due = "overdue" | "today" | "planned" | "done" | "none";
 const COLORS = ["#4F46E5", "#EA580C", "#0F766E", "#DB2777", "#7C3AED", "#16A34A", "#0284C7", "#CA8A04"];
 const DUE_COLOR: Record<Due, string> = { overdue: "#DC2626", today: "#F59E0B", planned: "#16A34A", done: "#64748B", none: "#CBD5E1" };
 const DUE_LABEL: Record<Due, string> = { overdue: "Overdue", today: "Due today", planned: "Planned", done: "Done", none: "No deadline" };
-const TAGS_SHOWN = 8;
 const FOLD_KEY = "ir.tasks.folded";
 const DAY = 86_400_000;
 
@@ -48,6 +47,7 @@ const START: SearchState = { q: "", quick: ["open"], fields: {}, groupBy: "found
 
 const today = () => new Date().toISOString().slice(0, 10);
 const dueOf = (t: Task): Due => t.status === "done" ? "done" : !t.deadline ? "none" : t.deadline < today() ? "overdue" : t.deadline === today() ? "today" : "planned";
+const ordinal = (n: number) => { const r = n % 100; return `${n}${r >= 11 && r <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`; };
 const initials = (n: string | null) => (n ?? "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 const fmtShort = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const addDays = (iso: string, n: number) => new Date(new Date(`${iso}T00:00:00Z`).getTime() + n * DAY).toISOString().slice(0, 10);
@@ -57,7 +57,6 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<SearchState>(START);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [fold, setFold] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
@@ -98,22 +97,21 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
   const grouping = search.groupBy === "founder" ? "founder" : "founder_month";
   const columns: Column[] = useMemo(() => {
     if (!data) return [];
-    const shown = data.tasks.filter((t) => !hidden.has(t.project_id) && passes(t));
+    const shown = data.tasks.filter(passes);
     const out: Column[] = [];
     for (const p of data.projects) {
-      if (hidden.has(p.id)) continue;
       const mine = shown.filter((t) => t.project_id === p.id);
       const name = founder.get(p.id) ?? "Founder";
       if (grouping === "founder") { out.push({ id: p.id, project_id: p.id, label: name, monthId: null, tasks: mine }); continue; }
       for (const m of data.months.filter((x) => x.project_id === p.id).sort((a, b) => a.sort_order - b.sort_order)) {
-        out.push({ id: m.id, project_id: p.id, label: `${name} · ${m.label}`, monthId: m.id, tasks: mine.filter((t) => weekById.get(t.milestone_id)?.parent_id === m.id) });
+        out.push({ id: m.id, project_id: p.id, label: `${name} ${ordinal(m.sort_order)} Month`, monthId: m.id, tasks: mine.filter((t) => weekById.get(t.milestone_id)?.parent_id === m.id) });
       }
       const loose = mine.filter((t) => !weekById.get(t.milestone_id)?.parent_id);
-      if (loose.length) out.push({ id: `${p.id}:none`, project_id: p.id, label: `${name} · No month`, monthId: null, tasks: loose });
+      if (loose.length) out.push({ id: `${p.id}:none`, project_id: p.id, label: `${name}, no month`, monthId: null, tasks: loose });
     }
     for (const c of out) c.tasks.sort((a, b) => (weekById.get(b.milestone_id)?.sort_order ?? 0) - (weekById.get(a.milestone_id)?.sort_order ?? 0) || b.title.localeCompare(a.title));
     return out;
-  }, [data, hidden, passes, grouping, founder, weekById]);
+  }, [data, passes, grouping, founder, weekById]);
 
   async function patchTask(id: string, body: Record<string, unknown>, local: Partial<Task>) {
     const before = data?.tasks.find((t) => t.id === id);
@@ -167,19 +165,19 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
   const weekly = search.groupBy === "week";
   const staff = [...new Set(data.tasks.map((t) => t.assignee_name ?? "Unassigned"))].sort();
   const viewBtn = (on: boolean) => `px-2 py-1 ${on ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50"}`;
-  const total = columns.reduce((n, c) => n + c.tasks.length, 0);
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <NewButton onClick={() => setAdding((v) => !v)} />
+        <span className="text-[16px] text-slate-800">All tasks</span>
         <ToolbarGear heading="Tasks" items={[
           { key: "import", icon: "ti-upload", label: "Odoo import", href: "/admin/ir/import" },
           { key: "projects", icon: "ti-folders", label: "Projects", href: "/admin/ir/projects" },
         ]} />
         <OdooSearchBar scope="ir.tasks" state={search} onChange={setSearch} quick={QUICK}
           fields={[{ key: "founder", label: "Founder", options: data.projects.map((p) => p.founder_name ?? p.title) }, { key: "assignee", label: "Assignee", options: staff }]}
-          groups={GROUPS} noGroupId="" groupChipPrefix="Grouped by " placeholder="Search task, founder, investor…" width={460} />
+          groups={GROUPS} noGroupId="founder_month" groupChipPrefix="Grouped by " placeholder="Search…" width={460} />
         <div className="ml-auto flex overflow-hidden rounded-lg border border-slate-200 text-[15px]" role="group" aria-label="View">
           <button type="button" aria-label="List view" aria-pressed={!weekly && view === "list"} onClick={() => { setView("list"); if (weekly) setSearch({ ...search, groupBy: "founder_month" }); }} className={viewBtn(!weekly && view === "list")}><i className="ti ti-list" aria-hidden="true" /></button>
           <button type="button" aria-label="Kanban view" aria-pressed={!weekly && view === "kanban"} onClick={() => { setView("kanban"); if (weekly) setSearch({ ...search, groupBy: "founder_month" }); }} className={viewBtn(!weekly && view === "kanban")}><i className="ti ti-layout-kanban" aria-hidden="true" /></button>
@@ -192,25 +190,10 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
 
       {weekly ? <AllFoundersBoard /> : (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {data.projects.map((p) => {
-              const on = !hidden.has(p.id);
-              const n = data.tasks.filter((t) => t.project_id === p.id && passes(t)).length;
-              return (
-                <button key={p.id} type="button" aria-pressed={on} onClick={() => setHidden((h) => { const x = new Set(h); if (on) x.add(p.id); else x.delete(p.id); return x; })}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] ${on ? "border-slate-200 bg-white text-slate-700" : "border-slate-100 bg-slate-50 text-slate-400"}`}>
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: color.get(p.id), opacity: on ? 1 : 0.4 }} />{founder.get(p.id)} <b className="tabular-nums">{n}</b>
-                </button>
-              );
-            })}
-            {hidden.size ? <button type="button" onClick={() => setHidden(new Set())} className="text-[12px] text-indigo-700 hover:underline">Show all</button> : null}
-            <span className="ml-auto text-[12px] text-slate-600">{total} task{total === 1 ? "" : "s"}</span>
-          </div>
-
           {view === "list" ? <ListView columns={columns} color={color} onOpen={setOpenId} /> : (
             <HScrollBoard>
-              {columns.map((c) => {
-                const folded = fold[c.id] ?? c.tasks.length === 0;
+              {columns.filter((c) => c.tasks.length > 0 || (dragId && canDrop(c))).map((c) => {
+                const folded = !dragId && (fold[c.id] ?? false);
                 const over = overCol === c.id && canDrop(c);
                 const dnd = {
                   onDragOver: (e: React.DragEvent) => { if (canDrop(c)) { e.preventDefault(); setOverCol(c.id); } },
@@ -226,20 +209,21 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
                 );
                 const counts = (["planned", "today", "overdue", "done", "none"] as Due[]).map((d) => [d, c.tasks.filter((t) => dueOf(t) === d).length] as const);
                 return (
-                  <div key={c.id} {...dnd} style={{ flex: "0 0 290px", minWidth: 290 }} className={`rounded-lg px-1 pb-2 ${over ? "bg-indigo-50 ring-2 ring-indigo-300" : ""}`}>
+                  <div key={c.id} {...dnd} style={{ flex: "0 0 260px", minWidth: 260 }} className={`rounded-lg px-1 pb-2 ${over ? "bg-indigo-50 ring-2 ring-indigo-300" : dragId && canDrop(c) ? "bg-slate-50 ring-1 ring-dashed ring-slate-300" : ""}`}>
                     <div className="group flex items-center gap-1 pt-1">
-                      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900" title={c.label}>{c.label}</span>
+                      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-slate-900" title={c.label}>{c.label}</span>
                       <button type="button" onClick={() => toggleFold(c.id, false)} aria-label={`Fold ${c.label}`} className="rounded px-1 text-slate-400 opacity-0 hover:bg-slate-100 group-hover:opacity-100 focus:opacity-100"><i className="ti ti-chevrons-left" aria-hidden="true" /></button>
                       <button type="button" onClick={() => void createIn(c.project_id, c.monthId)} aria-label={`Add task to ${c.label}`} className="rounded px-1 text-slate-500 hover:bg-slate-100"><i className="ti ti-plus" aria-hidden="true" /></button>
                     </div>
                     <div className="mb-2.5 mt-1.5 flex items-center gap-2">
-                      <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="flex h-2.5 flex-1 overflow-hidden bg-slate-200">
                         {counts.filter(([, n]) => n).map(([d, n]) => <div key={d} title={`${DUE_LABEL[d]}: ${n}`} style={{ width: `${(n / c.tasks.length) * 100}%`, background: DUE_COLOR[d] }} />)}
                       </div>
-                      <b className="text-[12px] tabular-nums text-slate-700">{c.tasks.length}</b>
+                      <span className="min-w-[14px] text-right text-[13px] font-medium tabular-nums text-slate-800">{c.tasks.length}</span>
                     </div>
                     <div className="flex min-h-[60px] flex-col gap-2">
-                      {c.tasks.map((t) => <Card key={t.id} t={t} color={color.get(t.project_id) ?? "#64748B"} draggable={grouping === "founder_month"}
+                      {c.tasks.length === 0 ? <p className="rounded border border-dashed border-slate-300 px-3 py-6 text-center text-[12px] text-slate-400">Drop here</p> : null}
+                      {c.tasks.map((t) => <Card key={t.id} t={t} draggable={grouping === "founder_month"}
                         onOpen={() => setOpenId(t.id)} onStar={() => void patchTask(t.id, { starred: !t.starred }, { starred: !t.starred })}
                         onDragStart={() => setDragId(t.id)} onDragEnd={() => { setDragId(null); setOverCol(null); }} dragging={dragId === t.id} />)}
                     </div>
@@ -248,9 +232,6 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
               })}
             </HScrollBoard>
           )}
-          <div className="mt-3 flex flex-wrap gap-3 text-[11.5px] text-slate-500">
-            {(Object.keys(DUE_LABEL) as Due[]).map((d) => <span key={d} className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: DUE_COLOR[d] }} />{DUE_LABEL[d]}</span>)}
-          </div>
         </>
       )}
 
@@ -260,34 +241,27 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
   );
 }
 
-function Card({ t, color, draggable, dragging, onOpen, onStar, onDragStart, onDragEnd }: { t: Task; color: string; draggable: boolean; dragging: boolean; onOpen: () => void; onStar: () => void; onDragStart: () => void; onDragEnd: () => void }) {
+function Card({ t, draggable, dragging, onOpen, onStar, onDragStart, onDragEnd }: { t: Task; draggable: boolean; dragging: boolean; onOpen: () => void; onStar: () => void; onDragStart: () => void; onDragEnd: () => void }) {
   const due = dueOf(t);
-  const extra = t.investor_names.length - TAGS_SHOWN;
+  const dueTitle = `${DUE_LABEL[due]}${t.deadline ? ` · ${fmtShort(t.deadline)}` : ""}`;
   return (
     <div role="button" tabIndex={0} aria-label={`Open ${t.title}`} draggable={draggable}
       onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", t.id); onDragStart(); }} onDragEnd={onDragEnd}
       onClick={(e) => { if (!(e.target as HTMLElement).closest("button")) onOpen(); }}
       onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen(); }}
-      className={`cursor-pointer rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-indigo-300 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 ${dragging ? "opacity-40" : ""}`}
-      style={{ borderLeft: `4px solid ${color}` }}>
-      <div className="flex items-start gap-2">
-        <p className="min-w-0 flex-1 text-[13px] font-semibold text-slate-900">{t.title}</p>
-        {t.week ? <span className="shrink-0 text-[11px] text-slate-400">{t.week.label}</span> : null}
-      </div>
+      className={`cursor-pointer rounded border border-slate-200 bg-white px-2.5 pb-2 pt-2.5 transition hover:border-slate-300 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 ${dragging ? "opacity-40" : ""}`}>
+      <p className="text-[14px] text-slate-900">{t.title}</p>
       <div className="mt-1.5 flex flex-wrap gap-1">
-        {t.investor_names.slice(0, TAGS_SHOWN).map((n, i) => <span key={`${n}-${i}`} className="max-w-full truncate rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">{n}</span>)}
-        {extra > 0 ? <span className="rounded-full px-1.5 py-0.5 text-[11px] font-medium text-indigo-700">+{extra} more</span> : null}
-        {t.investor_names.length === 0 ? <span className="text-[11.5px] text-slate-400">No investors yet</span> : null}
+        {t.investor_names.map((n, i) => <span key={`${n}-${i}`} className="max-w-full truncate rounded-full bg-slate-100 px-2 py-px text-[11.5px] text-slate-700" title={n}>{n}</span>)}
       </div>
-      <div className="mt-2 flex items-center gap-2 text-[11.5px] text-slate-500">
+      <div className="mt-2 flex items-center gap-2">
         <button type="button" onClick={onStar} aria-label={t.starred ? "Remove priority" : "Mark as priority"} aria-pressed={t.starred} className="leading-none">
-          <i className={`ti ${t.starred ? "ti-star-filled text-amber-500" : "ti-star text-slate-300 hover:text-amber-400"} text-[15px]`} aria-hidden="true" />
+          <i className={`ti ${t.starred ? "ti-star-filled text-amber-500" : "ti-star text-slate-500 hover:text-amber-500"} text-[16px]`} aria-hidden="true" />
         </button>
-        <i className="ti ti-clock text-[15px]" style={{ color: DUE_COLOR[due] }} title={DUE_LABEL[due]} aria-label={DUE_LABEL[due]} />
-        <span className={due === "overdue" ? "text-rose-600" : ""}>{t.deadline ? fmtShort(t.deadline) : ""}</span>
+        <i className="ti ti-clock text-[16px]" style={{ color: due === "none" || due === "done" ? "#475569" : DUE_COLOR[due] }} title={dueTitle} aria-label={dueTitle} />
         {t.assignee_name
-          ? <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[9px] font-semibold text-white" title={t.assignee_name}>{initials(t.assignee_name)}</span>
-          : <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-400" title="Unassigned"><i className="ti ti-user text-[12px]" aria-hidden="true" /></span>}
+          ? <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-semibold text-white" title={t.assignee_name}>{initials(t.assignee_name)}</span>
+          : <span className="ml-auto h-5 w-5 rounded-full border border-slate-300 bg-slate-100" title="Unassigned" />}
       </div>
     </div>
   );
