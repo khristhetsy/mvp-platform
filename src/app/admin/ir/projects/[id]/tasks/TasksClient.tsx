@@ -6,6 +6,11 @@
  * date, star, assignee, status dot). Search filters and highlights chips. "+" per column
  * and New create an empty week task. The whole card opens the task; the star and clock
  * inside it keep their own clicks.
+ *
+ * Group by: Stage (default when the project came from Odoo) lays the selected month out like
+ * the Odoo kanban: one column per Odoo stage, read live from Odoo, in Odoo's stage order,
+ * with pill investor chips. Tasks with no Odoo stage fall into a column for their week.
+ * Group by: Week keeps the weekly board above.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -19,6 +24,10 @@ type Payload = { project: IrProject; milestones: IrMilestone[]; matches: IrMatch
 const STATUS_DOT: Record<string, string> = { new: "#94A3B8", in_progress: "#F59E0B", done: "#16A34A" };
 const initials = (n: string | null | undefined) => (n ?? "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+// Firm and name are often the same for angels ("Adam Draper, Adam Draper") — show it once.
+const chipLabel = (m: IrMatch) => [...new Set([m.investor_firm, m.investor_name].filter(Boolean))].join(", ") || "Investor";
+const CHIP_LIMIT = 12;
+type StageInfo = { stages: Array<{ id: number; name: string }>; byTask: Record<string, number> };
 
 export function TasksClient({ projectId, meId, initialMonth }: { projectId: string; meId: string; initialMonth: string | null }) {
   const router = useRouter();
@@ -28,6 +37,9 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [groupBy, setGroupBy] = useState<"stage" | "week" | null>(null);
+  const [stageInfo, setStageInfo] = useState<StageInfo | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/ir/projects/${projectId}`);
@@ -37,6 +49,12 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   }, [projectId]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then set
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let off = false;
+    fetch(`/api/admin/ir/projects/${projectId}/task-stages`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((j: Partial<StageInfo> | null) => { if (!off) setStageInfo({ stages: j?.stages ?? [], byTask: j?.byTask ?? {} }); });
+    return () => { off = true; };
+  }, [projectId]);
 
   const today = new Date().toISOString().slice(0, 10);
   const months = useMemo(() => (data?.milestones ?? []).filter((m) => m.kind === "month"), [data]);
@@ -70,6 +88,49 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   if (!data) return <p className="text-[13px] text-slate-400">Loading…</p>;
   const p = data.project;
   const currentWeek = weeks.find((w) => w.starts_on <= today && today < w.ends_on) ?? null;
+  const hasStages = (stageInfo?.stages.length ?? 0) > 0;
+  const mode: "stage" | "week" = groupBy ?? (hasStages ? "stage" : "week");
+  const stagesPending = groupBy === null && stageInfo === null;
+
+  const payload = data;
+  function renderCard(t: IrTask, odoo: boolean) {
+    const ms = matchesByTask.get(t.id) ?? [];
+    const anyHit = ms.some(hit);
+    if (needle && !anyHit && !t.title.toLowerCase().includes(needle)) return null;
+    const href = `/admin/ir/projects/${projectId}/tasks/${t.id}`;
+    const open = expanded.has(t.id) || needle !== "";
+    const shown = odoo && !open ? ms.slice(0, CHIP_LIMIT) : ms;
+    return (
+      <div key={t.id} role="link" tabIndex={0} aria-label={`Open ${t.title}`}
+        onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) router.push(href); }}
+        onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) router.push(href); }}
+        className={`cursor-pointer rounded-lg border bg-white p-2.5 shadow-sm transition hover:border-indigo-300 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 ${anyHit ? "border-indigo-300" : "border-slate-200"}`}>
+        <Link href={href} className={`block font-semibold text-slate-900 hover:text-indigo-700 ${odoo ? "text-[14px]" : "text-[13px]"}`}>{t.title}</Link>
+        <div className={`flex flex-wrap ${odoo ? "mt-2 gap-1.5" : "mt-1.5 gap-1"}`}>
+          {shown.map((m) => <span key={m.id} className={`${odoo ? "max-w-full truncate rounded-full px-2 py-0.5 text-[11px]" : "rounded px-1.5 py-0.5 text-[10.5px]"} ${hit(m) ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700"}`}>{chipLabel(m)}</span>)}
+          {shown.length < ms.length ? <button type="button" onClick={() => setExpanded((s) => new Set(s).add(t.id))} className="rounded-full px-2 py-0.5 text-[11px] font-medium text-indigo-700 hover:bg-indigo-50">+ {ms.length - shown.length} more</button> : null}
+          {ms.length === 0 ? <span className="text-[10.5px] text-slate-400">no investors yet</span> : null}
+        </div>
+        <p className="mt-2 text-[11.5px] text-slate-600">{t.deadline ? new Date(`${t.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : fmtDay(t.created_at)}</p>
+        <div className="mt-1.5 flex items-center gap-2 text-[12px] text-slate-400">
+          <button type="button" onClick={() => star(t)} aria-label="Star" className={t.starred ? "text-amber-500" : "hover:text-amber-400"}><i className={`ti ${t.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
+          <ActivityClock projectId={projectId} taskId={t.id} meId={meId} staff={payload.staff} onChange={() => void load()}
+            activities={(payload.openActivities ?? []).filter((a) => a.task_id === t.id || (!!a.match_id && ms.some((m) => m.id === a.match_id)))} />
+          <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[9px] font-semibold text-white" title={t.assignee_name ?? ""}>{initials(t.assignee_name)}</span>
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_DOT[t.status] }} title={t.status} />
+        </div>
+      </div>
+    );
+  }
+
+  // Stage columns for the selected month (an Odoo project is one month): the Odoo stages its tasks
+  // sit in, in Odoo's order, then a week column for any task without an Odoo stage.
+  const monthWeekIds = new Set(monthWeeks.map((w) => w.id));
+  const monthTasks = data.tasks.filter((t) => monthWeekIds.has(t.milestone_id));
+  const stageColumns = mode !== "stage" || !stageInfo ? [] : [
+    ...stageInfo.stages.map((s) => ({ key: `s${s.id}`, title: s.name, weekId: null as string | null, tasks: monthTasks.filter((t) => stageInfo.byTask[t.id] === s.id) })).filter((c) => c.tasks.length > 0),
+    ...monthWeeks.map((w) => ({ key: `w${w.id}`, title: w.label, weekId: w.id as string | null, tasks: data.tasks.filter((t) => t.milestone_id === w.id && stageInfo.byTask[t.id] === undefined) })).filter((c) => c.tasks.length > 0),
+  ];
 
   return (
     <div>
@@ -82,6 +143,14 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         <h2 className="text-[18px] font-semibold text-slate-900">{p.title} · Tasks</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search investors…" className="ml-2 w-56 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />
         <span className="ml-auto flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="View"><button type="button" onClick={() => setView("kanban")} aria-pressed={view === "kanban"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "kanban" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Kanban</button><button type="button" onClick={() => setView("list")} aria-pressed={view === "list"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "list" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>List</button></span>
+        {hasStages ? (
+          <label className="text-[12px] text-slate-600">Group by
+            <select value={mode} onChange={(e) => setGroupBy(e.target.value as "stage" | "week")} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
+              <option value="stage">Stage</option>
+              <option value="week">Week</option>
+            </select>
+          </label>
+        ) : null}
         <label className="text-[12px] text-slate-600">Month
           <select value={month?.id ?? ""} onChange={(e) => setMonthId(e.target.value)} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
             {months.map((m) => <option key={m.id} value={m.id}>{m.label} · {formatRange(m.starts_on, m.ends_on)}</option>)}
@@ -107,6 +176,29 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
             </tbody>
           </table>
         </div>
+      ) : stagesPending ? (
+        <p className="text-[13px] text-slate-400">Loading…</p>
+      ) : mode === "stage" ? (
+      <HScrollBoard gap={16}>
+        {stageColumns.map((c) => {
+          const done = c.tasks.filter((t) => t.status === "done").length;
+          const pct = c.tasks.length ? Math.round((done / c.tasks.length) * 100) : 0;
+          return (
+            <div key={c.key} style={{ flex: "0 0 250px", minWidth: 250 }} className="px-1">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="truncate text-[15px] font-semibold text-slate-900" title={c.title}>{c.title}</span>
+                {c.weekId ? <button type="button" disabled={busy} onClick={() => newTask(c.weekId as string)} aria-label={`New task in ${c.title}`} className="rounded px-1 text-slate-500 hover:bg-slate-100 hover:text-indigo-700"><i className="ti ti-plus" aria-hidden="true" /></button> : null}
+              </div>
+              <div className="mb-2.5 flex items-center gap-2">
+                <div className="h-2 flex-1 rounded bg-slate-200"><div className="h-2 rounded bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+                <span className="text-[12px] font-medium text-slate-700">{c.tasks.length}</span>
+              </div>
+              <div className="flex min-h-[60px] flex-col gap-2">{c.tasks.map((t) => renderCard(t, true))}</div>
+            </div>
+          );
+        })}
+        {stageColumns.length === 0 ? <p className="px-1 text-[13px] text-slate-400">No tasks in this month yet.</p> : null}
+      </HScrollBoard>
       ) : (
       <HScrollBoard>
         {monthWeeks.map((w) => {
@@ -126,34 +218,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
               </div>
               <div className="mb-2.5 h-1.5 rounded bg-slate-200"><div className="h-1.5 rounded bg-emerald-500" style={{ width: `${pct}%` }} /></div>
               <div className="flex min-h-[60px] flex-col gap-2">
-                {tasks.map((t) => {
-                  const ms = matchesByTask.get(t.id) ?? [];
-                  const anyHit = ms.some(hit);
-                  if (needle && !anyHit && !t.title.toLowerCase().includes(needle)) return null;
-                  // Firm and name are often the same for angels ("Adam Draper, Adam Draper") — show it once.
-                  const label = (m: IrMatch) => [...new Set([m.investor_firm, m.investor_name].filter(Boolean))].join(", ") || "Investor";
-                  const href = `/admin/ir/projects/${projectId}/tasks/${t.id}`;
-                  return (
-                    <div key={t.id} role="link" tabIndex={0} aria-label={`Open ${t.title}`}
-                      onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) router.push(href); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) router.push(href); }}
-                      className={`cursor-pointer rounded-lg border bg-white p-2.5 shadow-sm transition hover:border-indigo-300 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 ${anyHit ? "border-indigo-300" : "border-slate-200"}`}>
-                      <Link href={href} className="block text-[13px] font-semibold text-slate-900 hover:text-indigo-700">{t.title}</Link>
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {ms.map((m) => <span key={m.id} className={`rounded px-1.5 py-0.5 text-[10.5px] ${hit(m) ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700"}`}>{label(m)}</span>)}
-                        {ms.length === 0 ? <span className="text-[10.5px] text-slate-400">no investors yet</span> : null}
-                      </div>
-                      <p className="mt-2 text-[11.5px] text-slate-600">{t.deadline ? new Date(`${t.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : fmtDay(t.created_at)}</p>
-                      <div className="mt-1.5 flex items-center gap-2 text-[12px] text-slate-400">
-                        <button type="button" onClick={() => star(t)} aria-label="Star" className={t.starred ? "text-amber-500" : "hover:text-amber-400"}><i className={`ti ${t.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
-                        <ActivityClock projectId={projectId} taskId={t.id} meId={meId} staff={data.staff} onChange={() => void load()}
-                          activities={(data.openActivities ?? []).filter((a) => a.task_id === t.id || (!!a.match_id && ms.some((m) => m.id === a.match_id)))} />
-                        <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[9px] font-semibold text-white" title={t.assignee_name ?? ""}>{initials(t.assignee_name)}</span>
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_DOT[t.status] }} title={t.status} />
-                      </div>
-                    </div>
-                  );
-                })}
+                {tasks.map((t) => renderCard(t, false))}
               </div>
             </div>
           );
