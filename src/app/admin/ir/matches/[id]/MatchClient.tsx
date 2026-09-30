@@ -188,7 +188,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
             </div>
           ) : null}
           {tab === "blocked" ? <BlockersPanel blockers={m.blockers ?? []} dealTitle={p.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}
-          {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} /> : null}
+          {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} onSaved={load} /> : null}
           {tab === "investor" ? (
             <div className="grid gap-x-8 gap-y-1 text-[12.5px] sm:grid-cols-2">
               <Field label="Name" value={investor?.name ?? "—"} /><Field label="Firm" value={investor?.firm ?? "—"} />

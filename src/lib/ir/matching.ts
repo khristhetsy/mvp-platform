@@ -33,8 +33,9 @@ export async function projectDefaults(companyId: string | null, founderContactId
   const out: Partial<FitAnswers> & { from?: "company" | "founder_profile" | "both" } = companyId ? await companyDefaults(companyId) : {};
   if (Object.keys(out).length) out.from = "company";
   if (!founderContactId) return out;
-  const { data } = await db().from("crm_contacts").select("raw").eq("id", founderContactId).maybeSingle();
-  const fromProfile = fitDefaultsFromProfile(founderOdooProfile((data as { raw: Record<string, unknown> | null } | null)?.raw), await offerableSectors().catch(() => undefined));
+  const { data } = await db().from("crm_contacts").select("raw, overrides").eq("id", founderContactId).maybeSingle();
+  const fc = data as { raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null } | null;
+  const fromProfile = fitDefaultsFromProfile(founderOdooProfile(fc?.raw, fc?.overrides), await offerableSectors().catch(() => undefined));
   let used = false;
   for (const k of ["industry", "raise", "revenue", "stage", "investorType"] as const) {
     if (!out[k]?.length && fromProfile[k]?.length) { out[k] = fromProfile[k]; used = true; }

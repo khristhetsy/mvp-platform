@@ -1,17 +1,26 @@
 /**
  * The founder's Odoo entrepreneur questionnaire, read from the founder contact's
- * crm_contacts.raw (the `__profile.extra` answers plus a few x_studio fields). Pure and
- * client-safe: the loader in db.ts passes the raw row in.
+ * crm_contacts.raw (the `__profile.extra` answers plus a few x_studio fields), with the
+ * team's edits from crm_contacts.overrides laid on top. Pure and client-safe: the loaders
+ * in db.ts and matching.ts pass the rows in.
  *
  * Two uses:
- *   - the Entrepreneur profile tab lays these out in Odoo's three sections;
+ *   - the Entrepreneur profile tab lays these out in Odoo's three sections, and each row
+ *     carries the overrides key an inline edit saves under;
  *   - the matching queue seeds its filters from them when the project has no iCapOS
  *     company (every Odoo-imported project), which is why matching found nothing.
+ *
+ * Edits follow the Sales Hub contact page (src/lib/sales/contacts.ts): an array-valued
+ * override replaces the synced answer, an empty one clears it, none keeps Odoo's value.
+ * Industry saves under "Industries", the key the contacts trigger and the Match campaign
+ * view read (migration 20260930115123).
  */
 import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, Q5_INVESTOR_TYPE, canonicalInvestorType, type FitAnswers } from "@/lib/fit/options";
 
 export type ProfileValue = string | string[] | null;
-export type ProfileRow = { label: string; value: ProfileValue; long?: boolean };
+/** kind: "list" edits as chips from the field's options, "text" as a text box.
+ *  saveKey is null for rows that can't be edited here (Assigned agent is the Odoo owner). */
+export type ProfileRow = { label: string; value: ProfileValue; long?: boolean; saveKey: string | null; kind: "list" | "text" };
 export type ProfileSection = { title: string; rows: ProfileRow[] };
 export type FounderOdooProfile = {
   sections: ProfileSection[];
@@ -25,68 +34,93 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const asList = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : typeof v === "string" && v.trim() ? [v.trim()] : []);
 const m2oName = (v: unknown): string | null => (Array.isArray(v) && typeof v[1] === "string" ? v[1] : null);
 
-/** Find an answer by keywords (Odoo labels drift: trailing spaces, "type(s)" vs "types"). */
-function pick(extra: Record<string, unknown>, ...keys: string[]): unknown {
-  const entries = Object.entries(extra).map(([k, v]) => [norm(k), v] as const);
+/** The synced label an answer lives under, found by keywords (Odoo labels drift: trailing
+ *  spaces, "type(s)" vs "types"). */
+function pickKey(extra: Record<string, unknown>, ...keys: string[]): string | undefined {
+  const entries = Object.keys(extra).map((k) => [norm(k), k] as const);
   for (const key of keys) { const n = norm(key); const hit = entries.find(([k]) => k === n) ?? entries.find(([k]) => k.includes(n)); if (hit) return hit[1]; }
   return undefined;
 }
+function pick(extra: Record<string, unknown>, ...keys: string[]): unknown {
+  const k = pickKey(extra, ...keys);
+  return k === undefined ? undefined : extra[k];
+}
+/** An array-valued override under this label (matched like contacts.ts: trimmed, any case). */
+function overrideFor(ov: Record<string, unknown>, label: string | undefined): string[] | undefined {
+  if (!label) return undefined;
+  const t = label.trim().toLowerCase();
+  const k = Object.keys(ov).find((x) => x.trim().toLowerCase() === t);
+  const v = k === undefined ? undefined : ov[k];
+  return Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : undefined;
+}
 
-/** Odoo's questionnaire, in Odoo's order. Missing answers stay as rows showing "—", like Odoo. */
-const SECTIONS: Array<{ title: string; rows: Array<{ label: string; keys: string[]; long?: boolean; raw?: (r: Record<string, unknown>) => ProfileValue }> }> = [
+type RowDef = { label: string; keys: string[]; odoo: string | null; save?: string; text?: boolean; long?: boolean; raw?: (r: Record<string, unknown>) => ProfileValue };
+/** Odoo's questionnaire, in Odoo's order. Missing answers stay as rows showing "—", like Odoo.
+ *  odoo = the canonical label a blank answer's edit saves under (null = not editable). */
+const SECTIONS: Array<{ title: string; rows: RowDef[] }> = [
   { title: "Entrepreneur information", rows: [
-    { label: "How did you hear about us?", keys: ["how did you hear about us"], raw: (r) => (typeof r.x_studio_lead_type === "string" ? r.x_studio_lead_type : null) },
-    { label: "If other, who referred you", keys: ["if other please tell us who referred you", "who referred you"] },
-    { label: "iCFO capital partner", keys: ["icfo capital partner"] },
-    { label: "Assigned agent", keys: ["entrepreneur assigned agent", "assigned agent"], raw: (r) => m2oName(r.user_id) },
-    { label: "Contact preference", keys: ["entrepreneur contact preference", "contact preference"] },
+    { label: "How did you hear about us?", keys: ["how did you hear about us"], odoo: "Entrepreneur: How did you hear about us?", raw: (r) => (typeof r.x_studio_lead_type === "string" ? r.x_studio_lead_type : null) },
+    { label: "If other, who referred you", keys: ["if other please tell us who referred you", "who referred you"], odoo: "Entrepreneur: If other, please tell us who referred you", text: true },
+    { label: "iCFO capital partner", keys: ["icfo capital partner"], odoo: "Entrepreneur: iCFO capital partner" },
+    { label: "Assigned agent", keys: ["entrepreneur assigned agent", "assigned agent"], odoo: null, raw: (r) => m2oName(r.user_id) },
+    { label: "Contact preference", keys: ["entrepreneur contact preference", "contact preference"], odoo: "Entrepreneur contact preference", text: true },
   ] },
   { title: "Agent field (internal use)", rows: [
-    { label: "Entrepreneur's note", keys: ["entrepreneur s note"], raw: (r) => (typeof r.x_studio_entrepreneurs_note === "string" ? r.x_studio_entrepreneurs_note : null) },
-    { label: "Entrepreneur's request", keys: ["entrepreneur s request"], raw: (r) => (typeof r.x_studio_entrepreneurs_request === "string" ? r.x_studio_entrepreneurs_request : null) },
-    { label: "Pitch frame to use", keys: ["entrepreneur pitch frame to use", "pitch frame"] },
+    { label: "Entrepreneur's note", keys: ["entrepreneur s note"], odoo: "Entrepreneur's note", text: true, raw: (r) => (typeof r.x_studio_entrepreneurs_note === "string" ? r.x_studio_entrepreneurs_note : null) },
+    { label: "Entrepreneur's request", keys: ["entrepreneur s request"], odoo: "Entrepreneur's request", text: true, raw: (r) => (typeof r.x_studio_entrepreneurs_request === "string" ? r.x_studio_entrepreneurs_request : null) },
+    { label: "Pitch frame to use", keys: ["entrepreneur pitch frame to use", "pitch frame"], odoo: "Entrepreneur pitch frame to use", text: true },
   ] },
   { title: "Entrepreneur", rows: [
-    { label: "Seeking type of investor(s)", keys: ["entrepreneur seeking type of investor"] },
-    { label: "Seeking type(s) of capital", keys: ["entrepreneur seeking type s of capital", "seeking types of capital"] },
-    { label: "Seeking amount of capital", keys: ["entrepreneur seeking amount of capital"] },
-    { label: "Type of industries", keys: ["entrepreneur type of industries"] },
-    { label: "Use of funds", keys: ["entrepreneur use of funds"] },
-    { label: "Funding stage", keys: ["entrepreneur funding stage"] },
-    { label: "Operating stage", keys: ["entrepreneur operating stage"] },
-    { label: "Annual revenue size", keys: ["entrepreneur annual revenue size"] },
-    { label: "Annual EBITDA", keys: ["entrepreneur annual ebitda"] },
-    { label: "Management team experience", keys: ["entrepreneur management team experience"] },
-    { label: "Business entity", keys: ["entrepreneur type s of business entity", "business entity"] },
-    { label: "Preferences for active investor", keys: ["entrepreneur preferences for active investor"] },
-    { label: "Short bio", keys: ["entrepreneur short bio"], long: true },
-    { label: "Business summary", keys: ["entrepreneur business summary"], long: true },
-    { label: "Five key highlights", keys: ["entrepreneur five key highlights"], long: true },
+    { label: "Seeking type of investor(s)", keys: ["entrepreneur seeking type of investor"], odoo: "Entrepreneur seeking type of investor(s)?" },
+    { label: "Seeking type(s) of capital", keys: ["entrepreneur seeking type s of capital", "seeking types of capital"], odoo: "Entrepreneur seeking type(s) of capital?" },
+    { label: "Seeking amount of capital", keys: ["entrepreneur seeking amount of capital"], odoo: "Entrepreneur seeking amount of capital?" },
+    { label: "Type of industries", keys: ["entrepreneur type of industries"], odoo: "Industries", save: "Industries" },
+    { label: "Use of funds", keys: ["entrepreneur use of funds"], odoo: "Entrepreneur use of funds?" },
+    { label: "Funding stage", keys: ["entrepreneur funding stage"], odoo: "Entrepreneur funding stage?" },
+    { label: "Operating stage", keys: ["entrepreneur operating stage"], odoo: "Entrepreneur operating stage?" },
+    { label: "Annual revenue size", keys: ["entrepreneur annual revenue size"], odoo: "Entrepreneur annual revenue size?" },
+    { label: "Annual EBITDA", keys: ["entrepreneur annual ebitda"], odoo: "Entrepreneur annual EBITDA?" },
+    { label: "Management team experience", keys: ["entrepreneur management team experience"], odoo: "Entrepreneur management team experience?", text: true },
+    { label: "Business entity", keys: ["entrepreneur type s of business entity", "business entity"], odoo: "Entrepreneur type(s) of business entity?" },
+    { label: "Preferences for active investor", keys: ["entrepreneur preferences for active investor"], odoo: "Entrepreneur preferences for active investor?" },
+    { label: "Short bio", keys: ["entrepreneur short bio"], odoo: "Entrepreneur short bio", text: true, long: true },
+    { label: "Business summary", keys: ["entrepreneur business summary"], odoo: "Entrepreneur business summary", text: true, long: true },
+    { label: "Five key highlights", keys: ["entrepreneur five key highlights"], odoo: "Entrepreneur five key highlights", text: true, long: true },
   ] },
 ];
 
-export function founderOdooProfile(raw: Raw): FounderOdooProfile | null {
+export function founderOdooProfile(raw: Raw, overrides?: Record<string, unknown> | null): FounderOdooProfile | null {
   if (!raw) return null;
   const prof = (raw.__profile as Record<string, unknown> | undefined) ?? {};
   const extra = (prof.extra as Record<string, unknown> | undefined) ?? {};
-  const val = (keys: string[], fromRaw?: (r: Record<string, unknown>) => ProfileValue): ProfileValue => {
-    const v = pick(extra, ...keys);
-    const list = asList(v);
-    if (list.length) return Array.isArray(v) ? list : list[0];
-    return fromRaw ? fromRaw(raw) : null;
+  const ov = overrides && typeof overrides === "object" ? overrides : {};
+  const rowOf = (d: RowDef): ProfileRow => {
+    const synced = pickKey(extra, ...d.keys);
+    const saveKey = d.odoo === null ? null : d.save ?? synced ?? d.odoo;
+    // The edit key wins, then an edit made on the contact page under the synced label.
+    const edited = (saveKey ? overrideFor(ov, saveKey) : undefined) ?? (d.odoo !== null && synced !== saveKey ? overrideFor(ov, synced) : undefined);
+    let value: ProfileValue;
+    if (edited) value = edited.length ? (d.text ? edited.join("\n") : edited) : null;
+    else {
+      const v = synced === undefined ? undefined : extra[synced];
+      const list = asList(v);
+      value = list.length ? (Array.isArray(v) ? list : list[0]) : d.raw ? d.raw(raw) : null;
+    }
+    return { label: d.label, value, saveKey, kind: d.text ? "text" : "list", ...(d.long ? { long: true } : {}) };
   };
-  const sections: ProfileSection[] = SECTIONS.map((s) => ({ title: s.title, rows: s.rows.map((r) => ({ label: r.label, value: val(r.keys, r.raw), ...(r.long ? { long: true } : {}) })) }));
+  const sections: ProfileSection[] = SECTIONS.map((s) => ({ title: s.title, rows: s.rows.map(rowOf) }));
+  const listOf = (label: string) => asList(sections.flatMap((s) => s.rows).find((r) => r.label === label)?.value);
   const hasQuestionnaire = Object.keys(extra).some((k) => /^entrepreneur/i.test(k.trim()));
   return {
     sections,
     companyName: asList(pick(extra, "company name"))[0] ?? (typeof raw.x_studio_company_name === "string" ? raw.x_studio_company_name : null) ?? m2oName(raw.parent_id),
     website: typeof raw.website === "string" && raw.website ? raw.website : null,
     membership: typeof prof.membership === "string" ? prof.membership : typeof raw.x_studio_membership_type === "string" ? raw.x_studio_membership_type : null,
-    industries: asList(pick(extra, "entrepreneur type of industries")),
-    seekingAmount: asList(pick(extra, "entrepreneur seeking amount of capital")),
-    revenue: asList(pick(extra, "entrepreneur annual revenue size")),
-    operatingStage: asList(pick(extra, "entrepreneur operating stage")),
-    investorTypes: asList(pick(extra, "entrepreneur seeking type of investor")),
+    industries: listOf("Type of industries"),
+    seekingAmount: listOf("Seeking amount of capital"),
+    revenue: listOf("Annual revenue size"),
+    operatingStage: listOf("Operating stage"),
+    investorTypes: listOf("Seeking type of investor(s)"),
     hasQuestionnaire,
   };
 }
