@@ -154,6 +154,13 @@ export async function sendCampaign(campaignId: string, opts?: {
     .single();
   if (ce || !campaign) throw new Error("Campaign not found");
 
+  // Match campaigns have no list or template: one email per founder with their own
+  // matches, sent in daily-capped batches by the match campaign sender.
+  if (campaign.match_config) {
+    const { sendMatchCampaignBatch } = await import("@/lib/match-campaigns/service");
+    return sendMatchCampaignBatch(campaignId);
+  }
+
   // A campaign is sendable with either an attached template or a body_override
   // (event emails carry their fully-rendered HTML in body_override, no template).
   const template = campaign.template;

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, Q5_INVESTOR_TYPE, type FitAnswers } from "@/lib/fit/options";
 
-type MatchResult = {
+export type MatchResult = {
   contactId: string; company: string; summary: string; fit: number;
   sectors: string[]; types: string[]; stage: string | null; checkSize: string | null; revenue: string | null;
   score: number | null; tier: string | null;
@@ -37,7 +37,7 @@ function FitGauge({ value }: { value: number }) {
   );
 }
 
-function MatchCard({ m }: { m: MatchResult }) {
+export function MatchCard({ m }: { m: MatchResult }) {
   const [open, setOpen] = useState(false);
   const c = tierColor(m.tier);
   const summaryLine = [m.sectors[0], m.stage, m.checkSize].filter(Boolean).join(" · ");

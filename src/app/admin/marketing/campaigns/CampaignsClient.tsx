@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
 import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
+import { MatchCreateFields } from "./match/MatchCreateFields";
 
 interface Props {
   campaigns: MarketingCampaign[];
@@ -58,6 +59,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [analyticsId, setAnalyticsId] = useState<string | null>(null);
   const [analyticsData, setAnalyticsData] = useState<CampaignDetail | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [campaignType, setCampaignType] = useState<"email" | "match">("email");
   const [expanded, setExpanded] = useState(false);
   const [drawerTab, setDrawerTab] = useState<"analytics" | "preview">("analytics");
   const [editing, setEditing] = useState(false);
@@ -88,6 +90,12 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
   const [rowMenuOpen, setRowMenuOpen] = useState<string | null>(null); // list-row ⋯ menu
   const deptOf = (c: MarketingCampaign) => departmentOf(c.department, deptOverride[c.id]);
+
+  /** Match campaigns open their own step flow; every other campaign opens the details drawer. */
+  function openCampaign(c: MarketingCampaign) {
+    if (c.match_config) router.push(`/admin/marketing/campaigns/match/${c.id}`);
+    else void openAnalytics(c.id);
+  }
 
   async function moveToDepartment(c: MarketingCampaign, dept: string) {
     setMoveOpen(null);
@@ -397,6 +405,24 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       {showCreate && (
         <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 20, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>New campaign</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            {([
+              { key: "email", title: "Email", text: "Send to a list you choose. Existing flow, unchanged." },
+              { key: "match", title: "Match", text: "Email founders their current investor matches. Matches are hidden until they choose a plan." },
+            ] as const).map((t) => (
+              <button type="button" key={t.key} onClick={() => setCampaignType(t.key)}
+                style={{ textAlign: "left", padding: "12px 14px", borderRadius: 10, cursor: "pointer", border: `1.5px solid ${campaignType === t.key ? "#1A6CE4" : "#e2e6ed"}`, background: campaignType === t.key ? "#EAF1FD" : "#fff" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--foreground)" }}>
+                  {t.title}{t.key === "match" && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: "#1F9D63", background: "#E7F7EF", borderRadius: 4, padding: "1px 6px" }}>NEW</span>}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{t.text}</div>
+              </button>
+            ))}
+          </div>
+          {campaignType === "match" && (
+            <MatchCreateFields form={form} setForm={setForm} onCancel={() => setShowCreate(false)} />
+          )}
+          {campaignType === "email" && (<>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
               { key: "name",         label: "Campaign name",         type: "text" },
@@ -520,6 +546,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               Cancel
             </button>
           </div>
+          </>)}
         </div>
       )}
 
@@ -572,7 +599,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                 {/* Card header */}
                 <div style={{ padding: "14px 16px 12px", borderBottom: "0.5px solid var(--border)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                    <button type="button" onClick={() => openAnalytics(c.id)}
+                    <button type="button" onClick={() => openCampaign(c)}
                       style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", lineHeight: 1.4, paddingRight: 8, background: "none", border: "none", cursor: "pointer", textAlign: "left", textDecoration: "none" }}>
                       {c.name}
                     </button>
@@ -585,7 +612,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   </div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    {(c.list as { name?: string } | null)?.name ?? "No list"}
+                    {(c.match_config ? "Match campaign · founders" : ((c.list as { name?: string } | null)?.name ?? "No list"))}
                   </div>
                   {scheduledAt && (
                     <div style={{ fontSize: 11, color: "#185FA5", marginTop: 3 }}>
@@ -611,13 +638,13 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
 
                 {/* Actions */}
                 <div style={{ padding: "10px 16px", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                  {c.status === "draft" && (
+                  {c.status === "draft" && !c.match_config && (
                     <button type="button" onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       {acting === c.id + "send" ? "Sending…" : "Send now"}
                     </button>
                   )}
-                  {c.status === "draft" && !scheduledAt && (
+                  {c.status === "draft" && !scheduledAt && !c.match_config && (
                     <ScheduleButton onSchedule={(at) => handleAction(c.id, "schedule", at)} acting={acting === c.id + "schedule"} />
                   )}
                   {c.status === "sending" && (
@@ -626,13 +653,13 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                       Pause
                     </button>
                   )}
-                  {c.status === "paused" && (
+                  {c.status === "paused" && !c.match_config && (
                     <button type="button" onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Resume
                     </button>
                   )}
-                  <button type="button" onClick={() => openAnalytics(c.id)}
+                  <button type="button" onClick={() => openCampaign(c)}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                     ↗ Details
                   </button>
@@ -698,12 +725,12 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
           return (
             <div key={c.id} style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, alignItems: "center", padding: "9px 13px", fontSize: 12.5, borderTop: i > 0 ? "0.5px solid var(--border)" : "none", background: c.archived ? "#FAFBFC" : "#fff" }}>
               <div style={{ minWidth: 0 }}>
-                <button type="button" onClick={() => openAnalytics(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <button type="button" onClick={() => openCampaign(c)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                   <span style={{ fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</span>
                   {c.group_type && <span style={{ flexShrink: 0, fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", background: c.group_type === "investor" ? "#f0edfd" : c.group_type === "event" ? "#e9f7ef" : "#eef4fe", color: c.group_type === "investor" ? "#5b3fd4" : c.group_type === "event" ? "#1a7f4e" : "#1A6CE4" }}>{c.group_type}</span>}
                 </button>
                 <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {(c.list as { name?: string } | null)?.name ?? "No list"}{scheduledAt ? ` · Scheduled ${new Date(scheduledAt).toLocaleDateString()}` : ""}
+                  {(c.match_config ? "Match campaign · founders" : ((c.list as { name?: string } | null)?.name ?? "No list"))}{scheduledAt ? ` · Scheduled ${new Date(scheduledAt).toLocaleDateString()}` : ""}
                 </div>
               </div>
               <div><span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 16, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{sc.label}</span></div>
@@ -716,8 +743,8 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   <>
                     <div onClick={() => setRowMenuOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
                     <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 41, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, boxShadow: "0 6px 18px rgb(12 35 64 / 0.14)", minWidth: 200, overflow: "hidden", padding: "4px 0" }}>
-                      <button type="button" onClick={() => { setRowMenuOpen(null); void openAnalytics(c.id); }} style={rowMenuItem}>↗ Details</button>
-                      {(c.status === "draft" || c.status === "paused") && (
+                      <button type="button" onClick={() => { setRowMenuOpen(null); openCampaign(c); }} style={rowMenuItem}>↗ Details</button>
+                      {(c.status === "draft" || c.status === "paused") && !c.match_config && (
                         <button type="button" onClick={() => { setRowMenuOpen(null); void handleAction(c.id, "send"); }} style={rowMenuItem}>{c.status === "paused" ? "Resume" : "Send now"}</button>
                       )}
                       <button type="button" disabled={!resendReady} onClick={() => { setRowMenuOpen(null); void handleSendTest(c.id); }} style={{ ...rowMenuItem, opacity: resendReady ? 1 : 0.5 }}><i className="ti ti-mail" aria-hidden="true" /> Send test to me</button>
