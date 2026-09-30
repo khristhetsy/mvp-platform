@@ -34,6 +34,8 @@ export type MatchConfig = {
    * set by a default guess ("guess:default"). Off: those founders are held back.
    */
   include_inferred: boolean;
+  /** An investor counts as a match only at or above this engine score (0 to 100). */
+  min_score: number;
   /** Exclude EU, EEA, UK and Swiss leads (GDPR and equivalents). */
   exclude_eu: boolean;
   /** Record sends without dispatching any email (demo and test runs). */
@@ -103,6 +105,7 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   preview_count: 3,
   verified_only: true,
   include_inferred: false,
+  min_score: 70,
   exclude_eu: true,
   dry_run: true,
   call_url: DEFAULT_CALL_PATH,
@@ -122,6 +125,7 @@ export function readMatchConfig(raw: unknown): MatchConfig {
     daily_cap: num(r.daily_cap, DEFAULT_MATCH_CONFIG.daily_cap),
     preview_count: num(r.preview_count, DEFAULT_MATCH_CONFIG.preview_count),
     verified_only: typeof r.verified_only === "boolean" ? r.verified_only : DEFAULT_MATCH_CONFIG.verified_only,
+    min_score: typeof r.min_score === "number" && Number.isFinite(r.min_score) ? Math.min(100, Math.max(0, Math.round(r.min_score))) : DEFAULT_MATCH_CONFIG.min_score,
     include_inferred: typeof r.include_inferred === "boolean" ? r.include_inferred : DEFAULT_MATCH_CONFIG.include_inferred,
     exclude_eu: typeof r.exclude_eu === "boolean" ? r.exclude_eu : DEFAULT_MATCH_CONFIG.exclude_eu,
     dry_run: typeof r.dry_run === "boolean" ? r.dry_run : DEFAULT_MATCH_CONFIG.dry_run,

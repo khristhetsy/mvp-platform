@@ -3,7 +3,8 @@
  *
  * An investor counts as a match when both industry and stage align, which is
  * what the email tells the founder ("N investors fit your industry and
- * stage"). The match % is the platform engine's score (explainMatch, the same
+ * stage") and the engine score reaches minScore (the campaign's match floor,
+ * 70 by default). The match % is the platform engine's score (explainMatch, the same
  * computation behind matchInvestorToCompany) with the admin weights, so the
  * number a founder sees is the one the rest of iCapOS would show.
  */
@@ -24,6 +25,7 @@ export function matchFounder(
   company: CompanyMatchProfile,
   investors: readonly CampaignInvestor[],
   weights?: EngineWeights,
+  minScore = 0,
 ): FounderMatch[] {
   const out: FounderMatch[] = [];
   for (const inv of investors) {
@@ -31,6 +33,7 @@ export function matchFounder(
     const sector = b.factors.find((f) => f.key === "sector");
     const stage = b.factors.find((f) => f.key === "stage");
     if (!sector || !stage || sector.points <= 0 || stage.points <= 0) continue;
+    if (b.matchScore < minScore) continue;
     out.push({
       investor_contact_id: inv.id,
       investor_type: inv.investorType,
