@@ -7,9 +7,9 @@
  * Move to stage, Assign owner, Mark intro sent, Export CSV, Remove from project.
  * Each action reuses the per-record IR endpoints, one call per investor.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SelectionBar, ActionResult, type SelectionAction } from "@/components/admin/sales/SelectionBar";
-import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
+import { MassEmailComposer, type ShareOption } from "@/components/marketing/MassEmailComposer";
 import { downloadCsv } from "@/components/admin/ToolbarGear";
 import { SEQUENCE_TEMPLATES, type SequenceStep, type StopEvent } from "@/lib/ir/sequence-templates";
 import { IR_STAGES, IR_STAGE_LABEL, type IrMatch, type IrProject } from "@/lib/ir/types";
@@ -26,12 +26,46 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
   const [composer, setComposer] = useState<null | "once" | "sequence">(null);
   // The founder's published one-pager: undefined while loading, null when none is published.
   const [onePager, setOnePager] = useState<{ url: string; label: string } | null | undefined>(undefined);
+  // Whether the project is linked to its company, and companies to offer when it isn't.
+  const [link, setLink] = useState<{ linked: boolean; suggestions: Array<{ id: string; name: string }> } | null>(null);
+  // The linked company's files, for the term sheet picker and the data room row.
+  const [room, setRoom] = useState<{ companyId: string | null; companyName: string | null; documents: Array<{ id: string; name: string; type: string | null }> } | null>(null);
+  const [termDoc, setTermDoc] = useState("");
+  const [termUpload, setTermUpload] = useState<{ path: string; name: string } | null>(null);
+  const [termBusy, setTermBusy] = useState(false);
+  const [termErr, setTermErr] = useState<string | null>(null);
+  const [expiresDays, setExpiresDays] = useState<number | null>(30);
+  const [linking, setLinking] = useState(false);
+  const loadAttachables = useCallback(() => {
+    void fetch(`/api/admin/ir/projects/${project.id}/one-pager`).then((r) => (r.ok ? r.json() : { onePager: null }))
+      .then((d) => { setOnePager(d.onePager ? { url: d.onePager.url, label: d.onePager.companyName ?? project.founder_name ?? project.title } : null); setLink({ linked: d.linked ?? true, suggestions: d.suggestions ?? [] }); })
+      .catch(() => setOnePager(null));
+    void fetch(`/api/admin/ir/projects/${project.id}/share-links`).then((r) => (r.ok ? r.json() : null)).then((d) => setRoom(d ?? { companyId: null, companyName: null, documents: [] })).catch(() => setRoom({ companyId: null, companyName: null, documents: [] }));
+  }, [project.id, project.founder_name, project.title]);
   useEffect(() => {
     if (!composer || onePager !== undefined) return;
-    fetch(`/api/admin/ir/projects/${project.id}/one-pager`).then((r) => (r.ok ? r.json() : { onePager: null }))
-      .then((d) => setOnePager(d.onePager ? { url: d.onePager.url, label: d.onePager.companyName ?? project.founder_name ?? project.title } : null))
-      .catch(() => setOnePager(null));
-  }, [composer, onePager, project.id, project.founder_name, project.title]);
+    loadAttachables();
+  }, [composer, onePager, loadAttachables]);
+  async function linkCompany(companyId: string) {
+    setLinking(true);
+    try {
+      const r = await fetch(`/api/admin/ir/projects/${project.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyId }) });
+      if (r.ok) loadAttachables();
+    } finally { setLinking(false); }
+  }
+  async function uploadTermSheet(f: File | undefined) {
+    if (!f) return;
+    setTermErr(null);
+    if (f.size > 4 * 1024 * 1024) { setTermErr("That file is over 4 MB. Pick it from the company's files instead."); return; }
+    setTermBusy(true);
+    try {
+      const fd = new FormData(); fd.append("file", f);
+      const r = await fetch("/api/email/attachments", { method: "POST", body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.attachment) { setTermErr(j.error ?? "Couldn't upload the term sheet."); return; }
+      setTermUpload({ path: j.attachment.path, name: f.name }); setTermDoc("");
+    } finally { setTermBusy(false); }
+  }
   const picked = matches.filter((m) => selected.has(m.id));
 
   /** Runs one request per picked investor; returns how many succeeded. */
@@ -82,6 +116,56 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
     sectors: e?.industry ?? "",
   };
   const withEmail = picked.filter((m) => contacts[m.investor_contact_id]?.email);
+  const small = { fontSize: 12, padding: "4px 7px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
+  const notice = link && !link.linked ? (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "7px 10px", borderRadius: 8, background: "#FAEEDA", color: "#633806", fontSize: 12, marginBottom: 6 }}>
+      <i className="ti ti-link" aria-hidden="true" />
+      <span style={{ flex: 1, minWidth: 160 }}>This project isn&rsquo;t linked to a company, so its one-pager and files can&rsquo;t be attached.</span>
+      {link.suggestions.length ? link.suggestions.slice(0, 2).map((c) => (
+        <button key={c.id} type="button" disabled={linking} onClick={() => void linkCompany(c.id)} style={{ border: "none", background: "none", color: "#633806", fontWeight: 600, textDecoration: "underline", cursor: "pointer", padding: 0, fontSize: 12 }}>Link {c.name}</button>
+      )) : <a href={`/admin/ir/projects/${project.id}`} style={{ color: "#633806", fontWeight: 600 }}>Link it on the project</a>}
+    </div>
+  ) : null;
+  const docs = room?.documents ?? [];
+  const termName = termUpload?.name ?? docs.find((d) => d.id === termDoc)?.name ?? null;
+  const shares: ShareOption[] = [
+    {
+      key: "term_sheet", icon: "ti-file-certificate", title: "Term sheet", buttonLabel: "View the term sheet", ready: !!(termDoc || termUpload),
+      detail: termName ? `${termName} · sent as a tracked view link` : "Pick one of the company's files or upload it",
+      control: (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <select value={termDoc} onChange={(e) => { setTermDoc(e.target.value); if (e.target.value) setTermUpload(null); }} aria-label="Term sheet file" style={{ ...small, maxWidth: 260 }}>
+            <option value="">{docs.length ? "Pick a company file…" : "No company files"}</option>
+            {docs.map((d) => <option key={d.id} value={d.id}>{d.name}{d.type ? ` · ${d.type.replace(/_/g, " ").toLowerCase()}` : ""}</option>)}
+          </select>
+          <label style={{ fontSize: 12, color: "#185FA5", cursor: "pointer" }}>
+            <input type="file" hidden accept=".pdf,.doc,.docx" onChange={(e) => { void uploadTermSheet(e.target.files?.[0]); e.target.value = ""; }} />
+            {termBusy ? "Uploading…" : "or upload"}
+          </label>
+          {termErr ? <span style={{ fontSize: 11, color: "#A32D2D" }}>{termErr}</span> : null}
+        </div>
+      ),
+    },
+    {
+      key: "data_room", icon: "ti-folder-lock", title: "Data room access", buttonLabel: "Open the data room", ready: !!room?.companyId && docs.length > 0,
+      badge: room?.companyId ? `${docs.length} doc${docs.length === 1 ? "" : "s"}` : null,
+      detail: !room?.companyId ? "Link the project to a company first" : docs.length ? `Private link per investor · view only · ${expiresDays ? `expires in ${expiresDays} days` : "no expiry"}` : `${room.companyName ?? "The company"} has no files yet`,
+      control: room?.companyId && docs.length ? (
+        <label style={{ fontSize: 12, color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 6 }}>Expires
+          <select value={expiresDays ?? 0} onChange={(e) => setExpiresDays(Number(e.target.value) || null)} style={small}>
+            {[7, 14, 30, 90].map((n) => <option key={n} value={n}>in {n} days</option>)}
+            <option value={0}>never</option>
+          </select>
+        </label>
+      ) : undefined,
+    },
+  ];
+  async function resolveShares(keys: string[], ctx: { testEmail?: string }) {
+    const r = await fetch(`/api/admin/ir/projects/${project.id}/share-links`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kinds: keys, matchIds: picked.map((m) => m.id), documentId: termDoc || null, upload: termUpload, expiresDays, testEmail: ctx.testEmail ?? null }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { error: j.error ?? "Couldn't make the links." };
+    return { buttons: (j.links ?? []).map((l: { label: string; url: string }) => ({ label: l.label, url: l.url })) };
+  }
   const previewAs = withEmail.map((m) => ({ label: m.investor_name ?? m.investor_firm ?? "Investor", first_name: (m.investor_name ?? "").trim().split(/\s+/)[0] || "there", company: m.investor_firm ?? "" }));
 
   return (
@@ -93,6 +177,7 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
           source="contacts" noun="investor" initialMode={composer}
           selection={{ mode: "ids", ids: [...new Set(picked.map((m) => m.investor_contact_id))], count: picked.length }}
           extraMerge={extraMerge} previewAs={previewAs} defaultDepartment="Investor Relations" onePager={onePager} allowAttachments
+          notice={notice} shares={shares} resolveShares={resolveShares}
           renderSequence={(done) => <IrSequencePanel matchIds={picked.map((m) => m.id)} staff={staff} ownerId={project.owner_id} onDone={(msg) => { done(msg); void onChange(); }} />}
           onSent={(sent) => {
             // A sent intro completes each still-Matched investor's "Send intro email" to-do.

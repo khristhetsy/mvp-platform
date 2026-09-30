@@ -28,6 +28,17 @@ function addOnePager(html: string, op: { url: string; label: string }): string {
   return i >= 0 ? html.slice(0, i) + block + html.slice(i) : html + block;
 }
 
+/** Link buttons (term sheet, data room) placed before </body>, the same way as the one-pager. */
+function addLinkButtons(html: string, buttons: Array<{ label: string; url: string }>): string {
+  if (!buttons.length) return html;
+  const block = `<div style="text-align:center;margin:18px 0;">${buttons.map((b) => `<a href="${escHtml(b.url)}" style="display:inline-block;margin:4px 6px;background:#ffffff;color:#4338CA;border:1.5px solid #4338CA;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;text-decoration:none;padding:10px 20px;border-radius:6px;">${escHtml(b.label)}</a>`).join("")}</div>`;
+  const i = html.toLowerCase().lastIndexOf("</body>");
+  return i >= 0 ? html.slice(0, i) + block + html.slice(i) : html + block;
+}
+
+/** A link the caller can add to the email (a term sheet, a data room); made just before the send by `resolveShares`. */
+export type ShareOption = { key: string; icon: string; title: string; detail: ReactNode; buttonLabel: string; badge?: string | null; ready: boolean; control?: ReactNode };
+
 const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
 
 /**
@@ -40,14 +51,18 @@ const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRad
  * `previewAs` adds a rendered Preview / HTML toggle filled for each recipient,
  * `renderSequence` replaces the Enroll in sequence panel, `onSent` reports a send,
  * `defaultDepartment` opens that group in the template picker first, `onePager` adds the
- * founder one-pager row (null = not published), `allowAttachments` adds file attachments.
+ * founder one-pager row (null = not published), `allowAttachments` adds file attachments,
+ * `notice` shows above the attachments, `shares` adds link rows (term sheet, data room) that
+ * `resolveShares` turns into real per-recipient links right before a send or test.
  * Without them it behaves exactly as before.
  */
-export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false }: {
+export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares }: {
   source: "contacts" | "opportunities"; selection: SelectionPayload; defaultEmail?: string; onClose: () => void;
   noun?: string; extraMerge?: Record<string, string>; previewAs?: PreviewRecipient[]; initialMode?: "once" | "sequence";
   renderSequence?: (done: (message: string) => void) => ReactNode; onSent?: (sent: number) => void; defaultDepartment?: string;
   onePager?: { url: string; label: string } | null; allowAttachments?: boolean;
+  notice?: ReactNode; shares?: ShareOption[];
+  resolveShares?: (keys: string[], ctx: { testEmail?: string }) => Promise<{ buttons: Array<{ label: string; url: string }> } | { error: string }>;
 }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sequences, setSequences] = useState<Sequence[]>([]);
@@ -68,6 +83,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   const [files, setFiles] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [fileErr, setFileErr] = useState<string | null>(null);
+  const [sharePicked, setSharePicked] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/marketing/templates").then((r) => (r.ok ? r.json() : { templates: [] })).then((d) => setTemplates(d.templates ?? d ?? [])).catch(() => {});
@@ -83,6 +99,15 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   const withExtra = (t: string) => (extraMerge ? fillTags(t, extraMerge) : t);
   /** The body as it goes out: record-level tags filled, plus the one-pager button when ticked. */
   const outgoing = () => { const b = withExtra(html); return b.trim() && onePager && includeOnePager ? addOnePager(b, onePager) : b; };
+  const pickedShares = (shares ?? []).filter((o) => o.ready && sharePicked.has(o.key));
+  /** The body with real share links made for this send, or null (and a message) when they couldn't be made. */
+  async function finalBody(testTo?: string): Promise<string | null> {
+    const b = outgoing();
+    if (!b.trim() || !pickedShares.length || !resolveShares) return b;
+    const r = await resolveShares(pickedShares.map((o) => o.key), { testEmail: testTo });
+    if ("error" in r) { setMsg(r.error); return null; }
+    return addLinkButtons(b, r.buttons);
+  }
   const usedBytes = files.reduce((n, f) => n + f.size, 0);
   async function addFiles(list: FileList | null) {
     if (!list?.length) return;
@@ -102,7 +127,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
     } finally { setUploading(false); }
   }
   const who = previewAs?.[Math.min(previewIdx, (previewAs?.length ?? 1) - 1)];
-  const previewDoc = who ? `<!doctype html><html><body style="margin:0;padding:12px 14px;font:13px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1f2937">${fillTags(outgoing(), { first_name: who.first_name, company: who.company })}</body></html>` : "";
+  const previewDoc = who ? `<!doctype html><html><body style="margin:0;padding:12px 14px;font:13px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1f2937">${fillTags(addLinkButtons(outgoing(), html.trim() ? pickedShares.map((o) => ({ label: o.buttonLabel, url: "#" })) : []), { first_name: who.first_name, company: who.company })}</body></html>` : "";
   const count = selection.count;
   const gmailOver = channel === "gmail" && mode === "once" && count > GMAIL_LIMIT;
   const base = () => ({ source, mode: selection.mode, ids: selection.ids, params: selection.params, group: selection.group });
@@ -114,7 +139,9 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   async function sendTest() {
     setBusy(true); setMsg(null);
     try {
-      const r = await post({ action: "test", channel, templateId: templateId || null, subject: withExtra(subject) || null, html: outgoing() || null, testEmail });
+      const body = await finalBody(testEmail.trim() || undefined);
+      if (body === null) return;
+      const r = await post({ action: "test", channel, templateId: templateId || null, subject: withExtra(subject) || null, html: body || null, testEmail });
       const j = await r.json();
       setMsg(r.ok ? `✓ Test sent to ${j.to}` : (j.error ?? "Test failed."));
     } finally { setBusy(false); }
@@ -123,7 +150,9 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
     if (mode === "sequence") return doEnroll();
     setBusy(true); setMsg(null);
     try {
-      const r = await post({ action: "send", channel, templateId: templateId || null, subject: withExtra(subject) || null, html: outgoing() || null });
+      const body = await finalBody();
+      if (body === null) return;
+      const r = await post({ action: "send", channel, templateId: templateId || null, subject: withExtra(subject) || null, html: body || null });
       const j = await r.json();
       if (!r.ok) { setMsg(j.error ?? "Send failed."); return; }
       onSent?.(j.sent ?? 0);
@@ -224,9 +253,10 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                 )}
                 {previewAs?.length ? <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>Merge: {["first_name", "company", ...Object.keys(extraMerge ?? {})].map((k) => `{{${k}}}`).join(" ")}</p> : null}
 
-                {onePager !== undefined || allowAttachments ? (
+                {onePager !== undefined || allowAttachments || shares?.length ? (
                   <div style={{ marginBottom: 12 }}>
                     <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 4px" }}>Attachments</p>
+                    {notice}
                     {onePager !== undefined ? (
                       <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", border: onePager && includeOnePager ? "1px solid #B5D4F4" : "0.5px solid var(--border)", borderRadius: 8, marginBottom: 6, cursor: onePager ? "pointer" : "default", opacity: onePager ? 1 : 0.7 }}>
                         <input type="checkbox" checked={!!onePager && includeOnePager} disabled={!onePager} onChange={(e) => setIncludeOnePager(e.target.checked)} />
@@ -238,6 +268,23 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                         {onePager ? <span style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 6, background: "#E6F1FB", color: "#0C447C" }}>Published</span> : null}
                       </label>
                     ) : null}
+                    {(shares ?? []).map((o) => {
+                      const on = o.ready && sharePicked.has(o.key);
+                      return (
+                        <div key={o.key} style={{ padding: "7px 10px", border: on ? "1px solid #B5D4F4" : "0.5px solid var(--border)", borderRadius: 8, marginBottom: 6 }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: o.ready ? "pointer" : "default" }}>
+                            <input type="checkbox" checked={on} disabled={!o.ready} onChange={(e) => setSharePicked((cur) => { const n = new Set(cur); if (e.target.checked) n.add(o.key); else n.delete(o.key); return n; })} />
+                            <i className={`ti ${o.icon}`} aria-hidden="true" style={{ fontSize: 17, color: "#185FA5" }} />
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: "block", fontSize: 12.5, fontWeight: 600 }}>{o.title}</span>
+                              <span style={{ display: "block", fontSize: 10.5, color: "var(--muted-foreground)" }}>{o.detail}</span>
+                            </span>
+                            {o.badge ? <span style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 6, background: "#E1F5EE", color: "#085041", whiteSpace: "nowrap" }}>{o.badge}</span> : null}
+                          </label>
+                          {o.control ? <div style={{ marginTop: 6, paddingLeft: 24 }}>{o.control}</div> : null}
+                        </div>
+                      );
+                    })}
                     {allowAttachments ? (
                       <>
                         {files.map((f) => (
