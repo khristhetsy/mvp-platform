@@ -77,6 +77,8 @@ export type MarketingCampaign = {
   group_type?: "founder" | "investor" | "event" | null;
   /** Owning department for grouping/sorting on the Campaigns page. Null = Unassigned. Separate axis from group_type. */
   department?: string | null;
+  /** Non-null marks a Match campaign (see lib/marketing/match-campaign). */
+  match_config?: Record<string, unknown> | null;
   // joined
   list?: MarketingList | null;
   template?: MarketingTemplate | null;

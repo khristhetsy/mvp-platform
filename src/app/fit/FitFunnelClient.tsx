@@ -37,7 +37,7 @@ function FitGauge({ value }: { value: number }) {
   );
 }
 
-function MatchCard({ m }: { m: MatchResult }) {
+export function MatchCard({ m }: { m: MatchResult }) {
   const [open, setOpen] = useState(false);
   const c = tierColor(m.tier);
   const summaryLine = [m.sectors[0], m.stage, m.checkSize].filter(Boolean).join(" · ");
