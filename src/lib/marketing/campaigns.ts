@@ -137,7 +137,10 @@ export async function sendCampaignTest(
   return { ok: result.ok, to: email, resend_id: result.resend_id, error: result.error };
 }
 
-export async function sendCampaign(campaignId: string): Promise<{
+export async function sendCampaign(campaignId: string, opts?: {
+  /** Files attached to every email of this send (the mass-email dialog). Not stored on the campaign. */
+  attachments?: Array<{ filename: string; content: string }>;
+}): Promise<{
   sent: number;
   skipped: number;
   failed: number;
@@ -221,6 +224,7 @@ export async function sendCampaign(campaignId: string): Promise<{
       html_body: campaign.body_override || template?.html_body || "",
       text_body: template?.text_body ?? null,
       unsubscribe_token: token,
+      attachments: opts?.attachments,
     });
 
     await db.from("marketing_events").insert({

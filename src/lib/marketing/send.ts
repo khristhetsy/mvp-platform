@@ -86,6 +86,8 @@ export type SendMarketingEmailInput = {
   text_body?: string | null;
   /** Signed token for unsubscribe link */
   unsubscribe_token: string;
+  /** Optional file attachments (base64 content), sent as real attachments. */
+  attachments?: Array<{ filename: string; content: string }>;
 };
 
 export async function sendMarketingEmail(
@@ -165,6 +167,7 @@ ${htmlBody}
           "List-Unsubscribe": `<${unsubscribeUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
+        ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       }),
     });
 

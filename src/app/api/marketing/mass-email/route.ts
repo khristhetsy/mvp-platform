@@ -8,6 +8,8 @@
  *                   conservative daily cap guard (Gmail throttles bulk).
  *  - Sequence     → hidden list + enrollList (idempotent; already-enrolled skipped).
  *  - Test         → one copy to a chosen address with sample merge data, either channel.
+ *  - Attachments  → files uploaded through /api/email/attachments ride along on every
+ *                   send (and the test), up to 10 MB in total.
  *
  * Staff-only.
  */
@@ -22,7 +24,8 @@ import { createCampaign, sendCampaign } from "@/lib/marketing/campaigns";
 import { enrollList } from "@/lib/marketing/sequences";
 import { sendMarketingEmail, makeUnsubscribeToken, interpolate, htmlToText, emailConfigured } from "@/lib/marketing/send";
 import { isUnsubscribed } from "@/lib/marketing/contacts";
-import { sendViaGmail } from "@/lib/integrations/gmail-send";
+import { sendViaGmail, type GmailAttachment } from "@/lib/integrations/gmail-send";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logOutboundEmailActivity } from "@/lib/sales/activity";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +35,8 @@ export const dynamic = "force-dynamic";
 const GMAIL_DAILY_LIMIT = 450;
 const MAX_TARGET = 25000;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const ATTACH_BUCKET = "email-attachments";
+const MAX_ATTACH_BYTES = 10 * 1024 * 1024;
 
 const schema = z.object({
   source: z.enum(["contacts", "opportunities"]),
@@ -43,13 +48,32 @@ const schema = z.object({
   channel: z.enum(["icapos", "gmail"]).optional(),
   templateId: z.string().uuid().nullish(),
   subject: z.string().max(300).nullish(),
-  html: z.string().max(100000).nullish(),
+  // Rich templates with inline images run past 150k characters; 1M leaves headroom.
+  html: z.string().max(1_000_000).nullish(),
   fromName: z.string().max(120).nullish(),
   fromEmail: z.string().max(200).nullish(),
   replyTo: z.string().max(200).nullish(),
   testEmail: z.string().max(200).nullish(),
   sequenceId: z.string().uuid().nullish(),
+  attachments: z.array(z.object({
+    name: z.string().max(200), path: z.string().max(400), size: z.number().int().nonnegative(), content_type: z.string().nullish(),
+  })).max(10).optional(),
 });
+
+/** The uploaded files' bytes, from the staff member's own folder in Storage. */
+async function loadAttachments(userId: string, refs: NonNullable<z.infer<typeof schema>["attachments"]>): Promise<GmailAttachment[] | { error: string }> {
+  if (refs.length === 0) return [];
+  if (refs.some((a) => !a.path.startsWith(`${userId}/`))) return { error: "An attachment couldn't be found. Remove it and attach it again." };
+  if (refs.reduce((n, a) => n + a.size, 0) > MAX_ATTACH_BYTES) return { error: "Attachments are over 10 MB in total. Remove one and try again." };
+  const admin = createServiceRoleClient();
+  const out: GmailAttachment[] = [];
+  for (const a of refs) {
+    const { data, error } = await admin.storage.from(ATTACH_BUCKET).download(a.path);
+    if (error || !data) return { error: `Couldn't read ${a.name}. Remove it and attach it again.` };
+    out.push({ name: a.name, mimeType: a.content_type || "application/octet-stream", content: Buffer.from(await data.arrayBuffer()) });
+  }
+  return out;
+}
 
 export async function POST(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
@@ -57,6 +81,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const d = parsed.data;
+  const files = await loadAttachments(profile.id, d.attachments ?? []);
+  if ("error" in files) return NextResponse.json({ error: files.error }, { status: 400 });
+  const resendFiles = files.map((f) => ({ filename: f.name, content: f.content.toString("base64") }));
 
   // ── Resolve the selection to crm_contacts ids ──────────────────────────────
   let crmIds: string[] = [];
@@ -95,13 +122,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     const subjOut = `[TEST] ${interpolate(subject, vars)}`;
     const htmlOut = interpolate(html, vars);
     if ((d.channel ?? "icapos") === "gmail") {
-      const r = await sendViaGmail({ userId: profile.id, to, subject: subjOut, body: htmlToText(htmlOut), html: htmlOut });
+      const r = await sendViaGmail({ userId: profile.id, to, subject: subjOut, body: htmlToText(htmlOut), html: htmlOut, attachments: files });
       return "error" in r
         ? NextResponse.json({ error: r.error.message }, { status: 400 })
         : NextResponse.json({ ok: true, to });
     }
     if (!emailConfigured()) return NextResponse.json({ error: "Email provider not configured (RESEND_API_KEY)." }, { status: 400 });
-    const r = await sendMarketingEmail({ to, first_name: vars.first_name, company: vars.company, from_name: fromName, from_email: fromEmail, reply_to: d.replyTo ?? null, subject: subjOut, html_body: htmlOut, text_body: text, unsubscribe_token: makeUnsubscribeToken(to) });
+    const r = await sendMarketingEmail({ to, first_name: vars.first_name, company: vars.company, from_name: fromName, from_email: fromEmail, reply_to: d.replyTo ?? null, subject: subjOut, html_body: htmlOut, text_body: text, unsubscribe_token: makeUnsubscribeToken(to), attachments: resendFiles });
     return r.ok ? NextResponse.json({ ok: true, to }) : NextResponse.json({ error: r.error ?? "Test send failed." }, { status: 400 });
   }
 
@@ -131,7 +158,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       if (await isUnsubscribed(rcpt.email)) { skipped++; continue; }
       const vars = { first_name: rcpt.first_name ?? "there", company: rcpt.company ?? "", email: rcpt.email, sender_name: fromName };
       const htmlOut = interpolate(html, vars);
-      const r = await sendViaGmail({ userId: profile.id, to: rcpt.email, subject: interpolate(subject, vars), body: htmlToText(htmlOut), html: htmlOut });
+      const r = await sendViaGmail({ userId: profile.id, to: rcpt.email, subject: interpolate(subject, vars), body: htmlToText(htmlOut), html: htmlOut, attachments: files });
       if ("error" in r) failed++; else sent++;
       await new Promise((res) => setTimeout(res, 120));
     }
@@ -156,7 +183,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   }, profile.id);
 
   try {
-    const result = await sendCampaign(campaign.id);
+    const result = await sendCampaign(campaign.id, { attachments: resendFiles });
     // Log to the sales timeline so the send shows on each contact + their open opps.
     const icaposEmails = recipients.map((r) => r.email);
     after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000));

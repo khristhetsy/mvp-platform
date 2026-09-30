@@ -24,6 +24,14 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [composer, setComposer] = useState<null | "once" | "sequence">(null);
+  // The founder's published one-pager: undefined while loading, null when none is published.
+  const [onePager, setOnePager] = useState<{ url: string; label: string } | null | undefined>(undefined);
+  useEffect(() => {
+    if (!composer || onePager !== undefined) return;
+    fetch(`/api/admin/ir/projects/${project.id}/one-pager`).then((r) => (r.ok ? r.json() : { onePager: null }))
+      .then((d) => setOnePager(d.onePager ? { url: d.onePager.url, label: d.onePager.companyName ?? project.founder_name ?? project.title } : null))
+      .catch(() => setOnePager(null));
+  }, [composer, onePager, project.id, project.founder_name, project.title]);
   const picked = matches.filter((m) => selected.has(m.id));
 
   /** Runs one request per picked investor; returns how many succeeded. */
@@ -84,7 +92,7 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
         <MassEmailComposer
           source="contacts" noun="investor" initialMode={composer}
           selection={{ mode: "ids", ids: [...new Set(picked.map((m) => m.investor_contact_id))], count: picked.length }}
-          extraMerge={extraMerge} previewAs={previewAs} defaultDepartment="Investor Relations"
+          extraMerge={extraMerge} previewAs={previewAs} defaultDepartment="Investor Relations" onePager={onePager} allowAttachments
           renderSequence={(done) => <IrSequencePanel matchIds={picked.map((m) => m.id)} staff={staff} ownerId={project.owner_id} onDone={(msg) => { done(msg); void onChange(); }} />}
           onSent={(sent) => {
             // A sent intro completes each still-Matched investor's "Send intro email" to-do.
