@@ -8,6 +8,7 @@ import { getMarketingSettings } from "@/lib/marketing/settings";
 import { DeliveryHealthBanner } from "@/components/marketing/DeliveryHealthBanner";
 import { GuidedBanner } from "@/components/marketing/GuidedBanner";
 import { CampaignsClient } from "./CampaignsClient";
+import { matchCampaignsEnabled } from "@/lib/marketing/match-campaign/flag";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function MarketingCampaignsPage() {
       </div>
       <GuidedBanner />
       <DeliveryHealthBanner />
-      <CampaignsClient campaigns={campaigns} lists={lists} templates={templates} resendReady={emailConfigured()} defaultSender={sender ? { name: sender.default_from_name, email: sender.default_from_email, replyTo: sender.default_reply_to ?? "" } : undefined} senders={sender?.senders ?? []} />
+      <CampaignsClient campaigns={campaigns} lists={lists} templates={templates} resendReady={emailConfigured()} defaultSender={sender ? { name: sender.default_from_name, email: sender.default_from_email, replyTo: sender.default_reply_to ?? "" } : undefined} senders={sender?.senders ?? []} matchEnabled={matchCampaignsEnabled()} />
     </div>
   );
 }

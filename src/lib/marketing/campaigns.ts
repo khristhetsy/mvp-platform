@@ -5,6 +5,8 @@ import { emitNotification } from "./notifications/emit";
 import { listAdminIds } from "./notifications/store";
 import type { MarketingCampaign } from "./types";
 import { needsEmailReview } from "./recipient";
+import { isMatchCampaign } from "./match-campaign/types";
+import { sendMatchCampaign } from "./match-campaign/send";
 
 export async function getCampaigns(): Promise<MarketingCampaign[]> {
   const db = await marketingDb();
@@ -153,6 +155,23 @@ export async function sendCampaign(campaignId: string, opts?: {
     .eq("id", campaignId)
     .single();
   if (ce || !campaign) throw new Error("Campaign not found");
+
+  // Match campaigns: one email per founder with their own matches. Same status
+  // gate and kill switch as below, then the Match sender takes over.
+  if (isMatchCampaign(campaign)) {
+    const matchStatus = campaign.status as MarketingCampaign["status"];
+    if (!SENDABLE_STATUSES.includes(matchStatus)) {
+      throw new Error(
+        matchStatus === "sending"
+          ? "This campaign is already sending. Wait for it to finish before sending again."
+          : `Cannot send a campaign with status "${matchStatus}".`,
+      );
+    }
+    if (!marketingSendEnabled()) {
+      throw new Error("Marketing sending is disabled (MARKETING_SEND_LIVE=false). No email was sent.");
+    }
+    return sendMatchCampaign(campaignId);
+  }
 
   // A campaign is sendable with either an attached template or a body_override
   // (event emails carry their fully-rendered HTML in body_override, no template).

@@ -13,6 +13,8 @@ interface Props {
   resendReady?: boolean;
   defaultSender?: { name: string; email: string; replyTo: string };
   senders?: { name: string; email: string }[];
+  /** Match campaigns flag (MATCH_CAMPAIGNS_ENABLED). */
+  matchEnabled?: boolean;
 }
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
@@ -44,7 +46,7 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender, senders = [] }: Props) {
+export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender, senders = [], matchEnabled = false }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -269,6 +271,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   }
 
   async function openAnalytics(campaignId: string) {
+    // Match campaigns open their own step editor.
+    if (campaigns.find((x) => x.id === campaignId)?.match_config) {
+      router.push(`/admin/marketing/campaigns/match/${campaignId}`);
+      return;
+    }
     setAnalyticsId(campaignId);
     setEditing(false);
     setDrawerTab("analytics");
@@ -397,6 +404,21 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       {showCreate && (
         <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 20, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>New campaign</div>
+          {matchEnabled && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 6 }}>Campaign type</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ border: "1.5px solid #1A6CE4", background: "#F3F8FF", borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Email</div>
+                  <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>Send to a list you choose. Existing flow, unchanged.</div>
+                </div>
+                <button type="button" onClick={() => router.push("/admin/marketing/campaigns/match/new")} style={{ textAlign: "left", border: "0.5px solid #e2e6ed", background: "#fff", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Match <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, background: "#FFF4E0", color: "#8A5A00", marginLeft: 4 }}>NEW</span></div>
+                  <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>Email founders their current investor matches. Matches are hidden until they choose a plan.</div>
+                </button>
+              </div>
+            </div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
               { key: "name",         label: "Campaign name",         type: "text" },
@@ -577,6 +599,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                       {c.name}
                     </button>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      {c.match_config ? <span style={{ flexShrink: 0, fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFF4E0", color: "#8A5A00" }}>match</span> : null}
                       {c.group_type && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", background: c.group_type === "investor" ? "#f0edfd" : c.group_type === "event" ? "#e9f7ef" : "#eef4fe", color: c.group_type === "investor" ? "#5b3fd4" : c.group_type === "event" ? "#1a7f4e" : "#1A6CE4" }}>{c.group_type}</span>}
                       <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>
                         {sc.label}
@@ -700,6 +723,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               <div style={{ minWidth: 0 }}>
                 <button type="button" onClick={() => openAnalytics(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                   <span style={{ fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</span>
+                  {c.match_config ? <span style={{ flexShrink: 0, fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFF4E0", color: "#8A5A00" }}>match</span> : null}
                   {c.group_type && <span style={{ flexShrink: 0, fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", background: c.group_type === "investor" ? "#f0edfd" : c.group_type === "event" ? "#e9f7ef" : "#eef4fe", color: c.group_type === "investor" ? "#5b3fd4" : c.group_type === "event" ? "#1a7f4e" : "#1A6CE4" }}>{c.group_type}</span>}
                 </button>
                 <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
