@@ -59,9 +59,12 @@ export function isEuCountry(country: string | null | undefined): boolean {
 
 export type CheckOptions = { verifiedOnly: boolean; excludeEu: boolean; unsubscribed: boolean; includeInferred?: boolean };
 
-/** Low-confidence inference or a default guess, as written by the enrichment fill. */
+/**
+ * Low-confidence industry (any source ending ":low", e.g. "inferred:low" from the
+ * enrichment fill or "keyword:low" from the keyword pass) or a default-guessed stage.
+ */
 export function isGuessedData(row: Pick<FounderFieldsRow, "industry_source" | "stage_source">): boolean {
-  return row.industry_source === "inferred:low" || Boolean(row.stage_source?.startsWith("guess:"));
+  return Boolean(row.industry_source?.endsWith(":low")) || Boolean(row.stage_source?.startsWith("guess:"));
 }
 
 /**

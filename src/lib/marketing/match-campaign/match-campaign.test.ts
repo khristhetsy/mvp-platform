@@ -50,6 +50,7 @@ describe("data check", () => {
   it("holds back low-confidence industry and guessed stage unless included", () => {
     expect(checkFounder(founder({ industry_source: "inferred:low" }), opts)).toBe("unconfirmed_data");
     expect(checkFounder(founder({ stage_source: "guess:default" }), opts)).toBe("unconfirmed_data");
+    expect(checkFounder(founder({ industry_source: "keyword:low" }), opts)).toBe("unconfirmed_data");
     expect(checkFounder(founder({ industry_source: "inferred:high", stage_source: "crm:extra" }), opts)).toBeNull();
     expect(checkFounder(founder({ stage_source: "guess:default" }), { ...opts, includeInferred: true })).toBeNull();
   });
