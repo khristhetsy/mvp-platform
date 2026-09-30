@@ -38,6 +38,7 @@ const ALL_COLUMNS: ColMeta[] = [
   { key: "name", label: "Name", width: "1.5fr", kind: "text", sortable: true, always: true },
   { key: "company", label: "Company", width: "1.3fr", kind: "text", sortable: true },
   { key: "type", label: "Type", width: "88px", kind: "none", sortable: false },
+  { key: "industries", label: "Industry", width: "1.2fr", kind: "none", sortable: false },
   { key: "phone", label: "Phone", width: "1fr", kind: "text", sortable: false },
   { key: "email", label: "Email", width: "1.4fr", kind: "text", sortable: true },
   { key: "last_message", label: "Last message", width: "1.7fr", kind: "none", sortable: false },
@@ -142,7 +143,15 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
   // v5 key: bumped when the "Activities" column was added (v4 for "Lead source") so a
   // stale saved set from before the column existed doesn't hide it. Resets prefs once.
-  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v5", ALL_COLUMNS.map((c) => c.key)));
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => {
+    const saved = loadLS<string[] | null>("salesContacts.cols.v5", null);
+    if (!saved) return ALL_COLUMNS.map((c) => c.key);
+    // Industry column shipped after people saved their picks: show it once by default
+    // (after Type); unticking it afterwards sticks.
+    if (saved.includes("industries") || loadLS<boolean>("salesContacts.cols.industrySeen", false)) return saved;
+    const at = saved.indexOf("type");
+    return at >= 0 ? [...saved.slice(0, at + 1), "industries", ...saved.slice(at + 1)] : [...saved, "industries"];
+  });
 
   // Group by dimension. "profile" keeps the original role-group behaviour; any
   // other dimension uses the dynamic group list from /groups.
@@ -219,7 +228,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canSelect ? `34px ${gridCols}` : gridCols;
 
-  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v5", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v5", JSON.stringify(visibleCols)); window.localStorage.setItem("salesContacts.cols.industrySeen", "true"); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
   // Load the questionnaire facet option lists once (universal — same for everyone).
@@ -436,6 +445,12 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       case "name": return <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>;
       case "company": return <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.company || "—"}</div>;
       case "type": { const tb = TYPE_BADGE[c.type] ?? TYPE_BADGE.other; return <div><span style={{ fontSize: 10, fontWeight: 600, color: tb.c, background: tb.bg, borderRadius: 10, padding: "2px 8px" }}>{tb.t}</span></div>; }
+      case "industries": {
+        const ind = c.industries ?? [];
+        if (!ind.length) return <div style={{ color: "var(--muted-foreground)" }}>—</div>;
+        const shown = ind.slice(0, 2).join(", ");
+        return <div title={ind.join(", ")} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shown}{ind.length > 2 ? <span style={{ color: "var(--muted-foreground)" }}> +{ind.length - 2}</span> : null}</div>;
+      }
       case "phone": return <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone || "—"}</div>;
       case "email": return <div style={{ color: "#185FA5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email || "—"}</div>;
       case "last_message": {

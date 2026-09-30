@@ -51,6 +51,17 @@ export async function GET(req: NextRequest): Promise<Response> {
       loadNextActivities(db(), raw.map((r) => r.id)),
     ]);
 
+    // Industry column: the page's profile->industries in one PK lookup (50 rows max),
+    // kept out of search_contacts so that function stays as is.
+    const industriesById = new Map<string, string[]>();
+    if (raw.length) {
+      const ind = await must<Array<{ id: string; industries: unknown }> | null>(
+        db().from("crm_contacts").select("id, industries:profile->industries").in("id", raw.map((r) => r.id)), "contacts: industries");
+      for (const row of ind ?? []) {
+        if (Array.isArray(row.industries)) industriesById.set(row.id, row.industries.map((x) => String(x).trim()).filter(Boolean));
+      }
+    }
+
     const rows = raw.map((r) => ({
       id: r.id,
       name: r.name ?? r.email ?? "Contact",
@@ -65,6 +76,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       createdOn: r.created_on ?? (r.synced_at ? String(r.synced_at).slice(0, 10) : ""),
       // Lead source: the override (Form D + edits) or the Odoo profile value.
       leadSource: (r.ls_override ?? "").trim() || (r.ls_profile ?? "").trim(),
+      industries: industriesById.get(r.id) ?? [],
       assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
       lastMessage: lastMsg.get(r.id) ?? null,
       activity: nextAct.get(r.id) ?? null,
