@@ -80,9 +80,24 @@ const SYSTEM = [
   "If the stage is not stated, return [] — do NOT reason from the firm's type, name, or size. A wrong stage is far worse than no stage.",
   "In rationale, when you return stages, quote the phrase you took them from.",
   "confidence reflects how sure you are overall. Be conservative: a generic holding-company name is low confidence. Never invent a sector or a stage to be helpful.",
+  "You may also get the investor's own profile notes and a LinkedIn URL. Profile notes were written by or about this investor, so sectors listed there count as stated.",
+  "A LinkedIn URL tells you only the name in its path; it is not evidence of sector or stage on its own.",
 ].join(" ");
 
-type InvestorRow = { id: string; company: string | null; email: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; inv_source: string | null };
+/**
+ * Stored in investor_enrichment.model for every proposal made WITH the extra signals
+ * (profile notes, LinkedIn URL, the contact's website column). Rows still carrying the
+ * bare model id were judged on name, email domain and website only, which is what lets
+ * the "re-run with new signals" pass find them without a schema change.
+ */
+export const SIGNALS_MODEL = `${CLAUDE_HAIKU}+signals`;
+
+/** Confidence band written as the provenance tag on approval, matching the queue UI. */
+export function confidenceBand(confidence: number): "high" | "medium" | "low" {
+  return confidence >= 85 ? "high" : confidence >= 60 ? "medium" : "low";
+}
+
+type InvestorRow = { id: string; company: string | null; email: string | null; website?: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; inv_source: string | null };
 
 function domainOf(email: string | null): string | null {
   if (!email || !email.includes("@")) return null;
@@ -116,6 +131,40 @@ async function fetchSiteText(domain: string | null): Promise<string | null> {
   const text = parts.filter(Boolean).join(" \n ").replace(/\s+/g, " ").trim().slice(0, 3000);
   return text || null;
 }
+/** Host of a website column value ("https://www.acme.vc/about" → "acme.vc"). Pure. */
+export function websiteDomain(website: string | null | undefined): string | null {
+  const w = (website ?? "").trim();
+  if (!w) return null;
+  try {
+    const host = new URL(/^https?:\/\//i.test(w) ? w : `https://${w}`).hostname.toLowerCase().replace(/^www\./, "");
+    return host.includes(".") ? host : null;
+  } catch { return null; }
+}
+
+const BOILERPLATE = /^(upon request|n\/a|none|-|\.)$/i;
+const NOTE_LABELS = ["Investor quick notes", "Investor short bio", "Investor business summary"];
+
+/** The investor's own descriptive notes from the Odoo profile, boilerplate removed. Pure. */
+export function profileNotes(raw: Record<string, unknown> | null): string | null {
+  const extra = (raw?.__profile as { extra?: Record<string, unknown> } | undefined)?.extra ?? {};
+  const parts = NOTE_LABELS.map((l) => extra[l]).filter((v): v is string => typeof v === "string")
+    .map((v) => v.trim()).filter((v) => v && !BOILERPLATE.test(v));
+  const text = parts.join(" | ").slice(0, 600);
+  return text || null;
+}
+
+/** First linkedin.com URL anywhere in the synced Odoo record. Pure. */
+export function linkedinOf(raw: Record<string, unknown> | null): string | null {
+  const m = JSON.stringify(raw ?? {}).match(/https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/[^"\s\\]+/i);
+  return m ? m[0] : null;
+}
+
+/** Signal the first AI pass never saw: notes, LinkedIn, or a website unlike the email's. */
+export function hasNewSignal(r: InvestorRow): boolean {
+  const site = websiteDomain(r.website);
+  return Boolean(profileNotes(r.raw) || linkedinOf(r.raw) || (site && site !== domainOf(r.email)));
+}
+
 function hasIndustry(r: InvestorRow): boolean {
   const ov = r.overrides?.["Industries"];
   if (Array.isArray(ov) && ov.length) return true;
@@ -156,12 +205,20 @@ export class ClaudeUnavailableError extends Error {
 export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis: string }) | null> {
   if (!isClaudeConfigured()) throw new ClaudeUnavailableError("Claude is not configured (no API key).");
   const domain = domainOf(row.email);
-  const site = await fetchSiteText(domain);
-  const basis = site ? "website" : domain ? "domain" : "name";
+  // The website column wins over the email domain: it is the firm's own site, where an
+  // email may be personal or a parent company's.
+  const siteDomain = websiteDomain(row.website) ?? domain;
+  const site = await fetchSiteText(siteDomain);
+  const notes = profileNotes(row.raw);
+  const linkedin = linkedinOf(row.raw);
+  const basis = site ? "website" : notes ? "notes" : linkedin ? "linkedin" : domain ? "domain" : "name";
   const user = [
     `Company: ${row.company ?? "(unknown)"}`,
     `Email domain: ${domain ?? "(none)"}`,
+    siteDomain && siteDomain !== domain ? `Website: ${siteDomain}` : null,
     site ? `Website text (excerpt): ${site}` : null,
+    notes ? `Investor's own profile notes: ${notes}` : null,
+    linkedin ? `LinkedIn: ${linkedin}` : null,
   ].filter(Boolean).join("\n");
   let reply: string;
   try {
@@ -176,7 +233,8 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
 }
 
 /** Run a capped batch: propose for investors missing industry or type, store as pending. */
-export async function runEnrichment(limit = 40): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number; unavailable: string | null }> {
+export async function runEnrichment(limit = 40, mode: "new" | "rerun" = "new"): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number; unavailable: string | null }> {
+  if (mode === "rerun") return rerunWithSignals(limit);
   // IDS ONLY. This used to select the full row — including the fat Odoo `raw` jsonb —
   // for every investor, on EVERY batch. A "run all" of ~50 batches therefore parsed the
   // whole network ~50 times over, which is what pinned the database CPU at 97%.
@@ -205,7 +263,7 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
   const fetched: InvestorRow[] = [];
   for (const part of chunk(slice)) {   // URL-bound .in() — default 100
     const { data } = await db().from("crm_contacts")
-      .select("id, company, email, raw, overrides, inv_source").in("id", part);
+      .select("id, company, email, website, raw, overrides, inv_source").in("id", part);
     fetched.push(...((data ?? []) as InvestorRow[]));
   }
   const todo = fetched.filter((r) => !hasIndustry(r) || !hasType(r) || !hasStage(r)).slice(0, limit);
@@ -217,7 +275,7 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
       nothingToDo.map((id) => ({
         contact_id: id, proposed_industries: [], proposed_type: null, proposed_stage: [],
         confidence: 0, basis: null, rationale: "Already complete — nothing missing.",
-        model: CLAUDE_HAIKU, status: "rejected", updated_at: new Date().toISOString(),
+        model: SIGNALS_MODEL, status: "rejected", updated_at: new Date().toISOString(),
       })), { onConflict: "contact_id" });
   }
 
@@ -247,7 +305,7 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
         proposed_industries: hasSignal ? p!.industries : [], proposed_type: hasSignal ? p!.investorType : null,
         proposed_stage: hasSignal ? p!.stages : [],
         confidence: hasSignal ? p!.confidence : 0, basis: p?.basis ?? null,
-        rationale: hasSignal ? p!.rationale : "No signal from name/domain/website.", model: CLAUDE_HAIKU,
+        rationale: hasSignal ? p!.rationale : "No signal from name, domain, website, notes or LinkedIn.", model: SIGNALS_MODEL,
         status: hasSignal ? "pending" : "rejected", updated_at: new Date().toISOString(),
       }, { onConflict: "contact_id" });
       if (!error && hasSignal) proposed++; else skipped++;
@@ -262,6 +320,61 @@ export async function runEnrichment(limit = 40): Promise<{ scanned: number; prop
     remaining: Math.max(0, candidates.length - consumed),
     unavailable,
   };
+}
+
+/**
+ * Second look at contacts the first pass wrote off as "no signal". Only contacts that now
+ * have signal that pass never read (profile notes, LinkedIn, a distinct website) and still
+ * miss industry or type go back to the AI; the rest are just stamped as re-checked so the
+ * loop terminates. A new result replaces the rejected row (one row per contact).
+ */
+async function rerunWithSignals(limit: number): Promise<{ scanned: number; proposed: number; skipped: number; remaining: number; unavailable: string | null }> {
+  const rejected = await readAllRows<{ contact_id: string }>((from, to) => db().from("investor_enrichment")
+    .select("contact_id").eq("status", "rejected")
+    .or(`model.is.null,model.neq."${SIGNALS_MODEL}"`)
+    .order("contact_id", { ascending: true }).range(from, to), { context: "rerunWithSignals: rejected" });
+  const slice = rejected.map((r) => r.contact_id).slice(0, limit * 3);
+  const fetched: InvestorRow[] = [];
+  for (const part of chunk(slice)) {
+    const { data } = await db().from("crm_contacts")
+      .select("id, company, email, website, raw, overrides, inv_source").in("id", part);
+    fetched.push(...((data ?? []) as InvestorRow[]));
+  }
+  const eligible = fetched.filter((r) => (!hasIndustry(r) || !hasType(r)) && hasNewSignal(r));
+  const todo = eligible.slice(0, limit);
+  const eligibleIds = new Set(eligible.map((r) => r.id));
+  // Nothing new to read: stamp as re-checked (status stays rejected) so we don't revisit.
+  const stamp = fetched.filter((r) => !eligibleIds.has(r.id)).map((r) => r.id);
+  for (const part of chunk(stamp)) {
+    await db().from("investor_enrichment").update({ model: SIGNALS_MODEL, updated_at: new Date().toISOString() }).in("contact_id", part);
+  }
+
+  let proposed = 0, skipped = 0;
+  let unavailable: string | null = null;
+  let cursor = 0;
+  async function worker() {
+    while (cursor < todo.length && !unavailable) {
+      const r = todo[cursor++];
+      let p: (Proposal & { basis: string }) | null;
+      try { p = await proposeFor(r); } catch (e) {
+        if (e instanceof ClaudeUnavailableError) { unavailable = e.message; return; }
+        throw e;
+      }
+      const hasSignal = p && (p.industries.length > 0 || p.investorType || p.stages.length > 0);
+      const { error } = await db().from("investor_enrichment").upsert({
+        contact_id: r.id,
+        proposed_industries: hasSignal ? p!.industries : [], proposed_type: hasSignal ? p!.investorType : null,
+        proposed_stage: hasSignal ? p!.stages : [],
+        confidence: hasSignal ? p!.confidence : 0, basis: p?.basis ?? null,
+        rationale: hasSignal ? p!.rationale : "No signal from name, domain, website, notes or LinkedIn.", model: SIGNALS_MODEL,
+        status: hasSignal ? "pending" : "rejected", updated_at: new Date().toISOString(),
+      }, { onConflict: "contact_id" });
+      if (!error && hasSignal) proposed++; else skipped++;
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(6, todo.length) }, () => worker()));
+  const consumed = stamp.length + todo.length;
+  return { scanned: rejected.length, proposed, skipped, remaining: Math.max(0, rejected.length - consumed), unavailable };
 }
 
 export type EnrichmentRow = {
@@ -284,7 +397,7 @@ export async function listProposals(status: "pending" | "approved" | "rejected" 
 
 /** Approve a proposal: fill missing overrides + mark inferred (never overwriting trusted). */
 export async function applyProposal(id: string, edits: { industries?: string[]; type?: string | null; stages?: string[] } | null, reviewerId?: string | null): Promise<boolean> {
-  const { data: prop } = await db().from("investor_enrichment").select("contact_id, proposed_industries, proposed_type, proposed_stage").eq("id", id).maybeSingle();
+  const { data: prop } = await db().from("investor_enrichment").select("contact_id, proposed_industries, proposed_type, proposed_stage, confidence").eq("id", id).maybeSingle();
   if (!prop) return false;
   // Read only to decide WHAT to write (never overwrite a value the contact already has);
   // the write itself is an atomic merge, so a concurrent writer can't be clobbered.
@@ -298,8 +411,13 @@ export async function applyProposal(id: string, edits: { industries?: string[]; 
   const stages = normalizeStages(edits?.stages ?? (prop.proposed_stage as string[]) ?? []);
   const has = (k: string) => Array.isArray(current[k]) && (current[k] as unknown[]).length > 0;
   const set: Record<string, unknown> = {};
-  if (industries.length && !has("Industries")) set["Industries"] = canonicalizeIndustries(industries);
-  if (type && !has("Investor type")) set["Investor type"] = [type];
+  // Provenance, as the founder fill does it: inferred:<band>. A reviewer's own edit is a
+  // human decision, so it is tagged high whatever the model's confidence was.
+  // The route always passes an edits object, so "edited" means the reviewer sent values.
+  const edited = edits?.industries !== undefined || edits?.stages !== undefined;
+  const tag = `inferred:${edited ? "high" : confidenceBand(Number(prop.confidence) || 0)}`;
+  if (industries.length && !has("Industries")) { set["Industries"] = canonicalizeIndustries(industries); set["_industry_source"] = tag; }
+  if (type && !has("Investor type")) { set["Investor type"] = [type]; set["_type_source"] = tag; }
   // Don't overwrite a stage the contact already has under EITHER label.
   if (stages.length && !OP_STAGE_LABELS.some(has)) set[OP_STAGE_LABEL] = stages;
   if (Object.keys(set).length > 0) {

@@ -16,7 +16,13 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { readAllRows, readAllRowsChecked, chunk } from "@/lib/supabase/paged";
 import { reportDbError } from "@/lib/supabase/report";
-import { fieldsOf, type GatedRow, type Scorable } from "@/lib/fit/match-investors";
+import { fieldsOf, INCLUDE_LOW_CONFIDENCE_KEY, type FieldOpts, type GatedRow, type Scorable } from "@/lib/fit/match-investors";
+import { getBoolSetting } from "@/lib/settings/platform-settings";
+
+/** Whether low-confidence AI values count in matching (admin setting, off by default). */
+async function fieldOpts(): Promise<FieldOpts> {
+  return { includeLow: await getBoolSetting(INCLUDE_LOW_CONFIDENCE_KEY, false) };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -44,10 +50,10 @@ export type IndexRow = {
  * skips those in firm de-dup) or no industries (the hard filter would exclude them from
  * every search anyway).
  */
-export function toIndexRow(row: GatedRow, now = new Date().toISOString()): IndexRow | null {
+export function toIndexRow(row: GatedRow, now = new Date().toISOString(), opts: FieldOpts = {}): IndexRow | null {
   const company = (row.company ?? "").trim();
   if (!company) return null;
-  const f = fieldsOf(row);
+  const f = fieldsOf(row, opts);
   if (f.industries.length === 0) return null;
   return {
     contact_id: row.id,
@@ -101,7 +107,8 @@ export async function rebuildMatchIndex(opts: { full?: boolean } = {}): Promise<
   }, { context: "rebuildMatchIndex: crm_contacts" });
 
   const now = new Date().toISOString();
-  const indexRows = rows.map((r) => toIndexRow(r, now)).filter((r): r is IndexRow => r !== null);
+  const fieldOptions = await fieldOpts();
+  const indexRows = rows.map((r) => toIndexRow(r, now, fieldOptions)).filter((r): r is IndexRow => r !== null);
 
   let written = 0;
   // A chunk that failed to upsert has NOT been refreshed, so its rows still carry an old
@@ -143,11 +150,12 @@ export async function reindexContacts(contactIds: string[]): Promise<number> {
   if (ids.length === 0) return 0;
   let written = 0;
   const now = new Date().toISOString();
+  const fieldOptions = await fieldOpts();
   for (const part of chunk(ids)) {   // URL-bound .in() — default 100
     const { data, error } = await db().from("crm_contacts")
       .select("id, company, raw, overrides, inv_source, inv_verified_at, synced_at").in("id", part);
     if (reportDbError("reindexContacts: read", error)) continue;
-    const rows = ((data ?? []) as GatedRow[]).map((r) => toIndexRow(r, now));
+    const rows = ((data ?? []) as GatedRow[]).map((r) => toIndexRow(r, now, fieldOptions));
     const keep = rows.filter((r): r is IndexRow => r !== null);
     if (keep.length) {
       const { error: upErr } = await db().from("investor_match_index").upsert(keep, { onConflict: "contact_id" });
