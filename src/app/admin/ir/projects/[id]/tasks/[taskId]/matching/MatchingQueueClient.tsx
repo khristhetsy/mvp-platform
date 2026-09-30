@@ -219,6 +219,32 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
         {!noSector && !data.thin ? <MatchTotals total={data.total} contacted={data.contacted ?? 0} loading={loading} hideContacted={hideContacted} onNeverContacted={() => setHideContacted((h) => !h)} /> : null}
       </div>
 
+      <div className="sticky top-0 z-20 mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-md">
+        <span className="text-[12.5px] text-slate-600">{picked.size} selected</span>
+        {picked.size ? <button type="button" onClick={() => setPicked(new Set())} className="text-[12.5px] text-indigo-700 hover:underline">Unselect all</button> : null}
+        {pickedContacted ? <span className="rounded-md bg-amber-50 px-2 py-1 text-[12px] text-amber-900">{pickedContacted} already worked for this founder</span> : null}
+        {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
+        <Link href={back} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Cancel</Link>
+        <button type="button" disabled={busy || !picked.size} onClick={() => void openSequence()} aria-expanded={!!seq} className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-50 disabled:opacity-60"><i className="ti ti-bolt" aria-hidden="true" /> Confirm + auto sequence</button>
+        <button type="button" disabled={busy || !picked.size} onClick={() => void confirm()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size || ""} investor${picked.size === 1 ? "" : "s"}`}</button>
+        {seq ? (
+          <div className="absolute right-0 top-full z-30 mt-2 w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-xl" role="dialog" aria-label="Auto sequence for the selected investors">
+            <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
+            {seq.setupNeeded ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">Auto sequences need migration <code>20260928100000_ir_sequences.sql</code> run in the Supabase SQL editor first.</p> : (
+              <div className="space-y-2">
+                <label className="block text-[11.5px] text-slate-500">Sequence<select value={seq.template} onChange={(e) => setSeq({ ...seq, template: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}</select></label>
+                <label className="block text-[11.5px] text-slate-500">Account manager to alert<select value={seq.manager} onChange={(e) => setSeq({ ...seq, manager: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{seq.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+                <div className="flex gap-4">{(["icapos", "gmail"] as const).map((k) => <label key={k} className="inline-flex items-center gap-1.5"><input type="radio" name="bulk-via" checked={seq.via === k} onChange={() => setSeq({ ...seq, via: k })} /> {k === "icapos" ? "iCapOS" : "Gmail"}</label>)}</div>
+                {seq.via === "gmail" ? <p className="text-[11.5px] text-amber-700">Opens and clicks can&rsquo;t be tracked on Gmail sends.</p> : null}
+                <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={seq.notifyEmail} onChange={(e) => setSeq({ ...seq, notifyEmail: e.target.checked })} /> Email the alerts too (always in iCapOS notifications)</label>
+                <p className="text-[11.5px] text-slate-500">Alerts on opens, clicks, replies and meetings; stops on a reply or meeting. Edit any one of them later from its record. The first emails go out within 15 minutes.</p>
+                <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size} and start sequence`}</button>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
+
       {mode === "search" ? (
         <InvestorSearchTab
           projectId={projectId} cols={cols} picked={picked} setPicked={setPicked} hideContacted={hideContacted}
@@ -264,32 +290,6 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
 
       </>)}
 
-      <div className="sticky bottom-0 mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
-        <span className="text-[12.5px] text-slate-600">{picked.size} selected</span>
-        {picked.size ? <button type="button" onClick={() => setPicked(new Set())} className="text-[12.5px] text-indigo-700 hover:underline">Unselect all</button> : null}
-        {pickedContacted ? <span className="rounded-md bg-amber-50 px-2 py-1 text-[12px] text-amber-900">{pickedContacted} already worked for this founder</span> : null}
-        {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
-        <Link href={back} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Cancel</Link>
-        <button type="button" disabled={busy || !picked.size} onClick={() => void openSequence()} aria-expanded={!!seq} className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-50 disabled:opacity-60"><i className="ti ti-bolt" aria-hidden="true" /> Confirm + auto sequence</button>
-        <button type="button" disabled={busy || !picked.size} onClick={() => void confirm()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size || ""} investor${picked.size === 1 ? "" : "s"}`}</button>
-      </div>
-
-      {seq ? (
-        <div className="fixed bottom-20 right-6 z-30 w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-xl" role="dialog" aria-label="Auto sequence for the selected investors">
-          <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
-          {seq.setupNeeded ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">Auto sequences need migration <code>20260928100000_ir_sequences.sql</code> run in the Supabase SQL editor first.</p> : (
-            <div className="space-y-2">
-              <label className="block text-[11.5px] text-slate-500">Sequence<select value={seq.template} onChange={(e) => setSeq({ ...seq, template: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}</select></label>
-              <label className="block text-[11.5px] text-slate-500">Account manager to alert<select value={seq.manager} onChange={(e) => setSeq({ ...seq, manager: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{seq.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-              <div className="flex gap-4">{(["icapos", "gmail"] as const).map((k) => <label key={k} className="inline-flex items-center gap-1.5"><input type="radio" name="bulk-via" checked={seq.via === k} onChange={() => setSeq({ ...seq, via: k })} /> {k === "icapos" ? "iCapOS" : "Gmail"}</label>)}</div>
-              {seq.via === "gmail" ? <p className="text-[11.5px] text-amber-700">Opens and clicks can&rsquo;t be tracked on Gmail sends.</p> : null}
-              <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={seq.notifyEmail} onChange={(e) => setSeq({ ...seq, notifyEmail: e.target.checked })} /> Email the alerts too (always in iCapOS notifications)</label>
-              <p className="text-[11.5px] text-slate-500">Alerts on opens, clicks, replies and meetings; stops on a reply or meeting. Edit any one of them later from its record. The first emails go out within 15 minutes.</p>
-              <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size} and start sequence`}</button>
-            </div>
-          )}
-        </div>
-      ) : null}
       {profile ? <InvestorPanel row={profile} onClose={() => setProfile(null)} picked={picked.has(profile.contactId)} onPick={(on) => setPicked((p) => { const n = new Set(p); if (on) n.add(profile.contactId); else n.delete(profile.contactId); return n; })} /> : null}
     </div>
   );
