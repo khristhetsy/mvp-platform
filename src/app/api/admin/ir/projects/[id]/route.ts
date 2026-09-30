@@ -1,12 +1,12 @@
 /**
  * One IR project — the pipeline payload.
  *   GET   → { project, milestones, matches, tasks, openActivities, staff, stageEvents }
- *   PATCH { status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary?, description?, color? } → { ok }
+ *   PATCH { companyId?, status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary?, description?, color? } → { ok }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
-import { getProject, listActivities, listMatches, listMilestones, listStaff, listTasks, rescheduleProject, updateProject } from "@/lib/ir/db";
+import { db, getProject, listActivities, listMatches, listMilestones, listStaff, listTasks, rescheduleProject, updateProject } from "@/lib/ir/db";
 import { loadEvents } from "@/lib/ir/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +25,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 const schema = z.object({
+  companyId: z.string().uuid().nullable().optional(),
   status: z.enum(["active", "paused", "completed", "cancelled"]).optional(),
   ownerId: z.string().uuid().optional(),
   founderReportVisible: z.boolean().optional(),
@@ -55,7 +56,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         try { await rescheduleProject(id, start, term); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't move the dates." }, { status: 409 }); }
       }
     }
-    await updateProject(id, { status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, founder_name: d.founderName === undefined ? undefined : d.founderName || null, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description, color: d.color });
+    if (d.companyId) {
+      const { data: co } = await db().from("companies").select("id").eq("id", d.companyId).maybeSingle();
+      if (!co) return NextResponse.json({ error: "Company not found." }, { status: 404 });
+    }
+    await updateProject(id, { company_id: d.companyId, status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, founder_name: d.founderName === undefined ? undefined : d.founderName || null, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description, color: d.color });
     return NextResponse.json({ ok: true });
   } catch (e) { return failed(e, "Couldn't update the project."); }
 }

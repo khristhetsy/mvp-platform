@@ -119,7 +119,7 @@ export function ProjectFormClient({ projectId, initialTab }: { projectId: string
             <Field label="Project manager"><select value={p.owner_id} disabled={busy} onChange={(e) => patch({ ownerId: e.target.value })} className={inp}>{data.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
             <Field label="Tags"><span className="flex flex-wrap gap-1">{p.owner_name ? <Chip cls="bg-blue-50 text-blue-800">{p.owner_name}</Chip> : null}{p.is_spv ? <Chip cls="bg-rose-50 text-rose-700">SPV</Chip> : null}{entrepreneur?.portalPlan ? <Chip cls="bg-emerald-50 text-emerald-700">{entrepreneur.portalPlan}</Chip> : null}<Chip cls="bg-slate-100 text-slate-600">{STATUS_LABEL[p.status]}</Chip></span></Field>
             <Field label="Planned date"><span>{fmtDay(p.start_date)} → {fmtDay(p.end_date)} · {p.term_months} months</span></Field>
-            <Field label="Company"><span>{entrepreneur?.companyId ? <Link href={`/admin/companies/${entrepreneur.companyId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.founderContactId ? <Link href={`/admin/sales/contacts/${entrepreneur.founderContactId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.company ?? "—"}{entrepreneur?.founder ? <span className="text-slate-500"> · {entrepreneur.founder}</span> : null}</span></Field>
+            <Field label="Company"><span>{entrepreneur?.companyId ? <Link href={`/admin/companies/${entrepreneur.companyId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.founderContactId ? <Link href={`/admin/sales/contacts/${entrepreneur.founderContactId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.company ?? "—"}{entrepreneur?.founder ? <span className="text-slate-500"> · {entrepreneur.founder}</span> : null}<CompanyLinker linked={!!p.company_id} busy={busy} onLink={(companyId) => patch({ companyId })} /></span></Field>
             <Field label="Founder portal"><span>{p.founder_report_visible ? "On · founder sees stage counts and firms, never investor names" : "Off"}</span></Field>
           </div>
 
@@ -227,5 +227,38 @@ function Chatter({ projectId, followers, feed, onPosted }: { projectId: string; 
         {feed.length === 0 ? <p className="py-3 text-[12.5px] text-slate-400">Nothing on this project yet.</p> : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * "Link company" beside the Company field: search iCapOS companies by name and link the
+ * project to one, so the email dialog finds the founder's one-pager and data room.
+ */
+function CompanyLinker({ linked, busy, onLink }: { linked: boolean; busy: boolean; onLink: (companyId: string) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<Array<{ id: string; name: string; published: boolean }>>([]);
+  useEffect(() => {
+    if (!open || q.trim().length < 2) return;
+    const t = setTimeout(() => {
+      void fetch(`/api/admin/ir/companies?q=${encodeURIComponent(q.trim())}`).then((r) => (r.ok ? r.json() : { companies: [] })).then((d) => setHits(d.companies ?? [])).catch(() => setHits([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [open, q]);
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="ml-2 text-[11.5px] text-indigo-700 hover:underline">{linked ? "Change" : "Link company"}</button>;
+  return (
+    <span className="relative ml-2 inline-block align-middle">
+      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }} placeholder="Search companies" aria-label="Search companies" className={`${inp} w-52`} />
+      <button type="button" onClick={() => { setOpen(false); setQ(""); setHits([]); }} className="ml-1 text-[11.5px] text-slate-500 hover:text-slate-800">Cancel</button>
+      {q.trim().length >= 2 ? (
+        <span className="absolute left-0 top-full z-20 mt-1 block w-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+          {hits.length === 0 ? <span className="block px-3 py-2 text-[12px] text-slate-400">No companies match.</span> : hits.map((c) => (
+            <button key={c.id} type="button" disabled={busy} onClick={async () => { await onLink(c.id); setOpen(false); setQ(""); setHits([]); }} className="flex w-full items-center justify-between px-3 py-2 text-left text-[12.5px] hover:bg-indigo-50 disabled:opacity-60">
+              <span className="truncate">{c.name}</span>{c.published ? <span className="ml-2 shrink-0 rounded bg-emerald-50 px-1.5 text-[10.5px] text-emerald-700">One-pager</span> : null}
+            </button>
+          ))}
+        </span>
+      ) : null}
+    </span>
   );
 }

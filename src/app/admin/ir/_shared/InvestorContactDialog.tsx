@@ -3,12 +3,14 @@
 /**
  * Odoo-style "Open: Contact" popup for an investor: the contact fields (membership, address,
  * job position, phone, email, website, created on, assigned staff), then tabs for the
- * investor questionnaire and the IR projects they are on. Read-only here; the contact is
- * edited in the Sales Hub, which the footer links to.
+ * investor questionnaire and the IR projects they are on. Edit (for Odoo contacts) swaps the
+ * view for the same field-by-field editor as the Sales Hub record: each field saves to Odoo
+ * and refreshes the iCapOS copy, and the popup reloads when editing is done.
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IR_STAGE_LABEL, type IrStage } from "@/lib/ir/types";
+import { EditableProfile } from "@/components/crm/EditableProfile";
 
 type Detail = {
   contact: {
@@ -17,7 +19,7 @@ type Detail = {
     createdOn: string | null; membership: string | null; assignees: string[];
     profile: { investorTypes: string[]; industries: string[]; operatingStages: string[]; fundingStages: string[]; capital: string[]; businessEntity: string[]; investmentSize: string[]; revenueRange: string[] };
   };
-  investor: { id: string; name: string | null; firm: string | null; dataSource: string | null; verifiedAt: string | null };
+  investor: { id: string; name: string | null; firm: string | null; dataSource: string | null; verifiedAt: string | null; odooId?: string | null };
   matches: Array<{ matchId: string; projectTitle: string; founderName: string | null; stage: IrStage; stageChangedAt: string }>;
 };
 type Tab = "address" | "profile" | "ir";
@@ -36,6 +38,8 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
   const [d, setD] = useState<Detail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("address");
+  const [editing, setEditing] = useState(false);
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     let live = true;
     void fetch(`/api/admin/ir/investors/${contactId}?detail=1`).then(async (r) => {
@@ -44,7 +48,7 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
       if (!r.ok) setErr(j.error ?? "Couldn't load the contact."); else setD(j);
     });
     return () => { live = false; };
-  }, [contactId]);
+  }, [contactId, reload]);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", esc);
@@ -60,11 +64,22 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
       <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden="true" />
       <div role="dialog" aria-modal="true" aria-label={`Contact: ${name}`} className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white text-[13px] shadow-2xl">
         <div className="flex items-center border-b border-slate-100 px-5 py-3">
-          <p className="text-[15px] font-semibold text-slate-900">Open: Contact</p>
+          <p className="text-[15px] font-semibold text-slate-900">{editing ? "Edit: Contact" : "Open: Contact"}</p>
+          {d?.investor.odooId ? (
+            editing
+              ? <button type="button" onClick={() => { setEditing(false); setReload((n) => n + 1); }} className="ml-3 rounded-lg bg-indigo-600 px-3 py-1 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Done editing</button>
+              : <button type="button" onClick={() => setEditing(true)} className="ml-3 inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
+          ) : null}
           <button type="button" onClick={onClose} aria-label="Close" className="ml-auto rounded-lg bg-slate-100 px-2 py-1 text-slate-600 hover:bg-slate-200"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
         <div className="overflow-y-auto px-5 py-4">
-          {err ? <p className="text-rose-600">{err}</p> : !d || !c ? <p className="text-slate-400">Loading…</p> : (
+          {editing && d?.investor.odooId ? (
+            <>
+              <h3 className="mb-1 truncate text-[22px] font-semibold text-slate-900">{name}</h3>
+              <p className="mb-3 flex items-center gap-1.5 text-[11.5px] text-slate-500"><i className="ti ti-refresh" aria-hidden="true" /> Each field saves to Odoo and updates iCapOS.</p>
+              <EditableProfile externalId={d.investor.odooId} />
+            </>
+          ) : err ? <p className="text-rose-600">{err}</p> : !d || !c ? <p className="text-slate-400">Loading…</p> : (
             <>
               <div className="flex items-start gap-4">
                 <div className="min-w-0 flex-1">

@@ -12,6 +12,7 @@ import { formatRange } from "@/lib/ir/milestones";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../../../_shared/RecordPanels";
+import type { OdooOpenActivity } from "@/lib/ir/odoo-open-activities";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 import { MatchBulkActions } from "./MatchBulkActions";
 import { ActivityPopover } from "./ActivityPopover";
@@ -95,6 +96,19 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
     await fetch(`/api/admin/ir/activities/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     await load();
   }
+
+  // Open Odoo activities on the investors (read live; the import only brings completed history).
+  const [odooActs, setOdooActs] = useState<Record<string, OdooOpenActivity[]>>({});
+  const matchKey = (data?.matches ?? []).map((m) => m.id).join(",");
+  const loadOdoo = useCallback(async () => {
+    if (!matchKey) { setOdooActs({}); return; }
+    const r = await fetch(`/api/admin/ir/odoo-activities?matchIds=${matchKey}`).catch(() => null);
+    const j = r && r.ok ? await r.json().catch(() => ({})) : {};
+    setOdooActs(j.byMatch ?? {});
+  }, [matchKey]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then set
+  useEffect(() => { void loadOdoo(); }, [loadOdoo]);
+  const odooDueIso = (o: OdooOpenActivity) => (o.due ? new Date(`${o.due}T17:00:00`).toISOString() : "");
 
   const open = useMemo(() => (data?.activities ?? []).filter((a) => !a.done_at).sort((a, b) => (a.due_at ?? "9").localeCompare(b.due_at ?? "9")), [data]);
   const done = useMemo(() => (data?.activities ?? []).filter((a) => a.done_at).sort((a, b) => (b.done_at ?? "").localeCompare(a.done_at ?? "")), [data]);
@@ -249,7 +263,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                       case "membership": return (c?.membership ?? "Investor").toLowerCase();
                       case "phone": return c?.phone ?? "";
                       case "email": return (c?.email ?? "").toLowerCase();
-                      case "activities": return open.find((a) => a.match_id === m.id)?.due_at ?? "";
+                      case "activities": return [open.find((a) => a.match_id === m.id)?.due_at ?? "", ...(odooActs[m.id] ?? []).map(odooDueIso)].filter(Boolean).sort()[0] ?? "";
                       case "country": return (c?.country ?? "").toLowerCase();
                       case "stage": return IR_STAGES.indexOf(m.stage);
                       case "fit": return m.fit_tier ?? "";
@@ -264,6 +278,11 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                   const nx = open.find((a) => a.match_id === m.id);
                   const last = done.find((a) => a.match_id === m.id);
                   const late = nx?.due_at ? nx.due_at < new Date(now).toISOString() : false;
+                  const ox = odooActs[m.id] ?? [];
+                  // The Odoo activity leads the cell when it is due before the iCapOS one (or there is none).
+                  const oFirst = ox[0] && (!nx?.due_at || (odooDueIso(ox[0]) && odooDueIso(ox[0]) < nx.due_at)) ? ox[0] : null;
+                  const oLate = oFirst ? !!oFirst.due && odooDueIso(oFirst) < new Date(now).toISOString() : false;
+                  const openCount = open.filter((a) => a.match_id === m.id).length + ox.length;
                   const cellOf = (k: MatchColKey) => {
                     switch (k) {
                       case "firm": return m.investor_firm ?? "—";
@@ -271,9 +290,10 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                       case "phone": return c?.phone ?? "—";
                       case "email": return <span className="block max-w-[220px] truncate" title={c?.email ?? ""}>{c?.email ?? "—"}</span>;
                       case "activities": return <button type="button" onClick={(e) => { e.stopPropagation(); const el = e.currentTarget; setActPop((cur) => (cur?.matchId === m.id ? null : { matchId: m.id, el })); }} aria-haspopup="dialog" aria-expanded={actPop?.matchId === m.id} title="See or schedule activities"
-                        className={`-mx-1 rounded px-1 py-0.5 text-left hover:bg-indigo-50 ${actPop?.matchId === m.id ? "bg-indigo-50" : ""}`}>{nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
+                        className={`-mx-1 rounded px-1 py-0.5 text-left hover:bg-indigo-50 ${actPop?.matchId === m.id ? "bg-indigo-50" : ""}`}>{oFirst ? <span className={`inline-flex items-center gap-1 ${oLate ? "text-rose-700" : "text-slate-700"}`}><i className="ti ti-calendar-event" aria-hidden="true" />{oFirst.summary}{oFirst.due ? <span className="text-slate-400"> · {oLate ? "overdue" : "due"} {new Date(odooDueIso(oFirst)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span> : null}</span>
+                        : nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
                         : last ? <span className="inline-flex items-center gap-1 text-emerald-700"><i className="ti ti-check" aria-hidden="true" />{last.subject}{last.done_at ? <span className="text-slate-400"> · {fmt(last.done_at)}</span> : null}</span>
-                        : <span className="inline-flex items-center gap-1 text-slate-400"><i className="ti ti-clock" aria-hidden="true" />{IR_STAGE_LABEL[m.stage]}</span>}{open.filter((a) => a.match_id === m.id).length > 1 ? <span className="ml-1 rounded-full bg-indigo-50 px-1.5 text-[10.5px] font-medium text-indigo-700">+{open.filter((a) => a.match_id === m.id).length - 1}</span> : null}</button>;
+                        : <span className="inline-flex items-center gap-1 text-slate-400"><i className="ti ti-clock" aria-hidden="true" />{IR_STAGE_LABEL[m.stage]}</span>}{openCount > 1 ? <span className="ml-1 rounded-full bg-indigo-50 px-1.5 text-[10.5px] font-medium text-indigo-700">+{openCount - 1}</span> : null}</button>;
                       case "country": return c?.country ?? "—";
                       case "stage": return <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">{IR_STAGE_LABEL[m.stage]}</span>;
                       case "fit": return m.fit_tier ? `${m.fit_tier[0].toUpperCase()}${m.fit_tier.slice(1)}` : "—";
@@ -292,7 +312,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                   <tr><td colSpan={mcols.length + 3} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
                 </tbody></table>
               </div>
-              {actPop ? (() => { const m = data.matches.find((x) => x.id === actPop.matchId); return m ? <ActivityPopover anchor={actPop.el} activities={open.filter((a) => a.match_id === m.id)} projectId={p.id} taskId={t.id} matchId={m.id} staff={data.staff} meId={meId} now={now} onChange={load} onClose={closeActPop} /> : null; })() : null}
+              {actPop ? (() => { const m = data.matches.find((x) => x.id === actPop.matchId); return m ? <ActivityPopover anchor={actPop.el} activities={open.filter((a) => a.match_id === m.id)} projectId={p.id} taskId={t.id} matchId={m.id} staff={data.staff} meId={meId} now={now} onChange={load} onClose={closeActPop} odoo={odooActs[m.id] ?? []} history={done.filter((a) => a.match_id === m.id)} onOdooChange={loadOdoo} /> : null; })() : null}
               {contact ? <InvestorContactDialog contactId={contact.contactId} matchId={contact.matchId} onClose={() => setContact(null)} /> : null}
             </div>
           ) : null}

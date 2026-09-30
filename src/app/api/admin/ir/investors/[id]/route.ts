@@ -1,7 +1,7 @@
 /**
  * One investor, for the matching queue's profile panel — name / firm / data source and every
  * IR match they are on, never phone or email.
- *   GET → { investor: { id, name, firm, dataSource, verifiedAt, website }, matches: [{ matchId, projectId, projectTitle, founderName, stage, stageChangedAt }] }
+ *   GET → { investor: { id, name, firm, dataSource, verifiedAt, website, odooId }, matches: [{ matchId, projectId, projectTitle, founderName, stage, stageChangedAt }] }
  *   GET ?detail=1 → also `contact` for the Odoo-style contact popup on the task's Matching tab:
  *       phone, email, address, job position, created on, assigned staff, membership and the
  *       investor questionnaire. Same IR-staff access that already shows phone / email there.
@@ -18,16 +18,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   try {
     const [{ data: c }, { data: m }] = await Promise.all([
-      db().from("crm_contacts").select(req.nextUrl.searchParams.get("detail") ? "id, name, company, inv_source, inv_verified_at, website, email, phone, country, contact_type, created_on, assignee_ids, profile, raw, overrides" : "id, name, company, inv_source, inv_verified_at, website").eq("id", id).maybeSingle(),
+      db().from("crm_contacts").select(req.nextUrl.searchParams.get("detail") ? "id, name, company, inv_source, inv_verified_at, website, source, external_id, email, phone, country, contact_type, created_on, assignee_ids, profile, raw, overrides" : "id, name, company, inv_source, inv_verified_at, website, source, external_id").eq("id", id).maybeSingle(),
       db().from("ir_matches").select("id, project_id, stage, stage_changed_at, project:ir_projects(title, founder_name)").eq("investor_contact_id", id).order("stage_changed_at", { ascending: false }),
     ]);
-    const inv = c as { id: string; name: string | null; company: string | null; inv_source: string | null; inv_verified_at: string | null; website: string | null } | null;
+    const inv = c as { id: string; name: string | null; company: string | null; inv_source: string | null; inv_verified_at: string | null; website: string | null; source: string | null; external_id: string | null } | null;
     if (!inv) return NextResponse.json({ error: "Investor not found." }, { status: 404 });
     type Row = { id: string; project_id: string; stage: IrStage; stage_changed_at: string; project: { title: string; founder_name: string | null } | null };
     const contact = req.nextUrl.searchParams.get("detail") ? await contactDetail(c as unknown as DetailRow) : undefined;
     return NextResponse.json({
       contact,
-      investor: { id: inv.id, name: inv.name, firm: inv.company, dataSource: inv.inv_source, verifiedAt: inv.inv_verified_at, website: inv.website },
+      investor: { id: inv.id, name: inv.name, firm: inv.company, dataSource: inv.inv_source, verifiedAt: inv.inv_verified_at, website: inv.website, odooId: inv.source === "odoo" && inv.external_id ? inv.external_id : null },
       matches: ((m ?? []) as Row[]).map((r) => ({ matchId: r.id, projectId: r.project_id, projectTitle: r.project?.title ?? "Project", founderName: r.project?.founder_name ?? null, stage: r.stage, stageChangedAt: r.stage_changed_at })),
     });
   } catch (e) { return failed(e, "Couldn't load the investor."); }
