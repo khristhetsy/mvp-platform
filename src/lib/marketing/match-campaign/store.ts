@@ -383,7 +383,7 @@ export async function runCampaignMatching(campaignId: string): Promise<RunSummar
   for (const f of founders) {
     const row = byContact.get(f.founder_contact_id);
     if (!row) continue;
-    const matches = matchFounder(founderCompanyProfile(row), investors, weights);
+    const matches = matchFounder(founderCompanyProfile(row), investors, weights, campaign.match_config.min_score);
     await db.from("match_campaign_matches").delete().eq("campaign_founder_id", f.id);
     const stored = matches.slice(0, STORED_MATCHES_PER_FOUNDER);
     if (stored.length) {
