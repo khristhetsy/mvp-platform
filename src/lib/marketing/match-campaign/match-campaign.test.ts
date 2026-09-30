@@ -50,6 +50,7 @@ describe("data check", () => {
   it("holds back low-confidence industry and guessed stage unless included", () => {
     expect(checkFounder(founder({ industry_source: "inferred:low" }), opts)).toBe("unconfirmed_data");
     expect(checkFounder(founder({ stage_source: "guess:default" }), opts)).toBe("unconfirmed_data");
+    expect(checkFounder(founder({ industry_source: "keyword:low" }), opts)).toBe("unconfirmed_data");
     expect(checkFounder(founder({ industry_source: "inferred:high", stage_source: "crm:extra" }), opts)).toBeNull();
     expect(checkFounder(founder({ stage_source: "guess:default" }), { ...opts, includeInferred: true })).toBeNull();
   });
@@ -80,6 +81,18 @@ describe("matching", () => {
     expect(m.map((x) => x.investor_contact_id)).toEqual(["a"]);
     expect(m[0].match_score).toBeGreaterThan(0);
     expect(m[0].match_score).toBeLessThanOrEqual(100);
+  });
+  it("drops investors below the campaign's minimum match score", () => {
+    const f = founderCompanyProfile(founder({ seeking_amount: ["$500k - $1m"] }));
+    const pool = [
+      investor("fit", ["Fintech"], ["Seed Round"], { "Investor investment size?": ["$500k - $1m"] }),
+      investor("far", ["Fintech"], ["Seed Round"], { "Investor investment size?": ["$10m - $50m"] }),
+    ];
+    const all = matchFounder(f, pool);
+    const scores = all.map((m) => m.match_score);
+    const floor = Math.max(...scores);
+    expect(scores.some((s) => s < floor)).toBe(true);
+    expect(matchFounder(f, pool, undefined, floor).map((m) => m.investor_contact_id)).toEqual(["fit"]);
   });
   it("does not let Pre-Seed match Seed Round by substring", () => {
     const m = matchFounder(founderCompanyProfile(founder({ funding_stages: ["Pre-Seed"] })), [investor("a", ["Fintech"], ["Seed Round"])]);
@@ -160,5 +173,7 @@ describe("helpers", () => {
     expect(c.dry_run).toBe(false);
     expect(c.verified_only).toBe(true);
     expect(c.preview_count).toBe(3);
+    expect(c.min_score).toBe(70);
+    expect(readMatchConfig({ min_score: 140 }).min_score).toBe(100);
   });
 });

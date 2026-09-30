@@ -177,7 +177,7 @@ export function MatchCampaignEditor({
         <StepCheck campaign={campaign} founders={founders} onError={setError} onChange={(c, rows) => { setCampaign(c); setFounders(rows); }} onNext={() => setStep(3)} />
       )}
       {step === 3 && campaign && (
-        <StepMatches campaign={campaign} founders={founders} onError={setError} onFounders={setFounders} onNext={() => setStep(4)} />
+        <StepMatches campaign={campaign} founders={founders} onError={setError} onFounders={setFounders} onCampaign={setCampaign} onNext={() => setStep(4)} />
       )}
       {step === 4 && campaign && (
         <StepContent campaign={campaign} founders={founders} onError={setError} onCampaign={setCampaign} onNext={() => setStep(5)} />
@@ -523,10 +523,11 @@ function StepCheck({ campaign, founders, onChange, onNext, onError }: {
 
 // ── 4. Matches ───────────────────────────────────────────────────────────────
 
-function StepMatches({ campaign, founders, onFounders, onNext, onError }: {
+function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onError }: {
   campaign: MatchCampaignRow;
   founders: CampaignFounderRow[];
   onFounders: (rows: CampaignFounderRow[]) => void;
+  onCampaign: (c: MatchCampaignRow) => void;
   onNext: () => void;
   onError: (e: string) => void;
 }) {
@@ -534,6 +535,7 @@ function StepMatches({ campaign, founders, onFounders, onNext, onError }: {
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [matches, setMatches] = useState<Record<string, AdminMatchRow[]>>({});
+  const [minScore, setMinScore] = useState(campaign.match_config.min_score);
   const pending = founders.filter((f) => f.send_status === "pending");
   const ready = pending.filter((f) => !f.excluded_reason || f.excluded_reason === "no_matches");
   const withMatches = ready.filter((f) => f.match_count > 0);
@@ -542,6 +544,10 @@ function StepMatches({ campaign, founders, onFounders, onNext, onError }: {
   async function run() {
     setRunning(true);
     try {
+      if (minScore !== campaign.match_config.min_score) {
+        const c = await api<{ campaign: MatchCampaignRow }>("/api/admin/marketing/match", { method: "PATCH", body: JSON.stringify({ id: campaign.id, config: { min_score: minScore } }) });
+        onCampaign(c.campaign);
+      }
       const j = await api<{ summary: RunSummary; founders: CampaignFounderRow[] }>("/api/admin/marketing/match/run", { method: "POST", body: JSON.stringify({ campaign_id: campaign.id }) });
       setSummary(j.summary);
       setMatches({});
@@ -584,7 +590,12 @@ function StepMatches({ campaign, founders, onFounders, onNext, onError }: {
         <div className="text-[14px] font-medium">Matches per founder</div>
         <button type="button" className={hasRun ? btnGhost : btn} disabled={running || ready.length === 0} onClick={run}>{running ? "Matching…" : hasRun ? "Run matching again" : "Run matching"}</button>
       </div>
-      <p className="mb-4 text-[12.5px] text-[#5A6782]">Each ready founder is matched to investors on industry and stage. Admin reviews and removes anyone. Investors are not contacted. Running again replaces earlier matches and removals.</p>
+      <p className="mb-4 text-[12.5px] text-[#5A6782]">Each ready founder is matched to investors on industry and stage, counting only investors at or above the minimum match score. Admin reviews and removes anyone. Investors are not contacted. Running again replaces earlier matches and removals.</p>
+      <div className="mb-4 flex items-center gap-2 text-[12.5px]">
+        <label htmlFor="min-score">Minimum match score</label>
+        <input id="min-score" className={`${input} w-20`} type="number" min={0} max={100} value={minScore} onChange={(e) => setMinScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} />
+        <span className="text-[#8A94A8]">%. Changing it takes effect when you run matching.</span>
+      </div>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tile value={ready.length} label="Founders ready" />
         <Tile value={hasRun ? withMatches.length : null} label="With 1 or more matches" tone="good" />
