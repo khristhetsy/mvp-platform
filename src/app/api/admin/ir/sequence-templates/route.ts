@@ -1,6 +1,6 @@
 /**
  * Saved IR auto sequences (beside the built-in ones in code).
- *   GET  → { templates: [{ id, name, steps, stop_on }] }  (empty until migration 20260930120000 is applied)
+ *   GET  → { templates: [{ id, name, steps, stop_on }] }  (empty until migration 20260930105243 is applied)
  *   POST { name, steps: [{ day, subject, body }], stopOn } → { template }
  */
 import { NextRequest, NextResponse } from "next/server";

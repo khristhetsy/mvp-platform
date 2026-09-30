@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 const MIGRATIONS = [
   "supabase/migrations/20260916001_investor_profile_merge.sql",
-  "supabase/migrations/20260930140000_contact_industries_override.sql",
+  "supabase/migrations/20260930115123_contact_industries_override.sql",
 ].map((f) => join(process.cwd(), f));
 let pg: PGlite;
 
