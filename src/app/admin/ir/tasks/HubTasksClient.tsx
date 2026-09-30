@@ -1,11 +1,11 @@
 "use client";
 
-/** Hub-level Tasks: the weekly board with a founder picker on top ("All founders" or one). Remembers the last choice. */
+/** Hub-level Tasks: a founder picker on top. "All founders" is the Odoo-style founder × month kanban (its Week grouping is the weekly board); one founder is that project's weekly board. Remembers the last choice. */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TasksClient } from "../projects/[id]/tasks/TasksClient";
-import { AllFoundersBoard } from "./AllFoundersBoard";
+import { OdooTasksBoard } from "./OdooTasksBoard";
 
 const KEY = "ir.tasks.project";
 const ALL = "all";
@@ -44,7 +44,7 @@ export function HubTasksClient({ meId, projects }: { meId: string; projects: Arr
           </select>
         </label>
       </div>
-      {projectId === ALL ? <AllFoundersBoard /> : projectId ? <TasksClient key={projectId} projectId={projectId} meId={meId} initialMonth={null} /> : null}
+      {projectId === ALL ? <OdooTasksBoard meId={meId} /> : projectId ? <TasksClient key={projectId} projectId={projectId} meId={meId} initialMonth={null} /> : null}
     </div>
   );
 }
