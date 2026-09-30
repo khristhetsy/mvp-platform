@@ -107,6 +107,20 @@ export async function odooTasks(projectIds: number[], d: Discovery, agentField: 
 export type Candidate = { id: string; name: string | null; firm: string | null; dataSource: string | null };
 export type TagResolution = { tag: string; parsed: ParsedTag; status: "matched" | "ambiguous" | "missing"; by: "email" | "name and firm" | "name" | "firm" | null; contactId: string | null; candidates: Candidate[] };
 
+type SameEmailRow = { id: string; name: string | null; company: string | null; inv_source: string | null; source: string | null; contact_type: string | null; profile: Record<string, unknown> | null; created_on: string | null };
+const PROFILE_KEYS = ["investorTypes", "industries", "fundingStages", "operatingStages", "capital", "businessEntity"];
+
+/** Several contacts share one email (Odoo duplicates, earlier imports): prefer the filled investor profile,
+ *  then an investor record, then anything not created by the IR import, then the oldest. */
+export function pickSameEmail<T extends Omit<SameEmailRow, "inv_source" | "name" | "company">>(rows: T[]): T | null {
+  const filled = (r: T) => PROFILE_KEYS.reduce((n, k) => n + (Array.isArray(r.profile?.[k]) ? (r.profile?.[k] as unknown[]).length : 0), 0);
+  return [...rows].sort((a, b) =>
+    filled(b) - filled(a)
+    || Number(b.contact_type === "investor") - Number(a.contact_type === "investor")
+    || Number(a.source === "odoo-ir") - Number(b.source === "odoo-ir")
+    || (a.created_on ?? "9999").localeCompare(b.created_on ?? "9999"))[0] ?? null;
+}
+
 export async function matchInvestorTags(tagNames: string[]): Promise<TagResolution[]> {
   const out: TagResolution[] = [];
   const cols = "id, name, company, inv_source";
@@ -114,7 +128,12 @@ export async function matchInvestorTags(tagNames: string[]): Promise<TagResoluti
   for (const tag of [...new Set(tagNames)]) {
     const parsed = parseTag(tag);
     let by: TagResolution["by"] = null; let cands: Candidate[] = [];
-    if (parsed.email) { const { data } = await db().from("crm_contacts").select(cols).ilike("email", parsed.email).limit(5); cands = toC(data ?? []); if (cands.length) by = "email"; }
+    if (parsed.email) {
+      // Same email means the same person, so it is never ambiguous: link the record with the fullest investor profile.
+      const { data } = await db().from("crm_contacts").select(`${cols}, source, contact_type, profile, created_on`).ilike("email", parsed.email).limit(10);
+      const best = pickSameEmail((data ?? []) as SameEmailRow[]);
+      if (best) { cands = toC([best]); by = "email"; }
+    }
     if (!cands.length && parsed.name) {
       const like = `%${parsed.name.replace(/[%_,]/g, " ").trim()}%`;
       const { data } = await db().from("crm_contacts").select(cols).eq("contact_type", "investor").ilike("name", like).limit(20);
