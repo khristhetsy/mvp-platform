@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const MIGRATIONS = [
-  "supabase/migrations/20260930150000_contact_merges.sql",
+  "supabase/migrations/20260930134947_contact_merges.sql",
   "supabase/migrations/20260930160000_merge_crm_contacts.sql",
 ].map((f) => join(process.cwd(), f));
 
