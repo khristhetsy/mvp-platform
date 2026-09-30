@@ -18,7 +18,7 @@ import type { FilterSpec } from "@/lib/sales/contact-filter-spec";
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
 export type NextActivity = { type: string; title: string; due: string | null; state: "overdue" | "today" | "planned" | "done" | "none" };
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; assignees?: string[]; lastMessage?: LastMessage | null; activity?: NextActivity | null };
+export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; leadSource?: string; industries?: string[]; assignees?: string[]; lastMessage?: LastMessage | null; activity?: NextActivity | null };
 export type GroupState = { rows: SalesContact[]; total: number; loading: boolean; loaded: boolean; page: number };
 export type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 export type Sort = { key: string; dir: "asc" | "desc" };
