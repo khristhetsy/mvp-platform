@@ -27,6 +27,42 @@ describe("founderOdooProfile", () => {
     expect(p.hasQuestionnaire).toBe(true);
   });
   it("returns null without a contact", () => { expect(founderOdooProfile(null)).toBeNull(); });
+  it("gives each row the key an edit saves under", () => {
+    const rows = p.sections.flatMap((s) => s.rows);
+    const row = (l: string) => rows.find((r) => r.label === l)!;
+    expect(row("Seeking type of investor(s)").saveKey).toBe("Entrepreneur seeking type of investor(s)? ");
+    expect(row("Funding stage")).toMatchObject({ saveKey: "Entrepreneur funding stage?", kind: "list" });
+    expect(row("Type of industries").saveKey).toBe("Industries");
+    expect(row("Business summary").kind).toBe("text");
+    expect(row("Assigned agent").saveKey).toBeNull();
+  });
+});
+
+describe("founderOdooProfile with edits", () => {
+  const ov = {
+    Industries: ["Fintech"], "Entrepreneur funding stage?": ["Series A"], "entrepreneur annual revenue size?": [],
+    "Entrepreneur business summary": ["Edited summary"], "Entrepreneur operating stage?": "not an array",
+  };
+  const e = founderOdooProfile(raw, ov)!;
+  const val = (l: string) => e.sections.flatMap((s) => s.rows).find((r) => r.label === l)?.value;
+  it("lays saved edits over the synced answers", () => {
+    expect(val("Type of industries")).toEqual(["Fintech"]);
+    expect(val("Funding stage")).toEqual(["Series A"]);
+    expect(val("Business summary")).toBe("Edited summary");
+    expect(e.industries).toEqual(["Fintech"]);
+  });
+  it("treats an empty edit as cleared and ignores non-array overrides", () => {
+    expect(val("Annual revenue size")).toBeNull();
+    expect(e.revenue).toEqual([]);
+    expect(val("Operating stage")).toEqual(["Expand Growth"]);
+  });
+  it("reads a contact page edit saved under the synced industry label", () => {
+    const c = founderOdooProfile(raw, { "Entrepreneur type of industries?": ["Software"] })!;
+    expect(c.industries).toEqual(["Software"]);
+  });
+  it("matching follows the edits", () => {
+    expect(fitDefaultsFromProfile(e, ["Healthcare", "Fintech"]).industry).toEqual(["Fintech"]);
+  });
 });
 
 describe("fitDefaultsFromProfile", () => {

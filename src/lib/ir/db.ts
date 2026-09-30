@@ -409,9 +409,9 @@ export async function entrepreneurProfile(project: IrProject): Promise<Entrepren
     }
   }
   if (project.founder_contact_id) {
-    const { data } = await db().from("crm_contacts").select("profile, company, raw, website, synced_at").eq("id", project.founder_contact_id).maybeSingle();
-    const c = data as { profile: Record<string, unknown> | null; company: string | null; raw: Record<string, unknown> | null; website: string | null; synced_at: string | null } | null;
-    const odoo = founderOdooProfile(c?.raw);
+    const { data } = await db().from("crm_contacts").select("profile, company, raw, overrides, website, synced_at").eq("id", project.founder_contact_id).maybeSingle();
+    const c = data as { profile: Record<string, unknown> | null; company: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; website: string | null; synced_at: string | null } | null;
+    const odoo = founderOdooProfile(c?.raw, c?.overrides);
     out.odoo = odoo; out.syncedAt = c?.synced_at ?? null; out.website = c?.website ?? odoo?.website ?? null;
     if (!project.company_id && (odoo?.companyName || c?.company)) out.company = odoo?.companyName ?? c?.company ?? out.company;
     const p = c?.profile ?? {};

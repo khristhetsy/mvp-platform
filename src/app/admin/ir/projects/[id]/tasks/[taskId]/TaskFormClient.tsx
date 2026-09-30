@@ -318,7 +318,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
           ) : null}
           {tab === "blocked" ? <BlockersPanel blockers={data.task.blockers ?? []} dealTitle={data.project.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}
           {tab === "extra" ? <ExtraInfo task={data.task} week={week ?? null} investors={data.matches.length} linked={data.activities.length} busy={busy} onSave={(notes) => patch({ notes })} /> : null}
-          {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} /> : null}
+          {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} onSaved={load} /> : null}
           {tab === "meetings" ? (
             (() => { const ms = data.activities.filter((a) => a.type === "meeting"); return ms.length === 0 ? <p className="text-[12.5px] text-slate-400">No meetings this week.</p> : (
               <ul className="divide-y divide-slate-100 text-[12.5px]">{ms.map((a) => <li key={a.id} className="flex gap-2 py-1.5"><span className="font-medium text-slate-900">{matchName(a.match_id)}</span><span className="flex-1 text-slate-600">{a.subject}</span><span className="text-slate-500">{a.done_at ? `held ${fmt(a.done_at)}` : `booked ${fmt(a.due_at)}`}</span></li>)}</ul>); })()
