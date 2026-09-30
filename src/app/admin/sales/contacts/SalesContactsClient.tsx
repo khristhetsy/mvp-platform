@@ -10,6 +10,8 @@ import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/Toolba
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import { useContactsQuery, contactsParams, PAGE, type SalesContact, type Sort } from "./useContactsQuery";
 import { ContactsBulkActions, type BulkTarget } from "./ContactsBulkActions";
+import { DuplicatesView } from "./DuplicatesView";
+import { MergeContactsDialog, MergeUndoBanner, type MergeDone } from "./MergeContactsDialog";
 import { ContactsSearchBar as OdooSearchBar, type SavedSearch as SharedSavedSearch } from "@/components/admin/sales/ContactsSearchBar";
 
 export type { SalesContact, LastMessage, NextActivity } from "./useContactsQuery";
@@ -126,7 +128,11 @@ function parseContactsCsv(text: string): { rows: ImportRow[]; skipped: number } 
 }
 
 
-export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; odooSearch?: boolean; basePath?: string }) {
+export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, canMerge = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; canMerge?: boolean; odooSearch?: boolean; basePath?: string }) {
+  // Duplicates view (gear → Find duplicates) and the Merge dialog / undo strip it shares with Actions → Merge.
+  const [dupMode, setDupMode] = useState(false);
+  const [mergeIds, setMergeIds] = useState<string[] | null>(null);
+  const [lastMerge, setLastMerge] = useState<MergeDone | null>(null);
   // ONE filter state. The search box, the column filters, the Role/facet dropdown and
   // the Odoo search bar all read and write conditions on this spec; the server gets it
   // as a single `filter=` param. (Previously five separate states were re-merged on
@@ -427,6 +433,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     { key: "odoo", icon: "ti-cloud-download", label: gearBusy ? "Working…" : "Import from Odoo", onClick: () => void pullFromOdoo() },
     { key: "csv", icon: "ti-upload", label: "Import from CSV", onClick: () => csvInputRef.current?.click() },
     ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${matchingTotal.toLocaleString()} matching`, onClick: () => void exportAll() } as GearItem] : []),
+    ...(canMerge ? [{ key: "dupes", icon: "ti-copy", label: "Find duplicates", onClick: () => { setDupMode(true); clearSelection(); } } as GearItem] : []),
     { key: "cols", icon: "ti-columns", label: "Columns", sep: true, onClick: () => { setOpenColPicker(true); setFiltersOpen(false); setOpenFilter(null); } },
     ...(basePath.startsWith("/admin/sales") ? [{ key: "members", icon: "ti-users", label: "Assignable members", href: "/admin/sales/settings" } as GearItem] : []),
     ...(basePath.startsWith("/admin/sales") ? [{ key: "fill", icon: "ti-wand", label: "Fill missing fields", hint: "Founders and investors", href: "/admin/sales/contacts/fill-missing" } as GearItem] : []),
@@ -497,8 +504,24 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     }
   }
 
+  const mergeBanner = lastMerge && <MergeUndoBanner key={lastMerge.batchId} done={lastMerge} onClose={() => setLastMerge(null)} onUndone={reload} />;
+
+  if (canMerge && dupMode) {
+    return (
+      <div>
+        {mergeBanner}
+        <DuplicatesView basePath={basePath} onExit={() => setDupMode(false)} onChanged={reload} onMerged={setLastMerge} />
+      </div>
+    );
+  }
+
   return (
     <div>
+      {mergeBanner}
+      {mergeIds && (
+        <MergeContactsDialog ids={mergeIds} onClose={() => setMergeIds(null)}
+          onMerged={(done) => { setMergeIds(null); setLastMerge(done); clearSelection(); reload(); }} />
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <NewButton onClick={() => setAdding((v) => !v)} />
         <ToolbarGear items={gearItems} heading="Contacts" />
@@ -740,7 +763,8 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         <ContactsBulkActions
           target={bulkTarget} count={selectionCount} selectAllMatching={selectAllMatching} matchingTotal={matchingTotal}
           onSelectAll={() => setSelectAllMatching(true)} onClear={clearSelection} onChanged={reload}
-          can={{ assign: canBulkAssign, list: canCreateList, edit: canBulkEdit, export: canExport }}
+          can={{ assign: canBulkAssign, list: canCreateList, edit: canBulkEdit, export: canExport, merge: canMerge }}
+          onMerge={setMergeIds}
         />
       )}
 
