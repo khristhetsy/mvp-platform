@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { TemplatePicker } from "@/components/marketing/TemplatePicker";
 
 export type SelectionPayload = { mode: "ids" | "filter"; ids?: string[]; params?: string; group?: string; count: number };
 type Template = { id: string; name: string; subject: string; html_body: string; department: string | null };
@@ -23,13 +24,14 @@ const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRad
  * Optional, for other record types (the IR task Matching tab): `noun` names the
  * recipients, `extraMerge` fills record-level tags ({{founder_name}} …) before sending,
  * `previewAs` adds a rendered Preview / HTML toggle filled for each recipient,
- * `renderSequence` replaces the Enroll in sequence panel, `onSent` reports a send.
+ * `renderSequence` replaces the Enroll in sequence panel, `onSent` reports a send,
+ * `defaultDepartment` opens that group in the template picker first.
  * Without them it behaves exactly as before.
  */
-export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent }: {
+export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment }: {
   source: "contacts" | "opportunities"; selection: SelectionPayload; defaultEmail?: string; onClose: () => void;
   noun?: string; extraMerge?: Record<string, string>; previewAs?: PreviewRecipient[]; initialMode?: "once" | "sequence";
-  renderSequence?: (done: (message: string) => void) => ReactNode; onSent?: (sent: number) => void;
+  renderSequence?: (done: (message: string) => void) => ReactNode; onSent?: (sent: number) => void; defaultDepartment?: string;
 }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sequences, setSequences] = useState<Sequence[]>([]);
@@ -45,21 +47,16 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     fetch("/api/marketing/templates").then((r) => (r.ok ? r.json() : { templates: [] })).then((d) => setTemplates(d.templates ?? d ?? [])).catch(() => {});
     fetch("/api/marketing/sequences").then((r) => (r.ok ? r.json() : [])).then((d) => setSequences(Array.isArray(d) ? d : d.sequences ?? [])).catch(() => {});
   }, []);
 
-  const grouped = useMemo(() => {
-    const m = new Map<string, Template[]>();
-    for (const t of templates) { const k = t.department || "Other"; (m.get(k) ?? m.set(k, []).get(k)!).push(t); }
-    return [...m.entries()];
-  }, [templates]);
-
-  function pickTemplate(id: string) {
+  function pickTemplate(id: string, list: Template[] = templates) {
     setTemplateId(id);
-    const t = templates.find((x) => x.id === id);
+    const t = list.find((x) => x.id === id);
     if (t) { setSubject(t.subject); setHtml(t.html_body); }
   }
 
@@ -107,7 +104,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--background, #fff)", borderRadius: 12, padding: 16, width: 560, maxWidth: "100%", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--background, #fff)", borderRadius: 12, padding: 16, width: expanded ? 960 : 560, maxWidth: "100%", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Email {count.toLocaleString()} {noun}{count === 1 ? "" : "s"}</p>
           <button type="button" onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
@@ -149,21 +146,19 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
                 {/* template */}
                 <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Template</p>
-                <select value={templateId} onChange={(e) => pickTemplate(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 10 }}>
-                  <option value="">Write without a template…</option>
-                  {grouped.map(([dept, ts]) => (
-                    <optgroup key={dept} label={dept}>
-                      {ts.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </optgroup>
-                  ))}
-                </select>
+                <TemplatePicker templates={templates} value={templateId} onPick={(id) => pickTemplate(id)} defaultDepartment={defaultDepartment}
+                  mergeTags={["first_name", "company", ...Object.keys(extraMerge ?? {})]}
+                  onCreated={(t) => { const next = [t, ...templates]; setTemplates(next); pickTemplate(t.id, next); }} />
 
                 <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Subject</p>
                 <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject… ({{first_name}}, {{company}})" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
                 {previewAs?.length ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 4px" }}>
                     <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: 0 }}>Body</p>
-                    <div style={{ marginLeft: "auto", display: "inline-flex", border: "0.5px solid #cdd9ec", borderRadius: 7, overflow: "hidden" }}>
+                    <button type="button" onClick={() => setExpanded((x) => !x)} aria-pressed={expanded} style={{ marginLeft: "auto", fontSize: 11.5, padding: "3px 10px", border: "0.5px solid #cdd9ec", borderRadius: 7, background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
+                      <i className={`ti ti-arrows-${expanded ? "minimize" : "maximize"}`} aria-hidden="true" /> {expanded ? "Collapse" : "Expand"}
+                    </button>
+                    <div style={{ display: "inline-flex", border: "0.5px solid #cdd9ec", borderRadius: 7, overflow: "hidden" }}>
                       {(["preview", "html"] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} style={{ fontSize: 11.5, padding: "3px 10px", border: "none", cursor: "pointer", background: view === v ? "#E6F1FB" : "transparent", color: view === v ? "#0C447C" : "var(--muted-foreground)", fontWeight: view === v ? 600 : 400 }}>{v === "preview" ? "Preview" : "HTML"}</button>)}
                     </div>
                   </div>
@@ -180,11 +175,11 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                       <button type="button" onClick={() => setView("html")} style={{ marginLeft: "auto", border: "none", background: "none", cursor: "pointer", color: "#185FA5", fontSize: 11, padding: 0 }}>Edit HTML</button>
                     </div>
                     {html.trim()
-                      ? <iframe title="Email preview" sandbox="" srcDoc={previewDoc} style={{ width: "100%", height: 260, border: "0.5px solid var(--border)", borderRadius: 8, background: "#fff", marginBottom: 4 }} />
+                      ? <iframe title="Email preview" sandbox="" srcDoc={previewDoc} style={{ width: "100%", height: expanded ? "min(68vh, 900px)" : 260, border: "0.5px solid var(--border)", borderRadius: 8, background: "#fff", marginBottom: 4 }} />
                       : <div style={{ border: "0.5px dashed var(--border)", borderRadius: 8, padding: "28px 12px", textAlign: "center", fontSize: 12, color: "var(--muted-foreground)", marginBottom: 4 }}>Pick a template, or <button type="button" onClick={() => setView("html")} style={{ border: "none", background: "none", color: "#185FA5", cursor: "pointer", padding: 0, fontSize: 12 }}>write the HTML</button>.</div>}
                   </>
                 ) : (
-                  <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
+                  <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={expanded ? 26 : previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
                 )}
                 {previewAs?.length ? <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>Merge: {["first_name", "company", ...Object.keys(extraMerge ?? {})].map((k) => `{{${k}}}`).join(" ")}</p> : null}
 

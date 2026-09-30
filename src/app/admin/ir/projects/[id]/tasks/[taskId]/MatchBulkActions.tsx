@@ -7,11 +7,11 @@
  * Move to stage, Assign owner, Mark intro sent, Export CSV, Remove from project.
  * Each action reuses the per-record IR endpoints, one call per investor.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SelectionBar, ActionResult, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 import { downloadCsv } from "@/components/admin/ToolbarGear";
-import { SEQUENCE_TEMPLATES } from "@/lib/ir/sequence-templates";
+import { SEQUENCE_TEMPLATES, type SequenceStep, type StopEvent } from "@/lib/ir/sequence-templates";
 import { IR_STAGES, IR_STAGE_LABEL, type IrMatch, type IrProject } from "@/lib/ir/types";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 
@@ -84,7 +84,7 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
         <MassEmailComposer
           source="contacts" noun="investor" initialMode={composer}
           selection={{ mode: "ids", ids: [...new Set(picked.map((m) => m.investor_contact_id))], count: picked.length }}
-          extraMerge={extraMerge} previewAs={previewAs}
+          extraMerge={extraMerge} previewAs={previewAs} defaultDepartment="Investor Relations"
           renderSequence={(done) => <IrSequencePanel matchIds={picked.map((m) => m.id)} staff={staff} ownerId={project.owner_id} onDone={(msg) => { done(msg); void onChange(); }} />}
           onSent={(sent) => {
             // A sent intro completes each still-Matched investor's "Send intro email" to-do.
@@ -97,32 +97,123 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
   );
 }
 
-/** Enroll in sequence for IR: the auto sequences the matching queue starts, on the picked investors. */
+type SavedSequence = { id: string; name: string; steps: SequenceStep[]; stop_on: StopEvent[] };
+type EmailTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
+type Draft = { name: string; steps: SequenceStep[]; stopOn: StopEvent[] };
+
+/** An email template's HTML as a plain-text step body, with its merge tags in the sequence's {first} / {founder} form. */
+function templateToStep(t: EmailTemplate): { subject: string; body: string } {
+  const toSeq = (x: string) => x.replace(/\{\{\s*first_name\s*\}\}/g, "{first}").replace(/\{\{\s*founder_name\s*\}\}/g, "{founder}");
+  const text = t.html_body
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|li|tr)>/gi, "\n\n").replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;|&rsquo;/g, "'").replace(/&quot;/g, '"')
+    .replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  return { subject: toSeq(t.subject), body: toSeq(text) };
+}
+
+/** Enroll in sequence for IR: the auto sequences the matching queue starts (built-in and saved), on the picked investors. */
 function IrSequencePanel({ matchIds, staff, ownerId, onDone }: { matchIds: string[]; staff: Array<{ id: string; name: string }>; ownerId: string; onDone: (msg: string) => void }) {
   const [template, setTemplate] = useState(Object.keys(SEQUENCE_TEMPLATES)[0]);
+  const [saved, setSaved] = useState<SavedSequence[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [via, setVia] = useState<"icapos" | "gmail">("icapos");
   const [manager, setManager] = useState(staff.some((s) => s.id === ownerId) ? ownerId : staff[0]?.id ?? "");
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const sel = { fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", width: "100%", boxSizing: "border-box" as const, marginBottom: 10 };
+  const small = { fontSize: 12.5, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", boxSizing: "border-box" as const, background: "var(--background)", color: "var(--foreground)" };
+
+  useEffect(() => {
+    fetch("/api/admin/ir/sequence-templates").then((r) => (r.ok ? r.json() : { templates: [] })).then((d) => setSaved(d.templates ?? [])).catch(() => {});
+    fetch("/api/marketing/templates").then((r) => (r.ok ? r.json() : { templates: [] })).then((d) => setEmailTemplates(d.templates ?? [])).catch(() => {});
+  }, []);
+
+  const options: Array<{ key: string; name: string; steps: SequenceStep[] }> = [
+    ...Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => ({ key: k, name: t.name, steps: t.steps })),
+    ...saved.map((t) => ({ key: t.id, name: t.name, steps: t.steps })),
+  ];
+  const chosen = options.find((o) => o.key === template);
+  const savedChosen = saved.find((t) => t.id === template);
+  // Email templates for step prefill, Investor Relations first.
+  const irFirst = [...emailTemplates].sort((a, b) => Number(b.department === "Investor Relations") - Number(a.department === "Investor Relations"));
+
+  function newSequence() {
+    setErr(null);
+    setDraft({ name: "", steps: [{ day: 0, subject: "", body: "" }], stopOn: ["reply", "meeting"] });
+  }
+  const setStep = (i: number, p: Partial<SequenceStep>) => draft && setDraft({ ...draft, steps: draft.steps.map((s, j) => (j === i ? { ...s, ...p } : s)) });
+
+  async function enroll(key: string, name: string, stopOn: StopEvent[]) {
+    const r = await fetch("/api/admin/ir/sequences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ matchIds, template: key, via, managerId: manager, notifyEmail, stopOn }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { setErr(j.error ?? "Couldn't start the sequence."); return; }
+    const skipped = (j.skipped ?? []).length;
+    onDone(`Started ${j.started ?? 0} on ${name}${skipped ? `, ${skipped} skipped` : ""}. The first emails go out within 15 minutes.`);
+  }
   async function start() {
     if (!manager) { setErr("Pick an account manager."); return; }
     setBusy(true); setErr(null);
+    try { await enroll(template, chosen?.name ?? "the sequence", savedChosen?.stop_on ?? ["reply", "meeting"]); } finally { setBusy(false); }
+  }
+  async function saveAndEnroll() {
+    if (!draft) return;
+    if (!draft.name.trim()) { setErr("Name the sequence."); return; }
+    if (draft.steps.some((s) => !s.subject.trim() || !s.body.trim())) { setErr("Every step needs a subject and a body."); return; }
+    if (!manager) { setErr("Pick an account manager."); return; }
+    setBusy(true); setErr(null);
     try {
-      const r = await fetch("/api/admin/ir/sequences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ matchIds, template, via, managerId: manager, notifyEmail }) });
+      const r = await fetch("/api/admin/ir/sequence-templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: draft.name.trim(), steps: draft.steps, stopOn: draft.stopOn }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setErr(j.error ?? "Couldn't start the sequence."); return; }
-      const skipped = (j.skipped ?? []).length;
-      onDone(`Started ${j.started ?? 0} on ${SEQUENCE_TEMPLATES[template]?.name ?? "the sequence"}${skipped ? `, ${skipped} skipped` : ""}. The first emails go out within 15 minutes.`);
+      if (!r.ok || !j.template) { setErr(j.error ?? "Couldn't save the sequence."); return; }
+      const t = j.template as SavedSequence;
+      setSaved((xs) => [...xs, t]); setTemplate(t.id); setDraft(null);
+      await enroll(t.id, t.name, t.stop_on);
     } finally { setBusy(false); }
   }
+
   return (
     <>
-      <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Sequence</p>
-      <select value={template} onChange={(e) => setTemplate(e.target.value)} style={sel}>
-        {Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}
-      </select>
+      <div style={{ display: "flex", alignItems: "center", margin: "0 0 3px" }}>
+        <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: 0 }}>Sequence</p>
+        {!draft ? <button type="button" onClick={newSequence} style={{ marginLeft: "auto", fontSize: 11.5, border: "none", background: "none", color: "#185FA5", cursor: "pointer", padding: 0 }}><i className="ti ti-plus" aria-hidden="true" /> New sequence</button> : null}
+      </div>
+      {!draft ? (
+        <select value={template} onChange={(e) => setTemplate(e.target.value)} style={sel}>
+          {options.map((o) => <option key={o.key} value={o.key}>{o.name} · {o.steps.length} steps (days {o.steps.map((s) => s.day).join(", ")})</option>)}
+        </select>
+      ) : (
+        <div style={{ border: "1px solid #B5D4F4", borderRadius: 9, padding: "10px 12px", marginBottom: 10 }}>
+          <p style={{ fontSize: 12.5, fontWeight: 600, margin: "0 0 8px" }}>New sequence</p>
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Investor thesis nudge" aria-label="Sequence name" style={{ ...small, width: "100%", marginBottom: 8 }} />
+          <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 4px" }}>Steps · merge: {"{first}"} {"{founder}"}</p>
+          {draft.steps.map((st, i) => (
+            <div key={i} style={{ border: "0.5px solid var(--border)", borderRadius: 8, padding: 8, marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                <label style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}>Day <input type="number" min={0} max={365} value={st.day} onChange={(e) => setStep(i, { day: Math.max(0, Math.round(Number(e.target.value) || 0)) })} style={{ ...small, width: 60 }} /></label>
+                <select value="" onChange={(e) => { const t = emailTemplates.find((x) => x.id === e.target.value); if (t) setStep(i, templateToStep(t)); }} aria-label="Fill from a template" style={{ ...small, flex: 1, minWidth: 0 }}>
+                  <option value="">Fill from a template…</option>
+                  {irFirst.map((t) => <option key={t.id} value={t.id}>{t.department ? `${t.department} · ` : ""}{t.name}</option>)}
+                </select>
+                {draft.steps.length > 1 ? <button type="button" aria-label={`Remove step ${i + 1}`} onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, j) => j !== i) })} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-x" aria-hidden="true" /></button> : null}
+              </div>
+              <input value={st.subject} onChange={(e) => setStep(i, { subject: e.target.value })} placeholder="Subject" aria-label={`Step ${i + 1} subject`} style={{ ...small, width: "100%", marginBottom: 6 }} />
+              <textarea value={st.body} onChange={(e) => setStep(i, { body: e.target.value })} rows={3} placeholder={"Hi {first},\n\n…"} aria-label={`Step ${i + 1} body`} style={{ ...small, width: "100%", resize: "vertical" }} />
+            </div>
+          ))}
+          <button type="button" onClick={() => setDraft({ ...draft, steps: [...draft.steps, { day: (draft.steps[draft.steps.length - 1]?.day ?? 0) + 7, subject: "", body: "" }] })} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 7, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", marginBottom: 8 }}><i className="ti ti-plus" aria-hidden="true" /> Add step</button>
+          <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 4px" }}>Stop rules</p>
+          <div style={{ display: "flex", gap: 14, fontSize: 12.5 }}>
+            {([["reply", "Stop on reply"], ["meeting", "Stop on meeting booked"]] as const).map(([k, l]) => (
+              <label key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input type="checkbox" checked={draft.stopOn.includes(k)} onChange={(e) => setDraft({ ...draft, stopOn: e.target.checked ? [...draft.stopOn, k] : draft.stopOn.filter((x) => x !== k) })} /> {l}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
       <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Account manager to alert</p>
       <select value={manager} onChange={(e) => setManager(e.target.value)} style={sel}>
         {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -136,9 +227,12 @@ function IrSequencePanel({ matchIds, staff, ownerId, onDone }: { matchIds: strin
       </p>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <span style={{ fontSize: 11, color: err ? "#A32D2D" : "var(--muted-foreground)" }}>{err ?? "Investors already on a sequence are skipped."}</span>
-        <button type="button" onClick={() => void start()} disabled={busy || !manager} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", opacity: busy ? 0.6 : 1 }}>
-          {busy ? "Starting…" : `Enroll · ${matchIds.length}`}
-        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          {draft ? <button type="button" onClick={() => { setDraft(null); setErr(null); }} style={{ fontSize: 12.5, padding: "8px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>Cancel</button> : null}
+          <button type="button" onClick={() => void (draft ? saveAndEnroll() : start())} disabled={busy || !manager} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", opacity: busy ? 0.6 : 1 }}>
+            {busy ? "Starting…" : draft ? `Save and enroll · ${matchIds.length}` : `Enroll · ${matchIds.length}`}
+          </button>
+        </div>
       </div>
     </>
   );
