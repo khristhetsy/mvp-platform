@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 
@@ -109,6 +109,64 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
     } finally { setBusy(false); }
   }
 
+  // Step 1c — fill missing fields: the investor's own PitchBook notes (stated), then
+  // same-type statistics (guess). No AI; previewed first; every value tagged and removable.
+  type FillDefaults = Record<string, Record<string, { sample: number; values: { value: string; share: number }[] }>>;
+  type FillPreview = { contacts: number; byField: Record<string, number>; sample: { contactId: string; company: string | null; field: string; values: string[] }[]; scanned: number; defaults?: FillDefaults };
+  const [fp, setFp] = useState<{ stated?: FillPreview; guess?: FillPreview }>({});
+  const [fMsg, setFMsg] = useState<{ stated?: string; guess?: string }>({});
+  const [includeLow, setIncludeLow] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/investors/fill-missing").then((r) => r.json()).then((d) => setIncludeLow(Boolean(d.includeLow))).catch(() => setIncludeLow(false));
+  }, []);
+  const fillPost = (body: Record<string, unknown>) => fetch("/api/admin/investors/fill-missing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  async function fillPreview(step: "stated" | "guess") {
+    setBusy(true); setFMsg((m) => ({ ...m, [step]: "Scanning…" }));
+    try {
+      const res = await fillPost({ op: "preview", step });
+      if (!res.ok) { setFMsg((m) => ({ ...m, [step]: "Preview failed." })); return; }
+      const d = (await res.json()) as FillPreview;
+      setFp((p) => ({ ...p, [step]: d }));
+      setFMsg((m) => ({ ...m, [step]: d.contacts === 0 ? `Nothing to fill, scanned ${d.scanned}.` : undefined }));
+    } finally { setBusy(false); }
+  }
+  async function fillApply(step: "stated" | "guess") {
+    setBusy(true);
+    try {
+      // Capped per request and resumed by cursor, like Step 1b, so a run walks the table once.
+      let cursor: string | null = null, fields = 0, contacts = 0, errs = 0, guard = 0, finished = false;
+      while (!finished && guard++ < 100) {
+        setFMsg((m) => ({ ...m, [step]: `Filling… ${fields} fields written` }));
+        const res = await fillPost({ op: "apply", step, ...(cursor ? { afterId: cursor } : {}) });
+        if (!res.ok) { setFMsg((m) => ({ ...m, [step]: `Stopped after ${fields} fields. Press Fill to resume.` })); return; }
+        const d = await res.json();
+        fields += d.fields ?? 0; contacts += d.contacts ?? 0; errs += d.errors ?? 0;
+        cursor = d.nextCursor ?? null; finished = d.done ?? true;
+        if (!cursor) finished = true;
+      }
+      setFMsg((m) => ({ ...m, [step]: `Filled ${fields} fields on ${contacts} investors${errs ? `, ${errs} failed` : ""}.` }));
+      setFp((p) => ({ ...p, [step]: undefined }));
+    } finally { setBusy(false); }
+  }
+  async function fillUndo(step: "stated" | "guess", field?: string) {
+    setBusy(true); setFMsg((m) => ({ ...m, [step]: "Removing…" }));
+    try {
+      const res = await fillPost({ op: "undo", step, ...(field ? { field } : {}) });
+      const d = await res.json().catch(() => ({}));
+      setFMsg((m) => ({ ...m, [step]: res.ok ? `Removed ${d.removed} values.` : "Remove failed." }));
+    } finally { setBusy(false); }
+  }
+  async function toggleIncludeLow(enabled: boolean) {
+    setBusy(true);
+    try {
+      const res = await fillPost({ op: "include_low", enabled });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setIncludeLow(enabled); setMsg(`Low confidence values ${enabled ? "now count" : "held back"} in matching · ${d.reindexed ?? 0} investors reindexed.`); }
+      else setMsg("Couldn't save the matching setting.");
+    } finally { setBusy(false); }
+  }
+  const FIELD_LABEL: Record<string, string> = { industry: "Industry", funding_stage: "Funding stage", capital_type: "Capital type", business_entity: "Business entity" };
+
   // Step 3 — refresh the narrow table /fit matches against. Also runs after each
   // contacts sync; this is the "don't wait four hours" button.
   const [idxMsg, setIdxMsg] = useState<string | null>(null);
@@ -149,8 +207,8 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
     const d = await fetch("/api/admin/investors/enrich?status=pending").then((r) => r.json()).catch(() => ({ proposals: [] }));
     setRows(d.proposals ?? []);
   }
-  async function runBatch(limit = 40) {
-    const res = await fetch("/api/admin/investors/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "run", limit }) });
+  async function runBatch(limit = 40, mode: "new" | "rerun" = "new") {
+    const res = await fetch("/api/admin/investors/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "run", limit, mode }) });
     if (!res.ok) throw new Error(String(res.status));
     return res.json();
   }
@@ -162,6 +220,25 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
       setMsg(`Scanned ${d.scanned} missing · proposed ${d.proposed} · skipped ${d.skipped} (no signal). ${d.remaining > 0 ? `${d.remaining} to go — run again or use Run all.` : "All done."}`);
       await refresh();
     } catch { setMsg("Enrichment failed."); } finally { setBusy(false); }
+  }
+  async function rerunAll() {
+    setBusy(true);
+    let proposed = 0, guard = 0, fails = 0;
+    while (guard++ < 400) {
+      try {
+        const d = await runBatch(20, "rerun");
+        if (d.unavailable) { setMsg(`Stopped, AI unavailable: ${d.unavailable}. ${proposed} proposed before stopping.`); break; }
+        proposed += d.proposed ?? 0; fails = 0;
+        setMsg(`Re-checking earlier no-signal investors… ${d.remaining ?? 0} left · ${proposed} proposed`);
+        await refresh();
+        if ((d.remaining ?? 0) <= 0) { setMsg(`Re-run done: ${proposed} new proposals from notes, LinkedIn and websites.`); break; }
+      } catch {
+        fails++;
+        if (fails >= 3) { setMsg(`Paused after a few errors, ${proposed} proposed so far. Run again to resume.`); break; }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    setBusy(false);
   }
   async function runAll() {
     setBusy(true);
@@ -275,13 +352,81 @@ export function EnrichClient({ initial }: { initial: Row[] }) {
         ) : null}
       </div>
 
+      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+        <div className="text-[13px] font-semibold text-slate-800">Step 1c · Fill missing fields <span className="font-normal text-slate-500">· free, no AI, run before Step 2</span></div>
+        <p className="mt-1 text-[11.5px] text-slate-500">Fills blanks only, never a value the investor already has. Each value is tagged with where it came from and can be removed on its own.</p>
+        {([
+          { step: "stated" as const, title: "From the investor's own notes", tag: "stated:pitchbook", body: "PitchBook sectors in \u201cInvestor quick notes\u201d mapped to the industry list. Unknown phrases are ignored." },
+          { step: "guess" as const, title: "From investors of the same type", tag: "guess:default", body: `Funding stage, capital type and business entity: a value is used only when at least half of same-type investors who answered chose it (30 or more answers). Industry is never guessed. /fit doesn't score these three fields.` },
+        ]).map(({ step, title, tag, body }) => {
+          const pv = fp[step];
+          return (
+            <div key={step} className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[12.5px] font-medium text-slate-800">{title}</span>
+                <span className={`rounded-md px-2 py-0.5 text-[10.5px] ${step === "stated" ? "bg-emerald-50 text-emerald-700" : "border border-dashed border-slate-300 text-slate-500"}`}>{tag}</span>
+              </div>
+              <p className="mt-1 text-[11.5px] text-slate-500">{body}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => void fillPreview(step)} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">⌕ Preview</button>
+                {pv && pv.contacts > 0 ? <button type="button" onClick={() => void fillApply(step)} disabled={busy} className="rounded-lg bg-slate-800 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-slate-900 disabled:opacity-50">✓ Fill {pv.contacts.toLocaleString()} investors</button> : null}
+                <button type="button" onClick={() => void fillUndo(step)} disabled={busy} className="text-[11.5px] text-rose-600 hover:underline disabled:opacity-50">remove all {tag}</button>
+                {pv ? <span className="text-[11.5px] text-slate-500">{Object.entries(pv.byField).map(([f, n]) => `${FIELD_LABEL[f] ?? f} ${n.toLocaleString()}`).join(" · ")} · scanned {pv.scanned.toLocaleString()}</span> : null}
+                {fMsg[step] ? <span className="text-[11.5px] text-slate-500">{fMsg[step]}</span> : null}
+              </div>
+              {step === "guess" && pv?.defaults ? (
+                <div className="mt-2.5 overflow-hidden rounded-lg border border-slate-200">
+                  <table className="w-full text-[11.5px]">
+                    <thead className="bg-slate-50 text-left text-[10.5px] text-slate-500">
+                      <tr><th className="px-3 py-1.5 font-medium">Type</th><th className="px-3 py-1.5 font-medium">Field</th><th className="px-3 py-1.5 font-medium">Value used (share of same-type answers)</th><th className="px-3 py-1.5 font-medium">Answers</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {Object.entries(pv.defaults).flatMap(([type, fields]) => Object.entries(fields).map(([field, d]) => (
+                        <tr key={`${type}-${field}`}>
+                          <td className="px-3 py-1.5 font-medium text-slate-700">{type}</td>
+                          <td className="px-3 py-1.5 text-slate-600">{FIELD_LABEL[field] ?? field}</td>
+                          <td className="px-3 py-1.5 text-slate-600">{d.values.map((v) => `${v.value} (${Math.round(v.share * 100)}%)`).join(" · ")}</td>
+                          <td className="px-3 py-1.5 text-slate-500">{d.sample.toLocaleString()}</td>
+                        </tr>
+                      )))}
+                    </tbody>
+                  </table>
+                  {Object.keys(pv.defaults).length === 0 ? <div className="p-3 text-[11.5px] text-slate-400">No type has a value chosen by half its investors, so nothing would be guessed.</div> : null}
+                </div>
+              ) : null}
+              {pv && pv.sample.length > 0 ? (
+                <div className="mt-2.5 max-h-56 overflow-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-[11.5px]">
+                    <thead className="sticky top-0 bg-slate-50 text-left text-[10.5px] text-slate-500"><tr><th className="px-3 py-1.5 font-medium">Investor</th><th className="px-3 py-1.5 font-medium">Field</th><th className="px-3 py-1.5 font-medium">Would get</th></tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pv.sample.map((i) => (
+                        <tr key={`${i.contactId}-${i.field}`}>
+                          <td className="px-3 py-1.5"><a href={`/admin/sales/contacts/${i.contactId}`} className="text-slate-700 hover:underline">{i.company ?? "(no company)"}</a></td>
+                          <td className="px-3 py-1.5 text-slate-500">{FIELD_LABEL[i.field] ?? i.field}</td>
+                          <td className="px-3 py-1.5 text-slate-700">{i.values.join(" · ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
       <div className="mb-1.5 text-[13px] font-semibold text-slate-800">Step 2 · AI enrichment <span className="font-normal text-slate-500">— industry, type &amp; thesis stage</span></div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => void run()} disabled={busy} className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">▷ Run next 40</button>
         <button type="button" onClick={() => void runAll()} disabled={busy} className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700 disabled:opacity-50">▷▷ Run all</button>
+        <button type="button" onClick={() => void rerunAll()} disabled={busy} title="Investors the first pass found no signal for, now read with their profile notes, LinkedIn and website" className="rounded-lg border border-indigo-300 bg-white px-3.5 py-2 text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">↻ Re-run with new signals</button>
         {highCount > 0 ? <button type="button" onClick={() => void bulk()} disabled={busy} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-[13px] font-medium text-emerald-700 disabled:opacity-50">✓ Approve all ≥{HIGH}% ({highCount})</button> : null}
         <span className="ml-auto text-[12px] text-slate-500">{visibleRows.length !== rows.length ? `${visibleRows.length} of ` : ""}{rows.length} pending{msg ? ` · ${msg}` : ""}</span>
       </div>
+      <label className="mb-3 flex items-center gap-2 text-[12px] text-slate-600">
+        <input type="checkbox" checked={includeLow === true} disabled={busy || includeLow === null} onChange={(e) => void toggleIncludeLow(e.target.checked)} />
+        Let matching use low confidence AI values <span className="text-slate-400">(inferred:low, under 60%). Off by default, same as founders.</span>
+      </label>
       <div className="mb-3 flex items-center gap-2">
         <ToolbarGear heading="Enrichment queue" items={[
           { key: "export", icon: "ti-download", label: "Export queue", hint: `${visibleRows.length.toLocaleString()} matching`, onClick: () => downloadCsv(`enrichment-queue-${new Date().toISOString().slice(0, 10)}.csv`, ["Company", "Proposed type", "Proposed industries", "Proposed stage", "Confidence", "Basis", "Rationale"], visibleRows.map((r) => [r.company ?? "", r.proposed_type ?? "", r.proposed_industries, r.proposed_stage, r.confidence, r.basis ?? "", r.rationale ?? ""])) } as GearItem,

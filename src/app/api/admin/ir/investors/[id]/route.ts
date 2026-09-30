@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   try {
     const [{ data: c }, { data: m }] = await Promise.all([
-      db().from("crm_contacts").select(req.nextUrl.searchParams.get("detail") ? "id, name, company, inv_source, inv_verified_at, website, email, phone, country, contact_type, created_on, assignee_ids, profile, raw" : "id, name, company, inv_source, inv_verified_at, website").eq("id", id).maybeSingle(),
+      db().from("crm_contacts").select(req.nextUrl.searchParams.get("detail") ? "id, name, company, inv_source, inv_verified_at, website, email, phone, country, contact_type, created_on, assignee_ids, profile, raw, overrides" : "id, name, company, inv_source, inv_verified_at, website").eq("id", id).maybeSingle(),
       db().from("ir_matches").select("id, project_id, stage, stage_changed_at, project:ir_projects(title, founder_name)").eq("investor_contact_id", id).order("stage_changed_at", { ascending: false }),
     ]);
     const inv = c as { id: string; name: string | null; company: string | null; inv_source: string | null; inv_verified_at: string | null; website: string | null } | null;
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   } catch (e) { return failed(e, "Couldn't load the investor."); }
 }
 
-type DetailRow = { email: string | null; phone: string | null; country: string | null; contact_type: string | null; created_on: string | null; assignee_ids: string[] | null; website: string | null; profile: Record<string, unknown> | null; raw: Record<string, unknown> | null };
+type DetailRow = { email: string | null; phone: string | null; country: string | null; contact_type: string | null; created_on: string | null; assignee_ids: string[] | null; website: string | null; profile: Record<string, unknown> | null; raw: Record<string, unknown> | null; overrides?: Record<string, unknown> | null };
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 const m2o = (v: unknown) => (Array.isArray(v) && typeof v[1] === "string" ? v[1] : null);
 const list = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : typeof v === "string" && v ? [v] : []);
@@ -44,6 +44,9 @@ async function contactDetail(c: DetailRow) {
   const extra = ((p.extra ?? (raw.__profile as Record<string, unknown> | undefined)?.extra) as Record<string, unknown> | undefined) ?? {};
   const byKeyword = (re: RegExp) => { const k = Object.keys(extra).find((x) => re.test(x)); return k ? list(extra[k]) : []; };
   const names = await nameMap(c.assignee_ids ?? []);
+  // Odoo's value wins; a filled or approved value (crm_contacts.overrides) shows only when
+  // Odoo has none, so the popup no longer reads blank for investors the fill completed.
+  const orOv = (odoo: string[], key: string) => (odoo.length ? odoo : list(c.overrides?.[key]));
   return {
     email: c.email, phone: c.phone ?? str(raw.phone) ?? str(raw.mobile), mobile: str(raw.mobile),
     jobPosition: str(raw.function), website: c.website ?? str(raw.website),
@@ -51,8 +54,8 @@ async function contactDetail(c: DetailRow) {
     createdOn: c.created_on ?? str(raw.create_date), membership: str(p.membership) ?? (c.contact_type ? c.contact_type[0].toUpperCase() + c.contact_type.slice(1) : null),
     assignees: (c.assignee_ids ?? []).map((id) => names.get(id)).filter(Boolean),
     profile: {
-      investorTypes: list(p.investorTypes), industries: list(p.industries), operatingStages: list(p.operatingStages), fundingStages: list(p.fundingStages),
-      capital: list(p.capital), businessEntity: list(p.businessEntity),
+      investorTypes: orOv(list(p.investorTypes), "Investor type"), industries: orOv(list(p.industries), "Industries"), operatingStages: list(p.operatingStages), fundingStages: orOv(list(p.fundingStages), "Funding stage"),
+      capital: orOv(list(p.capital), "Capital type"), businessEntity: orOv(list(p.businessEntity), "Business entity"),
       investmentSize: byKeyword(/investment size|check size/i), revenueRange: byKeyword(/annual revenue range|revenue range/i),
     },
   };

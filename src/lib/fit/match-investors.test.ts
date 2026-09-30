@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreRow, rankRows } from "./match-investors";
+import { scoreRow, rankRows, fieldsOf } from "./match-investors";
 import { OP_STAGE_LABEL, INV_SIZE_LABEL, REVENUE_LABEL, type FitAnswers } from "./options";
 
 function inv(opts: {
@@ -85,5 +85,23 @@ describe("rankRows", () => {
       inv({ id: "2", company: "ridge partners", source: "verified", industries: ["Cleantech"], stage: ["Expand Growth"], size: ["$1m - $10m"] }),
     ], ANSWERS);
     expect(out).toHaveLength(1); // deduped by normalised company
+  });
+});
+
+describe("low-confidence gate", () => {
+  const base = { id: "g1", company: "Acme", inv_source: null, inv_verified_at: null };
+  const r = (overrides: Record<string, unknown>) => ({ ...base, raw: { __profile: { industries: [], investorTypes: ["Angel"] } }, overrides });
+  it("holds back an industry tagged inferred:low unless allowed", () => {
+    const row = r({ Industries: ["Fintech"], _industry_source: "inferred:low" });
+    expect(fieldsOf(row).industries).toEqual([]);
+    expect(fieldsOf(row, { includeLow: true }).industries).toEqual(["Fintech"]);
+  });
+  it("keeps untagged, stated and higher-confidence values as before", () => {
+    expect(fieldsOf(r({ Industries: ["Fintech"] })).industries).toEqual(["Fintech"]);
+    expect(fieldsOf(r({ Industries: ["Fintech"], _industry_source: "inferred:medium" })).industries).toEqual(["Fintech"]);
+    expect(fieldsOf(r({ Industries: ["Fintech"], _industry_source: "stated:pitchbook" })).industries).toEqual(["Fintech"]);
+  });
+  it("falls back to the Odoo type when the override type is low confidence", () => {
+    expect(fieldsOf(r({ "Investor type": ["VC"], _type_source: "inferred:low" })).types).toEqual(["Angel"]);
   });
 });

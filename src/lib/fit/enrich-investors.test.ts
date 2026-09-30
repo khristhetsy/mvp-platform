@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseProposal, normalizeStages, STAGE_VOCAB } from "./enrich-investors";
+import { parseProposal, normalizeStages, STAGE_VOCAB, confidenceBand, websiteDomain, profileNotes, linkedinOf, hasNewSignal } from "./enrich-investors";
 import { Q1_STAGE } from "./options";
 
 describe("parseProposal", () => {
@@ -79,5 +79,33 @@ describe("normalizeStages", () => {
     // answer can never be filled by enrichment.
     const fromFunnel = new Set(Q1_STAGE.flatMap((o) => o.stored));
     for (const s of fromFunnel) expect(STAGE_VOCAB as readonly string[]).toContain(s);
+  });
+});
+
+describe("extra signals", () => {
+  it("confidenceBand matches the queue thresholds", () => {
+    expect(confidenceBand(85)).toBe("high");
+    expect(confidenceBand(60)).toBe("medium");
+    expect(confidenceBand(59)).toBe("low");
+  });
+  it("websiteDomain normalises", () => {
+    expect(websiteDomain("https://www.acme.vc/about")).toBe("acme.vc");
+    expect(websiteDomain("acme.vc")).toBe("acme.vc");
+    expect(websiteDomain("")).toBeNull();
+    expect(websiteDomain("not a url")).toBeNull();
+  });
+  it("profileNotes drops boilerplate", () => {
+    expect(profileNotes({ __profile: { extra: { "Investor quick notes": "Software", "Investor short bio": "upon request" } } })).toBe("Software");
+    expect(profileNotes({ __profile: { extra: { "Investor short bio": "upon request" } } })).toBeNull();
+  });
+  it("linkedinOf finds a LinkedIn URL anywhere in the record", () => {
+    expect(linkedinOf({ __profile: { extra: { "Investor linkedin url": "https://www.linkedin.com/in/jane-doe" } } })).toBe("https://www.linkedin.com/in/jane-doe");
+    expect(linkedinOf({})).toBeNull();
+  });
+  it("hasNewSignal ignores a website that is just the email domain", () => {
+    const base = { id: "c", company: "Acme", overrides: null, inv_source: null };
+    expect(hasNewSignal({ ...base, email: "a@acme.vc", website: "https://acme.vc", raw: {} })).toBe(false);
+    expect(hasNewSignal({ ...base, email: "a@gmail.com", website: "https://acme.vc", raw: {} })).toBe(true);
+    expect(hasNewSignal({ ...base, email: null, website: null, raw: { __profile: { extra: { "Investor quick notes": "Software" } } } })).toBe(true);
   });
 });

@@ -89,8 +89,23 @@ function ovList(overrides: Record<string, unknown> | null, key: string): string[
   const v = overrides?.[key];
   return Array.isArray(v) ? asList(v) : null;
 }
-export function mergedIndustries(row: GatedRow): string[] {
-  const raw = ovList(row.overrides, "Industries") ?? asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries);
+/**
+ * Setting key: when ON, AI values tagged low confidence ("inferred:low") count in matching.
+ * OFF by default, the same rule the founder Match campaign applies to low-confidence
+ * industries. Read by the index builder; everything else holds them back.
+ */
+export const INCLUDE_LOW_CONFIDENCE_KEY = "investor_fill_include_low";
+export const LOW_CONFIDENCE_TAG = "inferred:low";
+export type FieldOpts = { includeLow?: boolean };
+
+/** True when an override exists only as a low-confidence AI value and must sit out. */
+function heldBack(row: GatedRow, sourceKey: string, opts: FieldOpts): boolean {
+  return !opts.includeLow && row.overrides?.[sourceKey] === LOW_CONFIDENCE_TAG;
+}
+
+export function mergedIndustries(row: GatedRow, opts: FieldOpts = {}): string[] {
+  const ov = heldBack(row, "_industry_source", opts) ? null : ovList(row.overrides, "Industries");
+  const raw = ov ?? asList((row.raw?.__profile as { industries?: unknown } | undefined)?.industries);
   return canonicalizeIndustries(raw); // canonical taxonomy (merges/dedupes)
 }
 export function mergedExtra(row: GatedRow, label: string): string[] {
@@ -143,8 +158,9 @@ export function mergedExtraLoose(row: GatedRow, labels: readonly string[], keywo
   }
   return [];
 }
-export function mergedInvestorTypes(row: GatedRow): string[] {
-  return ovList(row.overrides, "Investor type") ?? asList((row.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes);
+export function mergedInvestorTypes(row: GatedRow, opts: FieldOpts = {}): string[] {
+  const ov = heldBack(row, "_type_source", opts) ? null : ovList(row.overrides, "Investor type");
+  return ov ?? asList((row.raw?.__profile as { investorTypes?: unknown } | undefined)?.investorTypes);
 }
 
 export type GatedRow = {
@@ -164,9 +180,9 @@ export type GatedRow = {
 export type MatchFields = { industries: string[]; stages: string[]; sizes: string[]; types: string[]; revenues: string[] };
 
 /** Project a wide crm_contacts row down to the scoring fields. */
-export function fieldsOf(row: GatedRow): MatchFields {
+export function fieldsOf(row: GatedRow, opts: FieldOpts = {}): MatchFields {
   return {
-    industries: mergedIndustries(row),
+    industries: mergedIndustries(row, opts),
     // Union of both stage labels — see OP_STAGE_LABELS. A contact may carry the value
     // under either, and reading only one is what made approved stages score nothing.
     // The keyword fallback catches a third spelling we haven't seen yet.
@@ -178,7 +194,7 @@ export function fieldsOf(row: GatedRow): MatchFields {
       return union.length ? union : mergedExtraLoose(row, [], FIELD_KEYWORDS.stage, "_stage_source");
     })(),
     sizes: mergedExtraLoose(row, [INV_SIZE_LABEL], FIELD_KEYWORDS.size, "_size_source"),
-    types: mergedInvestorTypes(row),
+    types: mergedInvestorTypes(row, opts),
     revenues: mergedExtraLoose(row, [REVENUE_LABEL], FIELD_KEYWORDS.revenue, "_revenue_source"),
   };
 }
