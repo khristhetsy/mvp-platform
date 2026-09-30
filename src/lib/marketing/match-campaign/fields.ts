@@ -57,7 +57,12 @@ export function isEuCountry(country: string | null | undefined): boolean {
   return Boolean(country && EU_COUNTRIES.has(country.trim().toLowerCase()));
 }
 
-export type CheckOptions = { verifiedOnly: boolean; excludeEu: boolean; unsubscribed: boolean };
+export type CheckOptions = { verifiedOnly: boolean; excludeEu: boolean; unsubscribed: boolean; includeInferred?: boolean };
+
+/** Low-confidence inference or a default guess, as written by the enrichment fill. */
+export function isGuessedData(row: Pick<FounderFieldsRow, "industry_source" | "stage_source">): boolean {
+  return row.industry_source === "inferred:low" || Boolean(row.stage_source?.startsWith("guess:"));
+}
 
 /**
  * The data check. Returns why a founder can't be matched or emailed, or null
@@ -66,6 +71,7 @@ export type CheckOptions = { verifiedOnly: boolean; excludeEu: boolean; unsubscr
 export function checkFounder(row: FounderFieldsRow, opts: CheckOptions): ExcludedReason | null {
   if ((row.industries ?? []).length === 0) return "missing_industry";
   if (canonicalStages(row.funding_stages).length === 0) return "missing_stage";
+  if (!opts.includeInferred && isGuessedData(row)) return "unconfirmed_data";
   if (!row.email || !row.email.trim()) return "no_email";
   if (!firstValidEmail(row.email) || row.email_status === "invalid") return "invalid_email";
   if (row.suppressed || opts.unsubscribed) return "suppressed";

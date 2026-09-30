@@ -24,7 +24,7 @@ import { DEFAULT_SUBJECT } from "./email";
 export const STORED_MATCHES_PER_FOUNDER = 50;
 
 const FIELD_COLUMNS =
-  "id, name, email, email_status, suppressed, company, country, industries, funding_stages, seeking_amount, seeking_investor_types, supabase_profile_id, pipeline_stage, founder_type";
+  "id, name, email, email_status, suppressed, company, country, industries, funding_stages, seeking_amount, seeking_investor_types, supabase_profile_id, pipeline_stage, founder_type, industry_source, stage_source";
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
@@ -278,6 +278,7 @@ export async function setCampaignFounders(campaignId: string, founderIds: readon
       const reason = checkFounder(r, {
         verifiedOnly: cfg.verified_only,
         excludeEu: cfg.exclude_eu,
+        includeInferred: cfg.include_inferred,
         unsubscribed: Boolean(r.email && unsub.has(r.email.trim().toLowerCase())),
       });
       tally(summary, reason);
@@ -302,7 +303,7 @@ export async function setCampaignFounders(campaignId: string, founderIds: readon
 
 function tally(s: CheckSummary, reason: ExcludedReason | null) {
   if (!reason) s.ready++;
-  else if (reason === "missing_industry" || reason === "missing_stage") s.missingData++;
+  else if (reason === "missing_industry" || reason === "missing_stage" || reason === "unconfirmed_data") s.missingData++;
   else if (reason === "suppressed") s.suppressed++;
   else if (reason === "eu_excluded") s.eu++;
   else s.emailIssue++;

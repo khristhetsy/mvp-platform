@@ -438,7 +438,7 @@ function summarize(founders: CampaignFounderRow[]) {
   for (const f of founders) {
     const x = f.excluded_reason;
     if (!x || x === "no_matches") r.ready++;
-    else if (x === "missing_industry" || x === "missing_stage") r.missing++;
+    else if (x === "missing_industry" || x === "missing_stage" || x === "unconfirmed_data") r.missing++;
     else if (x === "email_unverified" || x === "invalid_email" || x === "no_email") r.email++;
     else r.other++;
   }
@@ -475,7 +475,7 @@ function StepCheck({ campaign, founders, onChange, onNext, onError }: {
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Tile value={s.selected} label="Founders selected" />
         <Tile value={s.ready} label="Ready to match" tone="good" />
-        <Tile value={s.missing} label="Missing industry or stage" tone="warn" />
+        <Tile value={s.missing} label="Missing or guessed industry or stage" tone="warn" />
         <Tile value={s.email} label="Email unverified or invalid" tone="warn" />
         <Tile value={s.other} label="Unsubscribed or EU" tone="warn" />
       </div>
@@ -487,6 +487,10 @@ function StepCheck({ campaign, founders, onChange, onNext, onError }: {
         <label className="flex items-center gap-2">
           <input type="checkbox" disabled={busy} checked={campaign.match_config.exclude_eu} onChange={(e) => setOption({ exclude_eu: e.target.checked })} />
           Exclude EU, UK and Swiss leads
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" disabled={busy} checked={campaign.match_config.include_inferred} onChange={(e) => setOption({ include_inferred: e.target.checked })} />
+          Include low-confidence industry and guessed stages
         </label>
       </div>
       <div className="max-h-[420px] overflow-auto rounded-lg border border-[#E3E8F2]">

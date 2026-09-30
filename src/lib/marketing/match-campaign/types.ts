@@ -9,6 +9,7 @@ export type FounderType = "lead" | "existing_user" | "in_pipeline";
 export type ExcludedReason =
   | "missing_industry"
   | "missing_stage"
+  | "unconfirmed_data"
   | "no_email"
   | "invalid_email"
   | "email_unverified"
@@ -28,6 +29,11 @@ export type MatchConfig = {
   preview_count: number;
   /** Only send to founders whose email_status is "valid". */
   verified_only: boolean;
+  /**
+   * Also accept industry inferred with low confidence ("inferred:low") and stages
+   * set by a default guess ("guess:default"). Off: those founders are held back.
+   */
+  include_inferred: boolean;
   /** Exclude EU, EEA, UK and Swiss leads (GDPR and equivalents). */
   exclude_eu: boolean;
   /** Record sends without dispatching any email (demo and test runs). */
@@ -65,11 +71,15 @@ export type FounderFieldsRow = {
   supabase_profile_id: string | null;
   pipeline_stage: string | null;
   founder_type: FounderType;
+  /** Where an override value came from, e.g. "inferred:high", "guess:default", "crm:extra". */
+  industry_source?: string | null;
+  stage_source?: string | null;
 };
 
 export const EXCLUDED_LABEL: Record<ExcludedReason, string> = {
   missing_industry: "Missing industry",
   missing_stage: "Missing stage",
+  unconfirmed_data: "Industry or stage only guessed",
   no_email: "No email",
   invalid_email: "Invalid email",
   email_unverified: "Email unverified",
@@ -92,6 +102,7 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   daily_cap: 150,
   preview_count: 3,
   verified_only: true,
+  include_inferred: false,
   exclude_eu: true,
   dry_run: true,
   call_url: DEFAULT_CALL_PATH,
@@ -111,6 +122,7 @@ export function readMatchConfig(raw: unknown): MatchConfig {
     daily_cap: num(r.daily_cap, DEFAULT_MATCH_CONFIG.daily_cap),
     preview_count: num(r.preview_count, DEFAULT_MATCH_CONFIG.preview_count),
     verified_only: typeof r.verified_only === "boolean" ? r.verified_only : DEFAULT_MATCH_CONFIG.verified_only,
+    include_inferred: typeof r.include_inferred === "boolean" ? r.include_inferred : DEFAULT_MATCH_CONFIG.include_inferred,
     exclude_eu: typeof r.exclude_eu === "boolean" ? r.exclude_eu : DEFAULT_MATCH_CONFIG.exclude_eu,
     dry_run: typeof r.dry_run === "boolean" ? r.dry_run : DEFAULT_MATCH_CONFIG.dry_run,
     call_url: typeof r.call_url === "string" && r.call_url.trim() ? r.call_url.trim() : DEFAULT_MATCH_CONFIG.call_url,
