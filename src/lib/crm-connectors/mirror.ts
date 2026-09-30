@@ -42,9 +42,26 @@ export async function upsertContacts(contacts: CrmContact[]): Promise<number> {
     synced_at: new Date().toISOString(),
   }));
 
-  const { error } = await supabase.from("crm_contacts").upsert(rows, { onConflict: "source,external_id" });
+  // A record merged into another contact (Sales Hub → Merge) must not come back on the next pull.
+  const merged = await mergedAway(supabase, rows.map((r) => r.external_id).filter(Boolean) as string[]);
+  const keep = merged.size ? rows.filter((r) => !merged.has(`${r.source}|${r.external_id}`)) : rows;
+  if (keep.length === 0) return 0;
+
+  const { error } = await supabase.from("crm_contacts").upsert(keep, { onConflict: "source,external_id" });
   if (error) throw new Error(error.message);
-  return rows.length;
+  return keep.length;
+}
+
+/** `source|external_id` of contacts merged away and not restored (contact_merges tombstones). */
+async function mergedAway(supabase: SupabaseClient, externalIds: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let i = 0; i < externalIds.length; i += 500) {
+    const { data, error } = await supabase.from("contact_merges").select("merged_source, merged_external_id")
+      .is("undone_at", null).in("merged_external_id", externalIds.slice(i, i + 500));
+    if (error) break;   // before the migration runs the columns don't exist: sync as before
+    for (const r of (data ?? []) as Array<{ merged_source: string | null; merged_external_id: string | null }>) out.add(`${r.merged_source}|${r.merged_external_id}`);
+  }
+  return out;
 }
 
 export type SyncState = {

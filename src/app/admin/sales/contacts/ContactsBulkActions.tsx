@@ -53,10 +53,12 @@ type Props = {
   onClear: () => void;
   /** Refetch the list after a write. */
   onChanged: () => void;
-  can: { assign: boolean; list: boolean; edit: boolean; export: boolean };
+  can: { assign: boolean; list: boolean; edit: boolean; export: boolean; merge?: boolean };
+  /** Open the Merge dialog for the ticked contacts (2–10, ticked rows only). */
+  onMerge?: (ids: string[]) => void;
 };
 
-export function ContactsBulkActions({ target, count, selectAllMatching, matchingTotal, onSelectAll, onClear, onChanged, can }: Props) {
+export function ContactsBulkActions({ target, count, selectAllMatching, matchingTotal, onSelectAll, onClear, onChanged, can, onMerge }: Props) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
   const [exportBusy, setExportBusy] = useState(false);
@@ -170,6 +172,8 @@ export function ContactsBulkActions({ target, count, selectAllMatching, matching
     can.edit ? { key: "source", icon: "ti-tag", label: "Set lead source", run: () => { closePanels(); setSourceOpen(true); setSourceMsg(null); } } : null,
     can.list ? { key: "list", icon: "ti-list-details", label: "Create list", run: () => { closePanels(); openListPanel(); } } : null,
     can.export ? { key: "export", icon: "ti-download", label: "Export CSV", run: () => void exportCsv() } : null,
+    can.merge && onMerge && target.mode === "ids" && target.ids.length >= 2 && target.ids.length <= 10
+      ? { key: "merge", icon: "ti-git-merge", label: `Merge ${target.ids.length} contacts`, run: () => { closePanels(); onMerge(target.ids); } } : null,
   ] as Array<{ key: string; icon: string; label: string; run: () => void } | null>).filter((a): a is NonNullable<typeof a> => a !== null);
 
   return (
