@@ -9,11 +9,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
-import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
+import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../../../_shared/RecordPanels";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 import { MatchBulkActions } from "./MatchBulkActions";
+import { ActivityPopover } from "./ActivityPopover";
 
 type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
 type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
@@ -30,6 +31,8 @@ const MATCH_COLS: Array<{ key: MatchColKey; label: string; on: boolean }> = [
 ];
 const MATCH_DEFAULT = MATCH_COLS.filter((c) => c.on).map((c) => c.key);
 const MATCH_COLS_KEY = "ir.task.matching.columns";
+/** Sortable Matching columns: Name plus every optional column. Click a header to sort, click again to reverse. */
+type MatchSortKey = "name" | MatchColKey;
 
 export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = null }: { taskId: string; meId: string; initialTab: string | null; added: number; sequenced?: number | null }) {
   const [now] = useState(() => Date.now());
@@ -39,6 +42,9 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
   const [colsOpen, setColsOpen] = useState(false);
   const [contact, setContact] = useState<{ contactId: string; matchId: string } | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [actPop, setActPop] = useState<{ matchId: string; el: HTMLElement } | null>(null);
+  const closeActPop = useCallback(() => setActPop(null), []);
+  const [sort, setSort] = useState<{ key: MatchSortKey; dir: 1 | -1 } | null>(null);
   useEffect(() => {
     let saved: MatchColKey[] | null = null;
     try { const v = JSON.parse(window.localStorage.getItem(MATCH_COLS_KEY) ?? "null"); if (Array.isArray(v)) saved = v.filter((k): k is MatchColKey => MATCH_COLS.some((c) => c.key === k)); } catch { /* ignore */ }
@@ -104,6 +110,12 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
   const prev = idx > 0 ? ordered[idx - 1] : null, next = idx >= 0 && idx < ordered.length - 1 ? ordered[idx + 1] : null;
   const base = `/admin/ir/projects/${p.id}/tasks`;
   const monthWeeks = data.weeks.filter((w) => w.parent_id === week?.parent_id);
+  // Odoo-style task chain (top right): this project's earlier weekly tasks leading to this one.
+  const CHAIN_MAX = 4;
+  const chain = idx >= 0 ? ordered.slice(Math.max(0, idx + 1 - CHAIN_MAX), idx + 1) : [];
+  const chainHidden = idx >= 0 ? Math.max(0, idx + 1 - CHAIN_MAX) : 0;
+  const monthNo = week ? [...data.months].sort((a, b) => a.sort_order - b.sort_order).findIndex((m) => m.id === week.parent_id) + 1 : 0;
+  const chevron = (first: boolean) => ({ clipPath: first ? "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)" : "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)" });
 
   return (
     <div>
@@ -118,7 +130,8 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
         </span>
       </div>
       {/* Stage: big chevron bar, click a step to move; ▾ menu to pick or edit */}
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
         <div className="flex" role="group" aria-label="Stage">
           {(["new", "in_progress", "done"] as const).map((st, i) => {
             const rank = ["new", "in_progress", "done"].indexOf(t.status); const on = t.status === st; const done = i < rank;
@@ -131,10 +144,27 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
             <div className="fixed inset-0 z-20" onClick={() => setStageMenu(false)} />
             <div className="absolute right-0 z-30 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white text-[12.5px] shadow-lg">
               {(["new", "in_progress", "done"] as const).map((st) => <button key={st} type="button" onClick={() => { setStageMenu(false); if (t.status !== st) void patch({ status: st }); }} className={`block w-full px-3 py-2 text-left hover:bg-slate-50 ${t.status === st ? "font-medium text-indigo-700" : "text-slate-700"}`}>{STAGE_LABEL[st]}{t.status === st ? " ✓" : ""}</button>)}
-              <div className="border-t border-slate-100 px-3 py-2 text-[11.5px] text-slate-400">Stages are New → In progress → Done; the week a task sits in is changed at the bottom of the form.</div>
+              {monthWeeks.length ? <div className="border-t border-slate-100 py-1">
+                <p className="px-3 pb-0.5 pt-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Move to week</p>
+                {monthWeeks.map((w) => { const active = w.id === t.milestone_id; return <button key={w.id} type="button" disabled={busy || active} onClick={() => { setStageMenu(false); void patch({ milestoneId: w.id, deadline: w.ends_on }); }} title={formatRange(w.starts_on, w.ends_on)} className={`block w-full px-3 py-1.5 text-left hover:bg-slate-50 ${active ? "font-medium text-indigo-700" : "text-slate-700"}`}>{w.label}{active ? " ✓" : ""}</button>; })}
+              </div> : null}
+              <div className="border-t border-slate-100 px-3 py-2 text-[11.5px] text-slate-400">Stages are New → In progress → Done. Move to week changes the week this task sits in.</div>
             </div>
           </> : null}
         </div>
+        </div>
+        {chain.length ? (
+          <nav aria-label="Task chain" className="flex max-w-full overflow-x-auto">
+            {chainHidden ? <Link href={`${base}?month=${week?.parent_id ?? ""}`} title={`${chainHidden} earlier task${chainHidden === 1 ? "" : "s"} on the board`} className="bg-slate-100 px-4 py-2 text-[12.5px] text-slate-600 hover:bg-slate-200" style={chevron(true)}>+{chainHidden}</Link> : null}
+            {chain.map((s, i) => {
+              const cur = s.id === t.id; const w = data.weeks.find((x) => x.id === s.milestone_id);
+              const cls = `-ml-1.5 max-w-[240px] truncate whitespace-nowrap px-5 py-2 text-[12.5px] ${i === 0 && !chainHidden ? "ml-0" : ""}`;
+              return cur
+                ? <span key={s.id} aria-current="page" title={w ? formatRange(w.starts_on, w.ends_on) : undefined} className={`${cls} bg-indigo-50 font-semibold text-indigo-800`} style={chevron(i === 0 && !chainHidden)}>{s.title}{monthNo ? <span className="ml-1.5 text-[11px] font-normal text-indigo-500">{monthNo}M</span> : null}</span>
+                : <Link key={s.id} href={`${base}/${s.id}`} title={w ? `${s.title} · ${formatRange(w.starts_on, w.ends_on)}` : s.title} className={`${cls} bg-slate-100 text-slate-700 hover:bg-slate-200`} style={chevron(i === 0 && !chainHidden)}>{s.title}</Link>;
+            })}
+          </nav>
+        ) : null}
       </div>
       {notice ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" /><span className="flex-1">{notice}</span><button type="button" onClick={() => setNotice(null)} className="text-emerald-800"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
       {error ? <p className="mb-2 text-[12px] text-rose-600">{error}</p> : null}
@@ -201,8 +231,35 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                 const n = data.matches.filter((m) => picked.has(m.id)).length;
                 const all = data.matches.length > 0 && n === data.matches.length;
                 return <input type="checkbox" checked={all} disabled={!data.matches.length} ref={(el) => { if (el) el.indeterminate = n > 0 && !all; }} onChange={(e) => setPicked(e.target.checked ? new Set(data.matches.map((m) => m.id)) : new Set())} aria-label={all ? "Unselect all" : "Select all"} title={all ? "Unselect all" : "Select all"} />;
-              })()}</th><th className="py-1.5 pr-2 font-medium">Name</th>{mcols.map((k) => <th key={k} className="py-1.5 pr-2 font-medium">{MATCH_COLS.find((c) => c.key === k)?.label}</th>)}<th className="py-1.5 font-medium"></th></tr></thead>
-                <tbody className="divide-y divide-slate-100">{data.matches.map((m) => {
+              })()}</th>{(["name", ...mcols] as MatchSortKey[]).map((k) => {
+                const on = sort?.key === k;
+                return <th key={k} aria-sort={on ? (sort!.dir === 1 ? "ascending" : "descending") : "none"} className="p-0 pr-1 font-medium">
+                  <button type="button" onClick={() => setSort(on ? { key: k, dir: sort!.dir === 1 ? -1 : 1 } : { key: k, dir: 1 })} title={`Sort by ${k === "name" ? "name" : MATCH_COLS.find((c) => c.key === k)?.label.toLowerCase()}`}
+                    className={`flex w-full items-center gap-1 whitespace-nowrap rounded px-1.5 py-1.5 text-left hover:bg-slate-50 ${on ? "bg-indigo-50/60 text-slate-800 ring-1 ring-inset ring-indigo-400" : ""}`}>
+                    {k === "name" ? "Name" : MATCH_COLS.find((c) => c.key === k)?.label}{on ? <i className={`ti ${sort!.dir === 1 ? "ti-chevron-up" : "ti-chevron-down"} ml-auto`} aria-hidden="true" /> : null}
+                  </button></th>;
+              })}<th className="py-1.5 font-medium"></th></tr></thead>
+                <tbody className="divide-y divide-slate-100">{(() => {
+                  if (!sort) return data.matches;
+                  const val = (m: IrMatch): string | number => {
+                    const c = data.contacts[m.investor_contact_id];
+                    switch (sort.key) {
+                      case "name": return (m.investor_name ?? m.investor_firm ?? "").toLowerCase();
+                      case "firm": return (m.investor_firm ?? "").toLowerCase();
+                      case "membership": return (c?.membership ?? "Investor").toLowerCase();
+                      case "phone": return c?.phone ?? "";
+                      case "email": return (c?.email ?? "").toLowerCase();
+                      case "activities": return open.find((a) => a.match_id === m.id)?.due_at ?? "";
+                      case "country": return (c?.country ?? "").toLowerCase();
+                      case "stage": return IR_STAGES.indexOf(m.stage);
+                      case "fit": return m.fit_tier ?? "";
+                      case "source": return m.data_source ?? "";
+                      case "assignee": return (m.assignee_name ?? "").toLowerCase();
+                    }
+                  };
+                  // Blanks sort last in both directions, like Odoo.
+                  return [...data.matches].sort((a, b) => { const x = val(a), y = val(b); if (x === "" && y !== "") return 1; if (y === "" && x !== "") return -1; return (x < y ? -1 : x > y ? 1 : 0) * sort.dir; });
+                })().map((m) => {
                   const c = data.contacts[m.investor_contact_id];
                   const nx = open.find((a) => a.match_id === m.id);
                   const last = done.find((a) => a.match_id === m.id);
@@ -213,9 +270,10 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                       case "membership": return c?.membership ?? "Investor";
                       case "phone": return c?.phone ?? "—";
                       case "email": return <span className="block max-w-[220px] truncate" title={c?.email ?? ""}>{c?.email ?? "—"}</span>;
-                      case "activities": return nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
+                      case "activities": return <button type="button" onClick={(e) => { e.stopPropagation(); const el = e.currentTarget; setActPop((cur) => (cur?.matchId === m.id ? null : { matchId: m.id, el })); }} aria-haspopup="dialog" aria-expanded={actPop?.matchId === m.id} title="See or schedule activities"
+                        className={`-mx-1 rounded px-1 py-0.5 text-left hover:bg-indigo-50 ${actPop?.matchId === m.id ? "bg-indigo-50" : ""}`}>{nx ? <span className={`inline-flex items-center gap-1 ${late ? "text-rose-700" : "text-slate-700"}`}><i className={`ti ${IR_ACTIVITY_ICON[nx.type]}`} aria-hidden="true" />{nx.subject}{nx.due_at ? <span className="text-slate-400"> · {late ? "overdue" : "due"} {fmt(nx.due_at)}</span> : null}</span>
                         : last ? <span className="inline-flex items-center gap-1 text-emerald-700"><i className="ti ti-check" aria-hidden="true" />{last.subject}{last.done_at ? <span className="text-slate-400"> · {fmt(last.done_at)}</span> : null}</span>
-                        : <span className="text-slate-400">{IR_STAGE_LABEL[m.stage]}</span>;
+                        : <span className="inline-flex items-center gap-1 text-slate-400"><i className="ti ti-clock" aria-hidden="true" />{IR_STAGE_LABEL[m.stage]}</span>}{open.filter((a) => a.match_id === m.id).length > 1 ? <span className="ml-1 rounded-full bg-indigo-50 px-1.5 text-[10.5px] font-medium text-indigo-700">+{open.filter((a) => a.match_id === m.id).length - 1}</span> : null}</button>;
                       case "country": return c?.country ?? "—";
                       case "stage": return <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">{IR_STAGE_LABEL[m.stage]}</span>;
                       case "fit": return m.fit_tier ? `${m.fit_tier[0].toUpperCase()}${m.fit_tier.slice(1)}` : "—";
@@ -224,8 +282,8 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                     }
                   };
                   return (
-                    <tr key={m.id} className={picked.has(m.id) ? "bg-indigo-50/40" : "hover:bg-slate-50"}>
-                      <td className="py-2 pl-1 pr-2"><input type="checkbox" checked={picked.has(m.id)} onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Select ${m.investor_name ?? m.investor_firm ?? "investor"}`} /></td>
+                    <tr key={m.id} onClick={(e) => { if ((e.target as HTMLElement).closest("button, a, input, select, label")) return; setContact({ contactId: m.investor_contact_id, matchId: m.id }); }} className={`cursor-pointer ${picked.has(m.id) ? "bg-indigo-50/40" : "hover:bg-slate-50"}`}>
+                      <td className="py-2 pl-1 pr-2" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={picked.has(m.id)} onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Select ${m.investor_name ?? m.investor_firm ?? "investor"}`} /></td>
                       <td className="whitespace-nowrap py-2 pr-2"><button type="button" onClick={() => setContact({ contactId: m.investor_contact_id, matchId: m.id })} className="text-left font-medium text-slate-900 hover:text-indigo-700 hover:underline">{m.investor_name ?? m.investor_firm ?? "—"}</button></td>
                       {mcols.map((k) => <td key={k} className="whitespace-nowrap py-2 pr-2 text-slate-600">{cellOf(k)}</td>)}
                       <td className="py-2 text-right"><button type="button" disabled={busy} onClick={() => removeMatch(m)} aria-label={`Remove ${m.investor_name ?? "investor"}`} className="text-slate-400 hover:text-rose-600">✕</button></td>
@@ -234,6 +292,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                   <tr><td colSpan={mcols.length + 3} className="py-2"><Link href={`${base}/${t.id}/matching`} className="text-[12.5px] text-indigo-700 hover:underline">Add a line</Link></td></tr>
                 </tbody></table>
               </div>
+              {actPop ? (() => { const m = data.matches.find((x) => x.id === actPop.matchId); return m ? <ActivityPopover anchor={actPop.el} activities={open.filter((a) => a.match_id === m.id)} projectId={p.id} taskId={t.id} matchId={m.id} staff={data.staff} meId={meId} now={now} onChange={load} onClose={closeActPop} /> : null; })() : null}
               {contact ? <InvestorContactDialog contactId={contact.contactId} matchId={contact.matchId} onClose={() => setContact(null)} /> : null}
             </div>
           ) : null}
@@ -246,12 +305,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 px-4 py-3 text-[12.5px]">
-          <span className="mr-1 text-slate-500">Week</span>
-          {monthWeeks.map((w) => {
-            const active = w.id === t.milestone_id;
-            return <button key={w.id} type="button" disabled={busy || active} onClick={() => patch({ milestoneId: w.id, deadline: w.ends_on })} title={formatRange(w.starts_on, w.ends_on)} className={`rounded-lg border px-3 py-1.5 font-medium ${active ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>{w.label}</button>;
-          })}
-          {month ? <span className="ml-1 text-slate-500">· {month.label} of {data.months.length}</span> : null}
+          {month ? <span className="text-slate-500">{week?.label ? `${week.label} · ` : ""}{month.label} of {data.months.length}</span> : null}
           <Link href={`${base}?month=${week?.parent_id ?? ""}`} className="ml-auto text-indigo-700 hover:underline">Open board</Link>
         </div>
       </div>
