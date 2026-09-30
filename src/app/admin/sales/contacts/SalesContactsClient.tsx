@@ -429,6 +429,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${matchingTotal.toLocaleString()} matching`, onClick: () => void exportAll() } as GearItem] : []),
     { key: "cols", icon: "ti-columns", label: "Columns", sep: true, onClick: () => { setOpenColPicker(true); setFiltersOpen(false); setOpenFilter(null); } },
     ...(basePath.startsWith("/admin/sales") ? [{ key: "members", icon: "ti-users", label: "Assignable members", href: "/admin/sales/settings" } as GearItem] : []),
+    ...(basePath.startsWith("/admin/sales") ? [{ key: "fill", icon: "ti-wand", label: "Fill missing fields", hint: "Founders and investors", href: "/admin/sales/contacts/fill-missing" } as GearItem] : []),
   ];
 
   const roleFacets = FACETS_BY_ROLE[role] ?? FACETS_BY_ROLE.any;

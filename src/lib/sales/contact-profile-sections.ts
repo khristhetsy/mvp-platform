@@ -88,6 +88,13 @@ const FOUNDER_SCHEMA: SectionDef[] = [
       { display: "Five key highlights", match: "five key highlights", odoo: "Entrepreneur five key highlights" },
     ],
   },
+  // Where the contacts fill (src/lib/contacts/fill-missing.ts) writes a founder's LinkedIn.
+  {
+    title: "Social",
+    fields: [
+      { display: "LinkedIn", match: "linkedin", odoo: "Entrepreneur linkedin url" },
+    ],
+  },
   {
     title: "Agent field (internal)",
     fields: [
