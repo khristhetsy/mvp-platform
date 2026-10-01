@@ -53,6 +53,7 @@ export type AdminCompanyCardData = {
   investable_score?: number | null;
   journey_stage?: string | null;
   stage_approval_status?: string | null;
+  founder_signed_on_at?: string | null;
 };
 
 type Props = {
