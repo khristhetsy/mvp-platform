@@ -74,7 +74,7 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
   try {
     const out = await claudeComplete(
       [{ role: "user", content: `Context (JSON):\n${JSON.stringify(briefCtx)}\n\nWrite the CEO's operating brief. Output STRICT JSON {"headline": string, "sections": [{"title": string, "body": string}]} with 3–4 sections (e.g. What matters most, Wins, Watch items, Decisions needed). Cite magnitudes; reference journal decisions by date when relevant. Internal-only — no external performance claims.` }],
-      { system: "You are the AI Chief of Staff for iCapOS, briefing the CEO in the second person. Concise, specific, never invent metrics. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 1200, temperature: 0.4 },
+      { usage: { category: "internal", feature: "ceo_briefing" }, system: "You are the AI Chief of Staff for iCapOS, briefing the CEO in the second person. Concise, specific, never invent metrics. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 1200, temperature: 0.4 },
     );
     const parsed = briefSchema.safeParse(parseJson(out));
     if (parsed.success) {
@@ -94,7 +94,7 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
     try {
       const out = await claudeComplete(
         [{ role: "user", content: `KPIs needing analysis (JSON):\n${JSON.stringify(items)}\n\nOpen recommendations — do NOT repeat these as solutions: ${JSON.stringify(payload.recommendations.map((r) => r.title))}\n\nFor each KPI return: diagnosis (cite magnitude + most likely cause using funnel relationships), solutions (<=3, concrete), mentorship (one leadership principle, second person), coach_prompt (one literal question). Benchmark text is provided — never invent metrics or benchmarks. Output a STRICT JSON array of {"kpi_key","diagnosis","solutions","mentorship","coach_prompt"}.` }],
-        { system: "You are the AI Chief of Staff for iCapOS coaching the CEO on department KPIs. Internal-only. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 3200, temperature: 0.5 },
+        { usage: { category: "internal", feature: "ceo_briefing" }, system: "You are the AI Chief of Staff for iCapOS coaching the CEO on department KPIs. Internal-only. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 3200, temperature: 0.5 },
       );
       const parsed = kpiAiSchema.safeParse(parseJson(out));
       if (parsed.success) {

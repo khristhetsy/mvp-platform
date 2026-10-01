@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Gauge } from "lucide-react";
 import { LIMIT_PLANS, PLAN_LABELS, type LimitPlan, type PlanLimit, type UsagePeriod } from "@/lib/ai-usage";
 import { FEATURE_LABELS } from "@/lib/feature-controls";
+import { featureLabel } from "@/lib/ai-budget/config";
 
 type FeatureLimits = Record<LimitPlan, PlanLimit>;
 
@@ -75,7 +76,7 @@ export function AiUsageLimitsControls() {
         return (
           <div key={feature} className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <span className="text-sm font-medium text-slate-900">{FEATURE_LABELS[feature] ?? feature}</span>
+              <span className="text-sm font-medium text-slate-900">{FEATURE_LABELS[feature] ?? featureLabel(feature)}</span>
               <div className="flex items-center gap-3">
                 {msg?.feature === feature && (
                   <span className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</span>

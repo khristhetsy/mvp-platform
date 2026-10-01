@@ -45,7 +45,7 @@ export async function suggestGoals(): Promise<SuggestGoalsResult> {
   try {
     const out = await claudeComplete(
       [{ role: "user", content: `Company KPI context (JSON):\n${JSON.stringify(ctx)}\n\nYou are the CEO's Chief of Staff. Propose 3–5 concrete, measurable company goals for the coming quarter that move the weakest departments and build on strengths. Each goal must tie to a metric with a realistic numeric target (stretch but achievable vs current). Do NOT duplicate existing_goals. Output STRICT JSON array of {"title","metric","target","period","rationale"}. period like "Q3 2026". target is a number only.` }],
-      { system: "You are the AI Chief of Staff for iCapOS proposing CEO goals. Specific, measurable, realistic. Internal-only, not financial advice. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 1400, temperature: 0.5 },
+      { usage: { category: "internal", feature: "ceo_goals" }, system: "You are the AI Chief of Staff for iCapOS proposing CEO goals. Specific, measurable, realistic. Internal-only, not financial advice. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 1400, temperature: 0.5 },
     );
     const parsed = schema.safeParse(parseJson(out));
     if (!parsed.success) return { goals: [], skippedReason: "invalid_response" };

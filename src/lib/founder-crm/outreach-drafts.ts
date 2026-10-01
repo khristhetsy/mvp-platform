@@ -66,7 +66,7 @@ export async function generateOutreachDraftAI(input: OutreachDraftInput): Promis
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: JSON.stringify(context) }],
-      { model: CLAUDE_SONNET, maxTokens: 500, system },
+      { usage: { category: "founder", feature: "outreach_drafts" }, model: CLAUDE_SONNET, maxTokens: 500, system },
     );
     const parsed = JSON.parse(stripFences(raw)) as { subject?: string; body?: string };
     if (parsed?.subject?.trim() && parsed?.body?.trim()) {

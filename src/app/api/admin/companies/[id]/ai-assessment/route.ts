@@ -155,7 +155,7 @@ export async function POST(
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Review this company for marketplace listing approval:\n\n${context}` }],
-      { model: CLAUDE_SONNET, maxTokens: 500, system: SYSTEM_PROMPT },
+      { usage: { category: "internal", feature: "admin_company_ai" }, model: CLAUDE_SONNET, maxTokens: 500, system: SYSTEM_PROMPT },
     );
 
     const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();

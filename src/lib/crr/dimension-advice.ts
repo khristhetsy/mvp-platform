@@ -158,7 +158,7 @@ export async function generateAdvice(args: {
   try {
     const text = await claudeComplete(
       [{ role: "user", content: promptFor(company, dimension, profile, factorScores, gaps) }],
-      {
+      { usage: { category: "internal", feature: "admin_crr" },
         model: CLAUDE_HAIKU,
         maxTokens: 900,
         locale: "en",

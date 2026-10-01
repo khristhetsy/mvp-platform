@@ -63,7 +63,7 @@ export async function generateFindingsFromText(
 
   const reply = await claudeComplete(
     [{ role: "user", content: sourceText.slice(0, 60000) }],
-    { model: CLAUDE_SONNET, maxTokens: 4000, system: SYSTEM, temperature: 0.2 },
+    { usage: { category: "internal", feature: "admin_company_ai" }, model: CLAUDE_SONNET, maxTokens: 4000, system: SYSTEM, temperature: 0.2 },
   );
 
   let parsed: z.infer<typeof DraftSchema>;

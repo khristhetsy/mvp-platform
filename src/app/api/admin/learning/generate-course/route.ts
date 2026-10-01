@@ -124,7 +124,7 @@ Return ONLY valid JSON (no markdown fences, no extra text):
 }`,
       },
     ],
-    {
+    { usage: { category: "internal", feature: "admin_learning" },
       model: CLAUDE_SONNET,
       maxTokens: 2000,
       system:
@@ -183,7 +183,7 @@ Return ONLY valid JSON:
 }`,
       },
     ],
-    {
+    { usage: { category: "internal", feature: "admin_learning" },
       model: CLAUDE_SONNET,
       maxTokens: 4500,
       system:

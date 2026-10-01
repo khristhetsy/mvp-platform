@@ -50,7 +50,7 @@ export async function answerEventQuestion(
   }
   try {
     const messages: ClaudeMessage[] = [...history.slice(-6), { role: "user", content: message }];
-    const text = await claudeComplete(messages, {
+    const text = await claudeComplete(messages, { usage: { category: "public", feature: "event_assistant" },
       model: CLAUDE_HAIKU,
       maxTokens: 220,
       system: `${SYSTEM}\n\nEVENT CONTEXT:\n${context}`,

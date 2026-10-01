@@ -12,7 +12,19 @@ export type PlanLimit = { maxRuns: number | null; period: UsagePeriod };
  * Anthropic API call. Only these show a usage-limit editor and get enforced.
  * Add a key here (and a DEFAULTS entry below) to cap another paid tool.
  */
-export const AI_COST_FEATURES = ["pitch_deck_analyzer"] as const;
+export const AI_COST_FEATURES = [
+  "pitch_deck_analyzer",
+  "diligence_report",
+  "valuation_advisor",
+  "outreach_coach",
+  "business_plan",
+  "pitch_deck_draft",
+  "regcf_documents",
+  "intro_note_drafts",
+  "class_assistant",
+  "support_assistant",
+  "watchlist_summary",
+] as const;
 
 export function isAiCostFeature(feature: string): boolean {
   return (AI_COST_FEATURES as readonly string[]).includes(feature);
@@ -57,13 +69,34 @@ const UNLIMITED: Record<LimitPlan, PlanLimit> = {
 };
 
 /** Code defaults per feature. Admin overrides in ai_usage_limits win over these. */
-const DEFAULTS: Record<string, Record<LimitPlan, PlanLimit>> = {
-  pitch_deck_analyzer: {
-    founder_free: { maxRuns: 1, period: "week" },
-    founder_basic: { maxRuns: 10, period: "month" },
-    founder_professional: { maxRuns: null, period: "month" },
+/** Starting caps; every one is editable in Admin, Feature Controls. SPV Program
+ *  (which also covers internal staff accounts) stays unlimited, the dollar budget
+ *  in Admin, Feature Controls, AI budget still applies to it. */
+function caps(free: PlanLimit, basic: number, pro: number): Record<LimitPlan, PlanLimit> {
+  return {
+    founder_free: free,
+    founder_basic: { maxRuns: basic, period: "month" },
+    founder_professional: { maxRuns: pro, period: "month" },
     founder_managed_ir: { maxRuns: null, period: "month" },
-  },
+  };
+}
+const ONE_A_WEEK: PlanLimit = { maxRuns: 1, period: "week" };
+
+const DEFAULTS: Record<string, Record<LimitPlan, PlanLimit>> = {
+  pitch_deck_analyzer: caps(ONE_A_WEEK, 10, 30),
+  diligence_report: caps({ maxRuns: 1, period: "month" }, 2, 6),
+  valuation_advisor: caps(ONE_A_WEEK, 10, 30),
+  outreach_coach: caps(ONE_A_WEEK, 10, 30),
+  intro_note_drafts: caps(ONE_A_WEEK, 10, 30),
+  regcf_documents: caps(ONE_A_WEEK, 10, 30),
+  // One run drafts one section or slide, so a full plan or deck takes several.
+  business_plan: caps(ONE_A_WEEK, 30, 90),
+  pitch_deck_draft: caps(ONE_A_WEEK, 30, 90),
+  // Chat: one run is one message.
+  class_assistant: caps({ maxRuns: 10, period: "week" }, 50, 150),
+  support_assistant: caps({ maxRuns: 10, period: "week" }, 50, 150),
+  // Investors are on the free side, so the Free row is the investor cap.
+  watchlist_summary: caps({ maxRuns: 10, period: "month" }, 10, 30),
 };
 
 export function defaultLimits(feature: string): Record<LimitPlan, PlanLimit> {

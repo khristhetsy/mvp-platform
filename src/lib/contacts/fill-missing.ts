@@ -438,7 +438,7 @@ export async function readSite(role: Role, r: FillRow, site: SitePages, industry
   const user = [`Name on file: ${r.company ?? r.name ?? "(unknown)"}`, `Website text: ${site.text.slice(0, 5000)}`].join("\n");
   let reply: string;
   try {
-    reply = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: systemPrompt(role, industryLabels), maxTokens: 500, temperature: 0, locale: "en" });
+    reply = await claudeComplete([{ role: "user", content: user }], { usage: { category: "enrichment", feature: "contact_fill" }, model: CLAUDE_HAIKU, system: systemPrompt(role, industryLabels), maxTokens: 500, temperature: 0, locale: "en" });
   } catch (e) {
     throw new AiUnavailableError(e instanceof Error ? e.message.slice(0, 200) : "AI request failed.");
   }

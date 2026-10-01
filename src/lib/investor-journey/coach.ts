@@ -145,7 +145,7 @@ export async function coachInvestorStage(input: InvestorCoachInput): Promise<Inv
           }`,
         },
       ],
-      { model: CLAUDE_HAIKU, maxTokens: 140, system: SYSTEM_PROMPT },
+      { usage: { category: "investor", feature: "investor_journey" }, model: CLAUDE_HAIKU, maxTokens: 140, system: SYSTEM_PROMPT },
     );
     const body = text.trim();
     if (!body) return step;

@@ -216,7 +216,7 @@ export async function GET() {
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: userMessage }],
-      { model: CLAUDE_SONNET, maxTokens: 700, system: SYSTEM_PROMPT },
+      { usage: { category: "founder", feature: "round_health_advisor" }, model: CLAUDE_SONNET, maxTokens: 700, system: SYSTEM_PROMPT },
     );
 
     const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();

@@ -68,7 +68,7 @@ export async function getIrInsight(metricKey: string, opts: { force?: boolean; c
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Facts (JSON): ${JSON.stringify(facts)}\n\nWrite the insight for "${metric.label}".` }],
-      { system: SYSTEM, model: CLAUDE_HAIKU, maxTokens: 450, temperature: 0.3 },
+      { usage: { category: "internal", feature: "ir_analytics" }, system: SYSTEM, model: CLAUDE_HAIKU, maxTokens: 450, temperature: 0.3 },
     );
     parsed = schema.parse(JSON.parse(stripFences(raw)));
   } catch {

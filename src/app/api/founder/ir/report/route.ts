@@ -5,6 +5,7 @@
  * Founder-safe only: no investor names, no staff notes, no schedule settings.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { withAiUsage } from "@/lib/ai-budget/context";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { founderProjects, founderReport } from "@/lib/ir/founder-report";
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const kind: ReportKind = kindRaw === "month" || kindRaw === "custom" ? kindRaw : "week";
     const start = sp.get("start"), end = sp.get("end");
     if (kind === "custom" && (!start || !end || !DAY.test(start) || !DAY.test(end))) return NextResponse.json({ error: "Pick both dates." }, { status: 400 });
-    const { data, error, status } = await founderReport(company.id, projectId, { kind, milestoneId: sp.get("milestone") || null, start, end, compare: sp.get("compare") !== "0" });
+    const { data, error, status } = await withAiUsage({ category: "founder", feature: "ir_report", profileId: profile.id }, () => founderReport(company.id, projectId, { kind, milestoneId: sp.get("milestone") || null, start, end, compare: sp.get("compare") !== "0" }));
     if (!data) return NextResponse.json({ error: error ?? "Couldn't load the report." }, { status });
     return NextResponse.json(data);
   } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't load the report." }, { status: 500 }); }

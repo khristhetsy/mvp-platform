@@ -22,6 +22,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/ir-sequences": { name: "IR auto sequences", group: "Founders", description: "Sends due auto sequence emails to investors" },
   "/api/cron/matching": { name: "Matching pass", group: "Platform", description: "Suggested matches for eligible founders and approved investors" },
   "/api/cron/run-orchestration": { name: "Orchestration", group: "Platform", description: "Digests, match notices, outreach sends and automations" },
+  "/api/cron/ai-budget-alerts": { name: "AI budget alerts", group: "Platform", description: "Emails when an AI budget reaches 80% or 100% this month" },
   "/api/cron/job-dispatcher": { name: "Schedule dispatcher", group: "Platform", description: "Starts jobs with a custom schedule or a set next run" },
   "/api/cron/activity-escalations": { name: "Activity escalations", group: "Platform", description: "Chases account activity alerts nobody has opened" },
   "/api/cron/operations-escalations": { name: "Operations escalations", group: "Platform" },

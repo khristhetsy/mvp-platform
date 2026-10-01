@@ -212,6 +212,10 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
   const notes = profileNotes(row.raw);
   const linkedin = linkedinOf(row.raw);
   const basis = site ? "website" : notes ? "notes" : linkedin ? "linkedin" : domain ? "domain" : "name";
+  // Pre-filter: with no website, notes, LinkedIn or email domain the call rests on the
+  // company name alone. Of 1,791 calls made with no email domain (logged by 2026-10-01),
+  // none led to an approved proposal; this case is narrower still, so skip the paid call.
+  if (basis === "name") return null;
   const user = [
     `Company: ${row.company ?? "(unknown)"}`,
     `Email domain: ${domain ?? "(none)"}`,
@@ -222,7 +226,7 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
   ].filter(Boolean).join("\n");
   let reply: string;
   try {
-    reply = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
+    reply = await claudeComplete([{ role: "user", content: user }], { usage: { category: "enrichment", feature: "investor_enrichment" }, model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
   } catch (e) {
     // The call itself failed — out of credits, rate limited, network. Not a verdict.
     throw new ClaudeUnavailableError(e instanceof Error ? e.message.slice(0, 200) : "Claude request failed.");

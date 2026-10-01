@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 
   const reply = await claudeComplete(
     [{ role: "user", content: message }],
-    {
+    { usage: { category: "internal", feature: "marketing_cmo" },
       model:     CLAUDE_HAIKU,
       maxTokens: 400,
       system:    CMO_SYSTEM_PROMPT + metricsContext,

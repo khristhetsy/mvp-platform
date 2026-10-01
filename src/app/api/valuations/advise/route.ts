@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -93,8 +94,12 @@ export async function POST(request: Request) {
   };
   const prompt = buildAdvicePrompt(payload);
 
+  // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+  const aiRun = await gateAiRun(profile.id, "valuation_advisor");
+  if (aiRun.blocked) return aiRun.blocked;
+
   async function generate() {
-    const text = await claudeComplete([{ role: "user", content: prompt }], {
+    const text = await claudeComplete([{ role: "user", content: prompt }], { usage: { category: "founder", feature: "valuation_advisor" },
       model: CLAUDE_SONNET,
       maxTokens: 1400,
       system: ADVISOR_SYSTEM,
@@ -120,6 +125,7 @@ export async function POST(request: Request) {
       );
     }
     await persist(result.advice, false, CLAUDE_SONNET);
+    await aiRun.done();
     return NextResponse.json({ advice: result.advice, isSample: false });
   } catch (e) {
     console.warn(`[valuation/advise] generation error: ${e instanceof Error ? e.message : "unknown"}`);

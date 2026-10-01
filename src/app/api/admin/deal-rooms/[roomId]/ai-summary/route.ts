@@ -63,7 +63,7 @@ export async function GET(_: Request, { params }: Readonly<{ params: Promise<{ r
 
   const summary = await claudeComplete(
     [{ role: "user", content: prompt }],
-    {
+    { usage: { category: "internal", feature: "admin_deal_rooms" },
       model:       CLAUDE_HAIKU,
       maxTokens:   350,
       temperature: 0.2,

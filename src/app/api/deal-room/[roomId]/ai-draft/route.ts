@@ -82,7 +82,7 @@ export async function POST(
   try {
     const draft = await claudeComplete(
       [{ role: "user", content: userMessage }],
-      { model: CLAUDE_SONNET, maxTokens: 600, system: SYSTEM_PROMPT },
+      { usage: { category: "founder", feature: "deal_room_drafts" }, model: CLAUDE_SONNET, maxTokens: 600, system: SYSTEM_PROMPT },
     );
     return NextResponse.json({ draft, source: "claude" });
   } catch (err) {

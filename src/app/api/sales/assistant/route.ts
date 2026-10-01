@@ -87,7 +87,7 @@ ${block(facts)}`;
 
   const messages = [...(Array.isArray(history) ? history.slice(-6) : []), { role: "user" as const, content: message.trim() }];
   try {
-    const reply = await claudeComplete(messages, { system, model: CLAUDE_HAIKU, maxTokens: 400, temperature: 0.3 });
+    const reply = await claudeComplete(messages, { usage: { category: "internal", feature: "sales_assistant" }, system, model: CLAUDE_HAIKU, maxTokens: 400, temperature: 0.3 });
     return NextResponse.json({ reply: reply || "I couldn't generate a response — try rephrasing." });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Advisor failed." }, { status: 500 });
