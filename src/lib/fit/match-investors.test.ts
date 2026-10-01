@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreRow, rankRows, fieldsOf } from "./match-investors";
+import { scoreRow, rankRows, fieldsOf, scoreFields, fitWeightsFromEngine } from "./match-investors";
 import { OP_STAGE_LABEL, INV_SIZE_LABEL, REVENUE_LABEL, type FitAnswers } from "./options";
 
 function inv(opts: {
@@ -103,5 +103,26 @@ describe("low-confidence gate", () => {
   });
   it("falls back to the Odoo type when the override type is low confidence", () => {
     expect(fieldsOf(r({ "Investor type": ["VC"], _type_source: "inferred:low" })).types).toEqual(["Angel"]);
+  });
+});
+
+describe("one weight table", () => {
+  const engine = { sector: 40, stage: 10, checkSize: 10, geography: 10, investorType: 10, capitalType: 10, activeRating: 10, arr: 5, mrr: 5 };
+  it("maps engine weights onto the /fit factors, ARR and MRR together as revenue", () => {
+    expect(fitWeightsFromEngine(engine)).toEqual({ industry: 40, stage: 10, size: 10, type: 10, revenue: 10 });
+  });
+  it("scores as a percentage of the table's total", () => {
+    const w = fitWeightsFromEngine(engine); // total 80
+    const r = scoreFields(fieldsOf(inv({ company: "IndustryOnly", industries: ["Cleantech"] })), ANSWERS, w);
+    // industry 40 + open-to-any type 10 = 50 of 80
+    expect(r!.fit).toBe(63);
+  });
+  it("keeps today's scores when no table is passed", () => {
+    const r = scoreRow(inv({ company: "IndustryOnly", industries: ["Cleantech"] }), ANSWERS);
+    expect(r!.fit).toBe(45);
+  });
+  it("still lets a sector-only match pass with the table's weights", () => {
+    const out = rankRows([inv({ company: "OnlySector", industries: ["Cleantech"], invTypes: ["Angel"] })], { ...ANSWERS, investorType: ["vc"] }, fitWeightsFromEngine(engine));
+    expect(out.map((m) => m.company)).toEqual(["OnlySector"]);
   });
 });

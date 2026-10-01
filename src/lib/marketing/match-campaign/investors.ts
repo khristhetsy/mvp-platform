@@ -4,9 +4,9 @@
  *
  * Stage comes from the investor's Odoo funding stages (profile.fundingStages,
  * the same Pre-Seed / Seed Round / Series A list founders pick from). The
- * existing contact bridge (investorProfileFromContact) feeds stage from "use of
- * funds" for the founder board; that is left as it is, and this campaign builds
- * its own investor profile so a founder's funding stage has something to meet.
+ * contact bridge (investorProfileFromContact) reads the same Odoo funding stages;
+ * this campaign builds its own profile to add check size and capital from the
+ * Odoo mandate fields.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { InvestorMatchProfile } from "@/lib/matching/investor-company-matching";
