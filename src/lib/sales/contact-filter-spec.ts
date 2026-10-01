@@ -24,7 +24,7 @@ export const OP_LABEL: Record<Operator, string> = {
   before: "is before",
 };
 
-type FieldKind = "text" | "enumCol" | "type" | "leadSource" | "facet" | "date" | "assignee";
+type FieldKind = "text" | "enumCol" | "type" | "leadSource" | "facet" | "date" | "assignee" | "salesOpp";
 /** Where the value picker for a field gets its options (UI only). */
 export type OptionSource = "countries" | "type" | "leadSource" | "industries" | "capital" | "fundingStages" | "investorTypes" | "operatingStages";
 
@@ -55,6 +55,8 @@ export const FIELD_REGISTRY: FieldDef[] = [
   // correctly against an ISO date string. (Was created_at — every date filter errored.)
   { key: "createdAt", label: "Created on", kind: "date", col: "created_on", ops: ["after", "before"] },
   { key: "assignee", label: "Lead assignee", kind: "assignee", ops: ["set", "not_set"] },
+  // In the sales pipeline: any sales opportunity links to the contact (by contact_crm_id, or by email).
+  { key: "salesOpp", label: "Sales opportunity", kind: "salesOpp", ops: ["set", "not_set"] },
 ];
 
 export const GROUPABLE_FIELDS = ["type", "country", "leadSource", "industries", "fundingStages", "investorTypes"] as const;

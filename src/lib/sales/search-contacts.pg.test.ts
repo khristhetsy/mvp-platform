@@ -16,6 +16,7 @@ const MIGRATIONS = [
   "supabase/migrations/20260914004_search_contacts_page_first.sql",
   "supabase/migrations/20260914005_contact_role_index.sql",
   "supabase/migrations/20260914006_search_contacts_optional_count.sql",
+  "supabase/migrations/20261001200000_contacts_sales_opportunity_filter.sql",
 ].map((f) => join(process.cwd(), f));
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
@@ -46,6 +47,10 @@ beforeAll(async () => {
       contact_type text, module text, country text, created_on text, synced_at timestamptz,
       assignee_ids uuid[], raw jsonb, overrides jsonb, profile jsonb
     );
+    create table public.sales_opportunities (
+      id uuid primary key default gen_random_uuid(),
+      contact_crm_id text, contact_email text, contact_profile_id uuid, company_id uuid, status text
+    );
     -- service_role does not exist outside Supabase; the grants need it to parse.
     do $$ begin
       if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role; end if;
@@ -72,6 +77,27 @@ beforeAll(async () => {
   }
 });
 afterAll(async () => { await pg.close(); });
+
+describe("Sales opportunity filter and group", () => {
+  beforeAll(async () => {
+    // Alice is linked by CRM id, Carol only by email (different case); nobody else.
+    await pg.query(`insert into public.sales_opportunities (contact_crm_id, contact_email, status)
+      select id::text, null, 'open' from public.crm_contacts where name = 'Alice Angel'`);
+    await pg.query(`insert into public.sales_opportunities (contact_crm_id, contact_email, status) values (null, 'CAROL@x.com', 'lost')`);
+  });
+  it("in / not in the sales pipeline", async () => {
+    expect((await rows(spec([{ field: "salesOpp", op: "set" }]))).names).toEqual(["Alice Angel", "Carol \"CJ\" Jones"]);
+    expect((await rows(spec([{ field: "salesOpp", op: "not_set" }]))).names).toEqual(["Bob Fund", "Dan O'Brien", "Eve Nobody"]);
+  });
+  it("combines with Type", async () => {
+    expect((await rows(spec([{ field: "type", op: "in", value: ["investor"] }, { field: "salesOpp", op: "not_set" }]))).names).toEqual(["Bob Fund"]);
+  });
+  it("group by Sales opportunity: bucket counts match the rows each group expands to", async () => {
+    expect(await buckets(spec([]), "salesOpp")).toEqual({ in_pipeline: 2, not_in_pipeline: 3 });
+    expect((await rows(spec([]), { groupBy: "salesOpp", groupValue: "in_pipeline" })).total).toBe(2);
+    expect((await rows(spec([]), { groupBy: "salesOpp", groupValue: "not_in_pipeline" })).total).toBe(3);
+  });
+});
 
 describe("search_contacts — every filter kind runs on real Postgres", () => {
   it("empty spec returns everything with an exact total", async () => {

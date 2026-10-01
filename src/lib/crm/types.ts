@@ -50,6 +50,8 @@ export interface FounderRecord {
   ownerInitials: string;
   lastActivity: string; // ISO
   details?: ContactDetails;
+  /** Any sales opportunity links to this founder (CRM id, email, profile or company). */
+  inSalesPipeline?: boolean;
 }
 
 export interface InvestorRecord {
@@ -64,6 +66,8 @@ export interface InvestorRecord {
   ownerInitials: string;
   lastActivity: string; // ISO
   details?: ContactDetails;
+  /** Any sales opportunity links to this investor (CRM id, email or profile). */
+  inSalesPipeline?: boolean;
 }
 
 export interface MatchRow {

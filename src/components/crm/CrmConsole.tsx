@@ -87,6 +87,9 @@ type Props = {
   investors?: InvestorRecord[];
 };
 
+const SALES_IN = "__sales_in";
+const SALES_OUT = "__sales_out";
+
 export function CrmConsole({ module, founders = [], investors = [] }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -111,6 +114,11 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
   const records = module === "founder" ? founders : investors;
   const filtered = useMemo(() => {
     if (!filter) return records;
+    // Sales pipeline chips work the same for founders and investors.
+    if (filter === SALES_IN || filter === SALES_OUT) {
+      const want = filter === SALES_IN;
+      return (records as Array<FounderRecord | InvestorRecord>).filter((r) => !!r.inSalesPipeline === want) as typeof records;
+    }
     if (module === "founder") return (records as FounderRecord[]).filter((r) => r.stage === filter);
     return (records as InvestorRecord[]).filter((r) => r.kyc === filter || r.rel === filter);
   }, [records, filter, module]);
@@ -190,7 +198,7 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
                   { key: "Pending", label: "KYC pending" },
                   ...INVESTOR_RELS.map((r) => ({ key: r.key, label: r.label })),
                 ]
-            ).map((chip) => (
+            ).concat([{ key: SALES_OUT, label: "Not in sales pipeline" }, { key: SALES_IN, label: "In sales pipeline" }]).map((chip) => (
               <button type="button"
                 key={chip.key}
                 onClick={() => setFilter(chip.key)}

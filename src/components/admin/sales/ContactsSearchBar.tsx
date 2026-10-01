@@ -46,6 +46,8 @@ export function ContactsSearchBar(p: ContactsSearchBarProps) {
     { label: "Has phone", cond: { field: "phone", op: "set" } },
     { label: "Unassigned", cond: { field: "assignee", op: "not_set" } },
     { label: "Added this month", cond: { field: "createdAt", op: "after", value: p.firstOfMonth() } },
+    { label: "Not in sales pipeline", cond: { field: "salesOpp", op: "not_set" } },
+    { label: "In sales pipeline", cond: { field: "salesOpp", op: "set" } },
   ];
   const FACET_ROWS: { field: string; label: string; source: string }[] = [
     { field: "investorTypes", label: "Investor profile", source: "investorTypes" },
