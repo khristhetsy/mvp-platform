@@ -147,19 +147,33 @@ export async function countContactBuckets(spec: FilterSpec, owner: string | null
   return (rows ?? []).map((r) => ({ value: r.value, count: Number(r.n) }));
 }
 
-/** Rows PostgREST returns per request (Supabase max rows); larger sets are read in pages. */
+/** Rows PostgREST returns per request (Supabase max rows); the paged fallback reads in these. */
 export const ID_PAGE = 1000;
 
 /**
  * Every matching id — what "Select all N" acts on. Capped at 25,000.
- * Read in pages of ID_PAGE: PostgREST returns at most 1,000 rows per request, so a
- * single call silently stopped every "Select all" bulk action (lists, lead assign,
- * lead source, email, export) at the first 1,000 contacts. search_contact_ids orders
- * by id, so the pages are stable and never overlap.
+ *
+ * Read as ONE array (search_contact_id_array, migration 20261001210000): PostgREST
+ * returns at most 1,000 rows per request, and paging the set re-ran the full search
+ * per page, so a 13,000 contact selection hit the 8s statement timeout. An array is a
+ * single value, so the search runs once. Until that migration is applied, falls back
+ * to reading search_contact_ids in pages.
  */
 export async function searchContactIds(spec: FilterSpec, owner: string | null, groupBy: string | null, groupValue: string | null, limit = 25000): Promise<string[]> {
   const cap = Math.min(Math.max(limit, 1), 25000);
   const args = { p_spec: spec, p_owner: owner, p_group_by: groupBy, p_group_value: groupValue, p_limit: cap };
+
+  const ctx = "search_contact_id_array";
+  const first = await db().rpc(ctx, args);
+  const missing = first.error?.code === "PGRST202" || first.error?.code === "42883";
+  if (!missing) {
+    const ids = first.error?.code === "57014"
+      ? await readWithRetry<string[] | null>(() => db().rpc(ctx, args), ctx)
+      : await must<string[] | null>(Promise.resolve(first), ctx);
+    return (ids ?? []).slice(0, cap);
+  }
+
+  // Fallback: the array function isn't in the database yet.
   const out: string[] = [];
   for (let from = 0; from < cap; from += ID_PAGE) {
     const to = Math.min(from + ID_PAGE, cap) - 1;

@@ -17,6 +17,7 @@ const MIGRATIONS = [
   "supabase/migrations/20260914005_contact_role_index.sql",
   "supabase/migrations/20260914006_search_contacts_optional_count.sql",
   "supabase/migrations/20261001200000_contacts_sales_opportunity_filter.sql",
+  "supabase/migrations/20261001210000_search_contact_id_array.sql",
 ].map((f) => join(process.cwd(), f));
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
@@ -77,6 +78,21 @@ beforeAll(async () => {
   }
 });
 afterAll(async () => { await pg.close(); });
+
+describe("search_contact_id_array", () => {
+  it("returns the same ids as search_contact_ids, in one row", async () => {
+    const sp = JSON.stringify(spec([{ field: "country", op: "in", value: ["United States"] }]));
+    const set = await pg.query<{ id: string }>("select x as id from public.search_contact_ids($1::jsonb, null, null, null, 25000) x", [sp]);
+    const arr = await pg.query<{ ids: string[] }>("select public.search_contact_id_array($1::jsonb, null, null, null, 25000) as ids", [sp]);
+    expect(arr.rows).toHaveLength(1);
+    expect(arr.rows[0].ids).toEqual(set.rows.map((r) => r.id));
+    expect(arr.rows[0].ids).toHaveLength(2);
+  });
+  it("is an empty array, not null, when nothing matches", async () => {
+    const arr = await pg.query<{ ids: string[] }>("select public.search_contact_id_array($1::jsonb, null, null, null, 25000) as ids", [JSON.stringify(spec([{ field: "name", op: "equals", value: "nobody-here" }]))]);
+    expect(arr.rows[0].ids).toEqual([]);
+  });
+});
 
 describe("Sales opportunity filter and group", () => {
   beforeAll(async () => {
