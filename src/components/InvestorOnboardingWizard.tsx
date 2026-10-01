@@ -29,6 +29,25 @@ const investorProfileSchema = z.object({
   }),
 });
 
+/** Scored questions first, the thesis (read by a person) after them, then submit. */
+const STEPS = ["Firm and type", "Focus", "Check and revenue", "Your thesis", "Submit"] as const;
+const STEP_COUNT = STEPS.length;
+/** Which step asks each required field, so a failed submit opens the step to fix. */
+const STEP_OF_FIELD: Record<string, number> = {
+  investor_type: 1,
+  preferred_sectors: 2,
+  preferred_stages: 2,
+  preferred_geographies: 2,
+  investment_thesis: 4,
+  accredited_status: 5,
+};
+/** The required fields checked before leaving each step. */
+const STEP_SCHEMA: Partial<Record<number, z.ZodObject>> = {
+  1: investorProfileSchema.pick({ investor_type: true }),
+  2: investorProfileSchema.pick({ preferred_sectors: true, preferred_stages: true, preferred_geographies: true }),
+  4: investorProfileSchema.pick({ investment_thesis: true }),
+};
+
 function joinList(values: string[] | null | undefined) {
   return (values ?? []).join(", ");
 }
@@ -115,6 +134,7 @@ export function InvestorOnboardingWizard({
   const [addressPostal, setAddressPostal] = useState(investorProfile.address_postal_code ?? "");
   const [addressCountry, setAddressCountry] = useState(investorProfile.address_country ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const [step, setStep] = useState(1);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const isPending = investorProfile.approval_status === "submitted";
@@ -142,20 +162,36 @@ export function InvestorOnboardingWizard({
     [preferredSectors, preferredStages, checkSizeMin, checkSizeMax, preferredGeographies, investorType, capitalTypes, preferredArrBands, preferredMrrBands, matchWeights],
   );
 
+  function formValues() {
+    return {
+      investor_type: investorType,
+      preferred_sectors: joinList(preferredSectors),
+      preferred_geographies: joinList(preferredGeographies),
+      preferred_stages: joinList(preferredStages),
+      investment_thesis: investmentThesis,
+      accredited_status: accreditedStatus,
+    };
+  }
+
+  /** Next step, once this step's required answers are in (read-only profiles move freely). */
+  function next() {
+    const schema = STEP_SCHEMA[step];
+    if (!locked && schema && !validate(schema, formValues())) return;
+    setStep((n) => Math.min(STEP_COUNT, n + 1));
+  }
+
   async function save(submit: boolean) {
     setIsSaving(true);
     setMessage(null);
 
     if (submit) {
-      const ok = validate(investorProfileSchema, {
-        investor_type: investorType,
-        preferred_sectors: joinList(preferredSectors),
-        preferred_geographies: joinList(preferredGeographies),
-        preferred_stages: joinList(preferredStages),
-        investment_thesis: investmentThesis,
-        accredited_status: accreditedStatus,
-      });
+      const values = formValues();
+      const ok = validate(investorProfileSchema, values);
       if (!ok) {
+        // Open the first step with a missing answer so the error is on screen.
+        const parsed = investorProfileSchema.safeParse(values);
+        const steps = parsed.success ? [] : parsed.error.issues.map((i) => STEP_OF_FIELD[String(i.path[0])] ?? STEP_COUNT);
+        if (steps.length) setStep(Math.min(...steps));
         setIsSaving(false);
         return;
       }
@@ -218,7 +254,9 @@ export function InvestorOnboardingWizard({
       className="space-y-8"
       onSubmit={(event) => {
         event.preventDefault();
-        void save(true);
+        // Enter on an earlier step moves on rather than submitting.
+        if (step < STEP_COUNT) next();
+        else void save(true);
       }}
     >
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
@@ -243,7 +281,28 @@ export function InvestorOnboardingWizard({
         </p>
       ) : null}
 
+      <div>
+        <div className="flex justify-between text-xs text-slate-500"><span>Step {step} of {STEP_COUNT}</span><span>{locked ? "Submitted, read only" : ""}</span></div>
+        <div className="mt-1.5 flex gap-1.5" aria-hidden="true">
+          {STEPS.map((_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i + 1 < step ? "bg-[#378ADD]" : i + 1 === step ? "bg-[#185FA5]" : "bg-slate-200"}`} />)}
+        </div>
+        <nav aria-label="Onboarding steps" className="mt-1.5 grid grid-cols-5 gap-1.5 text-[11.5px]">
+          {STEPS.map((label, i) => (
+            <button key={label} type="button" onClick={() => setStep(i + 1)} aria-current={step === i + 1 ? "step" : undefined}
+              className={`truncate text-left ${step === i + 1 ? "font-semibold text-[#185FA5]" : "text-slate-400 hover:text-slate-600"}`}>
+              {i + 1} {label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       <fieldset disabled={isPending || isApproved} className="grid gap-6 disabled:opacity-70">
+        {step === 1 ? (
+          <>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Who is investing?</p>
+              <p className="text-xs text-slate-500">Your firm and where you are based.</p>
+            </div>
         <FormField label={t("investor_type")} error={getError("investor_type")} required>
           <select
             className={`${BASE_INPUT} ${inputCls("investor_type")}`}
@@ -258,7 +317,6 @@ export function InvestorOnboardingWizard({
             ))}
           </select>
         </FormField>
-
         <FormField label={t("individual_firm_name")} error={getError("firm_name")}>
           <input
             className={`${BASE_INPUT} ${inputCls("firm_name")}`}
@@ -267,7 +325,6 @@ export function InvestorOnboardingWizard({
             placeholder={t("fund_name_or_individual_investing_entity")}
           />
         </FormField>
-
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4">
           <div>
             <p className="text-sm font-semibold text-slate-900">{t("address")}</p>
@@ -315,7 +372,58 @@ export function InvestorOnboardingWizard({
             </FormField>
           </div>
         </div>
-
+          </>
+        ) : null}
+        {step === 2 ? (
+          <>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">What do you invest in?</p>
+              <p className="text-xs text-slate-500">Each answer here is scored when we match you with founders.</p>
+            </div>
+        <FormField label={t("preferred_sectors")} error={getError("preferred_sectors")} required hint="Pick every industry you invest in.">
+          <ChipMultiSelect
+            ariaLabel={t("preferred_sectors")}
+            options={pickerOptions(industryList, preferredSectors)}
+            selected={preferredSectors}
+            disabled={locked}
+            onChange={(v) => { setPreferredSectors(v); clearError("preferred_sectors"); }}
+          />
+        </FormField>
+        <FormField label={t("investment_stage_preference")} error={getError("preferred_stages")} required>
+          <ChipMultiSelect
+            ariaLabel={t("investment_stage_preference")}
+            options={pickerOptions(stageList, preferredStages)}
+            selected={preferredStages}
+            disabled={locked}
+            onChange={(v) => { setPreferredStages(v); clearError("preferred_stages"); }}
+          />
+        </FormField>
+        <FormField label={t("preferred_geographies")} error={getError("preferred_geographies")} required>
+          <ChipMultiSelect
+            ariaLabel={t("preferred_geographies")}
+            options={pickerOptions(geographyList, preferredGeographies)}
+            selected={preferredGeographies}
+            disabled={locked}
+            onChange={(v) => { setPreferredGeographies(v); clearError("preferred_geographies"); }}
+          />
+        </FormField>
+        <FormField label="Capital type" error={getError("capital_types")} hint="What you offer. Matched against what founders are seeking.">
+          <ChipMultiSelect
+            ariaLabel="Capital type"
+            options={pickerOptions(capitalList, capitalTypes)}
+            selected={capitalTypes}
+            disabled={locked}
+            onChange={(v) => { setCapitalTypes(v); clearError("capital_types"); }}
+          />
+        </FormField>
+          </>
+        ) : null}
+        {step === 3 ? (
+          <>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Check size and revenue</p>
+              <p className="text-xs text-slate-500">Scored against the founder&apos;s amount of capital, ARR and MRR.</p>
+            </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label={t("check_size_min_usd")} error={getError("check_size_min")}>
             <input
@@ -336,37 +444,6 @@ export function InvestorOnboardingWizard({
             />
           </FormField>
         </div>
-
-        <FormField label={t("preferred_sectors")} error={getError("preferred_sectors")} required hint="Pick every industry you invest in.">
-          <ChipMultiSelect
-            ariaLabel={t("preferred_sectors")}
-            options={pickerOptions(industryList, preferredSectors)}
-            selected={preferredSectors}
-            disabled={locked}
-            onChange={(v) => { setPreferredSectors(v); clearError("preferred_sectors"); }}
-          />
-        </FormField>
-
-        <FormField label={t("investment_stage_preference")} error={getError("preferred_stages")} required>
-          <ChipMultiSelect
-            ariaLabel={t("investment_stage_preference")}
-            options={pickerOptions(stageList, preferredStages)}
-            selected={preferredStages}
-            disabled={locked}
-            onChange={(v) => { setPreferredStages(v); clearError("preferred_stages"); }}
-          />
-        </FormField>
-
-        <FormField label={t("preferred_geographies")} error={getError("preferred_geographies")} required>
-          <ChipMultiSelect
-            ariaLabel={t("preferred_geographies")}
-            options={pickerOptions(geographyList, preferredGeographies)}
-            selected={preferredGeographies}
-            disabled={locked}
-            onChange={(v) => { setPreferredGeographies(v); clearError("preferred_geographies"); }}
-          />
-        </FormField>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Preferred ARR range" error={getError("preferred_arr_range")} hint="The same bands founders pick from. Pick all that apply.">
             <ChipMultiSelect
@@ -387,17 +464,14 @@ export function InvestorOnboardingWizard({
             />
           </FormField>
         </div>
-
-        <FormField label="Capital type" error={getError("capital_types")} hint="What you offer. Matched against what founders are seeking.">
-          <ChipMultiSelect
-            ariaLabel="Capital type"
-            options={pickerOptions(capitalList, capitalTypes)}
-            selected={capitalTypes}
-            disabled={locked}
-            onChange={(v) => { setCapitalTypes(v); clearError("capital_types"); }}
-          />
-        </FormField>
-
+          </>
+        ) : null}
+        {step === 4 ? (
+          <>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Your thesis</p>
+              <p className="text-xs text-slate-500">Read by a person on our team and by founders. Not scored.</p>
+            </div>
         <FormField label={t("investment_thesis")} error={getError("investment_thesis")} required hint="Min 20 characters, max 5000">
           <div className="-mt-1 mb-1"><ReadByPersonBadge /></div>
           <textarea
@@ -406,7 +480,6 @@ export function InvestorOnboardingWizard({
             onChange={(e) => { setInvestmentThesis(e.target.value); clearError("investment_thesis"); }}
           />
         </FormField>
-
         <FormField label={t("contact_preference")} error={getError("contact_preference")} required>
           <select
             className={`${BASE_INPUT} ${inputCls("contact_preference")}`}
@@ -420,7 +493,14 @@ export function InvestorOnboardingWizard({
             ))}
           </select>
         </FormField>
-
+          </>
+        ) : null}
+        {step === 5 ? (
+          <>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Submit for approval</p>
+              <p className="text-xs text-slate-500">Confirm your status, then submit. You can still save a draft.</p>
+            </div>
         <div className="grid gap-1.5">
           <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
             <input
@@ -440,9 +520,17 @@ export function InvestorOnboardingWizard({
             </p>
           ) : null}
         </div>
+          </>
+        ) : null}
       </fieldset>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {step > 1 ? (
+          <button type="button" className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-800" onClick={() => setStep(step - 1)}>
+            ‹ Back
+          </button>
+        ) : null}
+        <span className="flex-1" />
         <button
           type="button"
           className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-800 disabled:opacity-50"
@@ -451,13 +539,19 @@ export function InvestorOnboardingWizard({
         >
           Save draft
         </button>
-        <button
-          type="submit"
-          className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-          disabled={isSaving || isPending || isApproved}
-        >
-          Submit for approval
-        </button>
+        {step < STEP_COUNT ? (
+          <button type="button" className="rounded-xl bg-[#1A6CE4] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2E78F5]" onClick={next}>
+            Next ›
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            disabled={isSaving || isPending || isApproved}
+          >
+            Submit for approval
+          </button>
+        )}
       </div>
     </form>
       <MatchablePointsMeter meter={meter} className="lg:sticky lg:top-6" />

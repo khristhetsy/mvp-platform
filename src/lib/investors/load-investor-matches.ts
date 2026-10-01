@@ -10,6 +10,7 @@ import {
   type PreferenceMatch,
   type MatchWeights,
 } from "./preference-match";
+import { capitalTypesFromOdoo } from "@/lib/matching/odoo-mandate";
 
 /**
  * Loads investor contacts from the CRM mirror, normalizes their structured
@@ -269,7 +270,9 @@ export async function loadInvestorContacts(opts?: {
       email: (c.email as string) ?? null,
       company: (c.company as string) ?? null,
       investorType: asList(prof?.investorTypes)[0] ?? null,
-      capitalTypes: asList(prof?.capitalTypes),
+      // Odoo stores capital under "capital" (not "capitalTypes"); map it to the
+      // platform's capital type labels, the same way Match campaigns read it.
+      capitalTypes: capitalTypesFromOdoo(prof?.capital).length ? capitalTypesFromOdoo(prof?.capital) : asList(prof?.capitalTypes),
       sectors,
       fundingStages: asList(prof?.fundingStages),
       preferences,
