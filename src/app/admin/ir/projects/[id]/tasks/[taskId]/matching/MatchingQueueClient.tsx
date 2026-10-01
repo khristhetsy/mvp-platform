@@ -11,12 +11,18 @@
  * Columns can be shown or hidden (remembered in this browser). The Outreach column shows
  * how far each investor already got with this founder on another of the founder's
  * projects and links to that match; the investor name opens a profile panel.
+ *
+ * The week pager beside Back moves to the previous / next weekly task's queue (same
+ * order and wrap-around as the task page pager, Alt+P / Alt+N). The tab, group by and
+ * open groups carry over; filters and selections start fresh for that week.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type FieldFilter, type GroupOption, type SearchState } from "@/components/admin/OdooSearchBar";
 import { InvestorSearchTab } from "./InvestorSearchTab";
+import { OdooPager } from "@/components/admin/OdooPager";
+import { matchingQueueHref, weekNeighbours, type QueueView, type WeekTask } from "@/lib/ir/week-pager";
 import { COLS, DEFAULT_COLS, TIER_CLS, STAGE_CLS, srcLabel, fmtDay, cell, OutreachPill, sortRows, nextSort, SortTh, type ColKey, type Row, type SortKey, type SortState } from "./matching-table";
 import { formatRange } from "@/lib/ir/milestones";
 import { SEQUENCE_TEMPLATES } from "@/lib/ir/sequence-templates";
@@ -59,7 +65,7 @@ function toFilters(s: SearchState, o: Payload["options"]): Filters {
   };
 }
 
-export function MatchingQueueClient({ projectId, taskId }: { projectId: string; taskId: string }) {
+export function MatchingQueueClient({ projectId, taskId, initialView }: { projectId: string; taskId: string; initialView?: QueueView }) {
   const router = useRouter();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +77,10 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
   const [colsOpen, setColsOpen] = useState(false);
   const [hideContacted, setHideContacted] = useState(false);
   const [profile, setProfile] = useState<Row | null>(null);
-  const [mode, setMode] = useState<"match" | "search">("match");
+  const [mode, setMode] = useState<"match" | "search">(initialView?.mode ?? "match");
+  // Group by on the Search all investors tab (reported by that tab) for the week pager to carry over.
+  const [searchView, setSearchView] = useState<{ groupBy: string | null; open: string[] }>({ groupBy: null, open: [] });
+  const carriedMatchGroup = initialView?.mode === "match" && GROUPS.some((g) => g.id === initialView.groupBy && g.id !== "none") ? initialView.groupBy! : "none";
   const [sort, setSort] = useState<SortState>(null);
   const onSort = useCallback((k: SortKey) => setSort((s) => nextSort(s, k)), []);
   // Rows the search tab has shown, so selections made there keep their details here.
@@ -120,7 +129,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
     return j as Payload;
   }, [projectId, taskId]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then seed the search bar from the project's defaults
-  useEffect(() => { void load(null).then((j) => { if (j) setSearch((s) => s ?? toState(j.filters, j.options)); }); }, [load]);
+  useEffect(() => { void load(null).then((j) => { if (j) setSearch((s) => s ?? { ...toState(j.filters, j.options), groupBy: carriedMatchGroup }); }); }, [load, carriedMatchGroup]);
 
   function onSearch(next: SearchState) {
     if (!data) return;
@@ -208,8 +217,19 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
         </div>
   </>);
 
+  const view: QueueView = mode === "search"
+    ? { mode, groupBy: searchView.groupBy, open: searchView.open }
+    : { mode, groupBy: search.groupBy && search.groupBy !== "none" ? search.groupBy : null, open: [] };
+
   return (
     <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <Link href={back} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50" title="Back to this week's task">
+          <i className="ti ti-arrow-left" aria-hidden="true" /> Back
+        </Link>
+        <span className="ml-auto"><WeekPager projectId={projectId} taskId={taskId} view={view} /></span>
+      </div>
+
       <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
         <div className="min-w-0 flex-1">
           <p className="text-[13.5px] font-semibold text-indigo-900">Matching for {data.project.title}{data.week ? ` · ${data.week.label}` : ""}</p>
@@ -249,6 +269,7 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
         <InvestorSearchTab
           projectId={projectId} cols={cols} picked={picked} setPicked={setPicked} hideContacted={hideContacted}
           sort={sort} onSort={onSort} onProfile={setProfile} onRows={onFoundRows} tabs={tabsEl} tools={toolsEl}
+          initialGroupBy={initialView?.mode === "search" ? initialView.groupBy : null} initialOpen={initialView?.mode === "search" ? initialView.open : []} onView={setSearchView}
         />
       ) : (<>
       <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -296,6 +317,39 @@ export function MatchingQueueClient({ projectId, taskId }: { projectId: string; 
 }
 
 
+
+/**
+ * Odoo record pager for the weekly tasks ("13 / 13 ‹ ›"): opens the previous / next
+ * week's matching queue with the current tab and group by. Alt+P / Alt+N as on the task page.
+ */
+function WeekPager({ projectId, taskId, view }: { projectId: string; taskId: string; view: QueueView }) {
+  const router = useRouter();
+  const [tasks, setTasks] = useState<WeekTask[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetch(`/api/admin/ir/tasks/${taskId}/siblings`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (live) setTasks((j?.tasks as WeekTask[] | undefined) ?? []); }).catch(() => { if (live) setTasks([]); });
+    return () => { live = false; };
+  }, [taskId]);
+  const { index, total, prev, next } = weekNeighbours(tasks ?? [], taskId);
+  const hrefOf = useCallback((t: WeekTask | null) => (t ? matchingQueueHref(projectId, t.id, view) : undefined), [projectId, view]);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const to = e.code === "KeyN" ? next : e.code === "KeyP" ? prev : null;
+      if (!to) return;
+      e.preventDefault();
+      router.push(hrefOf(to)!);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prev, next, hrefOf, router]);
+  if (!tasks || index < 0) return null;
+  return (
+    <OdooPager label={`${index + 1} / ${total}`}
+      prev={{ href: hrefOf(prev), title: prev ? `${prev.title} (Alt+P)` : undefined }}
+      next={{ href: hrefOf(next), title: next ? `${next.title} (Alt+N)` : undefined }} />
+  );
+}
 
 type History = { investor: { id: string; name: string | null; firm: string | null; dataSource: string | null; verifiedAt: string | null; website: string | null }; matches: Array<{ matchId: string; projectId: string; projectTitle: string; founderName: string | null; stage: IrStage; stageChangedAt: string }> };
 
