@@ -32,8 +32,8 @@ export function renderSubject(template: string, v: { matchCount: number; company
   return template.replace(/\{\s*match_count\s*\}/gi, String(v.matchCount)).replace(/\{\s*company\s*\}/gi, v.company);
 }
 
-/** A masked name: same shape for every investor so length leaks nothing. */
-export const MASK = "██████████";
+/** Shown only if a match has no name or firm on record. */
+export const UNNAMED = "Investor";
 
 export function matchLine(m: MaskedMatch): string {
   return [m.investor_type ?? "Investor", m.sectors.slice(0, 2).join(", ") || null, m.stages.map(stageLabel).join(", ") || null]
@@ -49,7 +49,7 @@ export function renderFounderEmail(i: FounderEmailInput): string {
     .map(
       (m) => `<tr>
   <td style="padding:12px 14px;border-top:1px solid #E3E8F2;">
-    <div style="font-size:14px;font-weight:600;color:#0A1A40;letter-spacing:1px;">${MASK}</div>
+    <div style="font-size:14px;font-weight:600;color:#0A1A40;">${esc(m.investor_name || UNNAMED)}${m.investor_firm ? ` <span style="font-weight:400;color:#5A6782;">· ${esc(m.investor_firm)}</span>` : ""}</div>
     <div style="font-size:12px;color:#5A6782;margin-top:2px;">${esc(matchLine(m))}</div>
   </td>
   <td style="padding:12px 14px;border-top:1px solid #E3E8F2;text-align:right;white-space:nowrap;font-size:13px;font-weight:700;color:#1A6CE4;">${m.match_score}% match</td>
@@ -60,11 +60,11 @@ export function renderFounderEmail(i: FounderEmailInput): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0A1A40;">
   <h1 style="font-size:20px;margin:8px 0 4px;">Your investor matches</h1>
   <p style="font-size:13px;color:#5A6782;margin:0 0 16px;">${esc(i.company)}${meta ? ` · ${esc(meta)}` : ""}</p>
-  <p style="font-size:14px;line-height:22px;margin:0 0 16px;">We have a network of <strong>${esc(i.networkLabel)} investors</strong>. Here are your current matches: <strong>${i.matchCount} investor${i.matchCount === 1 ? "" : "s"}</strong> fit your industry and stage. Schedule a call with us to walk through them, or choose a plan to see who they are and request introductions.</p>
+  <p style="font-size:14px;line-height:22px;margin:0 0 16px;">We have a network of <strong>${esc(i.networkLabel)} investors</strong>. Here are your current matches: <strong>${i.matchCount} investor${i.matchCount === 1 ? "" : "s"}</strong> fit your industry and stage. Schedule a call with us to walk through them, or choose a plan to get their contact details and request introductions.</p>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #E3E8F2;border-radius:10px;border-collapse:separate;">
 ${rows}
   </table>
-  ${remaining > 0 ? `<p style="font-size:13px;color:#5A6782;margin:12px 0 0;">&#128274; ${remaining} more match${remaining === 1 ? "" : "es"}. Investor names and Request introduction unlock with a plan.</p>` : `<p style="font-size:13px;color:#5A6782;margin:12px 0 0;">&#128274; Investor names and Request introduction unlock with a plan.</p>`}
+  ${remaining > 0 ? `<p style="font-size:13px;color:#5A6782;margin:12px 0 0;">&#128274; ${remaining} more match${remaining === 1 ? "" : "es"}. Contact details and Request introduction unlock with a plan.</p>` : `<p style="font-size:13px;color:#5A6782;margin:12px 0 0;">&#128274; Contact details and Request introduction unlock with a plan.</p>`}
   <p style="margin:12px 0 20px;"><a href="${esc(i.links.matches)}" style="font-size:14px;font-weight:600;color:#1A6CE4;">See all ${i.matchCount} matches &rarr;</a></p>
   <table role="presentation" cellspacing="0" cellpadding="0"><tr>
     <td style="padding-right:10px;"><a href="${esc(i.links.call)}" style="display:inline-block;background:#1A6CE4;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 18px;border-radius:8px;">Schedule a call with us</a></td>

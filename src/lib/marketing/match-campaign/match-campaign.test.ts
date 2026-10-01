@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { canonicalStages, checkFounder, founderCompanyProfile, isEuCountry } from "./fields";
 import { campaignInvestorFromRow, checkBandLabel, networkLabel } from "./investors";
-import { matchFounder } from "./matcher";
+import { investorIdentity, matchFounder, toMasked } from "./matcher";
 import { makeFounderToken, verifyFounderToken } from "./token";
-import { renderFounderEmail, renderSubject, MASK } from "./email";
+import { renderFounderEmail, renderSubject, UNNAMED } from "./email";
 import { readMatchConfig } from "./types";
 import type { FounderFieldsRow } from "./types";
 
@@ -132,8 +132,8 @@ describe("email", () => {
     stages: ["Seed Round"],
     matchCount: 24,
     top: [
-      { investor_type: "VC", sectors: ["Fintech"], stages: ["Seed Round", "Series A"], check_band: null, match_score: 92 },
-      { investor_type: "Family office", sectors: ["Fintech", "SaaS"], stages: ["Seed Round"], check_band: null, match_score: 88 },
+      { investor_name: "Michael Karas", investor_firm: "Karas Partners", investor_type: "VC", sectors: ["Fintech"], stages: ["Seed Round", "Series A"], check_band: null, match_score: 92 },
+      { investor_name: "Kae Huynh", investor_firm: null, investor_type: "Family office", sectors: ["Fintech", "SaaS"], stages: ["Seed Round"], check_band: null, match_score: 88 },
       { investor_type: "Angel", sectors: ["Fintech"], stages: ["Pre-Seed"], check_band: null, match_score: 81 },
     ],
     networkLabel: "7,000+",
@@ -141,10 +141,15 @@ describe("email", () => {
     links: { matches: "https://icapos.com/matches/t", call: "https://icapos.com/mc/t?a=call", plan: "https://icapos.com/mc/t?a=intro", privacy: "https://icapos.com/privacy" },
     postalAddress: "iCFO Capital Global, Inc., La Jolla, CA",
   });
-  it("has the note, top 3 masked, see-all link and both buttons", () => {
+  it("has the note, top 3 with names, see-all link and both buttons", () => {
     expect(html).toContain("7,000+ investors");
     expect(html).toContain("24 investors</strong> fit your industry and stage");
-    expect(html.split(MASK).length - 1).toBe(3);
+    expect(html).toContain("Michael Karas");
+    expect(html).toContain("· Karas Partners");
+    expect(html).toContain("Kae Huynh");
+    expect(html).toContain(`>${UNNAMED}<`);
+    expect(html).toContain("Contact details and Request introduction unlock with a plan.");
+    expect(html).not.toContain("Investor names and Request introduction");
     expect(html).toContain("92% match");
     expect(html).toContain("21 more matches");
     expect(html).toContain("See all 24 matches");
@@ -175,5 +180,22 @@ describe("helpers", () => {
     expect(c.preview_count).toBe(3);
     expect(c.min_score).toBe(70);
     expect(readMatchConfig({ min_score: 140 }).min_score).toBe(100);
+  });
+});
+
+describe("investor identity shown to founders", () => {
+  it("shows the firm only when it differs from the name", () => {
+    expect(investorIdentity("Michael Karas", "Karas Partners")).toEqual({ investor_name: "Michael Karas", investor_firm: "Karas Partners" });
+    expect(investorIdentity("Kae Huynh", "Kae Huynh")).toEqual({ investor_name: "Kae Huynh", investor_firm: null });
+    expect(investorIdentity("Kae Huynh", " kae huynh ")).toEqual({ investor_name: "Kae Huynh", investor_firm: null });
+    expect(investorIdentity("Alan Fisher", null)).toEqual({ investor_name: "Alan Fisher", investor_firm: null });
+  });
+  it("falls back to the firm when there is no name", () => {
+    expect(investorIdentity(null, "Harbor Seed")).toEqual({ investor_name: "Harbor Seed", investor_firm: null });
+    expect(investorIdentity("  ", null)).toEqual({ investor_name: null, investor_firm: null });
+  });
+  it("the snapshot keeps name and firm and never carries contact ids or reasons", () => {
+    const snap = toMasked({ investor_contact_id: "c1", reasons: ["x"], investor_name: "Ben Paulo", investor_firm: null, investor_type: "Angel", sectors: ["A", "B", "C", "D", "E"], stages: ["Seed Round"], check_band: null, match_score: 70 } as Parameters<typeof toMasked>[0]);
+    expect(snap).toEqual({ investor_name: "Ben Paulo", investor_firm: null, investor_type: "Angel", sectors: ["A", "B", "C", "D"], stages: ["Seed Round"], check_band: null, match_score: 70 });
   });
 });

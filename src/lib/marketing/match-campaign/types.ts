@@ -1,6 +1,6 @@
 /**
  * Match campaigns: a Marketing Hub campaign type that emails founder leads their
- * current investor matches with investor names hidden. No email goes to investors.
+ * current investor matches: names shown, contact details hidden. No email goes to investors.
  * Shared types; everything here is client safe.
  */
 
@@ -48,8 +48,16 @@ export type MatchConfig = {
   cost?: { send_cost_usd?: number | null; admin_hours?: number | null; hourly_rate_usd?: number | null } | null;
 };
 
-/** One investor as shown to a founder before payment: no identity. */
+/**
+ * One investor as shown to a founder before payment: name and firm, never
+ * contact details (email, phone, LinkedIn). Contact details and Request
+ * introduction unlock with a plan.
+ */
 export type MaskedMatch = {
+  /** Display name; null on snapshots taken before names were shown. */
+  investor_name?: string | null;
+  /** Firm, only when it differs from the name (angels often list their own name). */
+  investor_firm?: string | null;
   investor_type: string | null;
   sectors: string[];
   stages: string[];

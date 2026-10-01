@@ -49,9 +49,23 @@ export function matchFounder(
   return out;
 }
 
-/** The identity-free snapshot stored for the email and the match page. */
+/**
+ * Name and firm as a founder sees them. The firm is dropped when it repeats the
+ * name, and a contact with no name falls back to the firm.
+ */
+export function investorIdentity(name: string | null | undefined, company: string | null | undefined): { investor_name: string | null; investor_firm: string | null } {
+  const n = name?.trim() || null;
+  const c = company?.trim() || null;
+  if (!n) return { investor_name: c, investor_firm: null };
+  if (!c || c.toLowerCase() === n.toLowerCase()) return { investor_name: n, investor_firm: null };
+  return { investor_name: n, investor_firm: c };
+}
+
+/** The snapshot stored for the email and the match page: name and firm, no contact details. */
 export function toMasked(m: MaskedMatch): MaskedMatch {
   return {
+    investor_name: m.investor_name ?? null,
+    investor_firm: m.investor_firm ?? null,
     investor_type: m.investor_type,
     sectors: m.sectors.slice(0, 4),
     stages: m.stages,

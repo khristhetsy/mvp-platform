@@ -6,7 +6,7 @@ import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
 import { loadFounderPage } from "@/lib/marketing/match-campaign/store";
 import { investorNetworkCount, networkLabel } from "@/lib/marketing/match-campaign/investors";
 import { stageLabel } from "@/lib/marketing/match-campaign/fields";
-import { MASK } from "@/lib/marketing/match-campaign/email";
+import { UNNAMED } from "@/lib/marketing/match-campaign/email";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
@@ -33,9 +33,10 @@ async function paidFounder(): Promise<boolean> {
 /**
  * The founder's match page, opened from the Match campaign email by a signed
  * token (no login). Every match is a collapsed row that expands with the /fit
- * results card. Investor names and contact details are never on this page; a
+ * results card. Investor name and firm show; contact details never do. A
  * founder on a paid plan goes to their investor matches in the app, which
- * reveals names and handles introduction requests through iCFO.
+ * handles introduction requests through iCFO. The admin preview (preview=1)
+ * always shows the unpaid view, whoever is signed in.
  */
 export default async function FounderMatchPage({
   params,
@@ -48,7 +49,8 @@ export default async function FounderMatchPage({
   const { preview } = await searchParams;
   const id = verifyFounderToken(token);
   if (!id) notFound();
-  const [page, network, paid] = await Promise.all([loadFounderPage(id, { track: preview !== "1" }), investorNetworkCount(), paidFounder()]);
+  const isPreview = preview === "1";
+  const [page, network, paid] = await Promise.all([loadFounderPage(id, { track: !isPreview }), investorNetworkCount(), isPreview ? false : paidFounder()]);
   if (!page) notFound();
 
   const meta = [page.industry, page.stages.map(stageLabel).join(", ")].filter(Boolean).join(" · ");
@@ -81,7 +83,7 @@ export default async function FounderMatchPage({
               <MatchCard
                 m={{
                   contactId: `match-${i}`,
-                  company: MASK,
+                  company: [m.investor_name || UNNAMED, m.investor_firm].filter(Boolean).join(" · "),
                   summary: "",
                   fit: m.match_score,
                   sectors: m.sectors,
@@ -94,7 +96,7 @@ export default async function FounderMatchPage({
                 }}
               />
               <p className="mt-1 px-1 text-[12px] text-slate-500">
-                <i className="ti ti-lock" aria-hidden="true" /> Contact info hidden. Choose a plan to unlock names and request an introduction.
+                <i className="ti ti-lock" aria-hidden="true" /> Contact details hidden. Choose a plan to request an introduction.
               </p>
             </div>
           ))}

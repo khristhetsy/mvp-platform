@@ -7,7 +7,7 @@ import { marketingDb } from "@/lib/marketing/db";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import { checkFounder, canonicalStages, founderCompanyProfile } from "./fields";
 import { loadCampaignInvestors } from "./investors";
-import { matchFounder, toMasked } from "./matcher";
+import { investorIdentity, matchFounder, toMasked } from "./matcher";
 import {
   DEFAULT_MATCH_CONFIG,
   readMatchConfig,
@@ -357,6 +357,26 @@ export type RunSummary = { ready: number; withMatches: number; noMatches: number
  * are loaded once for the whole run. Rerunning replaces earlier matches,
  * including admin removals, so admins review after the last run.
  */
+type Db = ReturnType<typeof marketingDb>;
+
+/** Name and firm for each investor contact id, as a founder sees them. Batched. */
+async function investorNames(db: Db, ids: readonly string[]): Promise<Map<string, { investor_name: string | null; investor_firm: string | null }>> {
+  const out = new Map<string, { investor_name: string | null; investor_firm: string | null }>();
+  const unique = [...new Set(ids)];
+  for (let i = 0; i < unique.length; i += 200) {
+    const { data, error } = await db.from("crm_contacts").select("id, name, company").in("id", unique.slice(i, i + 200));
+    if (error) throw new Error(error.message);
+    for (const r of (data ?? []) as Array<{ id: string; name: string | null; company: string | null }>) out.set(r.id, investorIdentity(r.name, r.company));
+  }
+  return out;
+}
+
+/** Stored match rows (with investor_contact_id) to the founder facing snapshot, names attached. */
+async function namedSnapshot(db: Db, rows: ReadonlyArray<MaskedMatch & { investor_contact_id: string }>): Promise<MaskedMatch[]> {
+  const names = await investorNames(db, rows.map((r) => r.investor_contact_id));
+  return rows.map((r) => toMasked({ ...r, ...(names.get(r.investor_contact_id) ?? { investor_name: null, investor_firm: null }) }));
+}
+
 export async function runCampaignMatching(campaignId: string): Promise<RunSummary> {
   const db = marketingDb();
   const campaign = await getMatchCampaign(campaignId);
@@ -407,7 +427,7 @@ export async function runCampaignMatching(campaignId: string): Promise<RunSummar
       .from("match_campaign_founders")
       .update({
         match_count: matches.length,
-        top_matches: stored.slice(0, preview).map(toMasked),
+        top_matches: await namedSnapshot(db, stored.slice(0, preview)),
         excluded_reason: matches.length ? null : "no_matches",
         updated_at: new Date().toISOString(),
       })
@@ -473,7 +493,7 @@ export async function removeFounderMatch(matchId: string, adminId: string | null
   const preview = campaign?.match_config.preview_count ?? DEFAULT_MATCH_CONFIG.preview_count;
   const { data: remaining } = await db
     .from("match_campaign_matches")
-    .select("investor_type, sectors, stages, check_band, match_score")
+    .select("investor_contact_id, investor_type, sectors, stages, check_band, match_score")
     .eq("campaign_founder_id", founder.id)
     .eq("removed", false)
     .order("match_score", { ascending: false })
@@ -483,7 +503,7 @@ export async function removeFounderMatch(matchId: string, adminId: string | null
     .from("match_campaign_founders")
     .update({
       match_count: count,
-      top_matches: ((remaining ?? []) as MaskedMatch[]).map(toMasked),
+      top_matches: await namedSnapshot(db, (remaining ?? []) as Array<MaskedMatch & { investor_contact_id: string }>),
       excluded_reason: count > 0 ? null : "no_matches",
       updated_at: new Date().toISOString(),
     })
@@ -505,7 +525,7 @@ export type FounderPageData = {
   callUrl: string;
 };
 
-/** Everything the public match page shows. Never selects investor identity columns. */
+/** Everything the public match page shows: investor name and firm, never contact details. */
 export async function loadFounderPage(campaignFounderId: string, opts: { track?: boolean } = {}): Promise<FounderPageData | null> {
   const db = marketingDb();
   const { data: f } = await db
@@ -519,7 +539,7 @@ export async function loadFounderPage(campaignFounderId: string, opts: { track?:
     getMatchCampaign(row.campaign_id),
     db
       .from("match_campaign_matches")
-      .select("investor_type, sectors, stages, check_band, match_score")
+      .select("investor_contact_id, investor_type, sectors, stages, check_band, match_score")
       .eq("campaign_founder_id", row.id)
       .eq("removed", false)
       .order("match_score", { ascending: false }),
@@ -533,7 +553,7 @@ export async function loadFounderPage(campaignFounderId: string, opts: { track?:
     industry: row.industry,
     stages: row.funding_stage ? row.funding_stage.split(", ").filter(Boolean) : [],
     matchCount: row.match_count,
-    matches: ((m ?? []) as MaskedMatch[]).map(toMasked),
+    matches: await namedSnapshot(db, (m ?? []) as Array<MaskedMatch & { investor_contact_id: string }>),
     founderContactId: row.founder_contact_id,
     email: row.email,
     callUrl: campaign?.match_config.call_url ?? DEFAULT_MATCH_CONFIG.call_url,
