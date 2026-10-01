@@ -118,13 +118,15 @@ export default async function AdminCompaniesPage() {
     // this list, the founder dashboard and the public one-pager cannot disagree.
     const investableByCompanyId: Map<string, number | null> = new Map(await crrScoresFor(companyIds));
     const journeyByFounderId = new Map<string, { stage: string | null; approval: string | null }>();
+    const signedOnByFounderId = new Map<string, string | null>();
     if (founderIds.length) {
       const { data: journeyRows } = await rawSupabase
         .from("profiles")
-        .select("id, journey_stage, stage_approval_status")
+        .select("id, journey_stage, stage_approval_status, created_at")
         .in("id", founderIds);
-      for (const r of (journeyRows ?? []) as Array<{ id: string; journey_stage: string | null; stage_approval_status: string | null }>) {
+      for (const r of (journeyRows ?? []) as Array<{ id: string; journey_stage: string | null; stage_approval_status: string | null; created_at: string | null }>) {
         journeyByFounderId.set(r.id, { stage: r.journey_stage ?? null, approval: r.stage_approval_status ?? null });
+        signedOnByFounderId.set(r.id, r.created_at ?? null);
       }
     }
     const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries, matchingSummaries, updateSummaries] =
@@ -152,6 +154,7 @@ export default async function AdminCompaniesPage() {
       updateSummaries,
       investableByCompanyId,
       journeyByFounderId,
+      signedOnByFounderId,
     );
   } catch (error) {
     loadError = formatError(error);

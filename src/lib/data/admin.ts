@@ -242,6 +242,8 @@ export type AdminCompanyCardPayload = {
   investable_score: number | null;  // AI diligence score (gates investor outreach)
   journey_stage: string | null;     // initialize → qualify → deploy → optimize
   stage_approval_status: string | null;
+  // When the founder created their account (profiles.created_at).
+  founder_signed_on_at: string | null;
 };
 
 export function mapAdminCompaniesToCardData(
@@ -260,6 +262,7 @@ export function mapAdminCompaniesToCardData(
   > = new Map(),
   investableByCompanyId: Map<string, number | null> = new Map(),
   journeyByFounderId: Map<string, FounderJourneyState> = new Map(),
+  signedOnByFounderId: Map<string, string | null> = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
     const remediation = remediationByCompanyId.get(company.id);
@@ -319,6 +322,7 @@ export function mapAdminCompaniesToCardData(
       investable_score: investableByCompanyId.get(company.id) ?? null,
       journey_stage: journeyByFounderId.get(company.founder_id)?.stage ?? null,
       stage_approval_status: journeyByFounderId.get(company.founder_id)?.approval ?? null,
+      founder_signed_on_at: signedOnByFounderId.get(company.founder_id) ?? null,
     };
   });
 }

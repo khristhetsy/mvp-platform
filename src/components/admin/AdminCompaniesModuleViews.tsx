@@ -11,6 +11,7 @@ import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
 import { matchRows, searchSummary, type SearchField } from "@/lib/ui/live-search";
 import { Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
+import { PLAN_LABELS, PLAN_PRICES } from "@/lib/subscriptions/plans";
 
 type ViewMode = "kanban" | "grid" | "list" | "journey";
 type UserType = "" | "founders" | "investors";
@@ -44,6 +45,78 @@ function journeyStatus(c: AdminCompanyCardData): { label: string; cls: string } 
   if (c.stage_approval_status === "rejected" || c.review_status === "rejected") return { label: "Rejected", cls: "bg-red-50 text-red-700" };
   if (c.review_status === "approved") return { label: "On track", cls: "bg-emerald-50 text-emerald-700" };
   return { label: "In progress", cls: "bg-slate-100 text-slate-600" };
+}
+
+// Plan column: which plan the founder is on and what they pay per month, read
+// from the subscription already loaded on each card (no new query).
+type PlanFilter = "" | "professional" | "basic" | "managed_ir" | "free" | "pending" | "none";
+type PlanView = {
+  label: string;
+  cls: string;
+  amount: string | null;
+  note: string | null;
+  cents: number;
+  group: Exclude<PlanFilter, "">;
+};
+
+function formatMonthly(cents: number, currency: string | null | undefined) {
+  const amount = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: (currency || "usd").toUpperCase(),
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+  return cents > 0 ? `${amount}/mo` : amount;
+}
+
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function timeAgo(iso: string) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "1 day ago";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.round((days / 30) * 2) / 2;
+  return months === 1 ? "1 month ago" : `${months} months ago`;
+}
+
+function planView(c: AdminCompanyCardData): PlanView {
+  const sub = c.founder_subscription;
+  if (!sub) {
+    return { label: "No plan", cls: "bg-slate-50 text-slate-400 border border-slate-200", amount: null, note: null, cents: -1, group: "none" };
+  }
+  const cents = sub.monthly_price_cents ?? 0;
+  const amount = formatMonthly(cents, sub.currency);
+  if (sub.plan_type === "admin_internal") {
+    return { label: "Internal", cls: "bg-slate-100 text-slate-600", amount, note: null, cents, group: "none" };
+  }
+  if (sub.plan_type === "founder_free" || sub.plan_type === "founder_trial") {
+    return { label: "Free (legacy)", cls: "bg-slate-100 text-slate-600", amount, note: null, cents, group: "free" };
+  }
+  const name = PLAN_LABELS[sub.plan_type] ?? sub.plan_type;
+  const group: PlanView["group"] =
+    sub.plan_type === "founder_professional" ? "professional"
+    : sub.plan_type === "founder_basic" ? "basic"
+    : sub.plan_type === "founder_managed_ir" ? "managed_ir"
+    : "none";
+  if (sub.subscription_status === "pending_payment") {
+    return { label: `${name}, pending`, cls: "bg-amber-50 text-amber-800", amount, note: "Not paid yet", cents, group: "pending" };
+  }
+  const cls = sub.plan_type === "founder_basic" ? "bg-emerald-50 text-emerald-800" : "bg-indigo-50 text-indigo-800";
+  if (sub.subscription_status === "canceled" || sub.subscription_status === "expired") {
+    return { label: name, cls: "bg-slate-100 text-slate-600", amount, note: sub.subscription_status === "canceled" ? "Canceled" : "Expired", cents, group };
+  }
+  if (cents === 0 && (PLAN_PRICES[sub.plan_type] ?? 0) > 0) {
+    return { label: name, cls, amount, note: "Comped", cents, group };
+  }
+  const note = sub.is_grandfathered && sub.current_period_start ? `Billing since ${formatShortDate(sub.current_period_start).replace(/, \d{4}$/, "")}` : null;
+  return { label: name, cls, amount, note, cents, group };
+}
+
+function isPaying(c: AdminCompanyCardData) {
+  const sub = c.founder_subscription;
+  return Boolean(sub && sub.subscription_status === "active" && sub.plan_type !== "admin_internal" && (sub.monthly_price_cents ?? 0) > 0);
 }
 
 function reviewStatusLabel(t: T, status: string | null) {
@@ -96,9 +169,10 @@ function AdminCompaniesModuleViewsInner({
 
   // Journey-stage filter + sortable score/stage columns (list view).
   const [stageFilter, setStageFilter] = useState<string>("");
-  const [sortKey, setSortKey] = useState<"readiness" | "investable" | "stage" | "">("");
+  const [planFilter, setPlanFilter] = useState<PlanFilter>("");
+  const [sortKey, setSortKey] = useState<"readiness" | "investable" | "stage" | "plan" | "signed_on" | "">("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  function toggleSort(key: "readiness" | "investable" | "stage") {
+  function toggleSort(key: "readiness" | "investable" | "stage" | "plan" | "signed_on") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("desc"); }
   }
@@ -106,15 +180,37 @@ function AdminCompaniesModuleViewsInner({
     let rows = filtered;
     if (stageFilter === "pending") rows = rows.filter((c) => c.stage_approval_status === "pending");
     else if (stageFilter) rows = rows.filter((c) => (c.journey_stage ?? "") === stageFilter);
+    if (planFilter) rows = rows.filter((c) => planView(c).group === planFilter);
     if (sortKey) {
       const val = (c: AdminCompanyCardData) =>
         sortKey === "stage"
           ? (c.journey_stage ? STAGE_ORDER.indexOf(c.journey_stage) : -1)
+          : sortKey === "plan"
+          ? planView(c).cents
+          : sortKey === "signed_on"
+          ? (c.founder_signed_on_at ? new Date(c.founder_signed_on_at).getTime() : -1)
           : (sortKey === "readiness" ? c.readiness_score : c.investable_score) ?? -1;
       rows = [...rows].sort((a, b) => (sortDir === "asc" ? val(a) - val(b) : val(b) - val(a)));
     }
     return rows;
-  }, [filtered, stageFilter, sortKey, sortDir]);
+  }, [filtered, stageFilter, planFilter, sortKey, sortDir]);
+
+  // Plan summary tiles. Counted per founder subscription so a founder with two
+  // companies is not counted (or billed) twice.
+  const planTotals = useMemo(() => {
+    const seen = new Set<string>();
+    let paying = 0, mrrCents = 0, free = 0, pending = 0;
+    let currency = "usd";
+    for (const c of companies) {
+      const sub = c.founder_subscription;
+      if (!sub || seen.has(sub.id)) continue;
+      seen.add(sub.id);
+      if (isPaying(c)) { paying += 1; mrrCents += sub.monthly_price_cents ?? 0; currency = sub.currency || currency; }
+      if (sub.plan_type === "founder_free" || sub.plan_type === "founder_trial") free += 1;
+      if (sub.subscription_status === "pending_payment") pending += 1;
+    }
+    return { paying, mrr: formatMonthly(mrrCents, currency).replace("/mo", ""), free, pending };
+  }, [companies]);
 
   const pipelineColumns = useMemo(() => {
     const byStatus = new Map<string, AdminCompanyCardData[]>();
@@ -169,6 +265,20 @@ function AdminCompaniesModuleViewsInner({
           <option value="optimize">Closing</option>
           <option value="pending">⏳ Awaiting my approval</option>
         </select>
+        <select
+          value={planFilter}
+          onChange={(e) => setPlanFilter(e.target.value as PlanFilter)}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          aria-label="Filter by plan"
+        >
+          <option value="">All plans</option>
+          <option value="professional">Professional</option>
+          <option value="basic">Basic</option>
+          <option value="managed_ir">{PLAN_LABELS.founder_managed_ir}</option>
+          <option value="free">Free (legacy)</option>
+          <option value="pending">Payment pending</option>
+          <option value="none">No plan or internal</option>
+        </select>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {(["kanban", "grid", "list", "journey"] as const).map((v) => (
             <button
@@ -185,6 +295,20 @@ function AdminCompaniesModuleViewsInner({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {([
+          ["Paying", String(planTotals.paying)],
+          ["MRR", planTotals.mrr],
+          ["Free (legacy)", String(planTotals.free)],
+          ["Payment pending", String(planTotals.pending)],
+        ] as const).map(([label, value]) => (
+          <div key={label} className="rounded-lg bg-slate-50 px-4 py-3">
+            <div className="text-xs text-slate-500">{label}</div>
+            <div className="text-xl font-semibold text-slate-900">{value}</div>
+          </div>
+        ))}
       </div>
 
       <PageSection
@@ -268,7 +392,7 @@ function AdminCompaniesModuleViewsInner({
                   <th className="px-4 py-3">{t("companies.colCompany")}</th>
                   <th className="px-4 py-3">{t("companies.colFounder")}</th>
                   <th className="px-4 py-3">{t("companies.colIndustry")}</th>
-                  {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"]] as const).map(([key, label]) => (
+                  {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"], ["plan", "Plan"], ["signed_on", "Signed on"]] as const).map(([key, label]) => (
                     <th key={key} className="px-4 py-3">
                       <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 hover:text-slate-800">
                         {label}
@@ -305,6 +429,26 @@ function AdminCompaniesModuleViewsInner({
                           </span>
                           {company.stage_approval_status === "pending" && <span className="text-[10px] text-amber-700" title="Awaiting your approval">⏳</span>}
                         </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    {(() => {
+                      const plan = planView(company);
+                      return (
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${plan.cls}`}>{plan.label}</span>
+                          {plan.amount && <div className="mt-1 text-xs font-semibold text-slate-900">{plan.amount}</div>}
+                          {plan.note && <div className="text-[10px] text-slate-400">{plan.note}</div>}
+                        </td>
+                      );
+                    })()}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {company.founder_signed_on_at ? (
+                        <>
+                          <div className="text-xs text-slate-700">{formatShortDate(company.founder_signed_on_at)}</div>
+                          <div className="text-[10px] text-slate-400">{timeAgo(company.founder_signed_on_at)}</div>
+                        </>
                       ) : (
                         <span className="text-slate-400">—</span>
                       )}
