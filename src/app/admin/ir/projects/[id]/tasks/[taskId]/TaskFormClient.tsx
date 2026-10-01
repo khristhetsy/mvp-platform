@@ -8,6 +8,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { OdooPager } from "@/components/admin/OdooPager";
 import { formatRange } from "@/lib/ir/milestones";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrTask } from "@/lib/ir/types";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
@@ -114,20 +116,47 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
   const done = useMemo(() => (data?.activities ?? []).filter((a) => a.done_at).sort((a, b) => (b.done_at ?? "").localeCompare(a.done_at ?? "")), [data]);
   const matchName = (id: string | null) => data?.matches.find((m) => m.id === id)?.investor_name ?? (id ? "Investor" : "Week");
 
+  // This project's weekly tasks in week order (pager + milestone strip).
+  const ordered = useMemo(() => {
+    if (!data) return [];
+    const rank = (mid: string) => data.weeks.find((w) => w.id === mid)?.sort_order ?? 0;
+    return [...data.siblings].sort((a, b) => rank(a.milestone_id) - rank(b.milestone_id));
+  }, [data]);
+  // Odoo pager: Prev / Next wrap around at either end.
+  const idx = data ? ordered.findIndex((s) => s.id === data.task.id) : -1;
+  const n = ordered.length;
+  const prev = idx >= 0 && n > 1 ? ordered[(idx - 1 + n) % n] : null;
+  const next = idx >= 0 && n > 1 ? ordered[(idx + 1) % n] : null;
+  const taskBase = data ? `/admin/ir/projects/${data.project.id}/tasks` : "";
+  const router = useRouter();
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Odoo keyboard shortcuts: Alt+P previous record, Alt+N next record.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const to = e.code === "KeyN" ? next : e.code === "KeyP" ? prev : null;
+      if (!to) return;
+      e.preventDefault();
+      router.push(`${taskBase}/${to.id}`);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prev, next, taskBase, router]);
+
   if (error && !data) return <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>;
   if (!data) return <p className="text-[13px] text-slate-400">Loading…</p>;
   const { task: t, project: p } = data;
   const week = data.weeks.find((w) => w.id === t.milestone_id) ?? null;
   const month = data.months.find((m) => m.id === week?.parent_id) ?? null;
-  const ordered = [...data.siblings].sort((a, b) => (data.weeks.find((w) => w.id === a.milestone_id)?.sort_order ?? 0) - (data.weeks.find((w) => w.id === b.milestone_id)?.sort_order ?? 0));
-  const idx = ordered.findIndex((s) => s.id === t.id);
-  const prev = idx > 0 ? ordered[idx - 1] : null, next = idx >= 0 && idx < ordered.length - 1 ? ordered[idx + 1] : null;
-  const base = `/admin/ir/projects/${p.id}/tasks`;
+  const base = taskBase;
   const monthWeeks = data.weeks.filter((w) => w.parent_id === week?.parent_id);
-  // Odoo-style task chain (top right): this project's earlier weekly tasks leading to this one.
+  // Odoo-style milestone strip (top right): up to 4 weekly tasks, current one first where possible,
+  // then the weeks that follow. Earlier weeks collapse into "+N", later ones into "+N more".
   const CHAIN_MAX = 4;
-  const chain = idx >= 0 ? ordered.slice(Math.max(0, idx + 1 - CHAIN_MAX), idx + 1) : [];
-  const chainHidden = idx >= 0 ? Math.max(0, idx + 1 - CHAIN_MAX) : 0;
+  const chainStart = idx >= 0 ? Math.max(0, Math.min(idx, n - CHAIN_MAX)) : 0;
+  const chain = idx >= 0 ? ordered.slice(chainStart, chainStart + CHAIN_MAX) : [];
+  const chainHidden = chainStart;
+  const chainLater = idx >= 0 ? ordered.slice(chainStart + CHAIN_MAX) : [];
   const monthNo = week ? [...data.months].sort((a, b) => a.sort_order - b.sort_order).findIndex((m) => m.id === week.parent_id) + 1 : 0;
   const chevron = (first: boolean) => ({ clipPath: first ? "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)" : "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)" });
 
@@ -138,9 +167,9 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
         <Link href={`/admin/ir/projects/${p.id}`} className="hover:text-indigo-700">{p.title}</Link><span>/</span>
         <Link href={base} className="hover:text-indigo-700">Tasks</Link><span>/</span><span className="text-slate-800">{t.title}</span>
         <span className="ml-auto flex items-center gap-1">
-          {prev ? <Link href={`${base}/${prev.id}`} className="rounded border border-slate-200 px-2 py-0.5 hover:bg-slate-50" title={prev.title}>‹ Prev</Link> : <span className="rounded border border-slate-100 px-2 py-0.5 text-slate-300">‹ Prev</span>}
-          <span>{idx + 1} / {ordered.length}</span>
-          {next ? <Link href={`${base}/${next.id}`} className="rounded border border-slate-200 px-2 py-0.5 hover:bg-slate-50" title={next.title}>Next ›</Link> : <span className="rounded border border-slate-100 px-2 py-0.5 text-slate-300">Next ›</span>}
+          <OdooPager label={`${idx + 1} / ${n}`}
+            prev={{ href: prev ? `${base}/${prev.id}` : undefined, title: prev ? `${prev.title} (Alt+P)` : undefined }}
+            next={{ href: next ? `${base}/${next.id}` : undefined, title: next ? `${next.title} (Alt+N)` : undefined }} />
         </span>
       </div>
       {/* Stage: big chevron bar, click a step to move; ▾ menu to pick or edit */}
@@ -168,7 +197,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
         </div>
         </div>
         {chain.length ? (
-          <nav aria-label="Task chain" className="flex max-w-full overflow-x-auto">
+          <nav aria-label="Task chain" className="flex max-w-full flex-wrap">
             {chainHidden ? <Link href={`${base}?month=${week?.parent_id ?? ""}`} title={`${chainHidden} earlier task${chainHidden === 1 ? "" : "s"} on the board`} className="bg-slate-100 px-4 py-2 text-[12.5px] text-slate-600 hover:bg-slate-200" style={chevron(true)}>+{chainHidden}</Link> : null}
             {chain.map((s, i) => {
               const cur = s.id === t.id; const w = data.weeks.find((x) => x.id === s.milestone_id);
@@ -177,6 +206,17 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                 ? <span key={s.id} aria-current="page" title={w ? formatRange(w.starts_on, w.ends_on) : undefined} className={`${cls} bg-indigo-50 font-semibold text-indigo-800`} style={chevron(i === 0 && !chainHidden)}>{s.title}{monthNo ? <span className="ml-1.5 text-[11px] font-normal text-indigo-500">{monthNo}M</span> : null}</span>
                 : <Link key={s.id} href={`${base}/${s.id}`} title={w ? `${s.title} · ${formatRange(w.starts_on, w.ends_on)}` : s.title} className={`${cls} bg-slate-100 text-slate-700 hover:bg-slate-200`} style={chevron(i === 0 && !chainHidden)}>{s.title}</Link>;
             })}
+            {chainLater.length ? (
+              <span className="relative -ml-1.5">
+                <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} title={`${chainLater.length} later task${chainLater.length === 1 ? "" : "s"}`} className="whitespace-nowrap bg-slate-100 py-2 pl-5 pr-4 text-[12.5px] text-slate-600 hover:bg-slate-200" style={chevron(false)}>+{chainLater.length} more</button>
+                {moreOpen ? <>
+                  <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
+                  <div className="absolute right-0 z-30 mt-1 max-h-72 w-64 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 text-[12.5px] shadow-lg">
+                    {chainLater.map((s) => { const w = data.weeks.find((x) => x.id === s.milestone_id); return <Link key={s.id} href={`${base}/${s.id}`} onClick={() => setMoreOpen(false)} className="block px-3 py-1.5 text-slate-700 hover:bg-slate-50">{s.title}{w ? <span className="block text-[11px] text-slate-400">{formatRange(w.starts_on, w.ends_on)}</span> : null}</Link>; })}
+                  </div>
+                </> : null}
+              </span>
+            ) : null}
           </nav>
         ) : null}
       </div>

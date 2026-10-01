@@ -15,6 +15,7 @@ import { GROUP_BY_OPTIONS } from "@/lib/sales/contact-grouping";
 import { INVESTOR_PROFILE_OPTIONS, isListedInvestorProfile } from "@/lib/sales/investor-profile";
 import { OP_LABEL, fieldDef, type FilterSpec, type Condition } from "@/lib/sales/contact-filter-spec";
 import { COLS, cell, sortRows, SortTh, type ColKey, type Outreach, type Row, type SortKey, type SortState } from "./matching-table";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 const SCOPE = "ir-investors";
 const NO_GROUP = "profile"; // with the list locked to investors, the role grouping is one group: none
@@ -154,14 +155,20 @@ export function InvestorSearchTab(p: {
   function pager(id: string) {
     const g = groups[id];
     if (!g || g.total <= PAGE) return null;
-    const from = g.page * PAGE + 1; const to = Math.min(g.total, from + PAGE - 1);
     return (
-      <tr key={`p:${id}`}><td colSpan={span} className="px-3 py-2 text-right text-[12px] text-slate-500">
-        {from}–{to} of {g.total.toLocaleString()}
-        <button type="button" onClick={() => goPage(id, -1)} disabled={g.loading || g.page === 0} aria-label="Previous page" className="ml-2 rounded border border-slate-200 px-2 disabled:opacity-40"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
-        <button type="button" onClick={() => goPage(id, 1)} disabled={g.loading || to >= g.total} aria-label="Next page" className="ml-1 rounded border border-slate-200 px-2 disabled:opacity-40"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+      <tr key={`p:${id}`}><td colSpan={span} className="px-3 py-2 text-right">
+        {pagerControl(id)}
       </td></tr>
     );
+  }
+  /** Odoo pager for one group ("1–50 / 7,187 ‹ ›"); shared by the top bar and the table foot so both stay in sync. */
+  function pagerControl(id: string) {
+    const g = groups[id];
+    if (!g || !g.total) return null;
+    const from = g.page * PAGE + 1; const to = Math.min(g.total, from + PAGE - 1);
+    return <OdooPager label={`${from.toLocaleString()}–${to.toLocaleString()} / ${g.total.toLocaleString()}`}
+      prev={{ onClick: () => goPage(id, -1), disabled: g.loading || g.page === 0, title: "Previous page" }}
+      next={{ onClick: () => goPage(id, 1), disabled: g.loading || to >= g.total, title: "Next page" }} />;
   }
   function body(id: string) {
     const g = groups[id];
@@ -196,7 +203,9 @@ export function InvestorSearchTab(p: {
           hideTypeQuick groupOptions={GROUP_OPTS} noGroupId={NO_GROUP} placeholder="Search investors…"
         />
         {p.tools}
-        <span className="ml-auto text-[12px] text-slate-600">{dynLoading ? "Searching…" : `${total.toLocaleString()} investor${total === 1 ? "" : "s"}`}</span>
+        {!grouped && !dynLoading && groups.investor?.total
+          ? <span className="ml-auto">{pagerControl("investor")}</span>
+          : <span className="ml-auto text-[12px] text-slate-600">{dynLoading ? "Searching…" : `${total.toLocaleString()} investor${total === 1 ? "" : "s"}`}</span>}
       </div>
       {error ? <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</p> : null}
       {grouped ? <p className="mb-3 text-[12px] text-slate-500">Grouped by {GROUP_OPTS.find((o) => o.id === groupBy)?.label.toLowerCase()}. Open a group to load its investors.</p> : null}
