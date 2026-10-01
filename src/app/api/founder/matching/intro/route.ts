@@ -5,6 +5,7 @@ import { crrFor } from "@/lib/crr/crr-for";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
+import { countIntroRequestsSince } from "@/lib/matching/intro-quota";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
@@ -84,13 +85,8 @@ export async function POST(request: Request) {
   // Weeks start Monday (UTC).
   const weekStart = (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
   // Declined requests are given back, so they don't count toward the limit.
-  async function countSince(since: string): Promise<number> {
-    const [member, prospect] = await Promise.all([
-      admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", company!.id).neq("status", "declined").gte("created_at", since),
-      admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).neq("status", "dismissed").gte("created_at", since),
-    ]);
-    return (member.count ?? 0) + (prospect.count ?? 0);
-  }
+  // Same counter the matches page displays, so the numbers shown are the numbers enforced.
+  const countSince = (since: string) => countIntroRequestsSince(admin, company!.id, founderId, since);
   let capPeriod: "week" | "month" = "month";
   async function overCap(): Promise<boolean> {
     if (weeklyCap !== null && (await countSince(weekStart)) >= weeklyCap) {

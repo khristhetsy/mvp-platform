@@ -85,7 +85,10 @@ export function investorProfileFromContact(s: ScoredInvestorContact): InvestorMa
     check_size_max: band && Number.isFinite(band.max) ? band.max : null,
     preferred_sectors: s.sectors,
     preferred_geographies: [],
-    preferred_stages: s.preferences.useOfFunds,
+    // Stage factor reads the investor's Odoo funding stages, the same list the
+    // founder's funding_stage comes from (as Match campaigns do). It previously
+    // read "use of funds", which never meets a funding stage.
+    preferred_stages: s.fundingStages ?? [],
     preferred_arr_range: s.preferences.arrRange[0] ?? null,
     preferred_mrr_range: s.preferences.mrrRange[0] ?? null,
     approval_status: "approved",

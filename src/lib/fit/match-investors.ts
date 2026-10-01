@@ -18,6 +18,8 @@
  */
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
+import type { EngineWeights } from "@/lib/matching/investor-company-matching";
 import { scorablesForIndustries, indexedSectors } from "@/lib/fit/match-index";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { getContactInvestorRating } from "@/lib/investor-rating/contact-rating";
@@ -36,12 +38,31 @@ import {
   type FitAnswers,
 } from "@/lib/fit/options";
 
-// Fit weights (sum 100). Industry is also a hard filter (no sector overlap → excluded),
-// so a passing row already fits on sector. Threshold defaults to the industry weight, so
-// a sector-only match still shows even when imported investors carry only industry data.
-// Override with FIT_PASS_THRESHOLD.
-const WEIGHTS = FIT_WEIGHTS;
-const PASS_THRESHOLD = Number(process.env.FIT_PASS_THRESHOLD ?? WEIGHTS.industry);
+// Fit weights. /fit reads the platform's one weight table (investor_match_config
+// engineWeights, edited on Admin > Profile and fields) through fitWeightsFromEngine;
+// FIT_WEIGHTS (sum 100) is the fallback when no table is passed (IR queue, tests).
+// The score is a percentage of the total weight, so with FIT_WEIGHTS it is the raw sum.
+// Industry is also a hard filter (no sector overlap → excluded), so a passing row already
+// fits on sector. The pass threshold defaults to industry's share, so a sector-only match
+// still shows even when imported investors carry only industry data. Override with
+// FIT_PASS_THRESHOLD (a percentage).
+export type FitWeights = { industry: number; stage: number; size: number; type: number; revenue: number };
+const WEIGHTS: FitWeights = FIT_WEIGHTS;
+
+/** /fit factors from the engine weight table. Revenue counts ARR and MRR together. */
+export function fitWeightsFromEngine(w: EngineWeights): FitWeights {
+  return { industry: w.sector, stage: w.stage, size: w.checkSize, type: w.investorType, revenue: (w.arr ?? 0) + (w.mrr ?? 0) };
+}
+
+function totalWeight(w: FitWeights): number {
+  return w.industry + w.stage + w.size + w.type + w.revenue;
+}
+
+function passThreshold(w: FitWeights): number {
+  if (process.env.FIT_PASS_THRESHOLD) return Number(process.env.FIT_PASS_THRESHOLD);
+  const total = totalWeight(w);
+  return total > 0 ? Math.round((w.industry / total) * 100) : 0;
+}
 
 export type MatchResult = {
   contactId: string;
@@ -200,7 +221,7 @@ export function fieldsOf(row: GatedRow, opts: FieldOpts = {}): MatchFields {
 }
 
 /** Score merged fields against the founder's answers. Null = industry filter failed. */
-export function scoreFields(f: MatchFields, answers: FitAnswers): { fit: number; summary: string } | null {
+export function scoreFields(f: MatchFields, answers: FitAnswers, WEIGHTS: FitWeights = FIT_WEIGHTS): { fit: number; summary: string } | null {
   const industries = lc(f.industries);
   // Hard filter: at least one selected sector overlaps (multi-select any-overlap).
   if (!answers.industry.some((i) => industries.has(i.trim().toLowerCase()))) return null;
@@ -222,7 +243,8 @@ export function scoreFields(f: MatchFields, answers: FitAnswers): { fit: number;
   if (revenueStoredFor(answers.revenue).some((r) => revStored.has(r.toLowerCase()))) fit += WEIGHTS.revenue;
 
   const summary = [f.stages.join("–") || null, f.sizes[0] || null].filter(Boolean).join(" · ");
-  return { fit, summary };
+  const total = totalWeight(WEIGHTS);
+  return { fit: total > 0 ? Math.round((fit / total) * 100) : 0, summary };
 }
 
 /** Score one wide row. Kept as the thin wrapper the fallback path and tests use. */
@@ -240,7 +262,8 @@ export type Scorable = {
 };
 
 /** Pure ranking: score → industry hard filter → one row per firm → threshold → sort. */
-export function rankScorables(items: Scorable[], answers: FitAnswers): MatchResult[] {
+export function rankScorables(items: Scorable[], answers: FitAnswers, weights: FitWeights = WEIGHTS): MatchResult[] {
+  const PASS_THRESHOLD = passThreshold(weights);
   // SCORE FIRST, then de-dup. De-duplicating first meant the tie-break (trust tier, then
   // recency) could pick a contact that happens to carry none of the firm's sector data —
   // that row then fails the industry filter and the whole firm vanishes, even though a
@@ -250,7 +273,7 @@ export function rankScorables(items: Scorable[], answers: FitAnswers): MatchResu
   const passed: Array<{ r: Scorable; s: { fit: number; summary: string } }> = [];
   for (const r of items) {
     if (!r.company) continue;
-    const s = scoreFields(r.fields, answers);
+    const s = scoreFields(r.fields, answers, weights);
     if (s && s.fit >= PASS_THRESHOLD) passed.push({ r, s });
   }
 
@@ -291,10 +314,10 @@ export function rankScorables(items: Scorable[], answers: FitAnswers): MatchResu
 }
 
 /** Rank wide crm_contacts rows (the fallback path). */
-export function rankRows(rows: GatedRow[], answers: FitAnswers): MatchResult[] {
+export function rankRows(rows: GatedRow[], answers: FitAnswers, weights: FitWeights = WEIGHTS): MatchResult[] {
   return rankScorables(rows.map((r) => ({
     id: r.id, company: r.company, inv_source: r.inv_source, inv_verified_at: r.inv_verified_at, fields: fieldsOf(r),
-  })), answers);
+  })), answers, weights);
 }
 
 /** Distinct sectors offerable at Q3 — the industries that at least one GATED
@@ -385,17 +408,20 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
   // investor scope; the industry hard filter excludes anyone without sector overlap.
   // Preferred path: the industry hard filter runs IN SQL against investor_match_index, so
   // we read back only investors that could match — no wide scan, full network coverage.
-  const [scorables, { count }] = await Promise.all([
+  // One weight table: /fit scores with the same engineWeights the platform matcher uses.
+  const [scorables, { count }, cfg] = await Promise.all([
     scorablesForIndustries(answers.industry).catch(() => null),
     db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
+    getInvestorMatchConfig().catch(() => null),
   ]);
   const networkTotal = count ?? 0;
+  const weights = cfg ? fitWeightsFromEngine(cfg.engineWeights) : WEIGHTS;
 
   // `null` means the index is unusable; `[]` means it answered and nothing matched. Only
   // the first justifies the wide fallback — treating an empty result as "index missing"
   // made every genuinely-no-match search pay for a full table scan.
   if (scorables !== null) {
-    return await finish(db, rankScorables(scorables, answers), networkTotal);
+    return await finish(db, rankScorables(scorables, answers, weights), networkTotal);
   }
 
   // Fallback: index missing or empty. Capped read — see the migration comment for why a
@@ -407,5 +433,5 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
     .limit(20000);
 
   if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
-  return await finish(db, rankRows(data as GatedRow[], answers), networkTotal);
+  return await finish(db, rankRows(data as GatedRow[], answers, weights), networkTotal);
 }

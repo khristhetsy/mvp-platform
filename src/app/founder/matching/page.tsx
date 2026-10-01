@@ -6,6 +6,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { crrFor } from "@/lib/crr/crr-for";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,8 @@ export default async function FounderMatchingPage() {
     );
   }
 
-  const [data, plan] = await Promise.all([loadFounderMatchingCenter(company!), getUserPlan(profile.id)]);
+  // Same rating gate as /founder/matches, so the Request intro button locks here too.
+  const [data, plan, crr] = await Promise.all([loadFounderMatchingCenter(company!), getUserPlan(profile.id), crrFor(company!.id)]);
   // Free sees that matches exist (count · sector · fit tier) but NOT who — identities
   // and distribution actions unlock on Basic and up.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;
@@ -124,6 +126,7 @@ export default async function FounderMatchingPage() {
           <MatchingCenterList
             scope="matching"
           cards={cards}
+            gate={crr ? { score: crr.score, gate: crr.gate, unlocked: crr.outreachUnlocked } : undefined}
             introEndpoint="/api/founder/matching/intro"
             followUpEndpoint="/api/founder/matching/follow-up"
             draftEndpoint="/api/founder/matching/draft-note"

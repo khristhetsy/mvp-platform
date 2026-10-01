@@ -28,6 +28,8 @@ export type ScoredInvestorContact = {
   investorType: string | null;
   capitalTypes: string[];
   sectors: string[];
+  /** Odoo funding stages (Pre-Seed, Seed Round, Series A …), the list founders pick their stage from. */
+  fundingStages?: string[];
   preferences: InvestorPreferences;
   /** Present only when scored against a company. */
   match: PreferenceMatch | null;
@@ -269,6 +271,7 @@ export async function loadInvestorContacts(opts?: {
       investorType: asList(prof?.investorTypes)[0] ?? null,
       capitalTypes: asList(prof?.capitalTypes),
       sectors,
+      fundingStages: asList(prof?.fundingStages),
       preferences,
       match: null,
     });

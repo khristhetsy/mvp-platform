@@ -54,6 +54,7 @@ export function InvestorDetailClient({
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [introState, setIntroState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [introError, setIntroError] = useState<string | null>(null);
   const [followState, setFollowState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
   const isMember = Boolean(investor.platform_investor_id);
@@ -104,14 +105,20 @@ export function InvestorDetailClient({
   async function requestIntro() {
     if (!isMember) return;
     setIntroState("loading");
+    setIntroError(null);
     try {
       const res = await fetch("/api/founder/matching/intro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ref: investor.platform_investor_id }),
       });
-      setIntroState(res.ok ? "done" : "error");
+      if (res.ok) { setIntroState("done"); return; }
+      // Show the reason the API gives (rating gate, plan, weekly or monthly limit).
+      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      setIntroError(d.error ?? "Couldn't request the introduction. Try again.");
+      setIntroState("error");
     } catch {
+      setIntroError("Couldn't request the introduction. Try again.");
       setIntroState("error");
     }
   }
@@ -169,6 +176,7 @@ export function InvestorDetailClient({
             {followState === "loading" ? "Adding…" : followState === "done" ? <>Added to follow-up <i className="ti ti-check" aria-hidden="true" /></> : "Add to follow-up"}
           </button>
         </div>
+        {introError ? <p role="alert" className="mt-2 text-[12.5px] text-rose-600">{introError}</p> : null}
 
         {/* Stage stepper */}
         <div className="mt-5 flex flex-wrap gap-2">

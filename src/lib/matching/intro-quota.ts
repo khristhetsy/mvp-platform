@@ -35,7 +35,11 @@ export function weekStartUtc(now: Date = new Date()): string {
   return d.toISOString();
 }
 
-/** Declined member requests and dismissed prospect requests are refunded (not counted). */
+/**
+ * Declined member requests and dismissed prospect requests are refunded (not counted).
+ * Only requests the founder sent count: introductions an investor asked for are not
+ * charged to the founder's plan.
+ */
 export async function countIntroRequestsSince(
   admin: SupabaseClient,
   companyId: string,
@@ -43,7 +47,7 @@ export async function countIntroRequestsSince(
   since: string,
 ): Promise<number> {
   const [member, prospect] = await Promise.all([
-    admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", companyId).neq("status", "declined").gte("created_at", since),
+    admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("direction", "founder_to_investor").neq("status", "declined").gte("created_at", since),
     admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).neq("status", "dismissed").gte("created_at", since),
   ]);
   return (member.count ?? 0) + (prospect.count ?? 0);
