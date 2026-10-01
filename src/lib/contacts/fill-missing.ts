@@ -305,10 +305,14 @@ export function isWeakIndustryTag(tag: unknown): boolean {
 }
 
 /** Fields the website step could still fill for this contact. Pure. */
-export function websiteTargets(r: FillRow, role: Role): string[] {
+/** Free mode (no AI) can only fill what the site states itself: its LinkedIn link and its own description. */
+export const FREE_WEBSITE_FIELDS = ["linkedin", "summary"];
+
+export function websiteTargets(r: FillRow, role: Role, freeMode = false): string[] {
   if (!siteFor(r)) return [];
   const out: string[] = [];
-  for (const field of role === "founder" ? ["linkedin", "summary", "industry", "team"] : ["linkedin", "summary", "industry"]) {
+  const all = role === "founder" ? ["linkedin", "summary", "industry", "team"] : ["linkedin", "summary", "industry"];
+  for (const field of freeMode ? all.filter((x) => FREE_WEBSITE_FIELDS.includes(x)) : all) {
     const f = fieldDef(role, field)!;
     if (!hasField(r, f)) out.push(field);
     else if (field === "industry" && isWeakIndustryTag(r.overrides?.[f.sourceKey])) out.push(field);
@@ -573,7 +577,7 @@ async function industryLabels(): Promise<string[]> {
   return offered(await loadVocabulary("industry")).map((o) => o.label);
 }
 
-export type RunOpts = { role: Role; step: Step; afterId?: string | null; guessFields?: string[] };
+export type RunOpts = { role: Role; step: Step; afterId?: string | null; guessFields?: string[]; /** Website step without the AI reading: no paid calls. */ freeMode?: boolean };
 export type Plan = { items: FillItem[]; scanned: number; withWork: number; nextCursor: string | null; done: boolean; aiError?: string };
 
 /** Cheap per-row work (steps 1 and 3) for one row. */
@@ -608,7 +612,7 @@ export async function scan(o: RunOpts, wanted = Number.POSITIVE_INFINITY): Promi
       scanned++;
       cursor = r.id;
       if (o.step === "website") {
-        if (websiteTargets(r, o.role).length === 0) continue;
+        if (websiteTargets(r, o.role, o.freeMode).length === 0) continue;
         candidates.push(r);
         withWork++;
       } else {
@@ -672,8 +676,8 @@ export async function previewFill(o: RunOpts, sampleSites = 8): Promise<Preview>
   }
   const p = await scan(o);
   const byField: Record<string, number> = {};
-  for (const r of p.candidates) for (const t of websiteTargets(r, o.role)) byField[t] = (byField[t] ?? 0) + 1;
-  const read = await readCandidates(o.role, p.candidates.slice(0, sampleSites), true);
+  for (const r of p.candidates) for (const t of websiteTargets(r, o.role, o.freeMode)) byField[t] = (byField[t] ?? 0) + 1;
+  const read = await readCandidates(o.role, p.candidates.slice(0, sampleSites), !o.freeMode);
   return { contacts: p.withWork, scanned: p.scanned, byField, sample: read.items, sampled: Math.min(sampleSites, p.candidates.length), unreadable: read.unreadable, aiError: read.aiError };
 }
 
@@ -684,7 +688,7 @@ async function writeContact(o: RunOpts, id: string, planned: FillItem[], default
   const r = fresh as FillRow;
   // Recompute against the fresh row, keeping only what the plan intended.
   const still = (o.step === "website"
-    ? planned.filter((i) => websiteTargets(r, o.role).includes(i.field))
+    ? planned.filter((i) => websiteTargets(r, o.role, o.freeMode).includes(i.field))
     : cheapItems(r, o, defaults).filter((i) => planned.some((p) => p.field === i.field)));
   if (still.length === 0) return { written: [], error: false };
 
@@ -734,7 +738,7 @@ export async function applyFill(o: RunOpts): Promise<ApplyResult> {
   let unreadable: number | undefined;
   let aiError: string | undefined;
   if (o.step === "website") {
-    const read = await readCandidates(o.role, plan.candidates, true);
+    const read = await readCandidates(o.role, plan.candidates, !o.freeMode);
     items = read.items; unreadable = read.unreadable; aiError = read.aiError;
     // An AI outage mid-slice: keep what was read, but don't move the cursor past rows
     // the AI never saw, so the next run picks them up.

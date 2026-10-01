@@ -23,7 +23,7 @@ const STEP_INFO: Record<Step, { title: string; note: string; fills: Record<Role,
   },
   website: {
     title: "Step 2 · Website read",
-    note: "reads home, /about and /team, then AI over the text",
+    note: "reads home, /about and /team; AI only when Free mode is off",
     fills: {
       founder: "LinkedIn link on the site. Business summary from the site's own description, else AI. Industry by AI, also replacing a low guess when the site reads medium or better. Management team named on the site.",
       investor: "LinkedIn link on the site. Business summary from the site's own description, else AI. Industry by AI where blank, also replacing a low guess when the site reads medium or better.",
@@ -67,6 +67,8 @@ export function FillMissingClient({ fields }: { fields: Record<Role, GuessField[
   const [preview, setPreview] = useState<Partial<Record<Step, Preview>>>({});
   const [msg, setMsg] = useState<Partial<Record<Step, string>>>({});
   const [busy, setBusy] = useState<Step | null>(null);
+  // Website step without the AI reading. On by default so a run adds no AI cost.
+  const [freeMode, setFreeMode] = useState(true);
   const stop = useRef(false);
 
   function switchRole(r: Role) {
@@ -78,7 +80,7 @@ export function FillMissingClient({ fields }: { fields: Record<Role, GuessField[
   async function runPreview(s: Step) {
     setBusy(s); say(s, s === "website" ? "Scanning, then reading a few sites…" : "Scanning…");
     try {
-      const d = await post<Preview>({ op: "preview", role, step: s, guessFields: guess[role] });
+      const d = await post<Preview>({ op: "preview", role, step: s, guessFields: guess[role], freeMode });
       setPreview((p) => ({ ...p, [s]: d }));
       say(s, d.aiError ? `AI unavailable: ${d.aiError}` : "");
     } catch (e) { say(s, e instanceof Error ? e.message : "Preview failed."); } finally { setBusy(null); }
@@ -92,7 +94,7 @@ export function FillMissingClient({ fields }: { fields: Record<Role, GuessField[
     while (guard++ < 5000) {
       if (stop.current) { say(s, `Stopped. ${contacts.toLocaleString()} contacts, ${fieldsN.toLocaleString()} fields filled. Apply again to continue from here.`); break; }
       try {
-        const d = await post<Apply>({ op: "apply", role, step: s, afterId: after ?? undefined, guessFields: guess[role] });
+        const d = await post<Apply>({ op: "apply", role, step: s, afterId: after ?? undefined, guessFields: guess[role], freeMode });
         if (d.aiError) { say(s, `Paused: AI unavailable (${d.aiError}). ${contacts.toLocaleString()} contacts filled so far. Apply again to continue.`); break; }
         fails = 0; contacts += d.contacts; fieldsN += d.fields; errors += d.errors;
         for (const [k, v] of Object.entries(d.byField)) byField[k] = (byField[k] ?? 0) + v;
@@ -141,6 +143,19 @@ export function FillMissingClient({ fields }: { fields: Record<Role, GuessField[
           <div key={s} className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="text-[13px] font-semibold text-slate-800">{info.title} <span className="font-normal text-slate-500">· {info.note}</span></div>
             <p className="mt-1 text-[11.5px] text-slate-500">{info.fills[role]}</p>
+
+            {s === "website" ? (
+              <label className="mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                <input type="checkbox" className="mt-0.5" checked={freeMode} disabled={busy !== null}
+                  onChange={(e) => { setFreeMode(e.target.checked); setPreview((x) => ({ ...x, website: undefined })); }} />
+                <span className="text-[12.5px] text-slate-800">
+                  <span className="font-medium">Free mode, no AI</span>
+                  <span className="block text-[11.5px] text-slate-500">{freeMode
+                    ? "Fills only what the site states itself: its LinkedIn link and its own description. Industry and management team are skipped. No AI calls, no AI cost."
+                    : "AI reads the site text to write a summary where the site has no description, and to pick industry and management team. Each site read is a paid AI call."}</span>
+                </span>
+              </label>
+            ) : null}
 
             {s === "guess" ? (
               <div className="mt-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white">

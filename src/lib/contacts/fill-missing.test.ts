@@ -171,3 +171,21 @@ describe("guess step", () => {
     expect(defaultGuessFields("founder")).toContain("entity");
   });
 });
+
+describe("websiteTargets free mode", () => {
+  it("keeps only what the site states itself (LinkedIn and description)", () => {
+    const r = row({ website: "acme.com" });
+    expect(websiteTargets(r, "founder")).toEqual(["linkedin", "summary", "industry", "team"]);
+    expect(websiteTargets(r, "founder", true)).toEqual(["linkedin", "summary"]);
+    expect(websiteTargets(r, "investor", true)).toEqual(["linkedin", "summary"]);
+  });
+  it("still skips contacts with no site", () => {
+    expect(websiteTargets(row({ email: "jane@gmail.com" }), "founder", true)).toEqual([]);
+  });
+  it("fills the site's own description without any AI reading", () => {
+    const html = '<meta name="description" content="Acme builds payroll software for clinics."><a href="https://www.linkedin.com/company/acme">in</a>';
+    const items = websiteItems(row({ website: "acme.com" }), "founder", { html, text: "x".repeat(300) }, null);
+    expect(items.map((i) => i.field).sort()).toEqual(["linkedin", "summary"]);
+    expect(items.find((i) => i.field === "summary")?.tag).toBe("site:meta");
+  });
+});
