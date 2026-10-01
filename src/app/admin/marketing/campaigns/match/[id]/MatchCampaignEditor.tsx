@@ -680,7 +680,7 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
     <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
       <div className={card}>
         <div className="mb-1 text-[14px] font-medium">Content</div>
-        <p className="mb-4 text-[12.5px] text-[#5A6782]">Each founder receives their own matches. Investor names and firms stay hidden until they choose a plan.</p>
+        <p className="mb-4 text-[12.5px] text-[#5A6782]">Each founder receives their own matches. Investor names and firms show; contact details stay hidden until they choose a plan.</p>
         <label className={label}>Subject</label>
         <div className="mb-3 flex gap-2">
           <input className={input} value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -714,8 +714,8 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
       <div className={`${card} h-fit text-[12.5px] leading-5`}>
         <div className="mb-2 font-semibold">What the founder sees before paying</div>
         <ul className="mb-4 space-y-1 text-[#5A6782]">
-          <li>+ Match count and top {campaign.match_config.preview_count} matches: investor type, sector, stage fit, match %</li>
-          <li>− Investor names, firms and contacts hidden</li>
+          <li>+ Match count and top {campaign.match_config.preview_count} matches: investor name and firm, type, sector, stage fit, match %</li>
+          <li>− Contact details (email, phone, LinkedIn) hidden</li>
           <li>= Existing footer with unsubscribe and suppression</li>
         </ul>
         <div className="mb-2 font-semibold">Buttons</div>
@@ -801,7 +801,7 @@ function StepSchedule({ campaign, founders, resendReady, onCampaign, onDone, onE
         <div>Campaign type: <b>Match</b></div>
         <div>Founder recipients: <b>{recipients}</b></div>
         <div>Investors emailed: <b>0</b></div>
-        <div>Template: <b>Founder match email, names hidden</b></div>
+        <div>Template: <b>Founder match email, contact details hidden</b></div>
         <div>Status: <b>{campaign.status}</b>{campaign.scheduled_at ? ` · ${new Date(campaign.scheduled_at).toLocaleString()}` : ""}</div>
         <div>Mode: <b>{dry ? "Test mode, no founder emails" : "Live"}</b></div>
       </div>

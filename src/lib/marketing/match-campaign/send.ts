@@ -1,6 +1,6 @@
 /**
  * Sending a Match campaign: one email per ready founder with their own count
- * and top matches, names hidden. Uses the shared sender (sendMarketingEmail)
+ * and top matches: investor names shown, contact details hidden. Uses the shared sender (sendMarketingEmail)
  * so the header, unsubscribe link, List-Unsubscribe headers and the outbound
  * email log are the same as every campaign. No email ever goes to investors:
  * recipients come only from match_campaign_founders. Server only.
