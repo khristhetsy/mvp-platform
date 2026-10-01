@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company, Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFounderPlatformInvestorMatches } from "@/lib/founder-crm/platform-matches";
+import { buildSalesPipelineIndex, inSalesPipeline, type SalesOppLink, type SalesPipelineIndex } from "@/lib/crm/sales-pipeline-index";
 import type {
   ContactDetails,
   FounderRecord,
@@ -142,6 +143,13 @@ function raiseLabel(row: Record<string, unknown>): string {
   return [stage, amtLabel].filter(Boolean).join(" · ") || "Raise TBD";
 }
 
+/** Every sales opportunity's links, for the "In / Not in sales pipeline" chips. Empty on error. */
+async function loadSalesPipelineIndex(): Promise<SalesPipelineIndex> {
+  const supabase = createServiceRoleClient();
+  const { data } = await raw(supabase).from("sales_opportunities").select("contact_crm_id, contact_email, contact_profile_id, company_id").limit(20000);
+  return buildSalesPipelineIndex((data ?? []) as SalesOppLink[]);
+}
+
 /** Read the connector mirror for a module. Empty until an import has run. */
 async function loadMirror(module: "founder" | "investor", limit: number): Promise<Record<string, unknown>[]> {
   const supabase = createServiceRoleClient();
@@ -157,6 +165,7 @@ async function loadMirror(module: "founder" | "investor", limit: number): Promis
 /** Build founder records from mirrored contacts, enriched with company intelligence where linked. */
 async function foundersFromMirror(mirror: Record<string, unknown>[], stage?: FounderStage): Promise<FounderRecord[]> {
   const supabase = createServiceRoleClient();
+  const pipeline = await loadSalesPipelineIndex();
   const profileIds = mirror.map((m) => m.supabase_profile_id).filter(Boolean) as string[];
   const companyByFounder = new Map<string, Record<string, unknown>>();
   if (profileIds.length) {
@@ -179,6 +188,7 @@ async function foundersFromMirror(mirror: Record<string, unknown>[], stage?: Fou
       ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
       lastActivity: String(m.synced_at ?? new Date().toISOString()),
       details: contactDetails(m),
+      inSalesPipeline: inSalesPipeline(pipeline, { crmId: m.id, email: m.email, profileId: m.supabase_profile_id, companyId: company?.id }),
     };
   });
   return stage ? records.filter((r) => r.stage === stage) : records;
@@ -191,6 +201,7 @@ export async function loadFounderRecords(
   if (mirror.length > 0) return foundersFromMirror(mirror, opts.stage);
 
   const supabase = createServiceRoleClient();
+  const pipeline = await loadSalesPipelineIndex();
   const { data } = await raw(supabase)
     .from("companies")
     .select(
@@ -220,6 +231,7 @@ export async function loadFounderRecords(
       plan: "—",
       ownerInitials: initials(prof?.full_name ?? prof?.email ?? null),
       lastActivity: String(row.updated_at ?? new Date().toISOString()),
+      inSalesPipeline: inSalesPipeline(pipeline, { email: prof?.email, profileId: row.founder_id, companyId: row.id }),
     };
   });
   return opts.stage ? records.filter((r) => r.stage === opts.stage) : records;
@@ -273,6 +285,7 @@ async function investorsFromMirror(
   const profileIds = mirror.map((m) => m.supabase_profile_id).filter(Boolean) as string[];
   const profByPid = new Map<string, Record<string, unknown>>();
   const pipelineCount = new Map<string, number>();
+  const sales = await loadSalesPipelineIndex();
   if (profileIds.length) {
     const [{ data: profs }, { data: pipelines }] = await Promise.all([
       raw(supabase).from("investor_profiles").select("*").in("profile_id", profileIds),
@@ -307,6 +320,7 @@ async function investorsFromMirror(
       ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
       lastActivity: String(m.synced_at ?? new Date().toISOString()),
       details: contactDetails(m),
+      inSalesPipeline: inSalesPipeline(sales, { crmId: m.id, email: m.email, profileId: pid }),
     };
   });
   let out = records;
@@ -322,6 +336,7 @@ export async function loadInvestorRecords(
   if (mirror.length > 0) return investorsFromMirror(mirror, opts);
 
   const supabase = createServiceRoleClient();
+  const sales = await loadSalesPipelineIndex();
   const [{ data: profs }, { data: pipelines }] = await Promise.all([
     raw(supabase)
       .from("investor_profiles")
@@ -354,6 +369,7 @@ export async function loadInvestorRecords(
       indicatedCount: count,
       ownerInitials: initials(prof?.full_name ?? prof?.email ?? null),
       lastActivity: String(row.updated_at ?? new Date().toISOString()),
+      inSalesPipeline: inSalesPipeline(sales, { email: prof?.email, profileId: investorId }),
     };
   });
 

@@ -103,12 +103,21 @@ export const GROUP_DIMS: Record<string, Dim> = {
     id: "createdMonth", label: "Added (month)", section: "crm",
     extract: (r) => (r.created_on ? [String(r.created_on).slice(0, 7)] : []),
   },
+  // Bucketed in SQL only (count_contact_buckets → in_pipeline | not_in_pipeline): the
+  // lightweight rows don't carry sales opportunities, so there is nothing to extract here.
+  salesOpp: {
+    id: "salesOpp", label: "Sales opportunity", section: "crm",
+    extract: () => [],
+  },
 };
+
+/** Bucket labels for the Sales opportunity group. */
+export const SALES_OPP_LABEL: Record<string, string> = { in_pipeline: "In sales pipeline", not_in_pipeline: "Not in sales pipeline" };
 
 export const GROUP_BY_ORDER = [
   "profile",
   "industries", "investorTypes", "capital", "fundingStages", "operatingStages", "leadSource",
-  "country", "company", "source", "assignees", "createdMonth",
+  "country", "company", "source", "assignees", "salesOpp", "createdMonth",
 ] as const;
 
 // Client-facing option list (no functions).
@@ -123,6 +132,7 @@ export function isGroupBy(v: string | null | undefined): v is keyof typeof GROUP
 export function bucketLabel(dimId: string, value: string, nameById?: Map<string, string>): string {
   if (value === NONE) return "Unassigned";
   if (dimId === "profile") return ROLE_LABEL[value] ?? value;
+  if (dimId === "salesOpp") return SALES_OPP_LABEL[value] ?? value;
   if (dimId === "assignees") return nameById?.get(value) ?? "Member";
   if (dimId === "createdMonth") {
     const [y, m] = value.split("-").map(Number);
