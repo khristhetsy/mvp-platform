@@ -3,19 +3,21 @@ import { errorJson, guardMatchAdmin } from "@/lib/marketing/match-campaign/api-g
 import { listCampaignFounders, listFounderMatches, removeFounderMatch, runCampaignMatching } from "@/lib/marketing/match-campaign/store";
 
 export const dynamic = "force-dynamic";
-// One pass loads the investor network once and scores every ready founder.
+// One batch loads the investor network once and scores up to MATCH_BATCH founders.
 export const maxDuration = 300;
 
-// POST /api/admin/marketing/match/run — match every ready founder.
+// POST /api/admin/marketing/match/run { campaign_id, after? } — match the next batch of
+// ready founders. The editor repeats with `after: next` until next is null; the
+// founder rows come back with the last batch.
 export async function POST(request: Request) {
   const auth = await guardMatchAdmin();
   if ("error" in auth) return auth.error;
-  const body = (await request.json().catch(() => null)) as { campaign_id?: string } | null;
+  const body = (await request.json().catch(() => null)) as { campaign_id?: string; after?: string | null } | null;
   if (!body?.campaign_id) return NextResponse.json({ error: "campaign_id is required." }, { status: 400 });
   try {
-    const summary = await runCampaignMatching(body.campaign_id);
-    const founders = await listCampaignFounders(body.campaign_id);
-    return NextResponse.json({ summary, founders });
+    const run = await runCampaignMatching(body.campaign_id, { after: typeof body.after === "string" ? body.after : null });
+    const founders = run.next ? null : await listCampaignFounders(body.campaign_id);
+    return NextResponse.json({ ...run, founders });
   } catch (err) {
     return errorJson(err);
   }

@@ -6,6 +6,9 @@
 
 export type FounderType = "lead" | "existing_user" | "in_pipeline";
 
+/** Most founders one Match campaign can take (Select all on the founder list step). */
+export const MAX_CAMPAIGN_FOUNDERS = 25000;
+
 export type ExcludedReason =
   | "missing_industry"
   | "missing_stage"

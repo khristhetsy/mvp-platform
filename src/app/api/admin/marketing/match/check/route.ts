@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { errorJson, guardMatchAdmin } from "@/lib/marketing/match-campaign/api-guard";
-import { listCampaignFounders, searchFounders, setCampaignFounders, updateMatchCampaign } from "@/lib/marketing/match-campaign/store";
+import { listCampaignFounders, searchFounderIds, setCampaignFounders, updateMatchCampaign } from "@/lib/marketing/match-campaign/store";
 import { sanitizeFilter } from "@/lib/marketing/match-campaign/filter-params";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 // POST /api/admin/marketing/match/check — put the selected founders on the
 // campaign and run the data check. Either explicit founder_ids, or every
-// founder that fits the list step's filter (select_all, up to 1,000).
+// founder that fits the list step's filter (select_all, up to 25,000).
 // With neither, re-runs the check on the founders already on the campaign
 // (after a Data check setting changes).
 export async function POST(request: Request) {
@@ -22,11 +22,10 @@ export async function POST(request: Request) {
     let ids = Array.isArray(body.founder_ids) ? body.founder_ids.filter((x) => typeof x === "string") : [];
     const f = body.filter !== undefined ? sanitizeFilter(body.filter) : null;
     if (body.select_all && f) {
-      const all = await searchFounders({
+      ids = await searchFounderIds({
         listId: f.list, founderTypes: f.types, industries: f.industries, stages: f.stages,
-        pipelineStages: f.pipeline, filledOnly: f.filled, q: f.q, limit: 1000,
+        pipelineStages: f.pipeline, filledOnly: f.filled, q: f.q,
       });
-      ids = all.rows.map((r) => r.id);
     }
     if (body.recheck) ids = (await listCampaignFounders(body.campaign_id)).map((r) => r.founder_contact_id);
     if (ids.length === 0) return NextResponse.json({ error: "Select at least one founder." }, { status: 400 });
