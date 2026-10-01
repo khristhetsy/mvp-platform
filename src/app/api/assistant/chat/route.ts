@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { isClaudeConfigured } from "@/lib/claude";
 import { requireApiProfile } from "@/lib/api/auth";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
@@ -84,11 +85,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
+  // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+  // Founders only: staff and investors use this chat too and are not on a founder plan.
+  const aiRun = auth.profile.role === "founder" ? await gateAiRun(auth.profile.id, "class_assistant") : { blocked: null, done: async () => {} };
+  if (aiRun.blocked) return aiRun.blocked;
   const response = await runAssistantChat({
     profile: auth.profile,
     supabase: auth.supabase,
     request: { ...parsed.data, message },
   });
+  await aiRun.done();
 
   emitOperationalEvent(createServiceRoleClient(), {
     eventType: "assistant_question_asked",

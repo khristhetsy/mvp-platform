@@ -56,7 +56,7 @@ export async function POST(req: Request): Promise<Response> {
       grounding = await cmoGrounding();
     }
 
-    const raw = await claudeComplete(recentTurns(messages), {
+    const raw = await claudeComplete(recentTurns(messages), { usage: { category: "internal", feature: "marketing_copilot" },
       model: topic === "aeo" ? CLAUDE_SONNET : CLAUDE_HAIKU,
       maxTokens: topic === "aeo" ? 900 : 500,
       system: systemFor(topic, grounding),

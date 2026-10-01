@@ -181,7 +181,7 @@ TRACTION:
 ${tractionText || "[none]"}`;
 
   try {
-    const out = await claudeComplete([{ role: "user", content: prompt }], {
+    const out = await claudeComplete([{ role: "user", content: prompt }], { usage: { category: "founder", feature: "business_plan" },
       model: CLAUDE_SONNET,
       maxTokens: 900,
       temperature: 0.2,

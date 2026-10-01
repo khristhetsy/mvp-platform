@@ -156,6 +156,10 @@ export class ClaudeUnavailableError extends Error {
 export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis: string }) | null> {
   if (!isClaudeConfigured()) throw new ClaudeUnavailableError("Claude is not configured (no API key).");
   const domain = domainOf(row.email);
+  // Pre-filter: with no usable email domain there is no website either, so the
+  // call would rest on the company name alone. Of 1,791 name-only calls logged by
+  // 2026-10-01, none led to an approved proposal, so skip the paid call.
+  if (!domain) return null;
   const site = await fetchSiteText(domain);
   const basis = site ? "website" : domain ? "domain" : "name";
   const user = [
@@ -165,7 +169,7 @@ export async function proposeFor(row: InvestorRow): Promise<(Proposal & { basis:
   ].filter(Boolean).join("\n");
   let reply: string;
   try {
-    reply = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
+    reply = await claudeComplete([{ role: "user", content: user }], { usage: { category: "enrichment", feature: "investor_enrichment" }, model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 300, temperature: 0 });
   } catch (e) {
     // The call itself failed — out of credits, rate limited, network. Not a verdict.
     throw new ClaudeUnavailableError(e instanceof Error ? e.message.slice(0, 200) : "Claude request failed.");

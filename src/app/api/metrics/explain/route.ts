@@ -67,7 +67,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             `Use only the figures above; never invent a number, a date or a name. Plain text, no heading.`,
         },
       ],
-      {
+      { usage: { category: "internal", feature: "metrics_explain" },
         maxTokens: 160,
         temperature: 0.3,
         system:

@@ -119,7 +119,7 @@ export async function generateReviewMessage(
   ].join(" ");
 
   try {
-    const text = await claudeComplete([{ role: "user", content: buildPrompt(input) }], {
+    const text = await claudeComplete([{ role: "user", content: buildPrompt(input) }], { usage: { category: "internal", feature: "admin_investor_ai" },
       model: CLAUDE_HAIKU,
       maxTokens: 400,
       temperature: 0.6,

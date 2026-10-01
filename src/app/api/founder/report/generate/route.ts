@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
@@ -40,7 +41,11 @@ export async function POST(): Promise<NextResponse> {
 
     // No 24h cooldown — founders may regenerate within the day (still guarded by
     // the per-hour burst limit above) so they can iterate on their materials.
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(profile.id, "diligence_report");
+    if (aiRun.blocked) return aiRun.blocked as NextResponse;
     const result = await generateAndSaveDiligenceReport(admin, company.id);
+    await aiRun.done();
 
     await writeAuditLog(admin, {
       userId: profile.id,

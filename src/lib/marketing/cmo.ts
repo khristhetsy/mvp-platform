@@ -200,7 +200,7 @@ export async function generatePlanDraft(brief: CmoBrief): Promise<CmoPlanDraft> 
         }),
       },
     ],
-    { model: CLAUDE_SONNET, maxTokens: 2048, temperature: 0.7, system },
+    { usage: { category: "internal", feature: "marketing_cmo" }, model: CLAUDE_SONNET, maxTokens: 2048, temperature: 0.7, system },
   );
 
   let parsed: Record<string, unknown>;

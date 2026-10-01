@@ -35,7 +35,7 @@ export async function generateSlideDraft(
   const ctx = source ? `\nRelevant business-plan content: ${source}` : "";
   const user = `${companyBlock(company)}${ctx}\n\nDraft the "${def.title}" slide. ${def.prompt}`;
   try {
-    const content = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_SONNET, maxTokens: 400, temperature: 0.5, system: SYSTEM });
+    const content = await claudeComplete([{ role: "user", content: user }], { usage: { category: "founder", feature: "pitch_deck_draft" }, model: CLAUDE_SONNET, maxTokens: 400, temperature: 0.5, system: SYSTEM });
     return { ...parse(content), aiGenerated: true };
   } catch {
     return { headline: def.title, body: "• [Add your points]", aiGenerated: false };

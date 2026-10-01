@@ -4,6 +4,7 @@
 // Service-role only; behind the master kill-switch (via the per-channel gates).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAiBudgetExceeded } from "@/lib/ai-budget/service";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { CadenceStep } from "@/lib/voice/types";
@@ -169,7 +170,10 @@ export async function runCadenceTick(limit = 100): Promise<{ processed: number; 
     } else {
       try {
         outcome = await executeStep(enr.contact_id, enr.campaign_id, steps[enr.current_step]);
-      } catch {
+      } catch (e) {
+        // Voice budget used up: stop this tick and leave the rest due, so no
+        // contact burns a retry on a call that was never attempted.
+        if (isAiBudgetExceeded(e)) break;
         outcome = "retry";
       }
     }

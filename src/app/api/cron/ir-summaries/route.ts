@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withAiUsage } from "@/lib/ai-budget/context";
 import { withCronGate } from "@/lib/cron/gate";
 import * as Sentry from "@sentry/nextjs";
 import { cronMisconfiguredResponse, cronUnauthorizedResponse, getCronSecret, validateCronSecret } from "@/lib/notifications/cron/auth";
@@ -12,7 +13,8 @@ async function handle(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
   try {
-    const result = await runIrSummaries();
+    // AI budget: summaries bill to Scheduled jobs (both the cron and a manual run).
+    const result = await withAiUsage({ category: "scheduled", feature: "ir_summaries" }, () => runIrSummaries());
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     Sentry.captureException(err);

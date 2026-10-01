@@ -149,7 +149,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
               `(a signature is appended separately). Warm and direct; no funding promises.`,
           },
         ],
-        {
+        { usage: { category: "internal", feature: "admin_company_ai" },
           maxTokens: 600,
           temperature: 0.4,
           system:

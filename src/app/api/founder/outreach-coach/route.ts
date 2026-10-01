@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
@@ -136,10 +137,14 @@ export async function POST(request: Request) {
   const userMessage = `Investor profile:\n${investorContext}\n\nCompany:\n${companyContext}\n\nGenerate a personalised outreach strategy as JSON.`;
 
   try {
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(auth.profile.id, "outreach_coach");
+    if (aiRun.blocked) return aiRun.blocked;
     const raw = await claudeComplete(
       [{ role: "user", content: userMessage }],
-      { model: CLAUDE_SONNET, maxTokens: 900, system: SYSTEM_PROMPT },
+      { usage: { category: "founder", feature: "outreach_coach" }, model: CLAUDE_SONNET, maxTokens: 900, system: SYSTEM_PROMPT },
     );
+    await aiRun.done();
 
     // Strip any markdown code fences
     const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();

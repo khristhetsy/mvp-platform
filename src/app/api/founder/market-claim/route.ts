@@ -6,6 +6,8 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { checkUsage, recordUsage } from "@/lib/ai-usage/service";
+import { assertAiBudget, isAiBudgetExceeded, recordAiSpend } from "@/lib/ai-budget/service";
+import { anthropicCostUsd } from "@/lib/ai-budget/config";
 import {
   buildMarketClaimSystemPrompt,
   parseMarketClaim,
@@ -113,6 +115,14 @@ export async function POST(req: Request) {
     company.revenue_stage ?? "",
   );
 
+  // AI budget: block before the call when the Founder tools budget is used up.
+  try {
+    await assertAiBudget("founder", anthropicCostUsd(CLAUDE_SONNET, Math.ceil(systemPrompt.length / 4), 8192));
+  } catch (e) {
+    if (isAiBudgetExceeded(e)) return NextResponse.json({ error: "ai_budget_exhausted", message: e.message }, { status: 429 });
+    throw e;
+  }
+
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     if (!apiKey) throw new Error("No API key");
@@ -150,7 +160,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ report: marketClaimFallback(describeFailure({ status: res.status, detail })) });
     }
 
-    const data = (await res.json()) as { content: Array<{ type: string; text: string }>; stop_reason?: string };
+    const data = (await res.json()) as { content: Array<{ type: string; text: string }>; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };
+    await recordAiSpend({
+      vendor: "anthropic", category: "founder", feature: "market_claim_grader", model: CLAUDE_SONNET,
+      inputTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0,
+      costUsd: anthropicCostUsd(CLAUDE_SONNET, data.usage?.input_tokens ?? 0, data.usage?.output_tokens ?? 0),
+      profileId: auth.profile.id,
+    });
     const raw = data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
     const parsed = parseMarketClaim(raw);
     if (!parsed) {

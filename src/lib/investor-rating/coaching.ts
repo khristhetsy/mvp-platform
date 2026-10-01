@@ -62,7 +62,7 @@ export async function buildPartnerCoaching(score: PartnerScore): Promise<Partner
   try {
     const text = await claudeComplete(
       [{ role: "user", content: `Coach this investor based on the data:\n\n${buildContext(score, recommendations)}` }],
-      { model: CLAUDE_HAIKU, maxTokens: 220, system: SYSTEM_PROMPT },
+      { usage: { category: "investor", feature: "investor_coaching" }, model: CLAUDE_HAIKU, maxTokens: 220, system: SYSTEM_PROMPT },
     );
     const summary = text.trim();
     if (!summary) {

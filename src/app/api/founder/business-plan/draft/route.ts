@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { gateBusinessPlanApi } from "@/lib/business-plan/gate";
@@ -18,6 +19,9 @@ export async function POST(request: Request): Promise<Response> {
     if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
     const plan = await getBusinessPlan(g.supabase, g.company.id).catch(() => null);
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(g.profile.id, "business_plan");
+    if (aiRun.blocked) return aiRun.blocked;
     const draft = await generateSectionDraft(
       parsed.data.sectionId,
       {
@@ -29,6 +33,7 @@ export async function POST(request: Request): Promise<Response> {
       },
       plan?.sections ?? null,
     );
+    await aiRun.done();
     return NextResponse.json(draft);
   } catch (err) {
     Sentry.captureException(err);

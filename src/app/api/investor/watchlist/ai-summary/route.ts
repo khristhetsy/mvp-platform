@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
@@ -141,10 +142,14 @@ export async function POST(request: Request) {
   const prompt = `Investor thesis:\n${thesisLines || "No thesis configured — assess based on general investment potential."}\n\nWatchlist companies (${companies.length} total):\n${companiesList}`;
 
   try {
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(investorId, "watchlist_summary");
+    if (aiRun.blocked) return aiRun.blocked;
     const raw = await claudeComplete(
       [{ role: "user", content: prompt }],
-      { model: CLAUDE_SONNET, maxTokens: 900, system: SYSTEM_PROMPT },
+      { usage: { category: "investor", feature: "watchlist_summary" }, model: CLAUDE_SONNET, maxTokens: 900, system: SYSTEM_PROMPT },
     );
+    await aiRun.done();
     const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const parsed = JSON.parse(cleaned) as WatchlistAISummaryResult;
     return NextResponse.json({ ...parsed, source: "claude" });

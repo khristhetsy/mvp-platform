@@ -10,6 +10,17 @@
 //   - GOOGLE_CSE_KEY + GOOGLE_CSE_CX       → Google Programmable Search JSON API
 
 import { fetchPageContacts } from "./site";
+import { assertAiBudget, recordAiSpend } from "@/lib/ai-budget/service";
+import { serperCostPerSearch } from "@/lib/ai-budget/config";
+
+async function withinBudget(): Promise<boolean> {
+  try {
+    await assertAiBudget("enrichment", serperCostPerSearch());
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export interface WebSearchResult { url: string; title: string }
 export interface WebContactResult { email: string | null; phone: string | null; domain: string | null; source: "site" }
@@ -31,6 +42,9 @@ export async function webSearch(query: string, num = 6): Promise<WebSearchResult
 
   const serper = process.env.SERPER_API_KEY?.trim();
   if (serper) {
+    // AI budget: searches bill to Data enrichment. Used up means no results,
+    // the same as no search key, so the free site scrape still runs.
+    if (!(await withinBudget())) return [];
     try {
       const res = await fetch("https://google.serper.dev/search", {
         method: "POST",
@@ -38,6 +52,7 @@ export async function webSearch(query: string, num = 6): Promise<WebSearchResult
         body: JSON.stringify({ q, num }),
       });
       if (res.ok) {
+        await recordAiSpend({ vendor: "serper", category: "enrichment", feature: "web_search", units: 1, costUsd: serperCostPerSearch() });
         const j = (await res.json()) as { organic?: Array<{ link?: string; title?: string }> };
         return (j.organic ?? []).filter((o) => o.link).map((o) => ({ url: o.link as string, title: o.title ?? "" }));
       }

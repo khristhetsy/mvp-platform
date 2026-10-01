@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withAiUsage } from "@/lib/ai-budget/context";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
   const affected = new Set<string>();
 
   for (const doc of targets) {
-    const res = await summarizeDocumentById(admin, doc.id, { force: body.force });
+    const res = await withAiUsage({ category: "internal", feature: "document_summaries" }, () => summarizeDocumentById(admin, doc.id, { force: body.force }));
     if (res.status === "ok") {
       summarized += 1;
       if (doc.company_id) affected.add(doc.company_id);

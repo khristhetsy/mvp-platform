@@ -40,7 +40,7 @@ export async function analyzeMeetingLog(filterKey?: string): Promise<AnalyzeResu
   try {
     const out = await claudeComplete(
       [{ role: "user", content: `Meeting-log entries (most recent first, JSON):\n${JSON.stringify(rows)}\n\nYou are the CEO's Chief of Staff reviewing the meeting log. Identify: recurring themes across meetings, emerging risks or unresolved items, and concrete advice for the CEO to raise or decide next. Reference dates/meetings when useful. Do NOT invent facts beyond these notes. Output STRICT JSON {"headline": string, "themes": string[], "risks": string[], "suggestions": string[]} — each array 2–5 short items.` }],
-      { system: "You are the AI Chief of Staff for iCapOS, analyzing the CEO's meeting log. Concise, specific, second person. Internal-only, not legal/financial advice. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 1400, temperature: 0.4 },
+      { usage: { category: "internal", feature: "ceo_meetings" }, system: "You are the AI Chief of Staff for iCapOS, analyzing the CEO's meeting log. Concise, specific, second person. Internal-only, not legal/financial advice. Respond with JSON only.", model: CLAUDE_SONNET, maxTokens: 1400, temperature: 0.4 },
     );
     const parsed = schema.safeParse(parseJson(out));
     if (!parsed.success) return { analysis: null, sessions: rows.length, skippedReason: "invalid_response" };

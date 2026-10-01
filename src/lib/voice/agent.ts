@@ -4,6 +4,8 @@
 // thin layer on top. Degrades gracefully with no ANTHROPIC_API_KEY.
 
 import { CLAUDE_SONNET } from "@/lib/claude";
+import { assertAiBudget, isAiBudgetExceeded, recordAiSpend } from "@/lib/ai-budget/service";
+import { anthropicCostUsd } from "@/lib/ai-budget/config";
 import { AI_DISCLOSURE } from "@/lib/voice/types";
 import { buildGuardrailSystemPrompt, guardrailViolations, GUARDRAIL_VERSION } from "@/lib/voice/guardrail";
 import { AGENT_TOOLS, runTool } from "@/lib/voice/tools";
@@ -51,6 +53,14 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnResu
   const toolCalls: { name: string; input: unknown; result: unknown }[] = [];
 
   for (let hop = 0; hop < 4; hop++) {
+    // AI budget: when the voice budget is used up, hand the caller to the team.
+    try {
+      await assertAiBudget("voice", anthropicCostUsd(CLAUDE_SONNET, Math.ceil((system.length + JSON.stringify(convo).length) / 4), 512));
+    } catch (e) {
+      if (!isAiBudgetExceeded(e)) throw e;
+      const reply = `${AI_DISCLOSURE} I'm going to have a member of the iCFO team reach out to you directly.`;
+      return { reply, toolCalls, guardrailVersion: GUARDRAIL_VERSION, violations: [] };
+    }
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -60,7 +70,12 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnResu
       const reply = `${AI_DISCLOSURE} I'm going to have a member of the iCFO team reach out to you directly.`;
       return { reply, toolCalls, guardrailVersion: GUARDRAIL_VERSION, violations: [] };
     }
-    const data = (await res.json()) as { content: ContentBlock[]; stop_reason?: string };
+    const data = (await res.json()) as { content: ContentBlock[]; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };
+    await recordAiSpend({
+      vendor: "anthropic", category: "voice", feature: "voice_agent", model: CLAUDE_SONNET,
+      inputTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0,
+      costUsd: anthropicCostUsd(CLAUDE_SONNET, data.usage?.input_tokens ?? 0, data.usage?.output_tokens ?? 0),
+    });
     const blocks = data.content ?? [];
     const toolUses = blocks.filter((b): b is Extract<ContentBlock, { type: "tool_use" }> => b.type === "tool_use");
 

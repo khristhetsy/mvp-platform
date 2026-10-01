@@ -1,6 +1,7 @@
 // Vapi connector — iCapOS tells Vapi to place an outbound call. Vapi owns the
 // phone, voice, and assistant; iCapOS owns the compliance gate that runs BEFORE
 // any call is triggered. Env-gated; dormant until the Vapi vars are set.
+import { assertAiBudget } from "@/lib/ai-budget/service";
 
 const VAPI_API_KEY = process.env.VAPI_API_KEY?.trim();
 const VAPI_PHONE_NUMBER_ID = process.env.VAPI_PHONE_NUMBER_ID?.trim();
@@ -24,6 +25,9 @@ export interface PlaceCallOptions {
  *  it to our webhooks, and the variant opener is passed as a template variable. */
 export async function placeVapiCall(toNumber: string, opts: PlaceCallOptions = {}): Promise<{ callId: string }> {
   if (!vapiConfigured()) throw new Error("Vapi is not configured (set VAPI_API_KEY, VAPI_PHONE_NUMBER_ID, VAPI_ASSISTANT_ID).");
+  // AI budget: no new calls once the voice budget is used up. A call's cost is
+  // only known when it ends (stored on call_attempts.cost), so nothing is reserved.
+  await assertAiBudget("voice");
   const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
     headers: { Authorization: `Bearer ${VAPI_API_KEY}`, "Content-Type": "application/json" },

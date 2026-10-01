@@ -120,7 +120,7 @@ Return ONLY valid JSON (no markdown fences):
 }`,
       },
     ],
-    { model: CLAUDE_SONNET, maxTokens: 3000, system: SYSTEM_PROMPT },
+    { usage: { category: "internal", feature: "admin_learning" }, model: CLAUDE_SONNET, maxTokens: 3000, system: SYSTEM_PROMPT },
   );
 
   const parsed = parseJson<{ questions: GeneratedQuestion[] }>(raw);

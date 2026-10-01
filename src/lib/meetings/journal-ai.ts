@@ -77,7 +77,7 @@ export async function journalDraft(sessionId: string, sectionId: string): Promis
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Write a concise weekly meeting journal entry for the "${ctx.sectionTitle}" section from these facts (JSON):\n${JSON.stringify(ctx)}\n\nUse a Deals / KPIs / Asks structure. Plain text, no preamble.` }],
-      { system: `You are the meeting Chief-of-Staff drafting an internal department journal entry. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 500, temperature: 0.4, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: `You are the meeting Chief-of-Staff drafting an internal department journal entry. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 500, temperature: 0.4, locale: "en" },
     );
     const text = stripFences(raw);
     return clean(text) ? text : heuristicDraft(ctx);
@@ -91,7 +91,7 @@ export async function journalPolish(rawText: string): Promise<string> {
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Polish these shorthand meeting notes into clear, professional prose. Keep all facts; do not invent. Plain text.\n\n${input}` }],
-      { system: `You polish internal meeting notes. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 500, temperature: 0.3, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: `You polish internal meeting notes. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 500, temperature: 0.3, locale: "en" },
     );
     const text = stripFences(raw);
     return clean(text) ? text : input;
@@ -112,7 +112,7 @@ export async function journalPoints(sessionId: string, sectionId: string): Promi
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `From these facts (JSON), give exactly 3 short talking-point bullets for the meeting. One per line, no numbering.\n${JSON.stringify({ kpis: ctx.kpis, openTasks: ctx.openTasks })}` }],
-      { system: `You surface meeting talking points. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 200, temperature: 0.4, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: `You surface meeting talking points. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 200, temperature: 0.4, locale: "en" },
     );
     const pts = stripFences(raw).split("\n").map((l) => l.replace(/^[-*\d.)\s]+/, "").trim()).filter((l) => l && clean(l)).slice(0, 3);
     return pts.length ? pts : fallback();

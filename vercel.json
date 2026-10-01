@@ -101,6 +101,10 @@
       "schedule": "0 15 * * *"
     },
     {
+      "path": "/api/cron/ai-budget-alerts",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/activity-escalations",
       "schedule": "*/15 * * * *"
     },

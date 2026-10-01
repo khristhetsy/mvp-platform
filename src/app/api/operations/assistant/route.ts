@@ -108,7 +108,7 @@ ${factsBlock(facts)}`;
   ];
 
   try {
-    const reply = await claudeComplete(messages, { system, model: CLAUDE_HAIKU, maxTokens: 400, temperature: 0.3 });
+    const reply = await claudeComplete(messages, { usage: { category: "internal", feature: "operations_assistant" }, system, model: CLAUDE_HAIKU, maxTokens: 400, temperature: 0.3 });
     return NextResponse.json({ reply: reply || "I couldn't generate a response — try rephrasing." });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Assistant failed." }, { status: 500 });

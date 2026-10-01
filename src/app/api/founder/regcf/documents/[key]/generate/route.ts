@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { gateRegCfFounderApi } from "@/lib/regcf/gate";
 import { isRegCfDocKey } from "@/lib/regcf/documents";
 import { generateRegCfDocument } from "@/lib/regcf/generate";
@@ -16,7 +17,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ key: s
   if (!isRegCfDocKey(key)) return NextResponse.json({ error: "Unknown document." }, { status: 400 });
 
   try {
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(gate.profile.id, "regcf_documents");
+    if (aiRun.blocked) return aiRun.blocked;
     const { content, aiGenerated } = await generateRegCfDocument(key, gate.company ?? {});
+    await aiRun.done();
     await upsertRegCfDocument(gate.supabase, {
       founderId: gate.profile.id,
       companyId: gate.company?.id ?? null,
