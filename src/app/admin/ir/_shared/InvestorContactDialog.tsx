@@ -3,14 +3,14 @@
 /**
  * Odoo-style "Open: Contact" popup for an investor: the contact fields (membership, address,
  * job position, phone, email, website, created on, assigned staff), then tabs for the
- * investor questionnaire and the IR projects they are on. Edit (for Odoo contacts) swaps the
- * view for the same field-by-field editor as the Sales Hub record: each field saves to Odoo
- * and refreshes the iCapOS copy, and the popup reloads when editing is done.
+ * investor questionnaire and the IR projects they are on. Edit turns the same window into an
+ * autosaving editor (InlineContactEditor): each field saves on its own to iCapOS, and to Odoo
+ * for linked contacts when an admin edits, with Undo and History. The popup reloads on Done.
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IR_STAGE_LABEL, type IrStage } from "@/lib/ir/types";
-import { EditableProfile } from "@/components/crm/EditableProfile";
+import { InlineContactEditor } from "@/components/crm/InlineContactEditor";
 
 type Detail = {
   contact: {
@@ -33,6 +33,21 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="grid grid-cols-[140px_1fr] gap-3 py-1.5"><span className="font-medium text-slate-600">{label}</span><span className="min-w-0 break-words text-slate-800">{children}</span></div>;
 }
 const dash = (v: string | null | undefined) => (v ? v : <span className="text-slate-400">—</span>);
+
+function IrList({ matches, matchId }: { matches: Detail["matches"]; matchId?: string | null }) {
+  if (matches.length === 0) return <p className="text-slate-500">Not on any IR project yet.</p>;
+  return (
+    <ul className="divide-y divide-slate-100">
+      {matches.map((m) => (
+        <li key={m.matchId} className="flex items-center gap-2 py-1.5">
+          <Link href={`/admin/ir/matches/${m.matchId}`} className={`min-w-0 flex-1 truncate hover:text-indigo-700 ${m.matchId === matchId ? "font-semibold text-indigo-800" : "text-slate-800"}`}>{m.projectTitle}{m.founderName ? <span className="text-slate-400"> · {m.founderName}</span> : null}</Link>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{IR_STAGE_LABEL[m.stage]}</span>
+          <span className="w-24 text-right text-[11.5px] text-slate-400">{fmtDay(m.stageChangedAt)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function InvestorContactDialog({ contactId, onClose, matchId }: { contactId: string; onClose: () => void; matchId?: string | null }) {
   const [d, setD] = useState<Detail | null>(null);
@@ -65,20 +80,16 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
       <div role="dialog" aria-modal="true" aria-label={`Contact: ${name}`} className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white text-[13px] shadow-2xl">
         <div className="flex items-center border-b border-slate-100 px-5 py-3">
           <p className="text-[15px] font-semibold text-slate-900">{editing ? "Edit: Contact" : "Open: Contact"}</p>
-          {d?.investor.odooId ? (
+          {d ? (
             editing
-              ? <button type="button" onClick={() => { setEditing(false); setReload((n) => n + 1); }} className="ml-3 rounded-lg bg-indigo-600 px-3 py-1 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Done editing</button>
+              ? <button type="button" onClick={() => { setEditing(false); setReload((n) => n + 1); }} className="ml-3 rounded-lg bg-indigo-600 px-3 py-1 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Done</button>
               : <button type="button" onClick={() => setEditing(true)} className="ml-3 inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>
           ) : null}
           <button type="button" onClick={onClose} aria-label="Close" className="ml-auto rounded-lg bg-slate-100 px-2 py-1 text-slate-600 hover:bg-slate-200"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
         <div className="overflow-y-auto px-5 py-4">
-          {editing && d?.investor.odooId ? (
-            <>
-              <h3 className="mb-1 truncate text-[22px] font-semibold text-slate-900">{name}</h3>
-              <p className="mb-3 flex items-center gap-1.5 text-[11.5px] text-slate-500"><i className="ti ti-refresh" aria-hidden="true" /> Each field saves to Odoo and updates iCapOS.</p>
-              <EditableProfile externalId={d.investor.odooId} />
-            </>
+          {editing && d ? (
+            <InlineContactEditor contactId={contactId} irLabel={`IR projects · ${d.matches.length}`} irTab={<IrList matches={d.matches} matchId={matchId} />} />
           ) : err ? <p className="text-rose-600">{err}</p> : !d || !c ? <p className="text-slate-400">Loading…</p> : (
             <>
               <div className="flex items-start gap-4">
@@ -120,17 +131,7 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
                     <div><F label="Investor type"><Tags v={c.profile.investorTypes} /></F><F label="Industries"><Tags v={c.profile.industries} /></F><F label="Investment size"><Tags v={c.profile.investmentSize} /></F><F label="Revenue range"><Tags v={c.profile.revenueRange} /></F></div>
                     <div><F label="Operating stage"><Tags v={c.profile.operatingStages} /></F><F label="Funding stage"><Tags v={c.profile.fundingStages} /></F><F label="Type of capital"><Tags v={c.profile.capital} /></F><F label="Business entity"><Tags v={c.profile.businessEntity} /></F></div>
                   </div>
-                ) : d.matches.length === 0 ? <p className="text-slate-500">Not on any IR project yet.</p> : (
-                  <ul className="divide-y divide-slate-100">
-                    {d.matches.map((m) => (
-                      <li key={m.matchId} className="flex items-center gap-2 py-1.5">
-                        <Link href={`/admin/ir/matches/${m.matchId}`} className={`min-w-0 flex-1 truncate hover:text-indigo-700 ${m.matchId === matchId ? "font-semibold text-indigo-800" : "text-slate-800"}`}>{m.projectTitle}{m.founderName ? <span className="text-slate-400"> · {m.founderName}</span> : null}</Link>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{IR_STAGE_LABEL[m.stage]}</span>
-                        <span className="w-24 text-right text-[11.5px] text-slate-400">{fmtDay(m.stageChangedAt)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                ) : <IrList matches={d.matches} matchId={matchId} />}
               </div>
             </>
           )}
