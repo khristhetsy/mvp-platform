@@ -4,6 +4,7 @@ import type { SendResult } from "./types";
 import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
 import { logOutboundEmail } from "@/lib/email/email-log";
 import { firstValidEmail } from "./recipient";
+import { SAMPLE_CRR, usesCrrTokens } from "./crr-merge";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -39,6 +40,10 @@ export function interpolate(text: string, vars: Record<string, string>): string 
   add(["company", "company_name", "organization"], vars.company ?? "");
   add(["email", "email_address"], vars.email ?? "");
   add(["your_name", "sender_name", "from_name"], vars.sender_name ?? "");
+  // CRR tokens are only filled when the caller resolved them; otherwise they are
+  // left as written so a template never goes out with an empty "went from  to ".
+  if (vars.starting_crr != null) add(["starting_crr", "start_crr"], vars.starting_crr);
+  if (vars.current_crr != null) add(["current_crr"], vars.current_crr);
   return text.replace(/\{\{?\s*([A-Za-z][\w ]*?)\s*\}?\}/g, (m, tok: string) => {
     const key = tok.trim().toLowerCase().replace(/\s+/g, "_");
     return key in known ? known[key] : m;
@@ -110,6 +115,21 @@ export async function sendMarketingEmail(
     email: to,
     sender_name: input.from_name ?? "",
   };
+
+  // Templates that quote the founder's Capital Readiness Rating ({{starting_crr}},
+  // {{current_crr}}) get the recipient's real scores. Recipients with no rising
+  // CRR on record are skipped rather than sent a broken or awkward line. [TEST]
+  // sends go to staff addresses, so they use sample scores instead.
+  if (usesCrrTokens(input.subject, input.html_body, input.text_body)) {
+    const isTest = /^\[TEST/i.test(input.subject);
+    const { loadCrrChangeForEmail } = await import("./crr-merge-db");
+    const crr = (await loadCrrChangeForEmail(to)) ?? (isTest ? SAMPLE_CRR : null);
+    if (!crr) {
+      return { resend_id: null, ok: false, error: `Skipped ${to}: no rising Capital Readiness Rating on record` };
+    }
+    vars.starting_crr = crr.starting_crr;
+    vars.current_crr = crr.current_crr;
+  }
 
   const subject = interpolate(input.subject, vars);
   // Strip HTML comments so template authoring notes (e.g. "<!-- to add more; delete to
