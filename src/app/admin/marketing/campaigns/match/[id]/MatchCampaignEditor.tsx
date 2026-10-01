@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OdooSearchBar, EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { SelectionBar } from "@/components/admin/sales/SelectionBar";
-import type { MatchCampaignRow, CampaignFounderRow, AdminMatchRow, RunSummary } from "@/lib/marketing/match-campaign/store";
+import type { MatchCampaignRow, CampaignFounderRow, AdminMatchRow, RunSummary, RunBatch } from "@/lib/marketing/match-campaign/store";
+import { MAX_CAMPAIGN_FOUNDERS } from "@/lib/marketing/match-campaign/types";
 import type { MatchResults } from "@/lib/marketing/match-campaign/results";
 import {
   DEFAULT_CALL_PATH,
@@ -326,7 +327,7 @@ function StepFounders({ campaign, lists, options, onChecked, onError }: {
     return () => { live = false; clearTimeout(t); };
   }, [filter, onError]);
 
-  const count = allSelected ? Math.min(total, 1000) : selected.size;
+  const count = allSelected ? Math.min(total, MAX_CAMPAIGN_FOUNDERS) : selected.size;
 
   async function useSelection() {
     setBusy(true);
@@ -385,7 +386,7 @@ function StepFounders({ campaign, lists, options, onChecked, onError }: {
         <div className="mb-2">
           <SelectionBar
             count={count}
-            total={Math.min(total, 1000)}
+            total={Math.min(total, MAX_CAMPAIGN_FOUNDERS)}
             onSelectAll={() => setAllSelected(true)}
             onClear={() => { setSelected(new Set()); setAllSelected(false); }}
             busy={busy}
@@ -423,7 +424,7 @@ function StepFounders({ campaign, lists, options, onChecked, onError }: {
           </tbody>
         </table>
       </div>
-      <div className="mt-2 text-[11.5px] text-[#8A94A8]">{loading ? "Loading…" : `Showing ${rows.length} of ${total} founders. Select all takes up to 1,000.`}</div>
+      <div className="mt-2 text-[11.5px] text-[#8A94A8]">{loading ? "Loading…" : `Showing ${rows.length} of ${total.toLocaleString()} founders. Select all takes every founder that fits, up to ${MAX_CAMPAIGN_FOUNDERS.toLocaleString()}.`}</div>
       <div className="mt-5 flex justify-end">
         <button type="button" className={btn} disabled={busy || count === 0} onClick={useSelection}>{busy ? "Checking…" : `Next: data check (${count})`}</button>
       </div>
@@ -532,6 +533,7 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
   onError: (e: string) => void;
 }) {
   const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [matches, setMatches] = useState<Record<string, AdminMatchRow[]>>({});
@@ -548,14 +550,31 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
         const c = await api<{ campaign: MatchCampaignRow }>("/api/admin/marketing/match", { method: "PATCH", body: JSON.stringify({ id: campaign.id, config: { min_score: minScore } }) });
         onCampaign(c.campaign);
       }
-      const j = await api<{ summary: RunSummary; founders: CampaignFounderRow[] }>("/api/admin/marketing/match/run", { method: "POST", body: JSON.stringify({ campaign_id: campaign.id }) });
-      setSummary(j.summary);
+      // Matching runs in batches; repeat until the server says it's done.
+      const total: RunSummary = { ready: 0, withMatches: 0, noMatches: 0, investors: 0 };
+      let after: string | null = null;
+      let done = 0;
+      let founders: CampaignFounderRow[] | null = null;
+      setProgress({ done: 0, total: ready.length });
+      do {
+        const j: RunBatch & { founders: CampaignFounderRow[] | null } = await api("/api/admin/marketing/match/run", { method: "POST", body: JSON.stringify({ campaign_id: campaign.id, after }) });
+        total.ready = j.summary.ready;
+        total.investors = j.summary.investors;
+        total.withMatches += j.summary.withMatches;
+        total.noMatches += j.summary.noMatches;
+        done += j.processed;
+        setProgress({ done, total: j.summary.ready });
+        after = j.next;
+        founders = j.founders;
+      } while (after);
+      setSummary(total);
       setMatches({});
-      onFounders(j.founders);
+      if (founders) onFounders(founders);
     } catch (e) {
       onError(String((e as Error).message));
     } finally {
       setRunning(false);
+      setProgress(null);
     }
   }
 
@@ -588,7 +607,7 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
     <div className={card}>
       <div className="mb-1 flex items-center justify-between">
         <div className="text-[14px] font-medium">Matches per founder</div>
-        <button type="button" className={hasRun ? btnGhost : btn} disabled={running || ready.length === 0} onClick={run}>{running ? "Matching…" : hasRun ? "Run matching again" : "Run matching"}</button>
+        <button type="button" className={hasRun ? btnGhost : btn} disabled={running || ready.length === 0} onClick={run}>{running ? (progress && progress.total > 0 ? `Matching… ${progress.done.toLocaleString()} of ${progress.total.toLocaleString()}` : "Matching…") : hasRun ? "Run matching again" : "Run matching"}</button>
       </div>
       <p className="mb-4 text-[12.5px] text-[#5A6782]">Each ready founder is matched to investors on industry and stage, counting only investors at or above the minimum match score. Admin reviews and removes anyone. Investors are not contacted. Running again replaces earlier matches and removals.</p>
       <div className="mb-4 flex items-center gap-2 text-[12.5px]">

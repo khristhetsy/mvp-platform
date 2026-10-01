@@ -17,6 +17,7 @@ import {
   type MaskedMatch,
   type MatchConfig,
   type SendStatus,
+  MAX_CAMPAIGN_FOUNDERS,
 } from "./types";
 import { DEFAULT_SUBJECT } from "./email";
 
@@ -25,6 +26,11 @@ export const STORED_MATCHES_PER_FOUNDER = 50;
 
 const FIELD_COLUMNS =
   "id, name, email, email_status, suppressed, company, country, industries, funding_stages, seeking_amount, seeking_investor_types, supabase_profile_id, pipeline_stage, founder_type, industry_source, stage_source";
+
+/** PostgREST returns at most this many rows per request; larger reads page. */
+const PAGE = 1000;
+/** Founders matched per call of runCampaignMatching (the editor loops until done). */
+export const MATCH_BATCH = 200;
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
@@ -173,20 +179,9 @@ export async function searchFounders(f: FounderFilter): Promise<{ rows: FounderF
     ids = await listFounderIds(f.listId);
     if (ids.length === 0) return { rows: [], total: 0 };
   }
-  const build = (subset: string[] | null) => {
-    let q = db.from("match_campaign_founder_fields").select(FIELD_COLUMNS, { count: "exact" });
-    if (subset) q = q.in("id", subset);
-    if (f.founderTypes?.length) q = q.in("founder_type", f.founderTypes);
-    if (f.industries?.length) q = q.overlaps("industries", f.industries);
-    if (f.stages?.length) q = q.overlaps("funding_stages", f.stages);
-    if (f.pipelineStages?.length) q = q.in("pipeline_stage", f.pipelineStages);
-    if (f.filledOnly) q = q.neq("industries", "{}").neq("funding_stages", "{}");
-    if (f.q?.trim()) {
-      const term = f.q.trim().replace(/[%,()]/g, " ");
-      q = q.or(`company.ilike.%${term}%,name.ilike.%${term}%,email.ilike.%${term}%`);
-    }
-    return q.order("company", { ascending: true, nullsFirst: false });
-  };
+  const build = (subset: string[] | null) =>
+    applyFounderFilters(db.from("match_campaign_founder_fields").select(FIELD_COLUMNS, { count: "exact" }), f, subset)
+      .order("company", { ascending: true, nullsFirst: false });
   if (!ids) {
     const { data, count, error } = await build(null).limit(limit);
     if (error) throw new Error(error.message);
@@ -202,6 +197,55 @@ export async function searchFounders(f: FounderFilter): Promise<{ rows: FounderF
     if (rows.length < limit) rows.push(...((data ?? []) as FounderFieldsRow[]).slice(0, limit - rows.length));
   }
   return { rows, total };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FounderQuery = any;
+
+/** The list step's filters, shared by the shown rows and "Select all". */
+function applyFounderFilters(q: FounderQuery, f: FounderFilter, subset: string[] | null): FounderQuery {
+  if (subset) q = q.in("id", subset);
+  if (f.founderTypes?.length) q = q.in("founder_type", f.founderTypes);
+  if (f.industries?.length) q = q.overlaps("industries", f.industries);
+  if (f.stages?.length) q = q.overlaps("funding_stages", f.stages);
+  if (f.pipelineStages?.length) q = q.in("pipeline_stage", f.pipelineStages);
+  if (f.filledOnly) q = q.neq("industries", "{}").neq("funding_stages", "{}");
+  if (f.q?.trim()) {
+    const term = f.q.trim().replace(/[%,()]/g, " ");
+    q = q.or(`company.ilike.%${term}%,name.ilike.%${term}%,email.ilike.%${term}%`);
+  }
+  return q;
+}
+
+/**
+ * Every founder id that fits the list step's filter: what "Select all" puts on the
+ * campaign. Up to MAX_CAMPAIGN_FOUNDERS (was a hard 1,000). Reads in pages so the
+ * PostgREST 1,000 row cap doesn't cut it short.
+ */
+export async function searchFounderIds(f: FounderFilter): Promise<string[]> {
+  const db = marketingDb();
+  const filtered = Boolean(f.founderTypes?.length || f.industries?.length || f.stages?.length || f.pipelineStages?.length || f.filledOnly || f.q?.trim());
+  const out: string[] = [];
+  if (f.listId) {
+    const ids = await listFounderIds(f.listId);
+    if (!filtered) return ids.slice(0, MAX_CAMPAIGN_FOUNDERS);
+    for (const part of chunk(ids, 200)) {
+      const { data, error } = await applyFounderFilters(db.from("match_campaign_founder_fields").select("id"), f, part);
+      if (error) throw new Error(error.message);
+      out.push(...((data ?? []) as Array<{ id: string }>).map((r) => r.id));
+      if (out.length >= MAX_CAMPAIGN_FOUNDERS) break;
+    }
+    return out.slice(0, MAX_CAMPAIGN_FOUNDERS);
+  }
+  for (let from = 0; from < MAX_CAMPAIGN_FOUNDERS; from += PAGE) {
+    const { data, error } = await applyFounderFilters(db.from("match_campaign_founder_fields").select("id"), f, null)
+      .order("id", { ascending: true }).range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as Array<{ id: string }>;
+    out.push(...rows.map((r) => r.id));
+    if (rows.length < PAGE) break;
+  }
+  return out.slice(0, MAX_CAMPAIGN_FOUNDERS);
 }
 
 /** Distinct values for the filter menus (small: industries and stages people actually picked). */
@@ -258,14 +302,22 @@ export async function setCampaignFounders(campaignId: string, founderIds: readon
   const rows = await loadFounderFields(unique);
   const unsub = await unsubscribedEmails(rows.map((r) => r.email ?? ""));
 
-  const { data: existing } = await db.from("match_campaign_founders").select("id, founder_contact_id, send_status").eq("campaign_id", campaignId);
+  const existing: Array<{ id: string; founder_contact_id: string; send_status: SendStatus }> = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db.from("match_campaign_founders").select("id, founder_contact_id, send_status")
+      .eq("campaign_id", campaignId).order("id", { ascending: true }).range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as typeof existing;
+    existing.push(...rows);
+    if (rows.length < PAGE) break;
+  }
   const done = new Set(
-    ((existing ?? []) as Array<{ founder_contact_id: string; send_status: SendStatus }>)
+    existing
       .filter((r) => r.send_status !== "pending")
       .map((r) => r.founder_contact_id),
   );
   const keep = new Set(unique);
-  const stale = ((existing ?? []) as Array<{ id: string; founder_contact_id: string; send_status: SendStatus }>)
+  const stale = existing
     .filter((r) => r.send_status === "pending" && !keep.has(r.founder_contact_id))
     .map((r) => r.id);
   for (const part of chunk(stale, 200)) await db.from("match_campaign_founders").delete().in("id", part);
@@ -351,6 +403,8 @@ export async function listCampaignFounders(campaignId: string): Promise<Campaign
 // ── Matching ────────────────────────────────────────────────────────────────
 
 export type RunSummary = { ready: number; withMatches: number; noMatches: number; investors: number };
+/** One batch of a matching run: counts for this batch, and where the next one starts (null when done). */
+export type RunBatch = { summary: RunSummary; processed: number; next: string | null };
 
 /**
  * Matches every ready founder (data check passed, not yet emailed). Investors
@@ -377,19 +431,29 @@ async function namedSnapshot(db: Db, rows: ReadonlyArray<MaskedMatch & { investo
   return rows.map((r) => toMasked({ ...r, ...(names.get(r.investor_contact_id) ?? { investor_name: null, investor_firm: null }) }));
 }
 
-export async function runCampaignMatching(campaignId: string): Promise<RunSummary> {
+/**
+ * Matches the next batch of ready founders (in id order, after `after`). The editor
+ * calls this until `next` is null, so a campaign of any size finishes without one
+ * request running for minutes. `summary.ready` is the run's total ready count;
+ * the other counts are this batch's.
+ */
+export async function runCampaignMatching(campaignId: string, opts: { after?: string | null; batch?: number } = {}): Promise<RunBatch> {
   const db = marketingDb();
   const campaign = await getMatchCampaign(campaignId);
   if (!campaign) throw new Error("Match campaign not found");
+  const batch = Math.min(Math.max(opts.batch ?? MATCH_BATCH, 1), PAGE);
 
-  const { data: frows, error } = await db
+  const readyQuery = (cols: string, head = false) => db
     .from("match_campaign_founders")
-    .select("id, founder_contact_id, excluded_reason")
+    .select(cols, head ? { count: "exact", head: true } : undefined)
     .eq("campaign_id", campaignId)
     .eq("send_status", "pending")
     .or("excluded_reason.is.null,excluded_reason.eq.no_matches");
+  let page = readyQuery("id, founder_contact_id, excluded_reason").order("id", { ascending: true }).limit(batch);
+  if (opts.after) page = page.gt("id", opts.after);
+  const [{ data: frows, error }, { count: readyTotal }] = await Promise.all([page, readyQuery("id", true)]);
   if (error) throw new Error(error.message);
-  const founders = (frows ?? []) as Array<{ id: string; founder_contact_id: string }>;
+  const founders = (frows ?? []) as unknown as Array<{ id: string; founder_contact_id: string }>;
   const [fields, investors, matchCfg] = await Promise.all([
     loadFounderFields(founders.map((f) => f.founder_contact_id)),
     loadCampaignInvestors(),
@@ -398,7 +462,8 @@ export async function runCampaignMatching(campaignId: string): Promise<RunSummar
   const byContact = new Map(fields.map((r) => [r.id, r]));
   const weights = matchCfg.engineWeights;
   const preview = campaign.match_config.preview_count;
-  const summary: RunSummary = { ready: founders.length, withMatches: 0, noMatches: 0, investors: investors.length };
+  const summary: RunSummary = { ready: readyTotal ?? founders.length, withMatches: 0, noMatches: 0, investors: investors.length };
+  const next = founders.length === batch ? founders[founders.length - 1].id : null;
 
   for (const f of founders) {
     const row = byContact.get(f.founder_contact_id);
@@ -434,11 +499,13 @@ export async function runCampaignMatching(campaignId: string): Promise<RunSummar
       .eq("id", f.id);
   }
 
-  await db
-    .from("marketing_campaigns")
-    .update({ match_config: { ...campaign.match_config, weights }, updated_at: new Date().toISOString() })
-    .eq("id", campaignId);
-  return summary;
+  if (!next) {
+    await db
+      .from("marketing_campaigns")
+      .update({ match_config: { ...campaign.match_config, weights }, updated_at: new Date().toISOString() })
+      .eq("id", campaignId);
+  }
+  return { summary, processed: founders.length, next };
 }
 
 export type AdminMatchRow = {
