@@ -51,7 +51,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       ].filter(Boolean).join("\n");
       const out = await claudeComplete(
         [{ role: "user", content: `${ctx}\n\nOutput STRICT JSON: {"subject": string, "body": string}. The body is plain text (no subject, no signature).` }],
-        { system: SYSTEM, model: CLAUDE_SONNET, maxTokens: 900, temperature: 0.6 },
+        { usage: { category: "internal", feature: "email_compose" }, system: SYSTEM, model: CLAUDE_SONNET, maxTokens: 900, temperature: 0.6 },
       );
       const j = parseJson(out);
       if (j && typeof j.body === "string") {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!currentText?.trim()) return NextResponse.json({ error: "Write something first, then rewrite it." }, { status: 400 });
     const out = await claudeComplete(
       [{ role: "user", content: `Rewrite the email below to be ${how}. Preserve the intent. Output ONLY the rewritten email body as plain text — no subject, no signature, no preamble.\n\n---\n${currentText}` }],
-      { system: SYSTEM, model: CLAUDE_SONNET, maxTokens: 1100, temperature: 0.5 },
+      { usage: { category: "internal", feature: "email_compose" }, system: SYSTEM, model: CLAUDE_SONNET, maxTokens: 1100, temperature: 0.5 },
     );
     return NextResponse.json({ body: out.trim() });
   } catch (err) {

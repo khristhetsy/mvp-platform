@@ -4,6 +4,8 @@ import { systemPromptFor } from "@/lib/ai-site/prompts";
 import { violatesGuardrails, GUARDRAIL_FALLBACK } from "@/lib/ai-site/guardrails";
 import { checkRateLimitAsync } from "@/lib/ai-site/ratelimit";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { assertAiBudget, isAiBudgetExceeded, recordAiSpend } from "@/lib/ai-budget/service";
+import { anthropicCostUsd } from "@/lib/ai-budget/config";
 
 export const runtime = "edge";
 
@@ -17,6 +19,14 @@ async function callAnthropic(system: string, messages: { role: string; content: 
     console.error("[ai-site] ANTHROPIC_API_KEY is not set");
     return null;
   }
+  // AI budget: when the Public site chat budget is used up, take the existing
+  // "AI is unavailable" path instead of calling Anthropic.
+  try {
+    await assertAiBudget("public", anthropicCostUsd(MODEL, Math.ceil((system.length + JSON.stringify(messages).length) / 4), maxTokens));
+  } catch (e) {
+    if (isAiBudgetExceeded(e)) return null;
+    throw e;
+  }
   const res = await fetch(ANTHROPIC_URL, {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -28,7 +38,12 @@ async function callAnthropic(system: string, messages: { role: string; content: 
     console.error(`[ai-site] Anthropic API ${res.status}: ${detail.slice(0, 500)}`);
     return null;
   }
-  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
+  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }>; usage?: { input_tokens?: number; output_tokens?: number } };
+  await recordAiSpend({
+    vendor: "anthropic", category: "public", feature: "site_chat", model: MODEL,
+    inputTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0,
+    costUsd: anthropicCostUsd(MODEL, data.usage?.input_tokens ?? 0, data.usage?.output_tokens ?? 0),
+  });
   return (data.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim() || null;
 }
 

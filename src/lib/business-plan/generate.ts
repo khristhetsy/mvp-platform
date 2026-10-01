@@ -45,7 +45,7 @@ export async function generateSectionDraft(
   const user = `${companyBlock(company)}${problem}${solution}\n\nDraft the "${def.title}" section. ${def.prompt}\nKeep it to 2–4 short sentences.`;
 
   try {
-    const content = await claudeComplete([{ role: "user", content: user }], {
+    const content = await claudeComplete([{ role: "user", content: user }], { usage: { category: "founder", feature: "business_plan" },
       model: CLAUDE_SONNET,
       maxTokens: 600,
       temperature: 0.5,
@@ -73,7 +73,7 @@ export async function generateExecSummary(
 
   const user = `${companyBlock(company)}\n\nThe founder's plan so far:\n${parts || "[limited content]"}\n\nWrite a 3–4 sentence executive summary an investor can read in 30 seconds: what the company does, the market, the model, and the raise. No fabricated numbers.`;
   try {
-    const content = await claudeComplete([{ role: "user", content: user }], {
+    const content = await claudeComplete([{ role: "user", content: user }], { usage: { category: "founder", feature: "business_plan" },
       model: CLAUDE_SONNET,
       maxTokens: 400,
       temperature: 0.4,

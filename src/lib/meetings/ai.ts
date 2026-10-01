@@ -120,7 +120,7 @@ export async function generateMeetingBrief(sessionId: string, opts: { force?: bo
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Meeting facts (JSON):\n${JSON.stringify(facts)}\n\nWrite the pre-read.` }],
-      { system: BRIEF_SYSTEM, model: CLAUDE_HAIKU, maxTokens: 600, temperature: 0.3, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: BRIEF_SYSTEM, model: CLAUDE_HAIKU, maxTokens: 600, temperature: 0.3, locale: "en" },
     );
     parsed = briefSchema.parse(JSON.parse(stripFences(raw)));
   } catch {
@@ -170,7 +170,7 @@ export async function generateTaskSuggestions(sessionId: string): Promise<{ crea
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Prep notes (JSON):\n${JSON.stringify(facts.sections)}\n\nPropose the action items.` }],
-      { system: SUGGEST_SYSTEM, model: CLAUDE_HAIKU, maxTokens: 700, temperature: 0.4, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: SUGGEST_SYSTEM, model: CLAUDE_HAIKU, maxTokens: 700, temperature: 0.4, locale: "en" },
     );
     parsed = suggestSchema.parse(JSON.parse(stripFences(raw)));
   } catch {

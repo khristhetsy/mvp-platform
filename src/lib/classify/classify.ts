@@ -78,7 +78,7 @@ export async function classifyAi(input: ClassifyInput): Promise<ClassifyResult |
   ].join(" ");
 
   try {
-    const text = await claudeComplete([{ role: "user", content: facts }], { model: CLAUDE_HAIKU, maxTokens: 120, temperature: 0, system, locale: "en" });
+    const text = await claudeComplete([{ role: "user", content: facts }], { usage: { category: "internal", feature: "untagged" }, model: CLAUDE_HAIKU, maxTokens: 120, temperature: 0, system, locale: "en" });
     const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as { side?: string; confidence?: number; reason?: string };
     const side = json.side === "founder" || json.side === "investor" ? json.side : null;
     const confidence = Math.max(0, Math.min(100, Math.round(Number(json.confidence ?? 0))));

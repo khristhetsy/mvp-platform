@@ -7,6 +7,9 @@
  */
 
 import { getServerLocale, aiLanguageInstruction } from "@/lib/i18n/locale";
+import { anthropicCostUsd, type AiUsageTag } from "@/lib/ai-budget/config";
+import { assertAiBudget, recordAiSpend } from "@/lib/ai-budget/service";
+import { currentAiUsage } from "@/lib/ai-budget/context";
 
 export type ClaudeMessage = { role: "user" | "assistant"; content: string };
 
@@ -21,6 +24,11 @@ export interface ClaudeOptions {
    * automatically; pass "en" explicitly to force English regardless of locale.
    */
   locale?: "en" | "es";
+  /**
+   * Which AI budget category and tool this call bills to. A request-scoped
+   * withAiUsage(...) wrapper overrides it; untagged calls bill to Internal hubs.
+   */
+  usage?: AiUsageTag;
 }
 
 export const CLAUDE_HAIKU  = "claude-haiku-4-5-20251001";
@@ -36,6 +44,40 @@ export function isClaudeConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 }
 
+// ── AI budget: check before the call, log the actual cost after ──────────────
+
+function resolveUsage(tag?: AiUsageTag): AiUsageTag & { profileId: string | null } {
+  const ctx = currentAiUsage();
+  return {
+    category: ctx?.category ?? tag?.category ?? "internal",
+    feature: ctx?.feature ?? tag?.feature ?? "untagged",
+    profileId: ctx?.profileId ?? null,
+  };
+}
+
+/** Worst case cost of a request: estimated input (4 chars per token) plus every output token. */
+function reserveUsd(model: string, body: unknown, maxTokens: number): number {
+  const approxInputTokens = Math.ceil(JSON.stringify(body).length / 4);
+  return anthropicCostUsd(model, approxInputTokens, maxTokens);
+}
+
+/** Log spend after the response when possible, so the meter adds no latency. */
+async function logSpend(usage: ReturnType<typeof resolveUsage>, model: string, data: { usage?: { input_tokens?: number; output_tokens?: number } }) {
+  const inputTokens = data.usage?.input_tokens ?? 0;
+  const outputTokens = data.usage?.output_tokens ?? 0;
+  const row = {
+    vendor: "anthropic" as const,
+    category: usage.category,
+    feature: usage.feature,
+    model,
+    inputTokens,
+    outputTokens,
+    costUsd: anthropicCostUsd(model, inputTokens, outputTokens),
+    profileId: usage.profileId,
+  };
+  await recordAiSpend(row);
+}
+
 /**
  * Send a message (or conversation) to Claude and return the text reply.
  */
@@ -49,6 +91,7 @@ export async function claudeComplete(
     temperature,
     system,
     locale,
+    usage: usageTag,
   } = options;
 
   // Localize output: explicit option wins; otherwise detect the request locale.
@@ -62,6 +105,9 @@ export async function claudeComplete(
   const body: Record<string, any> = { model, max_tokens: maxTokens, messages };
   if (finalSystem)               body.system      = finalSystem;
   if (temperature !== undefined) body.temperature = temperature;
+
+  const usage = resolveUsage(usageTag);
+  await assertAiBudget(usage.category, reserveUsd(model, body, maxTokens));
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:  "POST",
@@ -80,7 +126,9 @@ export async function claudeComplete(
 
   const data = await res.json() as {
     content: Array<{ type: string; text: string }>;
+    usage?: { input_tokens?: number; output_tokens?: number };
   };
+  await logSpend(usage, model, data);
   return data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
 }
 
@@ -96,7 +144,7 @@ export async function claudeCompleteWithPdf(
   prompt: string,
   options: Omit<ClaudeOptions, "locale"> = {},
 ): Promise<string> {
-  const { model = CLAUDE_HAIKU, maxTokens = 1024, temperature, system } = options;
+  const { model = CLAUDE_HAIKU, maxTokens = 1024, temperature, system, usage: usageTag } = options;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body: Record<string, any> = {
@@ -118,6 +166,11 @@ export async function claudeCompleteWithPdf(
   if (system)                    body.system      = system;
   if (temperature !== undefined) body.temperature = temperature;
 
+  const usage = resolveUsage(usageTag);
+  // PDF pages are billed as input tokens we can't count before the call, so the
+  // reserve covers the prompt and every output token; the actual cost is logged after.
+  await assertAiBudget(usage.category, reserveUsd(model, { prompt, system }, maxTokens));
+
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:  "POST",
     headers: {
@@ -133,6 +186,7 @@ export async function claudeCompleteWithPdf(
     throw new Error(`Anthropic API ${res.status}: ${err}`);
   }
 
-  const data = await res.json() as { content: Array<{ type: string; text: string }> };
+  const data = await res.json() as { content: Array<{ type: string; text: string }>; usage?: { input_tokens?: number; output_tokens?: number } };
+  await logSpend(usage, model, data);
   return data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
 }

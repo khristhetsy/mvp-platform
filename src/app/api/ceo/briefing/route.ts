@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withAiUsage } from "@/lib/ai-budget/context";
 import { withCronGate } from "@/lib/cron/gate";
 import { requireRole } from "@/lib/supabase/auth";
 import { getCronSecret, validateCronSecret, cronUnauthorizedResponse, cronMisconfiguredResponse } from "@/lib/notifications/cron/auth";
@@ -13,7 +14,8 @@ async function scheduledGET(req: NextRequest): Promise<Response> {
   if (!validateCronSecret(req)) return cronUnauthorizedResponse();
   const mode = new Date().getUTCDay() === 1 ? "weekly" : "daily";
   try {
-    return NextResponse.json(await runBriefing(mode));
+    // AI budget: the scheduled run bills to Scheduled jobs; a manual run stays on Internal hubs.
+    return NextResponse.json(await withAiUsage({ category: "scheduled", feature: "ceo_briefing" }, () => runBriefing(mode)));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Briefing failed." }, { status: 500 });
   }

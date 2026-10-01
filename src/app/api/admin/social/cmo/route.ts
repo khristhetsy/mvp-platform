@@ -56,7 +56,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       parsed.data.question ? `Question: ${parsed.data.question}` : "Give the single highest-leverage recommendation for what's on this tab.",
       `Context JSON:\n${JSON.stringify(parsed.data.context ?? {}).slice(0, 6000)}`,
     ].join("\n");
-    const advice = await claudeComplete([{ role: "user", content: user }], { model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 400, temperature: 0.3 });
+    const advice = await claudeComplete([{ role: "user", content: user }], { usage: { category: "internal", feature: "marketing_cmo" }, model: CLAUDE_HAIKU, system: SYSTEM, maxTokens: 400, temperature: 0.3 });
     return NextResponse.json({ advice: advice || fallbackTip(parsed.data.context), degraded: false });
   } catch {
     return NextResponse.json({ advice: fallbackTip(parsed.data.context), degraded: true });

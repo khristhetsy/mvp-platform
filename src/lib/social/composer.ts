@@ -35,7 +35,7 @@ export async function draftVariant(input: { brief: string; archetype: Archetype;
   ].join("\n");
   const reply = await claudeComplete(
     [{ role: "user", content: `Write the post from these raw notes (what actually happened):\n\n${input.brief}` }],
-    { model: CLAUDE_SONNET, system, maxTokens: 500, temperature: 0.7 },
+    { usage: { category: "internal", feature: "social_posts" }, model: CLAUDE_SONNET, system, maxTokens: 500, temperature: 0.7 },
   );
   return reply.trim() || input.brief.trim();
 }

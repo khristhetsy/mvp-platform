@@ -138,7 +138,7 @@ export async function generateCampaignKit(event: EventWithDetail, input: KitInpu
         content: `Draft a complete marketing kit for this event.${input.tone ? ` Desired tone: ${input.tone}.` : ""}\n\nEVENT FACTS:\n${context(event)}\n\nReturn JSON exactly in this shape:\n${JSON_SHAPE}`,
       },
     ];
-    const text = await claudeComplete(messages, { model: CLAUDE_SONNET, maxTokens: 1600, system: SYSTEM, locale: "en" });
+    const text = await claudeComplete(messages, { usage: { category: "internal", feature: "event_marketing" }, model: CLAUDE_SONNET, maxTokens: 1600, system: SYSTEM, locale: "en" });
     const parsed = parseKit(text);
     if (!parsed) return fallbackKit(event);
     return { ...emptyMarketing(), ...parsed };

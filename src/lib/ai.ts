@@ -95,7 +95,7 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
         }),
       },
     ],
-    {
+    { usage: { category: "founder", feature: "diligence_report" },
       model: CLAUDE_SONNET,
       maxTokens: 3000,
       system: [

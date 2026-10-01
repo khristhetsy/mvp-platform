@@ -86,7 +86,7 @@ export async function summarizeDocumentById(
             content: `Document type: ${doc.document_type ?? "unknown"}\nFile: ${doc.file_name ?? ""}\n\n---\n${text}\n---\n\nSummarize per the instructions.`,
           },
         ],
-        { model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM, locale: "en" },
+        { usage: { category: "founder", feature: "document_summaries" }, model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM, locale: "en" },
       );
     } else if (isPdfDoc(doc.mime_type, doc.file_name) && bytes.byteLength > 0 && bytes.byteLength <= MAX_DIRECT_PDF_BYTES) {
       // No text layer (scanned or image-only PDF), or local extraction failed:
@@ -94,7 +94,7 @@ export async function summarizeDocumentById(
       summary = await claudeCompleteWithPdf(
         bytes,
         `Document type: ${doc.document_type ?? "unknown"}\nFile: ${doc.file_name ?? ""}\n\nSummarize per the instructions.`,
-        { model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM },
+        { usage: { category: "founder", feature: "document_summaries" }, model: CLAUDE_HAIKU, maxTokens: 500, system: SYSTEM },
       );
     } else {
       return skip(documentId, "no_text");

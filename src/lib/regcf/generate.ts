@@ -67,7 +67,7 @@ export async function generateRegCfDocument(
     `Company context:\n${contextBlock(company)}`;
 
   try {
-    const text = await claudeComplete([{ role: "user", content: user }], {
+    const text = await claudeComplete([{ role: "user", content: user }], { usage: { category: "founder", feature: "regcf_documents" },
       model: CLAUDE_SONNET,
       maxTokens: 1800,
       temperature: 0.4,

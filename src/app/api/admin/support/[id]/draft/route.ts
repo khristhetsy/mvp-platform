@@ -39,7 +39,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
           content: `A founder on the iCapOS fundraising platform opened a support request titled "${thread.request.subject}". ${context}\n\nConversation so far:\n${transcript || "(no messages yet)"}\n\nDraft a concise, warm, practical reply to the founder that moves them forward. Plain text, no salutation line beyond a short greeting, no sign-off block.`,
         },
       ],
-      {
+      { usage: { category: "internal", feature: "admin_support" },
         maxTokens: 400,
         temperature: 0.4,
         system:

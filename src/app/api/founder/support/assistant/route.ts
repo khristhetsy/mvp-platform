@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -103,12 +104,16 @@ export async function POST(req: NextRequest): Promise<Response> {
   const messages: ClaudeMessage[] = parsed.data.messages.map((m) => ({ role: m.role, content: m.content }));
 
   try {
-    const reply = await claudeComplete(messages, {
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(profile.id, "support_assistant");
+    if (aiRun.blocked) return aiRun.blocked;
+    const reply = await claudeComplete(messages, { usage: { category: "founder", feature: "support_assistant" },
       model: CLAUDE_HAIKU,
       system,
       maxTokens: 700,
       temperature: 0.3,
     });
+    await aiRun.done();
     return NextResponse.json({
       reply:
         reply ||

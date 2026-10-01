@@ -151,7 +151,7 @@ async function callClaudeAssistant(
     ...history.map((entry) => ({ role: entry.role, content: entry.content })),
     { role: "user" as const, content: message },
   ];
-  return claudeComplete(messages, {
+  return claudeComplete(messages, { usage: { category: "founder", feature: "ai_coach" },
     model: CLAUDE_HAIKU,
     maxTokens: 1024,
     system: buildAssistantSystemPrompt(ctx),

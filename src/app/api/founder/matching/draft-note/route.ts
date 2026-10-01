@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
@@ -33,6 +34,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ note });
   }
 
+  // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+  const aiRun = await gateAiRun(auth.profile.id, "intro_note_drafts");
+  if (aiRun.blocked) return aiRun.blocked;
   const raw = await claudeComplete(
     [
       {
@@ -50,7 +54,7 @@ export async function POST(request: Request) {
         }),
       },
     ],
-    {
+    { usage: { category: "founder", feature: "intro_note_drafts" },
       model: CLAUDE_SONNET,
       maxTokens: 350,
       system: [
@@ -61,6 +65,7 @@ export async function POST(request: Request) {
       ].join(" "),
     },
   );
+  await aiRun.done();
 
   return NextResponse.json({ note: raw.trim() });
 }

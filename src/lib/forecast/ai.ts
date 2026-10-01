@@ -91,7 +91,7 @@ export async function getSalesInsight(metric: MetricKey, scenarioId: string, opt
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Facts (JSON): ${JSON.stringify(facts)}\n\nWrite the insight for metric "${metric}".` }],
-      { system: SYSTEM, model: CLAUDE_HAIKU, maxTokens: 500, temperature: 0.3 },
+      { usage: { category: "internal", feature: "sales_forecast" }, system: SYSTEM, model: CLAUDE_HAIKU, maxTokens: 500, temperature: 0.3 },
     );
     parsed = insightSchema.parse(JSON.parse(stripFences(raw)));
   } catch {

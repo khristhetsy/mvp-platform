@@ -162,7 +162,7 @@ export async function draftExecSummary(d: ReportData): Promise<{ summary: ExecSu
   };
   const system = `You write the executive summary of an investor-relations report that iCFO Capital Global, Inc. sends to a founder client. Bottom line first, then what happened, what it means, and what the founder owes. Plain, specific, no hype. Never invent facts, names, or numbers not in the data. Never name an investor person; firms only where the data names them. Return strict JSON with keys: bottom (one sentence), lead (one paragraph, 2–4 sentences), highlights (2–5 short bullets), themes (0–3 bullets: what investors are asking, only from the notes/communications), watch (0–3 bullets), asks (1–3 bullets of what the founder should do next). Empty arrays are fine when the data is thin.`;
   try {
-    const text = await claudeComplete([{ role: "user", content: `Data:\n${JSON.stringify(facts, null, 1)}\n\nReturn only the JSON object.` }], { model: CLAUDE_SONNET, maxTokens: 1200, temperature: 0.3, system, locale: "en" });
+    const text = await claudeComplete([{ role: "user", content: `Data:\n${JSON.stringify(facts, null, 1)}\n\nReturn only the JSON object.` }], { usage: { category: "internal", feature: "ir_report" }, model: CLAUDE_SONNET, maxTokens: 1200, temperature: 0.3, system, locale: "en" });
     const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
     const raw = JSON.parse(json) as Partial<ExecSummary>;
     const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "").slice(0, 6) : []);

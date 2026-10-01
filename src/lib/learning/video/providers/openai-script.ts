@@ -43,7 +43,7 @@ ${input.isQuizLesson ? "This is a quiz review lesson — explain concepts to stu
 
   const raw = await claudeComplete(
     [{ role: "user", content: userContent }],
-    { model: CLAUDE_HAIKU, maxTokens: 2048, system }
+    { usage: { category: "founder", feature: "lesson_video_scripts" }, model: CLAUDE_HAIKU, maxTokens: 2048, system }
   );
 
   const parsed = parseJsonBlock(raw || "{}");

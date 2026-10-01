@@ -57,7 +57,7 @@ export async function generateMeetingSummary(sessionId: string): Promise<Meeting
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Summarize this weekly meeting from its section notes (JSON). One tight summary per section that has content, plus a list of decision tags.\n${JSON.stringify(facts)}\n\nReturn STRICT JSON: {"sections":[{"title","summary"}],"decisions":[string]}.` }],
-      { system: `You write internal meeting minutes. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 900, temperature: 0.3, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: `You write internal meeting minutes. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 900, temperature: 0.3, locale: "en" },
     );
     const parsed = summarySchema.parse(JSON.parse(stripFences(raw)));
     const okSections = parsed.sections.filter((s) => clean(s.summary));
@@ -107,7 +107,7 @@ export async function generateRecommendations(sessionId: string): Promise<Recomm
   try {
     const raw = await claudeComplete(
       [{ role: "user", content: `Cross-department operating signals (JSON): ${JSON.stringify({ overdueCarryover: overdue, kpisBehind: behind, marketing, ir })}\n\nGive up to 5 advisory recommendation cards. Return STRICT JSON: {"recommendations":[{"title","detail","priority"}]}.` }],
-      { system: `You are the CEO's Chief-of-Staff surfacing cross-department advisories. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 600, temperature: 0.4, locale: "en" },
+      { usage: { category: "internal", feature: "meetings" }, system: `You are the CEO's Chief-of-Staff surfacing cross-department advisories. ${RAILS}`, model: CLAUDE_HAIKU, maxTokens: 600, temperature: 0.4, locale: "en" },
     );
     const parsed = recSchema.parse(JSON.parse(stripFences(raw)));
     const cards = parsed.recommendations.filter((r) => clean(r.title) && clean(r.detail)).map((r) => ({ ...r, department_id: null }));

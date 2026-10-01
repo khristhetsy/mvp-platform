@@ -56,7 +56,7 @@ export async function ensureTodayPhrase(force = false): Promise<string> {
       const ctx = { dept_scores: scores, brief: payload.brief?.headline ?? null };
       const out = await claudeComplete(
         [{ role: "user", content: `Context (JSON): ${JSON.stringify(ctx)}\n\nWrite ONE short motivational line (max 18 words) for the CEO to start the day. Ground it in how the departments are trending — encouraging if strong, focusing if weak. No quotes, no attribution, no emojis. Output only the sentence.` }],
-        { system: "You are the AI Chief of Staff for iCapOS. One punchy, grounded motivational sentence. No preamble.", model: CLAUDE_HAIKU, maxTokens: 60, temperature: 0.8 },
+        { usage: { category: "internal", feature: "ceo_phrase" }, system: "You are the AI Chief of Staff for iCapOS. One punchy, grounded motivational sentence. No preamble.", model: CLAUDE_HAIKU, maxTokens: 60, temperature: 0.8 },
       );
       const clean = out.trim().replace(/^["']|["']$/g, "").split("\n")[0]?.trim();
       if (clean) { phrase = clean.slice(0, 200); model = CLAUDE_HAIKU; }

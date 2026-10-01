@@ -260,7 +260,7 @@ async function callClaudeCoach(ctx: PersonalCoachContext, message: string, histo
     { role: "user" as const, content: message },
   ];
 
-  return claudeComplete(messages, {
+  return claudeComplete(messages, { usage: { category: "founder", feature: "class_assistant" },
     model: CLAUDE_HAIKU,
     maxTokens: 1024,
     system: buildSystemPrompt(ctx),

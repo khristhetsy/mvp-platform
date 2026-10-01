@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gateAiRun } from "@/lib/ai-usage/gate";
 import { isClaudeConfigured } from "@/lib/claude";
 import { requireApiProfile } from "@/lib/api/auth";
 import {
@@ -72,7 +73,11 @@ export async function POST(request: Request) {
       adminCurriculumOutline,
       gapBasedRecommendations,
     });
+    // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+    const aiRun = await gateAiRun(auth.profile.id, "class_assistant");
+    if (aiRun.blocked) return aiRun.blocked;
     const result = await runPersonalCoach({ message, ctx, history });
+    await aiRun.done();
 
     return NextResponse.json({
       reply: result.reply,
@@ -97,7 +102,11 @@ export async function POST(request: Request) {
     gapBasedRecommendations,
   });
 
+  // Per-plan run cap (Admin, Feature Controls, AI usage limits).
+  const aiRun = await gateAiRun(auth.profile.id, "class_assistant");
+  if (aiRun.blocked) return aiRun.blocked;
   const result = await runPersonalCoach({ message, ctx, history });
+  await aiRun.done();
 
   return NextResponse.json({
     reply: result.reply,
