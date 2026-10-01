@@ -147,10 +147,28 @@ export async function countContactBuckets(spec: FilterSpec, owner: string | null
   return (rows ?? []).map((r) => ({ value: r.value, count: Number(r.n) }));
 }
 
-/** Every matching id — what "Select all N" acts on. Capped at 25,000. */
+/** Rows PostgREST returns per request (Supabase max rows); larger sets are read in pages. */
+export const ID_PAGE = 1000;
+
+/**
+ * Every matching id — what "Select all N" acts on. Capped at 25,000.
+ * Read in pages of ID_PAGE: PostgREST returns at most 1,000 rows per request, so a
+ * single call silently stopped every "Select all" bulk action (lists, lead assign,
+ * lead source, email, export) at the first 1,000 contacts. search_contact_ids orders
+ * by id, so the pages are stable and never overlap.
+ */
 export async function searchContactIds(spec: FilterSpec, owner: string | null, groupBy: string | null, groupValue: string | null, limit = 25000): Promise<string[]> {
-  const rows = await must<Array<string | { search_contact_ids: string }> | null>(
-    db().rpc("search_contact_ids", { p_spec: spec, p_owner: owner, p_group_by: groupBy, p_group_value: groupValue, p_limit: limit }), "search_contact_ids");
-  // PostgREST returns a setof scalar as [{search_contact_ids: uuid}] (or bare strings in some versions).
-  return (rows ?? []).map((r) => (typeof r === "string" ? r : r.search_contact_ids));
+  const cap = Math.min(Math.max(limit, 1), 25000);
+  const args = { p_spec: spec, p_owner: owner, p_group_by: groupBy, p_group_value: groupValue, p_limit: cap };
+  const out: string[] = [];
+  for (let from = 0; from < cap; from += ID_PAGE) {
+    const to = Math.min(from + ID_PAGE, cap) - 1;
+    const rows = await readWithRetry<Array<string | { search_contact_ids: string }> | null>(
+      () => db().rpc("search_contact_ids", args).range(from, to), "search_contact_ids");
+    // PostgREST returns a setof scalar as [{search_contact_ids: uuid}] (or bare strings in some versions).
+    const page = (rows ?? []).map((r) => (typeof r === "string" ? r : r.search_contact_ids));
+    out.push(...page);
+    if (page.length < to - from + 1) break;
+  }
+  return out;
 }
