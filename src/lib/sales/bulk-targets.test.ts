@@ -10,7 +10,9 @@ const { rpc, range, getSalesScope } = vi.hoisted(() => ({
       ? { isManager: true, canViewTeam: true, canSeeAllContacts: true, ownerId: null, isSuperAdmin: false, viewOwnerId: viewAs ?? undefined }
       : { isManager: false, canViewTeam: false, canSeeAllContacts: false, ownerId: caller.id, isSuperAdmin: false, viewOwnerId: undefined }),
 }));
-vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: () => ({ rpc: (...a: unknown[]) => { rpc(...a); return { range }; } }) }));
+// rpc("search_contact_id_array") resolves the next queued array result; the paged
+// fallback (rpc("search_contact_ids").range(from, to)) resolves from `range`.
+vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: () => ({ rpc: (name: string, args: unknown) => { const r = rpc(name, args); return name === "search_contact_ids" ? { range } : r; } }) }));
 vi.mock("@/lib/sales/scope", async (orig) => ({ ...(await orig<typeof import("@/lib/sales/scope")>()), getSalesScope }));
 
 const rep = { id: "rep-1" };
@@ -32,44 +34,65 @@ describe("csv", () => {
 });
 
 describe("resolveContactIds", () => {
+  const ARR = "search_contact_id_array";
+  const missingFn = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
+
   it("de-dups an explicit id list without touching the database", async () => {
-    rpc.mockClear();
+    rpc.mockReset();
     expect(await resolveContactIds(rep, { mode: "ids", ids: ["a", "b", "a"] })).toEqual(["a", "b"]);
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("filter mode runs the same spec as the list through search_contact_ids", async () => {
-    rpc.mockClear();
-    range.mockResolvedValueOnce({ data: [{ search_contact_ids: "x" }, { search_contact_ids: "y" }], error: null });
+  it("filter mode runs the same spec as the list, as one array", async () => {
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce({ data: ["x", "y"], error: null });
     const params = new URLSearchParams({ filter: JSON.stringify({ match: "all", conditions: [{ field: "investorTypes", op: "in", value: ["Angel Investor"] }] }) });
     const ids = await resolveContactIds(rep, { mode: "filter", params: params.toString(), group: "investor" });
     expect(ids).toEqual(["x", "y"]);
-    expect(rpc).toHaveBeenCalledWith("search_contact_ids", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith(ARR, expect.objectContaining({
       p_owner: "rep-1",
       p_group_by: "profile",
       p_group_value: "investor",
+      p_limit: 25000,
       p_spec: { match: "all", conditions: [{ field: "investorTypes", op: "in", value: ["Angel Investor"] }] },
     }));
   });
 
+  it("returns 13,030 ids from one call (no 1,000 row cap, no paging)", async () => {
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce({ data: Array.from({ length: 13030 }, (_, i) => `id-${i}`), error: null });
+    const ids = await resolveContactIds(rep, { mode: "filter", params: "q=acme" });
+    expect(ids).toHaveLength(13030);
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries once on a statement timeout", async () => {
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } })
+      .mockResolvedValueOnce({ data: ["a"], error: null });
+    expect(await resolveContactIds(rep, { mode: "filter", params: "q=acme" })).toEqual(["a"]);
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
   it("a manager's viewAs inside params scopes the set like the list did", async () => {
-    rpc.mockClear();
-    range.mockResolvedValueOnce({ data: [], error: null });
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: [], error: null });
     await resolveContactIds(manager, { mode: "filter", params: "q=acme&viewAs=rep-2" });
-    expect(rpc).toHaveBeenCalledWith("search_contact_ids", expect.objectContaining({ p_owner: "rep-2" }));
-    range.mockResolvedValueOnce({ data: [], error: null });
+    expect(rpc).toHaveBeenCalledWith(ARR, expect.objectContaining({ p_owner: "rep-2" }));
     await resolveContactIds(manager, { mode: "filter", params: "q=acme" });
-    expect(rpc).toHaveBeenLastCalledWith("search_contact_ids", expect.objectContaining({ p_owner: null }));
+    expect(rpc).toHaveBeenLastCalledWith(ARR, expect.objectContaining({ p_owner: null }));
   });
 
   it("a database error throws instead of returning a partial set", async () => {
-    rpc.mockClear();
-    range.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
     await expect(resolveContactIds(rep, { mode: "filter", params: "q=acme" })).rejects.toThrow(/boom/);
   });
 
-  it("reads past PostgREST's 1,000 row cap in pages until a short page", async () => {
-    rpc.mockClear(); range.mockClear();
+  it("before the migration: falls back to paging search_contact_ids past the 1,000 row cap", async () => {
+    rpc.mockReset(); range.mockReset();
+    rpc.mockResolvedValueOnce(missingFn);
     const page = (start: number, n: number) => ({ data: Array.from({ length: n }, (_, i) => ({ search_contact_ids: `id-${start + i}` })), error: null });
     range.mockResolvedValueOnce(page(0, 1000)).mockResolvedValueOnce(page(1000, 1000)).mockResolvedValueOnce(page(2000, 30));
     const ids = await resolveContactIds(rep, { mode: "filter", params: "q=acme" });
@@ -78,17 +101,8 @@ describe("resolveContactIds", () => {
     expect(range.mock.calls).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
   });
 
-  it("stops at the 25,000 cap", async () => {
-    rpc.mockClear(); range.mockClear();
-    range.mockImplementation(async (from: number, to: number) => ({ data: Array.from({ length: to - from + 1 }, (_, i) => `id-${from + i}`), error: null }));
-    const ids = await resolveContactIds(rep, { mode: "filter", params: "q=acme" });
-    expect(ids).toHaveLength(25000);
-    expect(range).toHaveBeenCalledTimes(25);
-    range.mockReset();
-  });
-
   it("a malformed filter throws instead of selecting the whole table", async () => {
-    rpc.mockClear();
+    rpc.mockReset();
     await expect(resolveContactIds(rep, { mode: "filter", params: "filter=%7Bnot-json" })).rejects.toThrow(/Invalid filter/);
     expect(rpc).not.toHaveBeenCalled();
   });
