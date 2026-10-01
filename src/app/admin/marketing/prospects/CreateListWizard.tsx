@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVocabulary } from "@/lib/vocabulary/provider";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 type Source = "founder" | "all" | "odoo" | "icapos" | "csv";
 const SOURCES: Array<{ id: Source; label: string }> = [
@@ -252,10 +253,10 @@ export function CreateListWizard() {
             })}
           </div>
           {!isFounder && total > PAGE_SIZE ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 9 }}>
-              <button type="button" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ fontSize: 11, border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "6px 11px", color: "var(--muted-foreground)", cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.5 : 1 }}>‹ Prev</button>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Page <b style={{ color: "var(--foreground)" }}>{page + 1}</b> of {pageCount.toLocaleString()} · {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, total).toLocaleString()} of {total.toLocaleString()}</span>
-              <button type="button" onClick={() => setPage(Math.min(pageCount - 1, page + 1))} disabled={page + 1 >= pageCount} style={{ fontSize: 11, fontWeight: 700, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 6, padding: "6px 11px", cursor: page + 1 >= pageCount ? "default" : "pointer", opacity: page + 1 >= pageCount ? 0.5 : 1 }}>Next page ›</button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: 9 }}>
+              <OdooPager label={`${(page * PAGE_SIZE + 1).toLocaleString()}–${Math.min((page + 1) * PAGE_SIZE, total).toLocaleString()} / ${total.toLocaleString()}`}
+                prev={{ onClick: () => setPage(Math.max(0, page - 1)), disabled: page === 0, title: "Previous page" }}
+                next={{ onClick: () => setPage(Math.min(pageCount - 1, page + 1)), disabled: page + 1 >= pageCount, title: "Next page" }} />
             </div>
           ) : null}
         </div>

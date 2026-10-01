@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { TemplatePicker } from "@/components/marketing/TemplatePicker";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 export type SelectionPayload = { mode: "ids" | "filter"; ids?: string[]; params?: string; group?: string; count: number };
 type Template = { id: string; name: string; subject: string; html_body: string; department: string | null };
@@ -238,9 +239,9 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)", margin: "0 0 4px" }}>
                       Previewing as <b style={{ color: "var(--foreground)", fontWeight: 600 }}>{who?.label}</b>
                       {previewAs.length > 1 ? <>
-                        <button type="button" aria-label="Previous recipient" onClick={() => setPreviewIdx((i) => (i - 1 + previewAs.length) % previewAs.length)} style={{ border: "none", background: "none", cursor: "pointer", color: "#185FA5", padding: 0 }}><i className="ti ti-chevron-left" aria-hidden="true" /></button>
-                        {Math.min(previewIdx, previewAs.length - 1) + 1} of {previewAs.length}
-                        <button type="button" aria-label="Next recipient" onClick={() => setPreviewIdx((i) => (i + 1) % previewAs.length)} style={{ border: "none", background: "none", cursor: "pointer", color: "#185FA5", padding: 0 }}><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+                        <OdooPager label={`${Math.min(previewIdx, previewAs.length - 1) + 1} / ${previewAs.length}`}
+                          prev={{ onClick: () => setPreviewIdx((i) => (i - 1 + previewAs.length) % previewAs.length), title: "Previous recipient" }}
+                          next={{ onClick: () => setPreviewIdx((i) => (i + 1) % previewAs.length), title: "Next recipient" }} />
                       </> : null}
                       <button type="button" onClick={() => setView("html")} style={{ marginLeft: "auto", border: "none", background: "none", cursor: "pointer", color: "#185FA5", fontSize: 11, padding: 0 }}>Edit HTML</button>
                     </div>
@@ -364,9 +365,9 @@ function FullView({ doc, title, who, idx, total, files, onStep, onClose }: {
           <p style={{ fontSize: 13.5, fontWeight: 600, margin: 0 }}>{title} <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>· as {who}</span></p>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
             {total > 1 ? <>
-              <button type="button" aria-label="Previous recipient" onClick={() => onStep(-1)} style={btn()}><i className="ti ti-chevron-left" aria-hidden="true" /></button>
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{idx + 1} of {total}</span>
-              <button type="button" aria-label="Next recipient" onClick={() => onStep(1)} style={btn()}><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+              <OdooPager label={`${idx + 1} / ${total}`}
+                prev={{ onClick: () => onStep(-1), title: "Previous recipient" }}
+                next={{ onClick: () => onStep(1), title: "Next recipient" }} />
             </> : null}
             <button type="button" aria-pressed={width === "desktop"} onClick={() => setWidth("desktop")} style={btn(width === "desktop")}><i className="ti ti-device-desktop" aria-hidden="true" /> Desktop</button>
             <button type="button" aria-pressed={width === "mobile"} onClick={() => setWidth("mobile")} style={btn(width === "mobile")}><i className="ti ti-device-mobile" aria-hidden="true" /> Mobile</button>

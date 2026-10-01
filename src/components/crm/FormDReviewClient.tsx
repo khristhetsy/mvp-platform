@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 type FilingRow = {
   accessionNo: string; cik: string; formType: string; companyName: string; city: string | null; state: string | null;
@@ -226,7 +227,6 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
         </table>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-        <span>Showing {count === 0 ? 0 : (page * perPage + 1).toLocaleString()}–{Math.min(count, (page + 1) * perPage).toLocaleString()} of {count.toLocaleString()} in this view</span>
         <span className="flex-1" />
         <label className="flex items-center gap-1.5">
           Per page
@@ -236,11 +236,9 @@ export function FormDReviewClient({ canPromote }: { canPromote: boolean }) {
             <option value={200}>200</option>
           </select>
         </label>
-        <div className="flex items-center gap-1">
-          <button type="button" disabled={page === 0 || loading} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Back</button>
-          <span className="px-2">Page {page + 1} of {Math.max(1, Math.ceil(count / perPage)).toLocaleString()}</span>
-          <button type="button" disabled={(page + 1) >= Math.ceil(count / perPage) || loading} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Next</button>
-        </div>
+        <OdooPager label={`${count === 0 ? 0 : (page * perPage + 1).toLocaleString()}–${Math.min(count, (page + 1) * perPage).toLocaleString()} / ${count.toLocaleString()}`}
+          prev={{ onClick: () => setPage((p) => Math.max(0, p - 1)), disabled: page === 0 || loading, title: "Previous page" }}
+          next={{ onClick: () => setPage((p) => p + 1), disabled: (page + 1) >= Math.ceil(count / perPage) || loading, title: "Next page" }} />
       </div>
     </div>
   );
