@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
 import type { DuplicateGroup } from "@/lib/sales/merge-contacts-shared";
 import { MergeContactsDialog, type MergeDone } from "./MergeContactsDialog";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 const PAGE = 25;
 const TYPE_BADGE: Record<string, { t: string; c: string; bg: string }> = {
@@ -132,9 +133,9 @@ export function DuplicatesView({ basePath, onExit, onChanged, onMerged }: { base
           })}
           {total > PAGE && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, padding: "8px 14px", background: "#F8FAFD", borderTop: "0.5px solid #eef1f5", borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
-              <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>{(offset + 1).toLocaleString()}–{Math.min(total, offset + groups.length).toLocaleString()} / {total.toLocaleString()} groups</span>
-              <button type="button" onClick={() => setOffset((o) => Math.max(0, o - PAGE))} disabled={loading || offset === 0} style={{ fontSize: 11, color: offset === 0 ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: offset === 0 ? "not-allowed" : "pointer" }}><i className="ti ti-chevron-left" aria-hidden="true" /> Prev</button>
-              <button type="button" onClick={() => setOffset((o) => o + PAGE)} disabled={loading || offset + PAGE >= total} style={{ fontSize: 11, color: offset + PAGE >= total ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: offset + PAGE >= total ? "not-allowed" : "pointer" }}>Next <i className="ti ti-chevron-right" aria-hidden="true" /></button>
+              <OdooPager label={`${(offset + 1).toLocaleString()}–${Math.min(total, offset + groups.length).toLocaleString()} / ${total.toLocaleString()} groups`}
+                prev={{ onClick: () => setOffset((o) => Math.max(0, o - PAGE)), disabled: loading || offset === 0, title: "Previous page" }}
+                next={{ onClick: () => setOffset((o) => o + PAGE), disabled: loading || offset + PAGE >= total, title: "Next page" }} />
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 type Investor = { id: string; name: string; firm: string | null; source: string; isMember: boolean; tier: string | null; score: number | null; engaged: number };
 type Counts = { all: number; members: number; prospects: number };
@@ -154,11 +155,10 @@ function InvestorsTab() {
 
       {total > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-          <span>Showing {(page * PER_PAGE + 1).toLocaleString()}–{Math.min(total, (page + 1) * PER_PAGE).toLocaleString()} of {total.toLocaleString()}</span>
           <span className="flex-1" />
-          <button type="button" disabled={page === 0 || loading} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Back</button>
-          <span className="px-2">Page {page + 1} of {totalPages.toLocaleString()}</span>
-          <button type="button" disabled={page + 1 >= totalPages || loading} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40">Next</button>
+          <OdooPager label={`${(page * PER_PAGE + 1).toLocaleString()}–${Math.min(total, (page + 1) * PER_PAGE).toLocaleString()} / ${total.toLocaleString()}`}
+            prev={{ onClick: () => setPage((p) => Math.max(0, p - 1)), disabled: page === 0 || loading, title: "Previous page" }}
+            next={{ onClick: () => setPage((p) => p + 1), disabled: page + 1 >= totalPages || loading, title: "Next page" }} />
         </div>
       ) : null}
     </div>

@@ -13,6 +13,7 @@ import { ContactsBulkActions, type BulkTarget } from "./ContactsBulkActions";
 import { DuplicatesView } from "./DuplicatesView";
 import { MergeContactsDialog, MergeUndoBanner, type MergeDone } from "./MergeContactsDialog";
 import { ContactsSearchBar as OdooSearchBar, type SavedSearch as SharedSavedSearch } from "@/components/admin/sales/ContactsSearchBar";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 export type { SalesContact, LastMessage, NextActivity } from "./useContactsQuery";
 
@@ -894,15 +895,9 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                       ))}
                       {gs!.total > PAGE && (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, padding: "8px 14px", background: "#F8FAFD", borderTop: "0.5px solid #eef1f5" }}>
-                          <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
-                            {(gs!.page * PAGE + 1).toLocaleString()}–{Math.min(gs!.total, gs!.page * PAGE + gs!.rows.length).toLocaleString()} / {gs!.total.toLocaleString()}
-                          </span>
-                          <button type="button" onClick={() => goPage(g.id, -1)} disabled={gs!.loading || gs!.page === 0} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: gs!.page === 0 ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: gs!.page === 0 ? "not-allowed" : "pointer", opacity: gs!.page === 0 ? 0.5 : 1 }}>
-                            <i className="ti ti-chevron-left" aria-hidden="true" /> Prev
-                          </button>
-                          <button type="button" onClick={() => goPage(g.id, 1)} disabled={gs!.loading || (gs!.page + 1) * PAGE >= gs!.total} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: (gs!.page + 1) * PAGE >= gs!.total ? "#9aa4b2" : "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "4px 10px", cursor: (gs!.page + 1) * PAGE >= gs!.total ? "not-allowed" : "pointer", opacity: (gs!.page + 1) * PAGE >= gs!.total ? 0.5 : 1 }}>
-                            Next <i className="ti ti-chevron-right" aria-hidden="true" />
-                          </button>
+                          <OdooPager label={`${(gs!.page * PAGE + 1).toLocaleString()}–${Math.min(gs!.total, gs!.page * PAGE + gs!.rows.length).toLocaleString()} / ${gs!.total.toLocaleString()}`}
+                            prev={{ onClick: () => goPage(g.id, -1), disabled: gs!.loading || gs!.page === 0, title: "Previous page" }}
+                            next={{ onClick: () => goPage(g.id, 1), disabled: gs!.loading || (gs!.page + 1) * PAGE >= gs!.total, title: "Next page" }} />
                         </div>
                       )}
                     </>
