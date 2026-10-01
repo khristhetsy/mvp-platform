@@ -31,9 +31,14 @@ export function InvestorSearchTab(p: {
   projectId: string; cols: ColKey[]; picked: Set<string>; setPicked: (f: (s: Set<string>) => Set<string>) => void;
   hideContacted: boolean; sort: SortState; onSort: (k: SortKey) => void; onProfile: (r: Row) => void;
   onRows: (rows: Row[]) => void; tabs: ReactNode; tools: ReactNode;
+  /** Group by and open groups carried over from another week by the week pager. */
+  initialGroupBy?: string | null; initialOpen?: string[];
+  /** Reports the current group by and open groups, so the week pager can carry them over. */
+  onView?: (v: { groupBy: string | null; open: string[] }) => void;
 }) {
+  const carriedGroup = p.initialGroupBy && p.initialGroupBy !== NO_GROUP && GROUP_OPTS.some((o) => o.id === p.initialGroupBy) ? p.initialGroupBy : null;
   const [spec, setSpec] = useState<FilterSpec>(EMPTY);
-  const [groupBy, setGroupBy] = useState(NO_GROUP);
+  const [groupBy, setGroupBy] = useState(carriedGroup ?? NO_GROUP);
   const [typed, setTyped] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
@@ -74,8 +79,9 @@ export function InvestorSearchTab(p: {
     defaultApplied.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time default apply
     setSpec(def.spec);
-    if (def.groupBy) setGroupBy(def.groupBy);
-  }, [saved]);
+    // A group by carried over from another week wins over the saved default's.
+    if (def.groupBy && !carriedGroup) setGroupBy(def.groupBy);
+  }, [saved, carriedGroup]);
 
   // ── Spec helpers (same behaviour as the Contacts page) ──
   const same = (a: Condition, b: Condition) => a.field === b.field && a.op === b.op && JSON.stringify(a.value ?? null) === JSON.stringify(b.value ?? null);
@@ -115,6 +121,18 @@ export function InvestorSearchTab(p: {
   const grouped = groupBy !== NO_GROUP;
   const groupList = useMemo(() => grouped ? dynGroups.map((g) => ({ id: g.id, label: g.label, count: g.count })) : [{ id: "investor", label: "", count: facets.counts.investor ?? 0 }], [grouped, dynGroups, facets.counts]);
   const total = facets.counts.investor ?? 0;
+
+  // Reopen the groups that were open on the previous week, once they've loaded.
+  const reopened = useRef(false);
+  const initialOpen = p.initialOpen;
+  useEffect(() => {
+    if (reopened.current || !grouped || !dynGroups.length || groupBy !== carriedGroup) return;
+    reopened.current = true;
+    for (const id of initialOpen ?? []) if (dynGroups.some((g) => g.id === id) && !expanded[id]) toggleGroup(id);
+  }, [grouped, dynGroups, groupBy, carriedGroup, initialOpen, expanded, toggleGroup]);
+  const { onView } = p;
+  const openIds = useMemo(() => (grouped ? Object.keys(expanded).filter((k) => expanded[k]) : []), [grouped, expanded]);
+  useEffect(() => { onView?.({ groupBy: grouped ? groupBy : null, open: openIds }); }, [onView, grouped, groupBy, openIds]);
 
   // ── Top up loaded rows with the IR fields ──
   const [extra, setExtra] = useState<Map<string, Extra>>(new Map());
