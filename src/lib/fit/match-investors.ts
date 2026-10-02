@@ -261,8 +261,26 @@ export type Scorable = {
   fields: MatchFields;
 };
 
+/**
+ * True when the investor states a check size and none of it overlaps the raise.
+ * An investor with no parseable size is NOT a mismatch: unknown is kept, so the
+ * filter only removes investors whose own data says the raise does not fit.
+ */
+export function sizeMismatch(f: MatchFields, answers: FitAnswers): boolean {
+  const bounds = raiseBoundsFor(answers.raise);
+  if (!bounds) return false;
+  const bands = f.sizes.map(parseMoneyBand).filter((b): b is { min: number; max: number } => b != null);
+  if (bands.length === 0) return false;
+  return !bands.some((b) => b.min <= bounds.max && b.max >= bounds.min);
+}
+
+export type RankOptions = {
+  /** /fit v2: drop investors whose stated check size cannot fit the raise. */
+  excludeSizeMismatch?: boolean;
+};
+
 /** Pure ranking: score → industry hard filter → one row per firm → threshold → sort. */
-export function rankScorables(items: Scorable[], answers: FitAnswers, weights: FitWeights = WEIGHTS): MatchResult[] {
+export function rankScorables(items: Scorable[], answers: FitAnswers, weights: FitWeights = WEIGHTS, opts: RankOptions = {}): MatchResult[] {
   const PASS_THRESHOLD = passThreshold(weights);
   // SCORE FIRST, then de-dup. De-duplicating first meant the tie-break (trust tier, then
   // recency) could pick a contact that happens to carry none of the firm's sector data —
@@ -273,6 +291,7 @@ export function rankScorables(items: Scorable[], answers: FitAnswers, weights: F
   const passed: Array<{ r: Scorable; s: { fit: number; summary: string } }> = [];
   for (const r of items) {
     if (!r.company) continue;
+    if (opts.excludeSizeMismatch && sizeMismatch(r.fields, answers)) continue;
     const s = scoreFields(r.fields, answers, weights);
     if (s && s.fit >= PASS_THRESHOLD) passed.push({ r, s });
   }
@@ -314,10 +333,10 @@ export function rankScorables(items: Scorable[], answers: FitAnswers, weights: F
 }
 
 /** Rank wide crm_contacts rows (the fallback path). */
-export function rankRows(rows: GatedRow[], answers: FitAnswers, weights: FitWeights = WEIGHTS): MatchResult[] {
+export function rankRows(rows: GatedRow[], answers: FitAnswers, weights: FitWeights = WEIGHTS, opts: RankOptions = {}): MatchResult[] {
   return rankScorables(rows.map((r) => ({
     id: r.id, company: r.company, inv_source: r.inv_source, inv_verified_at: r.inv_verified_at, fields: fieldsOf(r),
-  })), answers, weights);
+  })), answers, weights, opts);
 }
 
 /** Distinct sectors offerable at Q3 — the industries that at least one GATED
@@ -367,11 +386,12 @@ async function finish(
   db: any,
   ranked: MatchResult[],
   networkTotal: number,
+  shownCount = 3,
 ): Promise<MatchResponse> {
   // ranked is the COMPLETE match list. Truncation happens here, at the display boundary,
   // so matched_count and locked_count describe reality — previously the list was cut to
   // 25 before counting, so "N more locked" saturated at 22 however many actually matched.
-  const shown = ranked.slice(0, 3);
+  const shown = ranked.slice(0, shownCount);
   if (shown.length > 0) {
     type RatingRow = { id: string; source: string | null; contact_type: string | null; email: string | null; raw: Record<string, unknown> | null };
     const { data } = await db.from("crm_contacts")
@@ -394,12 +414,20 @@ async function finish(
     matched_count: ranked.length,
     top: shown,
     locked_count: Math.max(0, ranked.length - shown.length),
-    thin: ranked.length < 3,
+    thin: ranked.length < Math.min(3, shownCount),
     network_total: networkTotal,
   };
 }
 
-export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse> {
+export type MatchOptions = {
+  /** /fit v2 shows the top 5 and filters out stated check-size mismatches. */
+  variant?: "v1" | "v2";
+};
+
+export async function matchInvestors(answers: FitAnswers, opts: MatchOptions = {}): Promise<MatchResponse> {
+  const v2 = opts.variant === "v2";
+  const rank: RankOptions = { excludeSizeMismatch: v2 };
+  const shownCount = v2 ? 5 : 3;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
 
@@ -421,7 +449,7 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
   // the first justifies the wide fallback — treating an empty result as "index missing"
   // made every genuinely-no-match search pay for a full table scan.
   if (scorables !== null) {
-    return await finish(db, rankScorables(scorables, answers, weights), networkTotal);
+    return await finish(db, rankScorables(scorables, answers, weights, rank), networkTotal, shownCount);
   }
 
   // Fallback: index missing or empty. Capped read — see the migration comment for why a
@@ -433,5 +461,5 @@ export async function matchInvestors(answers: FitAnswers): Promise<MatchResponse
     .limit(20000);
 
   if (error || !Array.isArray(data)) return { matched_count: 0, top: [], locked_count: 0, thin: true, network_total: networkTotal };
-  return await finish(db, rankRows(data as GatedRow[], answers, weights), networkTotal);
+  return await finish(db, rankRows(data as GatedRow[], answers, weights, rank), networkTotal, shownCount);
 }

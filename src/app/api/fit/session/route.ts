@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createSession, updateSession } from "@/lib/fit/sessions";
+import { variantFor, forcedVariant } from "@/lib/fit/variant";
+import { getFitV2RolloutPct } from "@/lib/settings/platform-settings";
+import { recordFunnelEvent } from "@/lib/analytics/funnel";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +22,28 @@ function setCookie(res: NextResponse, id: string) {
 
 // Create the session on landing (before any answer). Attribution tag captured once.
 // Reuses an existing cookie so a reload doesn't spawn duplicate rows.
+// Also returns the A/B arm (v1 control, v2 Match Review), deterministic per session;
+// `v` in the body ("1" | "2") forces an arm for previews and QA.
 export async function POST(req: NextRequest): Promise<Response> {
-  const existing = req.cookies.get(COOKIE)?.value;
-  if (existing) return NextResponse.json({ sessionId: existing });
-
   const body = await req.json().catch(() => ({}));
+  const forced = forcedVariant(body?.v);
+  const existing = req.cookies.get(COOKIE)?.value;
+  if (existing) {
+    const variant = forced ?? variantFor(existing, await getFitV2RolloutPct());
+    return NextResponse.json({ sessionId: existing, variant });
+  }
+
   const sourceTag = typeof body?.sourceTag === "string" ? body.sourceTag.slice(0, 120) : null;
   const id = await createSession(sourceTag);
-  if (!id) return NextResponse.json({ sessionId: null });
+  if (!id) return NextResponse.json({ sessionId: null, variant: forced ?? "v1" });
 
-  const res = NextResponse.json({ sessionId: id });
+  const pct = await getFitV2RolloutPct();
+  const variant = forced ?? variantFor(id, pct);
+  // Record the arm at assignment so the split survives a later rollout change.
+  // `forced` marks QA/preview sessions so analysis can leave them out.
+  await recordFunnelEvent({ sessionId: id, eventName: "fit_variant", properties: { variant, pct, forced: !!forced } });
+
+  const res = NextResponse.json({ sessionId: id, variant });
   setCookie(res, id);
   return res;
 }

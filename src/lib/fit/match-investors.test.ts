@@ -126,3 +126,21 @@ describe("one weight table", () => {
     expect(out.map((m) => m.company)).toEqual(["OnlySector"]);
   });
 });
+
+describe("rankRows with excludeSizeMismatch (/fit v2)", () => {
+  const rows = [
+    inv({ company: "Fits", industries: ["Cleantech"], size: ["$1m - $10m"] }),
+    inv({ company: "Too small", industries: ["Cleantech"], size: ["$100k - $250k"] }),
+    inv({ company: "Tiny", industries: ["Cleantech"], size: ["Less than $50k"] }),
+    inv({ company: "Unknown size", industries: ["Cleantech"] }),
+  ];
+
+  it("leaves v1 ranking unchanged by default", () => {
+    expect(rankRows(rows, ANSWERS).map((r) => r.company).sort()).toEqual(["Fits", "Tiny", "Too small", "Unknown size"]);
+  });
+
+  it("drops only investors whose stated check size cannot fit the raise", () => {
+    const names = rankRows(rows, ANSWERS, undefined, { excludeSizeMismatch: true }).map((r) => r.company).sort();
+    expect(names).toEqual(["Fits", "Unknown size"]);
+  });
+});

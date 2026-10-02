@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { DEFAULT_WEIGHTS, type MatchWeights } from "@/lib/investors/preference-match";
 import { DEFAULT_ENGINE_WEIGHTS, type EngineWeights } from "@/lib/matching/investor-company-matching";
+import { FIT_V2_ROLLOUT_KEY, FIT_V2_DEFAULT_PCT } from "@/lib/fit/variant";
 
 /**
  * Small key-value store for platform-level settings that admins toggle at
@@ -152,6 +153,22 @@ export async function getFounderNavV2RolloutPct(): Promise<number> {
     return Math.max(0, Math.min(100, Math.round(pct)));
   } catch {
     return 0;
+  }
+}
+
+/**
+ * /fit Match Review (v2) A/B share — percentage of NEW funnel sessions bucketed
+ * into v2. No row = FIT_V2_DEFAULT_PCT. Bucketing is deterministic per session
+ * (see src/lib/fit/variant.ts). Set `{ "pct": 0 }` to turn v2 off, 100 to roll it out.
+ */
+export async function getFitV2RolloutPct(): Promise<number> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", FIT_V2_ROLLOUT_KEY).maybeSingle();
+    const pct = (data as { value?: { pct?: number } } | null)?.value?.pct;
+    if (typeof pct !== "number" || Number.isNaN(pct)) return FIT_V2_DEFAULT_PCT;
+    return Math.max(0, Math.min(100, Math.round(pct)));
+  } catch {
+    return FIT_V2_DEFAULT_PCT;
   }
 }
 

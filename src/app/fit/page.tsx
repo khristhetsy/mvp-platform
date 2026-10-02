@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FitFunnelClient } from "./FitFunnelClient";
+import { FitEntry } from "./FitEntry";
 
 export const metadata: Metadata = {
   title: "Find investors that fit your raise — iCapOS",
@@ -9,10 +9,11 @@ export const metadata: Metadata = {
 
 // Public capital funnel (build-spec §6). No auth, no pricing, no email before the
 // match screen. The email IS the landing page in production; standalone it opens on Q1.
+// FitEntry splits sessions between the current flow (v1) and the Match Review flow (v2).
 export default function FitPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-5 py-16">
-      <FitFunnelClient />
+      <FitEntry />
     </main>
   );
 }
