@@ -33,7 +33,9 @@ export type MatchResults = {
   dryRun: number;
   opened: number | null;
   pageOpened: number | null;
+  profileViewed: number | null;
   callClicks: number | null;
+  followUps: number | null;
   booked: number | null;
   introClicks: number | null;
   plans: number | null;
@@ -119,7 +121,7 @@ export async function loadMatchResults(campaignId: string): Promise<MatchResults
           (b.contact_crm_id === f.founder_contact_id || (b.booker_email && f.email && b.booker_email.toLowerCase() === f.email.toLowerCase())) &&
           new Date(b.created_at) >= new Date(f.clicked_call_at as string),
       );
-      if (hit) booked++;
+      if (hit || f.booked_at) booked++;
     }
   }
 
@@ -187,6 +189,8 @@ export async function loadMatchResults(campaignId: string): Promise<MatchResults
     dryRun,
     opened: orNull(opened),
     pageOpened: orNull(founders.filter((f) => f.opened_page_at).length),
+    profileViewed: orNull(founders.filter((f) => f.first_profile_view_at).length),
+    followUps: orNull(founders.filter((f) => f.followup_sent_at).length),
     callClicks: orNull(callers.length),
     booked: orNull(booked),
     introClicks: orNull(founders.filter((f) => f.clicked_intro_at).length),

@@ -47,6 +47,9 @@ export function BookingClient({
   viewerEmail,
   rescheduleToken,
   sourceTag,
+  matchToken,
+  viewerCompany,
+  afterBooking,
 }: {
   hostId: string;
   hostName: string;
@@ -63,6 +66,13 @@ export function BookingClient({
    *  meeting booked straight from a post can be attributed; the server ranks it
    *  below a /fit session and above the first-touch cookie. */
   sourceTag?: string | null;
+  /** Founder token from a Match campaign link (?mc=…). Marks that founder as
+   *  booked when the meeting is confirmed. */
+  matchToken?: string | null;
+  /** Prefill for the company field (Match campaign founders). */
+  viewerCompany?: string | null;
+  /** Optional link shown under the confirmation (Match campaign: back to matches). */
+  afterBooking?: { href: string; label: string; note?: string } | null;
 }) {
   const durations = slotDurations && slotDurations.length > 0 ? slotDurations : [30];
   const cf = contactFields;
@@ -88,7 +98,7 @@ export function BookingClient({
   const [lastName, setLastName] = useState(lastSeed);
   const [email, setEmail] = useState(viewerEmail ?? "");
   const [phone, setPhone] = useState("");
-  const [company, setCompany] = useState("");
+  const [company, setCompany] = useState(viewerCompany ?? "");
   const [note, setNote] = useState("");
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
 
@@ -190,6 +200,7 @@ export function BookingClient({
           answers: answerPayload,
           rescheduleToken: rescheduleToken || undefined,
           sourceTag: sourceTag || undefined,
+          matchToken: matchToken || undefined,
         }),
       });
       const data = await res.json();
@@ -205,7 +216,7 @@ export function BookingClient({
     } finally {
       setBooking(false);
     }
-  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, sourceTag, load, localTz]);
+  }, [hostId, pending, firstName, lastName, email, phone, company, cf, note, questions, answers, rescheduleToken, sourceTag, matchToken, load, localTz]);
 
   if (confirmed) {
     return (
@@ -217,6 +228,12 @@ export function BookingClient({
           <a href={confirmed.meetUrl} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"><Video className="h-4 w-4" /> Join Google Meet</a>
         ) : null}
         <p className="mt-3 text-xs text-emerald-700">{t("a_confirmation_and_calendar_invite_are_on_th")}</p>
+        {afterBooking ? (
+          <div className="mt-5 border-t border-emerald-200 pt-4 text-left">
+            {afterBooking.note ? <p className="mb-2 text-xs text-emerald-800">{afterBooking.note}</p> : null}
+            <a href={afterBooking.href} className="block rounded-lg border border-emerald-300 bg-white px-4 py-2 text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-100">{afterBooking.label}</a>
+          </div>
+        ) : null}
       </div>
     );
   }

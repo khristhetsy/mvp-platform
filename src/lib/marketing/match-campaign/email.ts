@@ -36,7 +36,8 @@ export function renderSubject(template: string, v: { matchCount: number; company
 export const UNNAMED = "Investor";
 
 export function matchLine(m: MaskedMatch): string {
-  return [m.investor_type ?? "Investor", m.sectors.slice(0, 2).join(", ") || null, m.stages.map(stageLabel).join(", ") || null]
+  const sectors = m.matched_sectors?.length ? m.matched_sectors : m.sectors;
+  return [m.investor_type ?? "Investor", sectors.slice(0, 2).join(", ") || null, m.stages.map(stageLabel).join(", ") || null]
     .filter(Boolean)
     .join(" · ");
 }
@@ -72,4 +73,84 @@ ${rows}
   </tr></table>
   <p style="font-size:12px;color:#8A94A8;margin:24px 0 0;line-height:18px;">Plans from ${esc(i.basicPrice)}. ${esc(i.postalAddress)}.<br />We are writing because your company is in the iCapOS founder network. Your data is handled as described in our <a href="${esc(i.links.privacy)}" style="color:#8A94A8;">privacy policy</a>.</p>
 </div>`;
+}
+
+// ── Review flow ─────────────────────────────────────────────────────────────
+
+export const REVIEW_SUBJECT = "{company}: your {match_count} investor matches";
+
+export type ReviewEmailInput = Omit<FounderEmailInput, "links"> & {
+  /** Matches open by name on the founder pages (the rest show as locked). */
+  visibleCount: number;
+  links: FounderEmailInput["links"] & {
+    /** Profile page for the nth open match (1 based). */
+    profile: (n: number) => string;
+  };
+};
+
+/** "Matched on: Pre-seed, Biotechnology/Life Science". */
+export function matchedOn(m: MaskedMatch, founderStages: readonly string[]): string {
+  const stage = founderStages.find((s) => m.stages.includes(s)) ?? m.stages[0] ?? null;
+  const sectors = (m.matched_sectors?.length ? m.matched_sectors : m.sectors).slice(0, 2);
+  return [stage ? stageLabel(stage) : null, ...sectors].filter(Boolean).join(", ");
+}
+
+/**
+ * The match review email: the founder's matches by name with what each matched
+ * on (no match %), one primary button to book a free 15 minute match review on
+ * live availability, and the plan as the secondary path. No times are written
+ * into the email, so nothing goes stale between send and open.
+ */
+export function renderReviewEmail(i: ReviewEmailInput): string {
+  const stage = i.stages.map(stageLabel).join(", ");
+  const shown = i.top.slice(0, Math.min(i.top.length, i.visibleCount));
+  const locked = Math.max(0, i.matchCount - Math.min(i.matchCount, i.visibleCount));
+  const what = [stage, i.industry].filter(Boolean).join(" ");
+  const rows = shown
+    .map(
+      (m, n) => `<tr>
+  <td style="padding:12px 14px;border-top:${n === 0 ? "0" : "1px solid #E3E8F2"};">
+    <a href="${esc(i.links.profile(n + 1))}" style="font-size:14px;font-weight:600;color:#1A6CE4;text-decoration:underline;">${esc(m.investor_name || UNNAMED)}</a>${m.investor_firm ? ` <span style="font-size:13px;color:#5A6782;">· ${esc(m.investor_firm)}</span>` : ""}
+    <div style="font-size:12px;color:#5A6782;margin-top:2px;">Matched on: ${esc(matchedOn(m, i.stages))}</div>
+  </td>
+</tr>`,
+    )
+    .join("\n");
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0A1A40;">
+  <p style="font-size:14px;line-height:22px;margin:8px 0 16px;">We screened our ${esc(i.networkLabel)} investor network. These investors back ${what ? `${esc(what)} ` : ""}companies like ${esc(i.company)}:</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #E3E8F2;border-radius:10px;border-collapse:separate;">
+${rows}
+  </table>
+  <p style="margin:12px 0 4px;"><a href="${esc(i.links.matches)}" style="font-size:14px;font-weight:600;color:#1A6CE4;">See all ${i.matchCount} matches</a></p>
+  <p style="font-size:13px;color:#5A6782;margin:0 0 20px;">${locked > 0 ? `${locked} more match${locked === 1 ? "" : "es"} and contact details open with a plan.` : "Contact details and introductions open with a plan."}</p>
+  <p style="font-size:16px;font-weight:700;margin:0 0 4px;">Which 2 should you approach first?</p>
+  <p style="font-size:13px;line-height:20px;color:#5A6782;margin:0 0 14px;">In a free 15 minute match review, we'll rank all ${i.matchCount} for ${esc(i.company)}.</p>
+  <table role="presentation" cellspacing="0" cellpadding="0" width="100%"><tr>
+    <td><a href="${esc(i.links.call)}" style="display:block;text-align:center;background:#1A6CE4;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 18px;border-radius:8px;">Pick a time for your match review</a></td>
+  </tr><tr>
+    <td style="padding-top:8px;"><a href="${esc(i.links.plan)}" style="display:block;text-align:center;background:#ffffff;color:#1A6CE4;text-decoration:none;font-size:14px;font-weight:600;padding:11px 17px;border-radius:8px;border:1px solid #1A6CE4;">Choose a plan to unlock</a></td>
+  </tr></table>
+  <p style="font-size:13px;color:#5A6782;margin:16px 0 0;">P.S. Reply "review" and we'll send you times.</p>
+  <p style="font-size:12px;color:#8A94A8;margin:24px 0 0;line-height:18px;">Plans from ${esc(i.basicPrice)}. You're receiving this because ${esc(i.company)} is listed${i.industry ? ` in ${esc(i.industry)}` : ""}${stage ? ` at ${esc(stage)}` : ""} in the iCapOS founder network. ${esc(i.postalAddress)}. Your data is handled as described in our <a href="${esc(i.links.privacy)}" style="color:#8A94A8;">privacy policy</a>.</p>
+</div>`;
+}
+
+/**
+ * Follow up for a review flow founder who opened an investor's profile but did
+ * not book a match review or start a plan within a day. Names the investor they
+ * looked at last.
+ */
+export function renderFollowUpEmail(i: { company: string; investorName: string; links: { call: string; privacy: string }; postalAddress: string }): { subject: string; html: string } {
+  const name = esc(i.investorName);
+  return {
+    subject: `About ${i.investorName}`,
+    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0A1A40;">
+  <p style="font-size:14px;line-height:22px;margin:8px 0 12px;">You looked at ${name}'s profile in your ${esc(i.company)} investor matches. Before you reach out, it's worth 15 minutes to decide whether they should be your first conversation or your third.</p>
+  <p style="font-size:14px;line-height:22px;margin:0 0 16px;">Want to go through it together?</p>
+  <a href="${esc(i.links.call)}" style="display:block;text-align:center;background:#1A6CE4;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 18px;border-radius:8px;">Pick a time for your match review</a>
+  <p style="font-size:13px;color:#5A6782;margin:14px 0 0;">Or reply "review" and we'll send you times.</p>
+  <p style="font-size:12px;color:#8A94A8;margin:24px 0 0;line-height:18px;">${esc(i.postalAddress)}. Your data is handled as described in our <a href="${esc(i.links.privacy)}" style="color:#8A94A8;">privacy policy</a>.</p>
+</div>`,
+  };
 }

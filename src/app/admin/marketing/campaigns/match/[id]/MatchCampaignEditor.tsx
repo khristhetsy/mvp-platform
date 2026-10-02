@@ -591,9 +591,10 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
     }
   }
 
-  async function remove(founderId: string, matchId: string) {
+  async function remove(founderId: string, matchId: string, hide = false) {
+    if (hide && !window.confirm("Hide this investor from every founder? Future matching runs will skip them.")) return;
     try {
-      const j = await api<{ match_count: number }>("/api/admin/marketing/match/run", { method: "PATCH", body: JSON.stringify({ match_id: matchId }) });
+      const j = await api<{ match_count: number }>("/api/admin/marketing/match/run", { method: "PATCH", body: JSON.stringify({ match_id: matchId, hide }) });
       setMatches((m) => ({ ...m, [founderId]: (m[founderId] ?? []).filter((x) => x.id !== matchId) }));
       onFounders(founders.map((f) => (f.id === founderId ? { ...f, match_count: j.match_count, excluded_reason: j.match_count > 0 ? null : "no_matches" } : f)));
     } catch (e) {
@@ -638,10 +639,10 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
                       <tr key={m.id} className="border-t border-[#E3E8F2]">
                         <td className={td}><div className="font-medium">{m.investor_company || m.investor_name || "—"}</div>{m.investor_company && m.investor_name ? <div className="text-[11px] text-[#8A94A8]">{m.investor_name}</div> : null}</td>
                         <td className={td}>{m.investor_type ?? "—"}</td>
-                        <td className={td}>{m.sectors.slice(0, 3).join(", ") || "—"}</td>
+                        <td className={td}>{(m.matched_sectors?.length ? m.matched_sectors : m.sectors.slice(0, 3)).join(", ") || "—"}{m.sector_tier ? <div className="text-[11px] text-[#8A94A8]">{m.sector_tier === "exact" ? "Exact fit" : m.sector_tier === "adjacent" ? "Adjacent fit" : "Generalist"}</div> : null}</td>
                         <td className={td}>{m.stages.join(", ") || "—"}</td>
                         <td className={`${td} font-semibold`}>{m.match_score}%</td>
-                        <td className={td}><button type="button" className="text-[12px] text-[#A32D2D] hover:underline" disabled={f.send_status !== "pending"} onClick={() => remove(f.id, m.id)}>Remove</button></td>
+                        <td className={td}><button type="button" className="text-[12px] text-[#A32D2D] hover:underline" disabled={f.send_status !== "pending"} onClick={() => remove(f.id, m.id)}>Remove</button><button type="button" className="ml-3 text-[12px] text-[#5A6782] hover:underline" disabled={f.send_status !== "pending"} title="Hide this investor from every founder" onClick={() => remove(f.id, m.id, true)}>Hide everywhere</button></td>
                       </tr>
                     ))}
                     {!matches[f.id] ? <tr><td className={`${td} text-[#8A94A8]`} colSpan={6}>Loading…</td></tr> : null}
@@ -683,6 +684,15 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
       .catch((e) => onError(String(e.message)));
   }, [campaign.id, campaign.subject_override, founderId, onError]);
 
+  async function setLayout(config: Partial<MatchConfig>) {
+    try {
+      const j = await api<{ campaign: MatchCampaignRow }>("/api/admin/marketing/match", { method: "PATCH", body: JSON.stringify({ id: campaign.id, config }) });
+      onCampaign(j.campaign);
+    } catch (e) {
+      onError(String((e as Error).message));
+    }
+  }
+
   async function saveSubject() {
     setSaving(true);
     try {
@@ -700,6 +710,23 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
       <div className={card}>
         <div className="mb-1 text-[14px] font-medium">Content</div>
         <p className="mb-4 text-[12.5px] text-[#5A6782]">Each founder receives their own matches. Investor names and firms show; contact details stay hidden until they choose a plan.</p>
+        <label className={label}>Layout</label>
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-[12.5px]">
+          <div className="inline-flex rounded-lg border border-[#E3E8F2] p-0.5">
+            <button type="button" onClick={() => setLayout({ flow: "review" })} className={`rounded-md px-3 py-1.5 text-[12px] ${campaign.match_config.flow === "review" ? "bg-[#1A6CE4] text-white" : "text-[#5A6782]"}`}>Match review first</button>
+            <button type="button" onClick={() => setLayout({ flow: "plan" })} className={`rounded-md px-3 py-1.5 text-[12px] ${campaign.match_config.flow === "plan" ? "bg-[#1A6CE4] text-white" : "text-[#5A6782]"}`}>Plan first</button>
+          </div>
+          {campaign.match_config.flow === "review" ? (
+            <span className="flex items-center gap-2 text-[#5A6782]">
+              Open matches by name
+              <select className={`${input} w-16`} value={campaign.match_config.visible_count} onChange={(e) => setLayout({ visible_count: Number(e.target.value) })}>
+                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+              the rest show as locked
+            </span>
+          ) : null}
+        </div>
+        <p className="-mt-1 mb-4 text-[11px] text-[#8A94A8]">Match review first: one button to book a free 15 minute match review on live availability, plan as the secondary path, no match %. Plan first: the original layout. Run one campaign of each to compare bookings and plan starts on Results.</p>
         <label className={label}>Subject</label>
         <div className="mb-3 flex gap-2">
           <input className={input} value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -733,7 +760,7 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
       <div className={`${card} h-fit text-[12.5px] leading-5`}>
         <div className="mb-2 font-semibold">What the founder sees before paying</div>
         <ul className="mb-4 space-y-1 text-[#5A6782]">
-          <li>+ Match count and top {campaign.match_config.preview_count} matches: investor name and firm, type, sector, stage fit, match %</li>
+          <li>+ Match count and top {campaign.match_config.preview_count} matches: investor name and firm, {campaign.match_config.flow === "review" ? "what each matched on" : "type, sector, stage fit, match %"}</li>
           <li>− Contact details (email, phone, LinkedIn) hidden</li>
           <li>= Existing footer with unsubscribe and suppression</li>
         </ul>
@@ -891,8 +918,10 @@ function StepResults({ campaign, onCampaign, onError }: { campaign: MatchCampaig
     ["Founders emailed", r.emailed || null],
     ["Opened", r.opened],
     ["Opened match page", r.pageOpened],
-    ["Clicked Schedule a call", r.callClicks],
-    ["Booked a call", r.booked],
+    ...(campaign.match_config.flow === "review" ? ([["Viewed an investor profile", r.profileViewed]] as Array<[string, number | null]>) : []),
+    [campaign.match_config.flow === "review" ? "Clicked Pick a time" : "Clicked Schedule a call", r.callClicks],
+    [campaign.match_config.flow === "review" ? "Booked a match review" : "Booked a call", r.booked],
+    ...(campaign.match_config.flow === "review" ? ([["Sent the profile follow up", r.followUps]] as Array<[string, number | null]>) : []),
     ["Clicked Choose a plan", r.introClicks],
     ["Chose a plan", r.plans],
     ["Requested introduction", r.introsRequested],

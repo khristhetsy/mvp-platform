@@ -10,7 +10,7 @@
  * Keys are POST-tokenized (split on , ; / |), so "AI/ML" is matched as the
  * separate tokens "ai" and "ml", and "Technology/Web" as "technology" + "web".
  */
-const SECTOR_FAMILY: Record<string, string> = {
+export const SECTOR_FAMILY: Record<string, string> = {
   // ── Technology ────────────────────────────────────────────────────────────
   ai: "technology",
   ml: "technology",
@@ -89,7 +89,7 @@ const SECTOR_FAMILY: Record<string, string> = {
   hospitality: "agriculture",
 };
 
-function tokenize(values: string[]): string[] {
+export function tokenize(values: string[]): string[] {
   return values.flatMap((value) =>
     value
       .trim()
@@ -101,7 +101,7 @@ function tokenize(values: string[]): string[] {
 }
 
 /** The family a sector token belongs to, or the token itself if it's unmapped. */
-function familyOf(token: string): string {
+export function familyOf(token: string): string {
   return SECTOR_FAMILY[token] ?? token;
 }
 

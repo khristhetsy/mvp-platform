@@ -11,7 +11,8 @@ import { isUnsubscribed } from "@/lib/marketing/contacts";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
-import { renderFounderEmail, renderSubject, DEFAULT_SUBJECT } from "./email";
+import { renderFollowUpEmail, renderFounderEmail, renderReviewEmail, renderSubject, DEFAULT_SUBJECT, REVIEW_SUBJECT, UNNAMED } from "./email";
+import { investorIdentity } from "./matcher";
 import { investorNetworkCount, networkLabel } from "./investors";
 import { makeFounderToken } from "./token";
 import { getMatchCampaign, type MatchCampaignRow } from "./store";
@@ -46,8 +47,9 @@ type FounderSendRow = {
 export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRow, ctx: SendContext): { subject: string; html: string } {
   const token = makeFounderToken(f.id);
   const company = f.company?.trim() || "your company";
-  const subject = renderSubject(campaign.subject_override || DEFAULT_SUBJECT, { matchCount: f.match_count, company });
-  const html = renderFounderEmail({
+  const review = campaign.match_config.flow === "review";
+  const subject = renderSubject(campaign.subject_override || (review ? REVIEW_SUBJECT : DEFAULT_SUBJECT), { matchCount: f.match_count, company });
+  const base = {
     company,
     industry: f.industry,
     stages: f.funding_stage ? f.funding_stage.split(", ").filter(Boolean) : [],
@@ -55,14 +57,17 @@ export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRo
     top: (f.top_matches ?? []).slice(0, campaign.match_config.preview_count),
     networkLabel: ctx.network,
     basicPrice: ctx.basicPrice,
-    links: {
-      matches: `${appUrl()}/matches/${token}`,
-      call: `${appUrl()}/mc/${token}?a=call`,
-      plan: `${appUrl()}/mc/${token}?a=intro`,
-      privacy: `${appUrl()}/privacy`,
-    },
     postalAddress: postalAddress(),
-  });
+  };
+  const links = {
+    matches: `${appUrl()}/matches/${token}`,
+    call: `${appUrl()}/mc/${token}?a=call`,
+    plan: `${appUrl()}/mc/${token}?a=intro`,
+    privacy: `${appUrl()}/privacy`,
+  };
+  const html = review
+    ? renderReviewEmail({ ...base, visibleCount: campaign.match_config.visible_count, links: { ...links, profile: (n: number) => `${appUrl()}/matches/${token}/i/${n}` } })
+    : renderFounderEmail({ ...base, links });
   return { subject, html };
 }
 
@@ -243,3 +248,86 @@ export async function previewFounderEmail(campaignId: string, campaignFounderId:
   return buildFounderMessage(campaign, data as FounderSendRow, await sendContext());
 }
 
+
+/** Founders followed up per cron pass. */
+const FOLLOW_UP_BATCH = 50;
+const DAY_MS = 86_400_000;
+
+/**
+ * The one follow up email of the review flow: a founder who opened an investor
+ * profile at least 24 hours ago, has not booked a match review or started a
+ * plan, and has not been followed up yet, gets one email naming the investor
+ * they viewed last. Only real sends (not dry runs or internal addresses), only
+ * review flow campaigns, never to an unsubscribed address. Runs on the 15
+ * minute marketing cron.
+ */
+export async function sendMatchFollowUps(now: Date = new Date()): Promise<{ sent: number; skipped: number; failed: number }> {
+  const db = marketingDb();
+  const cutoff = new Date(now.getTime() - DAY_MS).toISOString();
+  const { data } = await db
+    .from("match_campaign_founders")
+    .select("id, campaign_id, email, company")
+    .eq("send_status", "sent")
+    .not("first_profile_view_at", "is", null)
+    .lte("first_profile_view_at", cutoff)
+    .is("booked_at", null)
+    .is("plan_started_at", null)
+    .is("followup_sent_at", null)
+    .order("first_profile_view_at", { ascending: true })
+    .limit(FOLLOW_UP_BATCH);
+  const rows = (data ?? []) as Array<{ id: string; campaign_id: string; email: string | null; company: string | null }>;
+  let sent = 0, skipped = 0, failed = 0;
+  const campaigns = new Map<string, MatchCampaignRow | null>();
+  for (const f of rows) {
+    const stamp = new Date().toISOString();
+    if (!campaigns.has(f.campaign_id)) campaigns.set(f.campaign_id, await getMatchCampaign(f.campaign_id));
+    const campaign = campaigns.get(f.campaign_id) ?? null;
+    // Mark first, so a failure below never sends twice.
+    await db.from("match_campaign_founders").update({ followup_sent_at: stamp }).eq("id", f.id).is("followup_sent_at", null);
+    if (!campaign || campaign.match_config.flow !== "review" || campaign.match_config.dry_run || !f.email || (await isUnsubscribed(f.email)) || isInternalAccount({ email: f.email, role: "founder" })) {
+      skipped++;
+      continue;
+    }
+    const { data: view } = await db
+      .from("match_campaign_profile_views")
+      .select("match_id")
+      .eq("campaign_founder_id", f.id)
+      .order("viewed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const matchId = (view as { match_id: string } | null)?.match_id;
+    let investorName = UNNAMED;
+    if (matchId) {
+      const { data: m } = await db.from("match_campaign_matches").select("investor_contact_id").eq("id", matchId).maybeSingle();
+      const contactId = (m as { investor_contact_id: string } | null)?.investor_contact_id;
+      if (contactId) {
+        const { data: c } = await db.from("crm_contacts").select("name, company").eq("id", contactId).maybeSingle();
+        const who = c as { name: string | null; company: string | null } | null;
+        investorName = investorIdentity(who?.name, who?.company).investor_name ?? UNNAMED;
+      }
+    }
+    const token = makeFounderToken(f.id);
+    const { subject, html } = renderFollowUpEmail({
+      company: f.company?.trim() || "your company",
+      investorName,
+      links: { call: `${appUrl()}/mc/${token}?a=call`, privacy: `${appUrl()}/privacy` },
+      postalAddress: postalAddress(),
+    });
+    const result = await sendMarketingEmail({
+      to: f.email,
+      first_name: null,
+      company: f.company,
+      from_name: campaign.from_name,
+      from_email: campaign.from_email,
+      reply_to: campaign.reply_to,
+      subject,
+      html_body: html,
+      text_body: null,
+      unsubscribe_token: makeUnsubscribeToken(f.email),
+    });
+    if (result.ok) sent++;
+    else failed++;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return { sent, skipped, failed };
+}

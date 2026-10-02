@@ -3,6 +3,8 @@ import { withCronGate } from "@/lib/cron/gate";
 import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
 import { sendCampaign } from "@/lib/marketing/campaigns";
+import { sendMatchFollowUps } from "@/lib/marketing/match-campaign/send";
+import { matchCampaignsEnabled } from "@/lib/marketing/match-campaign/flag";
 
 // Called by cron or admin trigger — fires campaigns whose scheduled_at is in the past
 async function scheduledGET(req: NextRequest): Promise<NextResponse> {
@@ -32,7 +34,11 @@ async function scheduledGET(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  return NextResponse.json({ ok: true, processed });
+  // Match campaign review flow: one follow up per founder who viewed a profile
+  // a day ago and has not booked or started a plan.
+  const followUps = matchCampaignsEnabled() ? await sendMatchFollowUps().catch(() => null) : null;
+
+  return NextResponse.json({ ok: true, processed, followUps });
 }
 
 // POST — admin manual trigger (no cron auth required, uses session auth)

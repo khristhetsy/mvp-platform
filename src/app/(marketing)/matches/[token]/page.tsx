@@ -10,6 +10,7 @@ import { UNNAMED } from "@/lib/marketing/match-campaign/email";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { ExpiredLink, ReviewMatchesPage } from "./review-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,13 @@ export default async function FounderMatchPage({
   const isPreview = preview === "1";
   const [page, network, paid] = await Promise.all([loadFounderPage(id, { track: !isPreview }), investorNetworkCount(), isPreview ? false : paidFounder()]);
   if (!page) notFound();
+
+  // Review flow campaigns: the match review layout (open matches by name, the
+  // rest locked, booking a match review as the primary action).
+  if (page.flow === "review") {
+    if (page.expired && !isPreview) return <ExpiredLink token={token} />;
+    return <ReviewMatchesPage token={token} page={page} paid={paid} />;
+  }
 
   const meta = [page.industry, page.stages.map(stageLabel).join(", ")].filter(Boolean).join(" · ");
   const hidden = Math.max(0, page.matchCount - page.matches.length);
