@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { getContactProfile, appendContactNote, updateContact } from "@/lib/sales/contacts";
+import { getContactProfile, appendContactNote, updateContact, replaceContactNotes, NoteLogConflictError } from "@/lib/sales/contacts";
 import { getSalesScope } from "@/lib/sales/scope";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 
@@ -92,5 +92,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Save failed." }, { status: 500 });
+  }
+}
+
+const replaceSchema = z.object({
+  notes: z.string().max(100000),
+  expected: z.string().max(100000),
+  action: z.enum(["edit", "delete", "undo"]),
+});
+const REPLACE_SUMMARY = { edit: "Edited a note", delete: "Deleted a note", undo: "Undid a note change" } as const;
+
+// PUT /api/sales/contacts/[id] — rewrite the internal notes (Note Log edit, delete, undo).
+// Rejected with 409 if the notes changed since the editor loaded them.
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const profile = await requireRole(["admin", "analyst"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
+  const { id } = await params;
+  const parsed = replaceSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  const scope = await getSalesScope(profile);
+  if (!scope.isManager) {
+    const existing = await getContactProfile(id);
+    const c = existing?.contact;
+    if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  try {
+    await replaceContactNotes(id, parsed.data.notes, parsed.data.expected, profile.id, REPLACE_SUMMARY[parsed.data.action]);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    const status = err instanceof NoteLogConflictError ? 409 : 500;
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Save failed." }, { status });
   }
 }

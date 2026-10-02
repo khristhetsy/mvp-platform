@@ -7,6 +7,7 @@ import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabel } from "@/lib/sales/investor-profile";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
+import { NoteLogEntries } from "./NoteLogEntries";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
 
@@ -1254,7 +1255,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                           <button type="button" onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
                           {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
                         </div>
-                        {savedNotes ? <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, marginTop: 8 }}>{savedNotes}</div> : null}
+                        <NoteLogEntries contactId={contact.id} notes={savedNotes} onChange={setSavedNotes} />
                       </div>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log notes{odooNotes.length ? ` · ${odooNotes.length} from Odoo` : ""}</div>

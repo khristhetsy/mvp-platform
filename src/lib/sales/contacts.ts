@@ -297,3 +297,27 @@ export async function appendContactNote(id: string, text: string, userId: string
   if (error) throw new Error(error.message);
   await logActivity({ kind: "note", summary: text.trim().slice(0, 200), actorId: userId, contactCrmId: id });
 }
+
+export class NoteLogConflictError extends Error {}
+
+/**
+ * Replace the whole internal notes text, but only if it still equals `expected`
+ * (what the editor last saw). Used by Note Log edit, delete and undo. The compare
+ * happens inside the UPDATE, so two people editing at once can't overwrite each other.
+ */
+export async function replaceContactNotes(
+  id: string, notes: string, expected: string, userId: string | null, summary: string,
+): Promise<void> {
+  const { data: c } = await db().from("crm_contacts").select("source, external_id").eq("id", id).maybeSingle();
+  if (!c) throw new Error("Contact not found.");
+  const { data, error } = await db()
+    .from("crm_contact_annotations")
+    .update({ notes, updated_by: userId, updated_at: new Date().toISOString() })
+    .eq("source", c.source)
+    .eq("external_id", c.external_id)
+    .eq("notes", expected)
+    .select("external_id");
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new NoteLogConflictError("These notes changed since you opened the page. Reload and try again.");
+  await logActivity({ kind: "note", summary, actorId: userId, contactCrmId: id });
+}
