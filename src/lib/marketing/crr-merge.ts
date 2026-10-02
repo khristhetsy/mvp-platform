@@ -14,24 +14,38 @@ export function usesCrrTokens(...texts: (string | null | undefined)[]): boolean 
 export type CrrScoreRow = { company_id: string; effective_score: number | null; created_at: string };
 export type CrrChange = { starting_crr: string; current_crr: string };
 
+/** Smallest CRR rise worth quoting back to a founder; smaller moves are skipped. */
+export const MIN_CRR_GAIN = 10;
+
 /**
- * Starting CRR = the company's first recorded score, current CRR = its latest.
- * When the founder has several companies, the one scored most recently wins.
- * Returns null unless the rating actually went up, so the "went from X to Y"
- * line is never sent to a founder whose score is flat, down, or unscored.
+ * Starting CRR = a company's first recorded score, current CRR = its latest.
+ * When the founder has several companies, the one with the largest rise wins
+ * (so an auto-created placeholder company never hides the real one; ties go
+ * to the higher current score). Returns null unless the rise is at least
+ * MIN_CRR_GAIN points.
  */
 export function computeCrrChange(rows: CrrScoreRow[]): CrrChange | null {
+  const byCompany = new Map<string, number[]>();
   const scored = rows
     .filter((r) => typeof r.effective_score === "number" && Number.isFinite(r.effective_score))
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  if (scored.length < 2) return null;
-  const companyId = scored[scored.length - 1].company_id;
-  const own = scored.filter((r) => r.company_id === companyId);
-  if (own.length < 2) return null;
-  const start = Math.round(own[0].effective_score as number);
-  const current = Math.round(own[own.length - 1].effective_score as number);
-  if (current <= start) return null;
-  return { starting_crr: String(start), current_crr: String(current) };
+  for (const r of scored) {
+    const list = byCompany.get(r.company_id) ?? [];
+    list.push(Math.round(r.effective_score as number));
+    byCompany.set(r.company_id, list);
+  }
+  let best: { start: number; current: number } | null = null;
+  for (const list of byCompany.values()) {
+    if (list.length < 2) continue;
+    const start = list[0];
+    const current = list[list.length - 1];
+    const gain = current - start;
+    if (gain < MIN_CRR_GAIN) continue;
+    if (!best || gain > best.current - best.start || (gain === best.current - best.start && current > best.current)) {
+      best = { start, current };
+    }
+  }
+  return best ? { starting_crr: String(best.start), current_crr: String(best.current) } : null;
 }
 
 /** Sample values for [TEST] sends, which go to staff addresses with no CRR history. */
