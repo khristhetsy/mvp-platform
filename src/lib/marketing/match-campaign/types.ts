@@ -49,6 +49,17 @@ export type MatchConfig = {
   weights?: Record<string, number> | null;
   /** Campaign cost inputs for ROI, entered by admin on Results. */
   cost?: { send_cost_usd?: number | null; admin_hours?: number | null; hourly_rate_usd?: number | null } | null;
+  /**
+   * Follow up sequence (needs MATCH_SEQUENCE_ENABLED=true). Off: the campaign
+   * sends exactly as before, one email, no follow ups.
+   */
+  sequence_enabled: boolean;
+  /** Most founders per cohort (industry, stage, region); bigger cohorts split into parts. */
+  cohort_cap: number;
+  /** Percent of each cohort held back to the single Day 0 email, for the split test. 0 turns the test off. */
+  holdout_pct: number;
+  /** Cohorts the admin left out of this campaign. */
+  excluded_cohorts: string[];
 };
 
 /**
@@ -122,6 +133,10 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   call_url: DEFAULT_CALL_PATH,
   weights: null,
   cost: null,
+  sequence_enabled: false,
+  cohort_cap: 50,
+  holdout_pct: 50,
+  excluded_cohorts: [],
 };
 
 export function isMatchCampaign(c: { match_config?: unknown } | null | undefined): boolean {
@@ -143,5 +158,11 @@ export function readMatchConfig(raw: unknown): MatchConfig {
     call_url: typeof r.call_url === "string" && r.call_url.trim() ? r.call_url.trim() : DEFAULT_MATCH_CONFIG.call_url,
     weights: r.weights ?? null,
     cost: r.cost ?? null,
+    sequence_enabled: typeof r.sequence_enabled === "boolean" ? r.sequence_enabled : DEFAULT_MATCH_CONFIG.sequence_enabled,
+    cohort_cap:
+      typeof r.cohort_cap === "number" && Number.isFinite(r.cohort_cap) ? Math.min(100, Math.max(10, Math.round(r.cohort_cap))) : DEFAULT_MATCH_CONFIG.cohort_cap,
+    holdout_pct:
+      typeof r.holdout_pct === "number" && Number.isFinite(r.holdout_pct) ? Math.min(90, Math.max(0, Math.round(r.holdout_pct))) : DEFAULT_MATCH_CONFIG.holdout_pct,
+    excluded_cohorts: Array.isArray(r.excluded_cohorts) ? r.excluded_cohorts.filter((x): x is string => typeof x === "string") : [],
   };
 }

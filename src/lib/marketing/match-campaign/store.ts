@@ -20,6 +20,7 @@ import {
   MAX_CAMPAIGN_FOUNDERS,
 } from "./types";
 import { DEFAULT_SUBJECT } from "./email";
+import { matchSequenceEnabled } from "./flag";
 
 /** Matches stored per founder. The full count is kept in match_count. */
 export const STORED_MATCHES_PER_FOUNDER = 50;
@@ -62,7 +63,12 @@ export async function createMatchCampaign(
   createdBy: string | null,
 ): Promise<MatchCampaignRow> {
   const db = marketingDb();
-  const config: MatchConfig = { ...DEFAULT_MATCH_CONFIG, ...(input.call_url?.trim() ? { call_url: input.call_url.trim() } : {}) };
+  const config: MatchConfig = {
+    ...DEFAULT_MATCH_CONFIG,
+    ...(input.call_url?.trim() ? { call_url: input.call_url.trim() } : {}),
+    // New campaigns start with follow ups on when the feature is enabled; existing campaigns keep theirs off.
+    sequence_enabled: matchSequenceEnabled(),
+  };
   const { data, error } = await db
     .from("marketing_campaigns")
     .insert({
@@ -414,7 +420,7 @@ export type RunBatch = { summary: RunSummary; processed: number; next: string | 
 type Db = ReturnType<typeof marketingDb>;
 
 /** Name and firm for each investor contact id, as a founder sees them. Batched. */
-async function investorNames(db: Db, ids: readonly string[]): Promise<Map<string, { investor_name: string | null; investor_firm: string | null }>> {
+export async function investorNames(db: Db, ids: readonly string[]): Promise<Map<string, { investor_name: string | null; investor_firm: string | null }>> {
   const out = new Map<string, { investor_name: string | null; investor_firm: string | null }>();
   const unique = [...new Set(ids)];
   for (let i = 0; i < unique.length; i += 200) {
@@ -590,6 +596,8 @@ export type FounderPageData = {
   founderContactId: string;
   email: string | null;
   callUrl: string;
+  /** match_campaign_matches ids, same order as matches (for profile view tracking). */
+  matchIds: string[];
 };
 
 /** Everything the public match page shows: investor name and firm, never contact details. */
@@ -606,7 +614,7 @@ export async function loadFounderPage(campaignFounderId: string, opts: { track?:
     getMatchCampaign(row.campaign_id),
     db
       .from("match_campaign_matches")
-      .select("investor_contact_id, investor_type, sectors, stages, check_band, match_score")
+      .select("id, investor_contact_id, investor_type, sectors, stages, check_band, match_score")
       .eq("campaign_founder_id", row.id)
       .eq("removed", false)
       .order("match_score", { ascending: false }),
@@ -624,6 +632,7 @@ export async function loadFounderPage(campaignFounderId: string, opts: { track?:
     founderContactId: row.founder_contact_id,
     email: row.email,
     callUrl: campaign?.match_config.call_url ?? DEFAULT_MATCH_CONFIG.call_url,
+    matchIds: ((m ?? []) as Array<{ id: string }>).map((r) => r.id),
   };
 }
 

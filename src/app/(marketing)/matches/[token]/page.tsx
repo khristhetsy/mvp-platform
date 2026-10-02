@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MatchCard } from "@/app/fit/FitFunnelClient";
+import { TrackedMatch } from "./TrackedMatch";
+import { matchSequenceEnabled } from "@/lib/marketing/match-campaign/flag";
 import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
 import { loadFounderPage } from "@/lib/marketing/match-campaign/store";
 import { investorNetworkCount, networkLabel } from "@/lib/marketing/match-campaign/investors";
@@ -57,6 +58,7 @@ export default async function FounderMatchPage({
   const hidden = Math.max(0, page.matchCount - page.matches.length);
   const callHref = `/mc/${token}?a=call`;
   const planHref = `/mc/${token}?a=intro`;
+  const trackViews = !isPreview && matchSequenceEnabled();
 
   return (
     <section className="bg-site-paper px-4 py-12 sm:px-6">
@@ -80,7 +82,10 @@ export default async function FounderMatchPage({
         <div className="mt-6 space-y-3">
           {page.matches.map((m, i) => (
             <div key={i}>
-              <MatchCard
+              <TrackedMatch
+                token={token}
+                matchId={page.matchIds[i] ?? null}
+                track={trackViews}
                 m={{
                   contactId: `match-${i}`,
                   company: [m.investor_name || UNNAMED, m.investor_firm].filter(Boolean).join(" · "),
