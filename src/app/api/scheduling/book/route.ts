@@ -134,7 +134,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // (matched on normalised email; first-touch lead source preserved). Unchanged
     // — the funnel path keeps behaving exactly as it did. Best-effort.
     if (fitSessionId) {
-      await handoffFitSession(fitSessionId, { name: parsed.data.name, email: parsed.data.email }).catch(() => {});
+      await handoffFitSession(fitSessionId, { name: parsed.data.name, email: parsed.data.email, phone: parsed.data.phone ?? null, company: parsed.data.company ?? null }).catch(() => {});
     }
 
     return NextResponse.json({ event: result.event, meetUrl: result.meetUrl });

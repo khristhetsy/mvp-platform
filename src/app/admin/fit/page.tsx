@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { getFunnelStats } from "@/lib/fit/analytics";
+import { FitBookingFormEditor } from "./FitBookingFormEditor";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Fit funnel" };
@@ -66,6 +67,8 @@ export default async function AdminFitPage() {
             </div>
           </>
         )}
+
+        <FitBookingFormEditor />
       </div>
     </AppShell>
   );

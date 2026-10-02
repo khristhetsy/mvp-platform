@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Q2_RAISE, Q5_INVESTOR_TYPE, type FitAnswers } from "@/lib/fit/options";
 import { groupSectors, valuesForChips, type SectorGroup } from "@/lib/fit/sector-groups";
 import type { PublicMatchResponse, PublicMatch } from "@/lib/fit/public-match";
+import { FIT_BOOKING_FORM_DEFAULTS, resolveFitBookingForm, type FitBookingForm } from "@/lib/fit/booking-form-config";
 
 /**
  * /fit v2: the Match Review flow (A/B test arm; v1 is FitFunnelClient).
@@ -350,8 +351,15 @@ export function FitFunnelV2() {
       ) : top.length > 0 ? (
         <>
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-wider text-emerald-700">Your top fits</p>
-            <h1 className="mt-1 text-[24px] font-bold leading-tight tracking-tight text-slate-900">{top.length} investor{top.length === 1 ? "" : "s"} fit your raise</h1>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-emerald-700">Your top fits</p>
+                <h1 className="mt-1 text-[24px] font-bold leading-tight tracking-tight text-slate-900">{top.length} investor{top.length === 1 ? "" : "s"} fit your raise</h1>
+              </div>
+              <span className="mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/25" /> Live data
+              </span>
+            </div>
             <p className="mt-1 text-[13px] text-slate-500">{scope}</p>
             <p className="mt-1 text-[13px] text-slate-500">Only investors whose sector fits, and whose check size fits when they state one.</p>
           </div>
@@ -416,9 +424,25 @@ function ReviewBooker({ scope, onBack, onBooked }: { scope: string; onBack: () =
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [form, setForm] = useState<FitBookingForm>(FIT_BOOKING_FORM_DEFAULTS);
+  const [replies, setReplies] = useState<Record<string, string[]>>({});
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" : "UTC";
+
+  useEffect(() => {
+    fetch("/api/fit/booking-form").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (d?.form) setForm(resolveFitBookingForm(d.form));
+    }).catch(() => {});
+  }, []);
+
+  const cf = form.contactFields;
+  const setReply = (id: string, value: string, mode: "set" | "toggle") => setReplies((p) => {
+    const cur = p[id] ?? [];
+    if (mode === "set") return { ...p, [id]: value ? [value] : [] };
+    return { ...p, [id]: cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value] };
+  });
 
   useEffect(() => {
     const from = new Date();
@@ -444,6 +468,8 @@ function ReviewBooker({ scope, onBack, onBooked }: { scope: string; onBack: () =
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!pick) return;
+    const missing = form.questions.find((q) => q.required && !(replies[q.id] ?? []).some((v) => v.trim()));
+    if (missing) { setError(`Answer "${missing.label}" to book.`); return; }
     setSending(true);
     setError(null);
     try {
@@ -457,11 +483,15 @@ function ReviewBooker({ scope, onBack, onBooked }: { scope: string; onBack: () =
           timezone: tz,
           name: name.trim(),
           email: email.trim(),
-          company: companyName.trim() || undefined,
+          phone: cf.phone.collect ? phone.trim() || undefined : undefined,
+          company: cf.company.collect ? companyName.trim() || undefined : undefined,
           note: "Match Review booked from icapos.com/fit",
           answers: [
             { label: "Booked from", value: "Fit match review" },
             { label: "Raise scope", value: scope.slice(0, 1000) },
+            ...form.questions
+              .map((q) => ({ label: q.label.slice(0, 300), value: (replies[q.id] ?? []).map((v) => v.trim()).filter(Boolean).join(", ").slice(0, 1000) }))
+              .filter((a) => a.value),
           ],
         }),
       });
@@ -517,17 +547,45 @@ function ReviewBooker({ scope, onBack, onBooked }: { scope: string; onBack: () =
       <form onSubmit={submit} className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4">
           <div>
-            <label htmlFor="fr-name" className="text-[13px] font-semibold text-slate-800">Name</label>
+            <label htmlFor="fr-name" className="text-[13px] font-semibold text-slate-800">{cf.name.label}</label>
             <input id="fr-name" required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="mt-1 h-12 w-full rounded-xl border border-slate-300 px-3 text-[15px] focus:border-indigo-500 focus:outline-none" />
           </div>
           <div>
-            <label htmlFor="fr-email" className="text-[13px] font-semibold text-slate-800">Work email</label>
+            <label htmlFor="fr-email" className="text-[13px] font-semibold text-slate-800">{cf.email.label}</label>
             <input id="fr-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className="mt-1 h-12 w-full rounded-xl border border-slate-300 px-3 text-[15px] focus:border-indigo-500 focus:outline-none" />
           </div>
-          <div>
-            <label htmlFor="fr-company" className="text-[13px] font-semibold text-slate-800">Company</label>
-            <input id="fr-company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} autoComplete="organization" className="mt-1 h-12 w-full rounded-xl border border-slate-300 px-3 text-[15px] focus:border-indigo-500 focus:outline-none" />
-          </div>
+          {cf.phone.collect ? (
+            <div>
+              <label htmlFor="fr-phone" className="text-[13px] font-semibold text-slate-800">{cf.phone.label}{cf.phone.required ? "" : <span className="font-normal text-slate-400"> (optional)</span>}</label>
+              <input id="fr-phone" type="tel" required={cf.phone.required} maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" className="mt-1 h-12 w-full rounded-xl border border-slate-300 px-3 text-[15px] focus:border-indigo-500 focus:outline-none" />
+            </div>
+          ) : null}
+          {cf.company.collect ? (
+            <div>
+              <label htmlFor="fr-company" className="text-[13px] font-semibold text-slate-800">{cf.company.label}{cf.company.required ? "" : <span className="font-normal text-slate-400"> (optional)</span>}</label>
+              <input id="fr-company" required={cf.company.required} maxLength={200} value={companyName} onChange={(e) => setCompanyName(e.target.value)} autoComplete="organization" className="mt-1 h-12 w-full rounded-xl border border-slate-300 px-3 text-[15px] focus:border-indigo-500 focus:outline-none" />
+            </div>
+          ) : null}
+          {form.questions.map((q) => (
+            <fieldset key={q.id}>
+              <legend className="text-[13px] font-semibold text-slate-800">{q.label}{q.required ? "" : <span className="font-normal text-slate-400"> (optional)</span>}</legend>
+              {q.type === "short_text" ? (
+                <input aria-label={q.label} required={q.required} maxLength={1000} value={(replies[q.id] ?? [""])[0] ?? ""} onChange={(e) => setReply(q.id, e.target.value, "set")} className="mt-1 h-12 w-full rounded-xl border border-slate-300 px-3 text-[15px] focus:border-indigo-500 focus:outline-none" />
+              ) : (
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {q.options.map((o) => {
+                    const on = (replies[q.id] ?? []).includes(o);
+                    return (
+                      <button key={o} type="button" aria-pressed={on} onClick={() => setReply(q.id, on && q.type === "single" ? "" : o, q.type === "single" ? "set" : "toggle")}
+                        className={`min-h-10 rounded-xl border px-3 text-[14px] ${on ? "border-2 border-indigo-600 bg-indigo-50 font-semibold text-indigo-800" : "border-slate-200 bg-white text-slate-800"}`}>
+                        {o}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </fieldset>
+          ))}
         </div>
         {error ? <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-[13px] text-red-800" role="alert">{error}</p> : null}
         <button type="submit" disabled={!pick || sending}
