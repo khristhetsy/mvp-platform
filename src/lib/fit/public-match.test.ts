@@ -12,11 +12,15 @@ const row = (over: Partial<MatchResult> = {}): MatchResult => ({
 });
 
 describe("toPublicMatch", () => {
-  it("never exposes the firm name or contact id", () => {
+  it("shows the firm name but never the contact id", () => {
     const p = toPublicMatch(row(), answers, 0);
-    expect(JSON.stringify(p)).not.toContain("Secret Capital");
+    expect(p.company).toBe("Secret Capital LLC");
     expect(JSON.stringify(p)).not.toContain("c1");
     expect(p.key).toBe("m1");
+  });
+
+  it("returns null company when the firm name is blank", () => {
+    expect(toPublicMatch(row({ company: "  " }), answers, 0).company).toBeNull();
   });
 
   it("describes type, the overlapping sector, check size and stage", () => {
@@ -28,7 +32,7 @@ describe("toPublicMatch", () => {
 
   it("falls back to a generic label when type and data are missing", () => {
     const p = toPublicMatch(row({ types: [], sectors: [], checkSize: null, stage: null }), answers, 2);
-    expect(p).toEqual({ key: "m3", title: "Investor", detail: "", fit: 88 });
+    expect(p).toEqual({ key: "m3", company: "Secret Capital LLC", title: "Investor", detail: "", fit: 88 });
   });
 });
 

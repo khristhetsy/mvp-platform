@@ -8,8 +8,8 @@ import type { PublicMatchResponse, PublicMatch } from "@/lib/fit/public-match";
 /**
  * /fit v2: the Match Review flow (A/B test arm; v1 is FitFunnelClient).
  *
- * Four questions → the top five fits with names held back → one ask: book a
- * 15 minute Match Review where the team names all five. Bookings go through the
+ * Four questions → the top five fits by firm name → one ask: book a 15 minute
+ * Match Review where the team makes warm introductions to all five. Bookings go through the
  * existing scheduler API, which attributes them to this funnel session via the
  * fs_session cookie and hands the lead to Sales Hub.
  */
@@ -71,13 +71,23 @@ function FitRing({ value }: { value: number }) {
   );
 }
 
-function LockedMatchCard({ m }: { m: PublicMatch }) {
+function initials(name: string): string {
+  const words = name.replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+}
+
+function MatchCard({ m }: { m: PublicMatch }) {
+  const sub = [m.title, m.detail].filter(Boolean).join(" · ");
   return (
     <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><LockIcon /></span>
+      {m.company ? (
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[13px] font-semibold text-indigo-700" aria-hidden="true">{initials(m.company)}</span>
+      ) : (
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><LockIcon /></span>
+      )}
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-semibold text-slate-900">{m.title}</p>
-        {m.detail ? <p className="mt-0.5 text-[12px] text-slate-500">{m.detail}</p> : null}
+        <p className="text-[14px] font-semibold text-slate-900">{m.company ?? m.title}</p>
+        <p className="mt-0.5 text-[12px] text-slate-500">{m.company ? sub : m.detail}</p>
       </div>
       <FitRing value={m.fit} />
     </div>
@@ -178,13 +188,13 @@ export function FitFunnelV2() {
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="font-mono text-[11px] uppercase tracking-wider text-slate-500">What your result looks like</p>
           <div className="mt-2.5 flex items-center gap-3">
-            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><LockIcon size={18} /></span>
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[13px] font-semibold text-indigo-700" aria-hidden="true">VF</span>
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold text-slate-900">Venture fund, your sector</p>
-              <p className="text-[13px] text-slate-500">Check size, stage and fit score</p>
+              <p className="text-[15px] font-semibold text-slate-900">Investor firm name</p>
+              <p className="text-[13px] text-slate-500">Type, your sector, check size and fit score</p>
             </div>
           </div>
-          <p className="mt-2.5 text-[12px] text-slate-500">Names revealed on your match review call.</p>
+          <p className="mt-2.5 text-[12px] text-slate-500">Warm introductions on your match review call.</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <Progress n={1} />
@@ -324,7 +334,7 @@ export function FitFunnelV2() {
         <p className="mt-2 text-[15px] text-slate-600">{when}. The calendar invite with the video link is on its way to your inbox.</p>
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-[13px] leading-relaxed text-emerald-900">
           <p className="font-semibold">What you get on the call</p>
-          <p className="mt-1">Your matches by name. Who to approach first and why. Your raise scope is saved, so nothing gets asked twice.</p>
+          <p className="mt-1">Warm introductions to your matches. Who to approach first and why. Your raise scope is saved, so nothing gets asked twice.</p>
         </div>
       </div>
     );
@@ -345,10 +355,10 @@ export function FitFunnelV2() {
             <p className="mt-1 text-[13px] text-slate-500">{scope}</p>
             <p className="mt-1 text-[13px] text-slate-500">Only investors whose sector fits, and whose check size fits when they state one.</p>
           </div>
-          <div className="flex flex-col gap-2">{top.map((m) => <LockedMatchCard key={m.key} m={m} />)}</div>
+          <div className="flex flex-col gap-2">{top.map((m) => <MatchCard key={m.key} m={m} />)}</div>
           <div className="rounded-2xl border-2 border-indigo-600 bg-white p-5">
-            <h2 className="text-[18px] font-bold text-slate-900">Get the names and how to approach each</h2>
-            <p className="mt-1.5 text-[14px] leading-relaxed text-slate-600">A {REVIEW_MINUTES} minute match review with our team. We name all {top.length}, and tell you who to approach first.</p>
+            <h2 className="text-[18px] font-bold text-slate-900">Get a warm intro, not a cold email</h2>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-slate-600">A {REVIEW_MINUTES} minute match review with our team. We introduce you to all {top.length} and tell you who to approach first.</p>
             <button type="button" onClick={() => { logEvent("fit_v2_book_view"); setStep("book"); }}
               className="mt-3 min-h-12 w-full rounded-xl bg-indigo-600 px-5 text-[16px] font-semibold text-white hover:bg-indigo-700">
               Book my match review
@@ -526,7 +536,7 @@ function ReviewBooker({ scope, onBack, onBooked }: { scope: string; onBack: () =
         </button>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-[13px] leading-relaxed text-emerald-900">
           <p className="font-semibold">What you get on the call</p>
-          <p className="mt-1">Your matches by name. Who to approach first and why. Your raise scope is saved, so nothing gets asked twice.</p>
+          <p className="mt-1">Warm introductions to your matches. Who to approach first and why. Your raise scope is saved, so nothing gets asked twice.</p>
         </div>
       </form>
     </div>

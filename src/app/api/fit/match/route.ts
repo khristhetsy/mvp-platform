@@ -29,8 +29,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   const sessionId = req.cookies.get("fs_session")?.value;
   if (sessionId) await setSnapshot(sessionId, result.matched_count, result.top).catch(() => {});
 
-  // v2: firm names stay server-side (they are revealed on the Match Review call);
-  // the snapshot above still records exactly who was matched, for the team.
+  // v2: firm names are shown; contact details stay server-side. The snapshot above
+  // still records exactly who was matched, for the team running the call.
   if (variant === "v2") return NextResponse.json(toPublicResponse(result, answers));
   return NextResponse.json(result);
 }
