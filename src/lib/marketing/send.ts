@@ -125,7 +125,7 @@ export async function sendMarketingEmail(
     const { loadCrrChangeForEmail } = await import("./crr-merge-db");
     const crr = (await loadCrrChangeForEmail(to)) ?? (isTest ? SAMPLE_CRR : null);
     if (!crr) {
-      return { resend_id: null, ok: false, error: `Skipped ${to}: no rising Capital Readiness Rating on record` };
+      return { resend_id: null, ok: false, error: `Skipped ${to}: no Capital Readiness Rating rise of 10+ points on record` };
     }
     vars.starting_crr = crr.starting_crr;
     vars.current_crr = crr.current_crr;

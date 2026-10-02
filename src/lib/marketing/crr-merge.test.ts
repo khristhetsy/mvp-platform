@@ -13,20 +13,27 @@ describe("usesCrrTokens", () => {
 });
 
 describe("computeCrrChange", () => {
-  it("uses the first and latest score of the most recently scored company", () => {
+  it("uses the company with the largest rise, not a newer placeholder", () => {
     const out = computeCrrChange([
-      row("a", 40, "2026-07-01"),
-      row("b", 30, "2026-07-02"),
-      row("a", 55, "2026-08-01"),
-      row("b", 71.6, "2026-09-01"),
+      row("real", 28, "2026-07-01"),
+      row("real", 76, "2026-08-01"),
+      row("placeholder", 1, "2026-09-01"),
+      row("placeholder", 3, "2026-09-20"),
     ]);
-    expect(out).toEqual({ starting_crr: "30", current_crr: "72" });
+    expect(out).toEqual({ starting_crr: "28", current_crr: "76" });
   });
-  it("returns null for a single score, a flat or falling score, or no scores", () => {
+  it("rounds scores", () => {
+    expect(computeCrrChange([row("a", 30.4, "2026-07-01"), row("a", 71.6, "2026-09-01")])).toEqual({ starting_crr: "30", current_crr: "72" });
+  });
+  it("returns null below the minimum gain, for one score, or no scores", () => {
+    expect(computeCrrChange([row("a", 7, "2026-07-01"), row("a", 8, "2026-08-01")])).toBeNull();
+    expect(computeCrrChange([row("a", 50, "2026-07-01"), row("a", 59, "2026-08-01")])).toBeNull();
     expect(computeCrrChange([row("a", 50, "2026-07-01")])).toBeNull();
-    expect(computeCrrChange([row("a", 60, "2026-07-01"), row("a", 60, "2026-08-01")])).toBeNull();
     expect(computeCrrChange([row("a", 70, "2026-07-01"), row("a", 50, "2026-08-01")])).toBeNull();
     expect(computeCrrChange([])).toBeNull();
+  });
+  it("accepts exactly the minimum gain", () => {
+    expect(computeCrrChange([row("a", 50, "2026-07-01"), row("a", 60, "2026-08-01")])).toEqual({ starting_crr: "50", current_crr: "60" });
   });
 });
 
