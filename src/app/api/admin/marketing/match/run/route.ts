@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorJson, guardMatchAdmin } from "@/lib/marketing/match-campaign/api-guard";
-import { listCampaignFounders, listFounderMatches, removeFounderMatch, runCampaignMatching } from "@/lib/marketing/match-campaign/store";
+import { hideInvestorFromFounders, listCampaignFounders, listFounderMatches, removeFounderMatch, runCampaignMatching } from "@/lib/marketing/match-campaign/store";
 
 export const dynamic = "force-dynamic";
 // One batch loads the investor network once and scores up to MATCH_BATCH founders.
@@ -36,13 +36,16 @@ export async function GET(request: Request) {
   }
 }
 
-// PATCH /api/admin/marketing/match/run — admin removes an investor from a founder's matches.
+// PATCH /api/admin/marketing/match/run — admin removes an investor from a founder's
+// matches. With hide: true the investor is also hidden from every founder (all
+// future matching runs skip them).
 export async function PATCH(request: Request) {
   const auth = await guardMatchAdmin();
   if ("error" in auth) return auth.error;
-  const body = (await request.json().catch(() => null)) as { match_id?: string } | null;
+  const body = (await request.json().catch(() => null)) as { match_id?: string; hide?: boolean } | null;
   if (!body?.match_id) return NextResponse.json({ error: "match_id is required." }, { status: 400 });
   try {
+    if (body.hide) await hideInvestorFromFounders(body.match_id);
     return NextResponse.json(await removeFounderMatch(body.match_id, auth.profile.id));
   } catch (err) {
     return errorJson(err, 400);

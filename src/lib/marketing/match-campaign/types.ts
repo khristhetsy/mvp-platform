@@ -20,6 +20,8 @@ export type ExcludedReason =
   | "eu_excluded"
   | "no_matches";
 
+export type MatchFlow = "plan" | "review";
+
 export type SendStatus = "pending" | "sent" | "failed" | "skipped" | "dry_run";
 
 /** marketing_campaigns.match_config. Non-null marks the campaign as type Match. */
@@ -45,6 +47,16 @@ export type MatchConfig = {
   dry_run: boolean;
   /** "Schedule a call with us" target. */
   call_url: string;
+  /**
+   * Email and match page layout. "plan": the original layout (Schedule a call
+   * and Choose a plan side by side, match % shown). "review": the match review
+   * flow, where the primary action is booking a free 15 minute match review and
+   * the plan is secondary. Campaigns created before this setting read as "plan",
+   * so live campaigns keep their layout; new campaigns start on "review".
+   */
+  flow: MatchFlow;
+  /** Review flow: matches open by name on the founder pages; the rest show as locked. */
+  visible_count: number;
   /** Engine weights at the time matching ran (snapshot, for the record). */
   weights?: Record<string, number> | null;
   /** Campaign cost inputs for ROI, entered by admin on Results. */
@@ -74,6 +86,8 @@ export type MaskedMatch = {
   investor_firm?: string | null;
   investor_type: string | null;
   sectors: string[];
+  /** The investor's sectors that produced the fit; shown as "Matched on". Absent on older snapshots. */
+  matched_sectors?: string[];
   stages: string[];
   check_band: string | null;
   match_score: number;
@@ -131,6 +145,8 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   exclude_eu: true,
   dry_run: true,
   call_url: DEFAULT_CALL_PATH,
+  flow: "review",
+  visible_count: 3,
   weights: null,
   cost: null,
   sequence_enabled: false,
@@ -156,6 +172,9 @@ export function readMatchConfig(raw: unknown): MatchConfig {
     exclude_eu: typeof r.exclude_eu === "boolean" ? r.exclude_eu : DEFAULT_MATCH_CONFIG.exclude_eu,
     dry_run: typeof r.dry_run === "boolean" ? r.dry_run : DEFAULT_MATCH_CONFIG.dry_run,
     call_url: typeof r.call_url === "string" && r.call_url.trim() ? r.call_url.trim() : DEFAULT_MATCH_CONFIG.call_url,
+    // Missing means a campaign from before the review flow: keep its layout.
+    flow: r.flow === "review" ? "review" : "plan",
+    visible_count: num(r.visible_count, DEFAULT_MATCH_CONFIG.visible_count),
     weights: r.weights ?? null,
     cost: r.cost ?? null,
     sequence_enabled: typeof r.sequence_enabled === "boolean" ? r.sequence_enabled : DEFAULT_MATCH_CONFIG.sequence_enabled,

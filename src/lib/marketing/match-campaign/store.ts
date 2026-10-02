@@ -8,6 +8,7 @@ import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import { checkFounder, canonicalStages, founderCompanyProfile } from "./fields";
 import { loadCampaignInvestors } from "./investors";
 import { investorIdentity, matchFounder, toMasked } from "./matcher";
+import { buildAdjacency, type Adjacency } from "./sector-tier";
 import {
   DEFAULT_MATCH_CONFIG,
   readMatchConfig,
@@ -16,10 +17,11 @@ import {
   type FounderType,
   type MaskedMatch,
   type MatchConfig,
+  type MatchFlow,
   type SendStatus,
   MAX_CAMPAIGN_FOUNDERS,
 } from "./types";
-import { DEFAULT_SUBJECT } from "./email";
+import { DEFAULT_SUBJECT, REVIEW_SUBJECT } from "./email";
 import { matchSequenceEnabled } from "./flag";
 
 /** Matches stored per founder. The full count is kept in match_count. */
@@ -78,7 +80,7 @@ export async function createMatchCampaign(
       reply_to: input.reply_to?.trim() || null,
       group_type: "founder",
       status: "draft",
-      subject_override: DEFAULT_SUBJECT,
+      subject_override: config.flow === "review" ? REVIEW_SUBJECT : DEFAULT_SUBJECT,
       match_config: config,
       ...(createdBy ? { created_by: createdBy } : {}),
     })
@@ -381,7 +383,9 @@ export type CampaignFounderRow = {
   send_status: SendStatus;
   sent_at: string | null;
   opened_page_at: string | null;
+  first_profile_view_at: string | null;
   clicked_call_at: string | null;
+  booked_at: string | null;
   clicked_intro_at: string | null;
   plan_started_at: string | null;
   founder_profile_id: string | null;
@@ -394,7 +398,7 @@ export async function listCampaignFounders(campaignId: string): Promise<Campaign
   for (let from = 0; ; from += 1000) {
     const { data, error } = await db
       .from("match_campaign_founders")
-      .select("id, founder_contact_id, email, company, industry, funding_stage, founder_type, match_count, top_matches, excluded_reason, send_status, sent_at, opened_page_at, clicked_call_at, clicked_intro_at, plan_started_at, founder_profile_id, send_error")
+      .select("id, founder_contact_id, email, company, industry, funding_stage, founder_type, match_count, top_matches, excluded_reason, send_status, sent_at, opened_page_at, first_profile_view_at, clicked_call_at, booked_at, clicked_intro_at, plan_started_at, founder_profile_id, send_error")
       .eq("campaign_id", campaignId)
       .order("company", { ascending: true, nullsFirst: false })
       .range(from, from + 999);
@@ -437,6 +441,13 @@ async function namedSnapshot(db: Db, rows: ReadonlyArray<MaskedMatch & { investo
   return rows.map((r) => toMasked({ ...r, ...(names.get(r.investor_contact_id) ?? { investor_name: null, investor_firm: null }) }));
 }
 
+/** Admin maintained adjacent industries (match_sector_adjacency). Empty on error, so matching falls back to synonym families. */
+async function loadAdjacency(): Promise<Adjacency> {
+  const { data, error } = await marketingDb().from("match_sector_adjacency").select("industry, adjacent_industry");
+  if (error) return new Map();
+  return buildAdjacency((data ?? []) as Array<{ industry: string; adjacent_industry: string }>);
+}
+
 /**
  * Matches the next batch of ready founders (in id order, after `after`). The editor
  * calls this until `next` is null, so a campaign of any size finishes without one
@@ -460,10 +471,11 @@ export async function runCampaignMatching(campaignId: string, opts: { after?: st
   const [{ data: frows, error }, { count: readyTotal }] = await Promise.all([page, readyQuery("id", true)]);
   if (error) throw new Error(error.message);
   const founders = (frows ?? []) as unknown as Array<{ id: string; founder_contact_id: string }>;
-  const [fields, investors, matchCfg] = await Promise.all([
+  const [fields, investors, matchCfg, adjacency] = await Promise.all([
     loadFounderFields(founders.map((f) => f.founder_contact_id)),
     loadCampaignInvestors(),
     getInvestorMatchConfig(),
+    loadAdjacency(),
   ]);
   const byContact = new Map(fields.map((r) => [r.id, r]));
   const weights = matchCfg.engineWeights;
@@ -474,12 +486,15 @@ export async function runCampaignMatching(campaignId: string, opts: { after?: st
   for (const f of founders) {
     const row = byContact.get(f.founder_contact_id);
     if (!row) continue;
-    const matches = matchFounder(founderCompanyProfile(row), investors, weights, campaign.match_config.min_score);
+    const matches = matchFounder(founderCompanyProfile(row), investors, weights, campaign.match_config.min_score, {
+      founderIndustries: row.industries ?? [],
+      adjacency,
+    });
     await db.from("match_campaign_matches").delete().eq("campaign_founder_id", f.id);
     const stored = matches.slice(0, STORED_MATCHES_PER_FOUNDER);
     if (stored.length) {
       const { error: insErr } = await db.from("match_campaign_matches").insert(
-        stored.map((m) => ({
+        stored.map((m, i) => ({
           campaign_founder_id: f.id,
           investor_contact_id: m.investor_contact_id,
           match_score: m.match_score,
@@ -488,6 +503,9 @@ export async function runCampaignMatching(campaignId: string, opts: { after?: st
           stages: m.stages,
           check_band: m.check_band,
           reasons: m.reasons,
+          sector_tier: m.sector_tier,
+          matched_sectors: m.matched_sectors,
+          rank: i + 1,
         })),
       );
       if (insErr) throw new Error(insErr.message);
@@ -521,6 +539,8 @@ export type AdminMatchRow = {
   investor_company: string | null;
   investor_type: string | null;
   sectors: string[];
+  matched_sectors: string[] | null;
+  sector_tier: string | null;
   stages: string[];
   check_band: string | null;
   match_score: number;
@@ -531,9 +551,10 @@ export async function listFounderMatches(campaignFounderId: string): Promise<Adm
   const db = marketingDb();
   const { data, error } = await db
     .from("match_campaign_matches")
-    .select("id, investor_contact_id, investor_type, sectors, stages, check_band, match_score")
+    .select("id, investor_contact_id, investor_type, sectors, matched_sectors, sector_tier, stages, check_band, match_score")
     .eq("campaign_founder_id", campaignFounderId)
     .eq("removed", false)
+    .order("rank", { ascending: true, nullsFirst: false })
     .order("match_score", { ascending: false });
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Array<Omit<AdminMatchRow, "investor_name" | "investor_company">>;
@@ -543,6 +564,20 @@ export async function listFounderMatches(campaignFounderId: string): Promise<Adm
     for (const r of (inv ?? []) as Array<{ id: string; name: string | null; company: string | null }>) names.set(r.id, { name: r.name, company: r.company });
   }
   return rows.map((r) => ({ ...r, investor_name: names.get(r.investor_contact_id)?.name ?? null, investor_company: names.get(r.investor_contact_id)?.company ?? null }));
+}
+
+/**
+ * Hides the investor behind a match from every founder: crm_contacts
+ * hidden_from_founders = true, which loadCampaignInvestors skips on every later
+ * matching run. Used when an investor asks not to be shown.
+ */
+export async function hideInvestorFromFounders(matchId: string): Promise<void> {
+  const db = marketingDb();
+  const { data } = await db.from("match_campaign_matches").select("investor_contact_id").eq("id", matchId).maybeSingle();
+  const contactId = (data as { investor_contact_id: string } | null)?.investor_contact_id;
+  if (!contactId) throw new Error("Match not found");
+  const { error } = await db.from("crm_contacts").update({ hidden_from_founders: true }).eq("id", contactId);
+  if (error) throw new Error(error.message);
 }
 
 /** Admin removes an investor from a founder's matches; count and top 3 recompute. */
@@ -566,9 +601,10 @@ export async function removeFounderMatch(matchId: string, adminId: string | null
   const preview = campaign?.match_config.preview_count ?? DEFAULT_MATCH_CONFIG.preview_count;
   const { data: remaining } = await db
     .from("match_campaign_matches")
-    .select("investor_contact_id, investor_type, sectors, stages, check_band, match_score")
+    .select("investor_contact_id, investor_type, sectors, matched_sectors, stages, check_band, match_score")
     .eq("campaign_founder_id", founder.id)
     .eq("removed", false)
+    .order("rank", { ascending: true, nullsFirst: false })
     .order("match_score", { ascending: false })
     .limit(preview);
   const count = Math.max(0, founder.match_count - 1);
@@ -596,44 +632,170 @@ export type FounderPageData = {
   founderContactId: string;
   email: string | null;
   callUrl: string;
+  flow: MatchFlow;
+  /** Review flow: matches open by name; the rest are locked. */
+  visibleCount: number;
+  /** True when the link is older than LINK_DAYS after the email went out. */
+  expired: boolean;
   /** match_campaign_matches ids, same order as matches (for profile view tracking). */
   matchIds: string[];
 };
 
-/** Everything the public match page shows: investor name and firm, never contact details. */
-export async function loadFounderPage(campaignFounderId: string, opts: { track?: boolean } = {}): Promise<FounderPageData | null> {
+/** Founder links stop opening match details this many days after the email. */
+export const LINK_DAYS = 60;
+
+export function linkExpired(sentAt: string | null, now: Date = new Date()): boolean {
+  if (!sentAt) return false;
+  return now.getTime() - Date.parse(sentAt) > LINK_DAYS * 86_400_000;
+}
+
+type FounderPageRow = {
+  id: string;
+  campaign_id: string;
+  founder_contact_id: string;
+  email: string | null;
+  company: string | null;
+  industry: string | null;
+  funding_stage: string | null;
+  match_count: number;
+  opened_page_at: string | null;
+  sent_at: string | null;
+};
+
+type StoredMatch = MaskedMatch & { id: string; investor_contact_id: string };
+
+async function founderPageRows(campaignFounderId: string): Promise<{ row: FounderPageRow; campaign: MatchCampaignRow | null; stored: StoredMatch[] } | null> {
   const db = marketingDb();
   const { data: f } = await db
     .from("match_campaign_founders")
-    .select("id, campaign_id, founder_contact_id, email, company, industry, funding_stage, match_count, opened_page_at")
+    .select("id, campaign_id, founder_contact_id, email, company, industry, funding_stage, match_count, opened_page_at, sent_at")
     .eq("id", campaignFounderId)
     .maybeSingle();
   if (!f) return null;
-  const row = f as { id: string; campaign_id: string; founder_contact_id: string; email: string | null; company: string | null; industry: string | null; funding_stage: string | null; match_count: number; opened_page_at: string | null };
+  const row = f as FounderPageRow;
   const [campaign, { data: m }] = await Promise.all([
     getMatchCampaign(row.campaign_id),
     db
       .from("match_campaign_matches")
-      .select("id, investor_contact_id, investor_type, sectors, stages, check_band, match_score")
+      .select("id, investor_contact_id, investor_type, sectors, matched_sectors, stages, check_band, match_score")
       .eq("campaign_founder_id", row.id)
       .eq("removed", false)
+      .order("rank", { ascending: true, nullsFirst: false })
       .order("match_score", { ascending: false }),
   ]);
-  if (opts.track !== false && !row.opened_page_at) {
-    await db.from("match_campaign_founders").update({ opened_page_at: new Date().toISOString() }).eq("id", row.id);
-  }
+  return { row, campaign, stored: (m ?? []) as StoredMatch[] };
+}
+
+function pageData(row: FounderPageRow, campaign: MatchCampaignRow | null, matches: MaskedMatch[]): FounderPageData {
+  const cfg = campaign?.match_config ?? DEFAULT_MATCH_CONFIG;
   return {
     campaignFounderId: row.id,
     company: row.company ?? "Your company",
     industry: row.industry,
     stages: row.funding_stage ? row.funding_stage.split(", ").filter(Boolean) : [],
     matchCount: row.match_count,
-    matches: await namedSnapshot(db, (m ?? []) as Array<MaskedMatch & { investor_contact_id: string }>),
+    matches,
     founderContactId: row.founder_contact_id,
     email: row.email,
-    callUrl: campaign?.match_config.call_url ?? DEFAULT_MATCH_CONFIG.call_url,
-    matchIds: ((m ?? []) as Array<{ id: string }>).map((r) => r.id),
+    callUrl: cfg.call_url,
+    flow: campaign ? cfg.flow : "plan",
+    visibleCount: cfg.visible_count,
+    expired: linkExpired(row.sent_at),
+    matchIds: [],
   };
+}
+
+/**
+ * Everything the public match page shows: investor name and firm, never contact
+ * details. In the review flow only the first visibleCount matches carry a name;
+ * locked matches keep sectors and stages only, so a locked investor's identity
+ * never reaches the browser.
+ */
+export async function loadFounderPage(campaignFounderId: string, opts: { track?: boolean } = {}): Promise<FounderPageData | null> {
+  const db = marketingDb();
+  const loaded = await founderPageRows(campaignFounderId);
+  if (!loaded) return null;
+  const { row, campaign, stored } = loaded;
+  if (opts.track !== false && !row.opened_page_at) {
+    await db.from("match_campaign_founders").update({ opened_page_at: new Date().toISOString() }).eq("id", row.id);
+  }
+  const data = pageData(row, campaign, []);
+  const open = data.flow === "review" ? stored.slice(0, data.visibleCount) : stored;
+  const named = await namedSnapshot(db, open);
+  const locked = data.flow === "review" ? stored.slice(data.visibleCount).map(lockedMatch) : [];
+  // Ids only for named matches (view tracking); locked matches carry none.
+  return { ...data, matches: [...named, ...locked], matchIds: open.map((r) => r.id) };
+}
+
+/** A locked match as the browser may see it: no name, firm, type or check size. */
+export function lockedMatch(m: MaskedMatch): MaskedMatch {
+  return {
+    investor_name: null,
+    investor_firm: null,
+    investor_type: null,
+    sectors: [],
+    ...(m.matched_sectors?.length ? { matched_sectors: m.matched_sectors.slice(0, 2) } : { matched_sectors: m.sectors.slice(0, 1) }),
+    stages: m.stages,
+    check_band: null,
+    match_score: 0,
+  };
+}
+
+export type FounderProfileData = {
+  page: FounderPageData;
+  /** 1 based position among the open matches. */
+  position: number;
+  openCount: number;
+  match: MaskedMatch;
+  /** match_campaign_matches id of this profile (server only, for view tracking). */
+  matchId: string;
+};
+
+/**
+ * One open match's profile for the founder (review flow): public facts only,
+ * never contact details. Records the view unless track is false (admin preview).
+ * Null when the position is not an open match.
+ */
+export async function loadFounderProfile(campaignFounderId: string, position: number, opts: { track?: boolean } = {}): Promise<FounderProfileData | null> {
+  const db = marketingDb();
+  const loaded = await founderPageRows(campaignFounderId);
+  if (!loaded) return null;
+  const { row, campaign, stored } = loaded;
+  const data = pageData(row, campaign, []);
+  const open = data.flow === "review" ? stored.slice(0, data.visibleCount) : stored;
+  if (!Number.isInteger(position) || position < 1 || position > open.length) return null;
+  const target = open[position - 1];
+  const [named] = await namedSnapshot(db, [target]);
+  // Full sector list for the profile (the snapshot keeps four).
+  const match: MaskedMatch = { ...named, sectors: target.sectors };
+  if (opts.track !== false && !data.expired) {
+    // The per investor view count lives in match_campaign_investor_views (the
+    // follow up sequence names the most viewed investor); the page records it.
+    const now = new Date().toISOString();
+    await db.from("match_campaign_founders").update({ first_profile_view_at: now }).eq("id", row.id).is("first_profile_view_at", null);
+    if (!row.opened_page_at) await db.from("match_campaign_founders").update({ opened_page_at: now }).eq("id", row.id);
+  }
+  return { page: data, position, openCount: open.length, match, matchId: target.id };
+}
+
+/** Name and email to prefill the booking form from a founder link. */
+export async function founderBookingPrefill(campaignFounderId: string): Promise<{ name: string | null; email: string | null; company: string | null } | null> {
+  const db = marketingDb();
+  const { data } = await db.from("match_campaign_founders").select("founder_contact_id, email, company").eq("id", campaignFounderId).maybeSingle();
+  if (!data) return null;
+  const row = data as { founder_contact_id: string; email: string | null; company: string | null };
+  const { data: c } = await db.from("crm_contacts").select("name").eq("id", row.founder_contact_id).maybeSingle();
+  return { name: (c as { name: string | null } | null)?.name ?? null, email: row.email, company: row.company };
+}
+
+/** Marks the founder as booked once (first booking wins). */
+export async function recordFounderBooking(campaignFounderId: string, bookingId: string | null): Promise<void> {
+  const db = marketingDb();
+  await db
+    .from("match_campaign_founders")
+    .update({ booked_at: new Date().toISOString(), booking_id: bookingId })
+    .eq("id", campaignFounderId)
+    .is("booked_at", null);
 }
 
 /** Records a click once (first click wins) and returns where to send the founder. */

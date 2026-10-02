@@ -106,6 +106,8 @@ export async function loadCampaignInvestors(): Promise<CampaignInvestor[]> {
       .from("crm_contacts")
       .select("id, profile, overrides")
       .eq("module", "investor")
+      // Investors who asked not to be shown to founders.
+      .eq("hidden_from_founders", false)
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error) throw new Error(`Could not load investors: ${error.message}`);

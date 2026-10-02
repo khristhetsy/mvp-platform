@@ -7,6 +7,8 @@ import { cancelBookingByToken } from "@/lib/scheduling/cancel";
 import { handoffFitSession } from "@/lib/fit/handoff";
 import { resolveSource, SOURCE_COOKIE } from "@/lib/attribution/source";
 import { fitSessionTag, heardAboutAnswer, listCampaignOptions, matchCampaignAnswer } from "@/lib/attribution/resolve";
+import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
+import { recordFounderBooking } from "@/lib/marketing/match-campaign/store";
 
 // Public endpoint: anyone with the link can book (guest booking). Booker
 // identity comes from the form, not a session.
@@ -29,6 +31,8 @@ const schema = z.object({
   // Campaign tag off a tagged scheduler link (/schedule/<host>?src=…). Ranked
   // below a /fit session and above the site-wide first-touch cookie.
   sourceTag: z.string().max(120).optional(),
+  // Founder token off a Match campaign link (?mc=…): the founder row is marked booked.
+  matchToken: z.string().max(200).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -119,6 +123,12 @@ export async function POST(req: NextRequest): Promise<Response> {
       meetUrl: result.meetUrl,
       answers: parsed.data.answers,
     }).catch(() => {});
+
+    // Match campaign: mark the founder booked. Best-effort.
+    const matchFounderId = verifyFounderToken(parsed.data.matchToken);
+    if (matchFounderId) {
+      await recordFounderBooking(matchFounderId, result.bookingId).catch(() => {});
+    }
 
     // /fit handoff: on a funnel booking, write the lead + four answers to Sales Hub
     // (matched on normalised email; first-touch lead source preserved). Unchanged

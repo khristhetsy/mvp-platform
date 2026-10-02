@@ -11,7 +11,7 @@ import { isUnsubscribed } from "@/lib/marketing/contacts";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
-import { renderFounderEmail, renderSubject, DEFAULT_SUBJECT } from "./email";
+import { renderFounderEmail, renderReviewEmail, renderSubject, DEFAULT_SUBJECT, REVIEW_SUBJECT } from "./email";
 import { investorNetworkCount, networkLabel } from "./investors";
 import { makeFounderToken } from "./token";
 import { getMatchCampaign, type MatchCampaignRow } from "./store";
@@ -49,8 +49,9 @@ type FounderSendRow = {
 export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRow, ctx: SendContext): { subject: string; html: string } {
   const token = makeFounderToken(f.id);
   const company = f.company?.trim() || "your company";
-  const subject = renderSubject(campaign.subject_override || DEFAULT_SUBJECT, { matchCount: f.match_count, company });
-  const html = renderFounderEmail({
+  const review = campaign.match_config.flow === "review";
+  const subject = renderSubject(campaign.subject_override || (review ? REVIEW_SUBJECT : DEFAULT_SUBJECT), { matchCount: f.match_count, company });
+  const base = {
     company,
     industry: f.industry,
     stages: f.funding_stage ? f.funding_stage.split(", ").filter(Boolean) : [],
@@ -58,15 +59,17 @@ export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRo
     top: (f.top_matches ?? []).slice(0, campaign.match_config.preview_count),
     networkLabel: ctx.network,
     basicPrice: ctx.basicPrice,
-    links: {
-      matches: `${appUrl()}/matches/${token}`,
-      call: `${appUrl()}/mc/${token}?a=call`,
-      plan: `${appUrl()}/mc/${token}?a=intro`,
-      privacy: `${appUrl()}/privacy`,
-    },
     postalAddress: postalAddress(),
-    layout: sequenceActive(campaign.match_config) ? "matches_first" : "classic",
-  });
+  };
+  const links = {
+    matches: `${appUrl()}/matches/${token}`,
+    call: `${appUrl()}/mc/${token}?a=call`,
+    plan: `${appUrl()}/mc/${token}?a=intro`,
+    privacy: `${appUrl()}/privacy`,
+  };
+  const html = review
+    ? renderReviewEmail({ ...base, visibleCount: campaign.match_config.visible_count, links: { ...links, profile: (n: number) => `${appUrl()}/matches/${token}/i/${n}` } })
+    : renderFounderEmail({ ...base, links, layout: sequenceActive(campaign.match_config) ? "matches_first" : "classic" });
   return { subject, html };
 }
 
@@ -257,4 +260,3 @@ export async function previewFounderEmail(campaignId: string, campaignFounderId:
   if (!data) return null;
   return buildFounderMessage(campaign, data as FounderSendRow, await sendContext());
 }
-

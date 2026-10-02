@@ -3,8 +3,9 @@ import { canonicalStages, checkFounder, founderCompanyProfile, isEuCountry } fro
 import { campaignInvestorFromRow, checkBandLabel, networkLabel } from "./investors";
 import { investorIdentity, matchFounder, toMasked } from "./matcher";
 import { makeFounderToken, verifyFounderToken } from "./token";
-import { renderFounderEmail, renderSubject, UNNAMED } from "./email";
+import { matchedOn, renderFounderEmail, renderReviewEmail, renderSubject, UNNAMED } from "./email";
 import { readMatchConfig } from "./types";
+import { buildAdjacency, sectorFit } from "./sector-tier";
 import type { FounderFieldsRow } from "./types";
 
 const founder = (over: Partial<FounderFieldsRow> = {}): FounderFieldsRow => ({
@@ -108,7 +109,7 @@ describe("matching", () => {
   });
   it("never carries investor identity in the masked fields", () => {
     const [m] = matchFounder(company, [investor("a", ["Fintech"], ["Seed Round"])]);
-    expect(Object.keys(m).sort()).toEqual(["check_band", "investor_contact_id", "investor_type", "match_score", "reasons", "sectors", "stages"]);
+    expect(Object.keys(m).sort()).toEqual(["check_band", "investor_contact_id", "investor_type", "match_score", "matched_sectors", "reasons", "sector_tier", "sectors", "stages"]);
   });
 });
 
@@ -197,5 +198,87 @@ describe("investor identity shown to founders", () => {
   it("the snapshot keeps name and firm and never carries contact ids or reasons", () => {
     const snap = toMasked({ investor_contact_id: "c1", reasons: ["x"], investor_name: "Ben Paulo", investor_firm: null, investor_type: "Angel", sectors: ["A", "B", "C", "D", "E"], stages: ["Seed Round"], check_band: null, match_score: 70 } as Parameters<typeof toMasked>[0]);
     expect(snap).toEqual({ investor_name: "Ben Paulo", investor_firm: null, investor_type: "Angel", sectors: ["A", "B", "C", "D"], stages: ["Seed Round"], check_band: null, match_score: 70 });
+  });
+});
+
+describe("sector tier", () => {
+  const biotech = ["Biotechnology/Life Science"];
+  const adj = buildAdjacency([
+    { industry: "Biotechnology/Life Science", adjacent_industry: "Healthcare" },
+    { industry: "Biotechnology/Life Science", adjacent_industry: "Medical Devices" },
+    { industry: "Biotechnology/Life Science", adjacent_industry: "Digital Health" },
+  ]);
+  it("never matches Technology to Biotechnology by substring", () => {
+    expect(sectorFit(biotech, ["Software", "Technology/Web"], adj)).toBeNull();
+    expect(sectorFit(biotech, ["Software", "Technology/Web"])).toBeNull();
+  });
+  it("finds exact, adjacent and generalist fits with the sectors that matched", () => {
+    expect(sectorFit(biotech, ["Biotechnology/Life Science", "Healthcare"], adj)).toEqual({ tier: "exact", matched: ["Biotechnology/Life Science"] });
+    expect(sectorFit(biotech, ["Cleantech", "Consumer Products", "Healthcare", "Software"], adj)).toEqual({ tier: "adjacent", matched: ["Healthcare"] });
+    expect(sectorFit(biotech, ["Agnostic"], adj)?.tier).toBe("generalist");
+    const broad = ["Agriculture", "Apparel", "Biotechnology/Life Science", "Blockchain", "Business Service", "Cleantech", "Construction", "Energy", "Entertainment", "Financial Services", "SaaS"];
+    expect(sectorFit(biotech, broad, adj)).toEqual({ tier: "generalist", matched: ["Biotechnology/Life Science"] });
+    expect(sectorFit(biotech, broad.filter((x) => !x.startsWith("Bio")).concat("Telecom"), adj)).toBeNull();
+  });
+  it("uses the adjacency table when an industry has rows, synonym families otherwise", () => {
+    expect(sectorFit(biotech, ["Pharma"], adj)).toBeNull();
+    expect(sectorFit(biotech, ["Pharma"])).toEqual({ tier: "adjacent", matched: ["Pharma"] });
+  });
+  it("ranks exact before adjacent before generalist, then by score", () => {
+    const f = founderCompanyProfile(founder({ industries: biotech, funding_stages: ["Pre-Seed"] }));
+    const pool = [
+      investor("adj", ["Healthcare", "Medical Devices"], ["Pre-Seed"]),
+      investor("gen", ["Agnostic"], ["Pre-Seed"]),
+      investor("soft", ["Software", "Technology/Web"], ["Pre-Seed"]),
+      investor("exact", ["Biotechnology/Life Science", "Healthcare"], ["Pre-Seed"]),
+    ];
+    const m = matchFounder(f, pool, undefined, 0, { founderIndustries: biotech, adjacency: adj });
+    expect(m.map((x) => x.investor_contact_id)).toEqual(["exact", "adj", "gen"]);
+    expect(m[0].reasons).toContain("Sector alignment: Biotechnology/Life Science");
+  });
+});
+
+describe("review flow", () => {
+  it("keeps live campaigns on the plan layout and starts new ones on review", () => {
+    expect(readMatchConfig({}).flow).toBe("plan");
+    expect(readMatchConfig({ flow: "review" }).flow).toBe("review");
+    expect(readMatchConfig({ flow: "review" }).visible_count).toBe(3);
+    expect(readMatchConfig({ visible_count: 2 }).visible_count).toBe(2);
+  });
+
+  const html = renderReviewEmail({
+    company: "NanoRetinal",
+    industry: "Biotechnology/Life Science",
+    stages: ["Pre-Seed"],
+    matchCount: 5,
+    visibleCount: 3,
+    top: [
+      { investor_name: "Ben Paulo", investor_firm: null, investor_type: "Angel", sectors: ["Biotechnology/Life Science", "Healthcare"], matched_sectors: ["Biotechnology/Life Science"], stages: ["Seed Round", "Pre-Seed"], check_band: null, match_score: 70 },
+      { investor_name: "Kae Huynh", investor_firm: "Huynh Capital", investor_type: "Angel", sectors: ["Cleantech", "Healthcare"], matched_sectors: ["Healthcare"], stages: ["Pre-Seed"], check_band: null, match_score: 80 },
+      { investor_name: null, investor_type: "Angel", sectors: ["Medical Devices"], stages: ["Pre-Seed"], check_band: null, match_score: 72 },
+    ],
+    networkLabel: "7,000+",
+    basicPrice: "$49/mo",
+    links: { matches: "https://icapos.com/matches/t", call: "https://icapos.com/mc/t?a=call", plan: "https://icapos.com/mc/t?a=intro", privacy: "https://icapos.com/privacy", profile: (n) => `https://icapos.com/matches/t/i/${n}` },
+    postalAddress: "iCFO Capital Global, Inc., La Jolla, CA",
+  });
+  it("shows what each investor matched on, links profiles, and never a match %", () => {
+    expect(html).toContain("Matched on: Pre-seed, Biotechnology/Life Science");
+    expect(html).toContain("Matched on: Pre-seed, Healthcare");
+    expect(html).toContain("https://icapos.com/matches/t/i/2");
+    expect(html).not.toContain("% match");
+    expect(html).not.toContain("Cleantech");
+  });
+  it("has one booking button, the plan as secondary, the locked count and a complete footer", () => {
+    expect(html).toContain("Pick a time for your match review");
+    expect(html).toContain("Choose a plan to unlock");
+    expect(html).toContain("2 more matches and contact details open with a plan.");
+    expect(html).toContain("See all 5 matches");
+    expect(html).toContain("You're receiving this because NanoRetinal is listed in Biotechnology/Life Science at Pre-seed");
+    expect(html).not.toContain("Schedule a call with us");
+    expect(html.toLowerCase()).not.toContain("interested");
+  });
+  it("matchedOn prefers the founder's stage and the matched sectors", () => {
+    expect(matchedOn({ investor_type: null, sectors: ["Software", "Healthcare"], matched_sectors: ["Healthcare"], stages: ["Seed Round", "Pre-Seed"], check_band: null, match_score: 0 }, ["Pre-Seed"])).toBe("Pre-seed, Healthcare");
   });
 });
