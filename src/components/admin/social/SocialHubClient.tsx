@@ -408,7 +408,10 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   // Assign existing posts to a campaign — selection is keyed by post_id.
   const [selPosts, setSelPosts] = useState<Set<string>>(new Set());
   // Recurrence series summary for the selected post.
-  const [recSummary, setRecSummary] = useState<{ label: string; status: string; madeCount: number } | null>(null);
+  const [recSummary, setRecSummary] = useState<{ label: string; status: string; madeCount: number; accountIds?: string[] } | null>(null);
+  // Calendar account filter: "all" or one account id.
+  const [acctFilter, setAcctFilter] = useState<string>("all");
+  const [acctMsg, setAcctMsg] = useState<string | null>(null);
   // Google-style "delete recurring post" scope dialog.
   const [recDelete, setRecDelete] = useState<QueueItem | null>(null);
   const [recDeleteScope, setRecDeleteScope] = useState<"this" | "following" | "all">("this");
@@ -442,8 +445,10 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const platformOf = (name: string | null) => accounts.find((a) => a.display_name === name)?.platform ?? "linkedin";
   const defaultTime = slots[0]?.time_local?.slice(0, 5) || "08:15";
 
-  const rail = queue.filter((q) => !itemISO(q));
-  const dated = queue.filter((q) => itemISO(q));
+  const shown = acctFilter === "all" ? queue : queue.filter((q) => q.account_id === acctFilter);
+  const rail = shown.filter((q) => !itemISO(q));
+  const dated = shown.filter((q) => itemISO(q));
+  const publishedOn = (id: string | null) => queue.filter((q) => q.status === "published" && (id === null || q.account_id === id)).length;
 
   const byDay = useMemo(() => {
     const m = new Map<string, QueueItem[]>();
@@ -460,6 +465,29 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     try {
       const r = await fetch(`/api/admin/social/queue/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
       if (r.ok) { setEditing(false); setScheduling(null); await reload(); } else { alert((await r.json()).error ?? "Failed."); }
+    } finally { setBusy(false); }
+  }
+  // "Post here too": queue this post for one more account.
+  async function addAccount(postId: string, accountId: string) {
+    setBusy(true); setAcctMsg(null);
+    try {
+      const r = await fetch("/api/admin/social/posts/accounts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postId, accountId }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) setAcctMsg(j.error ?? "Couldn't add the account.");
+      await reload();
+    } finally { setBusy(false); }
+  }
+  // Series "Posts to" picker: future posts in the series follow the ticked accounts.
+  async function setSeriesAccounts(recurrenceId: string, accountIds: string[]) {
+    if (accountIds.length === 0) { setAcctMsg("A series needs at least one account."); return; }
+    setBusy(true); setAcctMsg(null);
+    try {
+      const r = await fetch(`/api/admin/social/recurrences/${recurrenceId}/accounts`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountIds }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setAcctMsg(j.error ?? "Couldn't update the series."); return; }
+      setRecSummary((cur) => (cur ? { ...cur, accountIds } : cur));
+      setAcctMsg(`Series updated: ${j.added ?? 0} upcoming post${j.added === 1 ? "" : "s"} added, ${j.removed ?? 0} removed.`);
+      await reload();
     } finally { setBusy(false); }
   }
   async function del(id: string) {
@@ -625,6 +653,20 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
         </div>
       </div>
 
+      {/* account filter */}
+      {accounts.length > 1 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Show posts for">
+          {[{ id: "all", name: "All accounts", platform: null as string | null, n: publishedOn(null) },
+            ...accounts.map((a) => ({ id: a.id, name: accountName(a), platform: a.platform as string | null, n: publishedOn(a.id) }))].map((c) => (
+            <button key={c.id} type="button" aria-pressed={acctFilter === c.id} onClick={() => setAcctFilter(c.id)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] ${acctFilter === c.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+              title={`${c.n} published`}>
+              {c.platform ? <i className={`ti ti-brand-${c.platform}`} aria-hidden="true" /> : null}{c.name}<span className="tabular-nums opacity-70">{c.n}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[200px_1fr]">
         {/* unscheduled rail */}
         <div className={`${card} h-max overflow-hidden`}>
@@ -768,6 +810,20 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                           : null}
                       {recSummary.status !== "ended" && <button type="button" disabled={busy} onClick={() => void recAct(q.recurrence_id!, "end")} className="rounded-md border border-rose-200 px-2.5 py-1 text-[10.5px] text-rose-600">End series</button>}
                     </div>
+                    {recSummary.status !== "ended" && recSummary.accountIds && accounts.length > 1 ? (
+                      <div className="mt-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10.5px] text-slate-500">Posts to</span>
+                          {accounts.map((a) => {
+                            const on = recSummary.accountIds!.includes(a.id);
+                            return <button key={a.id} type="button" disabled={busy} aria-pressed={on}
+                              onClick={() => void setSeriesAccounts(q.recurrence_id!, on ? recSummary.accountIds!.filter((x) => x !== a.id) : [...recSummary.accountIds!, a.id])}
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] ${on ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}</button>;
+                          })}
+                        </div>
+                        <p className="mt-1 text-[10px] text-slate-500">Every future post in the series goes to each ticked account. Posts already published stay as they are.</p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -844,6 +900,31 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 {q.url ? <a href={q.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-[11.5px] text-blue-600"><i className="ti ti-external-link" aria-hidden="true" /> View</a> : null}
               </div>
             </div>
+            {q.post_id && accounts.length > 1 ? (() => {
+              const siblings = queue.filter((x) => x.post_id === q.post_id);
+              const net = (p: string) => (p === "linkedin" ? "LinkedIn" : p === "facebook" ? "Facebook" : p === "instagram" ? "Instagram" : p);
+              return (
+                <div className="mt-3 rounded-lg border border-slate-200">
+                  <p className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Posted to</p>
+                  {accounts.map((a) => {
+                    const v = siblings.find((x) => x.account_id === a.id) ?? null;
+                    const vm = v ? statusMeta(v.status) : null;
+                    const when = v?.published_at ? ` ${new Date(v.published_at).toLocaleString([], { hour: "2-digit", minute: "2-digit" })}` : "";
+                    return (
+                      <div key={a.id} className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2 first-of-type:border-t-0">
+                        <i className={`ti ti-brand-${a.platform} text-[15px] text-slate-500`} aria-hidden="true" />
+                        <span className="min-w-0 flex-1 truncate text-[12px] text-slate-800">{accountName(a)} <span className="text-slate-400">· {net(a.platform)}</span></span>
+                        {v && vm ? <span className={`rounded px-2 py-0.5 text-[10.5px] ${vm.cls}`}>{vm.label}{v.status === "published" ? when : ""}</span> : <span className="rounded bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-500">Not in this post</span>}
+                        {v?.url
+                          ? <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-[11.5px] text-blue-600 hover:underline">View on {net(a.platform)} <i className="ti ti-external-link" aria-hidden="true" /></a>
+                          : !v ? <button type="button" disabled={busy} onClick={() => void addAccount(q.post_id!, a.id)} className="text-[11.5px] text-indigo-700 hover:underline disabled:opacity-50">Post here too</button> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })() : null}
+            {acctMsg ? <p className="mt-2 text-[11.5px] text-slate-600">{acctMsg}</p> : null}
             {editing ? (
               <div className="mt-3">
                 <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={5} className="w-full rounded-lg border border-slate-200 p-2 text-[13px]" />
