@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getLists } from "@/lib/marketing/contacts";
 import { getMarketingSettings } from "@/lib/marketing/settings";
 import { emailConfigured } from "@/lib/marketing/send";
-import { matchCampaignsEnabled } from "@/lib/marketing/match-campaign/flag";
+import { matchCampaignsEnabled, matchSequenceEnabled } from "@/lib/marketing/match-campaign/flag";
 import { getMatchCampaign } from "@/lib/marketing/match-campaign/store";
 import { MatchCampaignEditor } from "./MatchCampaignEditor";
 
@@ -32,6 +32,7 @@ export default async function MatchCampaignPage({ params }: { params: Promise<{ 
         }}
         senders={settings?.senders ?? []}
         resendReady={emailConfigured()}
+        sequenceEnabled={matchSequenceEnabled()}
       />
     </div>
   );

@@ -19,7 +19,17 @@ export type FounderEmailInput = {
   basicPrice: string; // "$49/mo"
   links: { matches: string; call: string; plan: string; privacy: string };
   postalAddress: string;
+  /**
+   * "classic" (default): two buttons, Schedule a call and Choose a plan.
+   * "matches_first" (follow up sequence on): one button that opens the match
+   * page, plus the warm intro line. Booking and plans live on the match page.
+   */
+  layout?: "classic" | "matches_first";
 };
+
+/** What the plan buys: the introduction, not the name. General fundraising data, not iCapOS figures. */
+export const WARM_INTRO_LINE =
+  "You can see who. We get you the meeting: investors take intros from us, while cold emails to investors get a first meeting about 1 to 2% of the time.";
 
 export const DEFAULT_SUBJECT = "{match_count} investors in our network match {company}";
 
@@ -56,6 +66,21 @@ export function renderFounderEmail(i: FounderEmailInput): string {
 </tr>`,
     )
     .join("\n");
+
+  if (i.layout === "matches_first") {
+    return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0A1A40;">
+  <h1 style="font-size:20px;margin:8px 0 4px;">Your investor matches</h1>
+  <p style="font-size:13px;color:#5A6782;margin:0 0 16px;">${esc(i.company)}${meta ? ` · ${esc(meta)}` : ""}</p>
+  <p style="font-size:14px;line-height:22px;margin:0 0 16px;">Our network of <strong>${esc(i.networkLabel)} investors</strong> has <strong>${i.matchCount} investor${i.matchCount === 1 ? "" : "s"}</strong> that fit your industry and stage.</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #E3E8F2;border-radius:10px;border-collapse:separate;">
+${rows}
+  </table>
+  ${remaining > 0 ? `<p style="font-size:13px;color:#5A6782;margin:12px 0 0;">+ ${remaining} more match${remaining === 1 ? "" : "es"}</p>` : ""}
+  <p style="font-size:14px;line-height:22px;margin:16px 0 0;">${esc(WARM_INTRO_LINE)}</p>
+  <p style="margin:18px 0 20px;"><a href="${esc(i.links.matches)}" style="display:inline-block;background:#1A6CE4;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 18px;border-radius:8px;">See my ${i.matchCount} match${i.matchCount === 1 ? "" : "es"}</a></p>
+  <p style="font-size:12px;color:#8A94A8;margin:24px 0 0;line-height:18px;">Plans from ${esc(i.basicPrice)}. ${esc(i.postalAddress)}.<br />We are writing because your company is in the iCapOS founder network. Your data is handled as described in our <a href="${esc(i.links.privacy)}" style="color:#8A94A8;">privacy policy</a>.</p>
+</div>`;
+  }
 
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0A1A40;">
   <h1 style="font-size:20px;margin:8px 0 4px;">Your investor matches</h1>

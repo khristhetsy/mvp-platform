@@ -93,6 +93,8 @@ export type SendMarketingEmailInput = {
   unsubscribe_token: string;
   /** Optional file attachments (base64 content), sent as real attachments. */
   attachments?: Array<{ filename: string; content: string }>;
+  /** Extra headers (Match campaign threading: Message-ID, In-Reply-To, References). Unsubscribe headers always win. */
+  headers?: Record<string, string>;
 };
 
 export async function sendMarketingEmail(
@@ -184,6 +186,7 @@ ${htmlBody}
         html: htmlWithFooter,
         text: textWithFooter,
         headers: {
+          ...(input.headers ?? {}),
           "List-Unsubscribe": `<${unsubscribeUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },

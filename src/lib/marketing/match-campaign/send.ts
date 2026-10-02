@@ -15,6 +15,8 @@ import { renderFounderEmail, renderSubject, DEFAULT_SUBJECT } from "./email";
 import { investorNetworkCount, networkLabel } from "./investors";
 import { makeFounderToken } from "./token";
 import { getMatchCampaign, type MatchCampaignRow } from "./store";
+import { sequenceActive } from "./flag";
+import { assignCohorts, enrollmentPatch, threadMessageId } from "./followups";
 import type { MaskedMatch } from "./types";
 
 function appUrl(): string {
@@ -41,6 +43,7 @@ type FounderSendRow = {
   funding_stage: string | null;
   match_count: number;
   top_matches: MaskedMatch[];
+  variant?: string | null;
 };
 
 export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRow, ctx: SendContext): { subject: string; html: string } {
@@ -62,6 +65,7 @@ export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRo
       privacy: `${appUrl()}/privacy`,
     },
     postalAddress: postalAddress(),
+    layout: sequenceActive(campaign.match_config) ? "matches_first" : "classic",
   });
   return { subject, html };
 }
@@ -81,6 +85,8 @@ async function marketingContactId(email: string, crmContactId: string, company: 
 }
 
 const SELECT = "id, founder_contact_id, email, company, industry, funding_stage, match_count, top_matches";
+/** With the follow up sequence on, Day 0 also reads the founder's split test variant. */
+const SELECT_SEQUENCE = `${SELECT}, variant`;
 
 /**
  * Sends up to the daily cap. Called from sendCampaign (manual send and the
@@ -111,16 +117,20 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
 
   await db.from("marketing_campaigns").update({ status: "sending", updated_at: new Date().toISOString() }).eq("id", campaignId);
 
+  // Follow up sequence: cohorts and the holdout split are fixed before anyone is emailed.
+  const withSequence = sequenceActive(cfg);
+  if (withSequence) await assignCohorts(campaign);
+
   const { data } = await db
     .from("match_campaign_founders")
-    .select(SELECT)
+    .select(withSequence ? SELECT_SEQUENCE : SELECT)
     .eq("campaign_id", campaignId)
     .eq("send_status", "pending")
     .is("excluded_reason", null)
     .gt("match_count", 0)
     .order("created_at", { ascending: true })
     .limit(room);
-  const batch = (data ?? []) as FounderSendRow[];
+  const batch = (data ?? []) as unknown as FounderSendRow[];
   const ctx = await sendContext();
 
   let sent = 0, skipped = 0, failed = 0;
@@ -134,7 +144,10 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
     const { subject, html } = buildFounderMessage(campaign, f, ctx);
     // Test mode and internal (@myicfos.com) addresses: record, never dispatch.
     if (cfg.dry_run || isInternalAccount({ email: f.email, role: "founder" })) {
-      await db.from("match_campaign_founders").update({ send_status: "dry_run", sent_at: now, updated_at: now }).eq("id", f.id);
+      await db
+        .from("match_campaign_founders")
+        .update({ send_status: "dry_run", sent_at: now, updated_at: now, ...(withSequence ? enrollmentPatch({ variant: f.variant ?? null, match_count: f.match_count }, now, null) : {}) })
+        .eq("id", f.id);
       sent++;
       continue;
     }
@@ -149,6 +162,7 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
       html_body: html,
       text_body: null,
       unsubscribe_token: makeUnsubscribeToken(f.email),
+      ...(withSequence ? { headers: { "Message-ID": threadMessageId(f.id, campaign.from_email) } } : {}),
     });
     const contactId = await marketingContactId(f.email, f.founder_contact_id, f.company);
     if (contactId) {
@@ -169,6 +183,7 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
         message_id: result.resend_id,
         send_error: result.error ?? null,
         updated_at: now,
+        ...(withSequence && result.ok ? enrollmentPatch({ variant: f.variant ?? null, match_count: f.match_count }, now, threadMessageId(f.id, campaign.from_email)) : {}),
       })
       .eq("id", f.id);
     if (result.ok) sent++;

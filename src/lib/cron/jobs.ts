@@ -32,6 +32,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/social-maintenance": { name: "Social maintenance", group: "Marketing" },
   "/api/marketing/process-sequences": { name: "Email sequences", group: "Marketing", description: "Collects due contacts into batches for review" },
   "/api/marketing/process-scheduled": { name: "Scheduled campaigns", group: "Marketing", description: "Sends campaigns whose scheduled time has passed" },
+  "/api/cron/match-followups": { name: "Match campaign follow ups", group: "Marketing", description: "Sends due Match campaign follow ups and creates call tasks" },
   "/api/cron/marketing-notifications": { name: "Marketing reminders", group: "Marketing" },
   "/api/cron/sales-forecast-rollup": { name: "Forecast rollup", group: "Sales" },
   "/api/cron/voice-cadence": { name: "Voice cadence", group: "Sales", description: "Fires due multichannel cadence steps" },
