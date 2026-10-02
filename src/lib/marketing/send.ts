@@ -44,6 +44,7 @@ export function interpolate(text: string, vars: Record<string, string>): string 
   // left as written so a template never goes out with an empty "went from  to ".
   if (vars.starting_crr != null) add(["starting_crr", "start_crr"], vars.starting_crr);
   if (vars.current_crr != null) add(["current_crr"], vars.current_crr);
+  if (vars.testimonial_url != null) add(["testimonial_url"], vars.testimonial_url);
   return text.replace(/\{\{?\s*([A-Za-z][\w ]*?)\s*\}?\}/g, (m, tok: string) => {
     const key = tok.trim().toLowerCase().replace(/\s+/g, "_");
     return key in known ? known[key] : m;
@@ -131,6 +132,12 @@ export async function sendMarketingEmail(
     }
     vars.starting_crr = crr.starting_crr;
     vars.current_crr = crr.current_crr;
+  }
+
+  // Personal signed link to icapos.com/testimonial, only for templates that use it.
+  if (/\{\{?\s*testimonial[ _]url\s*\}?\}/i.test(`${input.html_body}\n${input.text_body ?? ""}`)) {
+    const { testimonialUrl } = await import("@/lib/testimonials/token");
+    vars.testimonial_url = testimonialUrl(to);
   }
 
   const subject = interpolate(input.subject, vars);

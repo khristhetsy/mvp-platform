@@ -8,7 +8,7 @@ import { LogoStrip } from "@/components/marketing-site/LogoStrip";
 import { Reveal } from "@/components/marketing-site/Reveal";
 import { EventGallery } from "@/components/marketing-site/EventGallery";
 import { NetworkSupply } from "@/components/marketing-site/NetworkSupply";
-import { FounderResults } from "@/components/marketing-site/FounderResults";
+import { FounderResultsSection } from "@/components/marketing-site/FounderResultsSection";
 import { loadFunnelDelta } from "@/lib/marketing-site/funnel-delta";
 
 // ISR: statically rendered, refreshed hourly so newly-seeded client logos appear.
@@ -243,7 +243,7 @@ export default function MarketingHomePage() {
       </section>
 
       {/* iCapOS founder results: hidden until enough approved quotes exist */}
-      <FounderResults />
+      <FounderResultsSection />
 
       {/* Testimonials */}
       <section className="bg-white px-6 py-20">

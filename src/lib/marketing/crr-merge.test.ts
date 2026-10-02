@@ -45,3 +45,10 @@ describe("interpolate CRR tokens", () => {
     expect(interpolate("from {{starting_crr}}", { first_name: "Ana" })).toBe("from {{starting_crr}}");
   });
 });
+
+describe("interpolate testimonial_url", () => {
+  it("fills the link only when provided", () => {
+    expect(interpolate('href="{{testimonial_url}}"', { testimonial_url: "https://icapos.com/testimonial?t=x" })).toBe('href="https://icapos.com/testimonial?t=x"');
+    expect(interpolate("{{testimonial_url}}", {})).toBe("{{testimonial_url}}");
+  });
+});
