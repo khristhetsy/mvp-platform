@@ -3,7 +3,7 @@ import { canonicalStages, checkFounder, founderCompanyProfile, isEuCountry } fro
 import { campaignInvestorFromRow, checkBandLabel, networkLabel } from "./investors";
 import { investorIdentity, matchFounder, toMasked } from "./matcher";
 import { makeFounderToken, verifyFounderToken } from "./token";
-import { matchedOn, renderFollowUpEmail, renderFounderEmail, renderReviewEmail, renderSubject, UNNAMED } from "./email";
+import { matchedOn, renderFounderEmail, renderReviewEmail, renderSubject, UNNAMED } from "./email";
 import { readMatchConfig } from "./types";
 import { buildAdjacency, sectorFit } from "./sector-tier";
 import type { FounderFieldsRow } from "./types";
@@ -280,11 +280,5 @@ describe("review flow", () => {
   });
   it("matchedOn prefers the founder's stage and the matched sectors", () => {
     expect(matchedOn({ investor_type: null, sectors: ["Software", "Healthcare"], matched_sectors: ["Healthcare"], stages: ["Seed Round", "Pre-Seed"], check_band: null, match_score: 0 }, ["Pre-Seed"])).toBe("Pre-seed, Healthcare");
-  });
-  it("names the viewed investor in the follow up", () => {
-    const f = renderFollowUpEmail({ company: "NanoRetinal", investorName: "Ben Paulo", links: { call: "https://icapos.com/mc/t?a=call", privacy: "https://icapos.com/privacy" }, postalAddress: "iCFO Capital Global, Inc." });
-    expect(f.subject).toBe("About Ben Paulo");
-    expect(f.html).toContain("Ben Paulo's profile");
-    expect(f.html).toContain("Pick a time for your match review");
   });
 });

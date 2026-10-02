@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
 import { loadFounderProfile } from "@/lib/marketing/match-campaign/store";
+import { recordInvestorView } from "@/lib/marketing/match-campaign/followups";
 import { stageLabel } from "@/lib/marketing/match-campaign/fields";
 import { UNNAMED } from "@/lib/marketing/match-campaign/email";
 import { Avatar, ExpiredLink } from "../../review-ui";
@@ -37,6 +38,9 @@ export default async function FounderInvestorProfilePage({
   const data = await loadFounderProfile(id, Number(n), { track: !isPreview });
   if (!data) notFound();
   if (data.page.expired && !isPreview) return <ExpiredLink token={token} />;
+  // Same per investor view count the match page uses, so follow ups can name
+  // the investor a founder looked at most.
+  if (!isPreview) await recordInvestorView(id, data.matchId).catch(() => false);
 
   const { page, match: m, position, openCount } = data;
   const q = isPreview ? "?preview=1" : "";

@@ -22,6 +22,7 @@ import {
   MAX_CAMPAIGN_FOUNDERS,
 } from "./types";
 import { DEFAULT_SUBJECT, REVIEW_SUBJECT } from "./email";
+import { matchSequenceEnabled } from "./flag";
 
 /** Matches stored per founder. The full count is kept in match_count. */
 export const STORED_MATCHES_PER_FOUNDER = 50;
@@ -64,7 +65,12 @@ export async function createMatchCampaign(
   createdBy: string | null,
 ): Promise<MatchCampaignRow> {
   const db = marketingDb();
-  const config: MatchConfig = { ...DEFAULT_MATCH_CONFIG, ...(input.call_url?.trim() ? { call_url: input.call_url.trim() } : {}) };
+  const config: MatchConfig = {
+    ...DEFAULT_MATCH_CONFIG,
+    ...(input.call_url?.trim() ? { call_url: input.call_url.trim() } : {}),
+    // New campaigns start with follow ups on when the feature is enabled; existing campaigns keep theirs off.
+    sequence_enabled: matchSequenceEnabled(),
+  };
   const { data, error } = await db
     .from("marketing_campaigns")
     .insert({
@@ -380,7 +386,6 @@ export type CampaignFounderRow = {
   first_profile_view_at: string | null;
   clicked_call_at: string | null;
   booked_at: string | null;
-  followup_sent_at: string | null;
   clicked_intro_at: string | null;
   plan_started_at: string | null;
   founder_profile_id: string | null;
@@ -393,7 +398,7 @@ export async function listCampaignFounders(campaignId: string): Promise<Campaign
   for (let from = 0; ; from += 1000) {
     const { data, error } = await db
       .from("match_campaign_founders")
-      .select("id, founder_contact_id, email, company, industry, funding_stage, founder_type, match_count, top_matches, excluded_reason, send_status, sent_at, opened_page_at, first_profile_view_at, clicked_call_at, booked_at, followup_sent_at, clicked_intro_at, plan_started_at, founder_profile_id, send_error")
+      .select("id, founder_contact_id, email, company, industry, funding_stage, founder_type, match_count, top_matches, excluded_reason, send_status, sent_at, opened_page_at, first_profile_view_at, clicked_call_at, booked_at, clicked_intro_at, plan_started_at, founder_profile_id, send_error")
       .eq("campaign_id", campaignId)
       .order("company", { ascending: true, nullsFirst: false })
       .range(from, from + 999);
@@ -419,7 +424,7 @@ export type RunBatch = { summary: RunSummary; processed: number; next: string | 
 type Db = ReturnType<typeof marketingDb>;
 
 /** Name and firm for each investor contact id, as a founder sees them. Batched. */
-async function investorNames(db: Db, ids: readonly string[]): Promise<Map<string, { investor_name: string | null; investor_firm: string | null }>> {
+export async function investorNames(db: Db, ids: readonly string[]): Promise<Map<string, { investor_name: string | null; investor_firm: string | null }>> {
   const out = new Map<string, { investor_name: string | null; investor_firm: string | null }>();
   const unique = [...new Set(ids)];
   for (let i = 0; i < unique.length; i += 200) {
@@ -632,6 +637,8 @@ export type FounderPageData = {
   visibleCount: number;
   /** True when the link is older than LINK_DAYS after the email went out. */
   expired: boolean;
+  /** match_campaign_matches ids, same order as matches (for profile view tracking). */
+  matchIds: string[];
 };
 
 /** Founder links stop opening match details this many days after the email. */
@@ -694,6 +701,7 @@ function pageData(row: FounderPageRow, campaign: MatchCampaignRow | null, matche
     flow: campaign ? cfg.flow : "plan",
     visibleCount: cfg.visible_count,
     expired: linkExpired(row.sent_at),
+    matchIds: [],
   };
 }
 
@@ -712,9 +720,11 @@ export async function loadFounderPage(campaignFounderId: string, opts: { track?:
     await db.from("match_campaign_founders").update({ opened_page_at: new Date().toISOString() }).eq("id", row.id);
   }
   const data = pageData(row, campaign, []);
-  const named = await namedSnapshot(db, data.flow === "review" ? stored.slice(0, data.visibleCount) : stored);
+  const open = data.flow === "review" ? stored.slice(0, data.visibleCount) : stored;
+  const named = await namedSnapshot(db, open);
   const locked = data.flow === "review" ? stored.slice(data.visibleCount).map(lockedMatch) : [];
-  return { ...data, matches: [...named, ...locked] };
+  // Ids only for named matches (view tracking); locked matches carry none.
+  return { ...data, matches: [...named, ...locked], matchIds: open.map((r) => r.id) };
 }
 
 /** A locked match as the browser may see it: no name, firm, type or check size. */
@@ -737,6 +747,8 @@ export type FounderProfileData = {
   position: number;
   openCount: number;
   match: MaskedMatch;
+  /** match_campaign_matches id of this profile (server only, for view tracking). */
+  matchId: string;
 };
 
 /**
@@ -757,12 +769,13 @@ export async function loadFounderProfile(campaignFounderId: string, position: nu
   // Full sector list for the profile (the snapshot keeps four).
   const match: MaskedMatch = { ...named, sectors: target.sectors };
   if (opts.track !== false && !data.expired) {
+    // The per investor view count lives in match_campaign_investor_views (the
+    // follow up sequence names the most viewed investor); the page records it.
     const now = new Date().toISOString();
-    await db.from("match_campaign_profile_views").insert({ campaign_founder_id: row.id, match_id: target.id, viewed_at: now });
     await db.from("match_campaign_founders").update({ first_profile_view_at: now }).eq("id", row.id).is("first_profile_view_at", null);
     if (!row.opened_page_at) await db.from("match_campaign_founders").update({ opened_page_at: now }).eq("id", row.id);
   }
-  return { page: data, position, openCount: open.length, match };
+  return { page: data, position, openCount: open.length, match, matchId: target.id };
 }
 
 /** Name and email to prefill the booking form from a founder link. */

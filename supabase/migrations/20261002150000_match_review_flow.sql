@@ -16,6 +16,12 @@
 --   crm_contacts                  + hidden_from_founders: investors who asked
 --                                 not to be shown are skipped by matching
 --
+-- Applied to production on Oct 2, 2026. Merged after the follow up sequence
+-- (20261002120000_match_sequence.sql), which owns follow ups and per investor
+-- view counts (match_campaign_investor_views); followup_sent_at and
+-- match_campaign_profile_views below ended up unused by the code and can be
+-- dropped in a later cleanup. booked_at is added by both files (if not exists).
+--
 -- RLS: the new tables are staff only, like the other Match campaign tables. The
 -- public founder pages read and write through the service role after verifying
 -- the signed founder token.

@@ -8,6 +8,8 @@ import { SelectionBar } from "@/components/admin/sales/SelectionBar";
 import type { MatchCampaignRow, CampaignFounderRow, AdminMatchRow, RunSummary, RunBatch } from "@/lib/marketing/match-campaign/store";
 import { MAX_CAMPAIGN_FOUNDERS } from "@/lib/marketing/match-campaign/types";
 import type { MatchResults } from "@/lib/marketing/match-campaign/results";
+import type { CohortSummaryRow, SequenceResults, VariantRow } from "@/lib/marketing/match-campaign/followups";
+import { FOLLOWUP_STEPS, STOP_LABEL } from "@/lib/marketing/match-campaign/sequence";
 import {
   DEFAULT_CALL_PATH,
   EXCLUDED_LABEL,
@@ -21,7 +23,8 @@ import { filterToQuery, type FounderFilterInput } from "@/lib/marketing/match-ca
 type ListOption = { id: string; name: string; count: number | null };
 type Options = { industries: string[]; stages: string[]; pipelineStages: string[] };
 
-const STEPS = ["Create", "Founder list", "Data check", "Matches", "Content", "Schedule", "Results"] as const;
+const STEPS_CLASSIC = ["Create", "Founder list", "Data check", "Matches", "Content", "Schedule", "Results"] as const;
+const STEPS_SEQUENCE = ["Create", "Founder list", "Data check", "Matches", "Content", "Sequence", "Schedule", "Results"] as const;
 
 const card = "rounded-xl border border-[#E3E8F2] bg-white p-5 shadow-[0_1px_3px_rgb(12_35_64/0.06)]";
 const input = "w-full rounded-lg border border-[#E3E8F2] bg-[#F7F9FC] px-3 py-2 text-[13px] text-[#0A1A40] outline-none focus:border-[#1A6CE4]";
@@ -83,14 +86,21 @@ export function MatchCampaignEditor({
   defaultSender,
   senders,
   resendReady,
+  sequenceEnabled = false,
 }: {
   initialCampaign: MatchCampaignRow | null;
   lists: ListOption[];
   defaultSender: { name: string; email: string; replyTo: string };
   senders: { name: string; email: string }[];
   resendReady: boolean;
+  /** MATCH_SEQUENCE_ENABLED: adds the Sequence step, cohorts and the split test. */
+  sequenceEnabled?: boolean;
 }) {
   const router = useRouter();
+  const STEPS = sequenceEnabled ? STEPS_SEQUENCE : STEPS_CLASSIC;
+  const SEQ = sequenceEnabled ? 5 : -1;
+  const SCHEDULE = sequenceEnabled ? 6 : 5;
+  const RESULTS = sequenceEnabled ? 7 : 6;
   const [campaign, setCampaign] = useState<MatchCampaignRow | null>(initialCampaign);
   const [founders, setFounders] = useState<CampaignFounderRow[]>([]);
   const [options, setOptions] = useState<Options>({ industries: [], stages: [], pipelineStages: [] });
@@ -114,10 +124,10 @@ export function MatchCampaignEditor({
         setOptions(j.options);
         const sent = j.founders.some((f) => f.send_status !== "pending");
         const matched = j.founders.some((f) => f.match_count > 0);
-        setStep(sent || ["sending", "sent"].includes(j.campaign.status) ? 6 : matched ? 3 : j.founders.length ? 2 : 1);
+        setStep(sent || ["sending", "sent"].includes(j.campaign.status) ? RESULTS : matched ? 3 : j.founders.length ? 2 : 1);
       })
       .catch((e) => setError(String(e.message ?? e)));
-  }, [initialCampaign]);
+  }, [initialCampaign, RESULTS]);
 
   const reachable = (i: number) => i === 0 || Boolean(campaign && (i <= 1 || founders.length > 0));
 
@@ -175,18 +185,21 @@ export function MatchCampaignEditor({
         />
       )}
       {step === 2 && campaign && (
-        <StepCheck campaign={campaign} founders={founders} onError={setError} onChange={(c, rows) => { setCampaign(c); setFounders(rows); }} onNext={() => setStep(3)} />
+        <StepCheck campaign={campaign} founders={founders} sequenceEnabled={sequenceEnabled} onError={setError} onChange={(c, rows) => { setCampaign(c); setFounders(rows); }} onCampaign={setCampaign} onNext={() => setStep(3)} />
       )}
       {step === 3 && campaign && (
         <StepMatches campaign={campaign} founders={founders} onError={setError} onFounders={setFounders} onCampaign={setCampaign} onNext={() => setStep(4)} />
       )}
       {step === 4 && campaign && (
-        <StepContent campaign={campaign} founders={founders} onError={setError} onCampaign={setCampaign} onNext={() => setStep(5)} />
+        <StepContent campaign={campaign} founders={founders} sequenceEnabled={sequenceEnabled} onError={setError} onCampaign={setCampaign} onNext={() => setStep(sequenceEnabled ? SEQ : SCHEDULE)} />
       )}
-      {step === 5 && campaign && (
-        <StepSchedule campaign={campaign} founders={founders} resendReady={resendReady} onError={setError} onCampaign={setCampaign} onDone={() => reload(campaign.id).then(() => setStep(6))} />
+      {sequenceEnabled && step === SEQ && campaign && (
+        <StepSequence campaign={campaign} onError={setError} onCampaign={setCampaign} onNext={() => setStep(SCHEDULE)} />
       )}
-      {step === 6 && campaign && <StepResults campaign={campaign} onError={setError} onCampaign={setCampaign} />}
+      {step === SCHEDULE && campaign && (
+        <StepSchedule campaign={campaign} founders={founders} resendReady={resendReady} sequenceEnabled={sequenceEnabled} onError={setError} onCampaign={setCampaign} onDone={() => reload(campaign.id).then(() => setStep(RESULTS))} />
+      )}
+      {step === RESULTS && campaign && <StepResults campaign={campaign} sequenceEnabled={sequenceEnabled} onError={setError} onCampaign={setCampaign} />}
     </div>
   );
 }
@@ -446,10 +459,12 @@ function summarize(founders: CampaignFounderRow[]) {
   return r;
 }
 
-function StepCheck({ campaign, founders, onChange, onNext, onError }: {
+function StepCheck({ campaign, founders, sequenceEnabled, onChange, onCampaign, onNext, onError }: {
   campaign: MatchCampaignRow;
   founders: CampaignFounderRow[];
+  sequenceEnabled: boolean;
   onChange: (c: MatchCampaignRow, rows: CampaignFounderRow[]) => void;
+  onCampaign: (c: MatchCampaignRow) => void;
   onNext: () => void;
   onError: (e: string) => void;
 }) {
@@ -515,6 +530,7 @@ function StepCheck({ campaign, founders, onChange, onNext, onError }: {
         </table>
       </div>
       <p className="mt-2 text-[11.5px] text-[#8A94A8]">Excluded founders stay on the list and can join a later campaign once their data is filled.</p>
+      {sequenceEnabled && campaign.match_config.sequence_enabled ? <CohortPanel campaign={campaign} founders={founders} onCampaign={onCampaign} onError={onError} /> : null}
       <div className="mt-5 flex justify-end">
         <button type="button" className={btn} disabled={busy || s.ready === 0} onClick={onNext}>Next: matches</button>
       </div>
@@ -663,9 +679,10 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
 
 // ── 5. Content ───────────────────────────────────────────────────────────────
 
-function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
+function StepContent({ campaign, founders, sequenceEnabled, onCampaign, onNext, onError }: {
   campaign: MatchCampaignRow;
   founders: CampaignFounderRow[];
+  sequenceEnabled: boolean;
   onCampaign: (c: MatchCampaignRow) => void;
   onNext: () => void;
   onError: (e: string) => void;
@@ -755,7 +772,7 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
             />
           </>
         ) : <div className="text-[12px] text-[#8A94A8]">Loading preview…</div>}
-        <div className="mt-5 flex justify-end"><button type="button" className={btn} onClick={onNext}>Next: schedule</button></div>
+        <div className="mt-5 flex justify-end"><button type="button" className={btn} onClick={onNext}>{sequenceEnabled ? "Next: sequence" : "Next: schedule"}</button></div>
       </div>
       <div className={`${card} h-fit text-[12.5px] leading-5`}>
         <div className="mb-2 font-semibold">What the founder sees before paying</div>
@@ -765,6 +782,9 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
           <li>= Existing footer with unsubscribe and suppression</li>
         </ul>
         <div className="mb-2 font-semibold">Buttons</div>
+        {sequenceEnabled && campaign.match_config.sequence_enabled ? (
+          <p className="mb-2 rounded-lg bg-[#F3F8FF] p-2 text-[#1A6CE4]">Follow ups are on: the email has one button, See my matches, plus the warm intro line. Schedule a call and Choose a plan move to the match page.</p>
+        ) : null}
         <ul className="space-y-1 text-[#5A6782]">
           <li>• See all matches: the founder&apos;s match page; each match expands like icapos.com/fit, contact info hidden</li>
           <li>1. Schedule a call with us: the scheduling page</li>
@@ -778,10 +798,11 @@ function StepContent({ campaign, founders, onCampaign, onNext, onError }: {
 
 // ── 6. Schedule ──────────────────────────────────────────────────────────────
 
-function StepSchedule({ campaign, founders, resendReady, onCampaign, onDone, onError }: {
+function StepSchedule({ campaign, founders, resendReady, sequenceEnabled, onCampaign, onDone, onError }: {
   campaign: MatchCampaignRow;
   founders: CampaignFounderRow[];
   resendReady: boolean;
+  sequenceEnabled: boolean;
   onCampaign: (c: MatchCampaignRow) => void;
   onDone: () => void;
   onError: (e: string) => void;
@@ -850,6 +871,12 @@ function StepSchedule({ campaign, founders, resendReady, onCampaign, onDone, onE
         <div>Template: <b>Founder match email, contact details hidden</b></div>
         <div>Status: <b>{campaign.status}</b>{campaign.scheduled_at ? ` · ${new Date(campaign.scheduled_at).toLocaleString()}` : ""}</div>
         <div>Mode: <b>{dry ? "Test mode, no founder emails" : "Live"}</b></div>
+        {sequenceEnabled ? (
+          <div className="sm:col-span-2">
+            Follow ups: <b>{campaign.match_config.sequence_enabled ? `On, ${campaign.match_config.holdout_pct}% holdout gets the single email` : "Off, single email"}</b>
+            {campaign.match_config.sequence_enabled && dry ? " · test mode records follow ups and call tasks without sending or creating them" : ""}
+          </div>
+        ) : null}
       </div>
       {!resendReady && !dry ? <p className="mt-3 text-[12px] text-[#854F0B]">Email provider not connected. Live sends are held until RESEND_API_KEY is set.</p> : null}
       {note ? <p className="mt-3 text-[12.5px] text-[#0F6E56]">{note}</p> : null}
@@ -866,7 +893,7 @@ function StepSchedule({ campaign, founders, resendReady, onCampaign, onDone, onE
 
 const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
-function StepResults({ campaign, onCampaign, onError }: { campaign: MatchCampaignRow; onCampaign: (c: MatchCampaignRow) => void; onError: (e: string) => void }) {
+function StepResults({ campaign, sequenceEnabled, onCampaign, onError }: { campaign: MatchCampaignRow; sequenceEnabled: boolean; onCampaign: (c: MatchCampaignRow) => void; onError: (e: string) => void }) {
   const [r, setR] = useState<MatchResults | null>(null);
   const [cost, setCost] = useState({
     send: campaign.match_config.cost?.send_cost_usd?.toString() ?? "",
@@ -921,7 +948,6 @@ function StepResults({ campaign, onCampaign, onError }: { campaign: MatchCampaig
     ...(campaign.match_config.flow === "review" ? ([["Viewed an investor profile", r.profileViewed]] as Array<[string, number | null]>) : []),
     [campaign.match_config.flow === "review" ? "Clicked Pick a time" : "Clicked Schedule a call", r.callClicks],
     [campaign.match_config.flow === "review" ? "Booked a match review" : "Booked a call", r.booked],
-    ...(campaign.match_config.flow === "review" ? ([["Sent the profile follow up", r.followUps]] as Array<[string, number | null]>) : []),
     ["Clicked Choose a plan", r.introClicks],
     ["Chose a plan", r.plans],
     ["Requested introduction", r.introsRequested],
@@ -931,6 +957,7 @@ function StepResults({ campaign, onCampaign, onError }: { campaign: MatchCampaig
 
   return (
     <div className="space-y-4">
+      {sequenceEnabled && campaign.match_config.sequence_enabled ? <SequenceResultsCard campaign={campaign} onError={onError} /> : null}
       <div className={card}>
         <div className="mb-1 text-[14px] font-medium">Results</div>
         <p className="mb-4 text-[12.5px] text-[#5A6782]">Regular campaign stats, plus the founder funnel and introductions to approve. Blank until real data comes in. No projected figures shown.</p>
@@ -1001,6 +1028,285 @@ function StepResults({ campaign, onCampaign, onError }: { campaign: MatchCampaig
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Follow up sequence (MATCH_SEQUENCE_ENABLED) ──────────────────────────────
+
+async function patchConfig(campaignId: string, config: Partial<MatchConfig>): Promise<MatchCampaignRow> {
+  const j = await api<{ campaign: MatchCampaignRow }>("/api/admin/marketing/match", { method: "PATCH", body: JSON.stringify({ id: campaignId, config }) });
+  return j.campaign;
+}
+
+/** Inside Data check: cohorts of at most N founders and the holdout split, as they will be assigned at send. */
+function CohortPanel({ campaign, founders, onCampaign, onError }: {
+  campaign: MatchCampaignRow;
+  founders: CampaignFounderRow[];
+  onCampaign: (c: MatchCampaignRow) => void;
+  onError: (e: string) => void;
+}) {
+  const cfg = campaign.match_config;
+  const [data, setData] = useState<{ cohorts: CohortSummaryRow[]; cap: number; holdoutPct: number } | null>(null);
+  const [cap, setCap] = useState(cfg.cohort_cap);
+  const [holdout, setHoldout] = useState(cfg.holdout_pct);
+  const [busy, setBusy] = useState(false);
+  const matched = founders.some((f) => f.match_count > 0);
+
+  const load = useCallback(() => {
+    api<{ cohorts: CohortSummaryRow[]; cap: number; holdoutPct: number }>(`/api/admin/marketing/match/cohorts?campaign_id=${campaign.id}`)
+      .then(setData)
+      .catch((e) => onError(String(e.message)));
+  }, [campaign.id, onError]);
+  useEffect(load, [load, founders, cfg.cohort_cap, cfg.holdout_pct, cfg.excluded_cohorts.length]);
+
+  async function save(patch: Partial<MatchConfig>) {
+    setBusy(true);
+    try {
+      onCampaign(await patchConfig(campaign.id, patch));
+    } catch (e) {
+      onError(String((e as Error).message));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function toggle(key: string, include: boolean) {
+    const next = include ? cfg.excluded_cohorts.filter((k) => k !== key) : [...cfg.excluded_cohorts, key];
+    void save({ excluded_cohorts: next });
+  }
+
+  return (
+    <div className="mt-5 rounded-lg border border-[#E3E8F2] p-4">
+      <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold">
+        Cohorts <span className="rounded bg-[#FFF4E0] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[#8A5A00]">New</span>
+      </div>
+      <p className="mb-3 text-[12px] text-[#5A6782]">
+        Founders are grouped by industry, stage and region. Cohorts larger than the cap split into numbered parts. The holdout part of each cohort gets the Day 0 email only, so Results can compare single email against the sequence.
+      </p>
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div>
+          <label className={label}>Max founders per cohort (10 to 100)</label>
+          <div className="flex gap-2">
+            <input className={input} type="number" min={10} max={100} value={cap} onChange={(e) => setCap(Number(e.target.value) || 50)} />
+            <button type="button" className={btnGhost} disabled={busy || cap === cfg.cohort_cap} onClick={() => save({ cohort_cap: cap })}>Save</button>
+          </div>
+        </div>
+        <div>
+          <label className={label}>Holdout, single email only (0 to 90%)</label>
+          <div className="flex gap-2">
+            <input className={input} type="number" min={0} max={90} value={holdout} onChange={(e) => setHoldout(Number(e.target.value) || 0)} />
+            <button type="button" className={btnGhost} disabled={busy || holdout === cfg.holdout_pct} onClick={() => save({ holdout_pct: holdout })}>Save</button>
+          </div>
+        </div>
+        <div className="text-[11.5px] text-[#8A94A8]">
+          Assigned when the campaign sends; reruns never reshuffle a founder. 0% turns the split test off.
+        </div>
+      </div>
+      {!matched ? (
+        <p className="text-[12px] text-[#8A94A8]">Cohorts list founders that have matches. Run matching in the next step, then come back to review them.</p>
+      ) : !data ? (
+        <p className="text-[12px] text-[#8A94A8]">Loading cohorts…</p>
+      ) : data.cohorts.length === 0 ? (
+        <p className="text-[12px] text-[#8A94A8]">No unsent founders with matches.</p>
+      ) : (
+        <div className="max-h-[320px] overflow-auto rounded-lg border border-[#E3E8F2]">
+          <table className="w-full">
+            <thead className="sticky top-0 bg-[#F7F9FC]">
+              <tr><th className={th}>Include</th><th className={th}>Cohort</th><th className={th}>Founders</th><th className={th}>Avg matches</th><th className={th}>Sequence</th><th className={th}>Single</th></tr>
+            </thead>
+            <tbody>
+              {data.cohorts.map((c) => (
+                <tr key={c.key} className={`border-t border-[#E3E8F2] ${c.excluded ? "opacity-50" : ""}`}>
+                  <td className={td}><input type="checkbox" aria-label={`Include ${c.key}`} disabled={busy} checked={!c.excluded} onChange={(e) => toggle(c.key, e.target.checked)} /></td>
+                  <td className={td}>{c.key}</td>
+                  <td className={td}>{c.founders}</td>
+                  <td className={td}>{c.avgMatches}</td>
+                  <td className={td}>{c.sequence}</td>
+                  <td className={td}>{c.single}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** New step: the follow ups each founder gets after Day 0, by what they did. */
+function StepSequence({ campaign, onCampaign, onNext, onError }: {
+  campaign: MatchCampaignRow;
+  onCampaign: (c: MatchCampaignRow) => void;
+  onNext: () => void;
+  onError: (e: string) => void;
+}) {
+  const on = campaign.match_config.sequence_enabled;
+  const [busy, setBusy] = useState(false);
+  const branch = (b: "a" | "b") => FOLLOWUP_STEPS.filter((s) => s.branch === b);
+
+  async function setOn(v: boolean) {
+    setBusy(true);
+    try {
+      onCampaign(await patchConfig(campaign.id, { sequence_enabled: v }));
+    } catch (e) {
+      onError(String((e as Error).message));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={card}>
+      <div className="mb-1 flex items-center justify-between">
+        <div className="text-[14px] font-medium">Sequence</div>
+        <label className="flex items-center gap-2 text-[12.5px]">
+          <input type="checkbox" disabled={busy || campaign.status !== "draft"} checked={on} onChange={(e) => setOn(e.target.checked)} />
+          Follow ups
+        </label>
+      </div>
+      <p className="mb-4 text-[12.5px] text-[#5A6782]">
+        Follow ups reply in the Day 0 thread and stop as soon as the founder requests an intro, books a call, starts a plan, replies or unsubscribes. Off: one email, exactly as before.
+        {campaign.status !== "draft" ? " The campaign has started, so this setting is locked." : ""}
+      </p>
+      <div className={`grid gap-4 md:grid-cols-2 ${on ? "" : "opacity-50"}`}>
+        {(["a", "b"] as const).map((b) => (
+          <div key={b} className="rounded-lg bg-[#F7F9FC] p-4">
+            <div className="mb-2 text-[12.5px] font-semibold">{b === "a" ? "Branch A · never opened the match page" : "Branch B · viewed matches, no intro, no booking"}</div>
+            <ol className="space-y-2 border-l-2 border-[#E3E8F2] pl-3">
+              {branch(b).map((s) => (
+                <li key={s.key} className="text-[12.5px]">
+                  <span className={`mr-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${s.channel === "call" ? "bg-[#FAEEDA] text-[#854F0B]" : "bg-[#EAF2FF] text-[#1A6CE4]"}`}>{s.channel === "call" ? "Call task" : "Email"}</span>
+                  {s.label}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-2 rounded-lg bg-[#F7F9FC] p-4 text-[12.5px] sm:grid-cols-2">
+        <div>Founders who open their match page move to Branch B, timed from the view.</div>
+        <div>Call tasks go to the founder&apos;s Sales Hub opportunity owner, else the campaign creator.</div>
+        <div>Follow up emails share the campaign&apos;s daily send cap and test mode.</div>
+        <div>Holdout founders ({campaign.match_config.holdout_pct}%) get the Day 0 email only.</div>
+      </div>
+      <div className="mt-5 flex justify-end"><button type="button" className={btn} onClick={onNext}>Next: schedule</button></div>
+    </div>
+  );
+}
+
+function pct(n: number, d: number): string {
+  return d > 0 ? `${Math.round((n / d) * 100)}%` : "—";
+}
+
+function VariantCells({ v }: { v: VariantRow }) {
+  return (
+    <>
+      <td className={td}>{v.sent}</td>
+      <td className={td}>{v.pageOpened} · {pct(v.pageOpened, v.sent)}</td>
+      <td className={td}>{v.booked} · {pct(v.booked, v.sent)}</td>
+      <td className={td}>{v.introRequested} · {pct(v.introRequested, v.sent)}</td>
+      <td className={td}>{v.plans}</td>
+    </>
+  );
+}
+
+/** Results: sequence against the single email holdout, follow up activity, and the Replied mark. */
+function SequenceResultsCard({ campaign, onError }: { campaign: MatchCampaignRow; onError: (e: string) => void }) {
+  const [r, setR] = useState<SequenceResults | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api<SequenceResults>(`/api/admin/marketing/match/sequence?campaign_id=${campaign.id}`).then(setR).catch((e) => onError(String(e.message)));
+  }, [campaign.id, onError]);
+  useEffect(load, [load]);
+
+  async function replied(id: string, value: boolean) {
+    setActing(id);
+    try {
+      await api("/api/admin/marketing/match/sequence", { method: "POST", body: JSON.stringify({ campaign_founder_id: id, replied: value }) });
+      load();
+    } catch (e) {
+      onError(String((e as Error).message));
+    } finally {
+      setActing(null);
+    }
+  }
+
+  if (!r) return <div className={card}><div className="text-[12.5px] text-[#8A94A8]">Loading follow up results…</div></div>;
+  const cols = ["Variant", "Sent", "Opened match page", "Booked", "Intro requested", "Plans"].map((c) => <th key={c} className={th}>{c}</th>);
+  const head = <tr>{cols}</tr>;
+
+  return (
+    <div className={card}>
+      <div className="mb-1 text-[14px] font-medium">Sequence vs single email</div>
+      <p className="mb-3 text-[12.5px] text-[#5A6782]">Measured counts only. Booked means a booking on the scheduling page after the Day 0 email.</p>
+      {!r.enoughData ? (
+        <p className="mb-3 rounded-lg bg-[#FAEEDA] px-3 py-2 text-[12px] text-[#854F0B]">
+          Not enough data yet: each variant needs at least {r.minPerVariant} founders sent (single {r.single.sent}, sequence {r.sequence.sent}). Read the comparison once both pass.
+        </p>
+      ) : null}
+      <table className="mb-4 w-full rounded-lg border border-[#E3E8F2]">
+        <thead className="bg-[#F7F9FC]">{head}</thead>
+        <tbody>
+          <tr className="border-t border-[#E3E8F2]"><td className={td}>Single email</td><VariantCells v={r.single} /></tr>
+          <tr className="border-t border-[#E3E8F2]"><td className={td}>Sequence</td><VariantCells v={r.sequence} /></tr>
+        </tbody>
+      </table>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <Tile value={r.followups.emails || null} label="Follow up emails sent" />
+        <Tile value={r.followups.calls || null} label="Call tasks created" />
+        <Tile value={r.followups.recorded || null} label="Recorded in test mode" />
+        <Tile value={r.active || null} label="Still in sequence" />
+        <Tile value={r.followups.failed || null} label="Failed" tone="warn" />
+      </div>
+      {r.stopped.length ? (
+        <p className="mb-4 text-[12px] text-[#5A6782]">Stopped: {r.stopped.map((s) => `${STOP_LABEL[s.reason]} ${s.count}`).join(" · ")}</p>
+      ) : null}
+      {r.byCohort.length ? (
+        <>
+          <div className="mb-2 text-[12.5px] font-semibold">By cohort</div>
+          <div className="mb-4 max-h-[320px] overflow-auto rounded-lg border border-[#E3E8F2]">
+            <table className="w-full">
+              <thead className="sticky top-0 bg-[#F7F9FC]"><tr><th className={th}>Cohort</th>{cols}</tr></thead>
+              <tbody>
+                {r.byCohort.map((c) => (
+                  <tr key={`${c.key}|${c.variant}`} className="border-t border-[#E3E8F2]">
+                    <td className={td}>{c.key}</td>
+                    <td className={`${td} capitalize`}>{c.variant}</td>
+                    <VariantCells v={c} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
+      {r.founders.length ? (
+        <>
+          <div className="mb-2 text-[12.5px] font-semibold">Founders in the sequence</div>
+          <p className="mb-2 text-[11.5px] text-[#8A94A8]">Replies are not detected automatically yet. Mark a founder as replied to stop their follow ups.</p>
+          <div className="max-h-[320px] overflow-auto rounded-lg border border-[#E3E8F2]">
+            <table className="w-full">
+              <thead className="sticky top-0 bg-[#F7F9FC]"><tr><th className={th}>Company</th><th className={th}>Cohort</th><th className={th}>Branch</th><th className={th}>Status</th><th className={th}></th></tr></thead>
+              <tbody>
+                {r.founders.map((f) => (
+                  <tr key={f.id} className="border-t border-[#E3E8F2]">
+                    <td className={td}>{f.company ?? "—"}</td>
+                    <td className={td}>{f.cohort ?? "—"}</td>
+                    <td className={td}>{f.branch ? f.branch.toUpperCase() : "—"}</td>
+                    <td className={`${td} capitalize`}>{f.status ?? "—"}</td>
+                    <td className={`${td} text-right`}>
+                      <button type="button" className="text-[12px] text-[#1A6CE4] hover:underline disabled:opacity-50" disabled={acting === f.id} onClick={() => replied(f.id, !f.replied)}>
+                        {f.replied ? "Unmark replied" : "Mark replied"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

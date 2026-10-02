@@ -11,11 +11,12 @@ import { isUnsubscribed } from "@/lib/marketing/contacts";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
-import { renderFollowUpEmail, renderFounderEmail, renderReviewEmail, renderSubject, DEFAULT_SUBJECT, REVIEW_SUBJECT, UNNAMED } from "./email";
-import { investorIdentity } from "./matcher";
+import { renderFounderEmail, renderReviewEmail, renderSubject, DEFAULT_SUBJECT, REVIEW_SUBJECT } from "./email";
 import { investorNetworkCount, networkLabel } from "./investors";
 import { makeFounderToken } from "./token";
 import { getMatchCampaign, type MatchCampaignRow } from "./store";
+import { sequenceActive } from "./flag";
+import { assignCohorts, enrollmentPatch, threadMessageId } from "./followups";
 import type { MaskedMatch } from "./types";
 
 function appUrl(): string {
@@ -42,6 +43,7 @@ type FounderSendRow = {
   funding_stage: string | null;
   match_count: number;
   top_matches: MaskedMatch[];
+  variant?: string | null;
 };
 
 export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRow, ctx: SendContext): { subject: string; html: string } {
@@ -67,7 +69,7 @@ export function buildFounderMessage(campaign: MatchCampaignRow, f: FounderSendRo
   };
   const html = review
     ? renderReviewEmail({ ...base, visibleCount: campaign.match_config.visible_count, links: { ...links, profile: (n: number) => `${appUrl()}/matches/${token}/i/${n}` } })
-    : renderFounderEmail({ ...base, links });
+    : renderFounderEmail({ ...base, links, layout: sequenceActive(campaign.match_config) ? "matches_first" : "classic" });
   return { subject, html };
 }
 
@@ -86,6 +88,8 @@ async function marketingContactId(email: string, crmContactId: string, company: 
 }
 
 const SELECT = "id, founder_contact_id, email, company, industry, funding_stage, match_count, top_matches";
+/** With the follow up sequence on, Day 0 also reads the founder's split test variant. */
+const SELECT_SEQUENCE = `${SELECT}, variant`;
 
 /**
  * Sends up to the daily cap. Called from sendCampaign (manual send and the
@@ -116,16 +120,20 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
 
   await db.from("marketing_campaigns").update({ status: "sending", updated_at: new Date().toISOString() }).eq("id", campaignId);
 
+  // Follow up sequence: cohorts and the holdout split are fixed before anyone is emailed.
+  const withSequence = sequenceActive(cfg);
+  if (withSequence) await assignCohorts(campaign);
+
   const { data } = await db
     .from("match_campaign_founders")
-    .select(SELECT)
+    .select(withSequence ? SELECT_SEQUENCE : SELECT)
     .eq("campaign_id", campaignId)
     .eq("send_status", "pending")
     .is("excluded_reason", null)
     .gt("match_count", 0)
     .order("created_at", { ascending: true })
     .limit(room);
-  const batch = (data ?? []) as FounderSendRow[];
+  const batch = (data ?? []) as unknown as FounderSendRow[];
   const ctx = await sendContext();
 
   let sent = 0, skipped = 0, failed = 0;
@@ -139,7 +147,10 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
     const { subject, html } = buildFounderMessage(campaign, f, ctx);
     // Test mode and internal (@myicfos.com) addresses: record, never dispatch.
     if (cfg.dry_run || isInternalAccount({ email: f.email, role: "founder" })) {
-      await db.from("match_campaign_founders").update({ send_status: "dry_run", sent_at: now, updated_at: now }).eq("id", f.id);
+      await db
+        .from("match_campaign_founders")
+        .update({ send_status: "dry_run", sent_at: now, updated_at: now, ...(withSequence ? enrollmentPatch({ variant: f.variant ?? null, match_count: f.match_count }, now, null) : {}) })
+        .eq("id", f.id);
       sent++;
       continue;
     }
@@ -154,6 +165,7 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
       html_body: html,
       text_body: null,
       unsubscribe_token: makeUnsubscribeToken(f.email),
+      ...(withSequence ? { headers: { "Message-ID": threadMessageId(f.id, campaign.from_email) } } : {}),
     });
     const contactId = await marketingContactId(f.email, f.founder_contact_id, f.company);
     if (contactId) {
@@ -174,6 +186,7 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
         message_id: result.resend_id,
         send_error: result.error ?? null,
         updated_at: now,
+        ...(withSequence && result.ok ? enrollmentPatch({ variant: f.variant ?? null, match_count: f.match_count }, now, threadMessageId(f.id, campaign.from_email)) : {}),
       })
       .eq("id", f.id);
     if (result.ok) sent++;
@@ -246,88 +259,4 @@ export async function previewFounderEmail(campaignId: string, campaignFounderId:
   const { data } = await db.from("match_campaign_founders").select(SELECT).eq("id", campaignFounderId).eq("campaign_id", campaignId).maybeSingle();
   if (!data) return null;
   return buildFounderMessage(campaign, data as FounderSendRow, await sendContext());
-}
-
-
-/** Founders followed up per cron pass. */
-const FOLLOW_UP_BATCH = 50;
-const DAY_MS = 86_400_000;
-
-/**
- * The one follow up email of the review flow: a founder who opened an investor
- * profile at least 24 hours ago, has not booked a match review or started a
- * plan, and has not been followed up yet, gets one email naming the investor
- * they viewed last. Only real sends (not dry runs or internal addresses), only
- * review flow campaigns, never to an unsubscribed address. Runs on the 15
- * minute marketing cron.
- */
-export async function sendMatchFollowUps(now: Date = new Date()): Promise<{ sent: number; skipped: number; failed: number }> {
-  const db = marketingDb();
-  const cutoff = new Date(now.getTime() - DAY_MS).toISOString();
-  const { data } = await db
-    .from("match_campaign_founders")
-    .select("id, campaign_id, email, company")
-    .eq("send_status", "sent")
-    .not("first_profile_view_at", "is", null)
-    .lte("first_profile_view_at", cutoff)
-    .is("booked_at", null)
-    .is("plan_started_at", null)
-    .is("followup_sent_at", null)
-    .order("first_profile_view_at", { ascending: true })
-    .limit(FOLLOW_UP_BATCH);
-  const rows = (data ?? []) as Array<{ id: string; campaign_id: string; email: string | null; company: string | null }>;
-  let sent = 0, skipped = 0, failed = 0;
-  const campaigns = new Map<string, MatchCampaignRow | null>();
-  for (const f of rows) {
-    const stamp = new Date().toISOString();
-    if (!campaigns.has(f.campaign_id)) campaigns.set(f.campaign_id, await getMatchCampaign(f.campaign_id));
-    const campaign = campaigns.get(f.campaign_id) ?? null;
-    // Mark first, so a failure below never sends twice.
-    await db.from("match_campaign_founders").update({ followup_sent_at: stamp }).eq("id", f.id).is("followup_sent_at", null);
-    if (!campaign || campaign.match_config.flow !== "review" || campaign.match_config.dry_run || !f.email || (await isUnsubscribed(f.email)) || isInternalAccount({ email: f.email, role: "founder" })) {
-      skipped++;
-      continue;
-    }
-    const { data: view } = await db
-      .from("match_campaign_profile_views")
-      .select("match_id")
-      .eq("campaign_founder_id", f.id)
-      .order("viewed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const matchId = (view as { match_id: string } | null)?.match_id;
-    let investorName = UNNAMED;
-    if (matchId) {
-      const { data: m } = await db.from("match_campaign_matches").select("investor_contact_id").eq("id", matchId).maybeSingle();
-      const contactId = (m as { investor_contact_id: string } | null)?.investor_contact_id;
-      if (contactId) {
-        const { data: c } = await db.from("crm_contacts").select("name, company").eq("id", contactId).maybeSingle();
-        const who = c as { name: string | null; company: string | null } | null;
-        investorName = investorIdentity(who?.name, who?.company).investor_name ?? UNNAMED;
-      }
-    }
-    const token = makeFounderToken(f.id);
-    const { subject, html } = renderFollowUpEmail({
-      company: f.company?.trim() || "your company",
-      investorName,
-      links: { call: `${appUrl()}/mc/${token}?a=call`, privacy: `${appUrl()}/privacy` },
-      postalAddress: postalAddress(),
-    });
-    const result = await sendMarketingEmail({
-      to: f.email,
-      first_name: null,
-      company: f.company,
-      from_name: campaign.from_name,
-      from_email: campaign.from_email,
-      reply_to: campaign.reply_to,
-      subject,
-      html_body: html,
-      text_body: null,
-      unsubscribe_token: makeUnsubscribeToken(f.email),
-    });
-    if (result.ok) sent++;
-    else failed++;
-    await new Promise((r) => setTimeout(r, 200));
-  }
-  return { sent, skipped, failed };
 }

@@ -35,7 +35,6 @@ export type MatchResults = {
   pageOpened: number | null;
   profileViewed: number | null;
   callClicks: number | null;
-  followUps: number | null;
   booked: number | null;
   introClicks: number | null;
   plans: number | null;
@@ -190,7 +189,6 @@ export async function loadMatchResults(campaignId: string): Promise<MatchResults
     opened: orNull(opened),
     pageOpened: orNull(founders.filter((f) => f.opened_page_at).length),
     profileViewed: orNull(founders.filter((f) => f.first_profile_view_at).length),
-    followUps: orNull(founders.filter((f) => f.followup_sent_at).length),
     callClicks: orNull(callers.length),
     booked: orNull(booked),
     introClicks: orNull(founders.filter((f) => f.clicked_intro_at).length),

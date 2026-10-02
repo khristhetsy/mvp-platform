@@ -4,8 +4,9 @@ import { recordFunnelEvent, FIT_CHOICE_EVENTS } from "@/lib/analytics/funnel";
 
 export const dynamic = "force-dynamic";
 
-// fit_signup is written server-side by /api/lead, never from the browser.
-const schema = z.object({ eventName: z.enum(FIT_CHOICE_EVENTS).exclude(["fit_signup"]) });
+// fit_signup is written server-side by /api/lead, and fit_variant by /api/fit/session,
+// never from the browser.
+const schema = z.object({ eventName: z.enum(FIT_CHOICE_EVENTS).exclude(["fit_signup", "fit_variant"]) });
 
 // Logs which path a visitor picks on the /fit options screen, keyed to the funnel
 // session cookie. No cookie, no event. Never fails the caller.
