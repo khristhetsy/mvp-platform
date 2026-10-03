@@ -126,7 +126,7 @@ export function SiteNav() {
             </>
           ) : viewer.status === "signed-out" ? (
             <>
-              <Link href={`/auth/sign-in?next=${encodeURIComponent(pathname)}`} className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi sm:inline-flex">
+              <Link href="/auth/sign-in" className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi sm:inline-flex">
                 Sign in
               </Link>
               <Link
@@ -170,7 +170,7 @@ export function SiteNav() {
               ...(viewer.status === "signed-in"
                 ? [{ href: viewer.dashboardHref, label: "Dashboard" }]
                 : viewer.status === "signed-out"
-                  ? [{ href: `/auth/sign-in?next=${encodeURIComponent(pathname)}`, label: "Sign in" }]
+                  ? [{ href: "/auth/sign-in", label: "Sign in" }]
                   : []),
             ].map((i) => (
               <li key={i.href}>
