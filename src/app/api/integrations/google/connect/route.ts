@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   cookieStore.set(COOKIE_STATE, state, googleOAuthCookieOptions());
   cookieStore.set(COOKIE_RETURN, returnTo, googleOAuthCookieOptions());
 
-  const redirectUrl = buildGoogleAuthorizationUrl(state);
+  const redirectUrl = buildGoogleAuthorizationUrl(state, { staff: profile.role === "admin" || profile.role === "analyst" });
   return NextResponse.redirect(redirectUrl);
 }
 

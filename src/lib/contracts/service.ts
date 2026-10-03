@@ -77,10 +77,10 @@ export async function renderBundleDocx(db: Db, b: Bundle, mode: "preview" | "fin
   return renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
 }
 
-/** True preview: the same Word → PDF render that is sent for signature. */
-export async function renderBundlePdf(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
+/** True preview: the same Word → PDF render that is sent for signature, through `userId`'s Google account. */
+export async function renderBundlePdf(db: Db, b: Bundle, mode: "preview" | "final", userId: string): Promise<Buffer> {
   const docx = await renderBundleDocx(db, b, mode);
-  return docxToPdf(docx, `${fileBase(b)}.docx`);
+  return docxToPdf(docx, `${fileBase(b)}.docx`, userId);
 }
 
 // ── Send ───────────────────────────────────────────────────────────────────
@@ -108,9 +108,9 @@ function expiryFor(b: Bundle): string {
   return new Date(Date.now() + DEFAULT_EXPIRY_DAYS * 86400000).toISOString();
 }
 
-async function prepare(db: Db, b: Bundle): Promise<Prepared> {
+async function prepare(db: Db, b: Bundle, userId: string): Promise<Prepared> {
   const docx = await renderBundleDocx(db, b, "final");
-  const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`);
+  const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`, userId);
   const { lines, pageCount } = await readPdfLines(new Uint8Array(pdf));
   const placed = placeSignatureFields(lines, b.template.signature_anchors, bundleValues(b));
   const prospectFields: FieldInput[] = [{ field_type: "signature", ...placed.prospect.signature, required: true }];
@@ -164,7 +164,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
 
   // Render and place signatures for every document first.
   const prepared: Prepared[] = [];
-  for (const b of bundles) prepared.push(await prepare(db, b));
+  for (const b of bundles) prepared.push(await prepare(db, b, input.sender.id));
 
   const token = randomBytes(32).toString("hex");
   const { data: packet, error: pErr } = await db

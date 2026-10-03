@@ -5,7 +5,7 @@ import { getMaster, listEntities, updateDraft } from "@/lib/contracts/store";
 import { bundleOpenFields } from "@/lib/contracts/service";
 import { buildModel, loadDocx, tokenizeDoc } from "@/lib/contracts/docx-engine";
 import { actorAndBundle } from "@/lib/contracts/route-helpers";
-import { renderConfigured } from "@/lib/contracts/render-pdf";
+import { CONNECT_GOOGLE_HREF, renderStatus } from "@/lib/contracts/render-pdf";
 import { writeAuditLog } from "@/lib/data/audit";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     versions: versions.data ?? [],
     request: request.data,
     packet: packet.data ? { recipient_email: packet.data.recipient_email, sent_at: packet.data.sent_at, delivered: packet.data.delivered } : null,
-    renderConfigured: renderConfigured(),
+    ...(await renderInfo(actor.userId)),
     can: { cancelOrArchive: canCancelOrArchive(actor, b.doc.created_by), delete: actor.isAdmin },
   });
 }
@@ -120,4 +120,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const fresh = { ...b, doc: { ...b.doc, ...patch, field_values: patch.field_values ?? b.doc.field_values } };
   if (patch.entity_id !== undefined) fresh.entity = patch.entity_id ? (await listEntities(actor.db)).find((e) => e.id === patch.entity_id) ?? null : null;
   return NextResponse.json({ ok: true, savedAt: new Date().toISOString(), open: bundleOpenFields(fresh as typeof b) });
+}
+
+/** Render readiness for this staff member, with the message and link to fix it. */
+async function renderInfo(userId: string): Promise<{ renderConfigured: boolean; renderMessage: string | null; renderFixHref: string | null }> {
+  const s = await renderStatus(userId);
+  return s.ready ? { renderConfigured: true, renderMessage: null, renderFixHref: null } : { renderConfigured: false, renderMessage: s.message, renderFixHref: CONNECT_GOOGLE_HREF };
 }
