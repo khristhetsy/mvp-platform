@@ -9,6 +9,7 @@ import { MASTER_BASE64 as SAFE } from "./masters/safe";
 import { MASTER_BASE64 as SERIES_A } from "./masters/series-a";
 import { MASTER_BASE64 as DDSA } from "./masters/dd-services-agreement";
 import { MASTER_BASE64 as DDSA_3MO } from "./masters/dd-services-agreement-3mo";
+import { MASTER_BASE64 as DDSA_STOCK_CASH } from "./masters/dd-services-agreement-stock-cash";
 
 export type SeedField = { token: string; label: string; type: FieldType; required: boolean; default_value: string | null; position_ref: FieldMatch[] };
 export type MasterSeed = {
@@ -613,5 +614,144 @@ export const MASTER_SEEDS: MasterSeed[] = [
     hasExpiry: false,
     anchors: {"prospect": {"party": "COMPANY:"}, "countersign": [{"party": "{{issuing_entity}}"}]},
     fields: DDSA_FIELDS,
+  },
+  {
+    key: "dd_services_agreement_stock_cash",
+    name: "Due Diligence Services Agreement (cash and stock)",
+    kind: "services_agreement",
+    subtype: null,
+    filename: "iCFO Advisory Due Diligence Services Agreement - BLANK (Paid In Stock + Cash).docx",
+    base64: DDSA_STOCK_CASH,
+    entityKey: "advisory",
+    entityMatch: "ICFO CAPITAL ADVISORY, LLC",
+    hasExpiry: false,
+    anchors: {"prospect": {"party": "COMPANY:"}, "countersign": [{"party": "{{issuing_entity}}"}]},
+    fields: [
+      {
+        "token": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "(DATE)"
+          }
+        ]
+      },
+      {
+        "token": "service_fee_words",
+        "label": "Service fee in words",
+        "type": "text",
+        "required": true,
+        "default_value": "Fifty Thousand Dollars",
+        "position_ref": [
+          {
+            "find": "[Fifty Thousand Dollars ($50,000)]",
+            "replace": "Fifty Thousand Dollars"
+          }
+        ]
+      },
+      {
+        "token": "service_fee",
+        "label": "Service fee",
+        "type": "currency",
+        "required": true,
+        "default_value": "50,000",
+        "position_ref": [
+          {
+            "find": "($50,000)]",
+            "replace": "50,000"
+          }
+        ]
+      },
+      {
+        "token": "cash_portion",
+        "label": "Paid in cash at signing",
+        "type": "currency",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "($25,000 / $50,000) in cash",
+            "replace": "25,000 / $50,000"
+          }
+        ]
+      },
+      {
+        "token": "equity_portion",
+        "label": "Paid in equity after completion",
+        "type": "currency",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "($25,000 / $50,000) in equity",
+            "replace": "25,000 / $50,000"
+          }
+        ]
+      },
+      {
+        "token": "payment_schedule",
+        "label": "Payment schedule",
+        "type": "text",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "[insert payment schedule]"
+          }
+        ]
+      },
+      {
+        "token": "equity_valuation",
+        "label": "Equity valuation (pre money)",
+        "type": "currency",
+        "required": true,
+        "default_value": "10,000,000",
+        "position_ref": [
+          {
+            "find": "($10,000,000) fully diluted",
+            "replace": "10,000,000"
+          }
+        ]
+      },
+      {
+        "token": "company_name",
+        "label": "Company legal name",
+        "type": "text",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "[COMPANY]"
+          }
+        ]
+      },
+      {
+        "token": "company_address",
+        "label": "Company address",
+        "type": "multiline",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "[ADDRESS]"
+          }
+        ]
+      },
+      {
+        "token": "company_email",
+        "label": "Company notice email",
+        "type": "text",
+        "required": true,
+        "default_value": null,
+        "position_ref": [
+          {
+            "find": "[EMAIL]"
+          }
+        ]
+      }
+    ],
   },
 ];
