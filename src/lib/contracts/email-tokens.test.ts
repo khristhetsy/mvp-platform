@@ -37,3 +37,24 @@ describe("cover email tokens", () => {
     expect(r.missing).toEqual(["valuation_cap"]);
   });
 });
+
+describe("cover email gaps", () => {
+  it("typed values fill gaps but never override a document's value", async () => {
+    const { withTypedValues } = await import("./email-tokens");
+    const v = withTypedValues({ financing_amount: "$2,500,000" }, { financing_amount: "$1", valuation_cap: "12,000,000", "bad key": "x", empty: "  " });
+    expect(v.financing_amount).toBe("$2,500,000");
+    expect(v.valuation_cap).toBe("12,000,000");
+    expect(v["bad key"]).toBeUndefined();
+    expect(v.empty).toBeUndefined();
+  });
+
+  it("picks the draft the chosen documents fill best", async () => {
+    const { bestDraft } = await import("./email-tokens");
+    const drafts = [
+      { id: "cn", subject: "Term sheet for {{company}}", body: "{{financing_amount}} by {{spv_name}}" },
+      { id: "ddsa", subject: "Services agreement for {{company}}", body: "Hi {{first_name}}, attached: {{document_list}}" },
+    ];
+    expect(bestDraft(drafts, { company: "Acme", first_name: "Jo", document_list: "DDSA" })?.id).toBe("ddsa");
+    expect(bestDraft(drafts, { company: "Acme", financing_amount: "$1", spv_name: "ICFO ACME SPV, LLC" })?.id).toBe("cn");
+  });
+});

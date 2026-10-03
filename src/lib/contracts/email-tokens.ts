@@ -62,3 +62,37 @@ export function applyEmailTokens(text: string, values: Record<string, string>): 
   });
   return { text: out, missing: [...missing] };
 }
+
+/** Tokens a text uses, in order of first use. */
+export function tokensIn(text: string): string[] {
+  return [...new Set([...text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/g)].map((m) => m[1]))];
+}
+
+/**
+ * Values typed in the cover email step for tokens the documents and contact do
+ * not provide. They only fill gaps: a value from a document always wins, so the
+ * email cannot disagree with what is signed.
+ */
+export function withTypedValues(values: Record<string, string>, typed: Record<string, string> | null | undefined): Record<string, string> {
+  const out = { ...values };
+  for (const [k, v] of Object.entries(typed ?? {})) {
+    if (!/^[a-z0-9_]{1,40}$/.test(k)) continue;
+    const t = String(v ?? "").trim().slice(0, 300);
+    if (t && !out[k]) out[k] = t;
+  }
+  return out;
+}
+
+/** The draft whose tokens the chosen documents fill best (fewest gaps; first wins ties). */
+export function bestDraft<T extends { subject: string; body: string }>(drafts: T[], values: Record<string, string>): T | null {
+  let best: T | null = null;
+  let bestGaps = Infinity;
+  for (const d of drafts) {
+    const gaps = tokensIn(`${d.subject}\n${d.body}`).filter((t) => !values[t] && t !== "sender_name").length;
+    if (gaps < bestGaps) {
+      best = d;
+      bestGaps = gaps;
+    }
+  }
+  return best;
+}

@@ -17,6 +17,8 @@ const schema = z.object({
   body: z.string().max(20000),
   emailDraftId: z.string().uuid().nullable(),
   attachPdfs: z.boolean(),
+  /** Values typed in the email step for tokens no document or contact provides. */
+  typedValues: z.record(z.string(), z.string().max(300)).optional(),
 });
 
 /** POST — send the selected drafts for signature with one cover email. */

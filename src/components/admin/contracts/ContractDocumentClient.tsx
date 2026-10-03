@@ -9,7 +9,7 @@ import { ContractEditor, loadEditorData, type EditorData } from "./ContractEdito
 import { api, BLUE, btn, Card, fmtDateTime, MUTED, NAVY, Notice, SectionLabel, StatusPill } from "./ui";
 
 type Detail = EditorData & {
-  doc: EditorData["doc"] & { status: ContractStatus; sent_at: string | null; expires_at: string | null; archived_at: string | null; has_pdf: boolean; has_executed: boolean; has_certificate: boolean; created_by: string };
+  doc: EditorData["doc"] & { status: ContractStatus; sent_at: string | null; expires_at: string | null; archived_at: string | null; has_pdf: boolean; has_executed: boolean; has_certificate: boolean; created_by: string; source?: "template" | "upload"; signature_request_id?: string | null; countersign_count?: number; page_count?: number | null };
   contact: { id: string; name: string; email: string | null; company: string | null };
   events: { kind: string; actor: string | null; detail: Record<string, unknown> | null; created_at: string }[];
   versions: { id: string; version: number; status: ContractStatus; sent_at: string | null }[];
@@ -128,7 +128,11 @@ export function ContractDocumentClient({ id, defaultSignerName }: { id: string; 
       {!d.doc.locked ? (
         <>
           <Card style={{ overflow: "hidden" }}>
-            <ContractEditor data={d} onSaved={() => undefined} />
+            {d.doc.source === "upload" ? (
+              <UploadedDraft d={d} />
+            ) : (
+              <ContractEditor data={d} onSaved={() => undefined} />
+            )}
           </Card>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
             {d.can.delete ? <button type="button" disabled={busy} onClick={() => void act("delete", "Delete this draft? This is logged.")} style={btn(false, true)}>Delete draft</button> : null}
@@ -217,6 +221,24 @@ function Row({ k, v }: { k: string; v: string }) {
     <div style={{ display: "flex", gap: 10, padding: "4px 0", fontSize: 12.5 }}>
       <span style={{ width: 96, flexShrink: 0, color: MUTED }}>{k}</span>
       <span style={{ color: NAVY, minWidth: 0, overflowWrap: "anywhere" }}>{v}</span>
+    </div>
+  );
+}
+
+/** An uploaded contract before send: the PDF as uploaded, and its signature boxes. */
+function UploadedDraft({ d }: { d: Detail }) {
+  const place = d.doc.signature_request_id ? `/admin/signatures/${d.doc.signature_request_id}?contract=${d.doc.id}` : null;
+  const ready = (d.doc.countersign_count ?? 0) > 0;
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
+        <span style={{ fontSize: 12.5, color: MUTED }}>Uploaded contract{d.doc.page_count ? ` · ${d.doc.page_count} pages` : ""} · sent exactly as uploaded</span>
+        <span style={{ flex: 1 }} />
+        {place ? <Link href={place} style={btn(!ready)}>{ready ? "Edit signature boxes" : "Place signature boxes"}</Link> : null}
+      </div>
+      {!ready ? <div style={{ padding: "10px 16px 0" }}><Notice tone="warn">Place the prospect&apos;s signature box and your countersignature box before sending.</Notice></div> : null}
+      <iframe title="Contract PDF" src={`/api/admin/sales/contracts/${d.doc.id}/pdf?kind=preview`} style={{ width: "100%", height: "70vh", border: "none", display: "block" }} />
     </div>
   );
 }

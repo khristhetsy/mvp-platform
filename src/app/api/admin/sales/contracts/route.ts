@@ -3,14 +3,14 @@ import { z } from "zod";
 import { bad, canSeeContact, forbidden, requireContractsApi } from "@/lib/contracts/access";
 import { createDraft, getContactLite, getTemplate } from "@/lib/contracts/store";
 import { expireIfDue } from "@/lib/contracts/service";
-import { isSpvContact, type ContractDocument } from "@/lib/contracts/types";
+import type { ContractDocument } from "@/lib/contracts/types";
 import { writeAuditLog } from "@/lib/data/audit";
 import { errorMessage } from "@/lib/contracts/route-helpers";
 
 export const dynamic = "force-dynamic";
 
 const LIST_COLS =
-  "id, document_key, version, status, locked, sent_at, created_at, updated_at, archived_at, expires_at, created_by, contact_id, template_id, signature_request_id, " +
+  "id, document_key, version, status, locked, sent_at, created_at, updated_at, archived_at, expires_at, created_by, contact_id, template_id, signature_request_id, source, title, " +
   "template:contract_templates(name, kind), entity:contract_entities(short_name, legal_name), contact:crm_contacts(name, company, email), " +
   "request:signature_requests!contract_documents_signature_request_id_fkey(open_count, last_opened_at)";
 
@@ -51,7 +51,9 @@ export async function GET(req: Request): Promise<Response> {
   const documents = [];
   for (const row of latest.values()) {
     const doc = await expireIfDue(actor.db, row as unknown as ContractDocument);
-    documents.push({ ...row, status: doc.status, mine: row.created_by === actor.userId });
+    // Uploaded contracts carry their own title where template documents show the template name.
+    const template = row.template ?? (row.source === "upload" ? { name: (row.title as string) ?? "Contract", kind: "upload" } : null);
+    documents.push({ ...row, template, status: doc.status, mine: row.created_by === actor.userId });
   }
   return NextResponse.json({ documents, isAdmin: actor.isAdmin });
 }
@@ -69,7 +71,6 @@ export async function POST(req: Request): Promise<Response> {
   if (!(await canSeeContact(actor, contactId))) return forbidden();
   const contact = await getContactLite(actor.db, contactId);
   if (!contact) return bad("Contact not found.", 404);
-  if (!isSpvContact(contact.tags)) return forbidden("Contract send is only available for contacts tagged SPV.");
 
   const termSheets = [];
   for (const id of templateIds) {

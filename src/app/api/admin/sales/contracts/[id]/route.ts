@@ -18,9 +18,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { actor, b } = r;
   const db = actor.db;
 
-  const { doc } = await loadDocx(await getMaster(db, b.template.id));
-  tokenizeDoc(doc, b.fields, b.template.entity_match, { strict: false });
-  const blocks = buildModel(doc);
+  // Uploaded contracts have no Word master: no editor blocks, the PDF is the document.
+  let blocks: ReturnType<typeof buildModel> = [];
+  if (b.doc.source !== "upload") {
+    const { doc } = await loadDocx(await getMaster(db, b.template.id));
+    tokenizeDoc(doc, b.fields, b.template.entity_match, { strict: false });
+    blocks = buildModel(doc);
+  }
 
   const [entities, events, versions, request, packet] = await Promise.all([
     listEntities(db),
@@ -50,6 +54,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       has_executed: Boolean(b.doc.executed_path),
       has_certificate: Boolean(b.doc.certificate_path),
       created_by: b.doc.created_by,
+      source: b.doc.source,
+      signature_request_id: b.doc.signature_request_id,
+      countersign_count: (b.doc.countersign_fields ?? []).filter((f) => f.kind === "signature").length,
     },
     template: { id: b.template.id, name: b.template.name, kind: b.template.kind, version: b.template.version, entity_match: b.template.entity_match, has_expiry: b.template.has_expiry },
     contact: b.contact,

@@ -10,9 +10,14 @@ import type { FieldType } from "@/lib/esignature/types";
 
 type PrepT = (key: string, values?: Record<string, string | number>) => string;
 
+/** "countersign" exists only in contract mode: iCFO's own signature box, saved on the contract. */
+type ToolType = FieldType | "countersign";
+const COUNTERSIGN_LABEL = "Your countersignature";
+const toolLabel = (t: PrepT, type: ToolType) => (type === "countersign" ? COUNTERSIGN_LABEL : t(`field.${type}`));
+
 type PlacedField = {
   uid: string;
-  field_type: FieldType;
+  field_type: ToolType;
   page: number;
   x: number;
   y: number;
@@ -27,9 +32,11 @@ type Props = {
   documentName: string;
   status: string;
   pageCount: number;
+  /** Sales Hub contract upload: adds the countersignature box and returns to the contract when done. */
+  contract?: { docId: string; backHref: string };
 };
 
-const TOOLS: { type: FieldType; labelKey: string; icon: typeof Pen }[] = [
+const TOOLS: { type: ToolType; labelKey: string; icon: typeof Pen }[] = [
   { type: "signature", labelKey: "field.signature", icon: Pen },
   { type: "date", labelKey: "field.date", icon: Calendar },
   { type: "company", labelKey: "field.company", icon: Building2 },
@@ -40,7 +47,8 @@ const TOOLS: { type: FieldType; labelKey: string; icon: typeof Pen }[] = [
 const DEFAULT_W = 0.22;
 const DEFAULT_H = 0.05;
 
-const FIELD_COLORS: Record<FieldType, string> = {
+const FIELD_COLORS: Record<ToolType, string> = {
+  countersign: "#B7791F",
   signature: "#2E78F5",
   date: "#1D9E75",
   company: "#BA7517",
@@ -55,11 +63,13 @@ function statusLabel(t: PrepT, s: string) {
   return STATUS_KEYS.includes(s) ? t(`status.${s}`) : s;
 }
 
-export function SignaturePrepareClient({ requestId, documentName, status, pageCount }: Props) {
+export function SignaturePrepareClient({ requestId, documentName, status, pageCount, contract }: Props) {
+  const contractDocId = contract?.docId ?? null;
+  const contractBack = contract?.backHref ?? null;
   const t = useTranslations("signaturesAdmin.prepare");
   const router = useRouter();
   const { toast } = useToast();
-  const [tool, setTool] = useState<FieldType>("signature");
+  const [tool, setTool] = useState<ToolType>("signature");
   const [fields, setFields] = useState<PlacedField[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +102,11 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
             placeholder: f.placeholder,
           })),
         );
+        if (contractDocId) {
+          const c = await fetch(`/api/admin/sales/contracts/${contractDocId}/placement`).then((r) => r.json()).catch(() => ({}));
+          const boxes = (c.countersign ?? []) as { page: number; x: number; y: number; width: number; height: number }[];
+          if (active && boxes.length) setFields((prev) => [...prev, ...boxes.map((b) => ({ ...b, uid: crypto.randomUUID(), field_type: "countersign" as const, required: true, placeholder: null }))]);
+        }
         setSignedUrl(data.signedUrl ?? null);
         setAudit(data.audit ?? []);
         if (data.request?.status) setLiveStatus(data.request.status);
@@ -102,7 +117,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
       }
     })();
     return () => { active = false; };
-  }, [requestId, toast, t]);
+  }, [requestId, toast, t, contractDocId]);
 
   const addField = useCallback(
     (page: number, x: number, y: number) => {
@@ -143,7 +158,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fields: fields.map((f) => ({
+          fields: fields.filter((f) => f.field_type !== "countersign").map((f) => ({
             field_type: f.field_type,
             page: f.page,
             x: round(f.x),
@@ -157,13 +172,20 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Save failed.");
+      if (contractDocId) {
+        const boxes = fields.filter((f) => f.field_type === "countersign").map((f) => ({ page: f.page, x: round(f.x), y: round(f.y), width: round(f.width), height: round(f.height) }));
+        const cr = await fetch(`/api/admin/sales/contracts/${contractDocId}/placement`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ countersign: boxes }) });
+        if (!cr.ok) throw new Error(((await cr.json().catch(() => ({}))) as { error?: string }).error ?? "Could not save your countersignature box.");
+      }
       toast({ title: t("fieldsSaved"), variant: "success" });
+      return true;
     } catch (err) {
       toast({ title: t("couldNotSave"), description: err instanceof Error ? err.message : "", variant: "error" });
+      return false;
     } finally {
       setSaving(false);
     }
-  }, [fields, requestId, toast, t]);
+  }, [fields, requestId, toast, t, contractDocId]);
 
   const voidEnvelope = useCallback(async () => {
     if (!(await confirmDialog({ message: t("voidConfirm"), danger: true, confirmLabel: t("voidConfirmLabel") }))) return;
@@ -182,6 +204,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
   }, [requestId, toast, t]);
 
   const canVoid = ["draft", "sent", "viewed"].includes(liveStatus);
+  const tools = contractDocId ? [...TOOLS, { type: "countersign" as const, labelKey: "", icon: Pen }] : TOOLS;
 
   const selectedField = fields.find((f) => f.uid === selected) ?? null;
 
@@ -201,7 +224,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
               <Download className="h-4 w-4" /> {t("signedPdf")}
             </a>
           ) : null}
-          {canVoid ? (
+          {canVoid && !contract ? (
             <button
               type="button"
               onClick={() => void voidEnvelope()}
@@ -213,14 +236,26 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           ) : null}
           {editable ? (
             <>
-              <button
-                type="button"
-                onClick={() => router.push(`/admin/signatures/${requestId}/send`)}
-                disabled={fields.length === 0}
-                className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-              >
-                {t("continueSend")}
-              </button>
+              {contract ? (
+                <button
+                  type="button"
+                  onClick={() => void save().then((ok) => ok && contractBack && router.push(contractBack))}
+                  disabled={saving || !fields.some((f) => f.field_type === "signature") || !fields.some((f) => f.field_type === "countersign")}
+                  title="Place at least one signature box for the prospect and your countersignature box"
+                  className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  Save and return to the contract
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/admin/signatures/${requestId}/send`)}
+                  disabled={fields.length === 0}
+                  className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  {t("continueSend")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => void save()}
@@ -241,7 +276,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
       ) : (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-2 shadow-[var(--shadow-panel)]">
           <span className="px-2 text-xs font-medium text-slate-500">{t("place")}</span>
-          {TOOLS.map(({ type, labelKey, icon: Icon }) => (
+          {tools.map(({ type, labelKey, icon: Icon }) => (
             <button
               key={type}
               type="button"
@@ -251,16 +286,16 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
               }`}
               style={tool === type ? { background: FIELD_COLORS[type] } : undefined}
             >
-              <Icon className="h-4 w-4" /> {t(labelKey)}
+              <Icon className="h-4 w-4" /> {labelKey ? t(labelKey) : toolLabel(t, type)}
             </button>
           ))}
-          <span className="ml-auto px-2 text-xs text-slate-500">{t("dropHint", { tool: t(`field.${tool}`) })}</span>
+          <span className="ml-auto px-2 text-xs text-slate-500">{t("dropHint", { tool: toolLabel(t, tool) })}</span>
         </div>
       )}
 
       {selectedField && editable ? (
         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-3 text-sm shadow-[var(--shadow-panel)]">
-          <span className="font-medium text-slate-800">{t("fieldOf", { type: t(`field.${selectedField.field_type}`) })}</span>
+          <span className="font-medium text-slate-800">{t("fieldOf", { type: toolLabel(t, selectedField.field_type) })}</span>
           <label className="flex items-center gap-1.5 text-slate-600">
             <input
               type="checkbox"
@@ -348,7 +383,7 @@ function PdfPlacementSurface({
   fields: PlacedField[];
   selected: string | null;
   editable: boolean;
-  colors: Record<FieldType, string>;
+  colors: Record<ToolType, string>;
   onAdd: (page: number, x: number, y: number) => void;
   onSelect: (uid: string | null) => void;
   onUpdate: (uid: string, patch: Partial<PlacedField>) => void;
@@ -430,7 +465,7 @@ function PdfPage({
   fields: PlacedField[];
   selected: string | null;
   editable: boolean;
-  colors: Record<FieldType, string>;
+  colors: Record<ToolType, string>;
   onAdd: (page: number, x: number, y: number) => void;
   onSelect: (uid: string | null) => void;
   onUpdate: (uid: string, patch: Partial<PlacedField>) => void;
@@ -509,7 +544,7 @@ function PdfPage({
             }}
           >
             <span className="pointer-events-none select-none">
-              {t(`field.${f.field_type}`)}
+              {toolLabel(t, f.field_type)}
               {f.required ? " *" : ""}
             </span>
             {editable ? (

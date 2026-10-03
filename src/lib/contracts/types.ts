@@ -87,8 +87,15 @@ export type ContractDocument = {
   id: string;
   document_key: string;
   contact_id: string;
-  template_id: string;
-  template_version: number;
+  /** Template documents only; uploaded contracts have none. */
+  template_id: string | null;
+  template_version: number | null;
+  /** "upload" = a finished PDF uploaded by staff (no fields, no editor). */
+  source: "template" | "upload";
+  /** Uploaded contracts: the name shown everywhere instead of a template name. */
+  title: string | null;
+  /** Uploaded contracts: the original PDF in the contract-documents bucket. */
+  upload_path: string | null;
   entity_id: string | null;
   version: number;
   field_values: Record<string, string>;
@@ -131,8 +138,3 @@ export const STATUS_LABEL: Record<ContractStatus, string> = {
 export const STOP_STATUSES: ContractStatus[] = ["changes_requested", "awaiting_countersign", "signed", "declined", "cancelled"];
 
 export const CONTRACTS_BUCKET = "contract-documents";
-export const SPV_TAG = "spv";
-
-export function isSpvContact(tags: string[] | null | undefined): boolean {
-  return (tags ?? []).some((t) => t.trim().toLowerCase() === SPV_TAG);
-}

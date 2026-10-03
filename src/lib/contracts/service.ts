@@ -23,12 +23,12 @@ import {
   setStatus,
   type ContactLite,
 } from "./store";
-import { applyEmailTokens, emailTokenValues } from "./email-tokens";
+import { applyEmailTokens, emailTokenValues, withTypedValues } from "./email-tokens";
 import { appBase, notifySender, sendCoverEmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
 import { buildCertificate } from "./certificate";
 import type { ContractDocument, ContractTemplate, CountersignField, IssuingEntity, TemplateField } from "./types";
-import { isSpvContact, STOP_STATUSES } from "./types";
-import { replaceFields, type FieldInput } from "@/lib/esignature/fields";
+import { STOP_STATUSES } from "./types";
+import { listFields, replaceFields, type FieldInput } from "@/lib/esignature/fields";
 import { uploadToSignatureBucket, writeSignatureAudit } from "@/lib/esignature/storage";
 import { STORAGE_BUCKET as SIGNATURE_BUCKET } from "@/lib/esignature/types";
 
@@ -44,9 +44,40 @@ export type Bundle = {
   contact: ContactLite;
 };
 
+/**
+ * An uploaded contract has no template. It gets a stand-in carrying its own
+ * title, so naming, emails and tracking treat both kinds the same; rendering
+ * and signature placement branch on `doc.source`.
+ */
+function uploadTemplate(doc: ContractDocument): ContractTemplate {
+  return {
+    id: `upload:${doc.id}`,
+    key: "upload",
+    name: doc.title ?? "Contract",
+    kind: "services_agreement",
+    subtype: null,
+    version: 1,
+    status: "active",
+    default_entity_id: doc.entity_id,
+    entity_match: null,
+    signature_anchors: { prospect: { party: "" }, countersign: [] },
+    has_expiry: false,
+    created_by: doc.created_by,
+    created_at: doc.created_at,
+  };
+}
+
+export const isUpload = (b: Bundle) => b.doc.source === "upload";
+
 export async function loadBundle(db: Db, docId: string): Promise<Bundle | null> {
   const doc = await getDocument(db, docId);
   if (!doc) return null;
+  if (doc.source === "upload") {
+    const [entity, contact] = await Promise.all([getEntity(db, doc.entity_id), getContactLite(db, doc.contact_id)]);
+    if (!contact) return null;
+    return { doc, template: uploadTemplate(doc), fields: [], entity, contact };
+  }
+  if (!doc.template_id) return null;
   const [template, fields, entity, contact] = await Promise.all([
     getTemplate(db, doc.template_id),
     getTemplateFields(db, doc.template_id),
@@ -62,23 +93,27 @@ export function bundleValues(b: Bundle): Record<string, string> {
 }
 
 export function bundleOpenFields(b: Bundle) {
+  if (isUpload(b)) return [];
   return openFields(b.fields, b.doc.field_values, b.entity, Boolean(b.template.entity_match));
 }
 
 /** "Arrayworks_TermSheet_v3" style file names, matching how proposals are named today. */
 export function fileBase(b: Bundle): string {
   const company = (b.contact.company ?? b.contact.name).replace(/[,.]?\s*(inc|llc|corp|ltd)\.?$/i, "").replace(/[^A-Za-z0-9]+/g, "") || "Contract";
+  if (isUpload(b)) return `${company}_${(b.doc.title ?? "Contract").replace(/\.pdf$/i, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 60) || "Contract"}_v${b.doc.version}`;
   const doc = b.template.kind === "term_sheet" ? "TermSheet" : b.template.kind === "services_agreement" ? "DDSA" : b.template.kind === "advisory_agreement" ? "Advisory" : "NDA";
   return `${company}_${doc}_v${b.doc.version}`;
 }
 
 export async function renderBundleDocx(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
+  if (isUpload(b)) throw new SendBlockedError("An uploaded contract has no Word version.");
   const master = await getMaster(db, b.template.id);
   return renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
 }
 
 /** True preview: the same Word → PDF render that is sent for signature. */
 export async function renderBundlePdf(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
+  if (isUpload(b)) return getFile(db, b.doc.upload_path!);
   const docx = await renderBundleDocx(db, b, mode);
   return docxToPdf(docx, `${fileBase(b)}.docx`);
 }
@@ -94,7 +129,10 @@ export class SendBlockedError extends Error {
 
 type Prepared = {
   b: Bundle;
-  docx: Buffer;
+  /** Template documents only. */
+  docx: Buffer | null;
+  /** Uploaded contracts: their draft envelope, which becomes the signing request. */
+  requestId?: string;
   pdf: Buffer;
   pageCount: number;
   prospectFields: FieldInput[];
@@ -109,6 +147,18 @@ function expiryFor(b: Bundle): string {
 }
 
 async function prepare(db: Db, b: Bundle): Promise<Prepared> {
+  if (isUpload(b)) {
+    // Uploaded PDF: the boxes were placed by hand on its draft envelope.
+    const requestId = b.doc.signature_request_id;
+    if (!requestId) throw new SendBlockedError(`${b.template.name}: place the signature boxes first.`);
+    const placed = await listFields(db, requestId);
+    if (!placed.some((f) => f.field_type === "signature")) throw new SendBlockedError(`${b.template.name}: place at least one signature box for the prospect.`);
+    const counter = b.doc.countersign_fields ?? [];
+    if (!counter.some((f) => f.kind === "signature")) throw new SendBlockedError(`${b.template.name}: place your countersignature box.`);
+    const pdf = await getFile(db, b.doc.upload_path!);
+    const { data: req } = await db.from("signature_requests").select("page_count").eq("id", requestId).maybeSingle();
+    return { b, docx: null, pdf, pageCount: (req?.page_count as number) ?? b.doc.page_count ?? 1, prospectFields: [], countersign: counter, expiresAt: expiryFor(b), requestId };
+  }
   const docx = await renderBundleDocx(db, b, "final");
   const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`);
   const { lines, pageCount } = await readPdfLines(new Uint8Array(pdf));
@@ -127,6 +177,7 @@ export type SendInput = {
   body: string;
   emailDraftId: string | null;
   attachPdfs: boolean;
+  typedValues?: Record<string, string>;
   sender: { id: string; name: string; email: string | null; actorLabel: string };
 };
 
@@ -144,18 +195,20 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     bundles.push(b);
   }
   const contact = bundles[0].contact;
-  if (!isSpvContact(contact.tags)) throw new SendBlockedError("Contract send is only available for contacts tagged SPV.");
   if (!contact.email) throw new SendBlockedError("This contact has no email address.");
 
   const open = bundles.flatMap((b) => bundleOpenFields(b).map((f) => `${b.template.name}: ${f.label}`));
   if (open.length) throw new SendBlockedError(`Fill the open fields before sending: ${open.join("; ")}.`, { open });
 
-  const tokenValues = emailTokenValues({
-    contactName: contact.name,
-    company: contact.company,
-    senderName: input.sender.name,
-    documents: bundles.map((b) => ({ fields: b.fields, values: b.doc.field_values, entityName: b.entity?.legal_name ?? null, title: b.template.name })),
-  });
+  const tokenValues = withTypedValues(
+    emailTokenValues({
+      contactName: contact.name,
+      company: contact.company,
+      senderName: input.sender.name,
+      documents: bundles.map((b) => ({ fields: b.fields, values: b.doc.field_values, entityName: b.entity?.legal_name ?? null, title: b.template.name })),
+    }),
+    input.typedValues,
+  );
   const subject = applyEmailTokens(input.subject, tokenValues);
   const body = applyEmailTokens(input.body, tokenValues);
   const missing = [...new Set([...subject.missing, ...body.missing])];
@@ -189,10 +242,33 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
   for (const p of prepared) {
     const { b } = p;
     const base = `docs/${b.doc.id}/${fileBase(b)}`;
-    await putFile(db, `${base}.docx`, p.docx, DOCX_MIME);
+    if (p.docx) await putFile(db, `${base}.docx`, p.docx, DOCX_MIME);
     await putFile(db, `${base}.pdf`, p.pdf, "application/pdf");
 
-    const requestId = crypto.randomUUID();
+    let requestId: string;
+    if (p.requestId) {
+      // Uploaded contract: its draft envelope (PDF and placed boxes) is sent as is.
+      requestId = p.requestId;
+      const { error: uErr } = await db
+        .from("signature_requests")
+        .update({
+          document_name: b.template.name,
+          deal_label: contact.company,
+          signer_name: contact.name,
+          signer_email: contact.email,
+          signer_company: contact.company,
+          status: "sent",
+          access_token: randomBytes(32).toString("hex"),
+          sent_at: now,
+          contract_document_id: b.doc.id,
+          expires_at: p.expiresAt,
+        })
+        .eq("id", requestId)
+        .eq("status", "draft");
+      if (uErr) throw new Error(`Could not send the signature request: ${uErr.message}`);
+      await writeSignatureAudit(db, { requestId, eventType: "sent", actor: input.sender.actorLabel, metadata: { signer_email: contact.email } });
+    } else {
+    requestId = crypto.randomUUID();
     const workingPath = `originals/${requestId}.pdf`;
     await uploadToSignatureBucket(db, workingPath, p.pdf, "application/pdf");
     const { error: rErr } = await db.from("signature_requests").insert({
@@ -216,6 +292,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     await replaceFields(db, requestId, p.prospectFields);
     await writeSignatureAudit(db, { requestId, eventType: "created", actor: input.sender.actorLabel, metadata: { contract_document_id: b.doc.id } });
     await writeSignatureAudit(db, { requestId, eventType: "sent", actor: input.sender.actorLabel, metadata: { signer_email: contact.email } });
+    }
 
     await db
       .from("contract_documents")
@@ -224,7 +301,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
         locked: true,
         sent_at: now,
         updated_at: now,
-        docx_path: `${base}.docx`,
+        docx_path: p.docx ? `${base}.docx` : null,
         pdf_path: `${base}.pdf`,
         page_count: p.pageCount,
         signature_request_id: requestId,
