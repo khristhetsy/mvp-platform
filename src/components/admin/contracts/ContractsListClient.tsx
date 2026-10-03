@@ -151,7 +151,7 @@ export function ContractsListClient() {
             {!loading && rows.length === 0 ? (
               <div style={{ padding: 28, textAlign: "center" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: NAVY, margin: 0 }}>No contracts yet</p>
-                <p style={{ fontSize: 12.5, color: MUTED, margin: "6px 0 0" }}>Use New to pick a contact and send a term sheet or services agreement.</p>
+                <p style={{ fontSize: 12.5, color: MUTED, margin: "6px 0 0" }}>Use New to pick an SPV contact and send a term sheet or services agreement.</p>
               </div>
             ) : null}
             {!loading && rows.length > 0 && result.rows.length === 0 && q ? (
