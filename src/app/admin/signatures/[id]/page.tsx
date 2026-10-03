@@ -29,7 +29,11 @@ export default async function AdminSignaturePreparePage({
   if (contractId && /^[0-9a-f-]{36}$/i.test(contractId)) {
     const db = createServiceRoleClient() as unknown as SupabaseClient;
     const { data } = await db.from("contract_documents").select("id, contact_id, signature_request_id").eq("id", contractId).maybeSingle();
-    if (data && data.signature_request_id === request.id) contract = { docId: data.id as string, backHref: `/admin/sales/contracts/send?contact=${data.contact_id as string}` };
+    // No recipient yet: back to the contract, where the recipient is chosen next.
+    if (data && data.signature_request_id === request.id) {
+      const docId = data.id as string;
+      contract = { docId, backHref: data.contact_id ? `/admin/sales/contracts/send?contact=${data.contact_id as string}` : `/admin/sales/contracts/${docId}` };
+    }
   }
 
   return (

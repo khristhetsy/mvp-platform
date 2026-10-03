@@ -10,7 +10,7 @@ import { errorMessage } from "@/lib/contracts/route-helpers";
 export const dynamic = "force-dynamic";
 
 const LIST_COLS =
-  "id, document_key, version, status, locked, sent_at, created_at, updated_at, archived_at, expires_at, created_by, contact_id, template_id, signature_request_id, source, title, " +
+  "id, document_key, version, status, locked, sent_at, created_at, updated_at, archived_at, expires_at, created_by, contact_id, template_id, signature_request_id, source, title, contract_type, page_count, " +
   "template:contract_templates(name, kind), entity:contract_entities(short_name, legal_name), contact:crm_contacts(name, company, email), " +
   "request:signature_requests!contract_documents_signature_request_id_fkey(open_count, last_opened_at)";
 
@@ -34,8 +34,8 @@ export async function GET(req: Request): Promise<Response> {
   } else if (!actor.scope.canSeeAllContacts) {
     const { data: mine } = await actor.db.from("crm_contacts").select("id").contains("assignee_ids", [actor.userId]).limit(5000);
     const ids = ((mine ?? []) as { id: string }[]).map((r) => r.id);
-    if (!ids.length) return NextResponse.json({ documents: [] });
-    q = q.in("contact_id", ids);
+    // Their contacts' documents, plus uploads they made that have no recipient yet.
+    q = ids.length ? q.or(`contact_id.in.(${ids.join(",")}),and(contact_id.is.null,created_by.eq.${actor.userId})`) : q.is("contact_id", null).eq("created_by", actor.userId);
   }
   if (!withArchived) q = q.is("archived_at", null);
   const { data, error } = await q;

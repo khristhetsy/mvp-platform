@@ -146,6 +146,8 @@ function normalizeDoc(row: Record<string, unknown>): ContractDocument {
   return {
     ...(row as unknown as ContractDocument),
     source: row.source === "upload" ? "upload" : "template",
+    contact_id: (row.contact_id as string | null) ?? null,
+    contract_type: (row.contract_type as ContractDocument["contract_type"]) ?? null,
     field_values: (row.field_values as Record<string, string>) ?? {},
     body_edits: { edits: edits.edits ?? {}, inserted: edits.inserted ?? [] },
   };
@@ -216,7 +218,7 @@ export async function createDraft(
 
 /** Editing after send: a new draft version with the same key, copied from the sent one. */
 export async function newVersionFrom(db: Db, doc: ContractDocument, userId: string): Promise<ContractDocument> {
-  if (!doc.template_id) throw new Error("An uploaded contract has no editable version. Upload the revised file instead.");
+  if (!doc.template_id || !doc.contact_id) throw new Error("An uploaded contract has no editable version. Upload the revised file instead.");
   const { data: top } = await db.from("contract_documents").select("version").eq("document_key", doc.document_key).order("version", { ascending: false }).limit(1);
   const version = ((top?.[0]?.version as number) ?? doc.version) + 1;
   return createDraft(db, {

@@ -5,6 +5,18 @@ export type TemplateKind = "term_sheet" | "services_agreement" | "advisory_agree
 export type TemplateSubtype = "convertible_note" | "safe" | "series_a" | null;
 export type FieldType = "text" | "date" | "currency" | "percent" | "multiline";
 
+/** Contract types an uploaded contract is filed under (selection row on Contracts › Uploaded). */
+export const CONTRACT_TYPES = [
+  { key: "due_diligence_services", label: "Due Diligence Services" },
+  { key: "safe", label: "SAFE" },
+  { key: "convertible_note", label: "Convertible Note" },
+  { key: "series_a", label: "Series A" },
+  { key: "stock_and_cash", label: "Stock and Cash" },
+] as const;
+export type ContractType = (typeof CONTRACT_TYPES)[number]["key"];
+export const CONTRACT_TYPE_LABEL: Record<ContractType, string> = Object.fromEntries(CONTRACT_TYPES.map((t) => [t.key, t.label])) as Record<ContractType, string>;
+export const isContractType = (v: unknown): v is ContractType => CONTRACT_TYPES.some((t) => t.key === v);
+
 /**
  * Where a field lives in the master. `find` is located in a paragraph's text
  * (across Word runs); `replace` is the part of `find` that the token stands for
@@ -86,7 +98,10 @@ export const EMPTY_EDITS: BodyEdits = { edits: {}, inserted: [] };
 export type ContractDocument = {
   id: string;
   document_key: string;
-  contact_id: string;
+  /** Null only for an uploaded draft whose recipient is not chosen yet. */
+  contact_id: string | null;
+  /** Uploaded contracts: the type chosen at upload. */
+  contract_type: ContractType | null;
   /** Template documents only; uploaded contracts have none. */
   template_id: string | null;
   template_version: number | null;
