@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MASTER_SEEDS } from "./master-seeds";
+import { MASTER_SEED_KEYS } from "./seed-keys";
 import { loadDocx, renderDocx, tokenizeDoc, tokensInDoc } from "./docx-engine";
 import { resolveValues } from "./fields";
 import type { TemplateField } from "./types";
@@ -15,9 +16,16 @@ const SAMPLE: Record<string, string> = {
   post_money_valuation: "12500000",
   company_address: "11 Portwalk Place\nPortsmouth, NH 03801",
   company_email: "ken@arrayworks.com",
+  cash_portion: "25000",
+  equity_portion: "25000",
+  payment_schedule: "the cash portion on signing and the equity portion within fourteen days of completion",
 };
 
 describe("launch masters", () => {
+  it("seed key list matches the shipped masters", () => {
+    expect([...MASTER_SEED_KEYS]).toEqual(MASTER_SEEDS.map((s) => s.key));
+  });
+
   for (const seed of MASTER_SEEDS) {
     it(`${seed.name}: every field is found and a full render leaves no token or placeholder`, async () => {
       const bytes = Buffer.from(seed.base64, "base64");
@@ -32,7 +40,7 @@ describe("launch masters", () => {
       const r = await loadDocx(out);
       expect(tokensInDoc(r.doc)).toEqual([]);
       const xml = await r.zip.file("word/document.xml")!.async("string");
-      for (const placeholder of ["(COMPANY)", "(DATE)", "$0,000,000", "(AMOUNT)", "(STATE)", "[COMPANY]", "[ADDRESS]", "[EMAIL]"]) {
+      for (const placeholder of ["(COMPANY)", "(DATE)", "$0,000,000", "(AMOUNT)", "(STATE)", "[COMPANY]", "[ADDRESS]", "[EMAIL]", "[insert payment schedule]", "$25,000 / $50,000"]) {
         expect(xml.includes(placeholder), placeholder).toBe(false);
       }
     });

@@ -22,12 +22,13 @@ type ListRow = { id: string; status: string; template_id: string; locked: boolea
 const TS_ORDER = ["convertible_note", "series_a", "safe"];
 
 function fetchTemplates() {
-  return api<{ templates: Template[]; renderConfigured: boolean }>("/api/admin/sales/contracts/templates");
+  return api<{ templates: Template[]; renderConfigured: boolean; missingMasters?: number }>("/api/admin/sales/contracts/templates");
 }
 
 export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Contact; isAdmin: boolean; senderName: string | null }) {
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [renderConfigured, setRenderConfigured] = useState(true);
+  const [missingMasters, setMissingMasters] = useState(0);
   const [termSheet, setTermSheet] = useState<string | null>(null);
   const [extras, setExtras] = useState<Set<string>>(new Set());
   const [docs, setDocs] = useState<OpenDoc[]>([]);
@@ -48,6 +49,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
     if (!r.ok) return setError(r.data.error ?? "Could not load templates.");
     setTemplates(r.data.templates);
     setRenderConfigured(r.data.renderConfigured);
+    setMissingMasters(r.data.missingMasters ?? 0);
   }, []);
   const loadTemplates = useCallback(async () => applyTemplates(await fetchTemplates()), [applyTemplates]);
   useEffect(() => {
@@ -206,6 +208,12 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
                 <CardActions t={t} isAdmin={isAdmin} inline onReplace={() => { replaceTarget.current = t.id; fileRef.current?.click(); }} onHistory={() => void showHistory(t.id)} />
               </div>
             ))}
+            {isAdmin && missingMasters > 0 ? (
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <Notice tone="info">{missingMasters === 1 ? "1 new master is" : `${missingMasters} new masters are`} available to install.</Notice>
+                <button type="button" disabled={busy} onClick={() => void install()} style={btn()}>{busy ? "Installing…" : "Install"}</button>
+              </div>
+            ) : null}
             <div style={{ marginTop: 12, padding: "10px 12px", background: "#f6f8fc", borderRadius: 8, fontSize: 11.5, color: MUTED, lineHeight: 1.6 }}>
               <b>Open editor</b> makes an editable copy of each master for this prospect; the masters never change. {isAdmin ? <><b>Replace file</b> uploads a new Word version of a master for future sends; documents already sent keep their version.</> : null}
             </div>
