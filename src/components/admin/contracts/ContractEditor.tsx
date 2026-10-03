@@ -4,7 +4,7 @@
 // editable block; fields show as chips (amber = required and open, blue = set).
 // Only bold, italic, new list items and paragraph removal are offered: style,
 // font, margins and numbering come from the master and are not editable. The
-// true render (CloudConvert, Word engine) is one click away in the preview tab.
+// true render (iCapOS renderer, see render-pdf.ts) is one click away in the preview tab.
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { openFields } from "@/lib/contracts/fields";
@@ -529,10 +529,10 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
           ) : (
             <div style={{ padding: 12 }}>
               {!data.renderConfigured ? (
-                <Notice tone="warn">True preview needs PDF rendering. Add CLOUDCONVERT_API_KEY in Vercel; nothing else changes.</Notice>
+                <Notice tone="warn">PDF rendering is unavailable right now. Editing and saving still work.</Notice>
               ) : previewKey === null ? (
                 <div style={{ textAlign: "center", padding: "30px 10px" }}>
-                  <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 10px" }}>Renders through the same Word engine as the copy that gets signed. Open fields show as [Label].</p>
+                  <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 10px" }}>Renders the same PDF as the copy that gets signed. Open fields show as [Label].</p>
                   <button type="button" onClick={() => void save().then(() => setPreviewKey(Date.now()))} style={btn(true)}>Render preview</button>
                 </div>
               ) : (

@@ -8,6 +8,7 @@ import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchS
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import { STATUS_LABEL, type ContractStatus } from "@/lib/contracts/types";
 import { ContactPicker } from "./ContactPicker";
+import { UploadContractModal } from "./UploadContractModal";
 import { api, fmtDate, fmtDateTime, MUTED, NAVY, Notice, StatusPill } from "./ui";
 
 type Row = {
@@ -56,6 +57,7 @@ export function ContractsListClient() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [picking, setPicking] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const withArchived = search.quick.includes("archived");
 
   useEffect(() => {
@@ -122,6 +124,7 @@ export function ContractsListClient() {
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "visible" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <NewButton onClick={() => setPicking(true)} />
+          <button type="button" onClick={() => setUploading(true)} style={{ fontSize: 12.5, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Upload</button>
           <ToolbarGear items={gear} heading="Contracts" />
           <SearchCount result={result} noun="documents" />
           <OdooSearchBar
@@ -151,7 +154,7 @@ export function ContractsListClient() {
             {!loading && rows.length === 0 ? (
               <div style={{ padding: 28, textAlign: "center" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: NAVY, margin: 0 }}>No contracts yet</p>
-                <p style={{ fontSize: 12.5, color: MUTED, margin: "6px 0 0" }}>Use New to pick an SPV contact and send a term sheet or services agreement.</p>
+                <p style={{ fontSize: 12.5, color: MUTED, margin: "6px 0 0" }}>Use Upload to send your own contract PDF, or New to fill a term sheet or services agreement.</p>
               </div>
             ) : null}
             {!loading && rows.length > 0 && result.rows.length === 0 && q ? (
@@ -164,7 +167,10 @@ export function ContractsListClient() {
                 {g.key ? <div style={{ padding: "7px 14px", background: "#f6f8fc", fontSize: 11.5, fontWeight: 700, color: "#3a4a63", borderTop: "0.5px solid #eef1f5" }}>{g.key} <span style={{ color: MUTED, fontWeight: 400 }}>· {g.rows.length}</span></div> : null}
                 {g.rows.map((r) => (
                   <Link key={r.id} href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: grid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
-                    <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.template?.name} query={q} /></div>
+                    <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <Highlight text={r.template?.name} query={q} />
+                      {r.template?.kind === "upload" ? <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span> : null}
+                    </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.contact?.name} query={q} /></div>
                       <div style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.contact?.company ?? r.contact?.email} query={q} /></div>
@@ -184,6 +190,7 @@ export function ContractsListClient() {
         </div>
       </div>
       {picking ? <ContactPicker onClose={() => setPicking(false)} /> : null}
+      {uploading ? <UploadContractModal onClose={() => setUploading(false)} /> : null}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { requireContractsApi } from "@/lib/contracts/access";
 
 export const dynamic = "force-dynamic";
 
-/** GET ?q= — contacts tagged SPV that the caller can see (the only contacts contracts can go to). */
+/** GET ?q= — contacts the caller can see, for "New". Any contact can receive contracts. */
 export async function GET(req: Request): Promise<Response> {
   const auth = await requireContractsApi();
   if ("error" in auth) return auth.error;
@@ -12,7 +12,6 @@ export async function GET(req: Request): Promise<Response> {
   let query = actor.db
     .from("crm_contacts")
     .select("id, name, email, company, tags")
-    .overlaps("tags", ["SPV", "spv", "Spv"])
     .order("name")
     .limit(50);
   if (!actor.scope.canSeeAllContacts) query = query.contains("assignee_ids", [actor.userId]);

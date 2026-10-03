@@ -4,20 +4,22 @@
 // Step 1 choose documents, Step 2 entity and editor, Step 3 cover email,
 // Step 4 sent documents and tracking.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { applyEmailTokens, emailTokenValues, EMAIL_TOKENS_BASE } from "@/lib/contracts/email-tokens";
+import { applyEmailTokens, bestDraft, emailTokenValues, EMAIL_TOKENS_BASE, tokensIn, withTypedValues } from "@/lib/contracts/email-tokens";
 import { openFields } from "@/lib/contracts/fields";
 import type { TemplateField } from "@/lib/contracts/types";
 import { ContractEditor, loadEditorData, type EditorData, type EditorHandle } from "./ContractEditor";
 import { TrackingTable } from "./TrackingTable";
+import { UploadContractModal } from "./UploadContractModal";
 import { api, BLUE, btn, Card, MUTED, NAVY, Notice, SectionLabel } from "./ui";
 
 type Template = { id: string; key: string; name: string; kind: string; subtype: string | null; version: number; usage: number; versions: number; master_filename: string };
 type Contact = { id: string; name: string; email: string | null; company: string | null };
 type Draft = { id: string; name: string; description: string | null; subject: string; body: string };
 type OpenDoc = { id: string; templateId: string; name: string; kind: string };
-type ListRow = { id: string; status: string; template_id: string; locked: boolean };
+type ListRow = { id: string; status: string; template_id: string | null; locked: boolean; source?: string; title?: string | null; signature_request_id?: string | null };
+type Upload = { id: string; title: string; requestId: string | null };
 
 const TS_ORDER = ["convertible_note", "series_a", "safe"];
 
@@ -31,6 +33,9 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
   const [missingMasters, setMissingMasters] = useState(0);
   const [termSheet, setTermSheet] = useState<string | null>(null);
   const [extras, setExtras] = useState<Set<string>>(new Set());
+  const [uploads, setUploads] = useState<Upload[]>([]);
+  const [chosenUploads, setChosenUploads] = useState<Set<string>>(new Set());
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [docs, setDocs] = useState<OpenDoc[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [editorData, setEditorData] = useState<Record<string, EditorData>>({});
@@ -59,6 +64,20 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       alive = false;
     };
   }, [applyTemplates]);
+
+  // This contact's uploaded contracts that are still drafts.
+  useEffect(() => {
+    let alive = true;
+    void api<{ documents: ListRow[] }>(`/api/admin/sales/contracts?contactId=${contact.id}`).then((r) => {
+      if (!alive) return;
+      const list = (r.data.documents ?? []).filter((d) => d.source === "upload" && d.status === "draft" && !d.locked);
+      setUploads(list.map((d) => ({ id: d.id, title: d.title ?? "Contract", requestId: d.signature_request_id ?? null })));
+      setChosenUploads((cur) => (cur.size ? cur : new Set(list.map((d) => d.id))));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [contact.id, refreshKey]);
 
   const termSheets = useMemo(() => (templates ?? []).filter((t) => t.kind === "term_sheet").sort((a, b) => TS_ORDER.indexOf(a.subtype ?? "") - TS_ORDER.indexOf(b.subtype ?? "")), [templates]);
   const others = useMemo(() => (templates ?? []).filter((t) => t.kind !== "term_sheet"), [templates]);
@@ -93,12 +112,13 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
   /** Open editor: reuse this prospect's open drafts, otherwise duplicate the masters. */
   async function openEditor() {
     const chosen = [termSheet, ...extras].filter(Boolean) as string[];
-    if (!chosen.length) return setError("Choose at least one document.");
+    const ups = uploads.filter((u) => chosenUploads.has(u.id));
+    if (!chosen.length && !ups.length) return setError("Choose at least one document.");
     setBusy(true);
     setError(null);
     const list = await api<{ documents: ListRow[] }>(`/api/admin/sales/contracts?contactId=${contact.id}`);
-    const drafts = (list.data.documents ?? []).filter((d) => d.status === "draft" && !d.locked);
-    const reuse = new Map(drafts.map((d) => [d.template_id, d.id]));
+    const drafts = (list.data.documents ?? []).filter((d) => d.status === "draft" && !d.locked && d.template_id);
+    const reuse = new Map(drafts.map((d) => [d.template_id as string, d.id]));
     const missing = chosen.filter((t) => !reuse.has(t));
     if (missing.length) {
       const r = await api<{ documents: { id: string }[] }>("/api/admin/sales/contracts", { method: "POST", body: JSON.stringify({ contactId: contact.id, templateIds: missing }) });
@@ -108,10 +128,13 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       }
       missing.forEach((t, i) => reuse.set(t, r.data.documents[i].id));
     }
-    const opened = chosen.map((t) => {
-      const tpl = templates!.find((x) => x.id === t)!;
-      return { id: reuse.get(t)!, templateId: t, name: tpl.name, kind: tpl.kind };
-    });
+    const opened = [
+      ...chosen.map((t) => {
+        const tpl = templates!.find((x) => x.id === t)!;
+        return { id: reuse.get(t)!, templateId: t, name: tpl.name, kind: tpl.kind };
+      }),
+      ...ups.map((u) => ({ id: u.id, templateId: "", name: u.title, kind: "upload" })),
+    ];
     setDocs(opened);
     await Promise.all(opened.map((d) => loadDoc(d.id)));
     setActive(opened[0].id);
@@ -164,7 +187,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       ) : null}
       {!renderConfigured ? (
         <div style={{ marginBottom: 10 }}>
-          <Notice tone="warn">PDF rendering is not configured, so Preview, PDF and Send are unavailable. Add CLOUDCONVERT_API_KEY in Vercel; editing and saving work now.</Notice>
+          <Notice tone="warn">PDF rendering is unavailable right now, so Preview, PDF and Send are off. Editing and saving still work.</Notice>
         </div>
       ) : null}
 
@@ -214,11 +237,30 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
                 <button type="button" disabled={busy} onClick={() => void install()} style={btn()}>{busy ? "Installing…" : "Install"}</button>
               </div>
             ) : null}
+            <div style={{ borderTop: "0.5px solid #eef1f5", margin: "16px 0 12px" }} />
+            <div style={{ ...sub, display: "flex", alignItems: "center", gap: 10 }}>
+              Uploaded contracts
+              <button type="button" onClick={() => setUploadOpen(true)} style={{ border: "0.5px solid #B5D4F4", background: "#fff", color: "#185FA5", borderRadius: 7, padding: "3px 10px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", textTransform: "none", letterSpacing: 0 }}>Upload</button>
+            </div>
+            {uploads.length ? (
+              uploads.map((u) => (
+                <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: NAVY, lineHeight: 2.1, flexWrap: "wrap" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input type="checkbox" checked={chosenUploads.has(u.id)} onChange={(e) => setChosenUploads((s) => { const n = new Set(s); if (e.target.checked) n.add(u.id); else n.delete(u.id); return n; })} />
+                    {u.title} <span style={{ fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
+                  </label>
+                  {u.requestId ? <Link href={`/admin/signatures/${u.requestId}?contract=${u.id}`} style={{ fontSize: 11, color: BLUE }}>Place signatures</Link> : null}
+                  <Link href={`/admin/sales/contracts/${u.id}`} style={{ fontSize: 11, color: BLUE }}>Open</Link>
+                </div>
+              ))
+            ) : (
+              <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>None yet. Upload a finished contract PDF to send it with or without a template.</p>
+            )}
             <div style={{ marginTop: 12, padding: "10px 12px", background: "#f6f8fc", borderRadius: 8, fontSize: 11.5, color: MUTED, lineHeight: 1.6 }}>
               <b>Open editor</b> makes an editable copy of each master for this prospect; the masters never change. {isAdmin ? <><b>Replace file</b> uploads a new Word version of a master for future sends; documents already sent keep their version.</> : null}
             </div>
             <div style={{ textAlign: "right", marginTop: 14 }}>
-              <button type="button" disabled={busy || (!termSheet && !extras.size)} onClick={() => void openEditor()} style={{ ...btn(true), opacity: busy || (!termSheet && !extras.size) ? 0.5 : 1 }}>{busy && step === 1 ? "Opening…" : "Open editor"}</button>
+              <button type="button" disabled={busy || (!termSheet && !extras.size && !chosenUploads.size)} onClick={() => void openEditor()} style={{ ...btn(true), opacity: busy || (!termSheet && !extras.size && !chosenUploads.size) ? 0.5 : 1 }}>{busy && step === 1 ? "Opening…" : !termSheet && !extras.size ? "Continue" : "Open editor"}</button>
             </div>
           </>
         ) : null}
@@ -242,7 +284,13 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
                 );
               })}
             </div>
-            {active && editorData[active] ? <ContractEditor key={active} ref={editorRef} data={editorData[active]} onOpenChange={onOpenChange} /> : <p style={{ padding: 16, fontSize: 12.5, color: MUTED }}>Loading…</p>}
+            {active && docs.find((d) => d.id === active)?.kind === "upload" ? (
+              <UploadedPanel doc={docs.find((d) => d.id === active)!} requestId={uploads.find((u) => u.id === active)?.requestId ?? null} />
+            ) : active && editorData[active] ? (
+              <ContractEditor key={active} ref={editorRef} data={editorData[active]} onOpenChange={onOpenChange} />
+            ) : (
+              <p style={{ padding: 16, fontSize: 12.5, color: MUTED }}>Loading…</p>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "11px 18px", background: totalOpen ? "#fffbe9" : "#e6f6ec", borderTop: "0.5px solid #f0e2b8", flexWrap: "wrap" }}>
               <span style={{ fontSize: 12, color: totalOpen ? "#8a6500" : "#1a7f43" }}>
                 {docs.map((d) => `${d.name}: ${openCounts[d.id] ? `${openCounts[d.id]} field${openCounts[d.id] === 1 ? "" : "s"} open` : "ready"}`).join(" · ")}
@@ -268,6 +316,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
             setEditorData({});
             setTermSheet(null);
             setExtras(new Set());
+            setChosenUploads(new Set());
             setStep(1);
             setRefreshKey((k) => k + 1);
             void loadTemplates();
@@ -281,6 +330,8 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       <p style={{ fontSize: 12, color: "#8a93a6", margin: "8px 0 0", lineHeight: 1.6 }}>
         Opens count each visit to the signing page, with the time of the last one. Cancel withdraws a pending request. Archive hides a closed document without deleting it. Delete is admin only and logged.
       </p>
+
+      {uploadOpen ? <UploadContractModal contact={contact} onClose={() => setUploadOpen(false)} /> : null}
 
       {history ? (
         <div role="dialog" aria-modal="true" onClick={() => setHistory(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,26,64,.35)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "12vh", zIndex: 80 }}>
@@ -296,6 +347,20 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Step 2 for an uploaded contract: the PDF as it will be sent, and where to adjust its boxes. */
+function UploadedPanel({ doc, requestId }: { doc: OpenDoc; requestId: string | null }) {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12.5, color: MUTED }}>Uploaded contract · sent exactly as uploaded</span>
+        <span style={{ flex: 1 }} />
+        {requestId ? <Link href={`/admin/signatures/${requestId}?contract=${doc.id}`} style={btn()}>Edit signature boxes</Link> : null}
+      </div>
+      <iframe title={doc.name} src={`/api/admin/sales/contracts/${doc.id}/pdf?kind=preview`} style={{ width: "100%", height: "65vh", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -339,14 +404,7 @@ function EmailStep({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
-
-  useEffect(() => {
-    void api<{ drafts: Draft[] }>("/api/admin/sales/contracts/email-drafts").then((r) => {
-      const list = r.data.drafts ?? [];
-      setDrafts(list);
-      if (list[0]) pick(list[0]);
-    });
-  }, []);
+  const [typed, setTyped] = useState<Record<string, string>>({});
 
   function pick(d: Draft) {
     setDraftId(d.id);
@@ -354,7 +412,7 @@ function EmailStep({
     setBody(d.body);
   }
 
-  const tokenValues = useMemo(
+  const baseValues = useMemo(
     () =>
       emailTokenValues({
         contactName: contact.name,
@@ -368,6 +426,31 @@ function EmailStep({
       }),
     [contact, docs, editorData, senderName],
   );
+  const tokenValues = useMemo(() => withTypedValues(baseValues, typed), [baseValues, typed]);
+
+  // Start from the draft these documents fill best, so its values carry over.
+  const baseRef = useRef(baseValues);
+  useLayoutEffect(() => {
+    baseRef.current = baseValues;
+  }, [baseValues]);
+  useEffect(() => {
+    let alive = true;
+    void api<{ drafts: Draft[] }>("/api/admin/sales/contracts/email-drafts").then((r) => {
+      if (!alive) return;
+      const list = r.data.drafts ?? [];
+      setDrafts(list);
+      const first = bestDraft(list, baseRef.current) ?? list[0];
+      if (first) {
+        setDraftId(first.id);
+        setSubject(first.subject);
+        setBody(first.body);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const resolvedSubject = applyEmailTokens(subject, tokenValues);
   const resolvedBody = applyEmailTokens(body, tokenValues);
   const missing = [...new Set([...resolvedSubject.missing, ...resolvedBody.missing])].filter((m) => m !== "sender_name");
@@ -394,7 +477,7 @@ function EmailStep({
     setError(null);
     const r = await api<{ delivered: boolean; url: string }>("/api/admin/sales/contracts/send", {
       method: "POST",
-      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: attach }),
+      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: attach, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) }),
     });
     setBusy(false);
     if (!r.ok) return setError(r.data.error ?? "Send failed.");
@@ -408,8 +491,10 @@ function EmailStep({
       : stillOpen
         ? "Fill the open fields first."
         : missing.length
-          ? `No value for ${missing.map((m) => `{{${m}}}`).join(", ")}.`
+          ? `Fill ${missing.length === 1 ? "the value" : `${missing.length} values`} under "Values in this email".`
           : null;
+  const used = tokensIn(`${subject}\n${body}`).filter((t) => t !== "sender_name" || baseValues.sender_name);
+  const CONTACT_TOKENS = new Set(["first_name", "full_name", "company", "sender_name"]);
 
   return (
     <>
@@ -452,7 +537,26 @@ function EmailStep({
               </label>
               <span>{docs.map((d) => d.name).join(" · ")}</span>
             </div>
-            {missing.length ? <div style={{ marginTop: 10 }}><Notice tone="warn">These tokens have no value for this send: {missing.map((m) => `{{${m}}}`).join(", ")}. Fill them in the documents or remove them from the email.</Notice></div> : null}
+            {used.length ? (
+              <div style={{ marginTop: 12, border: "0.5px solid #e2e6ed", borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "#8a93a6", marginBottom: 8 }}>Values in this email</div>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(110px,170px) 1fr auto", gap: "6px 10px", alignItems: "center", fontSize: 12.5 }}>
+                  {used.map((tok) => {
+                    const fromDocs = baseValues[tok];
+                    return [
+                      <span key={`${tok}-l`} style={{ color: "#3a4a63" }}>{tok.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}</span>,
+                      fromDocs ? (
+                        <span key={`${tok}-v`} style={{ color: NAVY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fromDocs}</span>
+                      ) : (
+                        <input key={`${tok}-v`} value={typed[tok] ?? ""} onChange={(e) => setTyped((m) => ({ ...m, [tok]: e.target.value }))} placeholder="Type the value for this email" style={{ border: `1px solid ${typed[tok]?.trim() ? "#cbd5e1" : "#E0A800"}`, background: typed[tok]?.trim() ? "#fff" : "#FFF8E1", borderRadius: 6, padding: "5px 8px", fontSize: 12.5 }} />
+                      ),
+                      <span key={`${tok}-s`} style={{ fontSize: 10.5, fontWeight: 600, color: fromDocs ? "#1a7f43" : "#854F0B" }}>{fromDocs ? (CONTACT_TOKENS.has(tok) ? "contact" : "documents") : "fill here"}</span>,
+                    ];
+                  })}
+                </div>
+                {!missing.length ? <div style={{ marginTop: 8, fontSize: 12, color: "#1a7f43" }}>Nothing missing.</div> : null}
+              </div>
+            ) : null}
             {error ? <div style={{ marginTop: 10 }}><Notice tone="error">{error}</Notice></div> : null}
             {saved ? <div style={{ marginTop: 10 }}><Notice tone="ok">{saved}</Notice></div> : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14, flexWrap: "wrap" }}>

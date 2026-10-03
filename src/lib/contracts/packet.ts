@@ -37,8 +37,8 @@ export async function loadPacket(db: Db, token: string): Promise<Packet | null> 
     const open = doc.status === "sent" || doc.status === "viewed";
     documents.push({
       id: row.id,
-      title: row.template?.name ?? "Document",
-      kind: row.template?.kind ?? "",
+      title: row.template?.name ?? row.title ?? "Document",
+      kind: row.template?.kind ?? (row.source === "upload" ? "upload" : ""),
       entity: row.entity?.legal_name ?? null,
       pageCount: row.page_count,
       status: doc.status,
