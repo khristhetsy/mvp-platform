@@ -4,13 +4,13 @@
 // editable block; fields show as chips (amber = required and open, blue = set).
 // Only bold, italic, new list items and paragraph removal are offered: style,
 // font, margins and numbering come from the master and are not editable. The
-// true render (Google Docs, see render-pdf.ts) is one click away in the preview tab.
+// true render (CloudConvert, Word engine) is one click away in the preview tab.
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { openFields } from "@/lib/contracts/fields";
 import type { BodyEdits, IssuingEntity, Segment, TemplateField } from "@/lib/contracts/types";
 import type { ModelBlock, ModelParagraph, ModelSegment } from "@/lib/contracts/docx-engine";
-import { api, BLUE, btn, MUTED, NAVY, Notice, RenderNotice } from "./ui";
+import { api, BLUE, btn, MUTED, NAVY, Notice } from "./ui";
 
 export type EditorData = {
   doc: { id: string; version: number; status: string; locked: boolean; entity_id: string | null; field_values: Record<string, string>; body_edits: BodyEdits; updated_at: string };
@@ -19,8 +19,6 @@ export type EditorData = {
   entities: IssuingEntity[];
   blocks: ModelBlock[];
   renderConfigured: boolean;
-  renderMessage?: string | null;
-  renderFixHref?: string | null;
 };
 
 export type EditorHandle = { flush: () => Promise<void> };
@@ -418,7 +416,7 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
         <button
           type="button"
           disabled={!data.renderConfigured}
-          title={data.renderConfigured ? "True render in a new tab" : (data.renderMessage ?? "Contract PDFs are unavailable")}
+          title={data.renderConfigured ? "True render in a new tab" : "Rendering is not configured"}
           onClick={() => void save().then(() => window.open(`/api/admin/sales/contracts/${data.doc.id}/pdf?kind=preview`, "_blank"))}
           style={{ ...darkBtn, opacity: data.renderConfigured ? 1 : 0.5 }}
         >
@@ -531,10 +529,10 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
           ) : (
             <div style={{ padding: 12 }}>
               {!data.renderConfigured ? (
-                <RenderNotice message={data.renderMessage} href={data.renderFixHref} />
+                <Notice tone="warn">True preview needs PDF rendering. Add CLOUDCONVERT_API_KEY in Vercel; nothing else changes.</Notice>
               ) : previewKey === null ? (
                 <div style={{ textAlign: "center", padding: "30px 10px" }}>
-                  <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 10px" }}>Renders through Google Docs, the same render as the copy that gets signed. Open fields show as [Label].</p>
+                  <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 10px" }}>Renders through the same Word engine as the copy that gets signed. Open fields show as [Label].</p>
                   <button type="button" onClick={() => void save().then(() => setPreviewKey(Date.now()))} style={btn(true)}>Render preview</button>
                 </div>
               ) : (

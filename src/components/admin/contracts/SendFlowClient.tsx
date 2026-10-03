@@ -11,7 +11,7 @@ import { openFields } from "@/lib/contracts/fields";
 import type { TemplateField } from "@/lib/contracts/types";
 import { ContractEditor, loadEditorData, type EditorData, type EditorHandle } from "./ContractEditor";
 import { TrackingTable } from "./TrackingTable";
-import { api, BLUE, btn, Card, MUTED, NAVY, Notice, RenderNotice, SectionLabel } from "./ui";
+import { api, BLUE, btn, Card, MUTED, NAVY, Notice, SectionLabel } from "./ui";
 
 type Template = { id: string; key: string; name: string; kind: string; subtype: string | null; version: number; usage: number; versions: number; master_filename: string };
 type Contact = { id: string; name: string; email: string | null; company: string | null };
@@ -22,13 +22,12 @@ type ListRow = { id: string; status: string; template_id: string; locked: boolea
 const TS_ORDER = ["convertible_note", "series_a", "safe"];
 
 function fetchTemplates() {
-  return api<{ templates: Template[]; renderConfigured: boolean; renderMessage?: string | null; renderFixHref?: string | null; missingMasters?: number }>("/api/admin/sales/contracts/templates");
+  return api<{ templates: Template[]; renderConfigured: boolean; missingMasters?: number }>("/api/admin/sales/contracts/templates");
 }
 
 export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Contact; isAdmin: boolean; senderName: string | null }) {
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [renderConfigured, setRenderConfigured] = useState(true);
-  const [renderFix, setRenderFix] = useState<{ message: string | null; href: string | null }>({ message: null, href: null });
   const [missingMasters, setMissingMasters] = useState(0);
   const [termSheet, setTermSheet] = useState<string | null>(null);
   const [extras, setExtras] = useState<Set<string>>(new Set());
@@ -50,7 +49,6 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
     if (!r.ok) return setError(r.data.error ?? "Could not load templates.");
     setTemplates(r.data.templates);
     setRenderConfigured(r.data.renderConfigured);
-    setRenderFix({ message: r.data.renderMessage ?? null, href: r.data.renderFixHref ?? null });
     setMissingMasters(r.data.missingMasters ?? 0);
   }, []);
   const loadTemplates = useCallback(async () => applyTemplates(await fetchTemplates()), [applyTemplates]);
@@ -166,7 +164,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       ) : null}
       {!renderConfigured ? (
         <div style={{ marginBottom: 10 }}>
-          <RenderNotice message={renderFix.message} href={renderFix.href} />
+          <Notice tone="warn">PDF rendering is not configured, so Preview, PDF and Send are unavailable. Add CLOUDCONVERT_API_KEY in Vercel; editing and saving work now.</Notice>
         </div>
       ) : null}
 
@@ -404,7 +402,7 @@ function EmailStep({
   }
 
   const blockedReason = !renderConfigured
-    ? "Connect Google to make contract PDFs."
+    ? "PDF rendering is not configured."
     : !contact.email
       ? "This contact has no email address."
       : stillOpen

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireContractsApi } from "@/lib/contracts/access";
 import { listEntities, listTemplateCards } from "@/lib/contracts/store";
-import { CONNECT_GOOGLE_HREF, renderStatus } from "@/lib/contracts/render-pdf";
+import { renderConfigured } from "@/lib/contracts/render-pdf";
 import { MASTER_SEED_KEYS } from "@/lib/contracts/seed-keys";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +16,5 @@ export async function GET(): Promise<Response> {
   const { data: keys } = await db.from("contract_templates").select("key");
   const installed = new Set(((keys ?? []) as { key: string }[]).map((k) => k.key));
   const missingMasters = MASTER_SEED_KEYS.filter((k) => !installed.has(k)).length;
-  return NextResponse.json({ templates, entities, ...(await renderInfo(auth.actor.userId)), isAdmin, missingMasters });
-}
-
-/** Render readiness for this staff member, with the message and link to fix it. */
-async function renderInfo(userId: string): Promise<{ renderConfigured: boolean; renderMessage: string | null; renderFixHref: string | null }> {
-  const s = await renderStatus(userId);
-  return s.ready ? { renderConfigured: true, renderMessage: null, renderFixHref: null } : { renderConfigured: false, renderMessage: s.message, renderFixHref: CONNECT_GOOGLE_HREF };
+  return NextResponse.json({ templates, entities, renderConfigured: renderConfigured(), isAdmin, missingMasters });
 }
