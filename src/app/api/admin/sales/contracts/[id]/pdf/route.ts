@@ -43,10 +43,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       const open = bundleOpenFields(b);
       if (open.length) return bad(`Fill the open fields first: ${open.map((f) => f.label).join(", ")}.`, 409, { open });
       if (b.doc.locked && b.doc.pdf_path) return pdfResponse(await getFile(actor.db, b.doc.pdf_path), `${name}.pdf`, true);
-      return pdfResponse(await renderBundlePdf(actor.db, b, "final", actor.userId), `${name}.pdf`, true);
+      return pdfResponse(await renderBundlePdf(actor.db, b, "final"), `${name}.pdf`, true);
     }
     // preview: internal viewing only, never a download.
-    return pdfResponse(await renderBundlePdf(actor.db, b, "preview", actor.userId), `${name}_PREVIEW.pdf`, false);
+    return pdfResponse(await renderBundlePdf(actor.db, b, "preview"), `${name}_PREVIEW.pdf`, false);
   } catch (err) {
     if (err instanceof RenderUnavailableError) return NextResponse.json({ error: err.message, code: "render_unavailable" }, { status: 503 });
     if (err instanceof RenderFailedError) return NextResponse.json({ error: err.message }, { status: 502 });

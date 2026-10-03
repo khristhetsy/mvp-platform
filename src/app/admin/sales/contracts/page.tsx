@@ -1,17 +1,17 @@
 import { AppShell } from "@/components/AppShell";
-import { requirePermissionPage } from "@/lib/api/permissions";
+import { requireRole } from "@/lib/supabase/auth";
 import { SalesHubHeader } from "../SalesHubHeader";
-import { SignaturesIndexClient } from "@/components/admin/signatures/SignaturesIndexClient";
+import { ContractsListClient } from "@/components/admin/contracts/ContractsListClient";
 
 export const dynamic = "force-dynamic";
 
-/** Sales Hub › Contracts: upload a contract (PDF or Word), place signature fields, send. */
+/** Sales Hub › Contracts: every SPV contract document as one pipeline view. */
 export default async function SalesContractsPage() {
-  const { profile } = await requirePermissionPage("review_documents");
+  const profile = await requireRole(["admin", "analyst"]);
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <SignaturesIndexClient />
+      <ContractsListClient />
     </AppShell>
   );
 }

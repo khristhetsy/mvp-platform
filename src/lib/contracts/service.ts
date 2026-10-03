@@ -27,7 +27,7 @@ import { applyEmailTokens, emailTokenValues } from "./email-tokens";
 import { appBase, notifySender, sendCoverEmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
 import { buildCertificate } from "./certificate";
 import type { ContractDocument, ContractTemplate, CountersignField, IssuingEntity, TemplateField } from "./types";
-import { STOP_STATUSES } from "./types";
+import { isSpvContact, STOP_STATUSES } from "./types";
 import { replaceFields, type FieldInput } from "@/lib/esignature/fields";
 import { uploadToSignatureBucket, writeSignatureAudit } from "@/lib/esignature/storage";
 import { STORAGE_BUCKET as SIGNATURE_BUCKET } from "@/lib/esignature/types";
@@ -77,10 +77,10 @@ export async function renderBundleDocx(db: Db, b: Bundle, mode: "preview" | "fin
   return renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
 }
 
-/** True preview: the same Word → PDF render that is sent for signature, through `userId`'s Google account. */
-export async function renderBundlePdf(db: Db, b: Bundle, mode: "preview" | "final", userId: string): Promise<Buffer> {
+/** True preview: the same Word → PDF render that is sent for signature. */
+export async function renderBundlePdf(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
   const docx = await renderBundleDocx(db, b, mode);
-  return docxToPdf(docx, `${fileBase(b)}.docx`, userId);
+  return docxToPdf(docx, `${fileBase(b)}.docx`);
 }
 
 // ── Send ───────────────────────────────────────────────────────────────────
@@ -108,9 +108,9 @@ function expiryFor(b: Bundle): string {
   return new Date(Date.now() + DEFAULT_EXPIRY_DAYS * 86400000).toISOString();
 }
 
-async function prepare(db: Db, b: Bundle, userId: string): Promise<Prepared> {
+async function prepare(db: Db, b: Bundle): Promise<Prepared> {
   const docx = await renderBundleDocx(db, b, "final");
-  const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`, userId);
+  const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`);
   const { lines, pageCount } = await readPdfLines(new Uint8Array(pdf));
   const placed = placeSignatureFields(lines, b.template.signature_anchors, bundleValues(b));
   const prospectFields: FieldInput[] = [{ field_type: "signature", ...placed.prospect.signature, required: true }];
@@ -144,6 +144,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     bundles.push(b);
   }
   const contact = bundles[0].contact;
+  if (!isSpvContact(contact.tags)) throw new SendBlockedError("Contract send is only available for contacts tagged SPV.");
   if (!contact.email) throw new SendBlockedError("This contact has no email address.");
 
   const open = bundles.flatMap((b) => bundleOpenFields(b).map((f) => `${b.template.name}: ${f.label}`));
@@ -163,7 +164,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
 
   // Render and place signatures for every document first.
   const prepared: Prepared[] = [];
-  for (const b of bundles) prepared.push(await prepare(db, b, input.sender.id));
+  for (const b of bundles) prepared.push(await prepare(db, b));
 
   const token = randomBytes(32).toString("hex");
   const { data: packet, error: pErr } = await db
