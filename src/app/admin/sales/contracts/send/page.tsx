@@ -6,7 +6,6 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { getSalesScope } from "@/lib/sales/scope";
 import { getContactProfile } from "@/lib/sales/contacts";
-import { isSpvContact } from "@/lib/contracts/types";
 import { SalesHubHeader } from "../../SalesHubHeader";
 import { SendFlowClient } from "@/components/admin/contracts/SendFlowClient";
 
@@ -32,10 +31,6 @@ export default async function SendContractsPage({ searchParams }: { searchParams
   );
   if (!data || !visible) return shell(<Blocked title="Contact not available" text="This contact does not exist or is not assigned to you." />);
   const c = data.contact;
-  // Fail closed: send exists only for contacts tagged SPV.
-  if (!isSpvContact(c.tags)) {
-    return shell(<Blocked title="Not an SPV contact" text={`Contracts can only be sent to contacts tagged SPV. Add the SPV tag on ${c.name}'s contact record to continue.`} href={`/admin/sales/contacts/${c.id}`} />);
-  }
   return shell(
     <SendFlowClient
       contact={{ id: c.id, name: c.name, email: c.email, company: c.company }}

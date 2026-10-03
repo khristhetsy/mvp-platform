@@ -131,8 +131,3 @@ export const STATUS_LABEL: Record<ContractStatus, string> = {
 export const STOP_STATUSES: ContractStatus[] = ["changes_requested", "awaiting_countersign", "signed", "declined", "cancelled"];
 
 export const CONTRACTS_BUCKET = "contract-documents";
-export const SPV_TAG = "spv";
-
-export function isSpvContact(tags: string[] | null | undefined): boolean {
-  return (tags ?? []).some((t) => t.trim().toLowerCase() === SPV_TAG);
-}

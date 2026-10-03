@@ -3,7 +3,7 @@ import { z } from "zod";
 import { bad, canSeeContact, forbidden, requireContractsApi } from "@/lib/contracts/access";
 import { createDraft, getContactLite, getTemplate } from "@/lib/contracts/store";
 import { expireIfDue } from "@/lib/contracts/service";
-import { isSpvContact, type ContractDocument } from "@/lib/contracts/types";
+import type { ContractDocument } from "@/lib/contracts/types";
 import { writeAuditLog } from "@/lib/data/audit";
 import { errorMessage } from "@/lib/contracts/route-helpers";
 
@@ -69,7 +69,6 @@ export async function POST(req: Request): Promise<Response> {
   if (!(await canSeeContact(actor, contactId))) return forbidden();
   const contact = await getContactLite(actor.db, contactId);
   if (!contact) return bad("Contact not found.", 404);
-  if (!isSpvContact(contact.tags)) return forbidden("Contract send is only available for contacts tagged SPV.");
 
   const termSheets = [];
   for (const id of templateIds) {
