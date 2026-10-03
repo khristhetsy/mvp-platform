@@ -27,7 +27,7 @@ import { applyEmailTokens, emailTokenValues } from "./email-tokens";
 import { appBase, notifySender, sendCoverEmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
 import { buildCertificate } from "./certificate";
 import type { ContractDocument, ContractTemplate, CountersignField, IssuingEntity, TemplateField } from "./types";
-import { isSpvContact, STOP_STATUSES } from "./types";
+import { STOP_STATUSES } from "./types";
 import { replaceFields, type FieldInput } from "@/lib/esignature/fields";
 import { uploadToSignatureBucket, writeSignatureAudit } from "@/lib/esignature/storage";
 import { STORAGE_BUCKET as SIGNATURE_BUCKET } from "@/lib/esignature/types";
@@ -144,7 +144,6 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     bundles.push(b);
   }
   const contact = bundles[0].contact;
-  if (!isSpvContact(contact.tags)) throw new SendBlockedError("Contract send is only available for contacts tagged SPV.");
   if (!contact.email) throw new SendBlockedError("This contact has no email address.");
 
   const open = bundles.flatMap((b) => bundleOpenFields(b).map((f) => `${b.template.name}: ${f.label}`));
