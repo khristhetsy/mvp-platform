@@ -16,8 +16,8 @@ const base = {
 describe("renderIntroEmail (intro_fit_v1)", () => {
   it("keeps the fixed copy word for word", () => {
     const { subject, html, text } = renderIntroEmail(base);
-    expect(subject).toBe("Northstar Robotics — a Founder Preview that fits your focus");
-    expect(html).toContain("Our fit scoring matched Northstar Robotics to your stated preferences. Here&#39;s their Founder Preview — no obligation.");
+    expect(subject).toBe("Northstar Robotics: a Founder Preview that fits your focus");
+    expect(html).toContain("Our fit scoring matched Northstar Robotics to your stated preferences. Here&#39;s their Founder Preview, no obligation.");
     expect(html).toContain("If it&#39;s a fit, simply reply and we&#39;ll make the introduction. If not, no action is needed.");
     expect(html).toContain("Warm regards,<br/>The iCapOS Introductions Team");
     expect(html).toContain("iCapOS is not a broker-dealer or investment adviser. Recipients should conduct their own diligence. To stop receiving introductions,");

@@ -34,8 +34,8 @@ export type IntroTemplateFields = {
 };
 
 const DEFAULT_MESSAGE = {
-  subject: "{{company}} — a Founder Preview that fits your focus",
-  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview — no obligation.",
+  subject: "{{company}}: a Founder Preview that fits your focus",
+  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview, no obligation.",
   closing: "If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.",
 };
 
@@ -67,7 +67,7 @@ export function renderIntroEmail(f: IntroTemplateFields): { subject: string; htm
   };
   const subst = (s: string) => s.replace(/\{\{\s*(company|investor|stage|sector)\s*\}\}/gi, (_, k: string) => mergeValues[k.toLowerCase()] ?? "");
 
-  const subject = subst(message.subject).trim() || `${companyRaw} — a Founder Preview`;
+  const subject = subst(message.subject).trim() || `${companyRaw}: a Founder Preview`;
 
   const paraBlocks = (s: string): EmailBlock[] =>
     subst(s)

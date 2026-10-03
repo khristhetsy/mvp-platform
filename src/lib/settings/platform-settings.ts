@@ -264,8 +264,8 @@ export async function setInvestorMatchConfig(cfg: InvestorMatchConfig, updatedBy
 export type OutreachMessage = { subject: string; intro: string; closing: string };
 
 export const DEFAULT_OUTREACH_MESSAGE: OutreachMessage = {
-  subject: "{{company}} — a Founder Preview that fits your focus",
-  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview — no obligation.",
+  subject: "{{company}}: a Founder Preview that fits your focus",
+  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview, no obligation.",
   closing: "If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.",
 };
 

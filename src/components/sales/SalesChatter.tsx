@@ -48,6 +48,8 @@ const KIND_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   won: { icon: "ti-trophy", color: "#0F6E56", bg: "#E1F5EE" },
   lost: { icon: "ti-x", color: "#A32D2D", bg: "#FCEBEB" },
   converted: { icon: "ti-refresh", color: "#185FA5", bg: "#E6F1FB" },
+  outreach_queued: { icon: "ti-clock", color: "#5F5E5A", bg: "#F1EFE8" },
+  outreach_sent: { icon: "ti-send", color: "#0F6E56", bg: "#E1F5EE" },
 };
 function icon(kind: string) { return KIND_ICON[kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" }; }
 function ago(iso: string) { return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }

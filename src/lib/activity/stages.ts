@@ -101,6 +101,8 @@ export type ActivityClassKey =
   // founder · deploy
   | "outreach_launched"
   | "outreach_below_gate"
+  | "outreach_queued"
+  | "outreach_sent"
   | "interest_stage_changed"
   | "intro_requested"
   | "marketplace_visibility"
@@ -151,6 +153,7 @@ const on = { in_app: true, email: true, digest: true };
 const appMail = { in_app: true, email: true, digest: false };
 const appDigest = { in_app: true, email: false, digest: true };
 const digestOnly = { in_app: false, email: false, digest: true };
+const appOnly = { in_app: true, email: false, digest: false };
 
 export const ACTIVITY_CLASSES: readonly ActivityClass[] = [
   // ---- Founder · Stage 1 Onboarding -------------------------------------
@@ -270,6 +273,24 @@ export const ACTIVITY_CLASSES: readonly ActivityClass[] = [
     digestable: false,
     overrides: ["ceo"],
     defaults: appMail,
+  },
+  {
+    key: "outreach_queued",
+    stage: "deploy",
+    label: "Introductions queued",
+    description: "Automated outreach lined up investors for a founder's Founder Preview",
+    severity: "info",
+    digestable: false,
+    defaults: appOnly,
+  },
+  {
+    key: "outreach_sent",
+    stage: "deploy",
+    label: "Introductions sent",
+    description: "An outreach pass sent a founder's Founder Preview to investors",
+    severity: "info",
+    digestable: false,
+    defaults: appOnly,
   },
   {
     key: "interest_stage_changed",

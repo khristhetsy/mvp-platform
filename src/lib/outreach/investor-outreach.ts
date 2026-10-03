@@ -12,6 +12,7 @@ import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
+import { notifyOutreachQueued, notifyOutreachSent, type OutreachInvestor } from "@/lib/outreach/outreach-notify";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
 function formatRaise(amount: number | null | undefined): string | null {
@@ -183,6 +184,28 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     status: "queued",
   }));
   await db.from("investor_outreach_recipients").upsert(rows, { onConflict: "campaign_id,investor_ref", ignoreDuplicates: true });
+
+  // Tell the founder and admin, and log it on every investor's contact record.
+  // Never throws; a notification failure must not undo the queue.
+  {
+    const founderPlan = founderId ? await getUserPlan(founderId).catch(() => null) : null;
+    let monthlyCap: number | null = null;
+    try {
+      if (founderId) {
+        const eff = await resolveFounderOutreachConfig({ id: companyId, founder_id: founderId }, await loadOutreachGlobals());
+        monthlyCap = eff.monthlyCap;
+      }
+    } catch {
+      monthlyCap = null;
+    }
+    await notifyOutreachQueued({
+      companyId,
+      campaignId: (campaign as { id: string }).id,
+      investors: rows.map((r) => ({ investorRef: r.investor_ref, name: r.investor_name, matchScore: r.match_score })),
+      planType: founderPlan ?? null,
+      monthlyCap,
+    });
+  }
 
   return { created: true };
 }
@@ -369,6 +392,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     // Per-run slice = the campaign weekly cap, further clamped by how much of the
     // founder's MONTHLY plan cap is still left this calendar month.
     let batchLimit = campaign.weekly_cap;
+    let sentBeforeRun = 0;
     if (eff) {
       const { count } = await db
         .from("investor_outreach_recipients")
@@ -377,6 +401,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         .eq("status", "sent")
         .gte("sent_at", monthStart);
       const sentThisMonth = typeof count === "number" ? count : 0;
+      sentBeforeRun = sentThisMonth;
       const remaining = Math.max(0, eff.monthlyCap - sentThisMonth);
       batchLimit = Math.max(0, Math.min(campaign.weekly_cap, remaining));
     }
@@ -385,19 +410,28 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
 
     const { data: queued } = await db
       .from("investor_outreach_recipients")
-      .select("id, investor_ref, investor_name, email")
+      .select("id, investor_ref, investor_name, email, match_score")
       .eq("campaign_id", campaign.id)
       .eq("status", "queued")
       .order("match_score", { ascending: false })
       .limit(batchLimit);
 
-    const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string; email: string | null }>;
+    const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string; email: string | null; match_score: number | null }>;
     if (batch.length === 0) {
       await db.from("investor_outreach_campaigns").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", campaign.id);
       continue;
     }
 
-    if (outreachDispatchMode(live, dispatchAllowed) === "log") {
+    // Who this pass actually moved to "sent", for the queued/sent notifications.
+    const sentThisRun: OutreachInvestor[] = [];
+    const toInvestor = (r: (typeof batch)[number]): OutreachInvestor => ({
+      investorRef: r.investor_ref,
+      name: r.investor_name,
+      matchScore: typeof r.match_score === "number" ? r.match_score : 0,
+    });
+    const mode = outreachDispatchMode(live, dispatchAllowed);
+
+    if (mode === "log") {
       // Flag OFF, or a demo/internal account: advance the log without
       // dispatching real email (safe testing, never reaches investors).
       await db
@@ -405,6 +439,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         .update({ status: "sent", sent_at: now })
         .in("id", batch.map((r) => r.id));
       recipientsSent += batch.length;
+      sentThisRun.push(...batch.map(toInvestor));
     } else {
       // Flag ON: render the locked intro_fit_v1 template and dispatch via the
       // platform email sender. Members only — prospects have no verified email
@@ -473,10 +508,31 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
             .update({ status: "sent", sent_at: new Date().toISOString() })
             .eq("id", r.id);
           recipientsSent += 1;
+          sentThisRun.push(toInvestor(r));
         }
         // On send failure, leave the recipient queued so a later run retries it —
         // a transient email outage must not silently drop people from the campaign.
       }
+    }
+
+    // One founder + admin notification for this pass, plus a log entry on each
+    // investor's contact record. Never throws.
+    if (sentThisRun.length > 0) {
+      const { count: stillQueued } = await db
+        .from("investor_outreach_recipients")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign.id)
+        .eq("status", "queued");
+      await notifyOutreachSent({
+        companyId: campaign.company_id,
+        campaignId: campaign.id,
+        investors: sentThisRun,
+        emailed: mode === "send",
+        sentThisMonth: sentBeforeRun + sentThisRun.length,
+        monthlyCap: eff ? eff.monthlyCap : null,
+        stillQueued: typeof stillQueued === "number" ? stillQueued : 0,
+        planType: eff?.planType ?? null,
+      });
     }
 
     // last_run_at was already set atomically at claim time above.

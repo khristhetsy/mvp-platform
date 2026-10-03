@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Message = { subject: string; intro: string; closing: string };
 
 const DEFAULT_MESSAGE: Message = {
-  subject: "{{company}} — a Founder Preview that fits your focus",
-  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview — no obligation.",
+  subject: "{{company}}: a Founder Preview that fits your focus",
+  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview, no obligation.",
   closing: "If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.",
 };
 
