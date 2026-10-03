@@ -94,7 +94,7 @@ export function SignaturesIndexClient() {
         <input
           ref={fileRef}
           type="file"
-          accept=".pdf,application/pdf"
+          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

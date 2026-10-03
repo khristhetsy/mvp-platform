@@ -932,7 +932,7 @@
     "index": {
       "eyebrow": "iCFO Capital Global, Inc.",
       "title": "E-signatures",
-      "desc": "Upload a PDF, place fields, and send it for signature. (Word? Save it as PDF first.)",
+      "desc": "Upload a PDF or Word file, place the signature fields, and send it for signature.",
       "uploadDocument": "Upload document",
       "uploading": "Uploading…",
       "loading": "Loading…",

@@ -932,7 +932,7 @@
     "index": {
       "eyebrow": "iCFO Capital Global, Inc.",
       "title": "Firmas electrónicas",
-      "desc": "Sube un PDF, coloca los campos y envíalo para firmar. (¿Word? Guárdalo primero como PDF.)",
+      "desc": "Sube un PDF o un archivo de Word, coloca los campos de firma y envíalo para firmar.",
       "uploadDocument": "Subir documento",
       "uploading": "Subiendo…",
       "loading": "Cargando…",
