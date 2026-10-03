@@ -70,17 +70,19 @@ type Hit = { line: PdfLine; item: PdfItem; index: number };
 
 /** Last occurrence of `needle` in reading order (signature pages come last). */
 function findLast(lines: PdfLine[], needle: string): Hit | null {
-  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toUpperCase();
-  const n = norm(needle);
-  const firstWord = n.split(" ")[0];
+  // Spacing is ignored: Word can split a name into pieces ("ICFO VENTURE GROUP" + ", LLC"),
+  // and joining the pieces adds a space the document does not have.
+  const compact = (s: string) => s.replace(/\s+/g, "").toUpperCase();
+  const n = compact(needle);
+  const firstWord = needle.trim().split(/\s+/)[0].toUpperCase();
   let hit: Hit | null = null;
   lines.forEach((line, index) => {
-    if (!norm(line.text).includes(n)) return;
+    if (!n || !compact(line.text).includes(n)) return;
     // Prefer the item holding the whole name; the name can also be split
     // across items, then the item holding its first word marks the column.
     const item =
-      [...line.items].reverse().find((i) => norm(i.str).includes(n)) ??
-      [...line.items].reverse().find((i) => norm(i.str).includes(firstWord)) ??
+      [...line.items].reverse().find((i) => compact(i.str).includes(n)) ??
+      [...line.items].reverse().find((i) => i.str.toUpperCase().includes(firstWord)) ??
       line.items[0];
     hit = { line, item, index };
   });

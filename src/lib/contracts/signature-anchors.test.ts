@@ -27,6 +27,21 @@ describe("signature placement", () => {
     // Normalized top-left origin, above the "By:" baseline.
     expect(r.prospect.signature.y).toBeCloseTo((792 - (570 + 26 - 4)) / 792, 5);
   });
+  it("finds a name Word split into pieces (as in the Series A signature page)", () => {
+    const split = groupLines(
+      [
+        { str: "ICFO VENTURE GROUP", x: 288, y: 448, w: 128, h: 10 },
+        { str: ", LLC", x: 418, y: 448, w: 30, h: 10 },
+        { str: "By: ___________", x: 288, y: 406, w: 160, h: 10 },
+      ],
+      11,
+      612,
+      792,
+    );
+    const r = placeSignatureFields(split, { prospect: { party: "ICFO VENTURE GROUP, LLC" }, countersign: [] }, {});
+    expect(r.prospect.signature.page).toBe(11);
+    expect(r.prospect.signature.x * 612).toBeGreaterThan(288);
+  });
   it("fails closed when the block is missing", () => {
     expect(() => placeSignatureFields(lines, { prospect: { party: "NOT HERE" }, countersign: [] }, {})).toThrow(/signature block/);
   });
