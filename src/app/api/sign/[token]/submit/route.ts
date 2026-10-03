@@ -12,6 +12,7 @@ import { sealEnvelope } from "@/lib/esignature/seal";
 import { sendCompletionNotice } from "@/lib/esignature/email";
 import { onSignatureCompleted } from "@/lib/diligence/consent";
 import { resolveAutoValue } from "@/lib/esignature/compute";
+import { onEnvelopeSigned } from "@/lib/contracts/service";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,8 @@ export async function POST(
 
     // If this envelope is a Diligence consent, seal the DD version + advance.
     try { await onSignatureCompleted(supabase, request.id); } catch { /* best-effort; not a DD consent */ }
+    // If this envelope is a Sales Hub contract, move it to awaiting countersign + notify the sender.
+    try { await onEnvelopeSigned(supabase, request.id); } catch { /* best-effort; not a contract */ }
 
     const adminEmail = await getCreatorEmail(supabase, request.created_by);
     await Promise.allSettled([

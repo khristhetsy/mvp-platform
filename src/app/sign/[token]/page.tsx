@@ -5,6 +5,7 @@ import { getRequestByToken, listFieldsForToken, markViewed } from "@/lib/esignat
 import { signatureSignedUrl, writeSignatureAudit } from "@/lib/esignature/storage";
 import { BRAND } from "@/lib/esignature/types";
 import { SignerClient } from "@/components/signatures/SignerClient";
+import { contractSigningGate } from "@/lib/contracts/service";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,11 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
 
   if (!request) {
     return <Terminal title={t("link_not_found")} message="This signing link is invalid or has expired." />;
+  }
+  // Envelopes sent from Sales Hub contracts: expiry, prospect responses and open counts.
+  if ((request as { contract_document_id?: string | null }).contract_document_id) {
+    const closed = await contractSigningGate(supabase, request);
+    if (closed) return <Terminal title={closed.title} message={closed.message} />;
   }
   if (request.status === "voided") {
     return <Terminal title={t("document_voided")} message="This document has been voided by the sender and can no longer be signed." />;

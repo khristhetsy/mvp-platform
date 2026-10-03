@@ -10,6 +10,7 @@ import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { NoteLogEntries } from "./NoteLogEntries";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
+import { isSpvContact } from "@/lib/contracts/types";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
@@ -775,6 +776,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               {contact.phone
                 ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
+              {/* SPV contract send: only on contacts tagged SPV (fail closed). */}
+              {isSpvContact(contact.tags)
+                ? <Link href={`/admin/sales/contracts/send?contact=${contact.id}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-signature" aria-hidden="true" /> Contracts</Link>
+                : null}
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
