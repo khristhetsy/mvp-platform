@@ -12,6 +12,9 @@ export const GOOGLE_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
 ] as const;
 
+/** Drive access limited to files iCapOS itself creates (contract PDF rendering). Staff only. */
+export const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
 export const GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 export const GMAIL_MODIFY_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
 
@@ -33,13 +36,13 @@ export type GoogleUserInfo = {
   email: string;
 };
 
-export function buildGoogleAuthorizationUrl(state: string) {
+export function buildGoogleAuthorizationUrl(state: string, opts: { staff?: boolean } = {}) {
   const { clientId, redirectUri } = assertGoogleOAuthEnv();
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: GOOGLE_OAUTH_SCOPES.join(" "),
+    scope: [...GOOGLE_OAUTH_SCOPES, ...(opts.staff ? [DRIVE_FILE_SCOPE] : [])].join(" "),
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: "true",

@@ -71,6 +71,16 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "
   return <div style={{ background: c[0], border: `0.5px solid ${c[1]}`, color: c[2], borderRadius: 8, padding: "9px 12px", fontSize: 12.5, lineHeight: 1.6 }}>{children}</div>;
 }
 
+/** Why Preview, PDF and Send are off for this staff member, with the link that fixes it. */
+export function RenderNotice({ message, href }: { message: string | null | undefined; href: string | null | undefined }) {
+  return (
+    <Notice tone="warn">
+      {message ?? "Contract PDFs are unavailable."} Editing and saving work now.{" "}
+      {href ? <a href={href} style={{ color: "#6a5600", fontWeight: 600, textDecoration: "underline" }}>Connect Google</a> : null}
+    </Notice>
+  );
+}
+
 export async function api<T = Record<string, unknown>>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T & { error?: string } }> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
