@@ -9,8 +9,10 @@ import {
   requestClientMeta,
 } from "@/lib/esignature/storage";
 import { createDraftRequest } from "@/lib/esignature/requests";
+import { docxToPdf, RenderFailedError, RenderUnavailableError } from "@/lib/contracts/render-pdf";
 import {
   MAX_UPLOAD_BYTES,
+  MIME_DOCX,
   MIME_PDF,
   STORAGE_FOLDER_ORIGINALS,
   type SourceFormat,
@@ -47,15 +49,14 @@ export async function POST(req: Request): Promise<Response> {
   const name = file.name || "document";
   const isPdfByName = name.toLowerCase().endsWith(".pdf");
 
-  // PDF-only for now. DOCX conversion stays wired behind convertDocxToPdf() but
-  // is disabled here until a converter (CloudConvert) is configured.
-  const sourceFormat: SourceFormat | null = mime === MIME_PDF || (isPdfByName && !mime) ? "pdf" : null;
+  // PDF as is; Word (.docx) is converted through the uploader's connected Google
+  // account (same converter as Sales Hub contracts).
+  const isDocxByName = name.toLowerCase().endsWith(".docx");
+  const sourceFormat: SourceFormat | null =
+    mime === MIME_PDF || (isPdfByName && !mime) ? "pdf" : mime === MIME_DOCX || isDocxByName ? "docx" : null;
 
   if (!sourceFormat) {
-    return NextResponse.json(
-      { error: "Only PDF files are accepted. If you have a Word document, save it as PDF first." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Upload a PDF or Word (.docx) file." }, { status: 400 });
   }
 
   const documentName = name.replace(/\.(pdf|docx)$/i, "");
@@ -66,9 +67,19 @@ export async function POST(req: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
   const meta = requestClientMeta(req);
 
-  // PDF-only: the uploaded bytes are the canonical working PDF. (DOCX conversion
-  // stays available behind convertDocxToPdf() for when a converter is enabled.)
-  const workingPdf: Buffer = uploadBytes;
+  // The signed copy is always a PDF: a Word upload is converted first.
+  let workingPdf: Buffer = uploadBytes;
+  if (sourceFormat === "docx") {
+    try {
+      workingPdf = await docxToPdf(uploadBytes, name, userId);
+    } catch (err) {
+      if (err instanceof RenderUnavailableError) {
+        return NextResponse.json({ error: `${err.message.replace(/ \(Preview, PDF and Send\)/, "")} Or save the Word file as PDF and upload that.` }, { status: 400 });
+      }
+      if (err instanceof RenderFailedError) return NextResponse.json({ error: `${err.message} You can save the Word file as PDF and upload that.` }, { status: 502 });
+      throw err;
+    }
+  }
   const sourceFilePath: string | null = null;
 
   try {
