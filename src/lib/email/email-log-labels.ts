@@ -23,6 +23,8 @@ export function emailResult(e: {
 
 const SOURCES: Record<string, string> = {
   "investor-intro": "Investor intro",
+  "investor-intro-made": "Investor intro made",
+  "intro-request-digest": "Intro request digest",
   "manual-outreach": "Manual outreach",
   "marketplace-offering-live": "Offering live",
   "ir-report": "IR report",

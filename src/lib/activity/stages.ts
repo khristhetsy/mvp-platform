@@ -105,6 +105,8 @@ export type ActivityClassKey =
   | "outreach_sent"
   | "interest_stage_changed"
   | "intro_requested"
+  | "founder_intro_requested"
+  | "founder_intro_handled"
   | "marketplace_visibility"
   | "deal_saved"
   // founder · optimize
@@ -154,6 +156,7 @@ const appMail = { in_app: true, email: true, digest: false };
 const appDigest = { in_app: true, email: false, digest: true };
 const digestOnly = { in_app: false, email: false, digest: true };
 const appOnly = { in_app: true, email: false, digest: false };
+const logOnly = { in_app: false, email: false, digest: false };
 
 export const ACTIVITY_CLASSES: readonly ActivityClass[] = [
   // ---- Founder · Stage 1 Onboarding -------------------------------------
@@ -309,6 +312,24 @@ export const ACTIVITY_CLASSES: readonly ActivityClass[] = [
     severity: "medium",
     digestable: false,
     defaults: appMail,
+  },
+  {
+    key: "founder_intro_requested",
+    stage: "deploy",
+    label: "Founder requested an intro",
+    description: "A founder asked iCFO to introduce them to a matched investor",
+    severity: "medium",
+    digestable: true,
+    defaults: appDigest,
+  },
+  {
+    key: "founder_intro_handled",
+    stage: "deploy",
+    label: "Founder intro request handled",
+    description: "Staff marked a founder's intro request reviewing, contacted, introduced or declined",
+    severity: "info",
+    digestable: false,
+    defaults: logOnly,
   },
   {
     key: "marketplace_visibility",

@@ -3,6 +3,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/notifications/notifications";
 import { writeAuditLog } from "@/lib/data/audit";
+import { logIntroHandled } from "@/lib/matching/intro-request-log";
+import { emailInvestorIntroMade } from "@/lib/matching/investor-intro-notify";
 
 type IntroStatus = "reviewing" | "facilitated" | "declined";
 
@@ -103,6 +105,20 @@ export async function PATCH(
 
   // ── Notifications ──────────────────────────────────────────────────────────
 
+  // A founder requested intro made by iCFO: email the investor the introduction,
+  // so "we sent the details by email" is true when the in-app notice says it.
+  let investorEmailed = false;
+  if (newStatus === "facilitated" && founderInitiated && intro.investor_id) {
+    investorEmailed = await emailInvestorIntroMade({
+      introRequestId: id,
+      investorUserId: intro.investor_id,
+      companyId: intro.company_id,
+      founderId,
+      note: body.note ?? null,
+      actorUserId: profile.id,
+    });
+  }
+
   if (newStatus === "facilitated") {
     // Notify investor
     await createNotification({
@@ -111,7 +127,9 @@ export async function PATCH(
       type: "intro_facilitated",
       title: founderInitiated ? "New introduction from iCFO" : "Intro request facilitated",
       message: founderInitiated
-        ? `iCFO introduced you to ${companyName}. Check your inbox for next steps.`
+        ? investorEmailed
+          ? `iCFO introduced you to ${companyName}. We sent the details by email.`
+          : `iCFO introduced you to ${companyName}. Check your inbox for next steps.`
         : `Your intro request to ${companyName} has been facilitated. Check your inbox for next steps.`,
       entityType: "intro_request",
       entityId: id,
@@ -176,6 +194,18 @@ export async function PATCH(
       entityId: id,
       deepLink: "/investor/dashboard",
       dedupeKey: `intro_declined:${id}`,
+    });
+  }
+
+  if (founderInitiated) {
+    await logIntroHandled({
+      requestId: id,
+      entityType: "intro_request",
+      status: newStatus,
+      companyId: intro.company_id,
+      investorRef: intro.investor_id,
+      actorUserId: profile.id,
+      investorEmailed,
     });
   }
 
