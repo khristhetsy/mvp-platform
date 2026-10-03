@@ -3,6 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { setProspectIntroStatus, type ProspectIntroStatus } from "@/lib/matching/prospect-intros";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { notifyFounderIntroOutcome } from "@/lib/matching/intro-outcome-notify";
+import { logIntroHandled } from "@/lib/matching/intro-request-log";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         entityId: id,
       });
     }
+  }
+  // Log the decision to account activity and the investor's contact timeline.
+  {
+    const admin = createServiceRoleClient();
+    const { data: logged } = await admin
+      .from("prospect_intro_requests" as never)
+      .select("company_id, investor_ref")
+      .eq("id", id)
+      .maybeSingle();
+    const row = logged as { company_id?: string | null; investor_ref?: string | null } | null;
+    await logIntroHandled({
+      requestId: id,
+      entityType: "prospect_intro_request",
+      status,
+      companyId: row?.company_id ?? null,
+      investorRef: row?.investor_ref ?? null,
+      actorUserId: auth.profile.id,
+    });
   }
   return NextResponse.json({ ok: true });
 }

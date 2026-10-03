@@ -121,6 +121,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/cron/intro-request-digest",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/founder-digest",
       "schedule": "5 * * * *"
     }
