@@ -2,7 +2,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import type { AutoSource, FieldType, SignatureField } from "./types";
+import type { AutoSource, FieldOptions, FieldType, SignatureField } from "./types";
+import { normalizeTitleOptions } from "./compute";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
@@ -18,6 +19,8 @@ export type FieldInput = {
   required?: boolean;
   auto_source?: AutoSource | null;
   placeholder?: string | null;
+  /** Title fields: the choices and whether more than one can be picked. */
+  options?: FieldOptions | null;
 };
 
 export async function listFields(
@@ -55,8 +58,16 @@ export async function replaceFields(
     // Auto-fill source is implied by field type unless explicitly set.
     auto_source:
       f.auto_source ??
-      (f.field_type === "date" ? "signing_date" : f.field_type === "company" ? "signer_company" : null),
+      (f.field_type === "date"
+        ? "signing_date"
+        : f.field_type === "company"
+          ? "signer_company"
+          : f.field_type === "name"
+            ? "signer_name"
+            : null),
     placeholder: f.placeholder ?? null,
+    // Only title fields carry options; the column stays null for everything else.
+    ...(f.field_type === "title" ? { options: normalizeTitleOptions(f.options) } : {}),
   }));
 
   const { data, error } = await raw(supabase).from("signature_fields").insert(rows).select("*");

@@ -4,8 +4,13 @@
 
 export type SignatureStatus = "draft" | "sent" | "viewed" | "signed" | "completed" | "voided";
 export type SourceFormat = "pdf" | "docx";
-export type FieldType = "signature" | "date" | "company" | "text" | "initial";
-export type AutoSource = "signing_date" | "signer_company";
+export type FieldType = "signature" | "date" | "company" | "text" | "initial" | "name" | "title";
+export type AutoSource = "signing_date" | "signer_company" | "signer_name";
+
+/** Title field: the choices the signer picks from, and whether more than one is allowed. */
+export type FieldOptions = { choices: string[]; multiple: boolean };
+export const DEFAULT_TITLE_CHOICES = ["CEO", "President", "Founder", "Owner"] as const;
+export const DEFAULT_TITLE_OPTIONS: FieldOptions = { choices: [...DEFAULT_TITLE_CHOICES], multiple: true };
 export type AuditEventType =
   | "created"
   | "sent"
@@ -51,6 +56,8 @@ export type SignatureField = {
   required: boolean;
   auto_source: AutoSource | null;
   placeholder: string | null;
+  /** Title fields only (20261004130000_signature_name_title_fields.sql). */
+  options?: FieldOptions | null;
   value: string | null;
   created_at: string;
 };

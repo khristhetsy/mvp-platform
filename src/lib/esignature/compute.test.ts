@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fieldToPdfRect, resolveAutoValue } from "./compute";
+import { fieldToPdfRect, normalizeTitleOptions, resolveAutoValue, validateTitleValue } from "./compute";
 import type { SignatureField } from "./types";
 
 function field(partial: Partial<SignatureField>): SignatureField {
@@ -67,5 +67,34 @@ describe("resolveAutoValue", () => {
   it("returns null for signer-provided fields (signature / text)", () => {
     expect(resolveAutoValue(field({ field_type: "signature" }), "2026-06-21", "X")).toBeNull();
     expect(resolveAutoValue(field({ field_type: "text" }), "2026-06-21", "X")).toBeNull();
+  });
+});
+
+describe("name and title fields", () => {
+  it("fills the name from the signer", () => {
+    expect(resolveAutoValue({ field_type: "name", auto_source: null }, "2026-10-04", "Acme", "Dorrin Prophet")).toBe("Dorrin Prophet");
+    expect(resolveAutoValue({ field_type: "name", auto_source: "signer_name" }, "2026-10-04", null, null)).toBe("");
+  });
+
+  it("leaves title for the signer to pick", () => {
+    expect(resolveAutoValue({ field_type: "title", auto_source: null }, "2026-10-04", "Acme", "Dorrin")).toBeNull();
+  });
+
+  it("defaults title options and cleans custom ones", () => {
+    expect(normalizeTitleOptions(null)).toEqual({ choices: ["CEO", "President", "Founder", "Owner"], multiple: true });
+    expect(normalizeTitleOptions({ choices: [" CEO ", "ceo", "", "Managing, Partner"], multiple: false })).toEqual({
+      choices: ["CEO", "Managing Partner"],
+      multiple: false,
+    });
+  });
+
+  it("accepts picks from the list, in list order", () => {
+    expect(validateTitleValue("founder, ceo", null)).toEqual({ value: "CEO, Founder" });
+    expect(validateTitleValue("", null)).toEqual({ value: "" });
+  });
+
+  it("rejects picks outside the list or too many", () => {
+    expect(validateTitleValue("Chairman", null)).toEqual({ error: "Pick your title from the list." });
+    expect(validateTitleValue("CEO, Owner", { choices: ["CEO", "Owner"], multiple: false })).toEqual({ error: "Pick one title." });
   });
 });

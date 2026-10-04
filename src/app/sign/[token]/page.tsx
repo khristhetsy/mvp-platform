@@ -5,6 +5,7 @@ import { getRequestByToken, listFieldsForToken, markViewed } from "@/lib/esignat
 import { signatureSignedUrl, writeSignatureAudit } from "@/lib/esignature/storage";
 import { BRAND } from "@/lib/esignature/types";
 import { SignerClient } from "@/components/signatures/SignerClient";
+import { normalizeTitleOptions } from "@/lib/esignature/compute";
 import { contractSigningGate } from "@/lib/contracts/service";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
         required: f.required,
         placeholder: f.placeholder,
         auto_source: f.auto_source,
+        options: f.field_type === "title" ? normalizeTitleOptions(f.options) : null,
       }))}
     />
   );

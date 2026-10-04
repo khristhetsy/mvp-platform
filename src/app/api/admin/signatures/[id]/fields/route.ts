@@ -7,7 +7,7 @@ import { replaceFields } from "@/lib/esignature/fields";
 export const dynamic = "force-dynamic";
 
 const fieldSchema = z.object({
-  field_type: z.enum(["signature", "date", "company", "text", "initial"]),
+  field_type: z.enum(["signature", "date", "company", "text", "initial", "name", "title"]),
   page: z.number().int().min(1),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
@@ -15,6 +15,7 @@ const fieldSchema = z.object({
   height: z.number().min(0).max(1),
   required: z.boolean().optional(),
   placeholder: z.string().max(120).nullish(),
+  options: z.object({ choices: z.array(z.string().max(40)).max(12), multiple: z.boolean() }).nullish(),
 });
 
 const putSchema = z.object({ fields: z.array(fieldSchema).max(200) });

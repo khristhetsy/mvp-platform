@@ -11,7 +11,7 @@ import { writeSignatureAudit, requestClientMeta } from "@/lib/esignature/storage
 import { sealEnvelope } from "@/lib/esignature/seal";
 import { sendCompletionNotice } from "@/lib/esignature/email";
 import { onSignatureCompleted } from "@/lib/diligence/consent";
-import { resolveAutoValue } from "@/lib/esignature/compute";
+import { resolveAutoValue, validateTitleValue } from "@/lib/esignature/compute";
 import { onEnvelopeSigned } from "@/lib/contracts/service";
 
 export const dynamic = "force-dynamic";
@@ -51,8 +51,14 @@ export async function POST(
   // Server computes auto values (never trust the client for those).
   const resolved: { fieldId: string; value: string }[] = [];
   for (const f of fields) {
-    const auto = resolveAutoValue(f, today, request.signer_company);
-    const value = auto !== null ? auto : (provided[f.id] ?? "").trim();
+    const auto = resolveAutoValue(f, today, request.signer_company, request.signer_name);
+    let value = auto !== null ? auto : (provided[f.id] ?? "").trim();
+    // Title: only choices from the sender's list (one, unless more are allowed).
+    if (f.field_type === "title") {
+      const checked = validateTitleValue(value, f.options);
+      if ("error" in checked) return NextResponse.json({ error: checked.error }, { status: 400 });
+      value = checked.value;
+    }
 
     if (f.required && !value) {
       return NextResponse.json({ error: "Please complete all required fields." }, { status: 400 });
