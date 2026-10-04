@@ -3,6 +3,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listFounderRequests } from "@/lib/support/support";
 import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
 import { FounderSupportClient, type FounderRequestRow } from "@/components/founder/FounderSupportClient";
@@ -29,6 +30,15 @@ export default async function FounderSupportPage() {
     getJourneyOverview(supabase as unknown as SupabaseClient<Database>, profile.id).catch(() => null),
   ]);
 
+  // Owner names: staff profiles aren't readable under founder RLS.
+  const ownerIds = [...new Set(requests.map((r) => r.assigned_to).filter(Boolean) as string[])];
+  const { data: owners } = ownerIds.length
+    ? await (createServiceRoleClient() as unknown as SupabaseClient).from("profiles").select("id, full_name, email").in("id", ownerIds)
+    : { data: [] };
+  const ownerName = new Map(
+    ((owners ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>).map((p) => [p.id, p.full_name?.trim() || p.email || "iCapOS team"]),
+  );
+
   const rows: FounderRequestRow[] = requests.map((r) => ({
     id: r.id,
     subject: r.subject,
@@ -36,6 +46,13 @@ export default async function FounderSupportPage() {
     contextItem: r.context_item,
     csat: r.csat,
     createdAt: r.created_at,
+    refNo: r.ref_no ?? null,
+    ownerId: r.assigned_to,
+    ownerName: r.assigned_to ? ownerName.get(r.assigned_to) ?? null : null,
+    dueAt: r.due_at ?? null,
+    resolutionSummary: r.resolution_summary ?? null,
+    rating: r.rating ?? null,
+    closedAt: r.closed_at ?? null,
   }));
 
   const founderName = profile.full_name ?? profile.email ?? "Founder";

@@ -177,6 +177,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/companies",       label: "Companies",       requiredPermission: "manage_companies"     },
           { href: "/admin/investors",       label: "Investors",       requiredPermission: "manage_investors"     },
           { href: "/admin/support",         label: "Support queue",   requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/support/log",     label: "Support log",     requiredPermission: "view_admin_dashboard" },
           { href: "/admin/founders-stuck",  label: "Stuck founders",  requiredPermission: "manage_companies"     },
           { href: "/admin/intro-requests",  label: "Intro Requests",  requiredPermission: "manage_matching"      },
           { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"      },

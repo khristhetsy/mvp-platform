@@ -33,6 +33,30 @@ export type SupportRequest = {
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
+  // Support care (20261004100000_support_care.sql)
+  ref_no: number | null;
+  due_at: string | null;
+  first_staff_reply_at: string | null;
+  due_soon_alerted_at: string | null;
+  overdue_alerted_at: string | null;
+  last_reminder_at: string | null;
+  reminder_count: number;
+  founder_nudged_at: string | null;
+  resolution_summary: string | null;
+  confirm_reminded_at: string | null;
+  closed_at: string | null;
+  rating: number | null;
+  rating_comment: string | null;
+  reopened_count: number;
+  ai_triage: SupportAiTriage | null;
+};
+
+/** What AI triage stored on a request. Internal only; staff can ignore it. */
+export type SupportAiTriage = {
+  topic: string;
+  priority: "low" | "normal" | "high";
+  canAiAnswer: boolean;
+  reason: string;
 };
 
 export type SupportMessage = {
@@ -50,8 +74,9 @@ function db(c: SupabaseClient<Database>): SupabaseClient<any> {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-const REQUEST_COLS =
-  "id, company_id, founder_id, subject, context_stage, context_item, source, status, assigned_to, priority, csat, created_at, updated_at, resolved_at";
+// One literal (not concatenated) so the query builder can type the selected columns.
+export const REQUEST_COLS =
+  "id, company_id, founder_id, subject, context_stage, context_item, source, status, assigned_to, priority, csat, created_at, updated_at, resolved_at, ref_no, due_at, first_staff_reply_at, due_soon_alerted_at, overdue_alerted_at, last_reminder_at, reminder_count, founder_nudged_at, resolution_summary, confirm_reminded_at, closed_at, rating, rating_comment, reopened_count, ai_triage";
 
 export type CreateSupportRequestInput = {
   companyId: string;
@@ -174,10 +199,21 @@ export async function assignSupportRequest(
 export async function resolveSupportRequest(
   supabase: SupabaseClient<Database>,
   requestId: string,
+  summary?: string | null,
 ): Promise<{ ok: true } | { error: string }> {
+  const now = new Date().toISOString();
   const { error } = await db(supabase)
     .from("support_requests")
-    .update({ status: "resolved", resolved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      status: "resolved",
+      resolved_at: now,
+      updated_at: now,
+      // Each resolve starts a fresh "did this solve it?" loop for the founder.
+      resolution_summary: summary?.trim() ? summary.trim().slice(0, 2000) : null,
+      csat: null,
+      confirm_reminded_at: null,
+      closed_at: null,
+    })
     .eq("id", requestId);
   return error ? { error: error.message } : { ok: true };
 }

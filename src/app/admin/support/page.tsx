@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listSupportQueue } from "@/lib/support/support";
+import { getSupportSettings } from "@/lib/support/settings";
 import { SupportQueueClient, type QueueRow, type StaffOption } from "@/components/admin/support/SupportQueueClient";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -47,7 +48,14 @@ export default async function AdminSupportPage({ searchParams }: { searchParams:
     assigneeName: q.assigned_to ? personName.get(q.assigned_to) ?? "—" : null,
     csat: q.csat,
     createdAt: q.created_at,
+    refNo: q.ref_no ?? null,
+    dueAt: q.due_at ?? null,
+    aiTriage: q.ai_triage ?? null,
+    rating: q.rating ?? null,
+    reopenedCount: q.reopened_count ?? 0,
   }));
+
+  const settings = await getSupportSettings();
 
   const staffOptions: StaffOption[] = (staff ?? []).map((s: { id: string; full_name: string | null; email: string | null }) => ({
     id: s.id,
@@ -63,7 +71,14 @@ export default async function AdminSupportPage({ searchParams }: { searchParams:
           description="Founder help requests and questions — assign, reply, and resolve in one place."
           metadata={`${rows.filter((r) => r.status !== "resolved").length} open`}
         />
-        <SupportQueueClient rows={rows} staff={staffOptions} currentStaffId={profile.id} showResolved={showResolved} />
+        <SupportQueueClient
+          rows={rows}
+          staff={staffOptions}
+          currentStaffId={profile.id}
+          showResolved={showResolved}
+          settings={settings}
+          canEditSettings={profile.role === "admin"}
+        />
       </WorkspacePageContainer>
     </AppShell>
   );
