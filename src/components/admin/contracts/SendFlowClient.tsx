@@ -6,10 +6,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { applyEmailTokens, bestDraft, emailTokenValues, EMAIL_TOKENS_BASE, tokensIn, withTypedValues } from "@/lib/contracts/email-tokens";
-import { openFields } from "@/lib/contracts/fields";
+import { linkedFieldValues, openFields, plainCurrency } from "@/lib/contracts/fields";
 import type { TemplateField } from "@/lib/contracts/types";
-import { ContractEditor, loadEditorData, type EditorData, type EditorHandle } from "./ContractEditor";
+import { ContractEditor, loadEditorData, type EditorData, type EditorHandle, type FieldLink } from "./ContractEditor";
 import { TrackingTable } from "./TrackingTable";
 import { UploadContractModal } from "./UploadContractModal";
 import { api, BLUE, btn, Card, MUTED, NAVY, Notice, SectionLabel } from "./ui";
@@ -40,6 +41,10 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
   const [active, setActive] = useState<string | null>(null);
   const [editorData, setEditorData] = useState<Record<string, EditorData>>({});
   const [openCounts, setOpenCounts] = useState<Record<string, number>>({});
+  // Documents opened in this send session. Next stays locked until every tab was opened.
+  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
+  // Linked fields the user overrode for this send, per document.
+  const [unlinked, setUnlinked] = useState<Record<string, string[]>>({});
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,35 +141,93 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       ...ups.map((u) => ({ id: u.id, templateId: "", name: u.title, kind: "upload" })),
     ];
     setDocs(opened);
+    setUnlinked({});
     await Promise.all(opened.map((d) => loadDoc(d.id)));
+    setReviewed(new Set([opened[0].id]));
     setActive(opened[0].id);
     setStep(2);
     setBusy(false);
   }
 
-  async function loadDoc(id: string) {
+  async function loadDoc(id: string): Promise<EditorData | null> {
     const r = await loadEditorData(id);
     if (r.data) {
       setEditorData((m) => ({ ...m, [id]: r.data! }));
       setOpenCounts((m) => ({ ...m, [id]: (r.data!.open as unknown[] | undefined)?.length ?? 0 }));
-    } else setError(r.error ?? "Could not load a document.");
+      return r.data;
+    }
+    setError(r.error ?? "Could not load a document.");
+    return null;
   }
 
+  /** Term sheet values a document's linked fields follow (Due Diligence valuation = term sheet valuation cap). */
+  const linksFor = useCallback(
+    (docId: string, data: Record<string, EditorData | null | undefined>): FieldLink[] => {
+      const d = docs.find((x) => x.id === docId);
+      const e = data[docId];
+      if (!d || !e || d.kind === "term_sheet" || d.kind === "upload") return [];
+      const sources = docs
+        .filter((x) => x.kind === "term_sheet" && data[x.id])
+        .map((x) => ({ fields: data[x.id]!.fields, values: data[x.id]!.doc.field_values }));
+      const off = unlinked[docId] ?? [];
+      return Object.entries(linkedFieldValues(e.fields, sources)).map(([token, value]) => ({ token, value, linked: !off.includes(token), source: "term sheet" }));
+    },
+    [docs, unlinked],
+  );
+
   async function switchTab(id: string) {
+    const leaving = active;
     await editorRef.current?.flush();
+    // Reload the tab being left so its saved values show when it is opened again
+    // and the other tabs read its latest values.
+    if (leaving && docs.find((d) => d.id === leaving)?.kind !== "upload") await loadDoc(leaving);
+    setReviewed((s) => new Set(s).add(id));
     setActive(id);
   }
 
   async function toEmail() {
     await editorRef.current?.flush();
     setBusy(true);
-    await Promise.all(docs.map((d) => loadDoc(d.id)));
+    const fresh = await Promise.all(docs.map((d) => loadDoc(d.id)));
+    const data = Object.fromEntries(docs.map((d, i) => [d.id, fresh[i]]));
+    // Linked fields on tabs that are not open follow the latest term sheet values.
+    const changed: string[] = [];
+    for (const d of docs) {
+      const e = data[d.id];
+      if (!e || e.doc.locked) continue;
+      const next = { ...e.doc.field_values };
+      let diff = false;
+      for (const l of linksFor(d.id, data)) {
+        const f = e.fields.find((x) => x.token === l.token);
+        if (l.linked && plainCurrency(next[l.token] ?? f?.default_value ?? "") !== l.value) {
+          next[l.token] = l.value;
+          diff = true;
+        }
+      }
+      if (diff) {
+        const r = await api(`/api/admin/sales/contracts/${d.id}`, { method: "PATCH", body: JSON.stringify({ field_values: next }) });
+        if (r.ok) changed.push(d.id);
+      }
+    }
+    if (changed.length) await Promise.all(changed.map((id) => loadDoc(id)));
     setBusy(false);
     setStep(3);
   }
 
+  const onUnlink = useCallback((token: string) => setUnlinked((m) => (active ? { ...m, [active]: [...new Set([...(m[active] ?? []), token])] } : m)), [active]);
+  const onRelink = useCallback((token: string) => setUnlinked((m) => (active ? { ...m, [active]: (m[active] ?? []).filter((t) => t !== token) } : m)), [active]);
+  const activeLinks = useMemo(() => (active ? linksFor(active, editorData) : []), [active, editorData, linksFor]);
+
   const onOpenChange = useCallback((n: number) => setOpenCounts((m) => (active ? { ...m, [active]: n } : m)), [active]);
   const totalOpen = docs.reduce((a, d) => a + (openCounts[d.id] ?? 0), 0);
+  const unopened = docs.filter((d) => !reviewed.has(d.id)).length;
+  const blocked = totalOpen > 0 || unopened > 0;
+  const tabStatus = (id: string) => {
+    const n = openCounts[id] ?? 0;
+    if (!reviewed.has(id)) return { short: "not opened", long: "open this tab to review", warn: true };
+    if (n) return { short: `${n} open`, long: `${n} field${n === 1 ? "" : "s"} open`, warn: true };
+    return { short: "reviewed", long: "reviewed", warn: false };
+  };
 
   return (
     <div>
@@ -275,11 +338,11 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
             <div role="tablist" style={{ display: "flex", background: NAVY, padding: "0 14px", flexWrap: "wrap" }}>
               {docs.map((d) => {
                 const on = d.id === active;
-                const n = openCounts[d.id] ?? 0;
+                const st = tabStatus(d.id);
                 return (
                   <button key={d.id} role="tab" aria-selected={on} type="button" onClick={() => void switchTab(d.id)} style={{ padding: "12px 16px", marginTop: 6, border: "none", borderRadius: "8px 8px 0 0", background: on ? "#fff" : "transparent", color: on ? NAVY : "#9fd0ff", fontSize: 13, fontWeight: on ? 700 : 500, cursor: "pointer" }}>
                     {d.name}
-                    <span style={{ background: n ? (on ? "#fff4d6" : "#1e3a5f") : on ? "#e6f6ec" : "#1e3a5f", color: n ? (on ? "#8a6500" : "#9fd0ff") : on ? "#1a7f43" : "#9fd0ff", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 9, marginLeft: 6 }}>{n ? `${n} open` : "ready"}</span>
+                    <span style={{ background: st.warn ? "#fff4d6" : on ? "#e6f6ec" : "#1e3a5f", color: st.warn ? "#8a6500" : on ? "#1a7f43" : "#9fd0ff", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 9, marginLeft: 6 }}>{st.short}</span>
                   </button>
                 );
               })}
@@ -287,15 +350,15 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
             {active && docs.find((d) => d.id === active)?.kind === "upload" ? (
               <UploadedPanel doc={docs.find((d) => d.id === active)!} requestId={uploads.find((u) => u.id === active)?.requestId ?? null} />
             ) : active && editorData[active] ? (
-              <ContractEditor key={active} ref={editorRef} data={editorData[active]} onOpenChange={onOpenChange} />
+              <ContractEditor key={active} ref={editorRef} data={editorData[active]} onOpenChange={onOpenChange} links={activeLinks} onUnlink={onUnlink} onRelink={onRelink} />
             ) : (
               <p style={{ padding: 16, fontSize: 12.5, color: MUTED }}>Loading…</p>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "11px 18px", background: totalOpen ? "#fffbe9" : "#e6f6ec", borderTop: "0.5px solid #f0e2b8", flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: totalOpen ? "#8a6500" : "#1a7f43" }}>
-                {docs.map((d) => `${d.name}: ${openCounts[d.id] ? `${openCounts[d.id]} field${openCounts[d.id] === 1 ? "" : "s"} open` : "ready"}`).join(" · ")}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "11px 18px", background: blocked ? "#fffbe9" : "#e6f6ec", borderTop: "0.5px solid #f0e2b8", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: blocked ? "#8a6500" : "#1a7f43" }}>
+                {docs.map((d) => `${d.name}: ${tabStatus(d.id).long}`).join(" · ")}
               </span>
-              <button type="button" disabled={busy || totalOpen > 0} onClick={() => void toEmail()} style={{ ...btn(true), background: totalOpen ? "#c9d4e5" : BLUE }}>Next: choose email</button>
+              <button type="button" disabled={busy || blocked} onClick={() => void toEmail()} style={{ ...btn(true), background: blocked ? "#c9d4e5" : BLUE }}>Next: choose email</button>
             </div>
           </Card>
         </>
@@ -405,6 +468,54 @@ function EmailStep({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>({});
+  // Library draft being created or edited (id null = new), and the draft awaiting delete confirmation.
+  const [editing, setEditing] = useState<{ id: string | null; name: string; description: string; subject: string; body: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  function startEdit(d: Draft | null, copy = false) {
+    setDraftError(null);
+    setConfirmDelete(null);
+    setEditing(
+      d
+        ? { id: copy ? null : d.id, name: copy ? `${d.name} (copy)` : d.name, description: d.description ?? "", subject: d.subject, body: d.body }
+        : { id: null, name: "", description: "", subject: "", body: "" },
+    );
+  }
+
+  async function saveDraft() {
+    if (!editing) return;
+    if (!editing.name.trim() || !editing.subject.trim() || !editing.body.trim()) return setDraftError("Give the draft a name, subject and body.");
+    setDraftBusy(true);
+    setDraftError(null);
+    const payload = JSON.stringify({ name: editing.name, description: editing.description.trim() || null, subject: editing.subject, body: editing.body });
+    const r = editing.id
+      ? await api<{ draft: Draft }>(`/api/admin/sales/contracts/email-drafts/${editing.id}`, { method: "PATCH", body: payload })
+      : await api<{ draft: Draft }>("/api/admin/sales/contracts/email-drafts", { method: "POST", body: payload });
+    setDraftBusy(false);
+    if (!r.ok) return setDraftError(r.data.error ?? "Could not save the draft.");
+    const saved = r.data.draft;
+    setDrafts((list) => (editing.id ? list.map((x) => (x.id === saved.id ? saved : x)) : [...list, saved]));
+    if (!editing.id || editing.id === draftId) pick(saved);
+    setSaved(`Saved "${saved.name}" to the library.`);
+    setEditing(null);
+  }
+
+  async function removeDraft(id: string) {
+    setDraftBusy(true);
+    const r = await api(`/api/admin/sales/contracts/email-drafts/${id}`, { method: "DELETE" });
+    setDraftBusy(false);
+    setConfirmDelete(null);
+    if (!r.ok) return setError((r.data as { error?: string }).error ?? "Could not remove the draft.");
+    const rest = drafts.filter((x) => x.id !== id);
+    setDrafts(rest);
+    if (editing?.id === id) setEditing(null);
+    if (draftId === id) {
+      if (rest[0]) pick(rest[0]);
+      else setDraftId(null);
+    }
+  }
 
   function pick(d: Draft) {
     setDraftId(d.id);
@@ -502,16 +613,67 @@ function EmailStep({
       <Card style={{ overflow: "hidden" }}>
         <div style={{ display: "flex", flexWrap: "wrap" }}>
           <div style={{ flex: "0 0 225px", background: "#f6f8fc", borderRight: "0.5px solid #eef1f5", padding: "14px 0" }}>
-            <div style={{ ...sub, padding: "0 16px" }}>Email drafts</div>
-            {drafts.map((d) => (
-              <button key={d.id} type="button" onClick={() => pick(d)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 16px", border: "none", borderLeft: d.id === draftId ? `3px solid ${BLUE}` : "3px solid transparent", background: d.id === draftId ? "#e8f0fe" : "transparent", cursor: "pointer" }}>
-                <div style={{ fontSize: 13, fontWeight: d.id === draftId ? 700 : 500, color: d.id === draftId ? BLUE : NAVY }}>{d.name}</div>
-                {d.description ? <div style={{ fontSize: 11, color: MUTED }}>{d.description}</div> : null}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px 0 16px" }}>
+              <span style={sub}>Email drafts</span>
+              <button type="button" onClick={() => startEdit(null)} style={{ display: "inline-flex", alignItems: "center", gap: 3, border: "none", background: "none", color: BLUE, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "2px 4px" }}>
+                <Plus size={13} aria-hidden="true" /> New draft
               </button>
-            ))}
-            {!drafts.length ? <p style={{ padding: "0 16px", fontSize: 12, color: MUTED }}>No drafts yet. Write one here and save it to the library.</p> : null}
+            </div>
+            {drafts.map((d) => {
+              const on = d.id === draftId;
+              const isEditing = editing?.id === d.id;
+              return (
+                <div key={d.id} style={{ display: "flex", alignItems: "flex-start", gap: 4, padding: "10px 10px 10px 13px", borderLeft: on || isEditing ? `3px solid ${BLUE}` : "3px solid transparent", background: on || isEditing ? "#e8f0fe" : "transparent" }}>
+                  <button type="button" onClick={() => { setEditing(null); pick(d); }} style={{ flex: 1, minWidth: 0, textAlign: "left", border: "none", background: "none", padding: 0, cursor: "pointer" }}>
+                    <div style={{ fontSize: 13, fontWeight: on ? 700 : 500, color: on ? BLUE : NAVY }}>{d.name}</div>
+                    {d.description ? <div style={{ fontSize: 11, color: MUTED }}>{d.description}</div> : null}
+                  </button>
+                  {confirmDelete === d.id ? (
+                    <span style={{ fontSize: 11, color: "#A32D2D", whiteSpace: "nowrap" }}>
+                      Remove?{" "}
+                      <button type="button" disabled={draftBusy} onClick={() => void removeDraft(d.id)} style={{ ...iconBtn, color: "#A32D2D", fontWeight: 700 }}>Yes</button>
+                      <button type="button" onClick={() => setConfirmDelete(null)} style={iconBtn}>No</button>
+                    </span>
+                  ) : (
+                    <span style={{ display: "inline-flex", gap: 2, flexShrink: 0 }}>
+                      <button type="button" title="Edit draft" aria-label={`Edit ${d.name}`} onClick={() => startEdit(d)} style={iconBtn}><Pencil size={13} /></button>
+                      <button type="button" title="Duplicate draft" aria-label={`Duplicate ${d.name}`} onClick={() => startEdit(d, true)} style={iconBtn}><Copy size={13} /></button>
+                      <button type="button" title="Remove draft" aria-label={`Remove ${d.name}`} onClick={() => setConfirmDelete(d.id)} style={iconBtn}><Trash2 size={13} /></button>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            {editing && !editing.id ? (
+              <div style={{ padding: "10px 16px", borderLeft: `3px solid ${BLUE}`, background: "#e8f0fe", fontSize: 13, fontWeight: 700, color: BLUE }}>{editing.name.trim() || "New draft"}</div>
+            ) : null}
+            {!drafts.length && !editing ? <p style={{ padding: "0 16px", fontSize: 12, color: MUTED }}>No drafts yet. Use New draft to add one.</p> : null}
           </div>
           <div style={{ flex: "1 1 420px", padding: "16px 18px", minWidth: 0 }}>
+            {editing ? (
+              <div>
+                <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Pencil size={13} aria-hidden="true" /> {editing.id ? "Editing draft in the library" : "New draft for the library"}
+                </div>
+                <label style={draftLabel}>Name</label>
+                <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Proposal 3" style={draftInput} />
+                <label style={draftLabel}>Description</label>
+                <input value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="SAFE, single entity" style={draftInput} />
+                <label style={draftLabel}>Subject</label>
+                <input value={editing.subject} onChange={(e) => setEditing({ ...editing, subject: e.target.value })} placeholder="Proposal for {{company}}" style={draftInput} />
+                <label style={draftLabel}>Body</label>
+                <textarea value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} rows={12} style={{ ...draftInput, border: `1px solid ${BLUE}`, lineHeight: 1.7, fontFamily: "inherit" }} />
+                <p style={{ fontSize: 11, color: MUTED, margin: "0 0 10px", lineHeight: 1.6 }}>
+                  Tokens you can use: {[...EMAIL_TOKENS_BASE, ...fieldTokens].map((t) => `{{${t}}}`).join(" ")}. Saving updates the library for future sends.
+                </p>
+                {draftError ? <div style={{ marginBottom: 10 }}><Notice tone="error">{draftError}</Notice></div> : null}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => setEditing(null)} style={btn()}>Cancel</button>
+                  <button type="button" disabled={draftBusy} onClick={() => void saveDraft()} style={{ ...btn(true), opacity: draftBusy ? 0.5 : 1 }}>{draftBusy ? "Saving…" : "Save draft"}</button>
+                </div>
+              </div>
+            ) : (
+            <>
             <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 12 }}>
               <button type="button" onClick={() => setPreview(false)} style={{ ...btn(!preview), padding: "4px 10px", fontSize: 11.5 }}>Edit</button>
               <button type="button" onClick={() => setPreview(true)} style={{ ...btn(preview), padding: "4px 10px", fontSize: 11.5 }}>Preview</button>
@@ -578,9 +740,15 @@ function EmailStep({
               </button>
             </div>
             {blockedReason ? <p style={{ fontSize: 11.5, color: "#8a6500", textAlign: "right", margin: "6px 0 0" }}>{blockedReason}</p> : null}
+            </>
+            )}
           </div>
         </div>
       </Card>
     </>
   );
 }
+
+const iconBtn = { border: "none", background: "none", color: "#5a6b87", cursor: "pointer", padding: "2px 4px", fontSize: 11, display: "inline-flex", alignItems: "center" } as const;
+const draftLabel = { display: "block", fontSize: 11.5, fontWeight: 600, color: "#3a4a63", marginBottom: 4 } as const;
+const draftInput = { width: "100%", boxSizing: "border-box", border: "0.5px solid #d5deea", borderRadius: 7, padding: "9px 12px", fontSize: 13, color: NAVY, marginBottom: 10 } as const;

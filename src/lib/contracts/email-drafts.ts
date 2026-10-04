@@ -89,6 +89,27 @@ export async function saveEmailDraft(db: Db, input: { name: string; description:
   return { id: data.id as string, name: input.name, description: input.description, subject: input.subject, body: input.body };
 }
 
+/** Edit a library draft (name, description, subject, body). */
+export async function updateEmailDraft(db: Db, id: string, input: { name: string; description: string | null; subject: string; body: string }): Promise<EmailDraft> {
+  const { data, error } = await db
+    .from("marketing_templates")
+    .update({ name: input.name, preview_text: input.description, subject: input.subject, text_body: input.body, html_body: toHtml(input.body) })
+    .eq("id", id)
+    .eq("category", "spv_contract")
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Could not save the draft: ${error.message}`);
+  if (!data) throw new Error("Draft not found.");
+  return { id, ...input };
+}
+
+/** Remove a draft from the library. Archived, not deleted, so past sends keep their reference. */
+export async function archiveEmailDraft(db: Db, id: string): Promise<boolean> {
+  const { data, error } = await db.from("marketing_templates").update({ status: "archived" }).eq("id", id).eq("category", "spv_contract").select("id").maybeSingle();
+  if (error) throw new Error(`Could not remove the draft: ${error.message}`);
+  return Boolean(data);
+}
+
 /** Seed the three launch drafts once (with the master install). */
 export async function seedEmailDrafts(db: Db, userId: string): Promise<number> {
   const existing = await listEmailDrafts(db);

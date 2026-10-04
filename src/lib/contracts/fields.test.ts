@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultCompanyName, defaultSpvName, formatCurrency, formatDate, formatPercent, openFields, resolveValues } from "./fields";
+import { defaultCompanyName, defaultSpvName, formatCurrency, formatDate, formatPercent, groupCurrencyInput, linkedFieldValues, openFields, plainCurrency, resolveValues } from "./fields";
 import type { IssuingEntity, TemplateField } from "./types";
 
 const f = (token: string, required = true, default_value: string | null = null, type: TemplateField["type"] = "text"): TemplateField => ({ token, label: token, type, required, default_value, position_ref: [], sort_order: 0 });
@@ -42,5 +42,33 @@ describe("values", () => {
     expect(defaultSpvName("Zero Emission Truck Leasing Inc.")).toBe("ICFO ZERO EMISSION TRUCK LEASING SPV, LLC");
     expect(defaultSpvName(null)).toBe("");
     expect(defaultCompanyName("Arrayworks, Inc.")).toBe("ARRAYWORKS, INC.");
+  });
+});
+
+describe("currency input", () => {
+  it("groups thousands while typing", () => {
+    expect(groupCurrencyInput("1500000")).toBe("1,500,000");
+    expect(groupCurrencyInput("1,500,000")).toBe("1,500,000");
+    expect(groupCurrencyInput("1500000.")).toBe("1,500,000.");
+    expect(groupCurrencyInput("2500.75")).toBe("2,500.75");
+    expect(groupCurrencyInput("")).toBe("");
+    expect(groupCurrencyInput("TBD")).toBe("TBD");
+  });
+  it("stores digits only", () => {
+    expect(plainCurrency("1,500,000")).toBe("1500000");
+    expect(plainCurrency("$2,500.7.5")).toBe("2500.75");
+  });
+});
+
+describe("linked fields", () => {
+  const cf = (token: string, dv: string | null = null) => f(token, true, dv, "currency");
+  it("copies the term sheet valuation cap into the services agreement valuation", () => {
+    const dd = [cf("equity_valuation", "10,000,000"), cf("service_fee")];
+    expect(linkedFieldValues(dd, [{ fields: [cf("valuation_cap", "10,000,000")], values: { valuation_cap: "23,000,000" } }])).toEqual({ equity_valuation: "23000000" });
+    expect(linkedFieldValues(dd, [{ fields: [cf("pre_money_valuation")], values: { pre_money_valuation: "8000000" } }])).toEqual({ equity_valuation: "8000000" });
+  });
+  it("does nothing without a term sheet or the field", () => {
+    expect(linkedFieldValues([cf("equity_valuation")], [])).toEqual({});
+    expect(linkedFieldValues([cf("service_fee")], [{ fields: [cf("valuation_cap")], values: { valuation_cap: "5" } }])).toEqual({});
   });
 });
