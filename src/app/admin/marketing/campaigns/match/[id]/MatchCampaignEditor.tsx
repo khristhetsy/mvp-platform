@@ -448,12 +448,13 @@ function StepFounders({ campaign, lists, options, onChecked, onError }: {
 // ── 3. Data check ────────────────────────────────────────────────────────────
 
 function summarize(founders: CampaignFounderRow[]) {
-  const r = { selected: founders.length, ready: 0, missing: 0, email: 0, other: 0 };
+  const r = { selected: founders.length, ready: 0, missing: 0, email: 0, recent: 0, other: 0 };
   for (const f of founders) {
     const x = f.excluded_reason;
     if (!x || x === "no_matches") r.ready++;
     else if (x === "missing_industry" || x === "missing_stage" || x === "unconfirmed_data") r.missing++;
     else if (x === "email_unverified" || x === "invalid_email" || x === "no_email") r.email++;
+    else if (x === "emailed_recently") r.recent++;
     else r.other++;
   }
   return r;
@@ -469,6 +470,7 @@ function StepCheck({ campaign, founders, sequenceEnabled, onChange, onCampaign, 
   onError: (e: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [days, setDays] = useState(String(campaign.match_config.cooldown_days));
   const s = summarize(founders);
 
   async function setOption(patch: Partial<MatchConfig>) {
@@ -488,11 +490,12 @@ function StepCheck({ campaign, founders, sequenceEnabled, onChange, onCampaign, 
     <div className={card}>
       <div className="mb-1 text-[14px] font-medium">Data check</div>
       <p className="mb-4 text-[12.5px] text-[#5A6782]">Only founders with industry and stage filled can be matched. Data is filled by the team separately; this step only checks it.</p>
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-6">
         <Tile value={s.selected} label="Founders selected" />
         <Tile value={s.ready} label="Ready to match" tone="good" />
         <Tile value={s.missing} label="Missing or guessed industry or stage" tone="warn" />
         <Tile value={s.email} label="Email unverified or invalid" tone="warn" />
+        <Tile value={s.recent} label="Emailed recently" tone="warn" />
         <Tile value={s.other} label="Unsubscribed or EU" tone="warn" />
       </div>
       <div className="mb-4 flex flex-wrap gap-5 text-[12.5px]">
@@ -508,6 +511,27 @@ function StepCheck({ campaign, founders, sequenceEnabled, onChange, onCampaign, 
           <input type="checkbox" disabled={busy} checked={campaign.match_config.include_inferred} onChange={(e) => setOption({ include_inferred: e.target.checked })} />
           Include low-confidence industry and guessed stages
         </label>
+        <label className="flex flex-wrap items-center gap-2">
+          <input type="checkbox" disabled={busy} checked={campaign.match_config.cooldown_enabled} onChange={(e) => setOption({ cooldown_enabled: e.target.checked })} />
+          Hold back founders emailed by another Match campaign in the last
+          <input
+            type="number"
+            min={1}
+            max={365}
+            aria-label="Cooldown days"
+            className="h-7 w-16 rounded-md border border-[#E3E8F2] px-2 text-[12.5px]"
+            disabled={busy || !campaign.match_config.cooldown_enabled}
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            onBlur={() => {
+              const n = Math.min(365, Math.max(1, Math.round(Number(days) || 0)));
+              if (!n || n === campaign.match_config.cooldown_days) { setDays(String(campaign.match_config.cooldown_days)); return; }
+              setDays(String(n));
+              void setOption({ cooldown_days: n });
+            }}
+          />
+          days
+        </label>
       </div>
       <div className="max-h-[420px] overflow-auto rounded-lg border border-[#E3E8F2]">
         <table className="w-full">
@@ -522,14 +546,14 @@ function StepCheck({ campaign, founders, sequenceEnabled, onChange, onCampaign, 
                 <td className={td}>
                   {!f.excluded_reason || f.excluded_reason === "no_matches"
                     ? <span className="font-medium text-[#0F6E56]">Ready</span>
-                    : <span className="text-[#854F0B]">Excluded, {EXCLUDED_LABEL[f.excluded_reason].toLowerCase()}</span>}
+                    : <span className="text-[#854F0B]">Excluded, {f.excluded_reason === "emailed_recently" && f.excluded_note ? f.excluded_note.charAt(0).toLowerCase() + f.excluded_note.slice(1) : EXCLUDED_LABEL[f.excluded_reason].toLowerCase()}</span>}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[11.5px] text-[#8A94A8]">Excluded founders stay on the list and can join a later campaign once their data is filled.</p>
+      <p className="mt-2 text-[11.5px] text-[#8A94A8]">Excluded founders stay on the list and can join a later campaign once their data is filled. The cooldown counts real emails only, not test mode, and is checked again right before each send.</p>
       {sequenceEnabled && campaign.match_config.sequence_enabled ? <CohortPanel campaign={campaign} founders={founders} onCampaign={onCampaign} onError={onError} /> : null}
       <div className="mt-5 flex justify-end">
         <button type="button" className={btn} disabled={busy || s.ready === 0} onClick={onNext}>Next: matches</button>

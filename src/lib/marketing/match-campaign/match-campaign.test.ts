@@ -6,6 +6,7 @@ import { makeFounderToken, verifyFounderToken } from "./token";
 import { matchedOn, renderFounderEmail, renderReviewEmail, renderSubject, UNNAMED } from "./email";
 import { readMatchConfig } from "./types";
 import { buildAdjacency, sectorFit } from "./sector-tier";
+import { cooldownCutoff, cooldownNote, latestByContact } from "./cooldown";
 import type { FounderFieldsRow } from "./types";
 
 const founder = (over: Partial<FounderFieldsRow> = {}): FounderFieldsRow => ({
@@ -280,5 +281,26 @@ describe("review flow", () => {
   });
   it("matchedOn prefers the founder's stage and the matched sectors", () => {
     expect(matchedOn({ investor_type: null, sectors: ["Software", "Healthcare"], matched_sectors: ["Healthcare"], stages: ["Seed Round", "Pre-Seed"], check_band: null, match_score: 0 }, ["Pre-Seed"])).toBe("Pre-seed, Healthcare");
+  });
+});
+
+describe("cooldown between campaigns", () => {
+  it("is on with 30 days by default, including campaigns from before it existed", () => {
+    expect(readMatchConfig({}).cooldown_enabled).toBe(true);
+    expect(readMatchConfig({}).cooldown_days).toBe(30);
+    expect(readMatchConfig({ cooldown_enabled: false, cooldown_days: 900 })).toMatchObject({ cooldown_enabled: false, cooldown_days: 365 });
+  });
+  it("keeps the latest email per founder and describes it", () => {
+    const latest = latestByContact([
+      { contactId: "a", at: "2026-09-20T10:00:00Z", campaignId: "c1", campaign: null },
+      { contactId: "a", at: "2026-09-30T10:00:00Z", campaignId: "c2", campaign: null },
+      { contactId: "b", at: "2026-09-25T10:00:00Z", campaignId: "c1", campaign: null },
+    ]);
+    expect(latest.get("a")?.campaignId).toBe("c2");
+    expect(cooldownNote({ at: "2026-09-30T10:00:00Z", campaignId: "c2", campaign: "Your investor matches" })).toBe('Emailed Sep 30 by "Your investor matches"');
+    expect(cooldownNote({ at: "2026-09-30T10:00:00Z", campaignId: "c2", campaign: null })).toBe("Emailed Sep 30 by another Match campaign");
+  });
+  it("counts from the cutoff", () => {
+    expect(cooldownCutoff(30, new Date("2026-10-04T12:00:00Z"))).toBe("2026-09-04T12:00:00.000Z");
   });
 });

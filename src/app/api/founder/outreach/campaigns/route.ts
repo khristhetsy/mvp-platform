@@ -52,7 +52,8 @@ export async function POST(request: Request) {
   }
 
   // Distribution unlocks on Basic — Free can't start outreach campaigns.
-  if (!founderEntitlements(await getUserPlan(auth.profile.id)).canDistribute) {
+  const entitlements = founderEntitlements(await getUserPlan(auth.profile.id));
+  if (!entitlements.canDistribute) {
     return NextResponse.json(
       { error: "Starting outreach unlocks on Basic. Upgrade to reach investors.", code: "upgrade_required" },
       { status: 403 },
@@ -129,8 +130,13 @@ export async function POST(request: Request) {
     contactIds = [...new Set([...contactIds, ...(fromTargets.data ?? [])])];
   }
 
-  if (contactIds.length > 25) {
-    return NextResponse.json({ error: "Campaign audience cannot exceed 25 contacts." }, { status: 400 });
+  // Audience follows the plan: Basic up to 5, Professional up to 50, never over 25 per campaign.
+  const audienceMax = entitlements.investorCap === null ? 25 : Math.min(25, entitlements.investorCap);
+  if (contactIds.length > audienceMax) {
+    return NextResponse.json(
+      { error: audienceMax < 25 ? `Your plan reaches up to ${audienceMax} investors per campaign.` : "Campaign audience cannot exceed 25 contacts." },
+      { status: 400 },
+    );
   }
 
   const draftKind = parsed.data.draftKind ?? "intro";

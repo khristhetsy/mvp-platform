@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { capMessage, checkManualOutreachCap } from "@/lib/outreach/investor-cap";
 import {
   getManualOutreach,
   getManualRecipients,
@@ -67,7 +68,8 @@ export async function POST(request: Request) {
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
   // DIY outreach unlocks on Basic. Free can draft but not send/enroll.
-  if (body.action === "start" && !founderEntitlements(await getUserPlan(auth.profile.id)).canDistribute) {
+  const plan = body.action === "start" ? await getUserPlan(auth.profile.id) : null;
+  if (body.action === "start" && !founderEntitlements(plan).canDistribute) {
     return NextResponse.json(
       {
         error: "Sending outreach unlocks on Basic — you can save a draft now and upgrade to reach investors.",
@@ -75,6 +77,18 @@ export async function POST(request: Request) {
       },
       { status: 403 },
     );
+  }
+
+  // Plan limit: Basic reaches up to 5 investors and Professional up to 50 every
+  // 30 days from signup. Checked before saving, so a refused start changes nothing.
+  if (body.action === "start") {
+    const cap = await checkManualOutreachCap({ founderId: auth.profile.id, companyId: company.id, plan, selectedIds: recipientIds });
+    if (!cap.ok) {
+      return NextResponse.json(
+        { error: capMessage(cap), code: "investor_cap_reached", cap: cap.cap, used: cap.used, remaining: cap.remaining, resets_at: cap.resetsAt.toISOString() },
+        { status: 403 },
+      );
+    }
   }
 
   // API-layer guard (spec §3a): starting a sequence queues live email dispatch,
