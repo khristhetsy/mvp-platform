@@ -997,7 +997,9 @@
         "date": "Fecha",
         "company": "Empresa",
         "text": "Texto",
-        "initial": "Inicial"
+        "initial": "Inicial",
+        "name": "Nombre",
+        "title": "Cargo"
       },
       "fieldOf": "Campo de {type}",
       "required": "Obligatorio",
@@ -1016,7 +1018,15 @@
       "envelopeVoided": "Sobre anulado",
       "couldNotVoid": "No se pudo anular",
       "previewUnavailable": "La vista previa del documento no está disponible.",
-      "couldNotRender": "No se pudo renderizar el PDF."
+      "couldNotRender": "No se pudo renderizar el PDF.",
+      "autofillName": "Se rellena con el nombre del fundador (de solo lectura para el fundador)",
+      "titleChoices": "Opciones que el fundador puede elegir:",
+      "titleAddChoice": "Agregar opción",
+      "titleMultiple": "Permitir más de una (se muestra como \"CEO, Founder\")",
+      "founderFills": "El fundador completa al firmar",
+      "youAfter": "Tú, después de que firme el fundador",
+      "countersignHint": "Solo tú firmas aquí, y solo después de que el fundador haya firmado. El fundador nunca ve este recuadro.",
+      "signingOrder": "Orden de firma: el fundador firma primero. Tu contrafirma se habilita en el contrato cuando el fundador haya firmado."
     }
   },
   "irAdmin": {

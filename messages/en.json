@@ -997,7 +997,9 @@
         "date": "Date",
         "company": "Company",
         "text": "Text",
-        "initial": "Initial"
+        "initial": "Initial",
+        "name": "Name",
+        "title": "Title"
       },
       "fieldOf": "{type} field",
       "required": "Required",
@@ -1016,7 +1018,15 @@
       "envelopeVoided": "Envelope voided",
       "couldNotVoid": "Could not void",
       "previewUnavailable": "Document preview is unavailable.",
-      "couldNotRender": "Could not render the PDF."
+      "couldNotRender": "Could not render the PDF.",
+      "autofillName": "Fills in the founder's name (read only to the founder)",
+      "titleChoices": "Choices the founder can pick:",
+      "titleAddChoice": "Add choice",
+      "titleMultiple": "Allow more than one (shown as \"CEO, Founder\")",
+      "founderFills": "Founder fills when signing",
+      "youAfter": "You, after the founder signs",
+      "countersignHint": "Only you sign here, and only after the founder has signed. The founder never sees this box.",
+      "signingOrder": "Signing order: the founder signs first. Your countersignature unlocks on the contract once the founder has signed."
     }
   },
   "irAdmin": {

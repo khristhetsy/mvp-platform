@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pen, Calendar, Building2, Type, Trash2, Save, Loader2, Download, Ban } from "lucide-react";
+import { Pen, Calendar, Building2, Type, Trash2, Save, Loader2, Download, Ban, UserRound, Briefcase, Lock, X, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/ToastProvider";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
-import type { FieldType } from "@/lib/esignature/types";
+import { DEFAULT_TITLE_OPTIONS, type FieldOptions, type FieldType } from "@/lib/esignature/types";
 
 type PrepT = (key: string, values?: Record<string, string | number>) => string;
 
@@ -25,6 +25,8 @@ type PlacedField = {
   height: number;
   required: boolean;
   placeholder: string | null;
+  /** Title fields: the choices the founder picks from. */
+  options?: FieldOptions | null;
 };
 
 type Props = {
@@ -38,6 +40,8 @@ type Props = {
 
 const TOOLS: { type: ToolType; labelKey: string; icon: typeof Pen }[] = [
   { type: "signature", labelKey: "field.signature", icon: Pen },
+  { type: "name", labelKey: "field.name", icon: UserRound },
+  { type: "title", labelKey: "field.title", icon: Briefcase },
   { type: "date", labelKey: "field.date", icon: Calendar },
   { type: "company", labelKey: "field.company", icon: Building2 },
   { type: "text", labelKey: "field.text", icon: Type },
@@ -54,6 +58,8 @@ const FIELD_COLORS: Record<ToolType, string> = {
   company: "#BA7517",
   text: "#185FA5",
   initial: "#993556",
+  name: "#7C3AED",
+  title: "#0E7490",
 };
 
 type AuditEvent = { id: string; event_type: string; actor: string | null; ip_address: string | null; created_at: string };
@@ -100,6 +106,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
             height: f.height,
             required: f.required,
             placeholder: f.placeholder,
+            options: f.options ?? null,
           })),
         );
         if (contractDocId) {
@@ -135,6 +142,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           height: DEFAULT_H,
           required: true,
           placeholder: tool === "text" ? t("textPlaceholderDefault") : null,
+          options: tool === "title" ? { choices: [...DEFAULT_TITLE_OPTIONS.choices], multiple: DEFAULT_TITLE_OPTIONS.multiple } : null,
         },
       ]);
       setSelected(uid);
@@ -167,6 +175,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
             height: round(f.height),
             required: f.required,
             placeholder: f.placeholder,
+            ...(f.field_type === "title" ? { options: f.options ?? DEFAULT_TITLE_OPTIONS } : {}),
           })),
         }),
       });
@@ -204,12 +213,37 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
   }, [requestId, toast, t]);
 
   const canVoid = ["draft", "sent", "viewed"].includes(liveStatus);
-  const tools = contractDocId ? [...TOOLS, { type: "countersign" as const, labelKey: "", icon: Pen }] : TOOLS;
+  const [newChoice, setNewChoice] = useState("");
 
   const selectedField = fields.find((f) => f.uid === selected) ?? null;
 
+  const toolButton = ({ type, labelKey, icon: Icon }: { type: ToolType; labelKey: string; icon: typeof Pen }) => (
+    <button
+      key={type}
+      type="button"
+      onClick={() => setTool(type)}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+        tool === type ? "text-white" : "text-slate-700 hover:bg-slate-100"
+      }`}
+      style={tool === type ? { background: FIELD_COLORS[type] } : undefined}
+    >
+      <Icon className="h-4 w-4" /> {labelKey ? t(labelKey) : toolLabel(t, type)}
+    </button>
+  );
+
+  const titleOptions = selectedField?.field_type === "title" ? selectedField.options ?? DEFAULT_TITLE_OPTIONS : null;
+  const setTitleOptions = (next: FieldOptions) => selectedField && updateField(selectedField.uid, { options: next });
+  const addChoice = () => {
+    const c = newChoice.trim().replace(/,/g, " ").replace(/\s+/g, " ").slice(0, 40);
+    if (!titleOptions || !c || titleOptions.choices.some((x) => x.toLowerCase() === c.toLowerCase()) || titleOptions.choices.length >= 12) return;
+    setTitleOptions({ ...titleOptions, choices: [...titleOptions.choices, c] });
+    setNewChoice("");
+  };
+
   return (
     <div className="space-y-4">
+      {/* Header, field bar and the selected field stay pinned while scrolling the document. */}
+      <div className="sticky top-0 z-20 -mx-1 space-y-3 bg-[var(--background)] px-1 pb-3 pt-1">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("prepareDocument")}</p>
@@ -274,22 +308,25 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           {t("readonlyNotice", { status: statusLabel(t, liveStatus).toLowerCase() })}
         </p>
       ) : (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-2 shadow-[var(--shadow-panel)]">
-          <span className="px-2 text-xs font-medium text-slate-500">{t("place")}</span>
-          {tools.map(({ type, labelKey, icon: Icon }) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setTool(type)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                tool === type ? "text-white" : "text-slate-700 hover:bg-slate-100"
-              }`}
-              style={tool === type ? { background: FIELD_COLORS[type] } : undefined}
-            >
-              <Icon className="h-4 w-4" /> {labelKey ? t(labelKey) : toolLabel(t, type)}
-            </button>
-          ))}
-          <span className="ml-auto px-2 text-xs text-slate-500">{t("dropHint", { tool: toolLabel(t, tool) })}</span>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-stretch gap-2">
+            <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200/80 bg-white p-2 shadow-[var(--shadow-panel)]">
+              <span className="px-2 text-xs font-medium text-slate-500">{contractDocId ? t("founderFills") : t("place")}</span>
+              {TOOLS.map(toolButton)}
+            </div>
+            {contractDocId ? (
+              <div className="flex flex-wrap items-center gap-1 rounded-xl border border-dashed border-amber-300 bg-white p-2 shadow-[var(--shadow-panel)]">
+                <span className="inline-flex items-center gap-1 px-2 text-xs font-medium text-slate-500">
+                  <Lock className="h-3.5 w-3.5 text-amber-600" /> {t("youAfter")}
+                </span>
+                {toolButton({ type: "countersign", labelKey: "", icon: Pen })}
+              </div>
+            ) : null}
+          </div>
+          <p className="px-1 text-xs text-slate-500">
+            {t("dropHint", { tool: toolLabel(t, tool) })}
+            {contractDocId ? ` · ${t("signingOrder")}` : ""}
+          </p>
         </div>
       )}
 
@@ -321,6 +358,12 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           {selectedField.field_type === "date" ? (
             <span className="text-xs text-slate-500">{t("autofillDate")}</span>
           ) : null}
+          {selectedField.field_type === "name" ? (
+            <span className="text-xs text-slate-500">{t("autofillName")}</span>
+          ) : null}
+          {selectedField.field_type === "countersign" ? (
+            <span className="text-xs text-slate-500">{t("countersignHint")}</span>
+          ) : null}
           <button
             type="button"
             onClick={() => removeField(selectedField.uid)}
@@ -328,8 +371,47 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           >
             <Trash2 className="h-4 w-4" /> {t("remove")}
           </button>
+          {titleOptions ? (
+            <div className="w-full space-y-2 border-t border-slate-100 pt-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-slate-500">{t("titleChoices")}</span>
+                {titleOptions.choices.map((c) => (
+                  <span key={c} className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-xs text-cyan-800">
+                    {c}
+                    {titleOptions.choices.length > 1 ? (
+                      <button
+                        type="button"
+                        aria-label={`Remove ${c}`}
+                        onClick={() => setTitleOptions({ ...titleOptions, choices: titleOptions.choices.filter((x) => x !== c) })}
+                        className="text-cyan-700 hover:text-cyan-900"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    ) : null}
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={newChoice}
+                  onChange={(e) => setNewChoice(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChoice(); } }}
+                  placeholder={t("titleAddChoice")}
+                  maxLength={40}
+                  className="w-32 rounded border border-slate-300 px-2 py-0.5 text-xs"
+                />
+                <button type="button" onClick={addChoice} disabled={!newChoice.trim()} className="inline-flex items-center rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label={t("titleAddChoice")}>
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <input type="checkbox" checked={titleOptions.multiple} onChange={(e) => setTitleOptions({ ...titleOptions, multiple: e.target.checked })} />
+                {t("titleMultiple")}
+              </label>
+            </div>
+          ) : null}
         </div>
       ) : null}
+      </div>
 
       {loading ? (
         <p className="text-sm text-slate-500">{t("loadingDoc")}</p>

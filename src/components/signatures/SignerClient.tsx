@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { FieldType, AutoSource } from "@/lib/esignature/types";
+import type { FieldType, AutoSource, FieldOptions } from "@/lib/esignature/types";
 import { BRAND } from "@/lib/esignature/types";
 import { SignaturePad } from "./SignaturePad";
 
@@ -17,6 +17,8 @@ type SignField = {
   required: boolean;
   placeholder: string | null;
   auto_source: AutoSource | null;
+  /** Title fields: the choices to pick from. */
+  options?: FieldOptions | null;
 };
 
 type Props = {
@@ -39,6 +41,7 @@ export function SignerClient(props: Props) {
   const [consented, setConsented] = useState(props.consentAccepted);
   const [values, setValues] = useState<Record<string, string>>({});
   const [activeSig, setActiveSig] = useState<string | null>(null);
+  const [activeTitle, setActiveTitle] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,9 +59,10 @@ export function SignerClient(props: Props) {
     (f: SignField): string | null => {
       if (f.auto_source === "signing_date" || f.field_type === "date") return props.signingDate;
       if (f.auto_source === "signer_company" || f.field_type === "company") return props.signerCompany ?? "";
+      if (f.auto_source === "signer_name" || f.field_type === "name") return props.signerName ?? "";
       return null;
     },
-    [props.signingDate, props.signerCompany],
+    [props.signingDate, props.signerCompany, props.signerName],
   );
 
   const isFilled = useCallback(
@@ -145,7 +149,22 @@ export function SignerClient(props: Props) {
         autoValue={autoValue}
         onText={(id, v) => setValues((p) => ({ ...p, [id]: v }))}
         onOpenSignature={(id) => setActiveSig(id)}
+        onOpenTitle={(id) => setActiveTitle(id)}
       />
+
+      {activeTitle ? (() => {
+        const f = props.fields.find((x) => x.id === activeTitle);
+        if (!f) return null;
+        return (
+          <TitlePicker
+            options={f.options ?? { choices: ["CEO", "President", "Founder", "Owner"], multiple: true }}
+            required={f.required}
+            value={values[f.id] ?? ""}
+            onCancel={() => setActiveTitle(null)}
+            onApply={(v) => { setValues((p) => ({ ...p, [f.id]: v })); setActiveTitle(null); }}
+          />
+        );
+      })() : null}
 
       {activeSig ? (
         <SignaturePad
@@ -160,7 +179,7 @@ export function SignerClient(props: Props) {
 
 // ── PDF + overlay ─────────────────────────────────────────────────────────────
 function PdfSignSurface({
-  previewUrl, pageCount, fields, consented, values, autoValue, onText, onOpenSignature,
+  previewUrl, pageCount, fields, consented, values, autoValue, onText, onOpenSignature, onOpenTitle,
 }: {
   previewUrl: string | null;
   pageCount: number;
@@ -170,6 +189,7 @@ function PdfSignSurface({
   autoValue: (f: SignField) => string | null;
   onText: (id: string, v: string) => void;
   onOpenSignature: (id: string) => void;
+  onOpenTitle: (id: string) => void;
 }) {
   useTranslations("sharedCmp");
   const [error, setError] = useState<string | null>(previewUrl ? null : "The document could not be loaded.");
@@ -219,6 +239,7 @@ function PdfSignSurface({
               value={values[f.id] ?? ""}
               onText={onText}
               onOpenSignature={onOpenSignature}
+              onOpenTitle={onOpenTitle}
             />
           ))}
         </div>
@@ -228,7 +249,7 @@ function PdfSignSurface({
 }
 
 function FieldOverlay({
-  field, consented, auto, value, onText, onOpenSignature,
+  field, consented, auto, value, onText, onOpenSignature, onOpenTitle,
 }: {
   field: SignField;
   consented: boolean;
@@ -236,6 +257,7 @@ function FieldOverlay({
   value: string;
   onText: (id: string, v: string) => void;
   onOpenSignature: (id: string) => void;
+  onOpenTitle: (id: string) => void;
 }) {
   const t = useTranslations("sharedCmp");
   const style: React.CSSProperties = {
@@ -276,6 +298,21 @@ function FieldOverlay({
     );
   }
 
+  if (field.field_type === "title") {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onOpenTitle(field.id)}
+        style={{ ...style, border: `2px solid ${disabled ? "#c7c5e6" : ACCENT}`, background: value ? "white" : disabled ? "#f8f9fb" : "#EEF0FB", cursor: disabled ? "not-allowed" : "pointer", color: value ? "#1f2937" : ACCENT, fontWeight: value ? 500 : 600, padding: "0 6px" }}
+      >
+        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {value || (field.required ? "Choose title *" : "Choose title")}
+        </span>
+      </button>
+    );
+  }
+
   // Signature
   return (
     <button
@@ -291,6 +328,73 @@ function FieldOverlay({
         <span>{field.required ? "Sign *" : "Sign"}</span>
       )}
     </button>
+  );
+}
+
+// ── Title picker ─────────────────────────────────────────────────────────────
+function TitlePicker({
+  options, required, value, onCancel, onApply,
+}: {
+  options: FieldOptions;
+  required: boolean;
+  value: string;
+  onCancel: () => void;
+  onApply: (value: string) => void;
+}) {
+  const initial = new Set(value.split(",").map((s) => s.trim()).filter(Boolean));
+  const [picked, setPicked] = useState<Set<string>>(initial);
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle(choice: string) {
+    setError(null);
+    setPicked((prev) => {
+      if (!options.multiple) return prev.has(choice) ? new Set() : new Set([choice]);
+      const next = new Set(prev);
+      if (next.has(choice)) next.delete(choice);
+      else next.add(choice);
+      return next;
+    });
+  }
+
+  function apply() {
+    if (required && picked.size === 0) {
+      setError("Pick at least one title.");
+      return;
+    }
+    onApply(options.choices.filter((c) => picked.has(c)).join(", "));
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div role="dialog" aria-modal="true" aria-label="Choose your title" style={{ width: "100%", maxWidth: 420, background: "white", borderRadius: 14, padding: 20, boxShadow: "0 20px 40px rgba(15,23,42,0.2)" }}>
+        <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#111827" }}>Your title</p>
+        <p style={{ margin: "4px 0 14px", fontSize: 13, color: "#6b7280" }}>{options.multiple ? "Pick all that apply." : "Pick one."}</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {options.choices.map((c) => {
+            const on = picked.has(c);
+            return (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggle(c)}
+                style={{ border: `1.5px solid ${on ? ACCENT : "#d1d5db"}`, background: on ? ACCENT : "white", color: on ? "white" : "#1f2937", borderRadius: 999, padding: "8px 14px", fontSize: 14, cursor: "pointer" }}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ margin: "14px 0 0", fontSize: 12, color: "#6b7280" }}>
+          On the document: <strong style={{ color: "#111827" }}>{options.choices.filter((c) => picked.has(c)).join(", ") || "nothing yet"}</strong>
+        </p>
+        {error ? <p style={{ margin: "8px 0 0", fontSize: 13, color: "#b91c1c" }}>{error}</p> : null}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
+          <button type="button" onClick={onCancel} style={{ border: "1px solid #d1d5db", background: "white", borderRadius: 10, padding: "9px 16px", fontSize: 14, cursor: "pointer" }}>Cancel</button>
+          <button type="button" onClick={apply} style={{ border: "none", background: ACCENT, color: "white", borderRadius: 10, padding: "9px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Apply</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
