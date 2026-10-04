@@ -215,6 +215,39 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
   const canVoid = ["draft", "sent", "viewed"].includes(liveStatus);
   const [newChoice, setNewChoice] = useState("");
 
+  // Pinned bar: when the full header scrolls out of view, show a compact copy
+  // fixed to the top of the scrolling area. Measured on scroll rather than CSS
+  // sticky, so it holds whatever wraps the page.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState<{ top: number; left: number; width: number } | null>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    let scroller: HTMLElement | null = el.parentElement;
+    while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+    const target: HTMLElement | Window = scroller ?? window;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const r = el.getBoundingClientRect();
+      const top = scroller ? Math.max(0, scroller.getBoundingClientRect().top) : 0;
+      if (r.bottom <= top + 8) {
+        setPinned((prev) => (prev && prev.top === top && prev.left === r.left && prev.width === r.width ? prev : { top, left: r.left, width: r.width }));
+      } else {
+        setPinned((prev) => (prev ? null : prev));
+      }
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(measure); };
+    target.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    measure();
+    return () => {
+      target.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [loading]);
+
   const selectedField = fields.find((f) => f.uid === selected) ?? null;
 
   const toolButton = ({ type, labelKey, icon: Icon }: { type: ToolType; labelKey: string; icon: typeof Pen }) => (
@@ -240,10 +273,171 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
     setNewChoice("");
   };
 
+  const selectedPanel = (selectedField && editable ? (
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-3 text-sm shadow-[var(--shadow-panel)]">
+          <span className="font-medium text-slate-800">{t("fieldOf", { type: toolLabel(t, selectedField.field_type) })}</span>
+          <label className="flex items-center gap-1.5 text-slate-600">
+            <input
+              type="checkbox"
+              checked={selectedField.required}
+              onChange={(e) => updateField(selectedField.uid, { required: e.target.checked })}
+            />
+            {t("required")}
+          </label>
+          {selectedField.field_type === "text" ? (
+            <label className="flex items-center gap-1.5 text-slate-600">
+              {t("placeholder")}
+              <input
+                type="text"
+                value={selectedField.placeholder ?? ""}
+                onChange={(e) => updateField(selectedField.uid, { placeholder: e.target.value })}
+                className="rounded border border-slate-300 px-2 py-1 text-sm"
+              />
+            </label>
+          ) : null}
+          {selectedField.field_type === "company" ? (
+            <span className="text-xs text-slate-500">{t("autofillCompany")}</span>
+          ) : null}
+          {selectedField.field_type === "date" ? (
+            <span className="text-xs text-slate-500">{t("autofillDate")}</span>
+          ) : null}
+          {selectedField.field_type === "name" ? (
+            <span className="text-xs text-slate-500">{t("autofillName")}</span>
+          ) : null}
+          {selectedField.field_type === "countersign" ? (
+            <span className="text-xs text-slate-500">{t("countersignHint")}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => removeField(selectedField.uid)}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-sm font-medium text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" /> {t("remove")}
+          </button>
+          {titleOptions ? (
+            <div className="w-full space-y-2 border-t border-slate-100 pt-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-slate-500">{t("titleChoices")}</span>
+                {titleOptions.choices.map((c) => (
+                  <span key={c} className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-xs text-cyan-800">
+                    {c}
+                    {titleOptions.choices.length > 1 ? (
+                      <button
+                        type="button"
+                        aria-label={`Remove ${c}`}
+                        onClick={() => setTitleOptions({ ...titleOptions, choices: titleOptions.choices.filter((x) => x !== c) })}
+                        className="text-cyan-700 hover:text-cyan-900"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    ) : null}
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={newChoice}
+                  onChange={(e) => setNewChoice(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChoice(); } }}
+                  placeholder={t("titleAddChoice")}
+                  maxLength={40}
+                  className="w-32 rounded border border-slate-300 px-2 py-0.5 text-xs"
+                />
+                <button type="button" onClick={addChoice} disabled={!newChoice.trim()} className="inline-flex items-center rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label={t("titleAddChoice")}>
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <input type="checkbox" checked={titleOptions.multiple} onChange={(e) => setTitleOptions({ ...titleOptions, multiple: e.target.checked })} />
+                {t("titleMultiple")}
+              </label>
+            </div>
+          ) : null}
+        </div>
+      ) : null);
+
+  // A compact tool: icon only, except the active tool keeps its label.
+  const compactTool = ({ type, labelKey, icon: Icon }: { type: ToolType; labelKey: string; icon: typeof Pen }) => {
+    const label = labelKey ? t(labelKey) : toolLabel(t, type);
+    const on = tool === type;
+    return (
+      <button
+        key={type}
+        type="button"
+        onClick={() => setTool(type)}
+        title={label}
+        aria-label={label}
+        aria-pressed={on}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors ${on ? "text-white" : "text-slate-700 hover:bg-slate-100"}`}
+        style={on ? { background: FIELD_COLORS[type] } : undefined}
+      >
+        <Icon className="h-4 w-4" />
+        {on ? label : null}
+      </button>
+    );
+  };
+
+  const primaryActions = editable ? (
+    <>
+      {contract ? (
+        <button
+          type="button"
+          onClick={() => void save().then((ok) => ok && contractBack && router.push(contractBack))}
+          disabled={saving || !fields.some((f) => f.field_type === "signature") || !fields.some((f) => f.field_type === "countersign")}
+          title="Place at least one signature box for the prospect and your countersignature box"
+          className="cap-btn-secondary whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
+        >
+          Save and return
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => router.push(`/admin/signatures/${requestId}/send`)}
+          disabled={fields.length === 0}
+          className="cap-btn-secondary whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
+        >
+          {t("continueSend")}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={saving}
+        className="cap-btn-primary inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+      >
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {t("saveFields")}
+      </button>
+    </>
+  ) : null;
+
   return (
     <div className="space-y-4">
-      {/* Header, field bar and the selected field stay pinned while scrolling the document. */}
-      <div className="sticky top-0 z-20 -mx-1 space-y-3 bg-[var(--background)] px-1 pb-3 pt-1">
+      {/* Full header. Once it scrolls out of view, the compact bar below takes its place, pinned. */}
+      {pinned && editable ? (
+        <div
+          className="fixed z-30 space-y-2 border-b border-slate-200 bg-[var(--background)] px-1 py-2 shadow-[0_8px_14px_-12px_rgba(15,23,42,0.45)]"
+          style={{ top: pinned.top, left: pinned.left, width: pinned.width }}
+          role="toolbar"
+          aria-label="Place fields"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 max-w-[340px] truncate text-sm font-semibold text-slate-900" title={documentName}>{documentName}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{statusLabel(t, liveStatus)}</span>
+            <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-slate-200/80 bg-white p-1 shadow-[var(--shadow-panel)]">
+              {TOOLS.map(compactTool)}
+            </div>
+            {contractDocId ? (
+              <div className="flex items-center gap-0.5 rounded-xl border border-dashed border-amber-300 bg-white p-1 shadow-[var(--shadow-panel)]">
+                <Lock className="ml-1 h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
+                {compactTool({ type: "countersign", labelKey: "", icon: Pen })}
+              </div>
+            ) : null}
+            <div className="ml-auto flex items-center gap-2">{primaryActions}</div>
+          </div>
+          {selectedPanel}
+        </div>
+      ) : null}
+
+      <div ref={headerRef} className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("prepareDocument")}</p>
@@ -330,87 +524,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
         </div>
       )}
 
-      {selectedField && editable ? (
-        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-3 text-sm shadow-[var(--shadow-panel)]">
-          <span className="font-medium text-slate-800">{t("fieldOf", { type: toolLabel(t, selectedField.field_type) })}</span>
-          <label className="flex items-center gap-1.5 text-slate-600">
-            <input
-              type="checkbox"
-              checked={selectedField.required}
-              onChange={(e) => updateField(selectedField.uid, { required: e.target.checked })}
-            />
-            {t("required")}
-          </label>
-          {selectedField.field_type === "text" ? (
-            <label className="flex items-center gap-1.5 text-slate-600">
-              {t("placeholder")}
-              <input
-                type="text"
-                value={selectedField.placeholder ?? ""}
-                onChange={(e) => updateField(selectedField.uid, { placeholder: e.target.value })}
-                className="rounded border border-slate-300 px-2 py-1 text-sm"
-              />
-            </label>
-          ) : null}
-          {selectedField.field_type === "company" ? (
-            <span className="text-xs text-slate-500">{t("autofillCompany")}</span>
-          ) : null}
-          {selectedField.field_type === "date" ? (
-            <span className="text-xs text-slate-500">{t("autofillDate")}</span>
-          ) : null}
-          {selectedField.field_type === "name" ? (
-            <span className="text-xs text-slate-500">{t("autofillName")}</span>
-          ) : null}
-          {selectedField.field_type === "countersign" ? (
-            <span className="text-xs text-slate-500">{t("countersignHint")}</span>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => removeField(selectedField.uid)}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-sm font-medium text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" /> {t("remove")}
-          </button>
-          {titleOptions ? (
-            <div className="w-full space-y-2 border-t border-slate-100 pt-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-slate-500">{t("titleChoices")}</span>
-                {titleOptions.choices.map((c) => (
-                  <span key={c} className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-xs text-cyan-800">
-                    {c}
-                    {titleOptions.choices.length > 1 ? (
-                      <button
-                        type="button"
-                        aria-label={`Remove ${c}`}
-                        onClick={() => setTitleOptions({ ...titleOptions, choices: titleOptions.choices.filter((x) => x !== c) })}
-                        className="text-cyan-700 hover:text-cyan-900"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    ) : null}
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  value={newChoice}
-                  onChange={(e) => setNewChoice(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChoice(); } }}
-                  placeholder={t("titleAddChoice")}
-                  maxLength={40}
-                  className="w-32 rounded border border-slate-300 px-2 py-0.5 text-xs"
-                />
-                <button type="button" onClick={addChoice} disabled={!newChoice.trim()} className="inline-flex items-center rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label={t("titleAddChoice")}>
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
-              <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                <input type="checkbox" checked={titleOptions.multiple} onChange={(e) => setTitleOptions({ ...titleOptions, multiple: e.target.checked })} />
-                {t("titleMultiple")}
-              </label>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      {pinned ? null : selectedPanel}
       </div>
 
       {loading ? (
