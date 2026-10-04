@@ -578,6 +578,19 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
   const [open, setOpen] = useState<string | null>(null);
   const [matches, setMatches] = useState<Record<string, AdminMatchRow[]>>({});
   const [minScore, setMinScore] = useState(campaign.match_config.min_score);
+  const [savingDaily, setSavingDaily] = useState(false);
+
+  async function setDailyRematch(on: boolean) {
+    setSavingDaily(true);
+    try {
+      const c = await api<{ campaign: MatchCampaignRow }>("/api/admin/marketing/match", { method: "PATCH", body: JSON.stringify({ id: campaign.id, config: { daily_rematch: on } }) });
+      onCampaign(c.campaign);
+    } catch (e) {
+      onError(String((e as Error).message));
+    } finally {
+      setSavingDaily(false);
+    }
+  }
   const pending = founders.filter((f) => f.send_status === "pending");
   const ready = pending.filter((f) => !f.excluded_reason || f.excluded_reason === "no_matches");
   const withMatches = ready.filter((f) => f.match_count > 0);
@@ -650,7 +663,19 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
         <div className="text-[14px] font-medium">Matches per founder</div>
         <button type="button" className={hasRun ? btnGhost : btn} disabled={running || ready.length === 0} onClick={run}>{running ? (progress && progress.total > 0 ? `Matching… ${progress.done.toLocaleString()} of ${progress.total.toLocaleString()}` : "Matching…") : hasRun ? "Run matching again" : "Run matching"}</button>
       </div>
-      <p className="mb-4 text-[12.5px] text-[#5A6782]">Each ready founder is matched to investors on industry and stage, counting only investors at or above the minimum match score. Admin reviews and removes anyone. Investors are not contacted. Running again replaces earlier matches and removals.</p>
+      <p className="mb-4 text-[12.5px] text-[#5A6782]">Each ready founder is matched to investors on industry and stage, counting only investors at or above the minimum match score. Admin reviews and removes anyone. Investors are not contacted. Running again keeps your removals.</p>
+      <label className="mb-4 block rounded-lg bg-[#E6F1FB] px-3 py-2 text-[12.5px] text-[#0C447C]">
+        <span className="flex items-center gap-2">
+          <input type="checkbox" disabled={savingDaily} checked={campaign.match_config.daily_rematch} onChange={(e) => setDailyRematch(e.target.checked)} />
+          Refresh matches daily for founders not yet emailed
+        </span>
+        <span className="mt-0.5 block pl-6 text-[11.5px] text-[#5A6782]">
+          Runs at 11:30 PM UTC, before the next day&apos;s sends. New investors and hidden investors are picked up.
+          {campaign.match_config.last_rematch_at
+            ? ` Last run: ${new Date(campaign.match_config.last_rematch_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`
+            : ""}
+        </span>
+      </label>
       <div className="mb-4 flex items-center gap-2 text-[12.5px]">
         <label htmlFor="min-score">Minimum match score</label>
         <input id="min-score" className={`${input} w-20`} type="number" min={0} max={100} value={minScore} onChange={(e) => setMinScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} />

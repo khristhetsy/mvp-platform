@@ -45,6 +45,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/match-rematch",
+      "schedule": "30 23 * * *"
+    },
+    {
       "path": "/api/cron/operations-escalations",
       "schedule": "0 8 * * *"
     },
