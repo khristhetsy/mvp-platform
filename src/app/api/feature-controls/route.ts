@@ -52,5 +52,15 @@ export async function GET(): Promise<Response> {
   const merged =
     audience === "founder" ? [...new Set([...disabledHrefs, ...(await getFounderStageMenuHidden())])] : disabledHrefs;
 
-  return NextResponse.json({ disabledHrefs: merged, founderNavV2 });
+  // Odoo-style top menu layout, per workspace. feature_flags row `<workspace>:nav_topmenu`
+  // (true/false) overrides; absent = on for admin, off for founder and investor.
+  const topMenuDefaults = { admin: true, founder: false, investor: false } as const;
+  const topMenu = Object.fromEntries(
+    (Object.keys(topMenuDefaults) as Array<keyof typeof topMenuDefaults>).map((ws) => {
+      const row = flags[`${ws}:nav_topmenu`];
+      return [ws, typeof row === "boolean" ? row : topMenuDefaults[ws]];
+    }),
+  );
+
+  return NextResponse.json({ disabledHrefs: merged, founderNavV2, topMenu });
 }

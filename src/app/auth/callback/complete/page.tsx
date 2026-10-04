@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 const DASHBOARD_BY_ROLE: Record<string, string> = {
   founder: "/founder/dashboard",
   investor: "/investor/dashboard",
-  admin: "/admin/dashboard",
-  analyst: "/admin/dashboard",
+  // Admins land on the app grid home; the Dashboard stays at /admin as its first tile.
+  admin: "/admin/home",
+  analyst: "/admin/home",
 };
 
 /**

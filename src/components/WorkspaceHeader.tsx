@@ -39,7 +39,15 @@ type Props = {
   compact?: boolean;
   /** Rendered after the logo in compact mode (the hub's tabs). */
   hubTabs?: React.ReactNode;
+  /** Top menu layout: replaces the logo and hub tabs in the compact bar. */
+  topMenu?: React.ReactNode;
+  /** Extra icons before the notification bell (top menu layout: the inbox button). */
+  extraActions?: React.ReactNode;
+  /** Layout switch shown in the avatar menu; null hides it. Omitted = the existing admin compact/classic switch. */
+  layoutSwitch?: LayoutSwitch | null;
 };
+
+type LayoutSwitch = { label: string; onSelect: () => void };
 
 type MenuItem =
   | { kind: "link"; label: string; href: string; icon: React.ReactNode; perm?: InternalPermission }
@@ -147,11 +155,13 @@ function ProfileDropdown({
   profileEmail,
   profileSubtitle,
   workspace,
+  layoutSwitch,
 }: Readonly<{
   profileName: string;
   profileEmail?: string;
   profileSubtitle?: string;
   workspace: WorkspaceId;
+  layoutSwitch?: LayoutSwitch | null;
 }>) {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -219,7 +229,13 @@ function ProfileDropdown({
   }, [workspace]);
 
   const canShow = useAdminMenuAccess(workspace);
-  const items = tidyDividers(menuItemsForWorkspace(workspace, founderNavV2).filter(canShow));
+  const baseItems = menuItemsForWorkspace(workspace, founderNavV2);
+  // Founder and investor get the layout switch only when there is one to offer (top menu layout).
+  if (workspace !== "admin" && layoutSwitch) {
+    const at = baseItems.map((i) => i.kind).lastIndexOf("divider");
+    baseItems.splice(at < 0 ? baseItems.length : at, 0, { kind: "chrome" });
+  }
+  const items = tidyDividers(baseItems.filter((i) => i.kind !== "chrome" || layoutSwitch !== null).filter(canShow));
 
   return (
     <div ref={ref} className="relative">
@@ -264,6 +280,20 @@ function ProfileDropdown({
             {items.map((item, i) => {
               if (item.kind === "divider") {
                 return <div key={i} className="my-1 border-t border-slate-100" />;
+              }
+              if (item.kind === "chrome" && layoutSwitch) {
+                return (
+                  <button
+                    key="chrome"
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { layoutSwitch.onSelect(); setOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors"
+                  >
+                    <span className="shrink-0 text-slate-400"><Settings className="h-4 w-4" /></span>
+                    {layoutSwitch.label}
+                  </button>
+                );
               }
               if (item.kind === "chrome") {
                 const classic = readAdminChrome() === "classic";
@@ -315,7 +345,7 @@ function ProfileDropdown({
   );
 }
 
-export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick, compact = false, hubTabs }: Readonly<Props>) {
+export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick, compact = false, hubTabs, topMenu, extraActions, layoutSwitch }: Readonly<Props>) {
   const t = useTranslations("sharedCmp");
   const companyLabel = profileSubtitle?.trim() || "Select company";
 
@@ -327,8 +357,12 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
           <button type="button" className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50 lg:hidden" aria-label="Open workspace menu" onClick={onMenuClick}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
           </button>
-          <Link href="/" className="flex shrink-0 items-center"><IcapOSLogo height={20} /></Link>
-          <div className="min-w-0 flex-1">{hubTabs}</div>
+          {topMenu ? topMenu : (
+            <>
+              <Link href="/" className="flex shrink-0 items-center"><IcapOSLogo height={20} /></Link>
+              <div className="min-w-0 flex-1">{hubTabs}</div>
+            </>
+          )}
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <button type="button" aria-label="Open global search (⌘K)" title="Search (⌘K)"
               onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
@@ -338,8 +372,9 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             {accountSwitcher ? <div className="hidden xl:block">{accountSwitcher}</div> : (
               <span className="hidden max-w-[160px] truncate rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700 xl:inline" title={companyLabel}>{companyLabel}</span>
             )}
+            {extraActions}
             <NotificationBellDropdown />
-            <ProfileDropdown profileName={profileName} profileEmail={profileEmail} profileSubtitle={profileSubtitle} workspace={workspace} />
+            <ProfileDropdown profileName={profileName} profileEmail={profileEmail} profileSubtitle={profileSubtitle} workspace={workspace} layoutSwitch={layoutSwitch} />
           </div>
         </div>
       </header>
@@ -400,6 +435,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             profileEmail={profileEmail}
             profileSubtitle={profileSubtitle}
             workspace={workspace}
+            layoutSwitch={layoutSwitch}
           />
         </div>
       </div>

@@ -122,6 +122,8 @@ function adminApiScopingMode(): "off" | "warn" | "enforce" {
  */
 const DEPARTMENT_EXEMPT_PREFIXES = [
   "/admin/dashboard",
+  // The app grid home every admin lands on; its tiles are gated per person.
+  "/admin/home",
   "/admin/profile",
   "/admin/ceo",
   "/admin/calendar",
