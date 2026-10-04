@@ -17,7 +17,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 // Complete English → Spanish dictionary for every sidebar nav label + section
 // title. Applied directly when locale === "es" (see tLabel below).
-const NAV_ES: Record<string, string> = {
+export const NAV_ES: Record<string, string> = {
   // Labels
   "AI diligence report": "Informe de diligencia con IA",
   "AI match center": "Centro de coincidencias IA",
