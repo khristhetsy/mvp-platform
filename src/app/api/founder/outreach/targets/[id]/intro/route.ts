@@ -58,8 +58,13 @@ export async function POST(request: Request, context: RouteContext) {
   const over = capReached(quota);
   if (over) {
     const limit = over === "week" ? quota.week?.cap : quota.month.cap;
+    const resetDay = new Date(quota.month.resetsAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const error =
+      over === "week"
+        ? `You've used all ${limit} introduction requests for this week.`
+        : `You've used all ${limit} introduction requests for this 30 day period. They reset on ${resetDay}.`;
     return NextResponse.json(
-      { error: `You've used all ${limit} introduction requests for this ${over}.`, code: "connection_cap_reached", cap: limit, period: over },
+      { error, code: "connection_cap_reached", cap: limit, period: over },
       { status: 429 },
     );
   }
