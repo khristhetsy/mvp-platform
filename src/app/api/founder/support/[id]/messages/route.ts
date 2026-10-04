@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { addSupportMessage, getSupportThread, staffSupportLink } from "@/lib/support/support";
-import { createNotification } from "@/lib/notifications/notifications";
+import { addSupportMessage } from "@/lib/support/support";
+import { onFounderReply } from "@/lib/support/care";
 
 export const dynamic = "force-dynamic";
 
@@ -27,23 +27,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
-  // Ping the assigned staff member, if any.
-  try {
-    const thread = await getSupportThread(supabase, id);
-    if (thread?.request.assigned_to) {
-      await createNotification({
-        recipientUserId: thread.request.assigned_to,
-        type: "support_founder_reply",
-        title: "Founder replied on a support request",
-        message: thread.request.subject,
-        entityType: "company",
-        entityId: thread.request.company_id,
-        deepLink: staffSupportLink(id),
-      });
+  // Notify the assigned staff member and the notify list (Support queue,
+  // Notifications), and log the reply. After the response, best effort.
+  after(async () => {
+    try {
+      await onFounderReply(id, parsed.data.body);
+    } catch {
+      /* best effort */
     }
-  } catch {
-    /* best-effort */
-  }
+  });
 
   return NextResponse.json({ ok: true });
 }

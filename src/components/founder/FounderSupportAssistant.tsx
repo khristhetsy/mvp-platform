@@ -3,7 +3,42 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type Handoff = { requestId: string; ownerName: string | null; dueAt: string | null };
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  /** Set when the assistant passed the question to a person. */
+  handoff?: Handoff | null;
+  /** The question an AI answer replied to, for "That solved it" feedback. */
+  question?: string | null;
+  feedback?: "solved" | "person" | null;
+};
+
+/** "Tue, Oct 6, 10:00 AM" in the founder's own time zone. */
+function formatDue(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function HandoffCard({ h }: Readonly<{ h: Handoff }>) {
+  const due = formatDue(h.dueAt);
+  return (
+    <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-semibold text-indigo-700">
+          {(h.ownerName ?? "iCapOS").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-slate-900">{h.ownerName ?? "Our team"} has your request</p>
+          {due ? <p className="text-[11.5px] text-slate-500">Reply expected by {due}</p> : null}
+        </div>
+      </div>
+      <a href={`/founder/support?request=${h.requestId}`} className="mt-2 inline-block text-[12px] font-medium text-indigo-600 hover:underline">
+        Track my request
+      </a>
+    </div>
+  );
+}
 
 const DEFAULT_PROMPTS = [
   "How do investor matches work?",
@@ -53,6 +88,8 @@ export function FounderSupportAssistant({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [handoff, setHandoff] = useState<"idle" | "sending" | "sent">("idle");
+  // Once a person has the conversation, later messages join that request instead of opening another.
+  const [handedTo, setHandedTo] = useState<Handoff | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -67,19 +104,54 @@ export function FounderSupportAssistant({
     setMessages(next);
     setInput("");
     setBusy(true);
+    if (handedTo) {
+      try {
+        const res = await fetch(`/api/founder/support/${handedTo.requestId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: content }),
+        });
+        if (!res.ok) {
+          setError("Couldn't add that to your request. Try again.");
+          return;
+        }
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: `Added to your request. ${handedTo.ownerName ?? "Our team"} will see it.` },
+        ]);
+      } catch {
+        setError("Network error. Try again.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const res = await fetch("/api/founder/support/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Send only the real turns (skip the local greeting) so the model sees a clean thread.
-        body: JSON.stringify({ messages: next.slice(1) }),
+        body: JSON.stringify({ messages: next.slice(1).map((m) => ({ role: m.role, content: m.content })) }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.reply) {
         setError(json.error ?? "Couldn't reach the assistant. Try again.");
         return;
       }
-      setMessages((m) => [...m, { role: "assistant", content: json.reply }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: json.reply,
+          handoff: json.handoff ?? null,
+          question: json.answered ? content : null,
+        },
+      ]);
+      if (json.handoff) {
+        setHandoff("sent");
+        setHandedTo(json.handoff);
+        router.refresh();
+      }
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -87,8 +159,20 @@ export function FounderSupportAssistant({
     }
   }
 
+  async function giveFeedback(index: number, solved: boolean) {
+    const msg = messages[index];
+    if (!msg || msg.feedback) return;
+    setMessages((m) => m.map((x, i) => (i === index ? { ...x, feedback: solved ? "solved" : "person" } : x)));
+    void fetch("/api/founder/support/assistant/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: msg.question ?? "", solved }),
+    }).catch(() => {});
+    if (!solved) await handOff();
+  }
+
   async function handOff() {
-    if (handoff === "sending") return;
+    if (handoff !== "idle") return;
     setHandoff("sending");
     const transcript = messages
       .slice(1)
@@ -107,12 +191,22 @@ export function FounderSupportAssistant({
           contextItem: "Assistant",
         }),
       });
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setHandoff("idle");
         setError("Couldn't reach the team just now. Try again.");
         return;
       }
       setHandoff("sent");
+      if (json.id) setHandedTo({ requestId: json.id, ownerName: json.ownerName ?? null, dueAt: json.dueAt ?? null });
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: "I've passed our conversation to a person.",
+          handoff: json.id ? { requestId: json.id, ownerName: json.ownerName ?? null, dueAt: json.dueAt ?? null } : null,
+        },
+      ]);
       router.refresh();
     } catch {
       setHandoff("idle");
@@ -130,7 +224,7 @@ export function FounderSupportAssistant({
           <p className="text-[13px] font-semibold text-slate-900">iCapOS Assistant</p>
           <p className="flex items-center gap-1 text-[11px] text-emerald-600">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-            Answers instantly · knows your workspace
+            AI · answers questions about using iCapOS
           </p>
         </div>
       </div>
@@ -149,6 +243,23 @@ export function FounderSupportAssistant({
               }`}
             >
               <p className="whitespace-pre-wrap">{m.content}</p>
+              {m.handoff ? <HandoffCard h={m.handoff} /> : null}
+              {m.role === "assistant" && m.question && i === messages.length - 1 && !busy ? (
+                m.feedback ? (
+                  <p className="mt-2 text-[11.5px] text-slate-400">
+                    {m.feedback === "solved" ? "Thanks. Glad that helped." : "Passing this to a person…"}
+                  </p>
+                ) : handoff !== "sent" ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <button type="button" onClick={() => giveFeedback(i, true)} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11.5px] text-slate-600 hover:bg-slate-50">
+                      <i className="ti ti-thumb-up mr-1" aria-hidden="true" />That solved it
+                    </button>
+                    <button type="button" onClick={() => giveFeedback(i, false)} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11.5px] text-slate-600 hover:bg-slate-50">
+                      <i className="ti ti-user mr-1" aria-hidden="true" />I still need a person
+                    </button>
+                  </div>
+                ) : null
+              ) : null}
             </div>
           </div>
         ))}
@@ -189,7 +300,7 @@ export function FounderSupportAssistant({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask anything about your raise…"
+            placeholder={handedTo ? `Add a message for ${handedTo.ownerName ?? "the team"}…` : "Ask anything about your raise…"}
             disabled={busy}
             className="flex-1 bg-transparent text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none"
           />

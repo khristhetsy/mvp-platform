@@ -127,6 +127,10 @@
     {
       "path": "/api/cron/founder-digest",
       "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/support-care",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

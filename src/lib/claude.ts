@@ -29,6 +29,12 @@ export interface ClaudeOptions {
    * withAiUsage(...) wrapper overrides it; untagged calls bill to Internal hubs.
    */
   usage?: AiUsageTag;
+  /**
+   * Optional: receives the tokens and cost of this one call after it returns,
+   * for callers that record cost against their own record (the support log).
+   * Does not change billing; spend is logged to the AI budget either way.
+   */
+  onUsage?: (u: { model: string; inputTokens: number; outputTokens: number; costUsd: number }) => void;
 }
 
 export const CLAUDE_HAIKU  = "claude-haiku-4-5-20251001";
@@ -92,6 +98,7 @@ export async function claudeComplete(
     system,
     locale,
     usage: usageTag,
+    onUsage,
   } = options;
 
   // Localize output: explicit option wins; otherwise detect the request locale.
@@ -129,6 +136,15 @@ export async function claudeComplete(
     usage?: { input_tokens?: number; output_tokens?: number };
   };
   await logSpend(usage, model, data);
+  if (onUsage) {
+    const inputTokens = data.usage?.input_tokens ?? 0;
+    const outputTokens = data.usage?.output_tokens ?? 0;
+    try {
+      onUsage({ model, inputTokens, outputTokens, costUsd: anthropicCostUsd(model, inputTokens, outputTokens) });
+    } catch {
+      /* a caller's bookkeeping never breaks the reply */
+    }
+  }
   return data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
 }
 

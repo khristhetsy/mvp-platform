@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { SupportCareSettings } from "@/lib/support/settings";
+import type { SupportAiTriage } from "@/lib/support/support";
+import { dueLabel } from "@/lib/support/business-hours";
+import { SupportSettingsPanel } from "./SupportSettingsPanel";
 
 export type QueueRow = {
   id: string;
@@ -18,6 +22,12 @@ export type QueueRow = {
   assigneeName: string | null;
   csat: number | null;
   createdAt: string;
+  // Support care
+  refNo: number | null;
+  dueAt: string | null;
+  aiTriage: SupportAiTriage | null;
+  rating: number | null;
+  reopenedCount: number;
 };
 
 export type StaffOption = { id: string; name: string };
@@ -48,7 +58,16 @@ export function SupportQueueClient({
   staff,
   currentStaffId,
   showResolved = false,
-}: Readonly<{ rows: QueueRow[]; staff: StaffOption[]; currentStaffId: string; showResolved?: boolean }>) {
+  settings,
+  canEditSettings = false,
+}: Readonly<{
+  rows: QueueRow[];
+  staff: StaffOption[];
+  currentStaffId: string;
+  showResolved?: boolean;
+  settings: SupportCareSettings;
+  canEditSettings?: boolean;
+}>) {
   const router = useRouter();
   const params = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -59,6 +78,13 @@ export function SupportQueueClient({
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  // The AI draft the reply started from, so the log can say whether staff edited it.
+  const [aiDraft, setAiDraft] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [summary, setSummary] = useState("");
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
   // Derive from `rows` so router.refresh() after assign / resolve is reflected here.
   const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? lastRow : null;
 
@@ -74,6 +100,7 @@ export function SupportQueueClient({
         alert("AI drafting isn't available right now — write your reply directly.");
       } else if (json.draft) {
         setReply(json.draft);
+        setAiDraft(json.draft);
       }
     } catch {
       alert("Couldn't reach the server to draft a reply.");
@@ -82,11 +109,34 @@ export function SupportQueueClient({
     }
   }
 
+  async function draftSummary() {
+    if (!selected) return;
+    setSummarizing(true);
+    try {
+      const res = await fetch(`/api/admin/support/${selected.id}/summary`, { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (json.summary) {
+        setSummary(json.summary);
+        setAiSummary(json.summary);
+      } else {
+        alert("AI summaries aren't available right now. Write the summary directly.");
+      }
+    } catch {
+      alert("Couldn't reach the server to draft a summary.");
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
   async function open(row: QueueRow) {
     setSelectedId(row.id);
     setLastRow(row);
     setMessages([]);
     setReply("");
+    setAiDraft(null);
+    setResolving(false);
+    setSummary("");
+    setAiSummary(null);
     const res = await fetch(`/api/admin/support/${row.id}`);
     if (res.ok) {
       const json = await res.json();
@@ -127,7 +177,13 @@ export function SupportQueueClient({
       }
       if (body.action === "reply") {
         setReply("");
+        setAiDraft(null);
         await open(selected);
+      }
+      if (body.action === "resolve") {
+        setResolving(false);
+        setSummary("");
+        setAiSummary(null);
       }
       // Keep the open thread truthful even if the row leaves the list on refresh.
       if (body.action === "resolve") setLastRow({ ...selected, status: "resolved" });
@@ -142,9 +198,24 @@ export function SupportQueueClient({
   }
 
   const toggle = (
-    <label className="mb-3 inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-      <input type="checkbox" checked={showResolved} onChange={toggleResolved} /> Show resolved
-    </label>
+    <div className="mb-3 flex flex-wrap items-center gap-3">
+      <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+        <input type="checkbox" checked={showResolved} onChange={toggleResolved} /> Show resolved
+      </label>
+      <a href="/admin/support/log" className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+        <i className="ti ti-list-details" aria-hidden="true" /> Support log
+      </a>
+      <button
+        type="button"
+        onClick={() => setSettingsOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+      >
+        <i className="ti ti-bell" aria-hidden="true" /> Notifications
+      </button>
+      {settingsOpen ? (
+        <SupportSettingsPanel initial={settings} staff={staff} canEdit={canEditSettings} onClose={() => { setSettingsOpen(false); router.refresh(); }} />
+      ) : null}
+    </div>
   );
 
   if (rows.length === 0) {
@@ -174,12 +245,25 @@ export function SupportQueueClient({
               >
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{r.subject}</span>
+                  {r.priority === "high" && r.status !== "resolved" ? (
+                    <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">Top priority</span>
+                  ) : null}
                   {(() => {
+                    // A promised reply time, when set, replaces the generic 24h "At risk".
+                    const due = r.status === "open" ? dueLabel(r.dueAt) : null;
+                    if (due) {
+                      return (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${due.overdue ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-600"}`}>
+                          {due.text}
+                        </span>
+                      );
+                    }
                     const sla = slaLabel(r.createdAt, r.status);
                     return sla.atRisk ? (
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">At risk</span>
                     ) : null;
                   })()}
+                  {r.rating ? <span className="text-[11px] text-amber-500" title="Founder rating">{"★".repeat(r.rating)}</span> : null}
                   {r.csat ? <span className="text-[11px]" title="Founder rating">{r.csat === 1 ? "👍" : "👎"}</span> : null}
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[r.status] ?? "bg-slate-100 text-slate-600"}`}>
                     {STATUS_LABEL[r.status] ?? r.status}
@@ -205,7 +289,10 @@ export function SupportQueueClient({
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-900">{selected.subject}</p>
-                <p className="truncate text-xs text-slate-500">{selected.companyName} · {selected.founderName}</p>
+                <p className="truncate text-xs text-slate-500">
+                  {selected.refNo ? `#${selected.refNo} · ` : ""}{selected.companyName} · {selected.founderName}
+                  {selected.reopenedCount ? ` · reopened ${selected.reopenedCount}x` : ""}
+                </p>
               </div>
               <select
                 value={selected.assignedTo ?? ""}
@@ -223,14 +310,74 @@ export function SupportQueueClient({
               {selected.status !== "resolved" ? (
                 <button
                   type="button"
-                  onClick={() => act({ action: "resolve" })}
-                  disabled={busy}
+                  onClick={() => setResolving(true)}
+                  disabled={busy || resolving}
                   className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
                 >
                   Resolve
                 </button>
               ) : null}
             </div>
+
+            {selected.aiTriage ? (
+              <div className="mx-4 mt-4 rounded-lg border border-indigo-200 bg-white p-3">
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
+                  <i className="ti ti-sparkles" aria-hidden="true" /> AI triage
+                  <span className="ml-auto rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">Internal only</span>
+                </p>
+                <dl className="grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+                  <dt className="text-slate-500">Topic</dt>
+                  <dd className="text-slate-800">{selected.aiTriage.topic}</dd>
+                  <dt className="text-slate-500">Priority</dt>
+                  <dd className="capitalize text-slate-800">{selected.aiTriage.priority}</dd>
+                  <dt className="text-slate-500">AI can answer?</dt>
+                  <dd>
+                    {selected.aiTriage.canAiAnswer ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Yes, how-to</span>
+                    ) : (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">No, needs a person</span>
+                    )}
+                  </dd>
+                </dl>
+                {selected.aiTriage.reason ? <p className="mt-1.5 text-[11px] text-slate-400">{selected.aiTriage.reason}</p> : null}
+              </div>
+            ) : null}
+
+            {resolving && selected.status !== "resolved" ? (
+              <div className="mx-4 mt-4 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                <p className="text-xs font-semibold text-emerald-800">Resolve and ask the founder &ldquo;Did this solve your issue?&rdquo;</p>
+                <textarea
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  rows={3}
+                  placeholder="Summary for the founder: what was done (optional)"
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+                />
+                <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                  {settings.ai.drafts ? (
+                    <button
+                      type="button"
+                      disabled={summarizing}
+                      onClick={draftSummary}
+                      className="mr-auto inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
+                    >
+                      <i className="ti ti-sparkles" aria-hidden="true" /> {summarizing ? "Drafting…" : "Draft summary with AI"}
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => setResolving(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => act({ action: "resolve", summary: summary.trim() || null, aiSummary })}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {busy ? "Resolving…" : "Resolve and send"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="flex-1 space-y-2 p-4">
               {messages.length === 0 ? (
@@ -267,7 +414,7 @@ export function SupportQueueClient({
                 <button
                   type="button"
                   disabled={busy || !reply.trim()}
-                  onClick={() => act({ action: "reply", body: reply.trim() })}
+                  onClick={() => act({ action: "reply", body: reply.trim(), aiDraft })}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
                 >
                   {busy ? "Sending…" : "Send reply"}

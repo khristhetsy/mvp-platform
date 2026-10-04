@@ -78,6 +78,7 @@ export const AI_FEATURE_META: Record<string, { label: string; group?: string }> 
   admin_company_ai: { label: "Company assessment and outreach", group: "Admin tools" },
   admin_investor_ai: { label: "Investor review and drafts", group: "Admin tools" },
   admin_support: { label: "Support reply drafts", group: "Admin tools" },
+  admin_support_triage: { label: "Support triage", group: "Admin tools" },
   admin_deal_rooms: { label: "Deal room summaries", group: "Admin tools" },
   admin_learning: { label: "Course and quiz generation", group: "Admin tools" },
   admin_crr: { label: "CRR advice", group: "Admin tools" },

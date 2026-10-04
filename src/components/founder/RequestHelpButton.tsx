@@ -14,6 +14,7 @@ export function RequestHelpButton({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const [confirmation, setConfirmation] = useState<{ id: string; ownerName: string | null; dueAt: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subject, setSubject] = useState(contextItem ? `Help with ${contextItem}` : "");
@@ -32,11 +33,12 @@ export function RequestHelpButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject, body, source: "request_help", contextStage, contextItem }),
       });
+      const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
         setError(j.error ?? "Could not send your request.");
         return;
       }
+      setConfirmation(j.id ? { id: j.id, ownerName: j.ownerName ?? null, dueAt: j.dueAt ?? null } : null);
       setSent(true);
       // The page lists the founder's requests server-side; pull it again so the new one shows.
       router.refresh();
@@ -48,10 +50,24 @@ export function RequestHelpButton({
   }
 
   if (sent) {
+    const due = confirmation?.dueAt
+      ? new Date(confirmation.dueAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      : null;
     return (
-      <div className="mt-4 flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-        <i className="ti ti-headset mt-0.5 text-indigo-600" aria-hidden="true" />
-        <p className="text-[13px] text-indigo-900">Our team is on it — we&apos;ll reply to you here. You can keep working in the meantime.</p>
+      <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+        <i className="ti ti-circle-check mt-0.5 text-lg text-emerald-600" aria-hidden="true" />
+        <div className="text-[13px] text-indigo-900">
+          <p className="font-semibold">We have your request</p>
+          <p className="mt-0.5">
+            {confirmation?.ownerName ? `${confirmation.ownerName} is on it.` : "Our team is on it."}
+            {due ? ` Expect a first reply by ${due}.` : ""} We&apos;ll email you and notify you here when there&apos;s a reply.
+          </p>
+          {confirmation?.id ? (
+            <a href={`/founder/support?request=${confirmation.id}`} className="mt-1.5 inline-block font-medium text-indigo-700 hover:underline">
+              Track my request
+            </a>
+          ) : null}
+        </div>
       </div>
     );
   }

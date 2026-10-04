@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getSupportThread, setSupportCsat, staffSupportLink } from "@/lib/support/support";
-import { createNotification } from "@/lib/notifications/notifications";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getSupportThread } from "@/lib/support/support";
+import { founderConfirm, founderRate } from "@/lib/support/care";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ csat: z.union([z.literal(1), z.literal(-1)]) });
+// `csat` is the original thumbs up / down, kept for any old client. `solved`
+// is "Did this solve your issue?"; No reopens the request at top priority.
+const schema = z.union([
+  z.object({ csat: z.union([z.literal(1), z.literal(-1)]) }),
+  z.object({ solved: z.boolean() }),
+  z.object({ rating: z.number().int().min(1).max(5), comment: z.string().max(1000).nullish() }),
+]);
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["founder"]).catch(() => null);
@@ -19,7 +27,19 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   if (!thread || thread.request.founder_id !== profile.id) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
-  return NextResponse.json(thread);
+  // The founder sees who has their request. Staff profiles aren't readable under
+  // founder RLS, so the owner's name comes through the service role.
+  let owner: { id: string; name: string } | null = null;
+  if (thread.request.assigned_to) {
+    const { data } = await (createServiceRoleClient() as unknown as SupabaseClient)
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("id", thread.request.assigned_to)
+      .maybeSingle();
+    const p = data as { id: string; full_name: string | null; email: string | null } | null;
+    if (p) owner = { id: p.id, name: p.full_name?.trim() || p.email || "iCapOS team" };
+  }
+  return NextResponse.json({ ...thread, owner });
 }
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -35,26 +55,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!thread || thread.request.founder_id !== profile.id) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
-  const result = await setSupportCsat(supabase, id, parsed.data.csat);
-  if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
-  // A thumbs-down flags the handling/assigned staff so they can follow up.
-  if (parsed.data.csat === -1) {
-    try {
-      if (thread.request.assigned_to) {
-        await createNotification({
-          recipientUserId: thread.request.assigned_to,
-          type: "support_csat_negative",
-          title: "A founder wasn't satisfied with support",
-          message: thread.request.subject,
-          entityType: "company",
-          entityId: thread.request.company_id,
-          deepLink: staffSupportLink(id),
-        });
-      }
-    } catch {
-      /* best-effort */
-    }
+  const body = parsed.data;
+  if ("rating" in body) {
+    const r = await founderRate(id, body.rating, body.comment ?? null);
+    return "error" in r ? NextResponse.json({ error: r.error }, { status: 400 }) : NextResponse.json({ ok: true });
   }
-  return NextResponse.json({ ok: true });
+  const solved = "solved" in body ? body.solved : body.csat === 1;
+  const r = await founderConfirm(id, solved, "app");
+  return "error" in r ? NextResponse.json({ error: r.error }, { status: 400 }) : NextResponse.json({ ok: true, status: r.status });
 }

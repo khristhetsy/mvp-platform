@@ -3,6 +3,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSupportThread } from "@/lib/support/support";
 import { claudeComplete, isClaudeConfigured } from "@/lib/claude";
+import { getSupportSettings } from "@/lib/support/settings";
+import { logSupportEvent, type AiCost } from "@/lib/support/events";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,8 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const thread = await getSupportThread(supabase, id);
   if (!thread) return NextResponse.json({ error: "Request not found." }, { status: 404 });
 
-  if (!isClaudeConfigured()) {
+  // Support queue, Notifications, AI: "Draft replies for staff".
+  if (!isClaudeConfigured() || !(await getSupportSettings()).ai.drafts) {
     return NextResponse.json({ draft: "", unavailable: true });
   }
 
@@ -32,6 +35,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     .join(" · ");
 
   try {
+    let cost: AiCost | null = null;
     const draft = await claudeComplete(
       [
         {
@@ -44,8 +48,19 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         temperature: 0.4,
         system:
           "You are an iCapOS support specialist helping founders prepare to raise capital. Be specific and actionable. Never promise funding or make legal/financial guarantees. Keep it under 120 words.",
+        onUsage: (u) => (cost = u),
       },
     );
+    await logSupportEvent({
+      requestId: id,
+      founderId: thread.request.founder_id,
+      actor: "ai",
+      actorUserId: profile.id,
+      kind: "ai_draft",
+      summary: `AI drafted a reply for ${profile.full_name ?? "staff"}`,
+      detail: "Not sent · waiting for staff review",
+      ai: cost,
+    });
     return NextResponse.json({ draft });
   } catch {
     return NextResponse.json({ draft: "", unavailable: true });
