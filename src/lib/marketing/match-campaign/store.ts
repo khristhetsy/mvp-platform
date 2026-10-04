@@ -504,13 +504,29 @@ async function loadAdjacency(): Promise<Adjacency> {
   return buildAdjacency((data ?? []) as Array<{ industry: string; adjacent_industry: string }>);
 }
 
+/** Inputs every batch of a matching run shares: load once, pass to each batch. */
+export type MatchingShared = {
+  investors: Awaited<ReturnType<typeof loadCampaignInvestors>>;
+  matchCfg: Awaited<ReturnType<typeof getInvestorMatchConfig>>;
+  adjacency: Adjacency;
+};
+
+export async function loadMatchingShared(): Promise<MatchingShared> {
+  const [investors, matchCfg, adjacency] = await Promise.all([loadCampaignInvestors(), getInvestorMatchConfig(), loadAdjacency()]);
+  return { investors, matchCfg, adjacency };
+}
+
 /**
  * Matches the next batch of ready founders (in id order, after `after`). The editor
  * calls this until `next` is null, so a campaign of any size finishes without one
  * request running for minutes. `summary.ready` is the run's total ready count;
  * the other counts are this batch's.
+ *
+ * Investors an admin removed for a founder stay removed: rerunning (by hand or
+ * the daily rematch) replaces the other matches and never brings them back.
+ * Pass `shared` to reuse the investor network across batches (the daily job).
  */
-export async function runCampaignMatching(campaignId: string, opts: { after?: string | null; batch?: number } = {}): Promise<RunBatch> {
+export async function runCampaignMatching(campaignId: string, opts: { after?: string | null; batch?: number; shared?: MatchingShared } = {}): Promise<RunBatch> {
   const db = marketingDb();
   const campaign = await getMatchCampaign(campaignId);
   if (!campaign) throw new Error("Match campaign not found");
@@ -527,12 +543,21 @@ export async function runCampaignMatching(campaignId: string, opts: { after?: st
   const [{ data: frows, error }, { count: readyTotal }] = await Promise.all([page, readyQuery("id", true)]);
   if (error) throw new Error(error.message);
   const founders = (frows ?? []) as unknown as Array<{ id: string; founder_contact_id: string }>;
-  const [fields, investors, matchCfg, adjacency] = await Promise.all([
+  const [fields, shared, { data: removedRows, error: removedErr }] = await Promise.all([
     loadFounderFields(founders.map((f) => f.founder_contact_id)),
-    loadCampaignInvestors(),
-    getInvestorMatchConfig(),
-    loadAdjacency(),
+    opts.shared ? Promise.resolve(opts.shared) : loadMatchingShared(),
+    founders.length
+      ? db.from("match_campaign_matches").select("campaign_founder_id, investor_contact_id").in("campaign_founder_id", founders.map((f) => f.id)).eq("removed", true)
+      : Promise.resolve({ data: [], error: null }),
   ]);
+  if (removedErr) throw new Error(removedErr.message);
+  const { investors, matchCfg, adjacency } = shared;
+  const removedBy = new Map<string, Set<string>>();
+  for (const r of (removedRows ?? []) as Array<{ campaign_founder_id: string; investor_contact_id: string }>) {
+    const set = removedBy.get(r.campaign_founder_id) ?? new Set<string>();
+    set.add(r.investor_contact_id);
+    removedBy.set(r.campaign_founder_id, set);
+  }
   const byContact = new Map(fields.map((r) => [r.id, r]));
   const weights = matchCfg.engineWeights;
   const preview = campaign.match_config.preview_count;
@@ -542,11 +567,13 @@ export async function runCampaignMatching(campaignId: string, opts: { after?: st
   for (const f of founders) {
     const row = byContact.get(f.founder_contact_id);
     if (!row) continue;
+    const removed = removedBy.get(f.id);
     const matches = matchFounder(founderCompanyProfile(row), investors, weights, campaign.match_config.min_score, {
       founderIndustries: row.industries ?? [],
       adjacency,
-    });
-    await db.from("match_campaign_matches").delete().eq("campaign_founder_id", f.id);
+    }).filter((m) => !removed?.has(m.investor_contact_id));
+    // Replace the matches but keep the admin's removals (removed rows stay).
+    await db.from("match_campaign_matches").delete().eq("campaign_founder_id", f.id).eq("removed", false);
     const stored = matches.slice(0, STORED_MATCHES_PER_FOUNDER);
     if (stored.length) {
       const { error: insErr } = await db.from("match_campaign_matches").insert(

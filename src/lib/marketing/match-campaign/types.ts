@@ -54,6 +54,13 @@ export type MatchConfig = {
   cooldown_enabled: boolean;
   /** Days a founder rests between Match campaigns (1 to 365). */
   cooldown_days: number;
+  /**
+   * Rematch founders not yet emailed every day at 23:30 UTC (before the next
+   * day's sends), so they get new and hidden investors picked up. Off by default.
+   */
+  daily_rematch: boolean;
+  /** When the daily rematch last finished for this campaign (ISO), for the editor. */
+  last_rematch_at: string | null;
   /** "Schedule a call with us" target. */
   call_url: string;
   /**
@@ -157,6 +164,8 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   call_url: DEFAULT_CALL_PATH,
   cooldown_enabled: true,
   cooldown_days: 30,
+  daily_rematch: false,
+  last_rematch_at: null,
   flow: "review",
   visible_count: 3,
   weights: null,
@@ -190,6 +199,8 @@ export function readMatchConfig(raw: unknown): MatchConfig {
       typeof r.cooldown_days === "number" && Number.isFinite(r.cooldown_days)
         ? Math.min(365, Math.max(1, Math.round(r.cooldown_days)))
         : DEFAULT_MATCH_CONFIG.cooldown_days,
+    daily_rematch: typeof r.daily_rematch === "boolean" ? r.daily_rematch : DEFAULT_MATCH_CONFIG.daily_rematch,
+    last_rematch_at: typeof r.last_rematch_at === "string" ? r.last_rematch_at : null,
     // Missing means a campaign from before the review flow: keep its layout.
     flow: r.flow === "review" ? "review" : "plan",
     visible_count: num(r.visible_count, DEFAULT_MATCH_CONFIG.visible_count),

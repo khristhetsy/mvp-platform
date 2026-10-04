@@ -304,3 +304,11 @@ describe("cooldown between campaigns", () => {
     expect(cooldownCutoff(30, new Date("2026-10-04T12:00:00Z"))).toBe("2026-09-04T12:00:00.000Z");
   });
 });
+
+describe("daily rematch setting", () => {
+  it("is off by default and keeps the last run time", () => {
+    expect(readMatchConfig({}).daily_rematch).toBe(false);
+    expect(readMatchConfig({}).last_rematch_at).toBeNull();
+    expect(readMatchConfig({ daily_rematch: true, last_rematch_at: "2026-10-04T23:30:00Z" })).toMatchObject({ daily_rematch: true, last_rematch_at: "2026-10-04T23:30:00Z" });
+  });
+});
