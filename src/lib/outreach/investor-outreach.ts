@@ -13,6 +13,7 @@ import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 import { notifyOutreachQueued, notifyOutreachSent, type OutreachInvestor } from "@/lib/outreach/outreach-notify";
+import { automatedCeiling, automatedRunLimit, founderCapPeriod, reachedInPeriod } from "@/lib/outreach/investor-cap";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
 function formatRaise(amount: number | null | undefined): string | null {
@@ -347,7 +348,6 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
   let recipientsSent = 0;
 
   const todayIso = new Date().toISOString().slice(0, 10);
-  const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
   // Global config rows are identical for every campaign — load once for the pass.
   const globals = await loadOutreachGlobals();
 
@@ -358,9 +358,10 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     // per-founder override): the monthly cap, schedule, pause, and message.
     let eff: EffectiveOutreachConfig | null = null;
     let dispatchAllowed = true;
+    let founderId: string | null = null;
     {
       const { data: cRow } = await db.from("companies").select("founder_id").eq("id", campaign.company_id).maybeSingle();
-      const founderId = (cRow as { founder_id?: string } | null)?.founder_id ?? null;
+      founderId = (cRow as { founder_id?: string } | null)?.founder_id ?? null;
       if (founderId) {
         eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: founderId }, globals);
         // Demo and internal founder accounts never email real investors.
@@ -374,6 +375,10 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     if (eff) {
       if (eff.pause.enabled && (!eff.pause.until || eff.pause.until >= todayIso)) continue;
       if (eff.startDate && todayIso < eff.startDate) continue;
+      // Plan rule: founders whose plan doesn't include outreach (Free, or a plan
+      // that lapsed) see their matches but nothing is sent for them. The campaign
+      // is held, not completed, so it resumes if they choose a plan.
+      if (!founderEntitlements(eff.planType).canDistribute) continue;
     }
 
     // Atomically claim this campaign for this run by advancing last_run_at under
@@ -389,23 +394,24 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       .select("id");
     if (!claimed || (claimed as Array<{ id: string }>).length === 0) continue;
 
-    // Per-run slice = the campaign weekly cap, further clamped by how much of the
-    // founder's MONTHLY plan cap is still left this calendar month.
+    // Per-run slice = the campaign weekly cap, clamped by what is left of the
+    // founder's plan allowance this 30 day period (from signup), shared with DIY
+    // outreach. See automatedCeiling for how admin settings combine with the plan.
     let batchLimit = campaign.weekly_cap;
     let sentBeforeRun = 0;
-    if (eff) {
-      const { count } = await db
-        .from("investor_outreach_recipients")
-        .select("id", { count: "exact", head: true })
-        .eq("campaign_id", campaign.id)
-        .eq("status", "sent")
-        .gte("sent_at", monthStart);
-      const sentThisMonth = typeof count === "number" ? count : 0;
-      sentBeforeRun = sentThisMonth;
-      const remaining = Math.max(0, eff.monthlyCap - sentThisMonth);
-      batchLimit = Math.max(0, Math.min(campaign.weekly_cap, remaining));
+    let periodCap: number | null = null;
+    if (eff && founderId) {
+      const period = await founderCapPeriod(db, founderId);
+      const reached = (await reachedInPeriod(db, campaign.company_id, period.start)).size;
+      sentBeforeRun = reached;
+      periodCap = automatedCeiling({
+        planCap: founderEntitlements(eff.planType).investorCap,
+        adminPlanCap: eff.monthlyCap,
+        capOverride: eff.capOverride,
+      });
+      batchLimit = automatedRunLimit(periodCap, reached, campaign.weekly_cap);
     }
-    // Monthly cap reached — send nothing this run; it resumes next month.
+    // Allowance used up — send nothing this run; it resumes next period.
     if (batchLimit === 0) continue;
 
     const { data: queued } = await db
@@ -529,7 +535,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         investors: sentThisRun,
         emailed: mode === "send",
         sentThisMonth: sentBeforeRun + sentThisRun.length,
-        monthlyCap: eff ? eff.monthlyCap : null,
+        monthlyCap: periodCap,
         stillQueued: typeof stillQueued === "number" ? stillQueued : 0,
         planType: eff?.planType ?? null,
       });

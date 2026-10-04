@@ -40,6 +40,8 @@ export type EffectiveOutreachConfig = {
   message: OutreachMessage;
   /** Resolved monthly send cap (per-founder override → else plan-derived). */
   monthlyCap: number;
+  /** The admin's explicit per-founder cap, when set (null = plan rules apply). */
+  capOverride: number | null;
   startDate: string | null;
   cadence: SendCadence;
   pause: { enabled: boolean; until: string | null };
@@ -165,6 +167,7 @@ export async function resolveFounderOutreachConfig(
     match,
     message,
     monthlyCap,
+    capOverride: oa && typeof oa.capOverride === "number" ? oa.capOverride : null,
     startDate,
     cadence,
     pause,

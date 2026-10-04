@@ -4,6 +4,10 @@ import { requestFounderPlatformIntro } from "@/lib/founder-crm/founder-platform-
 import { updateOutreachTarget } from "@/lib/founder-crm/outreach";
 import { notifyFounderPipelineIntroRequested } from "@/lib/notifications/founder-outreach-events";
 import { founderPipelineIntroSchema } from "@/lib/validation";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { capReached, loadIntroQuota } from "@/lib/matching/intro-quota";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -37,6 +41,26 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: "Intro requests are only available for platform matched investors." },
       { status: 400 },
+    );
+  }
+
+  // Same plan rules as introductions from the matches page: Free founders see
+  // investors but can't contact them, and paid plans stay within their limits.
+  const plan = await getUserPlan(auth.profile.id);
+  if (!founderEntitlements(plan).canBrokerIntros) {
+    return NextResponse.json(
+      { error: "Introduction requests are included in Basic and Professional. Choose a plan to request introductions.", code: "upgrade_required" },
+      { status: 403 },
+    );
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const quota = await loadIntroQuota(createServiceRoleClient() as any, { companyId: auth.company.id, founderId: auth.profile.id, plan });
+  const over = capReached(quota);
+  if (over) {
+    const limit = over === "week" ? quota.week?.cap : quota.month.cap;
+    return NextResponse.json(
+      { error: `You've used all ${limit} introduction requests for this ${over}.`, code: "connection_cap_reached", cap: limit, period: over },
+      { status: 429 },
     );
   }
 

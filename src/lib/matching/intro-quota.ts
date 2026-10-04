@@ -46,11 +46,14 @@ export async function countIntroRequestsSince(
   founderId: string,
   since: string,
 ): Promise<number> {
-  const [member, prospect] = await Promise.all([
+  const [member, prospect, pipeline] = await Promise.all([
     admin.from("intro_requests").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("direction", "founder_to_investor").neq("status", "declined").gte("created_at", since),
     admin.from("prospect_intro_requests").select("id", { count: "exact", head: true }).eq("founder_id", founderId).neq("status", "dismissed").gte("created_at", since),
+    // Intro requests the founder opened from their pipeline: a message thread the
+    // founder created with a platform investor. Investor opened threads don't count.
+    admin.from("message_threads").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("created_by", founderId).is("intro_request_id", null).gte("created_at", since),
   ]);
-  return (member.count ?? 0) + (prospect.count ?? 0);
+  return (member.count ?? 0) + (prospect.count ?? 0) + (pipeline.count ?? 0);
 }
 
 export async function loadIntroQuota(

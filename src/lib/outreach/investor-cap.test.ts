@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capMessage, capPeriod, decideCap, parseUtc } from "./investor-cap";
+import { automatedCeiling, automatedRunLimit, capMessage, capPeriod, decideCap, parseUtc } from "./investor-cap";
 
 const signup = new Date("2026-09-10T08:00:00Z");
 
@@ -34,5 +34,25 @@ describe("plan limit", () => {
     const full = decideCap(5, 5, 1, reset);
     if (full.ok) throw new Error("expected refusal");
     expect(capMessage(full)).toContain("so you can't add more until Oct 10");
+  });
+});
+
+describe("automated outreach allowance", () => {
+  it("takes the lower of the plan limit and the admin automation setting", () => {
+    expect(automatedCeiling({ planCap: 5, adminPlanCap: 25, capOverride: null })).toBe(5);
+    expect(automatedCeiling({ planCap: 50, adminPlanCap: 20, capOverride: null })).toBe(20);
+  });
+  it("lets an explicit per-founder admin cap replace the plan limit", () => {
+    expect(automatedCeiling({ planCap: 5, adminPlanCap: 25, capOverride: 12 })).toBe(12);
+  });
+  it("leaves Managed IR to the admin setting", () => {
+    expect(automatedCeiling({ planCap: null, adminPlanCap: 25, capOverride: null })).toBe(25);
+  });
+  it("sends no more than the weekly pace or what is left this period", () => {
+    expect(automatedRunLimit(5, 3, 10)).toBe(2);
+    expect(automatedRunLimit(50, 10, 10)).toBe(10);
+    expect(automatedRunLimit(5, 5, 10)).toBe(0);
+    expect(automatedRunLimit(5, 9, 10)).toBe(0);
+    expect(automatedRunLimit(null, 400, 10)).toBe(10);
   });
 });
