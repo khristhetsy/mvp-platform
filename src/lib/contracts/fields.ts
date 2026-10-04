@@ -81,3 +81,52 @@ export function defaultSpvName(company: string | null | undefined): string {
 export function defaultCompanyName(company: string | null | undefined): string {
   return (company ?? "").trim().toUpperCase();
 }
+
+/**
+ * Currency as shown while typing: "1500000" → "1,500,000", "1500000.5" → "1,500,000.5".
+ * Keeps a trailing "." so decimals can be typed. Non numeric text is kept as typed.
+ */
+export function groupCurrencyInput(v: string): string {
+  const raw = v.replace(/,/g, "").trim();
+  if (!raw) return "";
+  const m = /^\$?(\d*)(\.\d*)?$/.exec(raw);
+  if (!m) return v;
+  const int = (m[1] ?? "").replace(/^0+(?=\d)/, "");
+  return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${m[2] ?? ""}`;
+}
+
+/** What gets stored for a currency input: digits and one ".", no commas. */
+export function plainCurrency(v: string): string {
+  const cleaned = v.replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  return dot === -1 ? cleaned : `${cleaned.slice(0, dot + 1)}${cleaned.slice(dot + 1).replace(/\./g, "")}`;
+}
+
+/**
+ * Fields on a services agreement that mirror a term sheet field in the same send.
+ * The Due Diligence agreement's valuation follows the term sheet's valuation cap
+ * (Series A has a pre money valuation instead).
+ */
+export const LINKED_FIELDS: { token: string; from: string[] }[] = [{ token: "equity_valuation", from: ["valuation_cap", "pre_money_valuation"] }];
+
+/** Linked values for a target document, read from the term sheets in the same send. Values are plain numbers. */
+export function linkedFieldValues(
+  targetFields: TemplateField[],
+  sources: { fields: TemplateField[]; values: Record<string, string> }[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  const has = new Set(targetFields.map((f) => f.token));
+  for (const link of LINKED_FIELDS) {
+    if (!has.has(link.token)) continue;
+    for (const s of sources) {
+      const f = s.fields.find((x) => link.from.includes(x.token));
+      if (!f) continue;
+      const v = plainCurrency(s.values[f.token] ?? f.default_value ?? "");
+      if (v) {
+        out[link.token] = v;
+        break;
+      }
+    }
+  }
+  return out;
+}

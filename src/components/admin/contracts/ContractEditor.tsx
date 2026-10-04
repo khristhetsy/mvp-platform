@@ -7,7 +7,8 @@
 // true render (iCapOS renderer, see render-pdf.ts) is one click away in the preview tab.
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { openFields } from "@/lib/contracts/fields";
+import { groupCurrencyInput, openFields, plainCurrency } from "@/lib/contracts/fields";
+import type { CSSProperties, KeyboardEvent } from "react";
 import type { BodyEdits, IssuingEntity, Segment, TemplateField } from "@/lib/contracts/types";
 import type { ModelBlock, ModelParagraph, ModelSegment } from "@/lib/contracts/docx-engine";
 import { api, BLUE, btn, MUTED, NAVY, Notice } from "./ui";
@@ -22,6 +23,9 @@ export type EditorData = {
 };
 
 export type EditorHandle = { flush: () => Promise<void> };
+
+/** A field that mirrors a term sheet value in the same send (see LINKED_FIELDS). */
+export type FieldLink = { token: string; value: string; linked: boolean; source: string };
 
 const TOKEN_RE = /\{\{([a-z0-9_]+)\}\}/g;
 const AUTOSAVE_MS = 3000;
@@ -195,8 +199,18 @@ function Paragraph({
   );
 }
 
-export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpenChange?: (open: number) => void; onSaved?: () => void }>(function ContractEditor(
-  { data, onOpenChange, onSaved },
+export const ContractEditor = forwardRef<
+  EditorHandle,
+  {
+    data: EditorData;
+    onOpenChange?: (open: number) => void;
+    onSaved?: () => void;
+    links?: FieldLink[];
+    onUnlink?: (token: string) => void;
+    onRelink?: (token: string) => void;
+  }
+>(function ContractEditor(
+  { data, onOpenChange, onSaved, links, onUnlink, onRelink },
   ref,
 ) {
   const readOnly = data.doc.locked;
@@ -213,26 +227,39 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
   const [exportOpen, setExportOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef({ values, edits, entityId, dirty });
+  // Linked fields follow the term sheet value: shown and saved as the term sheet value until unlinked.
+  const overrides = useMemo(() => {
+    const next: Record<string, string> = {};
+    if (readOnly || !links?.length) return next;
+    for (const l of links) {
+      if (!l.linked || !l.value) continue;
+      const f = data.fields.find((x) => x.token === l.token);
+      if (f && plainCurrency(values[l.token] ?? f.default_value ?? "") !== l.value) next[l.token] = l.value;
+    }
+    return next;
+  }, [links, values, readOnly, data.fields]);
+  const needsSync = Object.keys(overrides).length > 0;
+  const eff = useMemo(() => (needsSync ? { ...values, ...overrides } : values), [values, overrides, needsSync]);
+  const stateRef = useRef({ values: eff, edits, entityId, dirty: dirty || needsSync, overrides });
   useLayoutEffect(() => {
-    stateRef.current = { values, edits, entityId, dirty };
+    stateRef.current = { values: eff, edits, entityId, dirty: dirty || needsSync, overrides };
   });
   const counter = useRef(Object.keys(data.doc.body_edits.inserted ?? []).length + 1);
 
   const entity = data.entities.find((e) => e.id === entityId) ?? null;
   const needsEntity = Boolean(data.template.entity_match);
-  const open = useMemo(() => openFields(data.fields, values, entity, needsEntity), [data.fields, values, entity, needsEntity]);
+  const open = useMemo(() => openFields(data.fields, eff, entity, needsEntity), [data.fields, eff, entity, needsEntity]);
   useEffect(() => onOpenChange?.(open.length), [open.length, onOpenChange]);
 
   const chips = useMemo(() => {
     const out: Record<string, ChipInfo> = {};
     for (const f of data.fields) {
-      const v = (values[f.token] ?? f.default_value ?? "").trim();
-      out[f.token] = { label: f.label, value: v || null, required: f.required };
+      const v = (eff[f.token] ?? f.default_value ?? "").trim();
+      out[f.token] = { label: f.label, value: (f.type === "currency" ? groupCurrencyInput(v) : v) || null, required: f.required };
     }
     out.issuing_entity = { label: "Issuing entity", value: entity?.legal_name ?? null, required: true };
     return out;
-  }, [data.fields, values, entity]);
+  }, [data.fields, eff, entity]);
 
   const save = useCallback(
     async (keepalive = false) => {
@@ -252,6 +279,7 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
         return;
       }
       setSaveError(null);
+      if (Object.keys(s.overrides).length) setValues((cur) => ({ ...cur, ...s.overrides }));
       setSavedAt(new Date().toISOString());
       onSaved?.();
     },
@@ -262,10 +290,10 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
 
   // Autosave 3 seconds after the last change; also on hide, unload and unmount.
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !needsSync) return;
     const t = setTimeout(() => void save(), AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [dirty, values, edits, entityId, save]);
+  }, [dirty, needsSync, values, edits, entityId, save]);
   useEffect(() => {
     const flush = () => void save(true);
     const onVis = () => document.visibilityState === "hidden" && flush();
@@ -283,6 +311,13 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
     setValues((cur) => ({ ...cur, [token]: v }));
     touch();
   };
+  // Typing into a linked field unlinks it from the term sheet for this send.
+  const editField = (token: string, v: string) => {
+    if (links?.some((l) => l.token === token && l.linked)) onUnlink?.(token);
+    setValue(token, v);
+  };
+
+
 
   const originals = useMemo(() => {
     const m = new Map<string, ModelParagraph>();
@@ -501,10 +536,10 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
             {chipEdit ? (
               <ChipPopover
                 field={data.fields.find((f) => f.token === chipEdit.token)}
-                value={values[chipEdit.token] ?? data.fields.find((f) => f.token === chipEdit.token)?.default_value ?? ""}
+                value={eff[chipEdit.token] ?? data.fields.find((f) => f.token === chipEdit.token)?.default_value ?? ""}
                 top={chipEdit.top}
                 left={chipEdit.left}
-                onChange={(v) => setValue(chipEdit.token, v)}
+                onChange={(v) => editField(chipEdit.token, v)}
                 onClose={() => setChipEdit(null)}
               />
             ) : null}
@@ -523,7 +558,15 @@ export const ContractEditor = forwardRef<EditorHandle, { data: EditorData; onOpe
           {pane === "terms" ? (
             <div style={{ padding: "12px 14px", maxHeight: "62vh", overflowY: "auto" }}>
               {data.fields.map((f) => (
-                <FieldInput key={f.token} field={f} value={values[f.token] ?? f.default_value ?? ""} readOnly={readOnly} onChange={(v) => setValue(f.token, v)} />
+                <FieldInput
+                  key={f.token}
+                  field={f}
+                  value={eff[f.token] ?? f.default_value ?? ""}
+                  readOnly={readOnly}
+                  link={links?.find((l) => l.token === f.token)}
+                  onRelink={() => onRelink?.(f.token)}
+                  onChange={(v) => editField(f.token, v)}
+                />
               ))}
             </div>
           ) : (
@@ -557,7 +600,58 @@ const menuItem = { display: "block", width: "100%", textAlign: "left", padding: 
 const toolBtn = { padding: "3px 8px", border: "0.5px solid #d5deea", borderRadius: 5, background: "#fff", cursor: "pointer", fontSize: 12, color: "#3a4a63" } as const;
 const labelStyle = { display: "block", fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "#8a93a6", marginBottom: 5 } as const;
 
-function FieldInput({ field, value, readOnly, onChange }: { field: TemplateField; value: string; readOnly: boolean; onChange: (v: string) => void }) {
+/** Currency input that shows thousands separators while typing and stores plain digits. */
+function CurrencyInput({ value, onChange, style, disabled, autoFocus, onKeyDown }: { value: string; onChange: (v: string) => void; style: CSSProperties; disabled?: boolean; autoFocus?: boolean; onKeyDown?: (e: KeyboardEvent<HTMLInputElement>) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  const shown = groupCurrencyInput(value);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || caret.current === null || document.activeElement !== el) return;
+    // Put the caret back after the same number of digits it followed before formatting.
+    let digits = caret.current;
+    let pos = 0;
+    while (pos < shown.length && digits > 0) {
+      if (/[\d.]/.test(shown[pos])) digits--;
+      pos++;
+    }
+    el.setSelectionRange(pos, pos);
+    caret.current = null;
+  }, [shown]);
+  return (
+    <input
+      ref={ref}
+      type="text"
+      inputMode="decimal"
+      value={shown}
+      disabled={disabled}
+      autoFocus={autoFocus}
+      onKeyDown={onKeyDown}
+      onChange={(e) => {
+        const at = e.target.selectionStart ?? e.target.value.length;
+        caret.current = e.target.value.slice(0, at).replace(/[^\d.]/g, "").length;
+        onChange(/^[\d,.$\s]*$/.test(e.target.value) ? plainCurrency(e.target.value) : e.target.value);
+      }}
+      style={style}
+    />
+  );
+}
+
+function FieldInput({
+  field,
+  value,
+  readOnly,
+  link,
+  onRelink,
+  onChange,
+}: {
+  field: TemplateField;
+  value: string;
+  readOnly: boolean;
+  link?: FieldLink;
+  onRelink?: () => void;
+  onChange: (v: string) => void;
+}) {
   const open = field.required && !value.trim();
   const common = { width: "100%", boxSizing: "border-box" as const, border: `1px solid ${open ? "#e0a800" : "#d5deea"}`, background: open ? "#fff4d6" : "#fff", borderRadius: 7, padding: "7px 9px", fontSize: 12.5, color: NAVY, fontFamily: "inherit" };
   return (
@@ -565,13 +659,25 @@ function FieldInput({ field, value, readOnly, onChange }: { field: TemplateField
       <span style={{ fontSize: 11.5, fontWeight: 600, color: "#3a4a63" }}>
         {field.label}
         {field.required ? <span style={{ color: open ? "#8a6500" : "#8a93a6" }}> *</span> : null}
+        {link?.linked ? (
+          <span title={`Follows the ${link.source} in this send. Type a different number to unlink.`} style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, background: "#e8f0fe", color: BLUE, padding: "1px 7px", borderRadius: 9 }}>
+            from {link.source}
+          </span>
+        ) : null}
+        {link && !link.linked && !readOnly ? (
+          <button type="button" onClick={(e) => { e.preventDefault(); onRelink?.(); }} style={{ marginLeft: 6, border: "none", background: "none", padding: 0, color: BLUE, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
+            Use {link.source} value
+          </button>
+        ) : null}
       </span>
       <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
         {field.type === "currency" ? <span style={{ fontSize: 12, color: MUTED }}>$</span> : null}
         {field.type === "multiline" ? (
           <textarea rows={3} value={value} disabled={readOnly} onChange={(e) => onChange(e.target.value)} style={common} />
+        ) : field.type === "currency" ? (
+          <CurrencyInput value={value} disabled={readOnly} onChange={onChange} style={common} />
         ) : (
-          <input type={field.type === "date" ? "date" : "text"} value={value} disabled={readOnly} onChange={(e) => onChange(e.target.value)} inputMode={field.type === "currency" || field.type === "percent" ? "decimal" : undefined} style={common} />
+          <input type={field.type === "date" ? "date" : "text"} value={value} disabled={readOnly} onChange={(e) => onChange(e.target.value)} inputMode={field.type === "percent" ? "decimal" : undefined} style={common} />
         )}
         {field.type === "percent" ? <span style={{ fontSize: 12, color: MUTED }}>%</span> : null}
       </span>
@@ -591,6 +697,17 @@ function ChipPopover({ field, value, top, left, onChange, onClose }: { field: Te
       <div style={{ fontSize: 11.5, fontWeight: 700, color: NAVY, marginBottom: 6 }}>{field.label}</div>
       {field.type === "multiline" ? (
         <textarea autoFocus rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} style={{ width: "100%", boxSizing: "border-box", border: "0.5px solid #cbd5e1", borderRadius: 6, padding: 7, fontSize: 12.5 }} />
+      ) : field.type === "currency" ? (
+        <CurrencyInput
+          autoFocus
+          value={draft}
+          onChange={setDraft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") onClose();
+          }}
+          style={{ width: "100%", boxSizing: "border-box", border: "0.5px solid #cbd5e1", borderRadius: 6, padding: 7, fontSize: 12.5 }}
+        />
       ) : (
         <input
           autoFocus

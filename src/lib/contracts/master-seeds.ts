@@ -67,7 +67,7 @@ const DDSA_FIELDS: SeedField[] = [
   },
   {
     "token": "equity_valuation",
-    "label": "Equity valuation (pre money)",
+    "label": "Valuation cap",
     "type": "currency",
     "required": true,
     "default_value": "10,000,000",
@@ -540,7 +540,7 @@ export const MASTER_SEEDS: MasterSeed[] = [
       },
       {
         "token": "equity_valuation",
-        "label": "Equity valuation (pre money)",
+        "label": "Valuation cap",
         "type": "currency",
         "required": true,
         "default_value": "10,000,000",
@@ -705,7 +705,7 @@ export const MASTER_SEEDS: MasterSeed[] = [
       },
       {
         "token": "equity_valuation",
-        "label": "Equity valuation (pre money)",
+        "label": "Valuation cap",
         "type": "currency",
         "required": true,
         "default_value": "10,000,000",
