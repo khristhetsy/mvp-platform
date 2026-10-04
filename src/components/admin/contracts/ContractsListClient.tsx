@@ -6,7 +6,7 @@ import { OdooSearchBar, EMPTY_SEARCH, type SearchState } from "@/components/admi
 import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
-import { STATUS_LABEL, type ContractStatus } from "@/lib/contracts/types";
+import { CONTRACT_TYPES, CONTRACT_TYPE_LABEL, STATUS_LABEL, type ContractStatus, type ContractType } from "@/lib/contracts/types";
 import { ContactPicker } from "./ContactPicker";
 import { UploadContractModal } from "./UploadContractModal";
 import { api, fmtDate, fmtDateTime, MUTED, NAVY, Notice, StatusPill } from "./ui";
@@ -18,7 +18,11 @@ type Row = {
   sent_at: string | null;
   updated_at: string;
   archived_at: string | null;
-  contact_id: string;
+  contact_id: string | null;
+  created_at: string;
+  source?: "template" | "upload";
+  contract_type?: ContractType | null;
+  page_count?: number | null;
   mine: boolean;
   template: { name: string; kind: string } | null;
   entity: { short_name: string; legal_name: string } | null;
@@ -49,6 +53,7 @@ const SEARCH_FIELDS: SearchField<Row>[] = [
   { label: "email", get: (r) => r.contact?.email },
   { label: "entity", get: (r) => r.entity?.legal_name },
   { label: "status", get: (r) => STATUS_LABEL[r.status] },
+  { label: "type", get: (r) => (r.contract_type ? CONTRACT_TYPE_LABEL[r.contract_type] : null) },
 ];
 
 export function ContractsListClient() {
@@ -58,6 +63,8 @@ export function ContractsListClient() {
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [picking, setPicking] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [view, setView] = useState<"all" | "uploaded">("all");
+  const [type, setType] = useState<ContractType | "">("");
   const withArchived = search.quick.includes("archived");
 
   useEffect(() => {
@@ -73,8 +80,9 @@ export function ContractsListClient() {
     };
   }, [withArchived]);
 
+  const uploads = useMemo(() => rows.filter((r) => r.source === "upload"), [rows]);
   const filtered = useMemo(() => {
-    let list = rows;
+    let list = view === "uploaded" ? uploads.filter((r) => !type || r.contract_type === type) : rows;
     const q = new Set(search.quick);
     if (q.has("awaiting")) list = list.filter((r) => r.status === "sent" || r.status === "viewed");
     if (q.has("countersign")) list = list.filter((r) => r.status === "awaiting_countersign");
@@ -87,7 +95,7 @@ export function ContractsListClient() {
     const dt = search.fields.document ?? [];
     if (dt.length) list = list.filter((r) => dt.includes(r.template?.name ?? ""));
     return list;
-  }, [rows, search]);
+  }, [rows, uploads, view, type, search]);
   const result = useMemo(() => matchRows(filtered, SEARCH_FIELDS, search.q), [filtered, search.q]);
 
   const groups = useMemo(() => {
@@ -116,6 +124,7 @@ export function ContractsListClient() {
     },
   ];
 
+  const upGrid = "minmax(240px,2.4fr) minmax(150px,1.2fr) 150px 70px 80px";
   const grid = "minmax(220px,2fr) minmax(170px,1.5fr) minmax(130px,1.1fr) 60px 70px minmax(110px,1fr) 160px";
   const q = search.q;
 
@@ -125,6 +134,14 @@ export function ContractsListClient() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <NewButton onClick={() => setPicking(true)} />
           <button type="button" onClick={() => setUploading(true)} style={{ fontSize: 12.5, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Upload</button>
+          <div style={{ display: "flex", gap: 2 }}>
+            {(["all", "uploaded"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setView(v)} style={{ fontSize: 12.5, fontWeight: 600, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer", background: view === v ? "#E6F1FB" : "transparent", color: view === v ? "#185FA5" : MUTED }}>
+                {v === "all" ? "All" : "Uploaded"}
+                {v === "uploaded" ? <span style={{ marginLeft: 5, fontSize: 10, background: "#185FA5", color: "#fff", borderRadius: 9, padding: "0 6px" }}>{uploads.length}</span> : null}
+              </button>
+            ))}
+          </div>
           <ToolbarGear items={gear} heading="Contracts" />
           <SearchCount result={result} noun="documents" />
           <OdooSearchBar
@@ -145,6 +162,49 @@ export function ContractsListClient() {
 
         {error ? <div style={{ padding: 14 }}><Notice tone="error">{error}</Notice></div> : null}
 
+        {view === "uploaded" ? (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 14px", borderBottom: "0.5px solid #eef1f5" }}>
+            {[{ key: "" as const, label: "All types" }, ...CONTRACT_TYPES].map((t) => {
+              const n = t.key ? uploads.filter((r) => r.contract_type === t.key).length : uploads.length;
+              const on = type === t.key;
+              return (
+                <button key={t.key || "all"} type="button" onClick={() => setType(t.key)} style={{ fontSize: 12.5, fontWeight: 600, borderRadius: 999, padding: "5px 12px", cursor: "pointer", border: `0.5px solid ${on ? "#185FA5" : "#e2e6ed"}`, background: on ? "#185FA5" : "#fff", color: on ? "#fff" : MUTED }}>
+                  {t.label} <span style={{ opacity: 0.7, marginLeft: 3 }}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {view === "uploaded" ? (
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ minWidth: 640 }}>
+              <div style={{ display: "grid", gridTemplateColumns: upGrid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                <div>Contract</div><div>Type</div><div>Uploaded</div><div>Pages</div><div />
+              </div>
+              {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: MUTED }}>Loading…</p> : null}
+              {!loading && result.rows.length === 0 ? (
+                q ? (
+                  <div style={{ padding: 14 }}><NoSearchMatches query={q} fields={SEARCH_FIELDS.map((f) => f.label)} onClear={() => setSearch({ ...search, q: "" })} /></div>
+                ) : (
+                  <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: MUTED, margin: 0 }}>{uploads.length ? "No uploaded contracts of this type." : "No uploaded contracts yet. Use Upload to add one."}</p>
+                )
+              ) : null}
+              {result.rows.map((r) => (
+                <Link key={r.id} href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: upGrid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
+                  <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <Highlight text={r.template?.name} query={q} />
+                    <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
+                  </div>
+                  <div><Highlight text={r.contract_type ? CONTRACT_TYPE_LABEL[r.contract_type] : "—"} query={q} /></div>
+                  <div style={{ color: MUTED }}>{fmtDateTime(r.created_at)}</div>
+                  <div style={{ color: MUTED }}>{r.page_count ?? "—"}</div>
+                  <div style={{ color: "#1A6CE4", fontWeight: 600, textAlign: "right" }}>Select ›</div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
         <div style={{ overflowX: "auto" }}>
           <div style={{ minWidth: 940 }}>
             <div style={{ display: "grid", gridTemplateColumns: grid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
@@ -172,7 +232,7 @@ export function ContractsListClient() {
                       {r.template?.kind === "upload" ? <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span> : null}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.contact?.name} query={q} /></div>
+                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: r.contact ? undefined : MUTED }}>{r.contact ? <Highlight text={r.contact.name} query={q} /> : "Not chosen"}</div>
                       <div style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.contact?.company ?? r.contact?.email} query={q} /></div>
                     </div>
                     <div style={{ fontSize: 12, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.entity?.short_name} query={q} /></div>
@@ -188,6 +248,7 @@ export function ContractsListClient() {
             ))}
           </div>
         </div>
+        )}
       </div>
       {picking ? <ContactPicker onClose={() => setPicking(false)} /> : null}
       {uploading ? <UploadContractModal onClose={() => setUploading(false)} /> : null}

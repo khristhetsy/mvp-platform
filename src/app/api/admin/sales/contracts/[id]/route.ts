@@ -55,6 +55,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       has_certificate: Boolean(b.doc.certificate_path),
       created_by: b.doc.created_by,
       source: b.doc.source,
+      contract_type: b.doc.contract_type,
+      has_recipient: Boolean(b.doc.contact_id),
       signature_request_id: b.doc.signature_request_id,
       countersign_count: (b.doc.countersign_fields ?? []).filter((f) => f.kind === "signature").length,
     },

@@ -8,6 +8,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Db } from "./access";
 import { renderDocx } from "./docx-engine";
 import { openFields, resolveValues } from "./fields";
+import { saveToDrive } from "./drive";
 import { docxToPdf } from "./render-pdf";
 import { placeSignatureFields, readPdfLines } from "./signature-anchors";
 import {
@@ -69,15 +70,18 @@ function uploadTemplate(doc: ContractDocument): ContractTemplate {
 
 export const isUpload = (b: Bundle) => b.doc.source === "upload";
 
+/** Stand-in contact for an uploaded draft whose recipient is chosen later. */
+export const NO_RECIPIENT: ContactLite = { id: "", name: "Recipient not chosen", email: null, company: null, tags: [], address: null };
+
 export async function loadBundle(db: Db, docId: string): Promise<Bundle | null> {
   const doc = await getDocument(db, docId);
   if (!doc) return null;
   if (doc.source === "upload") {
-    const [entity, contact] = await Promise.all([getEntity(db, doc.entity_id), getContactLite(db, doc.contact_id)]);
+    const [entity, contact] = await Promise.all([getEntity(db, doc.entity_id), doc.contact_id ? getContactLite(db, doc.contact_id) : Promise.resolve(NO_RECIPIENT)]);
     if (!contact) return null;
     return { doc, template: uploadTemplate(doc), fields: [], entity, contact };
   }
-  if (!doc.template_id) return null;
+  if (!doc.template_id || !doc.contact_id) return null;
   const [template, fields, entity, contact] = await Promise.all([
     getTemplate(db, doc.template_id),
     getTemplateFields(db, doc.template_id),
@@ -465,7 +469,7 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
 export async function countersign(
   db: Db,
   docId: string,
-  input: { signature: string; name: string; title: string; signer: { id: string; email: string | null; actorLabel: string; displayName: string } },
+  input: { signature: string; name: string; title: string; signer: { id: string; email: string | null; actorLabel: string; displayName: string }; saveToDrive?: boolean },
 ) {
   const b = await loadBundle(db, docId);
   if (!b) throw new SendBlockedError("Document not found.");
@@ -536,7 +540,27 @@ export async function countersign(
       ],
     }).then((r) => addEvent(db, b.doc.id, r.delivered ? "executed_copy_sent" : "executed_copy_not_sent", "system")).catch(() => addEvent(db, b.doc.id, "executed_copy_not_sent", "system"));
   }
-  return { hash };
+
+  // Optional: the executed copy and certificate also go to the countersigner's Google Drive.
+  let drive: { saved: true; folderUrl: string; path: string } | { saved: false; error: string } | null = null;
+  if (input.saveToDrive) {
+    const day = new Date().toISOString().slice(0, 10);
+    try {
+      const saved = await saveToDrive(input.signer.id, {
+        company: b.contact.company ?? b.contact.name,
+        files: [
+          { name: `${b.template.name} (executed) ${day}.pdf`, bytes: executed },
+          { name: `${b.template.name} (certificate) ${day}.pdf`, bytes: certificate },
+        ],
+      });
+      drive = { saved: true, folderUrl: saved.folderUrl, path: saved.path };
+      await addEvent(db, b.doc.id, "saved_to_drive", input.signer.actorLabel, { path: saved.path, files: saved.files.length, url: saved.folderUrl });
+    } catch (err) {
+      drive = { saved: false, error: err instanceof Error ? err.message : "Google Drive save failed." };
+      await addEvent(db, b.doc.id, "drive_save_failed", input.signer.actorLabel, { error: drive.error });
+    }
+  }
+  return { hash, drive };
 }
 
 export function stopsFollowUp(status: ContractDocument["status"]): boolean {

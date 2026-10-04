@@ -515,7 +515,18 @@ function EmailStep({
             <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 12 }}>
               <button type="button" onClick={() => setPreview(false)} style={{ ...btn(!preview), padding: "4px 10px", fontSize: 11.5 }}>Edit</button>
               <button type="button" onClick={() => setPreview(true)} style={{ ...btn(preview), padding: "4px 10px", fontSize: 11.5 }}>Preview</button>
-              <span style={{ marginLeft: "auto", color: MUTED, fontSize: 11 }}>To: {contact.email ?? "no email on file"}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, border: `1.5px solid ${BLUE}`, background: "#f6f9ff", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: MUTED }}>To</span>
+              <span style={{ width: 32, height: 32, borderRadius: "50%", background: "#185FA5", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                {contact.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("")}
+              </span>
+              <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: 1.5 }}>
+                <b style={{ color: NAVY }}>{contact.name}</b>
+                <span style={{ display: "block", color: contact.email ? MUTED : "#A32D2D", overflowWrap: "anywhere" }}>
+                  {[contact.email ?? "No email on file", contact.company].filter(Boolean).join(" · ")}
+                </span>
+              </span>
             </div>
             {preview ? (
               <div style={{ border: "0.5px solid #d5deea", borderRadius: 7, padding: "12px 14px", fontSize: 13, lineHeight: 1.7, color: "#1f2937", whiteSpace: "pre-wrap" }}>

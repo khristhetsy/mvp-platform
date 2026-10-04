@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { buildGoogleAuthorizationUrl, isGoogleOAuthConfigured } from "@/lib/integrations/google-oauth";
+import { buildGoogleAuthorizationUrl, DRIVE_FILE_SCOPE, isGoogleOAuthConfigured } from "@/lib/integrations/google-oauth";
 import {
   COOKIE_RETURN,
   COOKIE_STATE,
@@ -33,7 +33,9 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const returnTo = requestUrl.searchParams.get("returnTo") ?? defaultReturnPath(profile.role);
 
-  if (!ALLOWED_RETURN_PATHS.has(returnTo)) {
+  // Sales Hub contracts (Drive for executed copies) return to the contract page.
+  const contractsReturn = (profile.role === "admin" || profile.role === "analyst") && /^\/admin\/sales\/contracts(\/[0-9a-f-]{36})?$/i.test(returnTo);
+  if (!ALLOWED_RETURN_PATHS.has(returnTo) && !contractsReturn) {
     return NextResponse.json({ error: "Invalid return path." }, { status: 400 });
   }
 
@@ -43,7 +45,8 @@ export async function GET(request: Request) {
   cookieStore.set(COOKIE_STATE, state, googleOAuthCookieOptions());
   cookieStore.set(COOKIE_RETURN, returnTo, googleOAuthCookieOptions());
 
-  const redirectUrl = buildGoogleAuthorizationUrl(state);
+  const wantsDrive = requestUrl.searchParams.get("drive") === "1" && (profile.role === "admin" || profile.role === "analyst");
+  const redirectUrl = buildGoogleAuthorizationUrl(state, wantsDrive ? [DRIVE_FILE_SCOPE] : []);
   return NextResponse.redirect(redirectUrl);
 }
 

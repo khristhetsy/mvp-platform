@@ -53,6 +53,16 @@ export async function canSeeContact(actor: ContractsActor, contactId: string): P
   return ids.includes(actor.userId);
 }
 
+/**
+ * A contract document visible to this actor: through its contact, or, for an
+ * uploaded draft with no recipient yet, to its uploader and to staff who see
+ * every contact.
+ */
+export async function canSeeDocument(actor: ContractsActor, doc: { contact_id: string | null; created_by: string }): Promise<boolean> {
+  if (doc.contact_id) return canSeeContact(actor, doc.contact_id);
+  return actor.scope.canSeeAllContacts || actor.isAdmin || doc.created_by === actor.userId;
+}
+
 export function canCancelOrArchive(actor: ContractsActor, createdBy: string): boolean {
   return actor.isAdmin || createdBy === actor.userId;
 }
