@@ -45,6 +45,8 @@ type Props = {
   extraActions?: React.ReactNode;
   /** Layout switch shown in the avatar menu; null hides it. Omitted = the existing admin compact/classic switch. */
   layoutSwitch?: LayoutSwitch | null;
+  /** Classic layout: rendered before the logo (admin side menu layout: the grid link to Home). */
+  leading?: React.ReactNode;
 };
 
 type LayoutSwitch = { label: string; onSelect: () => void };
@@ -345,7 +347,7 @@ function ProfileDropdown({
   );
 }
 
-export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick, compact = false, hubTabs, topMenu, extraActions, layoutSwitch }: Readonly<Props>) {
+export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, accountSwitcher, onMenuClick, compact = false, hubTabs, topMenu, extraActions, layoutSwitch, leading }: Readonly<Props>) {
   const t = useTranslations("sharedCmp");
   const companyLabel = profileSubtitle?.trim() || "Select company";
 
@@ -394,6 +396,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
+        {leading}
         <Link href="/" className="flex shrink-0 items-center self-center">
           <IcapOSLogo height={28} />
         </Link>
@@ -429,6 +432,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
               <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
             </button>
           )}
+          {extraActions}
           <NotificationBellDropdown />
           <ProfileDropdown
             profileName={profileName}

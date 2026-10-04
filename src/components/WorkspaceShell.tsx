@@ -6,7 +6,10 @@ import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
 import { IcapOSAssistant } from "@/components/assistant/IcapOSAssistant";
 import { GlobalSearchModal } from "@/components/GlobalSearchModal";
 import { AdminHubTabsInline } from "@/components/admin/AdminHubTabsInline";
-import { TopMenuBar, TopMenuInboxButton } from "@/components/nav/TopMenuBar";
+import Link from "next/link";
+import { Grip } from "lucide-react";
+import { TopMenuBar, TopMenuInboxButton, WORKSPACE_HOME } from "@/components/nav/TopMenuBar";
+import { AdminHomeGear } from "@/components/nav/AdminHomeGear";
 import { setWorkspaceClassic, useWorkspaceLayout } from "@/lib/ui/workspace-layout";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 
@@ -32,13 +35,16 @@ export function WorkspaceShell({
   //  - topmenu: Odoo-style top menu + app launcher, no desktop sidebar (spec: Top Menu Layout).
   //  - compact: admin's 44px bar with hub tabs and the icon rail.
   //  - classic: the full sidebar.
-  const { layout, topMenuAvailable } = useWorkspaceLayout(workspace);
+  const { layout, topMenuAvailable, adminCompanyLayout: adminHomeActive } = useWorkspaceLayout(workspace);
+  const homeHref = WORKSPACE_HOME[workspace];
   const topMenu = layout === "topmenu";
   const compact = layout === "compact";
 
-  // Avatar menu switch: classic ↔ the workspace's default. Admin without the top menu
-  // keeps its existing compact ↔ classic switch (undefined = the header's own item).
-  const layoutSwitch =
+  // Admin: the layout is a company-wide choice (super admin gear), so there is no per-person
+  // switch, except when the top menu flag is off (then the earlier compact ↔ classic switch).
+  // Founder and investor: classic ↔ top menu while their flag is on.
+  const adminCompanyLayout = workspace === "admin" && (topMenu || (layout === "classic" && adminHomeActive));
+  const layoutSwitch = adminCompanyLayout ? null :
     layout === "classic"
       ? topMenuAvailable
         ? { label: "Switch to top menu layout", onSelect: () => setWorkspaceClassic(workspace, false) }
@@ -82,7 +88,20 @@ export function WorkspaceShell({
           compact={compact || topMenu}
           hubTabs={compact ? <AdminHubTabsInline /> : undefined}
           topMenu={topMenu ? <TopMenuBar workspace={workspace} /> : undefined}
-          extraActions={topMenu ? <TopMenuInboxButton workspace={workspace} /> : undefined}
+          extraActions={
+            topMenu || adminCompanyLayout ? (
+              <>
+                {topMenu ? <TopMenuInboxButton workspace={workspace} /> : null}
+                {workspace === "admin" ? <AdminHomeGear /> : null}
+              </>
+            ) : undefined
+          }
+          leading={adminCompanyLayout && !topMenu && homeHref ? (
+            <Link href={homeHref} aria-label="Home" title="Home"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-950">
+              <Grip className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            </Link>
+          ) : undefined}
           layoutSwitch={layoutSwitch}
         />
         <main className={compact || topMenu

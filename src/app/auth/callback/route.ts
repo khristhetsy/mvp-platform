@@ -62,7 +62,7 @@ export async function GET(request: Request) {
           : isNewProfile && profile.role === "investor"
             ? "/investor/onboarding"
             : profile.role === "admin" || profile.role === "analyst"
-              ? "/admin/home" // the app grid home; the Dashboard stays at /admin
+              ? "/admin/start" // Home grid or Dashboard, as set company-wide
               : dashboardForRole(profile.role));
 
       return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));

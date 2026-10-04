@@ -10,7 +10,10 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ChevronDown, Grip, Lock, Mail } from "lucide-react";
+import {
+  BookOpen, CalendarDays, ChevronDown, Contact, Crown, GraduationCap, Grip, Headset, Landmark, LayoutDashboard,
+  LifeBuoy, Lock, Mail, Megaphone, MessagesSquare, Settings, Share2, ShieldCheck, TrendingUp, Wrench, type LucideIcon,
+} from "lucide-react";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
@@ -23,7 +26,38 @@ import { useGatedNav } from "@/components/nav/useGatedNav";
 const MENU_OVERRIDES = { "/admin/sales": SALES_HUB_TABS, "/admin/ir": IR_HUB_TABS };
 
 /** Launcher tile colors (background, icon). Assigned by position, so the grid reads as a set. */
-const TILE_COLORS: Array<[string, string]> = [
+/** One distinct icon per admin hub on the launcher and Home tiles (the sidebar keeps its own icons). */
+export const TILE_ICONS: Record<string, LucideIcon> = {
+  "/admin": LayoutDashboard,
+  "/admin/sales/contacts": Contact,
+  "/admin/ceo": Crown,
+  "/admin/sales": TrendingUp,
+  "/admin/marketing": Megaphone,
+  "/admin/ir": Landmark,
+  "/admin/social": Share2,
+  "/admin/events": CalendarDays,
+  "/admin/voice": Headset,
+  "/admin/inbox": MessagesSquare,
+  "/admin/actions": Wrench,
+  "/admin/companies": LifeBuoy,
+  "/admin/learning": GraduationCap,
+  "/admin/manual": BookOpen,
+  "/admin/users/manage": ShieldCheck,
+  "/admin/integrations": Settings,
+};
+
+/** A tile's colors, fixed per admin hub so they don't shift when someone can't see every hub. */
+export function tileColor(app: TopMenuApp, index: number): [string, string] {
+  const k = Object.keys(TILE_ICONS).indexOf(app.iconHref);
+  return TILE_COLORS[(k >= 0 ? k : index) % TILE_COLORS.length];
+}
+
+/** The tile icon for an app: its own hub icon when it has one, else the sidebar's icon. */
+export function tileIcon(app: TopMenuApp): LucideIcon {
+  return TILE_ICONS[app.iconHref] ?? getWorkspaceNavIcon(app.iconHref);
+}
+
+export const TILE_COLORS: Array<[string, string]> = [
   ["#E6F1FB", "#0C447C"], ["#E8F0FD", "#1A6CE4"], ["#FAEEDA", "#633806"], ["#EAF3DE", "#27500A"],
   ["#FBEAF0", "#72243E"], ["#EEEDFE", "#3C3489"], ["#FAECE7", "#712B13"], ["#F1EFE8", "#444441"],
 ];
@@ -369,8 +403,8 @@ export function AppGrid({ apps, current, tLabel, onPick }: Readonly<{
   return (
     <div className="mx-auto grid max-w-5xl grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2 px-6 py-10">
       {apps.map((a, i) => {
-        const Icon = getWorkspaceNavIcon(a.iconHref);
-        const [bg, fg] = TILE_COLORS[i % TILE_COLORS.length];
+        const Icon = tileIcon(a);
+        const [bg, fg] = tileColor(a, i);
         return (
           <button key={a.id} type="button" onClick={() => onPick(a)}
             title={a.locked ? "Unlocks at a later stage" : undefined}

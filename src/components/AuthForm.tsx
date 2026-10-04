@@ -12,9 +12,9 @@ import { useFormValidation } from "@/hooks/useFormValidation";
 const signInDestinationByRole: Record<UserRole, string> = {
   founder: "/founder/dashboard",
   investor: "/investor/dashboard",
-  // Admins land on the app grid home; the Dashboard stays at /admin as its first tile.
-  admin: "/admin/home",
-  analyst: "/admin/home",
+  // Admins land on the start page set company-wide (Home grid or Dashboard).
+  admin: "/admin/start",
+  analyst: "/admin/start",
 };
 
 const signUpDestinationByRole: Record<UserRole, string> = {
