@@ -90,6 +90,8 @@ export type MarketingSequence = {
   status: "draft" | "active" | "paused" | "archived";
   department?: string | null;
   approver_id?: string | null;
+  /** "partner" = Partner outreach sequence (own editor and enrollments); absent or "email" = classic. */
+  kind?: "email" | "partner";
   created_by: string | null;
   created_at: string;
   updated_at: string;
