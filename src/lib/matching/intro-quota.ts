@@ -11,15 +11,21 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 import type { PlanType } from "@/lib/subscriptions/plans";
+import { founderCapPeriod } from "@/lib/outreach/investor-cap";
 
 export type IntroQuota = {
-  month: { used: number; cap: number };
+  /**
+   * The plan's "monthly" limit, counted over the founder's current 30 day period
+   * from their signup date (the same cycle as the outreach allowance), not the
+   * calendar month. resetsAt is when the next period starts.
+   */
+  month: { used: number; cap: number; resetsAt: string };
   /** null when the plan has no weekly cap. */
   week: { used: number; cap: number } | null;
   isProfessional: boolean;
 };
 
-/** First instant of the current UTC month. */
+/** First instant of the current UTC month. (Intro limits now use the 30 day signup period; see loadIntroQuota.) */
 export function monthStartUtc(now: Date = new Date()): string {
   const d = new Date(now);
   d.setUTCDate(1);
@@ -64,14 +70,15 @@ export async function loadIntroQuota(
   const isProfessional = input.plan === "founder_professional";
   const monthCap = isProfessional ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
   const weekCap = cfg.weeklyByPlan ? (isProfessional ? cfg.weeklyByPlan.professional : cfg.weeklyByPlan.basic) : null;
+  const period = await founderCapPeriod(admin, input.founderId);
   const [monthUsed, weekUsed] = await Promise.all([
-    countIntroRequestsSince(admin, input.companyId, input.founderId, monthStartUtc()),
+    countIntroRequestsSince(admin, input.companyId, input.founderId, period.start.toISOString()),
     weekCap === null
       ? Promise.resolve(0)
       : countIntroRequestsSince(admin, input.companyId, input.founderId, weekStartUtc()),
   ]);
   return {
-    month: { used: monthUsed, cap: monthCap },
+    month: { used: monthUsed, cap: monthCap, resetsAt: period.end.toISOString() },
     week: weekCap === null ? null : { used: weekUsed, cap: weekCap },
     isProfessional,
   };

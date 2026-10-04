@@ -84,6 +84,134 @@ export async function getCampaignRecipients(campaignId: string): Promise<Outreac
   return (data ?? []) as OutreachRecipient[];
 }
 
+/** The company fields audience ranking reads (select("*") on companies). */
+type OutreachCompany = {
+    company_name: string | null; slug: string | null;
+    funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null;
+    state: string | null; country: string | null; review_status: string | null;
+    is_published: boolean | null; marketplace_visible: boolean | null; published_at: string | null;
+    seeking_investor_types: string | null; seeking_capital_types: string | null;
+    funding_stage: string | null; operating_stage: string | null;
+  };
+
+/**
+ * Ranks investor contacts for a company's automated outreach: the same scoring
+ * the founder's board uses, the admin's match and investor score minimums, with
+ * an email on file. `exclude` drops investors this company already reached or
+ * queued, so a refill never contacts anyone twice.
+ */
+async function rankOutreachAudience(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  companyId: string,
+  c: OutreachCompany,
+  limit: number,
+  exclude: { refs: Set<string>; emails: Set<string> } = { refs: new Set(), emails: new Set() },
+) {
+  // Admin match/qualification thresholds.
+  const config = await getInvestorMatchConfig();
+
+  // Load the full investor-contact network, then score each with the SAME additive
+  // engine the founder board uses, so who gets emailed matches what the founder
+  // sees. Industry is a scoring signal (via the engine), NOT a hard exclude — this
+  // must stay aligned with loadFounderInvestorBoard. See memory:
+  // automated-outreach-board-populated.
+  const scored = await loadInvestorContacts({
+    scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
+    investorsOnly: true,
+    requireIndustryMatch: false,
+    score: false,
+    limit: 3000,
+  });
+  const companyProfile = buildCompanyMatchProfile({ id: companyId, ...c });
+  const matchOf = new Map<string, number>();
+  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, config.engineWeights).matchScore);
+  const candidates = scored.filter(
+    (s) =>
+      (matchOf.get(s.id) ?? 0) >= config.minMatch &&
+      (s.email ?? "").trim() &&
+      !exclude.refs.has(s.id) &&
+      !exclude.emails.has((s.email ?? "").trim().toLowerCase()),
+  );
+
+  // Investor-score qualification: bridge email → platform account → partner score.
+  const emails = [...new Set(candidates.map((s) => s.email!.trim().toLowerCase()))];
+  const profileByEmail = new Map<string, string>();
+  if (emails.length > 0) {
+    const { data: profs } = await db.from("profiles").select("id, email").in("email", emails);
+    for (const p of (profs ?? []) as Array<{ id: string; email: string | null }>) {
+      if (p.email) profileByEmail.set(p.email.trim().toLowerCase(), p.id);
+    }
+  }
+  const profileIds = [...new Set([...profileByEmail.values()])];
+  const scoreByProfile = profileIds.length > 0 ? await loadPartnerScoresBatch(db, profileIds) : new Map();
+
+  const ranked = candidates
+    .filter((s) => {
+      const pid = profileByEmail.get(s.email!.trim().toLowerCase());
+      const ps = pid ? scoreByProfile.get(pid) : undefined;
+      const rated = ps?.status === "rated" && typeof ps.score === "number";
+      // Rated → must clear the score minimum; unrated ("New") → passes unless
+      // the admin requires a rated score.
+      return rated ? (ps!.score as number) >= config.minInvestorScore : !config.requireRated;
+    })
+    .slice(0, limit);
+  return { ranked, matchOf };
+}
+
+/**
+ * Refill for a new 30 day period: when a paid founder's queue is empty and the
+ * plan allowance has room, queue the next best matched investors this company
+ * has never reached or queued, up to `limit`. Returns how many were added.
+ */
+async function refillOutreachAudience(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  campaign: OutreachCampaign,
+  limit: number,
+  planType: string | null,
+  monthlyCap: number | null,
+): Promise<number> {
+  if (limit <= 0) return 0;
+  const { data: comp } = await db.from("companies").select("*").eq("id", campaign.company_id).maybeSingle();
+  if (!comp) return 0;
+
+  // Everyone this company ever queued or reached, across all its campaigns.
+  const { data: camps } = await db.from("investor_outreach_campaigns").select("id").eq("company_id", campaign.company_id);
+  const campIds = ((camps ?? []) as Array<{ id: string }>).map((x) => x.id);
+  const refs = new Set<string>();
+  const emails = new Set<string>();
+  for (let from = 0; campIds.length; from += 1000) {
+    const { data: prior } = await db.from("investor_outreach_recipients").select("investor_ref, email").in("campaign_id", campIds).range(from, from + 999);
+    const rows = (prior ?? []) as Array<{ investor_ref: string; email: string | null }>;
+    for (const r of rows) {
+      refs.add(r.investor_ref);
+      if (r.email?.trim()) emails.add(r.email.trim().toLowerCase());
+    }
+    if (rows.length < 1000) break;
+  }
+
+  const { ranked, matchOf } = await rankOutreachAudience(db, campaign.company_id, comp as OutreachCompany, Math.min(limit, MAX_AUDIENCE), { refs, emails });
+  if (ranked.length === 0) return 0;
+  const rows = ranked.map((s) => ({
+    campaign_id: campaign.id,
+    investor_ref: s.id,
+    investor_name: s.name,
+    email: s.email,
+    match_score: matchOf.get(s.id) ?? 0,
+    status: "queued",
+  }));
+  await db.from("investor_outreach_recipients").upsert(rows, { onConflict: "campaign_id,investor_ref", ignoreDuplicates: true });
+  await notifyOutreachQueued({
+    companyId: campaign.company_id,
+    campaignId: campaign.id,
+    investors: rows.map((r) => ({ investorRef: r.investor_ref, name: r.investor_name, matchScore: r.match_score })),
+    planType,
+    monthlyCap,
+  }).catch(() => {});
+  return rows.length;
+}
+
 /**
  * Auto-drafts a pending-approval campaign for a company from its in-industry
  * matches (structured profile fit >= threshold) that have an email, if one
@@ -109,17 +237,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     .eq("id", companyId)
     .maybeSingle();
   if (!comp) return { created: false };
-  const c = comp as unknown as {
-    company_name: string | null; slug: string | null;
-    funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null;
-    state: string | null; country: string | null; review_status: string | null;
-    is_published: boolean | null; marketplace_visible: boolean | null; published_at: string | null;
-    seeking_investor_types: string | null; seeking_capital_types: string | null;
-    funding_stage: string | null; operating_stage: string | null;
-  };
-
-  // Admin match/qualification thresholds.
-  const config = await getInvestorMatchConfig();
+  const c = comp as unknown as OutreachCompany;
 
   // Per-plan distribution cap: Basic reaches up to 5, Professional up to 50,
   // Managed IR uncapped. Free (0) never enrolls anyone. Capped by MAX_AUDIENCE.
@@ -128,45 +246,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   const audienceCap = planCap === null ? MAX_AUDIENCE : Math.min(planCap, MAX_AUDIENCE);
   if (audienceCap === 0) return { created: false };
 
-  // Load the full investor-contact network, then score each with the SAME additive
-  // engine the founder board uses, so who gets emailed matches what the founder
-  // sees. Industry is a scoring signal (via the engine), NOT a hard exclude — this
-  // must stay aligned with loadFounderInvestorBoard. See memory:
-  // automated-outreach-board-populated.
-  const scored = await loadInvestorContacts({
-    scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
-    investorsOnly: true,
-    requireIndustryMatch: false,
-    score: false,
-    limit: 3000,
-  });
-  const companyProfile = buildCompanyMatchProfile({ id: companyId, ...c });
-  const matchOf = new Map<string, number>();
-  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, config.engineWeights).matchScore);
-  const candidates = scored.filter((s) => (matchOf.get(s.id) ?? 0) >= config.minMatch && (s.email ?? "").trim());
-
-  // Investor-score qualification: bridge email → platform account → partner score.
-  const emails = [...new Set(candidates.map((s) => s.email!.trim().toLowerCase()))];
-  const profileByEmail = new Map<string, string>();
-  if (emails.length > 0) {
-    const { data: profs } = await db.from("profiles").select("id, email").in("email", emails);
-    for (const p of (profs ?? []) as Array<{ id: string; email: string | null }>) {
-      if (p.email) profileByEmail.set(p.email.trim().toLowerCase(), p.id);
-    }
-  }
-  const profileIds = [...new Set([...profileByEmail.values()])];
-  const scoreByProfile = profileIds.length > 0 ? await loadPartnerScoresBatch(db, profileIds) : new Map();
-
-  const ranked = candidates
-    .filter((s) => {
-      const pid = profileByEmail.get(s.email!.trim().toLowerCase());
-      const ps = pid ? scoreByProfile.get(pid) : undefined;
-      const rated = ps?.status === "rated" && typeof ps.score === "number";
-      // Rated → must clear the score minimum; unrated ("New") → passes unless
-      // the admin requires a rated score.
-      return rated ? (ps!.score as number) >= config.minInvestorScore : !config.requireRated;
-    })
-    .slice(0, audienceCap);
+  const { ranked, matchOf } = await rankOutreachAudience(db, companyId, c, audienceCap);
   if (ranked.length === 0) return { created: false };
 
   const { data: campaign } = await db
@@ -339,7 +419,8 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
   const { data: campaigns } = await db
     .from("investor_outreach_campaigns")
     .select("*")
-    .eq("status", "approved")
+    // Completed campaigns are read too: a new 30 day period can refill them.
+    .in("status", ["approved", "completed"])
     .eq("paused", false)
     .or(`last_run_at.is.null,last_run_at.lt.${sixDaysAgo}`);
 
@@ -388,7 +469,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       .from("investor_outreach_campaigns")
       .update({ last_run_at: now, updated_at: now })
       .eq("id", campaign.id)
-      .eq("status", "approved")
+      .in("status", ["approved", "completed"])
       .eq("paused", false)
       .or(`last_run_at.is.null,last_run_at.lt.${sixDaysAgo}`)
       .select("id");
@@ -400,6 +481,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     let batchLimit = campaign.weekly_cap;
     let sentBeforeRun = 0;
     let periodCap: number | null = null;
+    let refillRoom = 0;
     if (eff && founderId) {
       const period = await founderCapPeriod(db, founderId);
       const reached = (await reachedInPeriod(db, campaign.company_id, period.start)).size;
@@ -410,21 +492,37 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         capOverride: eff.capOverride,
       });
       batchLimit = automatedRunLimit(periodCap, reached, campaign.weekly_cap);
+      refillRoom = periodCap === null ? MAX_AUDIENCE : Math.max(0, periodCap - reached);
     }
     // Allowance used up — send nothing this run; it resumes next period.
     if (batchLimit === 0) continue;
 
-    const { data: queued } = await db
-      .from("investor_outreach_recipients")
-      .select("id, investor_ref, investor_name, email, match_score")
-      .eq("campaign_id", campaign.id)
-      .eq("status", "queued")
-      .order("match_score", { ascending: false })
-      .limit(batchLimit);
-
-    const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string; email: string | null; match_score: number | null }>;
+    const loadQueued = async () => {
+      const { data: queued } = await db
+        .from("investor_outreach_recipients")
+        .select("id, investor_ref, investor_name, email, match_score")
+        .eq("campaign_id", campaign.id)
+        .eq("status", "queued")
+        .order("match_score", { ascending: false })
+        .limit(batchLimit);
+      return (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string; email: string | null; match_score: number | null }>;
+    };
+    let batch = await loadQueued();
+    if (batch.length === 0 && eff && refillRoom > 0) {
+      // Queue empty and the plan allowance has room this period: add the next
+      // best matched investors this company hasn't reached.
+      const added = await refillOutreachAudience(db, campaign, refillRoom, eff.planType, periodCap).catch(() => 0);
+      if (added > 0) {
+        if (campaign.status !== "approved") {
+          await db.from("investor_outreach_campaigns").update({ status: "approved", updated_at: new Date().toISOString() }).eq("id", campaign.id);
+        }
+        batch = await loadQueued();
+      }
+    }
     if (batch.length === 0) {
-      await db.from("investor_outreach_campaigns").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", campaign.id);
+      if (campaign.status !== "completed") {
+        await db.from("investor_outreach_campaigns").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", campaign.id);
+      }
       continue;
     }
 

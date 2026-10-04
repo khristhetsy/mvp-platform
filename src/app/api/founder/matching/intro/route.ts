@@ -6,6 +6,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
 import { countIntroRequestsSince } from "@/lib/matching/intro-quota";
+import { founderCapPeriod } from "@/lib/outreach/investor-cap";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
@@ -60,9 +61,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // Per-plan monthly cap on how many investor connection requests this founder
-  // may send. Trial/basic use the basic cap; professional uses the professional
-  // cap. Only genuinely NEW requests count (re-requesting the same investor is a
+  // Per-plan cap on how many investor connection requests this founder may send
+  // per 30 day period from signup (the same cycle as the outreach allowance), plus
+  // the weekly pace. Trial/basic use the basic cap; professional uses the
+  // professional cap. Only genuinely NEW requests count (re-requesting the same investor is a
   // no-op and isn't charged).
   const [cfg, plan] = await Promise.all([getFounderConnectionConfig(), getUserPlan(founderId)]);
 
@@ -82,7 +84,9 @@ export async function POST(request: Request) {
   const isPro = plan === "founder_professional";
   const cap = isPro ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
   const weeklyCap = cfg.weeklyByPlan ? (isPro ? cfg.weeklyByPlan.professional : cfg.weeklyByPlan.basic) : null;
-  const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
+  const period = await founderCapPeriod(admin, founderId);
+  const monthStart = period.start.toISOString();
+  const resetDay = period.end.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   // Weeks start Monday (UTC).
   const weekStart = (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
   // Declined requests are given back, so they don't count toward the limit.
@@ -105,7 +109,10 @@ export async function POST(request: Request) {
       : ` Upgrade to Professional for ${proWeekly !== null ? `${proWeekly} a week, ` : ""}up to ${cfg.monthlyByPlan.professional} a month.`;
     return NextResponse.json(
       {
-        error: `You've used all ${limit} introduction requests for this ${capPeriod}.${upsell}`,
+        error:
+          capPeriod === "week"
+            ? `You've used all ${limit} introduction requests for this week.${upsell}`
+            : `You've used all ${limit} introduction requests for this 30 day period. They reset on ${resetDay}.${upsell}`,
         code: "connection_cap_reached",
         cap: limit,
         period: capPeriod,
