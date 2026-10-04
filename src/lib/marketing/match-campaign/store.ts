@@ -9,6 +9,7 @@ import { checkFounder, canonicalStages, founderCompanyProfile } from "./fields";
 import { loadCampaignInvestors } from "./investors";
 import { investorIdentity, matchFounder, toMasked } from "./matcher";
 import { buildAdjacency, type Adjacency } from "./sector-tier";
+import { cooldownCutoff, cooldownNote, latestByContact, type RecentEmail } from "./cooldown";
 import {
   DEFAULT_MATCH_CONFIG,
   readMatchConfig,
@@ -294,7 +295,54 @@ async function unsubscribedEmails(emails: readonly string[]): Promise<Set<string
   return out;
 }
 
-export type CheckSummary = { selected: number; ready: number; missingData: number; emailIssue: number; suppressed: number; eu: number };
+export type CheckSummary = { selected: number; ready: number; missingData: number; emailIssue: number; suppressed: number; eu: number; recent: number };
+
+/**
+ * Latest real email each founder contact got from another Match campaign since
+ * the cooldown cutoff: Day 0 sends (send_status "sent") and follow up emails
+ * (match_campaign_followups status "sent"). Test mode records never count.
+ * Batched by 200 ids.
+ */
+export async function recentMatchEmails(contactIds: readonly string[], excludeCampaignId: string, days: number, now: Date = new Date()): Promise<Map<string, RecentEmail>> {
+  const db = marketingDb();
+  const cutoff = cooldownCutoff(days, now);
+  const rows: Array<{ contactId: string } & RecentEmail> = [];
+  for (const part of chunk([...new Set(contactIds)], 200)) {
+    const { data, error } = await db
+      .from("match_campaign_founders")
+      .select("id, founder_contact_id, campaign_id, send_status, sent_at")
+      .in("founder_contact_id", part)
+      .neq("campaign_id", excludeCampaignId);
+    if (error) throw new Error(error.message);
+    const others = (data ?? []) as Array<{ id: string; founder_contact_id: string; campaign_id: string; send_status: string; sent_at: string | null }>;
+    for (const o of others) {
+      if (o.send_status === "sent" && o.sent_at && o.sent_at >= cutoff) rows.push({ contactId: o.founder_contact_id, at: o.sent_at, campaignId: o.campaign_id, campaign: null });
+    }
+    const byRow = new Map(others.map((o) => [o.id, o]));
+    for (const ids of chunk(others.map((o) => o.id), 200)) {
+      const { data: fu, error: fuErr } = await db
+        .from("match_campaign_followups")
+        .select("campaign_founder_id, created_at")
+        .in("campaign_founder_id", ids)
+        .eq("channel", "email")
+        .eq("status", "sent")
+        .gte("created_at", cutoff);
+      if (fuErr) throw new Error(fuErr.message);
+      for (const f of (fu ?? []) as Array<{ campaign_founder_id: string; created_at: string }>) {
+        const o = byRow.get(f.campaign_founder_id);
+        if (o) rows.push({ contactId: o.founder_contact_id, at: f.created_at, campaignId: o.campaign_id, campaign: null });
+      }
+    }
+  }
+  const latest = latestByContact(rows);
+  const campaignIds = [...new Set([...latest.values()].map((r) => r.campaignId))];
+  if (campaignIds.length) {
+    const { data } = await db.from("marketing_campaigns").select("id, name").in("id", campaignIds);
+    const names = new Map(((data ?? []) as Array<{ id: string; name: string | null }>).map((c) => [c.id, c.name]));
+    for (const r of latest.values()) r.campaign = names.get(r.campaignId) ?? null;
+  }
+  return latest;
+}
 
 /**
  * Puts the selected founders on the campaign and runs the data check. Founders
@@ -309,6 +357,7 @@ export async function setCampaignFounders(campaignId: string, founderIds: readon
   const unique = [...new Set(founderIds)];
   const rows = await loadFounderFields(unique);
   const unsub = await unsubscribedEmails(rows.map((r) => r.email ?? ""));
+  const recent = cfg.cooldown_enabled ? await recentMatchEmails(rows.map((r) => r.id), campaignId, cfg.cooldown_days) : new Map<string, RecentEmail>();
 
   const existing: Array<{ id: string; founder_contact_id: string; send_status: SendStatus }> = [];
   for (let from = 0; ; from += PAGE) {
@@ -330,17 +379,20 @@ export async function setCampaignFounders(campaignId: string, founderIds: readon
     .map((r) => r.id);
   for (const part of chunk(stale, 200)) await db.from("match_campaign_founders").delete().in("id", part);
 
-  const summary: CheckSummary = { selected: rows.length, ready: 0, missingData: 0, emailIssue: 0, suppressed: 0, eu: 0 };
+  const summary: CheckSummary = { selected: rows.length, ready: 0, missingData: 0, emailIssue: 0, suppressed: 0, eu: 0, recent: 0 };
   const now = new Date().toISOString();
   const upserts = rows
     .filter((r) => !done.has(r.id))
     .map((r) => {
-      const reason = checkFounder(r, {
+      const dataReason = checkFounder(r, {
         verifiedOnly: cfg.verified_only,
         excludeEu: cfg.exclude_eu,
         includeInferred: cfg.include_inferred,
         unsubscribed: Boolean(r.email && unsub.has(r.email.trim().toLowerCase())),
       });
+      // Data problems show first; the cooldown applies only to founders who are otherwise ready.
+      const hit = dataReason ? undefined : recent.get(r.id);
+      const reason: ExcludedReason | null = dataReason ?? (hit ? "emailed_recently" : null);
       tally(summary, reason);
       return {
         campaign_id: campaignId,
@@ -351,6 +403,7 @@ export async function setCampaignFounders(campaignId: string, founderIds: readon
         funding_stage: canonicalStages(r.funding_stages).join(", ") || null,
         founder_type: r.founder_type,
         excluded_reason: reason,
+        excluded_note: hit ? cooldownNote(hit) : null,
         updated_at: now,
       };
     });
@@ -366,6 +419,7 @@ function tally(s: CheckSummary, reason: ExcludedReason | null) {
   else if (reason === "missing_industry" || reason === "missing_stage" || reason === "unconfirmed_data") s.missingData++;
   else if (reason === "suppressed") s.suppressed++;
   else if (reason === "eu_excluded") s.eu++;
+  else if (reason === "emailed_recently") s.recent++;
   else s.emailIssue++;
 }
 
@@ -380,6 +434,8 @@ export type CampaignFounderRow = {
   match_count: number;
   top_matches: MaskedMatch[];
   excluded_reason: ExcludedReason | null;
+  /** Why the founder is held back, when a reason needs detail (cooldown: when and by which campaign). */
+  excluded_note: string | null;
   send_status: SendStatus;
   sent_at: string | null;
   opened_page_at: string | null;
@@ -398,7 +454,7 @@ export async function listCampaignFounders(campaignId: string): Promise<Campaign
   for (let from = 0; ; from += 1000) {
     const { data, error } = await db
       .from("match_campaign_founders")
-      .select("id, founder_contact_id, email, company, industry, funding_stage, founder_type, match_count, top_matches, excluded_reason, send_status, sent_at, opened_page_at, first_profile_view_at, clicked_call_at, booked_at, clicked_intro_at, plan_started_at, founder_profile_id, send_error")
+      .select("id, founder_contact_id, email, company, industry, funding_stage, founder_type, match_count, top_matches, excluded_reason, excluded_note, send_status, sent_at, opened_page_at, first_profile_view_at, clicked_call_at, booked_at, clicked_intro_at, plan_started_at, founder_profile_id, send_error")
       .eq("campaign_id", campaignId)
       .order("company", { ascending: true, nullsFirst: false })
       .range(from, from + 999);

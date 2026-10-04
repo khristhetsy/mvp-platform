@@ -14,7 +14,8 @@ import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { renderFounderEmail, renderReviewEmail, renderSubject, DEFAULT_SUBJECT, REVIEW_SUBJECT } from "./email";
 import { investorNetworkCount, networkLabel } from "./investors";
 import { makeFounderToken } from "./token";
-import { getMatchCampaign, type MatchCampaignRow } from "./store";
+import { getMatchCampaign, recentMatchEmails, type MatchCampaignRow } from "./store";
+import { cooldownNote, type RecentEmail } from "./cooldown";
 import { sequenceActive } from "./flag";
 import { assignCohorts, enrollmentPatch, threadMessageId } from "./followups";
 import type { MaskedMatch } from "./types";
@@ -135,12 +136,26 @@ export async function sendMatchCampaign(campaignId: string): Promise<{ sent: num
     .limit(room);
   const batch = (data ?? []) as unknown as FounderSendRow[];
   const ctx = await sendContext();
+  // Cooldown, checked again at send time: another campaign may have emailed a
+  // founder after this campaign's data check ran (campaigns send over days).
+  const recent = cfg.cooldown_enabled
+    ? await recentMatchEmails(batch.map((f) => f.founder_contact_id), campaignId, cfg.cooldown_days)
+    : new Map<string, RecentEmail>();
 
   let sent = 0, skipped = 0, failed = 0;
   for (const f of batch) {
     const now = new Date().toISOString();
     if (!f.email || (await isUnsubscribed(f.email))) {
       await db.from("match_campaign_founders").update({ send_status: "skipped", excluded_reason: "suppressed", updated_at: now }).eq("id", f.id);
+      skipped++;
+      continue;
+    }
+    const hit = recent.get(f.founder_contact_id);
+    if (hit) {
+      await db
+        .from("match_campaign_founders")
+        .update({ send_status: "skipped", excluded_reason: "emailed_recently", excluded_note: cooldownNote(hit), updated_at: now })
+        .eq("id", f.id);
       skipped++;
       continue;
     }

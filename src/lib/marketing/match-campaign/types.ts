@@ -18,6 +18,7 @@ export type ExcludedReason =
   | "email_unverified"
   | "suppressed"
   | "eu_excluded"
+  | "emailed_recently"
   | "no_matches";
 
 export type MatchFlow = "plan" | "review";
@@ -45,6 +46,14 @@ export type MatchConfig = {
   exclude_eu: boolean;
   /** Record sends without dispatching any email (demo and test runs). */
   dry_run: boolean;
+  /**
+   * Hold back founders who got a real email (Day 0 or follow up) from another
+   * Match campaign within cooldown_days. Checked in the data check and again
+   * right before each send. Test mode sends never count.
+   */
+  cooldown_enabled: boolean;
+  /** Days a founder rests between Match campaigns (1 to 365). */
+  cooldown_days: number;
   /** "Schedule a call with us" target. */
   call_url: string;
   /**
@@ -123,6 +132,7 @@ export const EXCLUDED_LABEL: Record<ExcludedReason, string> = {
   email_unverified: "Email unverified",
   suppressed: "Unsubscribed or suppressed",
   eu_excluded: "EU lead, excluded",
+  emailed_recently: "Emailed recently",
   no_matches: "No matches",
 };
 
@@ -145,6 +155,8 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   exclude_eu: true,
   dry_run: true,
   call_url: DEFAULT_CALL_PATH,
+  cooldown_enabled: true,
+  cooldown_days: 30,
   flow: "review",
   visible_count: 3,
   weights: null,
@@ -172,6 +184,12 @@ export function readMatchConfig(raw: unknown): MatchConfig {
     exclude_eu: typeof r.exclude_eu === "boolean" ? r.exclude_eu : DEFAULT_MATCH_CONFIG.exclude_eu,
     dry_run: typeof r.dry_run === "boolean" ? r.dry_run : DEFAULT_MATCH_CONFIG.dry_run,
     call_url: typeof r.call_url === "string" && r.call_url.trim() ? r.call_url.trim() : DEFAULT_MATCH_CONFIG.call_url,
+    // Missing on campaigns from before the cooldown: on, so no founder is emailed twice in a short window.
+    cooldown_enabled: typeof r.cooldown_enabled === "boolean" ? r.cooldown_enabled : DEFAULT_MATCH_CONFIG.cooldown_enabled,
+    cooldown_days:
+      typeof r.cooldown_days === "number" && Number.isFinite(r.cooldown_days)
+        ? Math.min(365, Math.max(1, Math.round(r.cooldown_days)))
+        : DEFAULT_MATCH_CONFIG.cooldown_days,
     // Missing means a campaign from before the review flow: keep its layout.
     flow: r.flow === "review" ? "review" : "plan",
     visible_count: num(r.visible_count, DEFAULT_MATCH_CONFIG.visible_count),
