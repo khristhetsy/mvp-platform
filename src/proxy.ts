@@ -124,6 +124,8 @@ const DEPARTMENT_EXEMPT_PREFIXES = [
   "/admin/dashboard",
   // The app grid home every admin lands on; its tiles are gated per person.
   "/admin/home",
+  // Sign-in landing: forwards to the Home grid or the Dashboard (company-wide choice).
+  "/admin/start",
   "/admin/profile",
   "/admin/ceo",
   "/admin/calendar",

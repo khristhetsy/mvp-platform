@@ -19,7 +19,7 @@ export default async function AdminHomePage() {
       profileSubtitle={profile.role}
       profileEmail={profile.email ?? undefined}
     >
-      <WorkspaceHome workspace="admin" />
+      <WorkspaceHome workspace="admin" profileName={profile.full_name ?? undefined} />
     </AppShell>
   );
 }

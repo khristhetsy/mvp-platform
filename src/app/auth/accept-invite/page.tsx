@@ -66,7 +66,7 @@ export default function AcceptInvitePage() {
     }
 
     // Session is active and cookie-backed — go straight into the workspace.
-    router.push("/admin/home");
+    router.push("/admin/start");
   }
 
   if (!isReady) {

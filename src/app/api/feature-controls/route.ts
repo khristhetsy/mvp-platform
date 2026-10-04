@@ -3,6 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFeatureFlags, disabledHrefsFor, type FeatureAudience } from "@/lib/feature-controls";
 import { getFounderNavV2RolloutPct, getFounderStageMenuHidden } from "@/lib/settings/platform-settings";
+import { getAdminHomeSettings } from "@/lib/settings/admin-home";
 
 export const dynamic = "force-dynamic";
 
@@ -62,5 +63,8 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  return NextResponse.json({ disabledHrefs: merged, founderNavV2, topMenu });
+  // Company-wide admin Home choices (style, layout, start page), set by a super admin.
+  const adminHome = audience === "admin" ? await getAdminHomeSettings() : undefined;
+
+  return NextResponse.json({ disabledHrefs: merged, founderNavV2, topMenu, adminHome });
 }

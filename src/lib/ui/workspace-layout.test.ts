@@ -14,8 +14,16 @@ describe("resolveLayout", () => {
     expect(resolveLayout("investor", false, false)).toBe("classic");
   });
 
-  it("honours a person's classic choice either way", () => {
-    expect(resolveLayout("admin", true, true)).toBe("classic");
-    expect(resolveLayout("founder", false, true)).toBe("classic");
+  it("honours a founder's or investor's classic choice", () => {
+    expect(resolveLayout("founder", true, true)).toBe("classic");
+    expect(resolveLayout("investor", false, true)).toBe("classic");
+  });
+
+  it("uses the company-wide admin layout and ignores a per-person choice", () => {
+    expect(resolveLayout("admin", true, true)).toBe("topmenu");
+    expect(resolveLayout("admin", true, false, "top")).toBe("topmenu");
+    expect(resolveLayout("admin", true, false, "side")).toBe("classic");
+    expect(resolveLayout("admin", false, false, "side")).toBe("compact");
+    expect(resolveLayout("admin", false, true, "top")).toBe("classic");
   });
 });
