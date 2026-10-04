@@ -446,6 +446,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const gearItems: GearItem[] = [
     { key: "odoo", icon: "ti-cloud-download", label: gearBusy ? "Working…" : "Import from Odoo", onClick: () => void pullFromOdoo() },
     { key: "csv", icon: "ti-upload", label: "Import from CSV or Excel", onClick: () => csvInputRef.current?.click() },
+    ...(basePath.startsWith("/admin/sales") ? [{ key: "linkedin", icon: "ti-brand-linkedin", label: "Import LinkedIn connections", href: "/admin/sales/contacts/linkedin-import" } as GearItem] : []),
     ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${matchingTotal.toLocaleString()} matching`, onClick: () => void exportAll() } as GearItem] : []),
     ...(canMerge ? [{ key: "dupes", icon: "ti-copy", label: "Find duplicates", onClick: () => { setDupMode(true); clearSelection(); } } as GearItem] : []),
     { key: "cols", icon: "ti-columns", label: "Columns", sep: true, onClick: () => { setOpenColPicker(true); setFiltersOpen(false); setOpenFilter(null); } },
