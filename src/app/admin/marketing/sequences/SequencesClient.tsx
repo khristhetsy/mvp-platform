@@ -269,6 +269,22 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
   function renderCard(seq: MarketingSequence) {
     const steps = seq.steps ?? [];
     const sc = statusColors[seq.status] ?? statusColors.draft;
+    // Partner outreach sequences have their own editor; the card just links to it.
+    if (seq.kind === "partner") {
+      return (
+        <div style={{ ...card, padding: "16px 18px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ fontWeight: 500, fontSize: 14, color: "var(--foreground)" }}>{seq.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#EEF4FF", color: "#185FA5", fontWeight: 500 }}>Partner outreach</span>
+              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>{seq.status.charAt(0).toUpperCase() + seq.status.slice(1)}</span>
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "8px 0 12px" }}>Day 1 email, Day 4 call or LinkedIn task, Day 10 rate sheet, Day 21 close the loop.</div>
+          <button type="button" onClick={() => router.push(`/admin/marketing/sequences/partner/${seq.id}`)} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer" }}>Open</button>
+        </div>
+      );
+    }
     return (
               <div style={{ ...card, padding: "16px 18px" }}>
                 {/* Header */}
@@ -497,6 +513,17 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
       {showCreate && (
         <div style={{ ...card, padding: "16px 18px", marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>New sequence</div>
+          <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 6 }}>Sequence type</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <div style={{ border: "1.5px solid #1A6CE4", background: "#F3F8FF", borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Email</div>
+              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>Steps from templates, enroll a list. Existing flow, unchanged.</div>
+            </div>
+            <button type="button" onClick={() => router.push("/admin/marketing/sequences/partner/new")} style={{ textAlign: "left", border: "0.5px solid #e2e6ed", background: "#fff", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Partner outreach <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, background: "#FFF4E0", color: "#8A5A00", marginLeft: 4 }}>NEW</span></div>
+              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>Recruit referral and resale partners from Contacts, with tier offers and call tasks.</div>
+            </button>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. LP warm-up drip"
