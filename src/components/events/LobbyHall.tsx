@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
-  Presentation, Users, Tv, Store, Mic, Trophy, Home, Calendar, LifeBuoy,
+  Presentation, Users, Tv, Store, Mic, Trophy, Home, Calendar, LifeBuoy, Star,
   User as UserIcon, CalendarDays, MessageSquare, Bell,
   type LucideIcon,
 } from "lucide-react";
@@ -41,7 +41,7 @@ const DOORS: DoorDef[] = [
 ];
 
 const NAV_ICONS: Record<VenueZone["icon"], LucideIcon> = {
-  home: Home, stage: Presentation, users: Users, tv: Tv, store: Store, calendar: Calendar, trophy: Trophy,
+  home: Home, stage: Presentation, users: Users, tv: Tv, store: Store, calendar: Calendar, trophy: Trophy, star: Star,
 };
 const QL_ICONS: Record<string, LucideIcon> = {
   profile: UserIcon, calendar: CalendarDays, message: MessageSquare, bell: Bell,

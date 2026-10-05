@@ -72,6 +72,8 @@ export const AI_FEATURE_META: Record<string, { label: string; group?: string }> 
   social_posts: { label: "Social post drafts", group: "Marketing and social" },
   email_compose: { label: "Email compose", group: "Marketing and social" },
   event_marketing: { label: "Event marketing", group: "Marketing and social" },
+  spotlight_review: { label: "Spotlight video review", group: "Events" },
+  spotlight_intro: { label: "Spotlight intro drafts", group: "Events" },
   operations_assistant: { label: "Operations assistant", group: "Operations" },
   metrics_explain: { label: "Metric explanations", group: "Operations" },
   ir_analytics: { label: "IR analytics", group: "Admin tools" },

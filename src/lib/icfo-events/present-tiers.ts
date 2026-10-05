@@ -17,16 +17,17 @@ export type PresentTier = {
   features: PresentFeature[];
 };
 
-const SPOTLIGHT: PresentTier = {
+export const SPOTLIGHT: PresentTier = {
   key: "spotlight",
-  label: "Spotlight",
+  label: "Founder Spotlight",
   kind: "founder_showcase",
   requiresVideo: false,
-  blurb: "A curated showcase slot — your company card, a short pitch video, and a place in the event lineup.",
+  blurb: "Your 3 minute pitch video plays in the Founder Spotlight, with a short intro, a place in the lineup and your own booth.",
   features: [
-    { id: "lineup", label: "Company card in the event lineup" },
-    { id: "video60", label: "60-second pitch video" },
-    { id: "logo", label: "Logo on the showcase wall" },
+    { id: "lineup", label: "Place in the Founder Spotlight lineup" },
+    { id: "video3", label: "3 minute pitch video, reviewed by iCFO" },
+    { id: "intro", label: "Short introduction before your pitch" },
+    { id: "booth", label: "Your own virtual booth" },
     { id: "networking", label: "Investor networking opt-in", optional: true },
   ],
 };

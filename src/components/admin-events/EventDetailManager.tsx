@@ -81,6 +81,9 @@ function EventHeaderMenu({
           <Link role="menuitem" href={`/admin/events/${event.id}/leads`} className={item} onClick={() => setOpen(false)}>
             {leadsLabel}
           </Link>
+          <Link role="menuitem" href={`/admin/events/${event.id}/spotlight`} className={item} onClick={() => setOpen(false)}>
+            Spotlight studio
+          </Link>
           <div className="my-1 h-px bg-slate-100" />
           {/* Leaves the admin for the public site, so it is separated and opens away. */}
           <Link role="menuitem" href={`/events/${event.slug}`} target="_blank" className={item} onClick={() => setOpen(false)}>
