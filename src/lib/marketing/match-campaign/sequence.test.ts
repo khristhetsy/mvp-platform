@@ -10,7 +10,7 @@ import {
   variantFor,
   type FollowupState,
 } from "./sequence";
-import { renderFounderEmail, WARM_INTRO_LINE } from "./email";
+import { FOUNDER_DISCLAIMER, renderFounderEmail, WARM_INTRO_LINE } from "./email";
 import { readMatchConfig } from "./types";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -118,6 +118,9 @@ describe("follow up emails", () => {
     expect(none).not.toContain("You looked at");
     expect(renderFollowupEmail("b1", input)).toContain("Request intro to Ben Paulo");
   });
+  it("carries the securities disclaimer on every follow up email", () => {
+    for (const k of ["a1", "a2", "b1", "b3"] as const) expect(renderFollowupEmail(k, input)).toContain(FOUNDER_DISCLAIMER);
+  });
   it("has no email for the call step and links the plan on b3", () => {
     expect(renderFollowupEmail("b2", input)).toBeNull();
     expect(renderFollowupEmail("b3", input)).toContain("https://icapos.com/mc/t?a=intro");
@@ -157,6 +160,7 @@ describe("Day 0 layout and config", () => {
     expect(html).toContain("You can see who. We get you the meeting");
     expect(html).not.toContain("Schedule a call with us");
     expect(html).not.toContain("?a=call");
+    expect(html).toContain(FOUNDER_DISCLAIMER);
   });
   it("sequence settings default off and clamp", () => {
     const c = readMatchConfig({});
