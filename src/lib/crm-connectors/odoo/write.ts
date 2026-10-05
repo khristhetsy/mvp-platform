@@ -10,6 +10,7 @@ const FIELD_MAP: Record<string, string> = {
   name: "name",
   email: "email",
   phone: "phone",
+  phone2: "mobile", // second phone (event registration edits)
   title: "function", // job title
   website: "website",
   city: "city",
