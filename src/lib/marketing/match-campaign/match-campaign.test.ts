@@ -3,7 +3,7 @@ import { canonicalStages, checkFounder, founderCompanyProfile, isEuCountry } fro
 import { campaignInvestorFromRow, checkBandLabel, networkLabel } from "./investors";
 import { investorIdentity, matchFounder, toMasked } from "./matcher";
 import { makeFounderToken, verifyFounderToken } from "./token";
-import { matchedOn, renderFounderEmail, renderReviewEmail, renderSubject, UNNAMED } from "./email";
+import { FOUNDER_DISCLAIMER, matchedOn, renderFounderEmail, renderReviewEmail, renderSubject, UNNAMED } from "./email";
 import { readMatchConfig } from "./types";
 import { buildAdjacency, sectorFit } from "./sector-tier";
 import { cooldownCutoff, cooldownNote, latestByContact } from "./cooldown";
@@ -163,6 +163,7 @@ describe("email", () => {
     expect(html).toContain("Schedule a call with us");
     expect(html).toContain("Choose a plan to unlock");
     expect(html).toContain("Plans from $49/mo");
+    expect(html).toContain(FOUNDER_DISCLAIMER);
   });
   it("says match, never interested", () => {
     expect(html.toLowerCase()).not.toContain("interested");
@@ -277,6 +278,7 @@ describe("review flow", () => {
   });
   it("has one booking button, the plan as secondary, the locked count and a complete footer", () => {
     expect(html).toContain("Pick a time for your match review");
+    expect(html).toContain(FOUNDER_DISCLAIMER);
     expect(html).toContain("Choose a plan to unlock");
     expect(html).toContain("2 more matches and contact details open with a plan.");
     expect(html).toContain("See all 5 matches");

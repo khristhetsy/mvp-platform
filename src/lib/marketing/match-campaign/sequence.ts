@@ -8,6 +8,7 @@
  * page while in Branch A moves the founder to Branch B, timed from the view.
  * Holdout founders (variant "single") get the Day 0 email only.
  */
+import { FOUNDER_DISCLAIMER } from "./email";
 import { stageLabel } from "./fields";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -173,7 +174,7 @@ function wrap(body: string, postal: string): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0A1A40;font-size:14px;line-height:22px;">
   <p style="margin:0 0 12px;">Hi {first_name},</p>
 ${body}
-  <p style="font-size:12px;color:#8A94A8;margin:24px 0 0;line-height:18px;">${esc(postal)}.</p>
+  <p style="font-size:12px;color:#8A94A8;margin:24px 0 0;line-height:18px;">${esc(postal)}.<br />${esc(FOUNDER_DISCLAIMER)}</p>
 </div>`;
 }
 
