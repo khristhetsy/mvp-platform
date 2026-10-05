@@ -3,7 +3,7 @@
 // Marketing Hub › Sequences › Partner outreach editor. Four steps: Partners, Offer,
 // Steps (with the due now queue), Review. Every send is released by a person here.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ApproverPicker } from "../../ApproverPicker";
@@ -212,6 +212,54 @@ function nextStepLabel(p: PartnerEnrollment, now: number): string {
   return d.getTime() <= now ? `${step.label} · due now` : `${step.label} · ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
+// Tier filter: one dropdown with live counts, replacing the old chip row.
+function TierDropdown({ value, total, byTier, onChange }: { value: 0 | PartnerTier; total: number; byTier: Record<number, number>; onChange: (t: 0 | PartnerTier) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  const active = value !== 0;
+  const label = active ? TIER_LABEL[value] : "All tiers";
+  const count = active ? byTier[value] : total;
+  const pill = (on: boolean): React.CSSProperties => ({ fontSize: 11.5, fontVariantNumeric: "tabular-nums", borderRadius: 20, padding: "1px 8px", background: on ? "#DBE6FF" : "#F1F3F6", color: on ? "#185FA5" : "var(--muted-foreground)" });
+  const option = (t: 0 | PartnerTier) => {
+    const on = value === t;
+    const [head, sub] = t === 0 ? ["All tiers", ""] : TIER_LABEL[t].split(" · ");
+    return (
+      <button key={t} type="button" role="option" aria-selected={on} onClick={() => { onChange(t); setOpen(false); }}
+        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 7, border: 0, cursor: "pointer", background: on ? "#EEF4FF" : "transparent", color: "var(--foreground)", fontSize: 13 }}
+        onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = "#F5F7FA"; }} onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = "transparent"; }}>
+        <span style={{ width: 14, color: BLUE, fontWeight: 600 }}>{on ? "✓" : ""}</span>
+        <span style={{ flex: 1 }}>{head}{sub && <span style={{ display: "block", fontSize: 11.5, color: "var(--muted-foreground)" }}>{sub}</span>}</span>
+        <span style={pill(on)}>{t === 0 ? total : byTier[t]}</span>
+      </button>
+    );
+  };
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-label="Tier" onClick={() => setOpen(!open)}
+        style={{ ...input, width: "auto", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", whiteSpace: "nowrap", ...(active || open ? { border: `1px solid ${BLUE}`, background: "#EEF4FF", color: "#185FA5" } : {}) }}>
+        {label}
+        <span style={pill(active || open)}>{count}</span>
+        <i className="ti ti-chevron-down" aria-hidden="true" style={{ fontSize: 13, opacity: 0.7 }} />
+      </button>
+      {open && (
+        <div role="listbox" aria-label="Tier" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20, width: 300, background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 10, boxShadow: "0 12px 30px rgba(17,24,39,.12)", padding: 6 }}>
+          {option(0)}
+          <div style={{ height: 1, background: "#e2e6ed", margin: "4px 6px" }} />
+          {([1, 2, 3, 4] as PartnerTier[]).map((t) => option(t))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PartnersTab({ seq, partners, now, reload, say }: { seq: PartnerSequence; partners: PartnerEnrollment[]; now: number; reload: () => Promise<void>; say: (k: "ok" | "err", t: string) => void }) {
   const [tierFilter, setTierFilter] = useState<0 | PartnerTier>(0);
   const [ratingFilter, setRatingFilter] = useState<"" | PartnerRating>("");
@@ -244,10 +292,7 @@ function PartnersTab({ seq, partners, now, reload, say }: { seq: PartnerSequence
   return (
     <div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
-        <button type="button" style={chip(tierFilter === 0)} onClick={() => setTierFilter(0)}>All {partners.length}</button>
-        {([1, 2, 3, 4] as PartnerTier[]).map((t) => (
-          <button key={t} type="button" style={chip(tierFilter === t)} onClick={() => setTierFilter(t)}>{TIER_LABEL[t]} {byTier[t]}</button>
-        ))}
+        <TierDropdown value={tierFilter} total={partners.length} byTier={byTier} onChange={setTierFilter} />
         <select aria-label="Rating" style={{ ...input, width: "auto", fontSize: 12 }} value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value as "" | PartnerRating)}>
           <option value="">Any rating</option><option value="strong">Strong</option><option value="check">Check</option>
         </select>
@@ -261,6 +306,15 @@ function PartnersTab({ seq, partners, now, reload, say }: { seq: PartnerSequence
       {adding && <AddPartners seq={seq} onAdded={async (text) => { say("ok", text); await reload(); }} say={say} />}
 
       <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 6 }}>
+        {tierFilter !== 0 && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginRight: 8 }}>
+            <span style={{ ...chip(true), cursor: "default", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              Tier {tierFilter}
+              <button type="button" aria-label="Clear tier filter" onClick={() => setTierFilter(0)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}>×</button>
+            </span>
+            Showing {rows.length} of {partners.length} partners ·
+          </span>
+        )}
         {partners.length} partners · {partners.length - noEmail} with email{noEmail ? ` · ${noEmail} without email (their emails get skipped, the call task still runs)` : ""}
       </div>
 
