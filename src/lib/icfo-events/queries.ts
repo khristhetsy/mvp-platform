@@ -185,7 +185,8 @@ export async function getVenueNavFlags(
   const hasTracks = (event.sectors?.length ?? 0) > 0;
   const hasTalkShow = (event.sessions ?? []).some((s) => s.type === "talk_show" && s.status !== "draft");
   const sponsorCount = await countEventSponsors(supabase, event.id).catch(() => 0);
-  return { hasTracks, hasTalkShow, hasSponsors: sponsorCount > 0 };
+  const hasSpotlight = (event.sessions ?? []).some((s) => s.type === "founder_showcase" && s.status !== "draft");
+  return { hasTracks, hasTalkShow, hasSponsors: sponsorCount > 0, hasSpotlight };
 }
 
 export async function getEventById(

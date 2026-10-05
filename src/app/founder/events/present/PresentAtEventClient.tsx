@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Lock, Sparkles, Video } from "lucide-react";
-import type { PresentTier } from "@/lib/icfo-events/present-tiers";
+import { SPOTLIGHT, type PresentTier } from "@/lib/icfo-events/present-tiers";
+import { PITCH_OUTLINE } from "@/lib/icfo-events/spotlight/rules";
+import { SpotlightVideoUpload, type UploadedSpotlightVideo } from "@/components/events/SpotlightVideoUpload";
+import { IcfoDisclaimer } from "@/components/events/IcfoDisclaimer";
 
 export type PresentEventOption = {
   id: string;
@@ -16,6 +19,8 @@ export type PresentEventOption = {
   coverUrl?: string | null;
   coverFocal?: string;
   coverOverlay?: number;
+  /** Sector tracks, for the Spotlight track picker. */
+  sectors?: { slug: string; label: string }[];
 };
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -50,7 +55,15 @@ function EventBanner({ e, tall }: { e: PresentEventOption; tall?: boolean }) {
     </div>
   );
 }
-export type ExistingApplication = { eventId: string; status: string; kind: string; topic: string };
+export type ExistingApplication = {
+  id?: string;
+  eventId: string;
+  status: string;
+  kind: string;
+  topic: string;
+  decisionNote?: string | null;
+  boothSponsorId?: string | null;
+};
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "Date TBA";
@@ -81,6 +94,14 @@ export function PresentAtEventClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // Spotlight: an uploaded 3 minute pitch. Every presenting plan can use it;
+  // Professional can also choose the full presentation.
+  const [mode, setMode] = useState<"spotlight" | "full">("spotlight");
+  const [sectorSlug, setSectorSlug] = useState("");
+  const [companySummary, setCompanySummary] = useState("");
+  const [wantsBooth, setWantsBooth] = useState(true);
+  const [disclaimer, setDisclaimer] = useState(false);
+  const [video, setVideo] = useState<UploadedSpotlightVideo | null>(null);
 
   const includedFeatureIds = useMemo(
     () => (tier ? tier.features.filter((f) => !f.optional).map((f) => f.id) : []),
@@ -131,6 +152,10 @@ export function PresentAtEventClient({
             setVideoUrl("");
             setExtraLink("");
             setOptional(new Set());
+            setVideo(null);
+            setDisclaimer(false);
+            setCompanySummary("");
+            setSectorSlug("");
           }}
           className="mt-6 inline-flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted,#f8fafc)]"
         >
@@ -140,13 +165,16 @@ export function PresentAtEventClient({
     );
   }
 
-  const appliedEventIds = new Set(existing.map((e) => e.eventId));
+  const spotlightMode = mode === "spotlight";
+  const shownTier = spotlightMode ? SPOTLIGHT : tier;
+  const appliedEventIds = new Set(existing.filter((e) => e.kind === shownTier.kind).map((e) => e.eventId));
   const selectedEvent = events.find((e) => e.id === eventId) ?? null;
 
   async function submit() {
     setError(null);
     if (!eventId) return setError("Choose an event.");
     if (!topic.trim()) return setError("Enter a talk title.");
+    if (spotlightMode) return submitSpotlight();
     if (tier!.requiresVideo && !videoUrl.trim()) return setError("A video presentation link is required.");
 
     setSubmitting(true);
@@ -176,16 +204,69 @@ export function PresentAtEventClient({
     }
   }
 
+  async function submitSpotlight() {
+    if (!video) return setError("Upload your pitch video.");
+    if (!disclaimer) return setError("Confirm you have read the disclaimer.");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/founder/events/present", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "spotlight",
+          eventId,
+          topic: topic.trim(),
+          sectorSlug: sectorSlug || undefined,
+          companySummary: companySummary.trim() || undefined,
+          wantsBooth,
+          disclaimerAccepted: true,
+          videoPath: video.path,
+          videoType: video.type,
+          videoBytes: video.bytes,
+          videoSeconds: video.seconds,
+          videoWidth: video.width,
+          videoHeight: video.height,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json?.error ?? "Could not submit your application.");
+        return;
+      }
+      setDone(true);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       {/* Form */}
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-white p-6">
         <div className="mb-5 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-indigo,#2E78F5)]/10 px-3 py-1 text-xs font-medium text-[var(--brand-indigo,#2E78F5)]">
-            {tier.key === "full" ? <Video className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {tier.label} — included with {planLabel}
+            {spotlightMode ? <Sparkles className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
+            {shownTier.label}, included with {planLabel}
           </span>
         </div>
+        {tier.key === "full" ? (
+          <div className="mb-5 inline-flex rounded-lg border border-[var(--border-subtle)] p-0.5 text-sm" role="tablist">
+            {(["spotlight", "full"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => { setMode(m); setEventId(""); setError(null); }}
+                className={`rounded-md px-3 py-1.5 ${mode === m ? "bg-[var(--brand-indigo,#2E78F5)] text-white" : "text-[var(--text-secondary)]"}`}
+              >
+                {m === "spotlight" ? "Founder Spotlight video" : "Full presentation"}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <p className="block text-sm font-medium text-[var(--text-primary)]">Choose an event</p>
         {events.length === 0 ? (
@@ -202,7 +283,7 @@ export function PresentAtEventClient({
                   role="radio"
                   aria-checked={on}
                   disabled={applied}
-                  onClick={() => setEventId(e.id)}
+                  onClick={() => { setEventId(e.id); setVideo(null); setSectorSlug(""); }}
                   className={`overflow-hidden rounded-xl border text-left transition ${
                     on
                       ? "border-[var(--brand-indigo,#2E78F5)] ring-2 ring-[var(--brand-indigo,#2E78F5)]/30"
@@ -255,6 +336,70 @@ export function PresentAtEventClient({
           className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
         />
 
+        {spotlightMode ? (
+          <>
+            {selectedEvent?.sectors?.length ? (
+              <>
+                <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">Sector track</label>
+                <select
+                  value={sectorSlug}
+                  onChange={(e) => setSectorSlug(e.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                >
+                  <option value="">Choose your track</option>
+                  {selectedEvent.sectors.map((s) => (
+                    <option key={s.slug} value={s.slug}>{s.label}</option>
+                  ))}
+                </select>
+              </>
+            ) : null}
+
+            <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">One line company summary</label>
+            <input
+              value={companySummary}
+              onChange={(e) => setCompanySummary(e.target.value)}
+              maxLength={200}
+              placeholder="e.g. AP automation for mid market finance teams"
+              className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
+            />
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Used for the short introduction played before your pitch.</p>
+
+            <div className="mt-5 rounded-xl bg-[var(--surface-muted,#f8fafc)] p-4">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">What to cover in your 3 minutes</p>
+              <ol className="mt-2 grid gap-1 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+                {PITCH_OUTLINE.map((p, i) => (
+                  <li key={p.id}>{i + 1}. {p.label}</li>
+                ))}
+              </ol>
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                Use real numbers only and end with the amount you are raising. Before you record, run your deck through the{" "}
+                <Link href="/founder/pitch-deck-analyzer" className="font-medium text-[var(--brand-indigo,#2E78F5)] hover:underline">Pitch Deck Analyzer</Link>{" "}
+                and rehearse in{" "}
+                <Link href="/founder/pitch-practice" className="font-medium text-[var(--brand-indigo,#2E78F5)] hover:underline">Pitch Practice</Link>.
+              </p>
+            </div>
+
+            <p className="mt-5 block text-sm font-medium text-[var(--text-primary)]">Pitch video <span className="text-red-500">*</span></p>
+            <div className="mt-1.5">
+              {eventId ? (
+                <SpotlightVideoUpload key={eventId} eventId={eventId} onUploaded={setVideo} />
+              ) : (
+                <p className="text-xs text-[var(--text-muted)]">Choose an event first.</p>
+              )}
+            </div>
+
+            <label className="mt-5 flex items-start gap-2.5 text-sm text-[var(--text-primary)]">
+              <input type="checkbox" checked={wantsBooth} onChange={(e) => setWantsBooth(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--brand-indigo,#2E78F5)]" />
+              Create my virtual booth from my profile when approved
+            </label>
+            <label className="mt-3 flex items-start gap-2.5 text-sm text-[var(--text-primary)]">
+              <input type="checkbox" checked={disclaimer} onChange={(e) => setDisclaimer(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--brand-indigo,#2E78F5)]" />
+              I have read the disclaimer below. My pitch makes no offer of securities and no promise of returns.
+            </label>
+            <IcfoDisclaimer className="mt-2" />
+          </>
+        ) : (
+          <>
         <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">
           Video presentation link {tier.requiresVideo ? <span className="text-red-500">*</span> : <span className="text-[var(--text-muted)]">(optional)</span>}
         </label>
@@ -286,6 +431,9 @@ export function PresentAtEventClient({
           className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
         />
 
+          </>
+        )}
+
         {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
         <button
@@ -301,10 +449,10 @@ export function PresentAtEventClient({
       {/* Tier features + existing applications */}
       <div className="space-y-6">
         <div className="rounded-2xl border border-[var(--border-subtle)] bg-white p-5">
-          <h4 className="text-sm font-semibold text-[var(--text-primary)]">{tier.label} includes</h4>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">{tier.blurb}</p>
+          <h4 className="text-sm font-semibold text-[var(--text-primary)]">{shownTier.label} includes</h4>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">{shownTier.blurb}</p>
           <ul className="mt-4 space-y-2.5">
-            {tier.features.map((f) => {
+            {shownTier.features.map((f) => {
               const isOptional = Boolean(f.optional);
               const checked = isOptional ? optional.has(f.id) : true;
               return (
@@ -338,17 +486,81 @@ export function PresentAtEventClient({
             <h4 className="text-sm font-semibold text-[var(--text-primary)]">Your applications</h4>
             <ul className="mt-3 space-y-3">
               {existing.map((a, i) => (
-                <li key={`${a.eventId}-${i}`} className="flex items-start justify-between gap-3">
-                  <span className="text-sm text-[var(--text-primary)]">{a.topic}</span>
-                  <span className="shrink-0 rounded-full bg-[var(--surface-muted,#f1f5f9)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
-                    {statusLabel(a.status)}
-                  </span>
+                <li key={`${a.eventId}-${i}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-sm text-[var(--text-primary)]">
+                      {a.topic}
+                      {a.kind === "founder_showcase" ? <span className="ml-1 text-xs text-[var(--text-muted)]">(Spotlight)</span> : null}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-[var(--surface-muted,#f1f5f9)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+                      {a.kind === "founder_showcase" && a.status === "under_review" && a.decisionNote ? "Change requested" : statusLabel(a.status)}
+                    </span>
+                  </div>
+                  {a.kind === "founder_showcase" && a.status === "under_review" && a.decisionNote && a.id ? (
+                    <SpotlightResubmit applicationId={a.id} eventId={a.eventId} note={a.decisionNote} />
+                  ) : null}
+                  {a.kind === "founder_showcase" && a.status === "approved" && a.boothSponsorId ? (
+                    <Link href={`/sponsor/${a.boothSponsorId}`} className="mt-1 inline-block text-xs font-semibold text-[var(--brand-indigo,#2E78F5)] hover:underline">
+                      Finish your booth →
+                    </Link>
+                  ) : null}
                 </li>
               ))}
             </ul>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** After staff ask for a change: show their note and take a new video. */
+function SpotlightResubmit({ applicationId, eventId, note }: { applicationId: string; eventId: string; note: string }) {
+  const [video, setVideo] = useState<UploadedSpotlightVideo | null>(null);
+  const [state, setState] = useState<"idle" | "saving" | "done">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!video) return;
+    setState("saving");
+    setError(null);
+    const res = await fetch(`/api/founder/events/spotlight/${applicationId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        videoPath: video.path,
+        videoType: video.type,
+        videoBytes: video.bytes,
+        videoSeconds: video.seconds,
+        videoWidth: video.width,
+        videoHeight: video.height,
+      }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      const json = res ? await res.json().catch(() => ({})) : {};
+      setError((json as { error?: string }).error ?? "Could not send the new video.");
+      setState("idle");
+      return;
+    }
+    setState("done");
+  }
+
+  if (state === "done") return <p className="mt-2 text-xs text-emerald-700">New video sent for review.</p>;
+  return (
+    <div className="mt-2 rounded-lg bg-amber-50 p-3">
+      <p className="text-xs text-amber-800">{note}</p>
+      <div className="mt-2">
+        <SpotlightVideoUpload eventId={eventId} onUploaded={setVideo} />
+      </div>
+      <button
+        type="button"
+        onClick={save}
+        disabled={!video || state === "saving"}
+        className="mt-2 rounded-md bg-[var(--brand-indigo,#2E78F5)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+      >
+        {state === "saving" ? "Sending…" : "Send new video"}
+      </button>
+      {error ? <p className="mt-1 text-xs text-red-700">{error}</p> : null}
     </div>
   );
 }

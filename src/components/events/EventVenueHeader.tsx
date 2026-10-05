@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Presentation, Users, Tv, Store, Calendar, Trophy } from "lucide-react";
+import { Home, Presentation, Users, Tv, Store, Calendar, Trophy, Star } from "lucide-react";
 import { venueZones, type VenueZone, type VenueNavFlags } from "@/lib/icfo-events/venue";
 import { useEventPresence } from "@/components/events/EventPresenceProvider";
 
@@ -13,6 +13,7 @@ const ICONS: Record<VenueZone["icon"], typeof Home> = {
   store: Store,
   calendar: Calendar,
   trophy: Trophy,
+  star: Star,
 };
 
 /** Shared destination nav for every event surface. Highlights the current zone

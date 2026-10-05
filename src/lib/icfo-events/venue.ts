@@ -11,7 +11,7 @@ export type VenueZone = {
   key: string;
   label: string;
   /** lucide-react icon name resolved in the client component. */
-  icon: "home" | "stage" | "users" | "tv" | "store" | "calendar" | "trophy";
+  icon: "home" | "stage" | "users" | "tv" | "store" | "calendar" | "trophy" | "star";
   href: string;
 };
 
@@ -24,6 +24,9 @@ export type VenueNavFlags = {
   hasTracks?: boolean;
   hasTalkShow?: boolean;
   hasSponsors?: boolean;
+  /** Founder Spotlight tab. Shown only when explicitly true (it is new, so
+   *  pages that pass no flags keep their current nav). */
+  hasSpotlight?: boolean;
 };
 
 /** Build the destination nav for an event. `tracksHref` handles the
@@ -35,6 +38,7 @@ export function venueZones(slug: string, tracksHref?: string, flags?: VenueNavFl
     { key: "lobby", room: "Lobby", label: "Lobby", icon: "home", href: `${base}/lobby` },
     { key: "sessions", room: "Main Stage", label: "Main Stage", icon: "stage", href: `${base}/stage` },
     { key: "talkshow", room: "Main Stage", label: "Talk Show", icon: "tv", href: `${base}/talk-show` },
+    { key: "spotlight", room: "Main Stage", label: "Founder Spotlight", icon: "star", href: `${base}/spotlight` },
     { key: "ondemand", room: "On-Demand", label: "Tracks", icon: "calendar", href: tracksHref ?? `${base}/tracks` },
     { key: "networking", room: "Networking", label: "Networking", icon: "users", href: `${base}/lounge` },
     { key: "sponsors", room: "Sponsor Hall", label: "Sponsor Hall", icon: "store", href: `${base}/expo` },
@@ -44,6 +48,7 @@ export function venueZones(slug: string, tracksHref?: string, flags?: VenueNavFl
     if (z.key === "ondemand" && flags?.hasTracks === false) return false;
     if (z.key === "talkshow" && flags?.hasTalkShow === false) return false;
     if (z.key === "sponsors" && flags?.hasSponsors === false) return false;
+    if (z.key === "spotlight" && flags?.hasSpotlight !== true) return false;
     return true;
   });
 }

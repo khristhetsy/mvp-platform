@@ -20,6 +20,7 @@ import { getMaterials, listInvitesForProfile, stageLink } from "@/lib/icfo-event
 import { INVITE_ROLES } from "@/lib/icfo-events/invite-rules";
 import { FounderEventInvitations, type FounderInvite } from "@/components/founder/FounderEventInvitations";
 import type { EventRecord } from "@/lib/icfo-events/types";
+import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { PresentAtEventClient, type PresentEventOption, type ExistingApplication } from "./PresentAtEventClient";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,21 @@ export default async function PresentAtEventPage() {
   } catch {
     events = [];
   }
+  // Sector tracks per event, for the Spotlight track picker.
+  const sectorsByEvent = new Map<string, { slug: string; label: string }[]>();
+  if (events.length) {
+    const { data: sectorRows } = await (supabase as unknown as SupabaseClient)
+      .from("event_sectors")
+      .select("event_id, sector_slug, label")
+      .in("event_id", events.map((e) => e.id));
+    for (const r of (sectorRows ?? []) as Record<string, unknown>[]) {
+      const list = sectorsByEvent.get(String(r.event_id)) ?? [];
+      const slug = String(r.sector_slug);
+      list.push({ slug, label: (r.label as string | null) || sectorLabel(slug) });
+      sectorsByEvent.set(String(r.event_id), list);
+    }
+  }
+
   const eventOptions: PresentEventOption[] = events.map((e) => ({
     id: e.id,
     title: e.title,
@@ -51,6 +67,7 @@ export default async function PresentAtEventPage() {
     coverUrl: bannerPublicUrl(supabase, e.coverPath),
     coverFocal: e.coverFocal,
     coverOverlay: e.coverOverlay,
+    sectors: sectorsByEvent.get(e.id) ?? [],
   }));
 
   // The founder's own applications (RLS returns only their rows).
@@ -58,10 +75,13 @@ export default async function PresentAtEventPage() {
   try {
     const { data } = await (supabase as unknown as SupabaseClient)
       .from("speaker_applications")
-      .select("event_id, status, kind, topic, created_at")
+      .select("id, event_id, status, kind, topic, created_at, decision_note, booth_sponsor_id")
       .eq("applicant_id", profile.id)
       .order("created_at", { ascending: false });
     existing = (data ?? []).map((r: Record<string, unknown>) => ({
+      id: String(r.id),
+      decisionNote: (r.decision_note as string | null) ?? null,
+      boothSponsorId: (r.booth_sponsor_id as string | null) ?? null,
       eventId: String(r.event_id),
       status: String(r.status),
       kind: String(r.kind),
