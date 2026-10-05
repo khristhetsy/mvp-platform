@@ -1,13 +1,12 @@
-// Prospect Pipeline — Step 3: verify + append cascade worker and stats.
-// Cheapest-source-first per contact: (1) verify given email, (2) scrape company
-// site, (3) infer from pattern (marked risky, must verify before send),
-// (4) paid provider only if still missing. Bounded per batch to avoid timeouts.
+// Prospect Pipeline — bulk verify worker and stats.
+// The bulk run ONLY verifies emails contacts already have. It never writes a
+// found email or phone: those come from "Find missing info", where a person
+// reviews each suggestion before it is saved (AI drafts, humans confirm).
+// Opted-out contacts are skipped. See docs/contact-finder-spec.md (D4, D5, D6).
 
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { verifyEmail, type EmailStatus } from "./email";
-import { scrapeSiteContacts } from "@/lib/append/site";
-import { inferEmails, domainFromEmail } from "@/lib/append/pattern";
-import { searchConfigured, searchCompanyContacts } from "@/lib/append/websearch";
+import { unsubscribedEmails } from "./suppression";
 
 type Row = {
   id: string;
@@ -17,139 +16,96 @@ type Row = {
   company: string | null;
   company_domain: string | null;
   email_status: string | null;
+  email_source: string | null;
+  suppressed: boolean | null;
 };
 
-const MAX_SITE_SCRAPES = 10; // cap slow network work per batch
+const ROW_COLS = "id, name, email, phone, company, company_domain, email_status, email_source, suppressed";
 
 export interface VerifyBatchResult {
   processed: number;
   verified: number;
+  /** Always 0 since the bulk run stopped appending. Kept for API compatibility. */
   appended: number;
   valid: number;
   risky: number;
   invalid: number;
+  /** Selected contacts with no email: use "Find missing info" for these. */
+  missingEmail: number;
+  /** Selected contacts skipped because they opted out. */
+  suppressed: number;
   remaining: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = any;
 
+// The queue: contacts that HAVE an email which hasn't been checked yet, and
+// haven't opted out. Contacts with no email are not in it (nothing to verify),
+// so "Verify all" drains instead of re-reading the same rows.
+function queue(q: DB): DB {
+  return q.eq("email_status", "unverified").not("email", "is", null).neq("email", "").eq("suppressed", false);
+}
+
 async function remainingUnverified(db: DB): Promise<number> {
-  const { count } = await db
-    .from("crm_contacts")
-    .select("id", { count: "exact", head: true })
-    .or("email_status.eq.unverified,email.is.null");
+  const { count } = await queue(db.from("crm_contacts").select("id", { count: "exact", head: true }));
   return count ?? 0;
 }
 
-/** Run one verify + append batch over the next `limit` unverified contacts. */
+/** Verify the next `limit` contacts in the queue. */
 export async function verifyBatch(limit = 40): Promise<VerifyBatchResult> {
   const db = serviceRoleClientUntyped();
-  const { data } = await db
-    .from("crm_contacts")
-    .select("id, name, email, phone, company, company_domain, email_status")
-    .or("email_status.eq.unverified,email.is.null")
-    .limit(limit);
+  const { data } = await queue(db.from("crm_contacts").select(ROW_COLS)).order("id").limit(limit);
   return processRows(db, (data ?? []) as Row[]);
 }
 
-/** Verify + append a specific set of contacts (a slice the user picked). */
+/** Verify a specific set of contacts (a slice the user picked). */
 export async function verifyByIds(ids: string[]): Promise<VerifyBatchResult> {
   const db = serviceRoleClientUntyped();
-  const capped = ids.slice(0, 100); // bounded to fit the serverless window
-  if (capped.length === 0) return { processed: 0, verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0, remaining: await remainingUnverified(db) };
-  const { data } = await db
-    .from("crm_contacts")
-    .select("id, name, email, phone, company, company_domain, email_status")
-    .in("id", capped);
+  const capped = ids.slice(0, 100);
+  if (capped.length === 0) {
+    return { processed: 0, verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0, missingEmail: 0, suppressed: 0, remaining: await remainingUnverified(db) };
+  }
+  const { data } = await db.from("crm_contacts").select(ROW_COLS).in("id", capped);
   return processRows(db, (data ?? []) as Row[]);
 }
 
 async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
-  const tally = { verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0 };
-  let scrapes = 0;
+  const tally = { verified: 0, valid: 0, risky: 0, invalid: 0, missingEmail: 0, suppressed: 0 };
+  const unsubscribed = await unsubscribedEmails(db, rows.map((r) => r.email));
 
   for (const r of rows) {
-    let status: EmailStatus = "unverified";
-    let emailSource: string | null = null;
-    let confidence = 0;
-    let newEmail: string | null = null;
-    let newPhone: string | null = null;
-    let phoneSource: string | null = null;
-
-    // (1) verify a given email
-    if (r.email) {
-      const v = await verifyEmail(r.email);
-      status = v.status;
-      emailSource = "given";
-      confidence = v.confidence;
-      tally.verified++;
+    if (r.suppressed) { tally.suppressed++; continue; }
+    if (r.email && unsubscribed.has(r.email.trim().toLowerCase())) {
+      // They unsubscribed but the contact flag wasn't set: set it, so they leave
+      // the queue (and every segment that checks suppressed) instead of blocking it.
+      const { error } = await db.from("crm_contacts").update({ suppressed: true }).eq("id", r.id);
+      if (error) throw new Error(`Failed to mark ${r.id} suppressed: ${error.message}`);
+      tally.suppressed++;
+      continue;
     }
+    if (!r.email || !r.email.trim()) { tally.missingEmail++; continue; }
 
-    const needsEmail = !r.email || status === "invalid";
-    const needsPhone = !r.phone;
-    // Use the stored company domain, else derive it from a business email.
-    const domain = r.company_domain || domainFromEmail(r.email);
-
-    if ((needsEmail || needsPhone) && (domain || r.company) && scrapes < MAX_SITE_SCRAPES) {
-      scrapes++;
-      // (2) scrape the company site (from the stored or email-derived domain)
-      if (domain) {
-        const site = await scrapeSiteContacts(domain);
-        if (needsEmail && site.emails[0]) { newEmail = site.emails[0]; emailSource = "site"; }
-        if (needsPhone && site.phones[0]) { newPhone = site.phones[0]; phoneSource = "site"; }
-      }
-
-      // (3) pattern inference → verify (kept risky: must be verified before send)
-      if (needsEmail && !newEmail && r.name && domain) {
-        for (const cand of inferEmails(r.name, domain)) {
-          const v = await verifyEmail(cand);
-          if (v.mx) { newEmail = cand; emailSource = "profile"; break; }
-        }
-      }
-
-      // (4) internet search → company's own contact pages (last resort)
-      if (((needsEmail && !newEmail) || (needsPhone && !newPhone)) && searchConfigured()) {
-        const web = await searchCompanyContacts({ name: r.name, company: r.company, domain });
-        // web results are extracted from the company's own site → store as "site"
-        if (needsEmail && !newEmail && web.email) { newEmail = web.email; emailSource = "site"; }
-        if (needsPhone && !newPhone && web.phone) { newPhone = web.phone; phoneSource = "site"; }
-      }
-
-      if (newEmail) {
-        const v = await verifyEmail(newEmail);
-        // inferred addresses stay risky until a provider confirms them
-        status = emailSource === "profile" ? "risky" : v.status;
-        confidence = emailSource === "profile" ? 40 : v.confidence;
-        tally.appended++;
-      }
-    }
-
+    const v = await verifyEmail(r.email);
+    // A pattern guess stays "risky" until a mailbox check confirms it: a domain
+    // that accepts mail says nothing about whether this guessed address exists.
+    const isGuess = r.email_source === "profile";
+    const status: EmailStatus = isGuess && v.status === "valid" && v.level !== "mailbox" ? "risky" : v.status;
+    tally.verified++;
     if (status === "valid") tally.valid++;
     else if (status === "risky") tally.risky++;
     else if (status === "invalid") tally.invalid++;
 
-    const patch: Record<string, unknown> = {
-      email_status: status,
-      email_source: emailSource,
-      contact_confidence: confidence,
-      enrichment_status: domain || newEmail ? "enriched" : "no_website",
-    };
-    if (newEmail && !r.email) patch.email = newEmail;
-    if (newPhone && newPhone !== r.phone) { patch.phone = newPhone; patch.phone_source = phoneSource; }
-
-    // Surface write failures instead of dropping them silently (a bad column or
-    // constraint would otherwise make verification look like a no-op).
-    const { error: upErr } = await db.from("crm_contacts").update(patch).eq("id", r.id);
+    const { error: upErr } = await db
+      .from("crm_contacts")
+      // Keep where the address came from; only an unlabelled address becomes "given".
+      .update({ email_status: status, email_source: r.email_source ?? "given", contact_confidence: isGuess ? Math.min(v.confidence, 40) : v.confidence })
+      .eq("id", r.id);
+    // Surface write failures instead of dropping them silently.
     if (upErr) throw new Error(`Failed to persist verification for ${r.id}: ${upErr.message}`);
   }
 
-  const { count: remaining } = await db
-    .from("crm_contacts")
-    .select("id", { count: "exact", head: true })
-    .or("email_status.eq.unverified,email.is.null");
-
-  return { processed: rows.length, ...tally, remaining: remaining ?? 0 };
+  return { processed: rows.length, appended: 0, ...tally, remaining: await remainingUnverified(db) };
 }
 
 export interface VerifyStats {

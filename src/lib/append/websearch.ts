@@ -23,7 +23,15 @@ async function withinBudget(): Promise<boolean> {
 }
 
 export interface WebSearchResult { url: string; title: string }
-export interface WebContactResult { email: string | null; phone: string | null; domain: string | null; source: "site" }
+export interface WebContactResult {
+  /** Best single email (prefers the company's own domain). May be a company inbox. */
+  email: string | null;
+  phone: string | null;
+  domain: string | null;
+  source: "site";
+  /** Every email seen on the company's pages, so callers can match a person by name. */
+  emails?: string[];
+}
 
 const MAX_PAGES = 4; // bound page fetches per contact to stay within the serverless window
 const COMMON_PATHS = ["/contact", "/contact-us", "/about", "/team", "/about-us"];
@@ -123,13 +131,15 @@ export async function searchCompanyContacts(input: { name?: string | null; compa
 
   let email: string | null = null;
   let phone: string | null = null;
+  const allEmails = new Set<string>();
   for (const u of urls) {
     if (email && phone) break;
     const c = await fetchPageContacts(u);
+    for (const e of c.emails) allEmails.add(e);
     // Prefer an email on the company's own domain (a real business mailbox).
     if (!email) email = c.emails.find((e) => e.endsWith(`@${domain}`)) ?? c.emails[0] ?? null;
     if (!phone) phone = c.phones[0] ?? null;
   }
 
-  return { email, phone, domain, source: "site" };
+  return { email, phone, domain, source: "site", emails: Array.from(allEmails) };
 }

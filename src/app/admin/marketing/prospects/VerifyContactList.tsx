@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import type { ListRow } from "@/lib/prospects/store";
 
 type Filters = { status: string; side: string; search: string };
-type Suggestion = { field: "email" | "phone"; value: string; source: "site" | "email" | "profile" | "web"; confident: boolean; note: string };
+type Suggestion = { field: "email" | "phone"; value: string; source: "site" | "email" | "profile" | "web"; confident: boolean; note: string; alternatives?: string[] };
 type SuggState = { loading: boolean; done: boolean; suggestions: Suggestion[]; reason?: string };
 
 const EMAIL_COLOR: Record<string, string> = { valid: "#0F6E56", risky: "#92400E", invalid: "#B91C1C", unverified: "#475569" };
@@ -18,6 +18,8 @@ const LEAD_COLOR: Record<string, string> = {
   nurturing: "#92400E", converted: "#047857", disqualified: "#B91C1C",
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+// "valid" only means the domain accepts mail (no mailbox check on serverless).
+const EMAIL_LABEL: Record<string, string> = { valid: "Domain OK", risky: "Risky", invalid: "Invalid", unverified: "Unverified" };
 const GRID = "26px 1.5fr 1fr 1fr 74px 74px 62px";
 const PAGE = 50;
 
@@ -25,6 +27,15 @@ const PAGE = 50;
 function linkedinSearchUrl(name: string | null, company: string | null): string {
   const q = [name, company].filter(Boolean).join(" ").trim();
   return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(q)}`;
+}
+
+type VerifyResult = { processed: number; verified: number; valid: number; risky: number; invalid: number; missingEmail?: number; suppressed?: number };
+
+function verifySummary(d: VerifyResult): string {
+  const parts = [`${d.verified} verified · ${d.valid} domain OK, ${d.risky} risky, ${d.invalid} invalid`];
+  if (d.missingEmail) parts.push(`${d.missingEmail} have no email (use Find missing info)`);
+  if (d.suppressed) parts.push(`${d.suppressed} skipped, opted out`);
+  return parts.join(" · ") + ".";
 }
 
 export function VerifyContactList() {
@@ -116,7 +127,7 @@ export function VerifyContactList() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Verification failed.");
-      setMsg(`${data.processed} processed · ${data.valid} valid, ${data.risky} risky, ${data.invalid} invalid · ${data.appended} appended.`);
+      setMsg(verifySummary(data));
       await load();
       router.refresh(); // refresh the stat cards above
     } catch (err) {
@@ -136,9 +147,10 @@ export function VerifyContactList() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Verification failed.");
-        totalDone += data.processed ?? 0;
+        totalDone += data.verified ?? 0;
         setMsg(`Verifying all… ${totalDone.toLocaleString()} done · ${(data.remaining ?? 0).toLocaleString()} remaining`);
-        if (!data.processed || (data.remaining ?? 0) === 0) break;
+        // Stop when a batch verified nothing (only skipped rows left) or the queue is empty.
+        if (!data.verified || (data.remaining ?? 0) === 0) break;
       }
       setMsg(`Done — ${totalDone.toLocaleString()} contacts verified.`);
       await load();
@@ -232,7 +244,7 @@ export function VerifyContactList() {
         <span style={{ fontSize: 12.5, fontWeight: 800 }}>Contact list</span>
         <input value={f.search} onChange={(e) => setF({ ...f, search: e.target.value })} placeholder="Search name, email, company…" style={{ flex: 1, minWidth: 150, ...selStyle, background: "var(--background)", color: "var(--foreground)" }} />
         <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} style={{ ...selStyle, borderColor: f.status === "unverified" ? "#2E78F5" : "var(--border)", color: f.status === "unverified" ? "#1A6CE4" : "var(--muted-foreground)" }}>
-          <option value="unverified">Unverified</option><option value="valid">Valid</option><option value="risky">Risky</option><option value="invalid">Invalid</option><option value="">Any email status</option>
+          <option value="unverified">Unverified</option><option value="valid">Domain OK</option><option value="risky">Risky</option><option value="invalid">Invalid</option><option value="">Any email status</option>
         </select>
         <select value={f.side} onChange={(e) => setF({ ...f, side: e.target.value })} style={selStyle}><option value="">All sides</option><option value="founder">Founders</option><option value="investor">Investors</option></select>
       </div>
@@ -298,7 +310,7 @@ export function VerifyContactList() {
             </div>
             <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.company ?? "—"}</div>
             <div style={{ fontSize: 10.5, fontFamily: "monospace", color: r.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.phone ?? "—"}</div>
-            <div><span style={{ fontSize: 11, color: EMAIL_COLOR[es], fontWeight: 600 }}>{cap(es)}</span></div>
+            <div><span title={es === "valid" ? "The domain accepts mail. The mailbox itself is not confirmed." : undefined} style={{ fontSize: 11, color: EMAIL_COLOR[es], fontWeight: 600 }}>{EMAIL_LABEL[es] ?? cap(es)}</span></div>
             <div><span style={{ fontSize: 10, fontWeight: 700, color: LEAD_COLOR[ls] ?? "var(--foreground)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "1px 6px" }}>{cap(ls)}</span></div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <a href={linkedinSearchUrl(r.name, r.company)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10.5, fontWeight: 700, color: "#0369A1", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ background: "#0A66C2", color: "#fff", borderRadius: 3, padding: "0 3px", fontSize: 9 }}>in</span>Find</a>
@@ -325,6 +337,17 @@ export function VerifyContactList() {
                         <button type="button" onClick={() => acceptSugg(r.id, sg)} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 5, padding: "4px 11px", cursor: "pointer" }}>Accept</button>
                         <button type="button" onClick={() => rejectSugg(r.id, sg)} style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 5, padding: "4px 11px", cursor: "pointer" }}>Reject</button>
                       </div>
+                      {sg.alternatives && sg.alternatives.length > 0 ? (
+                        <details style={{ flexBasis: "100%", marginLeft: 52 }}>
+                          <summary style={{ fontSize: 10.5, color: "var(--muted-foreground)", cursor: "pointer" }}>Other formats ({sg.alternatives.length})</summary>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                            {sg.alternatives.map((alt) => (
+                              <button key={alt} type="button" onClick={() => acceptSugg(r.id, { ...sg, value: alt, alternatives: undefined })} title="Accept this format instead (saved as risky until confirmed)"
+                                style={{ fontSize: 11, fontFamily: "monospace", color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 5, padding: "3px 8px", cursor: "pointer" }}>{alt}</button>
+                            ))}
+                          </div>
+                        </details>
+                      ) : null}
                     </div>
                   ))}
                 </div>

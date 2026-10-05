@@ -174,7 +174,14 @@ export async function loadFounderFields(ids: readonly string[]): Promise<Founder
   for (const part of chunk(ids, 200)) {
     const { data, error } = await db.from("match_campaign_founder_fields").select(FIELD_COLUMNS).in("id", part);
     if (error) throw new Error(error.message);
-    out.push(...((data ?? []) as FounderFieldsRow[]));
+    const rows = (data ?? []) as FounderFieldsRow[];
+    if (rows.length === 0) continue;
+    // The view has no email_source, so read it from crm_contacts: the data check
+    // holds back pattern-guessed addresses (spec D7) without a view migration.
+    const { data: src, error: srcErr } = await db.from("crm_contacts").select("id, email_source").in("id", rows.map((r) => r.id));
+    if (srcErr) throw new Error(srcErr.message);
+    const sourceById = new Map(((src ?? []) as Array<{ id: string; email_source: string | null }>).map((s) => [s.id, s.email_source]));
+    out.push(...rows.map((r) => ({ ...r, email_source: sourceById.get(r.id) ?? null })));
   }
   return out;
 }

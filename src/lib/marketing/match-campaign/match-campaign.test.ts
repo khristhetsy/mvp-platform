@@ -49,6 +49,11 @@ describe("data check", () => {
     expect(checkFounder(founder({ country: "France" }), opts)).toBe("eu_excluded");
     expect(checkFounder(founder({ country: "France" }), { ...opts, excludeEu: false })).toBeNull();
   });
+  it("holds back a pattern-guessed email even when verified-only is off (D7)", () => {
+    expect(checkFounder(founder({ email_source: "profile", email_status: "risky" }), { ...opts, verifiedOnly: false })).toBe("email_unverified");
+    expect(checkFounder(founder({ email_source: "profile", email_status: "valid" }), opts)).toBe("email_unverified");
+    expect(checkFounder(founder({ email_source: "given" }), opts)).toBeNull();
+  });
   it("holds back low-confidence industry and guessed stage unless included", () => {
     expect(checkFounder(founder({ industry_source: "inferred:low" }), opts)).toBe("unconfirmed_data");
     expect(checkFounder(founder({ stage_source: "guess:default" }), opts)).toBe("unconfirmed_data");

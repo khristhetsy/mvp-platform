@@ -10,6 +10,7 @@ import { sendMarketingEmail, makeUnsubscribeToken } from "@/lib/marketing/send";
 import { isUnsubscribed } from "@/lib/marketing/contacts";
 import { advanceLeadStatus } from "@/lib/prospects/lead-status";
 import { lintCopy, type LintResult, type PublishBody } from "./lint";
+import { NOT_GUESSED_FILTER } from "@/lib/marketing/sendable";
 
 const MAX_PER_APPROVE = 250;
 const DELIVERABILITY_THRESHOLD = 0.97;
@@ -88,6 +89,7 @@ async function batchEligibleContacts(segment: string, batch: number): Promise<Co
     .eq("converted", false)
     .not("email", "is", null)
     .in("email_status", ["valid", "unverified"]) // risky/invalid held from sends
+    .or(NOT_GUESSED_FILTER) // and pattern guesses, whatever their status (spec D7)
     .order("lead_prescore", { ascending: false, nullsFirst: false });
   const all = (data ?? []) as ContactRow[];
   const third = Math.ceil(all.length / 3);
