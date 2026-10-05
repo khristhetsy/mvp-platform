@@ -43,6 +43,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/meeting-readiness-reminders": { name: "Meeting readiness reminders", group: "Meetings" },
   "/api/cron/meeting-kpi-goals": { name: "Meeting KPI goals", group: "Meetings" },
   "/api/cron/event-invite-reminders": { name: "Presenter reminders", group: "Events", description: "Chases accepted presenters who still owe materials" },
+  "/api/cron/event-invitations": { name: "Event invitations", group: "Events", description: "Sends due invitation steps and attendee reminders for Event Hub campaigns" },
   "/api/ceo/briefing": { name: "CEO briefing", group: "CEO" },
   "/api/cron/weekly-funnel-digest": { name: "Weekly funnel digest", group: "CEO", description: "Activation funnel report to staff" },
 };

@@ -11,6 +11,8 @@ import { EventRegistrationForm } from "@/components/events/EventRegistrationForm
 import { loadRegistrationFieldSet } from "@/lib/icfo-events/registration-field-sets-server";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { loadPrefill } from "@/lib/icfo-events/invitations/person";
+import { ATTENDEE_TYPES, type AttendeeType } from "@/lib/icfo-events/registration-intake";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Register — iCFO Events", robots: { index: false } };
@@ -24,6 +26,15 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
 
   // Registration is open without an account; signed in users get their details prefilled.
   const profile = await getCurrentUserProfile().catch(() => null);
+  // Signed in: fill in what we know from the profile, Contacts and their last registration.
+  const known = profile ? await loadPrefill({ email: profile.email ?? null, profileId: profile.id }) : null;
+  const prefill = known && Object.keys(known.answers).length
+    ? {
+        answers: known.answers,
+        firstName: known.firstName,
+        role: (ATTENDEE_TYPES as readonly string[]).includes(known.lastType ?? "") ? (known.lastType as AttendeeType) : null,
+      }
+    : undefined;
 
   return (
     <MarketingShell>
@@ -36,7 +47,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
 
         <div className="mt-6">
           <VocabularyProvider value={await loadVocabularies()}>
-            <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile?.email ?? undefined} defaultName={profile?.full_name ?? undefined} fieldSet={await loadRegistrationFieldSet()} signedIn={Boolean(profile)} />
+            <EventRegistrationForm eventId={event.id} slug={slug} defaultEmail={profile?.email ?? undefined} defaultName={profile?.full_name ?? undefined} fieldSet={await loadRegistrationFieldSet()} signedIn={Boolean(profile)} prefill={prefill} />
           </VocabularyProvider>
         </div>
       </section>

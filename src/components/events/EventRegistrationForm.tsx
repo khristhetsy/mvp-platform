@@ -12,6 +12,22 @@ import {
   REGISTRATION_BY_TYPE as CODE_BY_TYPE,
 } from "@/lib/icfo-events/registration-fields";
 import { resolveAll, sectorOptions, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
+import type { StatTile } from "@/lib/icfo-events/invitations/types";
+
+/** What we already know about the person, for autofill. */
+export type RegistrationPrefill = {
+  answers: Record<string, unknown>;
+  firstName: string | null;
+  role: AttendeeType | null;
+};
+
+/** Registering from an invitation link: several events at once. */
+export type InviteContext = {
+  token: string;
+  events: { id: string; title: string; dateLabel: string; already: boolean }[];
+};
+
+type Change = { field: string; label: string; before: string | null; after: string };
 
 const ROLES: { key: AttendeeType; label: string; Icon: typeof Coins; leads: string }[] = [
   { key: "investor", label: "Investor", Icon: Coins, leads: "See founders raising in your sectors. iCapOS is free for investors." },
@@ -39,7 +55,7 @@ const SECTOR_QUESTION: Record<AttendeeType, string> = {
   sponsor: "Which sectors do you want to reach?",
 };
 
-export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defaultPhone, defaultName, fieldSet, signedIn = true }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string; fieldSet?: FieldSet; /** False for visitors registering without an account. */ signedIn?: boolean }) {
+export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defaultPhone, defaultName, fieldSet, signedIn = true, prefill, invite, liveTiles }: { eventId: string; slug: string; defaultCompany?: string; defaultEmail?: string; defaultPhone?: string; defaultName?: string; fieldSet?: FieldSet; /** False for visitors registering without an account. */ signedIn?: boolean; /** Known details, shown filled in and marked when changed. */ prefill?: RegistrationPrefill; /** Set when registering from an invitation link. */ invite?: InviteContext; /** Live numbers shown above the form. */ liveTiles?: StatTile[] }) {
   // The saved set when the page loaded one; otherwise the code constants, so
   // the form renders even if the table is empty or unreachable. Linked industry
   // questions offer the stored list, the same one as the interests step.
@@ -50,15 +66,23 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
     ? Object.fromEntries(Object.entries(fieldSet.byType).map(([k, v]) => [k, resolveAll(v, sectorList)]))
     : CODE_BY_TYPE;
   const t = useTranslations("eventsCmp");
-  const [role, setRole] = useState<AttendeeType | null>(null);
+  const [role, setRole] = useState<AttendeeType | null>(prefill?.role ?? null);
+  const known: Record<string, unknown> = prefill?.answers ?? {};
   const [answers, setAnswers] = useState<Record<string, unknown>>({
     ...(defaultName ? { name: defaultName } : {}),
     ...(defaultCompany ? { company: defaultCompany } : {}),
     ...(defaultEmail ? { email: defaultEmail } : {}),
     ...(defaultPhone ? { phone: defaultPhone } : {}),
+    ...known,
   });
   const [consent, setConsent] = useState(false);
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>(() => {
+    const had = Array.isArray(known.sectors) ? (known.sectors as unknown[]).map(String) : [];
+    return sectors.filter((s) => had.includes(s.label) || had.includes(s.slug)).map((s) => s.slug);
+  });
+  const [chosen, setChosen] = useState<string[]>(() => invite?.events.filter((e) => !e.already).map((e) => e.id) ?? []);
+  const [changes, setChanges] = useState<Change[]>([]);
+  const [registeredTitles, setRegisteredTitles] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +127,28 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
     });
   }
 
+  /** Marker beside a prefilled field: kept, changed, added, or still needed. */
+  function marker(f: Field) {
+    if (!prefill) return null;
+    const was = known[f.key];
+    const now = answers[f.key];
+    const str = (v: unknown) => (Array.isArray(v) ? v.join(", ") : typeof v === "string" ? v.trim() : v === true ? "Yes" : "");
+    const a = str(was), b = str(now);
+    if (!b) return f.required ? <span className="ml-1 rounded bg-amber-50 px-1.5 text-[10px] font-semibold text-amber-700">Needed</span> : null;
+    if (!a) return <span className="ml-1 rounded bg-blue-50 px-1.5 text-[10px] font-semibold text-blue-700">Added</span>;
+    if (a.toLowerCase() === b.toLowerCase()) return <span className="ml-1 text-[10px] text-emerald-700">✓</span>;
+    return <span className="ml-1 rounded bg-blue-50 px-1.5 text-[10px] font-semibold text-blue-700">Changed</span>;
+  }
+
+  /** Under email and phone: a new value is kept as a second one, never replacing the main. */
+  function secondNote(f: Field) {
+    if (!prefill || (f.key !== "email" && f.key !== "phone")) return null;
+    const was = typeof known[f.key] === "string" ? String(known[f.key]).trim() : "";
+    const now = typeof answers[f.key] === "string" ? String(answers[f.key]).trim() : "";
+    if (!was || !now || was.toLowerCase() === now.toLowerCase()) return null;
+    return <span className="mt-1 block text-[11px] text-[var(--text-muted)]">Saved as your second {f.key === "email" ? "email" : "phone"}. {was} stays as your main one.</span>;
+  }
+
   function renderField(f: Field) {
     if (f.kind === "checkbox") {
       return (
@@ -137,7 +183,7 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
     return (
       <label key={f.key} className="block">
         <span className="mb-1 block text-xs text-[var(--text-secondary)]">
-          {f.label}{f.required ? <span className="text-rose-500"> *</span> : null}
+          {f.label}{f.required ? <span className="text-rose-500"> *</span> : null}{marker(f)}
         </span>
         {f.kind === "select" ? (
           <select value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
@@ -151,9 +197,10 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
             type={f.key === "email" ? "email" : f.key === "phone" ? "tel" : "text"}
             value={String(answers[f.key] ?? "")}
             onChange={(e) => set(f.key, e.target.value)}
-            className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            className={`w-full rounded-md border px-3 py-2 text-sm ${prefill && f.required && !String(answers[f.key] ?? "").trim() ? "border-amber-300" : "border-[var(--border-subtle)]"}`}
           />
         )}
+        {secondNote(f)}
       </label>
     );
   }
@@ -174,17 +221,20 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
       return;
     }
     if (interests.length === 0) { setError("Please pick at least one sector."); return; }
+    if (invite && chosen.length === 0) { setError("Choose at least one event."); return; }
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/events/${slug}/register`, {
+      const res = await fetch(invite ? `/api/events/invite/${encodeURIComponent(invite.token)}/register` : `/api/events/${slug}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // The one sector question fills the fields matching reads for every role.
-        body: JSON.stringify({ attendeeType: role, answers: { ...answers, sectors: sectorLabels, ...(role === "founder" ? { sector: sectorLabels[0] } : {}) }, interests }),
+        body: JSON.stringify({ ...(invite ? { eventIds: chosen } : {}), attendeeType: role, answers: { ...answers, sectors: sectorLabels, ...(role === "founder" ? { sector: sectorLabels[0] } : {}) }, interests }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not register.");
+      if (Array.isArray(json.changes)) setChanges(json.changes as Change[]);
+      if (Array.isArray(json.registered)) setRegisteredTitles((json.registered as { title: string }[]).map((r) => r.title));
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not register.");
@@ -217,6 +267,15 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
     return (
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[var(--shadow-card)]">
         <p className="text-lg font-medium text-[var(--navy)]">{t("you_re_registered")}</p>
+        {registeredTitles.length ? (
+          <ul className="mt-2 space-y-0.5 text-sm text-[var(--text-secondary)]">{registeredTitles.map((x) => <li key={x}>{x}</li>)}</ul>
+        ) : null}
+        {changes.length ? (
+          <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-[var(--navy)]">We also updated your profile:</p>
+            <ul className="mt-1 space-y-0.5 text-xs text-[var(--text-secondary)]">{changes.map((c) => <li key={c.field}>✓ {c.label}</li>)}</ul>
+          </div>
+        ) : null}
         {signedIn ? <p className="mt-1 text-sm text-[var(--text-muted)]">{t("a_confirmation_is_in_your_notifications_see")}</p> : null}
         {matchRole && matches ? (
           <div className="mt-5">
@@ -263,6 +322,44 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
         <p className="mt-1 text-base font-medium text-white">{t("tell_us_who_you_are")}</p>
       </div>
       <div className="p-5">
+        {prefill?.firstName ? (
+          <div className="mb-4 rounded-lg bg-blue-50 px-3 py-2.5 text-sm text-blue-800">
+            Welcome back, {prefill.firstName}. We filled in what we have. Check it and change anything.{" "}
+            <a href={`/events/${slug}/register`} className="whitespace-nowrap underline">Not {prefill.firstName}? Start fresh</a>
+          </div>
+        ) : null}
+        {liveTiles?.length ? (
+          <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-slate-50 p-2.5" aria-label="Who is registered">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live</p>
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              {liveTiles.map((tile) => (
+                <div key={tile.key} className="rounded-lg border border-[var(--border-subtle)] bg-white px-2 py-2 text-center">
+                  <p className={tile.counted ? "text-lg font-semibold text-blue-700" : "py-0.5 text-xs font-medium text-[var(--text-muted)]"}>{tile.value}</p>
+                  <p className="text-[10.5px] leading-snug text-[var(--text-muted)]">{tile.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {invite ? (
+          <div className="mb-5">
+            <p className="mb-2 text-sm font-medium text-[var(--navy)]">Choose your events</p>
+            <div className="grid gap-1.5">
+              {invite.events.map((e) => (
+                <label key={e.id} className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    disabled={e.already}
+                    checked={e.already || chosen.includes(e.id)}
+                    onChange={(ev) => setChosen((c) => (ev.target.checked ? [...c, e.id] : c.filter((x) => x !== e.id)))}
+                  />
+                  <span className="flex-1">{e.title}</span>
+                  <span className={`text-xs ${e.already ? "text-emerald-700" : "text-[var(--text-muted)]"}`}>{e.already ? "Already registered" : e.dateLabel}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <p className="mb-2 text-sm font-medium text-[var(--navy)]">{t("i_m_registering_as")}</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {ROLES.map((r) => (
@@ -333,6 +430,8 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
           <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span>I understand this is an educational community event and not an offer of securities, and I agree to the privacy policy.</span>
         </label>
+        {prefill ? <p className="mt-2 text-[11px] text-[var(--text-muted)]">Changes you make here update your profile too.</p> : null}
+        <p className="mt-2 text-[11px] text-[var(--text-muted)]">iCFO Capital does not solicit securities and is not an investment adviser. Content is for educational purposes only.</p>
 
         <button
           type="button"

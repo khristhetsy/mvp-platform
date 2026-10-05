@@ -13,6 +13,7 @@ import { registerForEvent } from "@/lib/icfo-events/registrations";
 import { upsertOptin } from "@/lib/icfo-events/networking";
 import { awardPoints } from "@/lib/icfo-events/gamification";
 import { applyRegistrationIntake, ATTENDEE_TYPES, type AttendeeType } from "@/lib/icfo-events/registration-intake";
+import { applyRegistrationEdits } from "@/lib/icfo-events/invitations/person";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +104,13 @@ export async function POST(
       await awardPoints(event.id, profile.id, "register");
     }
 
-    return NextResponse.json({ registration, created }, { status: created ? 201 : 200 });
+    // A signed-in registrant's edits update their profile, Contacts record and Odoo.
+    // Best effort: never blocks the registration.
+    const sync = body?.answers
+      ? await applyRegistrationEdits({ knownEmail: profile.email ?? null, profileId: profile.id, answers: body.answers, eventTitle: event.title }).catch(() => null)
+      : null;
+
+    return NextResponse.json({ registration, created, changes: sync?.changes ?? [] }, { status: created ? 201 : 200 });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Failed to register." }, { status: 500 });
